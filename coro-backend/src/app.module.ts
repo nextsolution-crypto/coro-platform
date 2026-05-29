@@ -8,6 +8,7 @@ import { ClientsModule } from './clients/clients.module';
 import { BuildingsModule } from './buildings/buildings.module';
 import { ProjectsModule } from './projects/projects.module';
 import { LibraryModule } from './library/library.module';
+import { ConfiguratorModule } from './configurator/configurator.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { LibraryModule } from './library/library.module';
     BuildingsModule,
     ProjectsModule,
     LibraryModule,
+    ConfiguratorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

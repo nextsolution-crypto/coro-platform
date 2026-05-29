@@ -17,6 +17,7 @@ const clients_module_1 = require("./clients/clients.module");
 const buildings_module_1 = require("./buildings/buildings.module");
 const projects_module_1 = require("./projects/projects.module");
 const library_module_1 = require("./library/library.module");
+const configurator_module_1 = require("./configurator/configurator.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -30,6 +31,7 @@ exports.AppModule = AppModule = __decorate([
             buildings_module_1.BuildingsModule,
             projects_module_1.ProjectsModule,
             library_module_1.LibraryModule,
+            configurator_module_1.ConfiguratorModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
