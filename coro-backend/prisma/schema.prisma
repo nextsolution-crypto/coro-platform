@@ -126,3 +126,66 @@ enum DocumentStatus {
   EXPORTED
   ARCHIVED
 }
+
+model IncidentCode {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  color       String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  procedures  Procedure[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String
+  roleCode    String   @unique
+  description String?
+  isStandard  Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  procedures  Procedure[]
+}
+
+model Procedure {
+  id            String          @id @default(uuid())
+  name          String
+  description   String?
+  documentTypes String[]
+  phase         String?
+  status        ProcedureStatus @default(DRAFT)
+  content       Json?
+  version       Int             @default(1)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  incidentCodeId String?
+  incidentCode   IncidentCode? @relation(fields: [incidentCodeId], references: [id])
+  roleId         String?
+  role           Role?         @relation(fields: [roleId], references: [id])
+}
+
+enum ProcedureStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+model LibrarySection {
+  id            String   @id @default(uuid())
+  title         String
+  documentTypes String[]
+  order         Int      @default(0)
+  content       Json?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

@@ -3,6 +3,11 @@ export declare class ProjectsService {
     private prisma;
     constructor(prisma: PrismaService);
     findAll(): Promise<({
+        user: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        };
         client: {
             id: string;
             name: string;
@@ -12,36 +17,42 @@ export declare class ProjectsService {
             name: string;
             address: string;
         };
-        user: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        };
         _count: {
             documents: number;
         };
     } & {
         id: string;
-        name: string;
-        documentType: import("@prisma/client").$Enums.DocumentType;
-        status: import("@prisma/client").$Enums.ProjectStatus;
-        year: number;
-        progress: number;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        year: number;
         clientId: string;
+        documentType: import("@prisma/client").$Enums.DocumentType;
+        status: import("@prisma/client").$Enums.ProjectStatus;
+        progress: number;
         buildingId: string;
         userId: string;
     })[]>;
     findOne(id: string): Promise<({
-        client: {
+        user: {
+            role: import("@prisma/client").$Enums.UserRole;
             id: string;
-            name: string;
+            email: string;
+            password: string;
+            firstName: string;
+            lastName: string;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
+        };
+        client: {
+            id: string;
             email: string | null;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            name: string;
             phone: string | null;
             address: string | null;
             city: string | null;
@@ -49,11 +60,10 @@ export declare class ProjectsService {
         };
         building: {
             id: string;
-            name: string;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
-            clientId: string;
+            name: string;
             address: string;
             city: string;
             province: string;
@@ -61,23 +71,13 @@ export declare class ProjectsService {
             floors: number | null;
             units: number | null;
             buildingType: string | null;
-        };
-        user: {
-            id: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            email: string;
-            password: string;
-            firstName: string;
-            lastName: string;
-            role: import("@prisma/client").$Enums.UserRole;
+            clientId: string;
         };
         documents: {
             id: string;
-            status: import("@prisma/client").$Enums.DocumentStatus;
             createdAt: Date;
             updatedAt: Date;
+            status: import("@prisma/client").$Enums.DocumentStatus;
             title: string;
             content: import("@prisma/client/runtime/library").JsonValue | null;
             version: number;
@@ -85,15 +85,15 @@ export declare class ProjectsService {
         }[];
     } & {
         id: string;
-        name: string;
-        documentType: import("@prisma/client").$Enums.DocumentType;
-        status: import("@prisma/client").$Enums.ProjectStatus;
-        year: number;
-        progress: number;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        year: number;
         clientId: string;
+        documentType: import("@prisma/client").$Enums.DocumentType;
+        status: import("@prisma/client").$Enums.ProjectStatus;
+        progress: number;
         buildingId: string;
         userId: string;
     }) | null>;
@@ -107,11 +107,11 @@ export declare class ProjectsService {
     }): Promise<{
         client: {
             id: string;
-            name: string;
+            email: string | null;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
-            email: string | null;
+            name: string;
             phone: string | null;
             address: string | null;
             city: string | null;
@@ -119,11 +119,10 @@ export declare class ProjectsService {
         };
         building: {
             id: string;
-            name: string;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
-            clientId: string;
+            name: string;
             address: string;
             city: string;
             province: string;
@@ -131,46 +130,47 @@ export declare class ProjectsService {
             floors: number | null;
             units: number | null;
             buildingType: string | null;
+            clientId: string;
         };
     } & {
         id: string;
-        name: string;
-        documentType: import("@prisma/client").$Enums.DocumentType;
-        status: import("@prisma/client").$Enums.ProjectStatus;
-        year: number;
-        progress: number;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        year: number;
         clientId: string;
+        documentType: import("@prisma/client").$Enums.DocumentType;
+        status: import("@prisma/client").$Enums.ProjectStatus;
+        progress: number;
         buildingId: string;
         userId: string;
     }>;
     update(id: string, data: any): Promise<{
         id: string;
-        name: string;
-        documentType: import("@prisma/client").$Enums.DocumentType;
-        status: import("@prisma/client").$Enums.ProjectStatus;
-        year: number;
-        progress: number;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        year: number;
         clientId: string;
+        documentType: import("@prisma/client").$Enums.DocumentType;
+        status: import("@prisma/client").$Enums.ProjectStatus;
+        progress: number;
         buildingId: string;
         userId: string;
     }>;
     remove(id: string): Promise<{
         id: string;
-        name: string;
-        documentType: import("@prisma/client").$Enums.DocumentType;
-        status: import("@prisma/client").$Enums.ProjectStatus;
-        year: number;
-        progress: number;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        year: number;
         clientId: string;
+        documentType: import("@prisma/client").$Enums.DocumentType;
+        status: import("@prisma/client").$Enums.ProjectStatus;
+        progress: number;
         buildingId: string;
         userId: string;
     }>;
