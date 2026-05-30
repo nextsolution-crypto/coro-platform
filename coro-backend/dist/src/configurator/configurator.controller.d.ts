@@ -3,7 +3,7 @@ export declare class ConfiguratorController {
     private configuratorService;
     constructor(configuratorService: ConfiguratorService);
     getQuestions(): Promise<{
-        sections: {
+        sections: ({
             id: string;
             title: string;
             icon: string;
@@ -11,14 +11,47 @@ export declare class ConfiguratorController {
                 key: string;
                 label: string;
                 type: string;
-                options: string[];
+                schema?: undefined;
             } | {
                 key: string;
                 label: string;
                 type: string;
+                schema: ({
+                    key: string;
+                    label: string;
+                    type: string;
+                    options: string[];
+                } | {
+                    key: string;
+                    label: string;
+                    type: string;
+                    options?: undefined;
+                })[];
+            })[];
+        } | {
+            id: string;
+            title: string;
+            icon: string;
+            fields: ({
+                key: string;
+                label: string;
+                type: string;
+                options?: undefined;
+                checkboxOptions?: undefined;
+            } | {
+                key: string;
+                label: string;
+                type: string;
+                options: string[];
+                checkboxOptions?: undefined;
+            } | {
+                key: string;
+                label: string;
+                type: string;
+                checkboxOptions: string[];
                 options?: undefined;
             })[];
-        }[];
+        })[];
     }>;
     analyze(config: any): Promise<import("./rules-engine.service").ConfiguratorResult>;
     save(projectId: string, config: any): Promise<{
