@@ -35,6 +35,61 @@ let ConfiguratorService = class ConfiguratorService {
         return {
             sections: [
                 {
+                    id: 'infos_document',
+                    title: 'Infos du document',
+                    icon: '📄',
+                    fields: [
+                        {
+                            key: 'province',
+                            label: 'Province',
+                            type: 'select',
+                            options: ['Quebec', 'Ontario', 'Alberta'],
+                        },
+                        {
+                            key: 'responsableNom',
+                            label: 'Nom du responsable du plan',
+                            type: 'text',
+                        },
+                        {
+                            key: 'responsableTitre',
+                            label: 'Titre / Poste du responsable',
+                            type: 'text',
+                        },
+                        {
+                            key: 'dateReleve',
+                            label: 'Date du releve technique',
+                            type: 'text',
+                        },
+                        {
+                            key: 'ville',
+                            label: 'Ville du batiment',
+                            type: 'text',
+                        },
+                        {
+                            key: 'reglementMunicipal',
+                            label: 'Reglement municipal applicable (si connu)',
+                            type: 'text',
+                        },
+                        {
+                            key: 'typeDocument',
+                            label: 'Type de document',
+                            type: 'select',
+                            options: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'],
+                        },
+                        {
+                            key: 'anneDocument',
+                            label: 'Annee du document',
+                            type: 'number',
+                        },
+                        {
+                            key: 'versionDocument',
+                            label: 'Version du document',
+                            type: 'select',
+                            options: ['Creation initiale', 'Mise a jour annuelle', 'Mise a jour suite a incident', 'Mise a jour suite a renovation', 'Mise a jour suite a changement occupation'],
+                        },
+                    ],
+                },
+                {
                     id: 'description',
                     title: 'Description generale',
                     icon: '🏢',

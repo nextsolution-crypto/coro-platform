@@ -9,6 +9,7 @@ import { BuildingsModule } from './buildings/buildings.module';
 import { ProjectsModule } from './projects/projects.module';
 import { LibraryModule } from './library/library.module';
 import { ConfiguratorModule } from './configurator/configurator.module';
+import { GeneratorModule } from './generator/generator.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ConfiguratorModule } from './configurator/configurator.module';
     ProjectsModule,
     LibraryModule,
     ConfiguratorModule,
+    GeneratorModule,
   ],
   controllers: [AppController],
   providers: [AppService],
