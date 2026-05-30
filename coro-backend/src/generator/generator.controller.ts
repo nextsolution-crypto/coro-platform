@@ -18,12 +18,14 @@ export class GeneratorController {
   }
 
   @Put('document/:documentId/module/:moduleId/section/:sectionId')
-  updateSection(
-    @Param('documentId') documentId: string,
-    @Param('moduleId') moduleId: string,
-    @Param('sectionId') sectionId: string,
-    @Body() body: { content: string },
-  ) {
-    return this.generatorService.updateModuleContent(documentId, moduleId, sectionId, body.content);
-  }
+updateSection(
+  @Param('documentId') documentId: string,
+  @Param('moduleId') moduleId: string,
+  @Param('sectionId') sectionId: string,
+  @Body() body: { content: string; language?: string },
+) {
+  return this.generatorService.updateModuleContent(
+    documentId, moduleId, sectionId, body.content, body.language || 'fr'
+  );
+}
 }

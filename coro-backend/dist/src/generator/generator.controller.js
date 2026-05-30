@@ -28,7 +28,7 @@ let GeneratorController = class GeneratorController {
         return this.generatorService.getDocument(projectId);
     }
     updateSection(documentId, moduleId, sectionId, body) {
-        return this.generatorService.updateModuleContent(documentId, moduleId, sectionId, body.content);
+        return this.generatorService.updateModuleContent(documentId, moduleId, sectionId, body.content, body.language || 'fr');
     }
 };
 exports.GeneratorController = GeneratorController;

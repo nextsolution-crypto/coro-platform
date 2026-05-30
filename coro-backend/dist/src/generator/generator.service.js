@@ -44,14 +44,15 @@ let GeneratorService = class GeneratorService {
     }
     async generateAndSave(projectId, config) {
         const ctx = await this.buildContext(projectId, config);
-        const module1 = (0, module1_templates_1.generateModule1)(ctx);
+        const module1Result = (0, module1_templates_1.generateModule1)(ctx);
         const existing = await this.prisma.document.findFirst({
             where: { projectId },
         });
         const documentData = {
             title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
             content: {
-                modules: [module1],
+                modules_fr: [module1Result.fr],
+                modules_en: [module1Result.en],
                 config,
                 generatedAt: new Date(),
             },
@@ -83,12 +84,13 @@ let GeneratorService = class GeneratorService {
             include: { project: { include: { client: true, building: true } } },
         });
     }
-    async updateModuleContent(documentId, moduleId, sectionId, content) {
+    async updateModuleContent(documentId, moduleId, sectionId, content, language = 'fr') {
         const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
         if (!doc)
             throw new Error('Document introuvable');
         const docContent = doc.content;
-        const modules = docContent.modules || [];
+        const modulesKey = language === 'en' ? 'modules_en' : 'modules_fr';
+        const modules = docContent[modulesKey] || [];
         const moduleIdx = modules.findIndex((m) => m.moduleNumber === parseInt(moduleId));
         if (moduleIdx === -1)
             throw new Error('Module introuvable');
@@ -98,9 +100,9 @@ let GeneratorService = class GeneratorService {
         modules[moduleIdx].sections[sectionIdx].content = content;
         await this.prisma.document.update({
             where: { id: documentId },
-            data: { content: { ...docContent, modules } },
+            data: { content: { ...docContent, [modulesKey]: modules } },
         });
-        return { success: true, moduleId, sectionId };
+        return { success: true, moduleId, sectionId, language };
     }
 };
 exports.GeneratorService = GeneratorService;

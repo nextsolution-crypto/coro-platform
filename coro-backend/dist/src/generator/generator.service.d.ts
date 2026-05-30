@@ -6,7 +6,8 @@ export declare class GeneratorService {
     generateAndSave(projectId: string, config: any): Promise<{
         title: string;
         content: {
-            modules: any[];
+            modules_fr: any[];
+            modules_en: any[];
             config: any;
             generatedAt: Date;
         };
@@ -70,9 +71,10 @@ export declare class GeneratorService {
         updatedAt: Date;
         projectId: string;
     }) | null>;
-    updateModuleContent(documentId: string, moduleId: string, sectionId: string, content: string): Promise<{
+    updateModuleContent(documentId: string, moduleId: string, sectionId: string, content: string, language?: string): Promise<{
         success: boolean;
         moduleId: string;
         sectionId: string;
+        language: string;
     }>;
 }

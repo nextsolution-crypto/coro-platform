@@ -32,46 +32,45 @@ export class GeneratorService {
   }
 
   async generateAndSave(projectId: string, config: any) {
-    const ctx = await this.buildContext(projectId, config);
-    const module1 = generateModule1(ctx);
+  const ctx = await this.buildContext(projectId, config);
+  const module1Result = generateModule1(ctx);
 
-    // Créer ou mettre à jour le document en BD
-    const existing = await this.prisma.document.findFirst({
-      where: { projectId },
+  const existing = await this.prisma.document.findFirst({
+    where: { projectId },
+  });
+
+  const documentData = {
+    title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
+    content: {
+      modules_fr: [module1Result.fr],
+      modules_en: [module1Result.en],
+      config,
+      generatedAt: new Date(),
+    },
+    status: 'IN_PROGRESS' as any,
+    version: existing ? existing.version + 1 : 1,
+    projectId,
+  };
+
+  let document;
+  if (existing) {
+    document = await this.prisma.document.update({
+      where: { id: existing.id },
+      data: documentData,
     });
-
-    const documentData = {
-      title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
-      content: {
-        modules: [module1],
-        config,
-        generatedAt: new Date(),
-      },
-      status: 'IN_PROGRESS' as any,
-      version: existing ? existing.version + 1 : 1,
-      projectId,
-    };
-
-    let document;
-    if (existing) {
-      document = await this.prisma.document.update({
-        where: { id: existing.id },
-        data: documentData,
-      });
-    } else {
-      document = await this.prisma.document.create({
-        data: documentData,
-      });
-    }
-
-    // Mettre à jour la progression du projet
-    await this.prisma.project.update({
-      where: { id: projectId },
-      data: { status: 'IN_PROGRESS', progress: 50 },
+  } else {
+    document = await this.prisma.document.create({
+      data: documentData,
     });
-
-    return { documentId: document.id, ...documentData };
   }
+
+  await this.prisma.project.update({
+    where: { id: projectId },
+    data: { status: 'IN_PROGRESS', progress: 50 },
+  });
+
+  return { documentId: document.id, ...documentData };
+}
 
   async getDocument(projectId: string) {
     return this.prisma.document.findFirst({
@@ -80,26 +79,33 @@ export class GeneratorService {
     });
   }
 
-  async updateModuleContent(documentId: string, moduleId: string, sectionId: string, content: string) {
-    const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
-    if (!doc) throw new Error('Document introuvable');
+  async updateModuleContent(
+  documentId: string,
+  moduleId: string,
+  sectionId: string,
+  content: string,
+  language: string = 'fr',
+) {
+  const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
+  if (!doc) throw new Error('Document introuvable');
 
-    const docContent = doc.content as any;
-    const modules = docContent.modules || [];
+  const docContent = doc.content as any;
+  const modulesKey = language === 'en' ? 'modules_en' : 'modules_fr';
+  const modules = docContent[modulesKey] || [];
 
-    const moduleIdx = modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleId));
-    if (moduleIdx === -1) throw new Error('Module introuvable');
+  const moduleIdx = modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleId));
+  if (moduleIdx === -1) throw new Error('Module introuvable');
 
-    const sectionIdx = modules[moduleIdx].sections.findIndex((s: any) => s.id === sectionId);
-    if (sectionIdx === -1) throw new Error('Section introuvable');
+  const sectionIdx = modules[moduleIdx].sections.findIndex((s: any) => s.id === sectionId);
+  if (sectionIdx === -1) throw new Error('Section introuvable');
 
-    modules[moduleIdx].sections[sectionIdx].content = content;
+  modules[moduleIdx].sections[sectionIdx].content = content;
 
-    await this.prisma.document.update({
-      where: { id: documentId },
-      data: { content: { ...docContent, modules } },
-    });
+  await this.prisma.document.update({
+    where: { id: documentId },
+    data: { content: { ...docContent, [modulesKey]: modules } },
+  });
 
-    return { success: true, moduleId, sectionId };
-  }
+  return { success: true, moduleId, sectionId, language };
+}
 }

@@ -5,7 +5,8 @@ export declare class GeneratorController {
     generate(projectId: string, config: any): Promise<{
         title: string;
         content: {
-            modules: any[];
+            modules_fr: any[];
+            modules_en: any[];
             config: any;
             generatedAt: Date;
         };
@@ -71,9 +72,11 @@ export declare class GeneratorController {
     }) | null>;
     updateSection(documentId: string, moduleId: string, sectionId: string, body: {
         content: string;
+        language?: string;
     }): Promise<{
         success: boolean;
         moduleId: string;
         sectionId: string;
+        language: string;
     }>;
 }
