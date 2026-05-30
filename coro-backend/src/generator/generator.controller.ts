@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GeneratorService } from './generator.service';
 
@@ -9,11 +9,21 @@ export class GeneratorController {
 
   @Post('generate/:projectId')
   generate(@Param('projectId') projectId: string, @Body() config: any) {
-    return this.generatorService.generateDocumentStructure(projectId, config);
+    return this.generatorService.generateAndSave(projectId, config);
   }
 
-  @Post('module1/:projectId')
-  getModule1(@Param('projectId') projectId: string, @Body() config: any) {
-    return this.generatorService.getModule1Preview(projectId, config);
+  @Get('document/:projectId')
+  getDocument(@Param('projectId') projectId: string) {
+    return this.generatorService.getDocument(projectId);
+  }
+
+  @Put('document/:documentId/module/:moduleId/section/:sectionId')
+  updateSection(
+    @Param('documentId') documentId: string,
+    @Param('moduleId') moduleId: string,
+    @Param('sectionId') sectionId: string,
+    @Body() body: { content: string },
+  ) {
+    return this.generatorService.updateModuleContent(documentId, moduleId, sectionId, body.content);
   }
 }

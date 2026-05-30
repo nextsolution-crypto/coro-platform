@@ -18,20 +18,30 @@ interface Project {
   _count?: { documents: number };
 }
 
-interface Client {
-  id: string;
-  name: string;
-}
+interface Client { id: string; name: string; }
+interface Building { id: string; name: string; clientId: string; }
 
-interface Building {
-  id: string;
-  name: string;
-  clientId: string;
-}
+const statusColors: Record<string, string> = {
+  DRAFT: 'bg-gray-500/20 text-gray-400',
+  IN_PROGRESS: 'bg-blue-500/20 text-blue-400',
+  REVIEW: 'bg-yellow-500/20 text-yellow-400',
+  VALIDATED: 'bg-green-500/20 text-green-400',
+  EXPORTED: 'bg-purple-500/20 text-purple-400',
+  ARCHIVED: 'bg-red-500/20 text-red-400',
+};
+
+const statusLabels: Record<string, string> = {
+  DRAFT: 'Brouillon',
+  IN_PROGRESS: 'En cours',
+  REVIEW: 'En revision',
+  VALIDATED: 'Valide',
+  EXPORTED: 'Exporte',
+  ARCHIVED: 'Archive',
+};
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, initAuth } = useAuthStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -45,27 +55,14 @@ export default function ProjectsPage() {
 
   const documentTypes = ['PSI', 'PMU', 'PCA', 'PGC', 'PRA', 'PUE'];
 
-  const statusColors: Record<string, string> = {
-    DRAFT: 'bg-gray-500/20 text-gray-400',
-    IN_PROGRESS: 'bg-blue-500/20 text-blue-400',
-    REVIEW: 'bg-yellow-500/20 text-yellow-400',
-    VALIDATED: 'bg-green-500/20 text-green-400',
-    EXPORTED: 'bg-purple-500/20 text-purple-400',
-    ARCHIVED: 'bg-red-500/20 text-red-400',
-  };
-
-  const statusLabels: Record<string, string> = {
-    DRAFT: 'Brouillon',
-    IN_PROGRESS: 'En cours',
-    REVIEW: 'En revision',
-    VALIDATED: 'Valide',
-    EXPORTED: 'Exporte',
-    ARCHIVED: 'Archive',
-  };
+  useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/login'); return; }
-    fetchData();
+    if (isAuthenticated) fetchData();
+    else {
+      const token = localStorage.getItem('coro_token');
+      if (!token) router.push('/login');
+    }
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -95,10 +92,7 @@ export default function ProjectsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/projects', {
-        ...form,
-        year: parseInt(form.year),
-      });
+      await api.post('/projects', { ...form, year: parseInt(form.year) });
       setShowModal(false);
       setForm({ name: '', documentType: '', year: new Date().getFullYear().toString(), clientId: '', buildingId: '' });
       fetchData();
@@ -123,9 +117,7 @@ export default function ProjectsPage() {
           CO<span className="text-orange-500">RO</span>
         </h1>
         <button onClick={() => { useAuthStore.getState().logout(); router.push('/login'); }}
-          className="text-gray-400 hover:text-white text-sm">
-          Deconnexion
-        </button>
+          className="text-gray-400 hover:text-white text-sm">Deconnexion</button>
       </div>
 
       <div className="flex">
@@ -194,10 +186,8 @@ export default function ProjectsPage() {
                       <span className="text-xs text-gray-400">{project.progress}%</span>
                     </div>
                     <div className="w-full bg-gray-800 rounded-full h-1.5">
-                      <div
-                        className="bg-orange-500 h-1.5 rounded-full transition-all"
-                        style={{ width: `${project.progress}%` }}>
-                      </div>
+                      <div className="bg-orange-500 h-1.5 rounded-full transition-all"
+                        style={{ width: `${project.progress}%` }}/>
                     </div>
                   </div>
                 </div>
@@ -226,9 +216,7 @@ export default function ProjectsPage() {
                   required
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500">
                   <option value="">Selectionner un type</option>
-                  {documentTypes.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  {documentTypes.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
@@ -245,22 +233,17 @@ export default function ProjectsPage() {
                   required
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500">
                   <option value="">Selectionner un client</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Batiment *</label>
                 <select value={form.buildingId}
                   onChange={(e) => setForm({ ...form, buildingId: e.target.value })}
-                  required
-                  disabled={!form.clientId}
+                  required disabled={!form.clientId}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 disabled:opacity-50">
                   <option value="">Selectionner un batiment</option>
-                  {filteredBuildings.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
+                  {filteredBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
               <div className="flex gap-3 pt-2">

@@ -58,7 +58,7 @@ let ConfiguratorService = class ConfiguratorService {
                         {
                             key: 'dateReleve',
                             label: 'Date du releve technique',
-                            type: 'text',
+                            type: 'date',
                         },
                         {
                             key: 'ville',
@@ -117,8 +117,8 @@ let ConfiguratorService = class ConfiguratorService {
                         { key: 'floors', label: 'Nombre d etages', type: 'number' },
                         { key: 'basements', label: 'Nombre de sous-sols', type: 'number' },
                         { key: 'superficie', label: 'Superficie du batiment (pi2)', type: 'number' },
-                        { key: 'anneeConstruction', label: 'Annee de construction', type: 'number' },
-                        { key: 'derniereRenovation', label: 'Annee derniere renovation majeure', type: 'number' },
+                        { key: 'anneeConstruction', label: 'Annee de construction', type: 'select', options: Array.from({ length: 125 }, (_, i) => String(2025 - i)) },
+                        { key: 'derniereRenovation', label: 'Annee derniere renovation majeure', type: 'select', options: ['Aucune', ...Array.from({ length: 35 }, (_, i) => String(2026 - i))] },
                         { key: 'typeConstruction', label: 'Type de construction', type: 'select',
                             options: ['Beton', 'Acier', 'Bois', 'Mixte', 'Autre'] },
                         { key: 'hauteurBatiment', label: 'Batiment a grande hauteur (+ de 18m)', type: 'boolean' },

@@ -16,7 +16,7 @@ interface SchemaField {
 interface Field {
   key: string;
   label: string;
-  type: 'boolean' | 'text' | 'number' | 'select' | 'dynamic_list' | 'checkbox_group';
+  type: 'boolean' | 'text' | 'number' | 'select' | 'dynamic_list' | 'checkbox_group' | 'date';
   options?: string[];
   checkboxOptions?: string[];
   schema?: SchemaField[];
@@ -328,16 +328,18 @@ export default function ConfiguratorPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await api.post(`/configurator/save/${projectId}`, { ...config, ...lists });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
+  setSaving(true);
+  try {
+    const payload = { ...config, ...lists };
+    await api.post(`/configurator/save/${projectId}`, payload);
+    localStorage.setItem(`coro_config_${projectId}`, JSON.stringify(payload));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setSaving(false);
+  }
   };
 
   const isFieldVisible = (field: Field): boolean => {
@@ -496,6 +498,15 @@ export default function ConfiguratorPage() {
                       </div>
                     )}
 
+                    {field.type === 'number' && (
+                      <input type="number"
+                        value={config[field.key] === 0 ? '' : config[field.key]}
+                        onChange={(e) => updateConfig(field.key, e.target.value === '' ? 0 : parseInt(e.target.value))}
+                        placeholder="0"
+                        min="0"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500"/>
+                    )}
+
                     {field.type === 'select' && (
                       <select
                         value={config[field.key] || ''}
@@ -516,11 +527,12 @@ export default function ConfiguratorPage() {
                         placeholder="Entrer une valeur..."/>
                     )}
 
-                    {field.type === 'number' && (
-                      <input type="number"
-                        value={config[field.key] || ''}
-                        onChange={(e) => updateConfig(field.key, parseInt(e.target.value) || 0)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500"/>
+                    {field.type === 'date' && (
+                      <input
+                       type="date"
+                       value={config[field.key] || ''}
+                       onChange={(e) => updateConfig(field.key, e.target.value)}
+                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-orange-500 [color-scheme:dark]"/>
                     )}
 
                     {field.type === 'checkbox_group' && (

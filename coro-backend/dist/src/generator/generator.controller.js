@@ -22,10 +22,13 @@ let GeneratorController = class GeneratorController {
         this.generatorService = generatorService;
     }
     generate(projectId, config) {
-        return this.generatorService.generateDocumentStructure(projectId, config);
+        return this.generatorService.generateAndSave(projectId, config);
     }
-    getModule1(projectId, config) {
-        return this.generatorService.getModule1Preview(projectId, config);
+    getDocument(projectId) {
+        return this.generatorService.getDocument(projectId);
+    }
+    updateSection(documentId, moduleId, sectionId, body) {
+        return this.generatorService.updateModuleContent(documentId, moduleId, sectionId, body.content);
     }
 };
 exports.GeneratorController = GeneratorController;
@@ -38,13 +41,22 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], GeneratorController.prototype, "generate", null);
 __decorate([
-    (0, common_1.Post)('module1/:projectId'),
+    (0, common_1.Get)('document/:projectId'),
     __param(0, (0, common_1.Param)('projectId')),
-    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
-], GeneratorController.prototype, "getModule1", null);
+], GeneratorController.prototype, "getDocument", null);
+__decorate([
+    (0, common_1.Put)('document/:documentId/module/:moduleId/section/:sectionId'),
+    __param(0, (0, common_1.Param)('documentId')),
+    __param(1, (0, common_1.Param)('moduleId')),
+    __param(2, (0, common_1.Param)('sectionId')),
+    __param(3, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, Object]),
+    __metadata("design:returntype", void 0)
+], GeneratorController.prototype, "updateSection", null);
 exports.GeneratorController = GeneratorController = __decorate([
     (0, common_1.Controller)('generator'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

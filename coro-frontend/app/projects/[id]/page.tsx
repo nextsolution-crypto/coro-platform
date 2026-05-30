@@ -42,28 +42,48 @@ export default function ProjectDetailPage() {
   const { isAuthenticated, initAuth } = useAuthStore();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [hasDocument, setHasDocument] = useState(false);
+
+  useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
-    initAuth();
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchProject();
-    } else {
+    if (isAuthenticated) fetchData();
+    else {
       const token = localStorage.getItem('coro_token');
       if (!token) router.push('/login');
     }
   }, [isAuthenticated]);
 
-  const fetchProject = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get(`/projects/${projectId}`);
-      setProject(res.data);
+      const [projectRes, docRes] = await Promise.all([
+        api.get(`/projects/${projectId}`),
+        api.get(`/generator/document/${projectId}`).catch(() => ({ data: null })),
+      ]);
+      setProject(projectRes.data);
+      setHasDocument(!!docRes.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const configStr = localStorage.getItem(`coro_config_${projectId}`);
+      const config = configStr ? JSON.parse(configStr) : {};
+      await api.post(`/generator/generate/${projectId}`, config);
+      setHasDocument(true);
+      await fetchData();
+      router.push(`/editor/${projectId}`);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la generation.');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -95,9 +115,7 @@ export default function ProjectDetailPage() {
           CO<span className="text-orange-500">RO</span>
         </h1>
         <button onClick={() => { useAuthStore.getState().logout(); router.push('/login'); }}
-          className="text-gray-400 hover:text-white text-sm">
-          Deconnexion
-        </button>
+          className="text-gray-400 hover:text-white text-sm">Deconnexion</button>
       </div>
 
       <div className="flex">
@@ -115,7 +133,6 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className="flex-1 p-8">
-          {/* Header projet */}
           <div className="flex items-start justify-between mb-8">
             <div>
               <button onClick={() => router.push('/projects')}
@@ -149,71 +166,81 @@ export default function ProjectDetailPage() {
             </div>
             <div className="w-full bg-gray-800 rounded-full h-2">
               <div className="bg-orange-500 h-2 rounded-full transition-all"
-                style={{ width: `${project.progress}%` }}>
-              </div>
+                style={{ width: `${project.progress}%` }}/>
             </div>
           </div>
 
-          {/* Etapes du projet */}
+          {/* 3 Etapes */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            {[
-              {
-                step: 1,
-                title: 'Configuration',
-                description: 'Configurer le batiment et activer les procedures',
-                action: () => router.push(`/configurator/${project.id}`),
-                buttonLabel: 'Configurer',
-                done: project.progress >= 25,
-                active: true,
-              },
-              {
-                step: 2,
-                title: 'Redaction',
-                description: 'Editer et personnaliser le document',
-                action: () => {},
-                buttonLabel: 'Bientot disponible',
-                done: project.progress >= 50,
-                active: false,
-              },
-              {
-                step: 3,
-                title: 'Export PDF',
-                description: 'Generer le document final en PDF',
-                action: () => {},
-                buttonLabel: 'Bientot disponible',
-                done: project.progress >= 100,
-                active: false,
-              },
-            ].map((item) => (
-              <div key={item.step}
-                className={`bg-gray-900 border rounded-xl p-6 ${
-                  item.done ? 'border-green-500/30' :
-                  item.active ? 'border-orange-500/30' : 'border-gray-800'
-                }`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    item.done ? 'bg-green-500/20 text-green-400' :
-                    item.active ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-800 text-gray-500'
-                  }`}>
-                    {item.done ? '✓' : item.step}
-                  </div>
-                  <h3 className={`font-semibold ${item.active || item.done ? 'text-white' : 'text-gray-500'}`}>
-                    {item.title}
-                  </h3>
+
+            {/* Etape 1 - Configuration */}
+            <div className={`bg-gray-900 border rounded-xl p-6 ${
+              project.progress >= 25 ? 'border-green-500/30' : 'border-orange-500/30'}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  project.progress >= 25 ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                  {project.progress >= 25 ? '✓' : '1'}
                 </div>
-                <p className="text-gray-500 text-sm mb-4">{item.description}</p>
-                <button
-                  onClick={item.action}
-                  disabled={!item.active}
-                  className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
-                    item.active
-                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                      : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                  }`}>
-                  {item.buttonLabel}
-                </button>
+                <h3 className="text-white font-semibold">Configuration</h3>
               </div>
-            ))}
+              <p className="text-gray-500 text-sm mb-4">Configurer le batiment et activer les procedures</p>
+              <button
+                onClick={() => router.push(`/configurator/${project.id}`)}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                {project.progress >= 25 ? 'Modifier la config' : 'Configurer'}
+              </button>
+            </div>
+
+            {/* Etape 2 - Generation */}
+            <div className={`bg-gray-900 border rounded-xl p-6 ${
+              project.progress >= 50 ? 'border-green-500/30' :
+              project.progress >= 25 ? 'border-orange-500/30' : 'border-gray-800'}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  project.progress >= 50 ? 'bg-green-500/20 text-green-400' :
+                  project.progress >= 25 ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-800 text-gray-500'}`}>
+                  {project.progress >= 50 ? '✓' : '2'}
+                </div>
+                <h3 className={`font-semibold ${project.progress >= 25 ? 'text-white' : 'text-gray-500'}`}>
+                  Generation
+                </h3>
+              </div>
+              <p className="text-gray-500 text-sm mb-4">Generer la structure du document automatiquement</p>
+              <button
+                onClick={handleGenerate}
+                disabled={project.progress < 25 || generating}
+                className={`w-full text-sm font-medium py-2 rounded-lg transition-colors ${
+                  project.progress >= 25
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+                {generating ? 'Generation en cours...' :
+                  hasDocument ? 'Regenerer le document' : 'Generer le document'}
+              </button>
+            </div>
+
+            {/* Etape 3 - Editeur */}
+            <div className={`bg-gray-900 border rounded-xl p-6 ${
+              hasDocument ? 'border-orange-500/30' : 'border-gray-800'}`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  hasDocument ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-800 text-gray-500'}`}>
+                  3
+                </div>
+                <h3 className={`font-semibold ${hasDocument ? 'text-white' : 'text-gray-500'}`}>
+                  Editeur
+                </h3>
+              </div>
+              <p className="text-gray-500 text-sm mb-4">Editer et personnaliser le document genere</p>
+              <button
+                onClick={() => router.push(`/editor/${project.id}`)}
+                disabled={!hasDocument}
+                className={`w-full text-sm font-medium py-2 rounded-lg transition-colors ${
+                  hasDocument
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+                {hasDocument ? 'Ouvrir l editeur' : 'Disponible apres generation'}
+              </button>
+            </div>
           </div>
 
           {/* Infos projet */}
