@@ -24,6 +24,12 @@ let UsersController = class UsersController {
     async getMe(req) {
         return this.usersService.findById(req.user.userId);
     }
+    async updateMe(req, body) {
+        return this.usersService.updateUser(req.user.userId, body);
+    }
+    async updateLogo(req, body) {
+        return this.usersService.updateUser(req.user.userId, { companyLogoB64: body.companyLogoB64 });
+    }
 };
 exports.UsersController = UsersController;
 __decorate([
@@ -34,6 +40,24 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getMe", null);
+__decorate([
+    (0, common_1.Put)('me'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateMe", null);
+__decorate([
+    (0, common_1.Put)('me/logo'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateLogo", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

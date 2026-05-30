@@ -27,12 +27,20 @@ export class ClientsService {
     address?: string;
     city?: string;
     province?: string;
+    logoBase64?: string;
   }) {
     return this.prisma.client.create({ data });
   }
 
   async update(id: string, data: any) {
     return this.prisma.client.update({ where: { id }, data });
+  }
+
+  async uploadLogo(id: string, logoBase64: string) {
+    return this.prisma.client.update({
+      where: { id },
+      data: { logoBase64 },
+    });
   }
 
   async remove(id: string) {

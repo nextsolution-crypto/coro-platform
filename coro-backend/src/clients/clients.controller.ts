@@ -27,6 +27,11 @@ export class ClientsController {
     return this.clientsService.update(id, body);
   }
 
+  @Put(':id/logo')
+  uploadLogo(@Param('id') id: string, @Body() body: { logoBase64: string }) {
+    return this.clientsService.uploadLogo(id, body.logoBase64);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.clientsService.remove(id);

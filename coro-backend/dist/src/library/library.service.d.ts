@@ -4,55 +4,55 @@ export declare class LibraryService {
     constructor(prisma: PrismaService);
     getIncidentCodes(): Promise<{
         id: string;
-        code: string;
-        name: string;
-        color: string;
-        description: string | null;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        code: string;
+        color: string;
+        description: string | null;
     }[]>;
     getRoles(): Promise<{
         id: string;
-        name: string;
-        description: string | null;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        description: string | null;
         roleCode: string;
         isStandard: boolean;
     }[]>;
     getProcedures(): Promise<({
         incidentCode: {
             id: string;
-            code: string;
-            name: string;
-            color: string;
-            description: string | null;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            code: string;
+            color: string;
+            description: string | null;
         } | null;
         role: {
             id: string;
-            name: string;
-            description: string | null;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            description: string | null;
             roleCode: string;
             isStandard: boolean;
         } | null;
     } & {
         id: string;
-        name: string;
-        description: string | null;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        status: import("@prisma/client").$Enums.ProcedureStatus;
+        description: string | null;
         documentTypes: string[];
         phase: string | null;
-        status: import("@prisma/client").$Enums.ProcedureStatus;
         content: import("@prisma/client/runtime/library").JsonValue | null;
         version: number;
         incidentCodeId: string | null;
@@ -60,14 +60,14 @@ export declare class LibraryService {
     })[]>;
     createProcedure(data: any): Promise<{
         id: string;
-        name: string;
-        description: string | null;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        status: import("@prisma/client").$Enums.ProcedureStatus;
+        description: string | null;
         documentTypes: string[];
         phase: string | null;
-        status: import("@prisma/client").$Enums.ProcedureStatus;
         content: import("@prisma/client/runtime/library").JsonValue | null;
         version: number;
         incidentCodeId: string | null;
@@ -75,14 +75,14 @@ export declare class LibraryService {
     }>;
     updateProcedure(id: string, data: any): Promise<{
         id: string;
-        name: string;
-        description: string | null;
         isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        name: string;
+        status: import("@prisma/client").$Enums.ProcedureStatus;
+        description: string | null;
         documentTypes: string[];
         phase: string | null;
-        status: import("@prisma/client").$Enums.ProcedureStatus;
         content: import("@prisma/client/runtime/library").JsonValue | null;
         version: number;
         incidentCodeId: string | null;

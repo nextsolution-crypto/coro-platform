@@ -4,62 +4,66 @@ export declare class ClientsService {
     constructor(prisma: PrismaService);
     findAll(): Promise<({
         _count: {
-            projects: number;
             buildings: number;
+            projects: number;
         };
     } & {
         id: string;
-        email: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
+        email: string | null;
         phone: string | null;
         address: string | null;
         city: string | null;
         province: string | null;
+        logoUrl: string | null;
+        logoBase64: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
     })[]>;
     findOne(id: string): Promise<({
-        projects: {
-            id: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            name: string;
-            year: number;
-            clientId: string;
-            documentType: import("@prisma/client").$Enums.DocumentType;
-            status: import("@prisma/client").$Enums.ProjectStatus;
-            progress: number;
-            buildingId: string;
-            userId: string;
-        }[];
         buildings: {
             id: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
             name: string;
             address: string;
             city: string;
             province: string;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
             postalCode: string | null;
             floors: number | null;
             units: number | null;
             buildingType: string | null;
             clientId: string;
         }[];
+        projects: {
+            id: string;
+            name: string;
+            isActive: boolean;
+            createdAt: Date;
+            updatedAt: Date;
+            clientId: string;
+            documentType: import("@prisma/client").$Enums.DocumentType;
+            status: import("@prisma/client").$Enums.ProjectStatus;
+            year: number;
+            progress: number;
+            buildingId: string;
+            userId: string;
+        }[];
     } & {
         id: string;
-        email: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
+        email: string | null;
         phone: string | null;
         address: string | null;
         city: string | null;
         province: string | null;
+        logoUrl: string | null;
+        logoBase64: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
     }) | null>;
     create(data: {
         name: string;
@@ -68,40 +72,61 @@ export declare class ClientsService {
         address?: string;
         city?: string;
         province?: string;
+        logoBase64?: string;
     }): Promise<{
         id: string;
-        email: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
+        email: string | null;
         phone: string | null;
         address: string | null;
         city: string | null;
         province: string | null;
+        logoUrl: string | null;
+        logoBase64: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     update(id: string, data: any): Promise<{
         id: string;
-        email: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
+        email: string | null;
         phone: string | null;
         address: string | null;
         city: string | null;
         province: string | null;
+        logoUrl: string | null;
+        logoBase64: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    uploadLogo(id: string, logoBase64: string): Promise<{
+        id: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        address: string | null;
+        city: string | null;
+        province: string | null;
+        logoUrl: string | null;
+        logoBase64: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
     remove(id: string): Promise<{
         id: string;
-        email: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
+        email: string | null;
         phone: string | null;
         address: string | null;
         city: string | null;
         province: string | null;
+        logoUrl: string | null;
+        logoBase64: string | null;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
     }>;
 }

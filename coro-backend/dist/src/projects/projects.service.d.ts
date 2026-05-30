@@ -42,6 +42,9 @@ export declare class ProjectsService {
             password: string;
             firstName: string;
             lastName: string;
+            companyName: string | null;
+            companyLogo: string | null;
+            companyLogoB64: string | null;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
@@ -57,6 +60,8 @@ export declare class ProjectsService {
             address: string | null;
             city: string | null;
             province: string | null;
+            logoUrl: string | null;
+            logoBase64: string | null;
         };
         building: {
             id: string;
@@ -78,10 +83,10 @@ export declare class ProjectsService {
             createdAt: Date;
             updatedAt: Date;
             status: import("@prisma/client").$Enums.DocumentStatus;
-            title: string;
             content: import("@prisma/client/runtime/library").JsonValue | null;
             version: number;
             projectId: string;
+            title: string;
         }[];
     } & {
         id: string;
@@ -116,6 +121,8 @@ export declare class ProjectsService {
             address: string | null;
             city: string | null;
             province: string | null;
+            logoUrl: string | null;
+            logoBase64: string | null;
         };
         building: {
             id: string;

@@ -113,7 +113,7 @@ export default function ClientsPage() {
           ) : (
             <div className="grid gap-4">
               {clients.map((client) => (
-                <div key={client.id} className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex items-center justify-between hover:border-gray-700 transition-colors">
+                <div key={client.id} onClick={() => router.push(`/clients/${client.id}`)} className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex items-center justify-between hover:border-gray-700 transition-colors cursor-pointer">
                   <div>
                     <h3 className="text-white font-semibold">{client.name}</h3>
                     <div className="flex gap-4 mt-1">

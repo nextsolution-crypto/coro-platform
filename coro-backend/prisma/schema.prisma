@@ -19,6 +19,9 @@ model User {
   firstName String
   lastName  String
   role      UserRole @default(OPERATOR)
+  companyName    String?
+  companyLogo    String?
+  companyLogoB64 String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -40,6 +43,8 @@ model Client {
   address   String?
   city      String?
   province  String?
+  logoUrl      String?
+  logoBase64   String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

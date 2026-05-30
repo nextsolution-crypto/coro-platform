@@ -36,6 +36,12 @@ let ClientsService = class ClientsService {
     async update(id, data) {
         return this.prisma.client.update({ where: { id }, data });
     }
+    async uploadLogo(id, logoBase64) {
+        return this.prisma.client.update({
+            where: { id },
+            data: { logoBase64 },
+        });
+    }
     async remove(id) {
         return this.prisma.client.update({
             where: { id },

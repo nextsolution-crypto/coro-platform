@@ -63,6 +63,22 @@ let UsersService = class UsersService {
             data: { ...data, password: hashedPassword },
         });
     }
+    async updateUser(id, data) {
+        const { password, ...safeData } = data;
+        return this.prisma.user.update({
+            where: { id },
+            data: safeData,
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                companyName: true,
+                companyLogoB64: true,
+            },
+        });
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

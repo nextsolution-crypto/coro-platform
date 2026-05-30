@@ -26,4 +26,20 @@ export class UsersService {
       data: { ...data, password: hashedPassword },
     });
   }
+  async updateUser(id: string, data: any) {
+  const { password, ...safeData } = data;
+  return this.prisma.user.update({
+    where: { id },
+    data: safeData,
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      companyName: true,
+      companyLogoB64: true,
+    },
+  });
+}
 }

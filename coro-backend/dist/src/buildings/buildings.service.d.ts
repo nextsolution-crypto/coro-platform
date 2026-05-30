@@ -37,6 +37,8 @@ export declare class BuildingsService {
             address: string | null;
             city: string | null;
             province: string | null;
+            logoUrl: string | null;
+            logoBase64: string | null;
         };
         projects: {
             id: string;
