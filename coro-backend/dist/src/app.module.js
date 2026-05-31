@@ -19,6 +19,8 @@ const projects_module_1 = require("./projects/projects.module");
 const library_module_1 = require("./library/library.module");
 const configurator_module_1 = require("./configurator/configurator.module");
 const generator_module_1 = require("./generator/generator.module");
+const module2_module_1 = require("./module2/module2.module");
+const module3_module_1 = require("./module3/module3.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -34,6 +36,8 @@ exports.AppModule = AppModule = __decorate([
             library_module_1.LibraryModule,
             configurator_module_1.ConfiguratorModule,
             generator_module_1.GeneratorModule,
+            module2_module_1.Module2Module,
+            module3_module_1.Module3Module,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

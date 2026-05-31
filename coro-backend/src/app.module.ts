@@ -10,19 +10,23 @@ import { ProjectsModule } from './projects/projects.module';
 import { LibraryModule } from './library/library.module';
 import { ConfiguratorModule } from './configurator/configurator.module';
 import { GeneratorModule } from './generator/generator.module';
+import { Module2Module } from './module2/module2.module';
+import { Module3Module } from './module3/module3.module';
 
 @Module({
   imports: [
-    PrismaModule,
-    AuthModule,
-    UsersModule,
-    ClientsModule,
-    BuildingsModule,
-    ProjectsModule,
-    LibraryModule,
-    ConfiguratorModule,
-    GeneratorModule,
-  ],
+  PrismaModule,
+  AuthModule,
+  UsersModule,
+  ClientsModule,
+  BuildingsModule,
+  ProjectsModule,
+  LibraryModule,
+  ConfiguratorModule,
+  GeneratorModule,
+  Module2Module,
+  Module3Module,
+],
   controllers: [AppController],
   providers: [AppService],
 })

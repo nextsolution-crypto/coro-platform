@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateModule1, DocumentContext } from './module1.templates';
+import { generateModule2 } from './module2.templates';
+import { generateModule3 } from './module3.templates';
 
 @Injectable()
 export class GeneratorService {
@@ -14,26 +16,43 @@ export class GeneratorService {
     if (!project) throw new Error('Projet introuvable');
 
     return {
-      clientName: project.client.name,
-      buildingName: project.building.name,
-      buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
-      city: project.building.city,
-      province: config.province || 'Quebec',
-      year: project.year,
-      documentType: project.documentType,
-      responsableNom: config.responsableNom || '',
-      responsableTitre: config.responsableTitre || 'Directeur de la securite',
-      dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
-      floors: config.floors || 0,
-      hauteurBatiment: config.hauteurBatiment || false,
-      multiLocataires: config.multiLocataires || false,
-      companyName: project.user.companyName || 'CORO',
-    };
+  clientName: project.client.name,
+  buildingName: project.building.name,
+  buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
+  city: project.building.city,
+  province: config.province || 'Quebec',
+  year: project.year,
+  documentType: project.documentType,
+  responsableNom: config.responsableNom || '',
+  responsableTitre: config.responsableTitre || 'Directeur de la securite',
+  dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
+  floors: config.floors || 0,
+  hauteurBatiment: config.hauteurBatiment || false,
+  multiLocataires: config.multiLocataires || false,
+  companyName: project.user.companyName || 'CORO',
+  buildingType: project.building.buildingType || 'office',
+  has_sprinklers: false,
+  has_generator: false,
+  has_elevators: false,
+  has_hazardous_materials: false,
+};
   }
 
   async generateAndSave(projectId: string, config: any) {
   const ctx = await this.buildContext(projectId, config);
   const module1Result = generateModule1(ctx);
+  const module2Result = generateModule2(ctx);
+
+// Récupère section2_2 sauvegardée si elle existe
+const existingDoc = await this.prisma.document.findFirst({
+  where: { projectId },
+  select: { content: true },
+});
+const existingContent = (existingDoc?.content as any) || {};
+const section2_2 = existingContent?.module2?.section2_2 || [];
+const existingCustomRoles = existingContent?.module3?.customRoles || [];
+
+const module3Result = generateModule3(ctx, config, section2_2, existingCustomRoles);
 
   const existing = await this.prisma.document.findFirst({
     where: { projectId },
@@ -42,8 +61,8 @@ export class GeneratorService {
   const documentData = {
     title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
     content: {
-      modules_fr: [module1Result.fr],
-      modules_en: [module1Result.en],
+      modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr],
+      modules_en: [module1Result.en, module2Result.en, module3Result.en],
       config,
       generatedAt: new Date(),
     },

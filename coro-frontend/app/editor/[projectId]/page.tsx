@@ -4,12 +4,28 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import Module2Section from '@/components/editor/Module2Section';
+import Module3Section from '@/components/editor/Module3Section';
+import { ShiftType } from '@/components/editor/Module3MemberTable';
+import {
+  ROLES_INTERNES_BUREAU_FR,
+  ROLES_INTERNES_BUREAU_EN,
+  ROLES_INTERNES_INDUSTRIEL_FR,
+  ROLES_INTERNES_INDUSTRIEL_EN,
+  ALL_EQUIPEMENTS_FR,
+  ALL_EQUIPEMENTS_EN,
+} from '@/lib/module2.roles';
 
 interface Section {
   id: string;
   title: string;
   content: string;
   isEditable?: boolean;
+  type?: string;
+  entries?: any[];
+  orgRoles?: any[];
+  members?: any[];
+  activeShifts?: string[];
 }
 
 interface Module {
@@ -34,7 +50,10 @@ interface Document {
     name: string;
     documentType: string;
     client: { name: string };
-    building: { name: string };
+    building: { 
+      name: string;
+      buildingType: string;
+    };
     year: number;
   };
 }
@@ -292,56 +311,94 @@ export default function EditorPage() {
         {/* Colonne centre — Contenu */}
         <div className="flex-1 overflow-y-auto">
           {currentSection && (
-            <div className="max-w-4xl mx-auto p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">
-                    {language === 'fr' ? 'Module' : 'Module'} {currentModule.moduleNumber} — {currentModule.title}
-                  </p>
-                  <h2 className="text-xl font-bold text-white">
-                    {currentSection.id} — {currentSection.title}
-                  </h2>
-                </div>
-                {!isEditing && (
-                  <button
-                    onClick={() => { setEditingContent(currentSection.content); setIsEditing(true); }}
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
-                    ✏️ {language === 'fr' ? 'Modifier' : 'Edit'}
-                  </button>
-                )}
-              </div>
+  <div className="max-w-4xl mx-auto p-8">
 
-              {isEditing ? (
-                <div className="space-y-3">
-                  <p className="text-gray-500 text-xs">
-                    {language === 'fr' ? 'Mode édition — Modifiez le texte directement' : 'Edit mode — Modify the text directly'}
-                  </p>
-                  <textarea
-                    value={editingContent}
-                    onChange={(e) => setEditingContent(e.target.value)}
-                    className="w-full h-[calc(100vh-280px)] bg-gray-900 border border-orange-500/30 rounded-xl p-6 text-gray-300 text-sm leading-relaxed focus:outline-none focus:border-orange-500 font-mono resize-none"
-                    spellCheck={false}/>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => { setEditingContent(currentSection.content); setIsEditing(false); }}
-                      className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
-                      {language === 'fr' ? 'Annuler' : 'Cancel'}
-                    </button>
-                    <button
-                      onClick={handleSaveSection}
-                      disabled={saving}
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2 rounded-lg text-sm">
-                      {saving ? '...' : language === 'fr' ? 'Sauvegarder les modifications' : 'Save changes'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
-                  <div dangerouslySetInnerHTML={{ __html: formatContent(currentSection.content) }}/>
-                </div>
-              )}
-            </div>
+    {/* Module 2 — tableaux interactifs */}
+{currentModule.moduleNumber === 3 ? (
+  <Module3Section
+    projectId={projectId}
+    language={language}
+    initialData={{
+      orgRoles:     currentModule.sections.find((s: any) => s.id === '3.1')?.orgRoles || [],
+      members:      currentModule.sections.find((s: any) => s.id === '3.2')?.members  || [],
+      activeShifts: (currentModule.sections.find((s: any) => s.id === '3.2')?.activeShifts || ['jour']) as ShiftType[],
+    }}
+  />
+) : currentModule.moduleNumber === 2 ? (
+  <Module2Section
+    projectId={projectId}
+    language={language}
+    initialData={{
+      section2_1: currentModule.sections.find((s: any) => s.id === '2.1')?.entries || [],
+      section2_2: currentModule.sections.find((s: any) => s.id === '2.2')?.entries || [],
+      section2_3: currentModule.sections.find((s: any) => s.id === '2.3')?.entries || [],
+      section2_4: currentModule.sections.find((s: any) => s.id === '2.4')?.entries || [],
+    }}
+    availableRoles2_2={
+      language === 'fr'
+        ? (document.project.building.buildingType === 'industrial'
+            ? ROLES_INTERNES_INDUSTRIEL_FR
+            : ROLES_INTERNES_BUREAU_FR)
+        : (document.project.building.buildingType === 'industrial'
+            ? ROLES_INTERNES_INDUSTRIEL_EN
+            : ROLES_INTERNES_BUREAU_EN)
+    }
+    availableRoles2_3={language === 'fr' ? ALL_EQUIPEMENTS_FR : ALL_EQUIPEMENTS_EN}
+  />
+    ) : (
+      /* Modules texte (Module 1 etc.) — comportement existant */
+      <>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className="text-gray-500 text-xs mb-1">
+              {language === 'fr' ? 'Module' : 'Module'} {currentModule.moduleNumber} — {currentModule.title}
+            </p>
+            <h2 className="text-xl font-bold text-white">
+              {currentSection.id} — {currentSection.title}
+            </h2>
+          </div>
+          {!isEditing && (
+            <button
+              onClick={() => { setEditingContent(currentSection.content); setIsEditing(true); }}
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+              ✏️ {language === 'fr' ? 'Modifier' : 'Edit'}
+            </button>
           )}
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-3">
+            <p className="text-gray-500 text-xs">
+              {language === 'fr' ? 'Mode édition — Modifiez le texte directement' : 'Edit mode — Modify the text directly'}
+            </p>
+            <textarea
+              value={editingContent}
+              onChange={(e) => setEditingContent(e.target.value)}
+              className="w-full h-[calc(100vh-280px)] bg-gray-900 border border-orange-500/30 rounded-xl p-6 text-gray-300 text-sm leading-relaxed focus:outline-none focus:border-orange-500 font-mono resize-none"
+              spellCheck={false}/>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setEditingContent(currentSection.content); setIsEditing(false); }}
+                className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">
+                {language === 'fr' ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleSaveSection}
+                disabled={saving}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2 rounded-lg text-sm">
+                {saving ? '...' : language === 'fr' ? 'Sauvegarder les modifications' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8">
+            <div dangerouslySetInnerHTML={{ __html: formatContent(currentSection.content) }}/>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+)}
         </div>
 
         {/* Colonne droite — Infos */}

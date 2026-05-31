@@ -13,6 +13,12 @@ export interface DocumentContext {
   hauteurBatiment: boolean;
   multiLocataires: boolean;
   companyName: string;
+  // Ajouts Module 2
+  buildingType: string;
+  has_sprinklers?: boolean;
+  has_generator?: boolean;
+  has_elevators?: boolean;
+  has_hazardous_materials?: boolean;
 }
 
 interface ReglementRef {

@@ -13,6 +13,8 @@ exports.GeneratorService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const module1_templates_1 = require("./module1.templates");
+const module2_templates_1 = require("./module2.templates");
+const module3_templates_1 = require("./module3.templates");
 let GeneratorService = class GeneratorService {
     prisma;
     constructor(prisma) {
@@ -40,19 +42,33 @@ let GeneratorService = class GeneratorService {
             hauteurBatiment: config.hauteurBatiment || false,
             multiLocataires: config.multiLocataires || false,
             companyName: project.user.companyName || 'CORO',
+            buildingType: project.building.buildingType || 'office',
+            has_sprinklers: false,
+            has_generator: false,
+            has_elevators: false,
+            has_hazardous_materials: false,
         };
     }
     async generateAndSave(projectId, config) {
         const ctx = await this.buildContext(projectId, config);
         const module1Result = (0, module1_templates_1.generateModule1)(ctx);
+        const module2Result = (0, module2_templates_1.generateModule2)(ctx);
+        const existingDoc = await this.prisma.document.findFirst({
+            where: { projectId },
+            select: { content: true },
+        });
+        const existingContent = existingDoc?.content || {};
+        const section2_2 = existingContent?.module2?.section2_2 || [];
+        const existingCustomRoles = existingContent?.module3?.customRoles || [];
+        const module3Result = (0, module3_templates_1.generateModule3)(ctx, config, section2_2, existingCustomRoles);
         const existing = await this.prisma.document.findFirst({
             where: { projectId },
         });
         const documentData = {
             title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
             content: {
-                modules_fr: [module1Result.fr],
-                modules_en: [module1Result.en],
+                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr],
+                modules_en: [module1Result.en, module2Result.en, module3Result.en],
                 config,
                 generatedAt: new Date(),
             },
