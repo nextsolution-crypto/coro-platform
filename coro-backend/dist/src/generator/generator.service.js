@@ -15,6 +15,7 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const module1_templates_1 = require("./module1.templates");
 const module2_templates_1 = require("./module2.templates");
 const module3_templates_1 = require("./module3.templates");
+const module4_templates_1 = require("./module4.templates");
 let GeneratorService = class GeneratorService {
     prisma;
     constructor(prisma) {
@@ -61,14 +62,27 @@ let GeneratorService = class GeneratorService {
         const section2_2 = existingContent?.module2?.section2_2 || [];
         const existingCustomRoles = existingContent?.module3?.customRoles || [];
         const module3Result = (0, module3_templates_1.generateModule3)(ctx, config, section2_2, existingCustomRoles);
+        const savedOrgRoles = existingContent?.module3?.orgRoles || [];
+        const activeRoleCodes = savedOrgRoles.length > 0
+            ? savedOrgRoles
+                .filter((r) => r.isActive)
+                .map((r) => r.roleCode)
+                .filter(Boolean)
+            : [
+                'ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM',
+                'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS',
+                'ROLE-CHE', 'ROLE-ACC',
+            ];
+        const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
+        const module4Result = (0, module4_templates_1.generateModule4)(ctx, config, activeRoleCodes, customProcedureIds);
         const existing = await this.prisma.document.findFirst({
             where: { projectId },
         });
         const documentData = {
             title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
             content: {
-                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr],
-                modules_en: [module1Result.en, module2Result.en, module3Result.en],
+                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result],
+                modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result],
                 config,
                 generatedAt: new Date(),
             },

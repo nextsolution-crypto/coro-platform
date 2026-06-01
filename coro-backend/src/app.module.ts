@@ -12,6 +12,7 @@ import { ConfiguratorModule } from './configurator/configurator.module';
 import { GeneratorModule } from './generator/generator.module';
 import { Module2Module } from './module2/module2.module';
 import { Module3Module } from './module3/module3.module';
+import { Module4Module } from './module4/module4.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { Module3Module } from './module3/module3.module';
   GeneratorModule,
   Module2Module,
   Module3Module,
+  Module4Module,
 ],
   controllers: [AppController],
   providers: [AppService],

@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import Module2Section from '@/components/editor/Module2Section';
 import Module3Section from '@/components/editor/Module3Section';
 import { ShiftType } from '@/components/editor/Module3MemberTable';
+import Module4Section from '@/components/editor/Module4Section';
 import {
   ROLES_INTERNES_BUREAU_FR,
   ROLES_INTERNES_BUREAU_EN,
@@ -33,6 +34,9 @@ interface Module {
   title: string;
   language: string;
   sections: Section[];
+  procedures?: any[];
+  customProcedureIds?: string[];
+  directivesGenerales?: any;
 }
 
 interface DocumentContent {
@@ -133,7 +137,7 @@ export default function EditorPage() {
     const modules = getModules();
     setActiveModule(moduleIdx);
     setActiveSection(sectionIdx);
-    setEditingContent(modules[moduleIdx]?.sections[sectionIdx]?.content || '');
+    setEditingContent(modules[moduleIdx]?.sections?.[sectionIdx]?.content || '');
     setIsEditing(false);
   };
 
@@ -287,34 +291,60 @@ export default function EditorPage() {
               </span>
             </div>
             {modules.map((mod, modIdx) => (
-              <div key={mod.moduleNumber} className="mb-2">
-                <div className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider mb-1 ${
-                  activeModule === modIdx ? 'text-orange-400' : 'text-gray-500'}`}>
-                  {language === 'fr' ? 'Module' : 'Module'} {mod.moduleNumber} — {mod.title}
-                </div>
-                {mod.sections.map((section, secIdx) => (
-                  <button
-                    key={section.id}
-                    onClick={() => handleSectionClick(modIdx, secIdx)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs mb-0.5 transition-colors ${
-                      activeModule === modIdx && activeSection === secIdx
-                        ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
-                        : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
-                    {section.id} — {section.title}
-                  </button>
-                ))}
-              </div>
-            ))}
+  <div key={mod.moduleNumber} className="mb-2">
+    <div className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider mb-1 ${
+      activeModule === modIdx ? 'text-orange-400' : 'text-gray-500'}`}>
+      {language === 'fr' ? 'Module' : 'Module'} {mod.moduleNumber} — {mod.title}
+    </div>
+
+    {/* Module sans sections (ex: Module 4) */}
+    {(mod.sections || []).length === 0 && (
+      <button
+        onClick={() => handleSectionClick(modIdx, 0)}
+        className={`w-full text-left px-3 py-2 rounded-lg text-xs mb-0.5 transition-colors ${
+          activeModule === modIdx
+            ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+            : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
+        {language === 'fr' ? 'Voir les procédures' : 'View procedures'}
+      </button>
+    )}
+
+    {/* Sections normales */}
+    {(mod.sections || []).map((section, secIdx) => (
+      <button
+        key={section.id}
+        onClick={() => handleSectionClick(modIdx, secIdx)}
+        className={`w-full text-left px-3 py-2 rounded-lg text-xs mb-0.5 transition-colors ${
+          activeModule === modIdx && activeSection === secIdx
+            ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
+            : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
+        {section.id} — {section.title}
+      </button>
+    ))}
+  </div>
+))}
           </div>
         </div>
 
         {/* Colonne centre — Contenu */}
         <div className="flex-1 overflow-y-auto">
-          {currentSection && (
+          {(currentSection || currentModule?.moduleNumber === 4) && (
   <div className="max-w-4xl mx-auto p-8">
 
     {/* Module 2 — tableaux interactifs */}
-{currentModule.moduleNumber === 3 ? (
+{currentModule.moduleNumber === 4 ? (
+  <Module4Section
+    projectId={projectId}
+    language={language}
+    initialData={{
+      directivesGenerales: currentModule.sections?.find(
+        (s: any) => s.id === 'directives'
+      ) || currentModule,
+      procedures: currentModule.procedures || [],
+      customProcedureIds: currentModule.customProcedureIds || [],
+    }}
+  />
+) : currentModule.moduleNumber === 3 ? (
   <Module3Section
     projectId={projectId}
     language={language}

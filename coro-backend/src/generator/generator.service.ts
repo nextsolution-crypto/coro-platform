@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { generateModule1, DocumentContext } from './module1.templates';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
+import { generateModule4 } from './module4.templates';
 
 @Injectable()
 export class GeneratorService {
@@ -54,6 +55,32 @@ const existingCustomRoles = existingContent?.module3?.customRoles || [];
 
 const module3Result = generateModule3(ctx, config, section2_2, existingCustomRoles);
 
+// Récupère les rôles actifs depuis Module 3
+// Cherche dans orgRoles sauvegardés OU utilise tous les roleCodes système par défaut
+const savedOrgRoles = existingContent?.module3?.orgRoles || [];
+
+const activeRoleCodes = savedOrgRoles.length > 0
+  ? savedOrgRoles
+      .filter((r: any) => r.isActive)
+      .map((r: any) => r.roleCode)
+      .filter(Boolean)
+  : [
+      // Rôles actifs par défaut si Module 3 pas encore configuré
+      'ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM',
+      'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS',
+      'ROLE-CHE', 'ROLE-ACC',
+    ];
+
+// Récupère les procédures manuelles ajoutées
+const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
+
+const module4Result = generateModule4(
+  ctx,
+  config,
+  activeRoleCodes,
+  customProcedureIds,
+);
+
   const existing = await this.prisma.document.findFirst({
     where: { projectId },
   });
@@ -61,8 +88,8 @@ const module3Result = generateModule3(ctx, config, section2_2, existingCustomRol
   const documentData = {
     title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
     content: {
-      modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr],
-      modules_en: [module1Result.en, module2Result.en, module3Result.en],
+      modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result],
+      modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result],
       config,
       generatedAt: new Date(),
     },
