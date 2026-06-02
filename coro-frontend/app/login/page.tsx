@@ -17,7 +17,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       const response = await api.post('/auth/login', { email, password });
       const { access_token, user } = response.data;
@@ -31,70 +30,105 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-      <div className="w-full max-w-md">
-        {/* Logo CORO */}
+    <div className="min-h-screen flex items-center justify-center"
+      style={{ backgroundColor: '#F8F9FA' }}>
+      <div className="w-full max-w-md px-4">
+
+        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white tracking-tight">
-            CO<span className="text-orange-500">RO</span>
+          <h1 className="text-4xl font-bold tracking-tight"
+            style={{ color: '#2C3E50' }}>
+            CO<span style={{ color: '#C0392B' }}>RO</span>
           </h1>
-          <p className="text-gray-400 mt-2 text-sm">
+          <p className="mt-2 text-sm" style={{ color: '#6C757D' }}>
             Conformité opérationnelle et résilience organisationnelle
           </p>
         </div>
 
-        {/* Carte login */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-          <h2 className="text-xl font-semibold text-white mb-6">
+        {/* Carte */}
+        <div className="bg-white rounded-2xl p-8"
+          style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1px solid #E9ECEF' }}>
+
+          <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C3E50' }}>
             Connexion
           </h2>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">
+              <label className="block text-sm mb-1.5 font-medium"
+                style={{ color: '#495057' }}>
                 Adresse courriel
               </label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                onChange={e => setEmail(e.target.value)}
                 placeholder="admin@coro.app"
                 required
+                className="w-full rounded-lg px-4 py-3 text-sm transition-colors
+                  focus:outline-none"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #CED4DA',
+                  color: '#2C3E50',
+                }}
+                onFocus={e => e.target.style.borderColor = '#C0392B'}
+                onBlur={e => e.target.style.borderColor = '#CED4DA'}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">
+              <label className="block text-sm mb-1.5 font-medium"
+                style={{ color: '#495057' }}>
                 Mot de passe
               </label>
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                className="w-full rounded-lg px-4 py-3 text-sm transition-colors
+                  focus:outline-none"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #CED4DA',
+                  color: '#2C3E50',
+                }}
+                onFocus={e => e.target.style.borderColor = '#C0392B'}
+                onBlur={e => e.target.style.borderColor = '#CED4DA'}
               />
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-                <p className="text-red-400 text-sm">{error}</p>
+              <div className="rounded-lg px-4 py-3"
+                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                <p className="text-sm" style={{ color: '#C0392B' }}>{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50 text-white font-semibold rounded-lg px-4 py-3 transition-colors mt-2"
+              className="w-full text-white font-semibold rounded-lg px-4 py-3
+                text-sm transition-colors mt-2"
+              style={{
+                backgroundColor: loading ? '#E8A89C' : '#C0392B',
+                cursor: loading ? 'not-allowed' : 'pointer',
+              }}
+              onMouseEnter={e => {
+                if (!loading) (e.target as HTMLElement).style.backgroundColor = '#A93226';
+              }}
+              onMouseLeave={e => {
+                if (!loading) (e.target as HTMLElement).style.backgroundColor = '#C0392B';
+              }}
             >
               {loading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-gray-600 text-xs mt-6">
+        <p className="text-center text-xs mt-6" style={{ color: '#ADB5BD' }}>
           CORO v1.0 — 2026
         </p>
       </div>

@@ -20,11 +20,11 @@ export declare class GeneratorService {
         project: {
             client: {
                 id: string;
+                email: string | null;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 name: string;
-                isActive: boolean;
-                email: string | null;
                 phone: string | null;
                 address: string | null;
                 city: string | null;
@@ -34,11 +34,10 @@ export declare class GeneratorService {
             };
             building: {
                 id: string;
+                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
                 name: string;
-                isActive: boolean;
-                clientId: string;
                 address: string;
                 city: string;
                 province: string;
@@ -46,30 +45,31 @@ export declare class GeneratorService {
                 floors: number | null;
                 units: number | null;
                 buildingType: string | null;
+                clientId: string;
             };
         } & {
             id: string;
-            status: import("@prisma/client").$Enums.ProjectStatus;
+            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
             name: string;
-            documentType: import("@prisma/client").$Enums.DocumentType;
             year: number;
-            progress: number;
-            isActive: boolean;
             clientId: string;
+            documentType: import("@prisma/client").$Enums.DocumentType;
+            status: import("@prisma/client").$Enums.ProjectStatus;
+            progress: number;
             buildingId: string;
             userId: string;
         };
     } & {
         id: string;
-        title: string;
-        content: import("@prisma/client/runtime/library").JsonValue | null;
-        status: import("@prisma/client").$Enums.DocumentStatus;
-        version: number;
         createdAt: Date;
         updatedAt: Date;
+        status: import("@prisma/client").$Enums.DocumentStatus;
+        content: import("@prisma/client/runtime/library").JsonValue | null;
+        version: number;
         projectId: string;
+        title: string;
     }) | null>;
     updateModuleContent(documentId: string, moduleId: string, sectionId: string, content: string, language?: string): Promise<{
         success: boolean;

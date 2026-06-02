@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import AppLayout from '@/components/layout/AppLayout';
 
 interface Project {
   id: string;
@@ -15,41 +16,50 @@ interface Project {
   client: { id: string; name: string };
   building: { id: string; name: string; address: string };
   user: { id: string; firstName: string; lastName: string };
-  _count?: { documents: number };
 }
 
-interface Client { id: string; name: string; }
+interface Client   { id: string; name: string; }
 interface Building { id: string; name: string; clientId: string; }
 
-const statusColors: Record<string, string> = {
-  DRAFT: 'bg-gray-500/20 text-gray-400',
-  IN_PROGRESS: 'bg-blue-500/20 text-blue-400',
-  REVIEW: 'bg-yellow-500/20 text-yellow-400',
-  VALIDATED: 'bg-green-500/20 text-green-400',
-  EXPORTED: 'bg-purple-500/20 text-purple-400',
-  ARCHIVED: 'bg-red-500/20 text-red-400',
+const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+  DRAFT:       { bg: '#F8F9FA', text: '#6C757D', border: '#DEE2E6' },
+  IN_PROGRESS: { bg: '#EBF5FB', text: '#2980B9', border: '#AED6F1' },
+  REVIEW:      { bg: '#FEF9E7', text: '#F39C12', border: '#FAD7A0' },
+  VALIDATED:   { bg: '#EAFAF1', text: '#27AE60', border: '#A9DFBF' },
+  EXPORTED:    { bg: '#F4ECF7', text: '#8E44AD', border: '#D2B4DE' },
+  ARCHIVED:    { bg: '#FDEDEC', text: '#C0392B', border: '#F1948A' },
 };
 
 const statusLabels: Record<string, string> = {
-  DRAFT: 'Brouillon',
+  DRAFT:       'Brouillon',
   IN_PROGRESS: 'En cours',
-  REVIEW: 'En revision',
-  VALIDATED: 'Valide',
-  EXPORTED: 'Exporte',
-  ARCHIVED: 'Archive',
+  REVIEW:      'En révision',
+  VALIDATED:   'Validé',
+  EXPORTED:    'Exporté',
+  ARCHIVED:    'Archivé',
+};
+
+const docTypeColors: Record<string, string> = {
+  PSI: '#C0392B',
+  PMU: '#2980B9',
+  PCA: '#27AE60',
+  PGC: '#8E44AD',
+  PRA: '#F39C12',
+  PUE: '#E67E22',
 };
 
 export default function ProjectsPage() {
   const router = useRouter();
   const { isAuthenticated, initAuth } = useAuthStore();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [projects, setProjects]               = useState<Project[]>([]);
+  const [clients, setClients]                 = useState<Client[]>([]);
+  const [buildings, setBuildings]             = useState<Building[]>([]);
   const [filteredBuildings, setFilteredBuildings] = useState<Building[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading]                 = useState(true);
+  const [showModal, setShowModal]             = useState(false);
   const [form, setForm] = useState({
-    name: '', documentType: '', year: new Date().getFullYear().toString(),
+    name: '', documentType: '',
+    year: new Date().getFullYear().toString(),
     clientId: '', buildingId: '',
   });
 
@@ -74,19 +84,16 @@ export default function ProjectsPage() {
 
   const fetchData = async () => {
     try {
-      const [projectsRes, clientsRes, buildingsRes] = await Promise.all([
+      const [pr, cl, bl] = await Promise.all([
         api.get('/projects'),
         api.get('/clients'),
         api.get('/buildings'),
       ]);
-      setProjects(projectsRes.data);
-      setClients(clientsRes.data);
-      setBuildings(buildingsRes.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      setProjects(pr.data);
+      setClients(cl.data);
+      setBuildings(bl.data);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -96,170 +103,271 @@ export default function ProjectsPage() {
       setShowModal(false);
       setForm({ name: '', documentType: '', year: new Date().getFullYear().toString(), clientId: '', buildingId: '' });
       fetchData();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  const navItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Projets', path: '/projects', active: true },
-    { label: 'Clients', path: '/clients' },
-    { label: 'Batiments', path: '/buildings' },
-    { label: 'Bibliotheque', path: '/library' },
-    { label: 'Parametres', path: '/settings' },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-950">
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white cursor-pointer" onClick={() => router.push('/dashboard')}>
-          CO<span className="text-orange-500">RO</span>
-        </h1>
-        <button onClick={() => { useAuthStore.getState().logout(); router.push('/login'); }}
-          className="text-gray-400 hover:text-white text-sm">Deconnexion</button>
+    <AppLayout>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
+            Projets
+          </h2>
+          <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
+            {projects.length} projet{projects.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          style={{ backgroundColor: '#C0392B' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+        >
+          + Nouveau projet
+        </button>
       </div>
 
-      <div className="flex">
-        <div className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 p-4">
-          <nav className="space-y-1">
-            {navItems.map((item) => (
-              <button key={item.label} onClick={() => router.push(item.path)}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-sm cursor-pointer transition-colors ${
-                  item.active ? 'bg-orange-500/10 text-orange-400 font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
-                {item.label}
-              </button>
-            ))}
-          </nav>
+      {/* Contenu */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>
+            Chargement...
+          </p>
         </div>
+      ) : projects.length === 0 ? (
+        <div className="rounded-xl p-12 text-center"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
+            Aucun projet pour l'instant
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+          >
+            Créer le premier projet
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {projects.map(project => {
+            const sc = statusColors[project.status] || statusColors.DRAFT;
+            const dc = docTypeColors[project.documentType] || '#6C757D';
+            return (
+              <div
+                key={project.id}
+                onClick={() => router.push(`/projects/${project.id}`)}
+                className="rounded-xl p-5 cursor-pointer transition-all"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E9ECEF',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.borderColor = '#CED4DA';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.borderColor = '#E9ECEF';
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="text-white text-xs font-bold px-2.5 py-1 rounded"
+                      style={{ backgroundColor: dc }}
+                    >
+                      {project.documentType}
+                    </span>
+                    <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+                      {project.name}
+                    </h3>
+                  </div>
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{
+                      backgroundColor: sc.bg,
+                      color: sc.text,
+                      border: `1px solid ${sc.border}`,
+                    }}
+                  >
+                    {statusLabels[project.status]}
+                  </span>
+                </div>
 
-        <div className="flex-1 p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-semibold text-white">Projets</h2>
-              <p className="text-gray-400 mt-1">{projects.length} projet{projects.length !== 1 ? 's' : ''}</p>
-            </div>
-            <button onClick={() => setShowModal(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-colors">
-              + Nouveau projet
-            </button>
-          </div>
+                <div className="flex items-center gap-3 text-sm mb-4"
+                  style={{ color: '#6C757D' }}>
+                  <span>{project.client.name}</span>
+                  <span style={{ color: '#DEE2E6' }}>•</span>
+                  <span>{project.building.name}</span>
+                  <span style={{ color: '#DEE2E6' }}>•</span>
+                  <span>{project.year}</span>
+                </div>
 
-          {loading ? (
-            <div className="text-center py-12"><p className="text-gray-500">Chargement...</p></div>
-          ) : projects.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-              <p className="text-gray-500 mb-4">Aucun projet pour linstant</p>
-              <button onClick={() => setShowModal(true)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg">
-                Creer le premier projet
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {projects.map((project) => (
-                <div key={project.id}
-                  className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors cursor-pointer"
-                  onClick={() => router.push(`/projects/${project.id}`)}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded">
-                        {project.documentType}
-                      </span>
-                      <h3 className="text-white font-semibold">{project.name}</h3>
-                    </div>
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColors[project.status]}`}>
-                      {statusLabels[project.status]}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                      Progression
+                    </span>
+                    <span className="text-xs font-medium" style={{ color: '#6C757D' }}>
+                      {project.progress}%
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
-                    <span>{project.client.name}</span>
-                    <span>—</span>
-                    <span>{project.building.name}</span>
-                    <span>—</span>
-                    <span>{project.year}</span>
-                  </div>
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-500">Progression</span>
-                      <span className="text-xs text-gray-400">{project.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-800 rounded-full h-1.5">
-                      <div className="bg-orange-500 h-1.5 rounded-full transition-all"
-                        style={{ width: `${project.progress}%` }}/>
-                    </div>
+                  <div className="w-full rounded-full h-1.5"
+                    style={{ backgroundColor: '#E9ECEF' }}>
+                    <div
+                      className="h-1.5 rounded-full transition-all"
+                      style={{
+                        width: `${project.progress}%`,
+                        backgroundColor: project.progress === 100 ? '#27AE60' : '#C0392B',
+                      }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
 
+      {/* Modal nouveau projet */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-lg">
-            <h3 className="text-white font-semibold text-lg mb-6">Nouveau projet</h3>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-lg rounded-2xl p-8"
+            style={{
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            }}>
+            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+              Nouveau projet
+            </h3>
             <form onSubmit={handleCreate} className="space-y-4">
+              {[
+                { label: 'Nom du projet *', key: 'name', type: 'text', placeholder: 'Ex: PMU Tour ABC 2026' },
+                { label: 'Année *', key: 'year', type: 'number', placeholder: '' },
+              ].map(field => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium mb-1.5"
+                    style={{ color: '#495057' }}>
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.type}
+                    value={form[field.key as keyof typeof form]}
+                    onChange={e => setForm({ ...form, [field.key]: e.target.value })}
+                    placeholder={field.placeholder}
+                    required
+                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    style={{
+                      border: '1px solid #CED4DA',
+                      color: '#2C3E50',
+                      backgroundColor: '#FFFFFF',
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
+                </div>
+              ))}
+
+              {/* Type document */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nom du projet *</label>
-                <input type="text" value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required placeholder="Ex: PMU Tour ABC 2026"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Type de document *</label>
-                <select value={form.documentType}
-                  onChange={(e) => setForm({ ...form, documentType: e.target.value })}
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>
+                  Type de document *
+                </label>
+                <select
+                  value={form.documentType}
+                  onChange={e => setForm({ ...form, documentType: e.target.value })}
                   required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500">
-                  <option value="">Selectionner un type</option>
-                  {documentTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                >
+                  <option value="">Sélectionner un type</option>
+                  {documentTypes.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
                 </select>
               </div>
+
+              {/* Client */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Annee *</label>
-                <input type="number" value={form.year}
-                  onChange={(e) => setForm({ ...form, year: e.target.value })}
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>
+                  Client *
+                </label>
+                <select
+                  value={form.clientId}
+                  onChange={e => setForm({ ...form, clientId: e.target.value })}
                   required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Client *</label>
-                <select value={form.clientId}
-                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-                  required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500">
-                  <option value="">Selectionner un client</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                >
+                  <option value="">Sélectionner un client</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </div>
+
+              {/* Bâtiment */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Batiment *</label>
-                <select value={form.buildingId}
-                  onChange={(e) => setForm({ ...form, buildingId: e.target.value })}
-                  required disabled={!form.clientId}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 disabled:opacity-50">
-                  <option value="">Selectionner un batiment</option>
-                  {filteredBuildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>
+                  Bâtiment *
+                </label>
+                <select
+                  value={form.buildingId}
+                  onChange={e => setForm({ ...form, buildingId: e.target.value })}
+                  required
+                  disabled={!form.clientId}
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none
+                    disabled:opacity-50"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                >
+                  <option value="">Sélectionner un bâtiment</option>
+                  {filteredBuildings.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
                 </select>
               </div>
+
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 font-medium py-2.5 rounded-lg text-sm transition-colors"
+                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
                   Annuler
                 </button>
-                <button type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 rounded-lg">
-                  Creer
+                <button
+                  type="submit"
+                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  style={{ backgroundColor: '#C0392B' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+                >
+                  Créer
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }

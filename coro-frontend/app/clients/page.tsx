@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import AppLayout from '@/components/layout/AppLayout';
 
 interface Client {
   id: string;
@@ -18,8 +19,8 @@ interface Client {
 export default function ClientsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [clients, setClients]     = useState<Client[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     name: '', email: '', phone: '', address: '', city: '', province: '',
@@ -34,11 +35,8 @@ export default function ClientsPage() {
     try {
       const res = await api.get('/clients');
       setClients(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -48,128 +46,166 @@ export default function ClientsPage() {
       setShowModal(false);
       setForm({ name: '', email: '', phone: '', address: '', city: '', province: '' });
       fetchClients();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
+  const fields = [
+    { label: 'Nom *',      key: 'name',     required: true },
+    { label: 'Courriel',   key: 'email' },
+    { label: 'Téléphone',  key: 'phone' },
+    { label: 'Adresse',    key: 'address' },
+    { label: 'Ville',      key: 'city' },
+    { label: 'Province',   key: 'province' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Topbar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white cursor-pointer" onClick={() => router.push('/dashboard')}>
-          CO<span className="text-orange-500">RO</span>
-        </h1>
-        <button onClick={() => { useAuthStore.getState().logout(); router.push('/login'); }}
-          className="text-gray-400 hover:text-white text-sm">Déconnexion</button>
+    <AppLayout>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>Clients</h2>
+          <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
+            {clients.length} client{clients.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+          style={{ backgroundColor: '#C0392B' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+        >
+          + Nouveau client
+        </button>
       </div>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 p-4">
-          <nav className="space-y-1">
-            {[
-              { label: 'Dashboard', path: '/dashboard' },
-              { label: 'Projets', path: '/projects' },
-              { label: 'Clients', path: '/clients', active: true },
-              { label: 'Bâtiments', path: '/buildings' },
-              { label: 'Bibliothèque', path: '/library' },
-              { label: 'Paramètres', path: '/settings' },
-            ].map((item) => (
-              <div key={item.label} onClick={() => router.push(item.path)}
-                className={`px-4 py-2.5 rounded-lg text-sm cursor-pointer transition-colors ${
-                  item.active ? 'bg-orange-500/10 text-orange-400 font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
-                {item.label}
-              </div>
-            ))}
-          </nav>
+      {/* Liste */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
         </div>
-
-        {/* Contenu */}
-        <div className="flex-1 p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-semibold text-white">Clients</h2>
-              <p className="text-gray-400 mt-1">{clients.length} client{clients.length !== 1 ? 's' : ''}</p>
-            </div>
-            <button onClick={() => setShowModal(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-colors">
-              + Nouveau client
-            </button>
-          </div>
-
-          {/* Liste clients */}
-          {loading ? (
-            <div className="text-center py-12"><p className="text-gray-500">Chargement...</p></div>
-          ) : clients.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-              <p className="text-gray-500 mb-4">Aucun client pour l'instant</p>
-              <button onClick={() => setShowModal(true)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg">
-                Créer le premier client
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {clients.map((client) => (
-                <div key={client.id} onClick={() => router.push(`/clients/${client.id}`)} className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex items-center justify-between hover:border-gray-700 transition-colors cursor-pointer">
-                  <div>
-                    <h3 className="text-white font-semibold">{client.name}</h3>
-                    <div className="flex gap-4 mt-1">
-                      {client.email && <span className="text-gray-400 text-sm">{client.email}</span>}
-                      {client.city && <span className="text-gray-400 text-sm">{client.city}, {client.province}</span>}
-                    </div>
-                  </div>
-                  <div className="flex gap-6 text-center">
-                    <div>
-                      <p className="text-white font-bold">{client._count?.buildings || 0}</p>
-                      <p className="text-gray-500 text-xs">Bâtiments</p>
-                    </div>
-                    <div>
-                      <p className="text-white font-bold">{client._count?.projects || 0}</p>
-                      <p className="text-gray-500 text-xs">Projets</p>
-                    </div>
-                  </div>
+      ) : clients.length === 0 ? (
+        <div className="rounded-xl p-12 text-center"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
+            Aucun client pour l'instant
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+          >
+            Créer le premier client
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {clients.map(client => (
+            <div
+              key={client.id}
+              onClick={() => router.push(`/clients/${client.id}`)}
+              className="rounded-xl p-5 flex items-center justify-between cursor-pointer transition-all"
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E9ECEF',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                e.currentTarget.style.borderColor = '#CED4DA';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
+                e.currentTarget.style.borderColor = '#E9ECEF';
+              }}
+            >
+              <div>
+                <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+                  {client.name}
+                </h3>
+                <div className="flex gap-3 mt-1">
+                  {client.email && (
+                    <span className="text-sm" style={{ color: '#6C757D' }}>
+                      {client.email}
+                    </span>
+                  )}
+                  {client.city && (
+                    <span className="text-sm" style={{ color: '#6C757D' }}>
+                      {client.city}{client.province ? `, ${client.province}` : ''}
+                    </span>
+                  )}
                 </div>
-              ))}
+              </div>
+              <div className="flex gap-6 text-center">
+                <div>
+                  <p className="font-bold" style={{ color: '#C0392B' }}>
+                    {client._count?.buildings || 0}
+                  </p>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Bâtiments</p>
+                </div>
+                <div>
+                  <p className="font-bold" style={{ color: '#2980B9' }}>
+                    {client._count?.projects || 0}
+                  </p>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
-      </div>
+      )}
 
-      {/* Modal création client */}
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md">
-            <h3 className="text-white font-semibold text-lg mb-6">Nouveau client</h3>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-2xl p-8"
+            style={{
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            }}>
+            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+              Nouveau client
+            </h3>
             <form onSubmit={handleCreate} className="space-y-4">
-              {[
-                { label: 'Nom *', key: 'name', required: true },
-                { label: 'Courriel', key: 'email' },
-                { label: 'Téléphone', key: 'phone' },
-                { label: 'Adresse', key: 'address' },
-                { label: 'Ville', key: 'city' },
-                { label: 'Province', key: 'province' },
-              ].map((field) => (
+              {fields.map(field => (
                 <div key={field.key}>
-                  <label className="block text-sm text-gray-400 mb-1">{field.label}</label>
+                  <label className="block text-sm font-medium mb-1.5"
+                    style={{ color: '#495057' }}>
+                    {field.label}
+                  </label>
                   <input
                     type="text"
                     value={(form as any)[field.key]}
-                    onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+                    onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                     required={field.required}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
                   />
                 </div>
               ))}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 rounded-lg transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 font-medium py-2.5 rounded-lg text-sm"
+                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
                   Annuler
                 </button>
-                <button type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 rounded-lg transition-colors">
+                <button
+                  type="submit"
+                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  style={{ backgroundColor: '#C0392B' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+                >
                   Créer
                 </button>
               </div>
@@ -177,6 +213,6 @@ export default function ClientsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }

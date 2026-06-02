@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import AppLayout from '@/components/layout/AppLayout';
 
 interface Building {
   id: string;
@@ -17,27 +18,24 @@ interface Building {
   _count?: { projects: number };
 }
 
-interface Client {
-  id: string;
-  name: string;
-}
+interface Client { id: string; name: string; }
+
+const buildingTypes = [
+  'Tour à bureaux', 'Immeuble résidentiel', 'Industriel',
+  'Commercial', 'Institutionnel', 'Hôtel', 'Centre commercial', 'Autre',
+];
 
 export default function BuildingsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const [buildings, setBuildings] = useState<Building[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [buildings, setBuildings]   = useState<Building[]>([]);
+  const [clients, setClients]       = useState<Client[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [showModal, setShowModal]   = useState(false);
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
     postalCode: '', floors: '', buildingType: '', clientId: '',
   });
-
-  const buildingTypes = [
-    'Tour à bureaux', 'Immeuble résidentiel', 'Industriel',
-    'Commercial', 'Institutionnel', 'Hôtel', 'Centre commercial', 'Autre',
-  ];
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
@@ -46,17 +44,14 @@ export default function BuildingsPage() {
 
   const fetchData = async () => {
     try {
-      const [buildingsRes, clientsRes] = await Promise.all([
+      const [br, cr] = await Promise.all([
         api.get('/buildings'),
         api.get('/clients'),
       ]);
-      setBuildings(buildingsRes.data);
-      setClients(clientsRes.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      setBuildings(br.data);
+      setClients(cr.data);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -67,227 +62,307 @@ export default function BuildingsPage() {
         floors: form.floors ? parseInt(form.floors) : undefined,
       });
       setShowModal(false);
-      setForm({
-        name: '', address: '', city: '', province: '',
-        postalCode: '', floors: '', buildingType: '', clientId: '',
-      });
+      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '' });
       fetchData();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  const navItems = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Projets', path: '/projects' },
-    { label: 'Clients', path: '/clients' },
-    { label: 'Batiments', path: '/buildings', active: true },
-    { label: 'Bibliotheque', path: '/library' },
-    { label: 'Parametres', path: '/settings' },
-  ];
+  const inputStyle = {
+    border: '1px solid #CED4DA',
+    color: '#2C3E50',
+    backgroundColor: '#FFFFFF',
+  };
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white cursor-pointer" onClick={() => router.push('/dashboard')}>
-          CO<span className="text-orange-500">RO</span>
-        </h1>
+    <AppLayout>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
+            Bâtiments
+          </h2>
+          <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
+            {buildings.length} bâtiment{buildings.length !== 1 ? 's' : ''}
+          </p>
+        </div>
         <button
-          onClick={() => { useAuthStore.getState().logout(); router.push('/login'); }}
-          className="text-gray-400 hover:text-white text-sm">
-          Deconnexion
+          onClick={() => setShowModal(true)}
+          className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+          style={{ backgroundColor: '#C0392B' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+        >
+          + Nouveau bâtiment
         </button>
       </div>
 
-      <div className="flex">
-        <div className="w-64 min-h-screen bg-gray-900 border-r border-gray-800 p-4">
-          <nav className="space-y-1">
-            {navItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => router.push(item.path)}
-                className={`w-full text-left px-4 py-2.5 rounded-lg text-sm cursor-pointer transition-colors ${
-                  item.active
-                    ? 'bg-orange-500/10 text-orange-400 font-medium'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                }`}>
-                {item.label}
-              </button>
-            ))}
-          </nav>
+      {/* Liste */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>
+            Chargement...
+          </p>
         </div>
-
-        <div className="flex-1 p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-semibold text-white">Batiments</h2>
-              <p className="text-gray-400 mt-1">
-                {buildings.length} batiment{buildings.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg transition-colors">
-              + Nouveau batiment
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Chargement...</p>
-            </div>
-          ) : buildings.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-              <p className="text-gray-500 mb-4">Aucun batiment pour linstant</p>
-              <button
-                onClick={() => setShowModal(true)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg">
-                Creer le premier batiment
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {buildings.map((building) => (
-                <div
-                  key={building.id}
-                  className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex items-center justify-between hover:border-gray-700 transition-colors cursor-pointer">
-                  <div>
-                    <h3 className="text-white font-semibold">{building.name}</h3>
-                    <p className="text-gray-400 text-sm mt-1">
-                      {building.address}, {building.city}, {building.province}
-                    </p>
-                    <div className="flex gap-3 mt-2">
-                      {building.buildingType && (
-                        <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded">
-                          {building.buildingType}
-                        </span>
-                      )}
-                      {building.floors && (
-                        <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded">
-                          {building.floors} etages
-                        </span>
-                      )}
-                      <span className="bg-orange-500/10 text-orange-400 text-xs px-2 py-1 rounded">
-                        {building.client.name}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-bold">{building._count?.projects || 0}</p>
-                    <p className="text-gray-500 text-xs">Projets</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      ) : buildings.length === 0 ? (
+        <div className="rounded-xl p-12 text-center"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
+            Aucun bâtiment pour l'instant
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+          >
+            Créer le premier bâtiment
+          </button>
         </div>
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-lg max-h-screen overflow-y-auto">
-            <h3 className="text-white font-semibold text-lg mb-6">Nouveau batiment</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
+      ) : (
+        <div className="grid gap-3">
+          {buildings.map(building => (
+            <div
+              key={building.id}
+              className="rounded-xl p-5 flex items-center justify-between
+                cursor-pointer transition-all"
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E9ECEF',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                e.currentTarget.style.borderColor = '#CED4DA';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
+                e.currentTarget.style.borderColor = '#E9ECEF';
+              }}
+            >
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Client *</label>
+                <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+                  {building.name}
+                </h3>
+                <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
+                  {building.address}, {building.city}, {building.province}
+                </p>
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {building.buildingType && (
+                    <span className="text-xs px-2 py-1 rounded-full font-medium"
+                      style={{
+                        backgroundColor: '#F8F9FA',
+                        color: '#495057',
+                        border: '1px solid #DEE2E6',
+                      }}>
+                      {building.buildingType}
+                    </span>
+                  )}
+                  {building.floors && (
+                    <span className="text-xs px-2 py-1 rounded-full font-medium"
+                      style={{
+                        backgroundColor: '#F8F9FA',
+                        color: '#495057',
+                        border: '1px solid #DEE2E6',
+                      }}>
+                      {building.floors} étages
+                    </span>
+                  )}
+                  <span className="text-xs px-2 py-1 rounded-full font-medium"
+                    style={{
+                      backgroundColor: '#FDEDEC',
+                      color: '#C0392B',
+                      border: '1px solid #F1948A',
+                    }}>
+                    {building.client.name}
+                  </span>
+                </div>
+              </div>
+              <div className="text-center ml-4">
+                <p className="font-bold text-lg" style={{ color: '#2980B9' }}>
+                  {building._count?.projects || 0}
+                </p>
+                <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-lg rounded-2xl p-8 overflow-y-auto max-h-[90vh]"
+            style={{
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            }}>
+            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+              Nouveau bâtiment
+            </h3>
+            <form onSubmit={handleCreate} className="space-y-4">
+
+              {/* Client */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>Client *</label>
                 <select
                   value={form.clientId}
-                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                  onChange={e => setForm({ ...form, clientId: e.target.value })}
                   required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500">
-                  <option value="">Selectionner un client</option>
-                  {clients.map((c) => (
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                >
+                  <option value="">Sélectionner un client</option>
+                  {clients.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
+
+              {/* Nom */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nom du batiment *</label>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>Nom du bâtiment *</label>
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
                   required
                   placeholder="Ex: Tour ABC"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                />
               </div>
+
+              {/* Type */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Type de batiment</label>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>Type de bâtiment</label>
                 <select
                   value={form.buildingType}
-                  onChange={(e) => setForm({ ...form, buildingType: e.target.value })}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500">
-                  <option value="">Selectionner un type</option>
-                  {buildingTypes.map((t) => (
+                  onChange={e => setForm({ ...form, buildingType: e.target.value })}
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                >
+                  <option value="">Sélectionner un type</option>
+                  {buildingTypes.map(t => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
               </div>
+
+              {/* Adresse */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Adresse *</label>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>Adresse *</label>
                 <input
                   type="text"
                   value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  onChange={e => setForm({ ...form, address: e.target.value })}
                   required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
+                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                />
               </div>
+
+              {/* Ville / Province */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Ville *</label>
+                  <label className="block text-sm font-medium mb-1.5"
+                    style={{ color: '#495057' }}>Ville *</label>
                   <input
                     type="text"
                     value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    onChange={e => setForm({ ...form, city: e.target.value })}
                     required
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
+                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Province *</label>
+                  <label className="block text-sm font-medium mb-1.5"
+                    style={{ color: '#495057' }}>Province *</label>
                   <input
                     type="text"
                     value={form.province}
-                    onChange={(e) => setForm({ ...form, province: e.target.value })}
+                    onChange={e => setForm({ ...form, province: e.target.value })}
                     required
                     placeholder="QC"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
+                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
                 </div>
               </div>
+
+              {/* Code postal / Étages */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Code postal</label>
+                  <label className="block text-sm font-medium mb-1.5"
+                    style={{ color: '#495057' }}>Code postal</label>
                   <input
                     type="text"
                     value={form.postalCode}
-                    onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
+                    onChange={e => setForm({ ...form, postalCode: e.target.value })}
+                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Nombre detages</label>
+                  <label className="block text-sm font-medium mb-1.5"
+                    style={{ color: '#495057' }}>Nombre d'étages</label>
                   <input
                     type="number"
                     value={form.floors}
-                    onChange={(e) => setForm({ ...form, floors: e.target.value })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-orange-500"/>
+                    onChange={e => setForm({ ...form, floors: e.target.value })}
+                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
                 </div>
               </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 rounded-lg">
+                  className="flex-1 font-medium py-2.5 rounded-lg text-sm"
+                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 rounded-lg">
-                  Creer
+                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  style={{ backgroundColor: '#C0392B' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+                >
+                  Créer
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }
