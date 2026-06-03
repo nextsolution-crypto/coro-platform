@@ -42,12 +42,24 @@ export interface ProcedureTemplate {
 // ============================================================
 
 export const COLORS = {
-  red:    '#C0392B',
-  orange: '#E67E22',
-  yellow: '#F39C12',
-  dark:   '#2C3E50',
-  blue:   '#2980B9',
-  green:  '#27AE60',
+  // Codes incidents officiels
+  red:       '#C0392B',  // Code Rouge / Alarme incendie
+  green:     '#27AE60',  // Code Vert
+  blue:      '#2980B9',  // Code Bleu
+  gray:      '#7F8C8D',  // Code Gris
+  white:     '#ECF0F1',  // Code Blanc
+  dark:      '#2C3E50',  // Code Noir
+  orange:    '#E67E22',  // Code Orange
+  yellow:    '#F1C40F',  // Code Jaune
+  brown:     '#8B4513',  // Code Brun
+  turquoise: '#1ABC9C',  // Code Turquoise
+  garnet:    '#8B0000',  // Code Grenat
+  pink:      '#E91E63',  // Code Rose
+  purple:    '#8E44AD',  // Code Violet
+  silver:    '#95A5A6',  // Code Argent
+  indigo:    '#4B0082',  // Protocole-18
+  fireAlert: '#FF6600',  // Alerte incendie
+  fireAlarm: '#FF0000',  // Alarme incendie
 };
 
 // ============================================================

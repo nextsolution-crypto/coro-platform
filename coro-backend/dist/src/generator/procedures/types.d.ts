@@ -31,10 +31,21 @@ export interface ProcedureTemplate {
 }
 export declare const COLORS: {
     red: string;
+    green: string;
+    blue: string;
+    gray: string;
+    white: string;
+    dark: string;
     orange: string;
     yellow: string;
-    dark: string;
-    blue: string;
-    green: string;
+    brown: string;
+    turquoise: string;
+    garnet: string;
+    pink: string;
+    purple: string;
+    silver: string;
+    indigo: string;
+    fireAlert: string;
+    fireAlarm: string;
 };
 export declare function sid(procedureCode: string, index: number): string;

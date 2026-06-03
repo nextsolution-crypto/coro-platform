@@ -1,0 +1,497 @@
+// ============================================================
+// CORO — P011 : Individu armé ou menace active
+// Toujours présent dans PMU et PSI
+// ============================================================
+
+import { ProcedureTemplate, COLORS, sid } from './types';
+
+const CODE = 'P011';
+
+export const P011_MENACE_ACTIVE: ProcedureTemplate = {
+  id: 'p011_menace_active',
+  code: CODE,
+  titleFR: 'INDIVIDU ARMÉ OU MENACE ACTIVE',
+  titleEN: 'ARMED INDIVIDUAL OR ACTIVE THREAT',
+  icon: '🔫',
+  headerColor: COLORS.white,
+  activationRule: 'always',
+  documentTypes: ['PMU', 'PSI'],
+  roleSections: [
+    // ── Coordonnateur d'urgence ────────────────────────────
+    {
+      roleCode: 'ROLE-CU',
+      roleLabelFR: 'Coordonnateur d\'urgence',
+      roleLabelEN: 'Emergency Coordinator',
+      headerColor: COLORS.white,
+      steps: [
+        {
+          id: sid(CODE, 1),
+          textFR: '**Réception du signalement**',
+          textEN: '**Receiving the report**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 2),
+          textFR: 'Recevoir tout signalement verbal, via caméra ou appel d\'un employé (cris, coups de feu, individu armé)',
+          textEN: 'Receive any report verbally, via camera, or from an employee call (screaming, gunshots, armed individual)',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 3),
+          textFR: 'Se diriger dans un endroit sécuritaire (au poste de commandement, dans un local verrouillable ou sous un bureau)',
+          textEN: 'Move to a secure location (command post, lockable room, or under a desk)',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 4),
+          textFR: 'Confirmer rapidement la crédibilité de la menace par les caméras de surveillance, sans s\'exposer',
+          textEN: 'Quickly confirm the credibility of the threat via surveillance cameras, without exposing yourself',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 5),
+          textFR: '**Ne pas déclencher l\'alarme incendie** — cela forcerait les occupants dans les corridors et les exposerait directement au danger',
+          textEN: '**Do not activate the fire alarm** — this would force occupants into corridors and directly expose them to danger',
+          isBold: false,
+          isRed: true,
+        },
+        // ── Appel au 9-1-1 ─────────────────────────────────
+        {
+          id: sid(CODE, 6),
+          textFR: '**Appel immédiat au 9-1-1**',
+          textEN: '**Immediate 9-1-1 call**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 7),
+          textFR: '**Appeler immédiatement le 9-1-1** et indiquer :',
+          textEN: '**Call 9-1-1 immediately** and indicate:',
+          isBold: true,
+        },
+        {
+          id: sid(CODE, 8),
+          textFR: '« Tireur actif en cours au [ADRESSE COMPLÈTE DU SITE]. Individu armé repéré. Plusieurs occupants dans le bâtiment. »',
+          textEN: '"Active shooter in progress at [COMPLETE SITE ADDRESS]. Armed individual spotted. Multiple occupants in the building."',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 9),
+          textFR: 'Fournir l\'emplacement approximatif du tireur, le nombre de suspects si connu, et toute information utile obtenue par caméra',
+          textEN: 'Provide the approximate location of the shooter, number of suspects if known, and any useful information obtained via camera',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 10),
+          textFR: 'Transmettre aux policiers le contexte particulier de l\'immeuble, des occupants et de l\'assaillant',
+          textEN: 'Transmit to police the specific context of the building, occupants, and assailant',
+          isBold: false,
+        },
+        // ── Communication interne ───────────────────────────
+        {
+          id: sid(CODE, 11),
+          textFR: '**Communication interne**',
+          textEN: '**Internal communication**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 12),
+          textFR: 'Diffuser immédiatement via le système de communication de masse (Teams ou phonique) :',
+          textEN: 'Immediately broadcast via mass communication system (Teams or phone):',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 13),
+          textFR: 'URGENT – TIREUR ACTIF DANS L\'ÉDIFICE. Mettez-vous immédiatement en sécurité selon le protocole FUIR – SE BARRICADER – COMBATTRE.',
+          textEN: 'URGENT – ACTIVE SHOOTER IN THE BUILDING. Immediately seek safety according to the RUN – HIDE – FIGHT protocol.',
+          isBold: false,
+          isRed: true,
+        },
+        // ── Surveillance et coordination ────────────────────
+        {
+          id: sid(CODE, 14),
+          textFR: '**Surveillance et coordination**',
+          textEN: '**Monitoring and coordination**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 15),
+          textFR: 'Surveiller en continu les caméras pour suivre les déplacements du ou des suspects',
+          textEN: 'Continuously monitor cameras to track the movements of the suspect(s)',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 16),
+          textFR: 'Transmettre aux policiers des mises à jour précises dès leur arrivée',
+          textEN: 'Transmit precise updates to police upon their arrival',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 17),
+          textFR: 'Noter dans un journal rapide : heure de détection, observations clés, communications avec la police, messages envoyés',
+          textEN: 'Note in a quick log: detection time, key observations, communications with police, messages sent',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 18),
+          textFR: 'Envoyer un agent en sécurité accueillir les policiers à l\'extérieur si possible',
+          textEN: 'Send an agent safely to welcome police outside if possible',
+          isBold: false,
+        },
+        // ── Accueil des forces de l'ordre ───────────────────
+        {
+          id: sid(CODE, 19),
+          textFR: '**Accueil des forces de l\'ordre**',
+          textEN: '**Receiving law enforcement**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 20),
+          textFR: 'Remettre aux policiers :',
+          textEN: 'Provide to police:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 21),
+              textFR: 'Plan du bâtiment',
+              textEN: 'Building plan',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 22),
+              textFR: 'Clés et cartes d\'accès',
+              textEN: 'Keys and access cards',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 23),
+              textFR: 'Dernières localisations connues du suspect',
+              textEN: 'Last known locations of the suspect',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 24),
+              textFR: 'Images des caméras pertinentes',
+              textEN: 'Relevant camera footage',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 25),
+              textFR: 'Liste des personnes clés à protéger (PPNAE, personnel vulnérable)',
+              textEN: 'List of key persons to protect (persons requiring evacuation assistance, vulnerable staff)',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 26),
+          textFR: 'Alimenter les policiers en données en temps réel par téléphone ou radio si demandé',
+          textEN: 'Feed real-time data to police by phone or radio if requested',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 27),
+          textFR: '**Ne pas tenter d\'intervenir physiquement contre le suspect. Votre sécurité est la priorité absolue.**',
+          textEN: '**Do not attempt to physically intervene against the suspect. Your safety is the absolute priority.**',
+          isBold: true,
+          isRed: true,
+        },
+        // ── Fin d'incident ──────────────────────────────────
+        {
+          id: sid(CODE, 28),
+          textFR: '**Fin d\'incident**',
+          textEN: '**End of incident**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 29),
+          textFR: 'Attendre l\'autorisation policière officielle avant toute communication de fin d\'incident',
+          textEN: 'Wait for official police authorization before any end-of-incident communication',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 30),
+          textFR: 'Informer via communication phonique ou Teams si disponible :',
+          textEN: 'Inform via phone communication or Teams if available:',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 31),
+          textFR: 'Tireur neutralisé – fin d\'incident. Avant de vous déplacer, attendez les consignes policières qui viendront vous chercher pour les personnes barricadées.',
+          textEN: 'Threat neutralized – end of incident. Before moving, wait for police instructions who will come to assist barricaded persons.',
+          isBold: false,
+          isRed: true,
+        },
+        // ── Post-incident ───────────────────────────────────
+        {
+          id: sid(CODE, 32),
+          textFR: '**Post-incident**',
+          textEN: '**Post-incident**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 33),
+          textFR: 'Mettre en place les services de soutien prévus :',
+          textEN: 'Activate planned support services:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 34),
+              textFR: 'Soutien psychologique (PAE ou service externe)',
+              textEN: 'Psychological support (EAP or external service)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 35),
+              textFR: 'Ligne d\'aide aux victimes',
+              textEN: 'Victim assistance line',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 36),
+              textFR: 'Communication aux familles si nécessaire',
+              textEN: 'Communication to families if necessary',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 37),
+          textFR: 'Assister les autorités dans leur enquête',
+          textEN: 'Assist authorities in their investigation',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 38),
+          textFR: 'Rédiger un rapport complet :',
+          textEN: 'Write a complete report:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 39),
+              textFR: 'Chronologie des faits',
+              textEN: 'Chronology of events',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 40),
+              textFR: 'Communications effectuées',
+              textEN: 'Communications made',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 41),
+              textFR: 'Enregistrements vidéo pertinents',
+              textEN: 'Relevant video recordings',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 42),
+              textFR: 'Mesures prises et résultats',
+              textEN: 'Measures taken and outcomes',
+              isList: true,
+            },
+          ],
+        },
+      ],
+    },
+    // ── Responsable de secteur ─────────────────────────────
+    {
+      roleCode: 'ROLE-RS',
+      roleLabelFR: 'Responsable de secteur',
+      roleLabelEN: 'Sector Supervisor',
+      headerColor: COLORS.dark,
+      steps: [
+        {
+          id: sid(CODE, 43),
+          textFR: '**Réception de l\'alerte**',
+          textEN: '**Receiving the alert**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 44),
+          textFR: 'Recevoir l\'avis d\'événement via le système de communication de masse :',
+          textEN: 'Receive the event notice via mass communication system:',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 45),
+          textFR: 'URGENT – TIREUR ACTIF DANS L\'ÉDIFICE. Mettez-vous immédiatement en sécurité selon le protocole FUIR – SE BARRICADER – COMBATTRE.',
+          textEN: 'URGENT – ACTIVE SHOOTER IN THE BUILDING. Immediately seek safety according to the RUN – HIDE – FIGHT protocol.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 46),
+          textFR: 'Interrompre immédiatement toute activité',
+          textEN: 'Immediately stop all activity',
+          isBold: false,
+        },
+        // ── Protocole FUIR – SE BARRICADER – COMBATTRE ──────
+        {
+          id: sid(CODE, 47),
+          textFR: '**Appliquer le protocole FUIR – SE BARRICADER – COMBATTRE**',
+          textEN: '**Apply the RUN – HIDE – FIGHT protocol**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 48),
+          textFR: 'Appliquer le principe recommandé par les autorités selon la situation :',
+          textEN: 'Apply the principle recommended by authorities based on the situation:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 49),
+              textFR: '**FUIR** : évacuer si possible et sécuritaire — laisser ses effets personnels, mains visibles, appeler le 9-1-1 une fois en sécurité',
+              textEN: '**RUN** : evacuate if possible and safe — leave personal belongings, keep hands visible, call 9-1-1 once safe',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 50),
+              textFR: '**SE BARRICADER** : si l\'évacuation est trop risquée — verrouiller, éteindre les lumières, se placer hors de vue',
+              textEN: '**HIDE** : if evacuation is too risky — lock up, turn off lights, stay out of sight',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 51),
+              textFR: '**COMBATTRE** : uniquement en dernier recours, quand la vie est en danger imminent',
+              textEN: '**FIGHT** : only as a last resort, when life is in immediate danger',
+              isList: true,
+            },
+          ],
+        },
+        // ── Si barricadé ────────────────────────────────────
+        {
+          id: sid(CODE, 52),
+          textFR: '**Si barricadé dans un local**',
+          textEN: '**If barricaded in a room**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 53),
+          textFR: 'Verrouiller les portes et bloquer l\'entrée avec des meubles si possible',
+          textEN: 'Lock doors and block the entrance with furniture if possible',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 54),
+          textFR: 'Éteindre les lumières et réduire tout bruit',
+          textEN: 'Turn off lights and reduce all noise',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 55),
+          textFR: 'Éloigner les occupants des portes et fenêtres — se positionner contre les murs intérieurs ou sous les bureaux',
+          textEN: 'Move occupants away from doors and windows — position against interior walls or under desks',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 56),
+          textFR: 'Mettre les téléphones en mode silence',
+          textEN: 'Put phones on silent mode',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 57),
+          textFR: 'Maintenir la discrétion absolue si le tireur est à proximité',
+          textEN: 'Maintain absolute discretion if the shooter is nearby',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 58),
+          textFR: '**Ne pas ouvrir la porte à personne sans identification policière claire** (badge visible, communication officielle)',
+          textEN: '**Do not open the door to anyone without clear police identification** (visible badge, official communication)',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 59),
+          textFR: 'Garder les mains en l\'air et visibles lors de l\'intervention policière',
+          textEN: 'Keep hands raised and visible during police intervention',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 60),
+          textFR: 'Suivre toutes les instructions des policiers sans discuter',
+          textEN: 'Follow all police instructions without question',
+          isBold: false,
+        },
+        // ── Fin d'incident ──────────────────────────────────
+        {
+          id: sid(CODE, 61),
+          textFR: '**Fin d\'incident**',
+          textEN: '**End of incident**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 62),
+          textFR: 'Attendre l\'avis officiel de fin de menace de la police ou du coordonnateur via Teams',
+          textEN: 'Wait for the official end-of-threat notice from police or coordinator via Teams',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 63),
+          textFR: 'Tireur neutralisé – fin d\'incident. Avant de vous déplacer, attendez les consignes policières qui viendront vous chercher pour les personnes barricadées.',
+          textEN: 'Threat neutralized – end of incident. Before moving, wait for police instructions who will come to assist barricaded persons.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 64),
+          textFR: 'Confirmer l\'état des occupants une fois autorisé :',
+          textEN: 'Confirm the status of occupants once authorized:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 65),
+              textFR: 'Blessés',
+              textEN: 'Injured persons',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 66),
+              textFR: 'Personnes manquantes',
+              textEN: 'Missing persons',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 67),
+              textFR: 'Personnes à risque ou en état de choc',
+              textEN: 'Persons at risk or in shock',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 68),
+          textFR: 'Transmettre ces informations au coordonnateur d\'urgence via le moyen de communication disponible',
+          textEN: 'Transmit this information to the emergency coordinator via available communication means',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 69),
+          textFR: 'Surveiller l\'état émotionnel des occupants et les référer aux services de soutien psychologique si nécessaire',
+          textEN: 'Monitor the emotional state of occupants and refer them to psychological support services if necessary',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 70),
+          textFR: 'Participer à la réunion post-incident et fournir un compte rendu : heure du confinement, nombre de personnes présentes, problèmes rencontrés',
+          textEN: 'Participate in the post-incident meeting and provide a report: time of lockdown, number of persons present, issues encountered',
+          isBold: false,
+        },
+      ],
+    },
+  ],
+};

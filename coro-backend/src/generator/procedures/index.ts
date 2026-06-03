@@ -8,6 +8,8 @@ import { P001_DIRECTIVES_GENERALES } from './p001_directives_generales';
 import { P002_DECOUVERTE_FUMEE } from './p002_decouverte_fumee';
 import { P003_ALERTE_INCENDIE } from './p003_alerte_incendie';
 import { P004_ALARME_INCENDIE } from './p004_alarme_incendie';
+import { P005_FUITE_GAZ } from './p005_fuite_gaz';
+import { P011_MENACE_ACTIVE } from './p011_menace_active';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -19,7 +21,8 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P002_DECOUVERTE_FUMEE,
   P003_ALERTE_INCENDIE,
   P004_ALARME_INCENDIE,
-  // P005_FUITE_GAZ,          ← à venir
+  P005_FUITE_GAZ,
+  P011_MENACE_ACTIVE,
   // P006_FUITE_AMMONIAC,     ← à venir
   // P007_URGENCE_MEDICALE,   ← à venir
 ];
