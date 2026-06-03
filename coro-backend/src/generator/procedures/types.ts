@@ -35,6 +35,15 @@ export interface ProcedureTemplate {
   phase?: string;
   directivesGenerales?: ProcedureStep[];
   roleSections: RoleSection[];
+  referenceImages?: ProcedureImage[];
+}
+
+export interface ProcedureImage {
+  id: string;
+  captionFR: string;
+  captionEN: string;
+  srcFR: string;   // chemin ou URL image FR
+  srcEN: string;   // chemin ou URL image EN
 }
 
 // ============================================================

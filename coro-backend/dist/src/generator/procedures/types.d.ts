@@ -28,6 +28,14 @@ export interface ProcedureTemplate {
     phase?: string;
     directivesGenerales?: ProcedureStep[];
     roleSections: RoleSection[];
+    referenceImages?: ProcedureImage[];
+}
+export interface ProcedureImage {
+    id: string;
+    captionFR: string;
+    captionEN: string;
+    srcFR: string;
+    srcEN: string;
 }
 export declare const COLORS: {
     red: string;

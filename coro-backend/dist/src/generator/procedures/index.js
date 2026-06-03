@@ -11,6 +11,8 @@ const p004_alarme_incendie_1 = require("./p004_alarme_incendie");
 const p005_fuite_gaz_1 = require("./p005_fuite_gaz");
 const p011_menace_active_1 = require("./p011_menace_active");
 const p012_ascenseur_1 = require("./p012_ascenseur");
+const p013_urgence_medicale_1 = require("./p013_urgence_medicale");
+const p015_colis_suspect_1 = require("./p015_colis_suspect");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
     p002_decouverte_fumee_1.P002_DECOUVERTE_FUMEE,
@@ -19,6 +21,8 @@ exports.PROCEDURES_REGISTRY = [
     p005_fuite_gaz_1.P005_FUITE_GAZ,
     p011_menace_active_1.P011_MENACE_ACTIVE,
     p012_ascenseur_1.P012_ASCENSEUR,
+    p013_urgence_medicale_1.P013_URGENCE_MEDICALE,
+    p015_colis_suspect_1.P015_COLIS_SUSPECT,
 ];
 exports.ACTIVATION_RULES = {
     always: () => true,
