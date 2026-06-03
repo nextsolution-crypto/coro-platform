@@ -60,6 +60,7 @@ export const COLORS = {
   indigo:    '#4B0082',  // Protocole-18
   fireAlert: '#FF6600',  // Alerte incendie
   fireAlarm: '#FF0000',  // Alarme incendie
+  teal:      '#008B8B',  // Ascenseur / urgence technique
 };
 
 // ============================================================

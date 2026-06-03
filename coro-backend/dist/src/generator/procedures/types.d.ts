@@ -47,5 +47,6 @@ export declare const COLORS: {
     indigo: string;
     fireAlert: string;
     fireAlarm: string;
+    teal: string;
 };
 export declare function sid(procedureCode: string, index: number): string;

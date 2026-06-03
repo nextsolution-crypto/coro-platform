@@ -22,6 +22,7 @@ async function main() {
         { code: 'PROTOCOLE_18', name: 'Protocole-18', color: '#4B0082', description: 'Situation sensible / médiatique' },
         { code: 'ALERTE_INCENDIE', name: 'Alerte incendie', color: '#FF6600', description: 'Phase alerte (double signal)' },
         { code: 'ALARME_INCENDIE', name: 'Alarme incendie', color: '#FF0000', description: 'Phase alarme générale' },
+        { code: 'CODE_TEAL', name: 'Code Teal', color: '#008B8B', description: 'Personne coincée dans un ascenseur' },
     ];
     for (const code of incidentCodes) {
         await prisma.incidentCode.upsert({

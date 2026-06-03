@@ -20,6 +20,7 @@ exports.COLORS = {
     indigo: '#4B0082',
     fireAlert: '#FF6600',
     fireAlarm: '#FF0000',
+    teal: '#008B8B',
 };
 function sid(procedureCode, index) {
     return `${procedureCode}_step_${index.toString().padStart(3, '0')}`;

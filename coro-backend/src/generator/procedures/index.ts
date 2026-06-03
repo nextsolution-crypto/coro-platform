@@ -10,6 +10,7 @@ import { P003_ALERTE_INCENDIE } from './p003_alerte_incendie';
 import { P004_ALARME_INCENDIE } from './p004_alarme_incendie';
 import { P005_FUITE_GAZ } from './p005_fuite_gaz';
 import { P011_MENACE_ACTIVE } from './p011_menace_active';
+import { P012_ASCENSEUR } from './p012_ascenseur';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -23,6 +24,7 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P004_ALARME_INCENDIE,
   P005_FUITE_GAZ,
   P011_MENACE_ACTIVE,
+  P012_ASCENSEUR,
   // P006_FUITE_AMMONIAC,     ← à venir
   // P007_URGENCE_MEDICALE,   ← à venir
 ];
