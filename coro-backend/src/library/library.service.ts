@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getAllProcedures } from '../generator/procedures/index';
 
 @Injectable()
 export class LibraryService {
@@ -20,15 +21,29 @@ export class LibraryService {
   }
 
   async getProcedures() {
-    return this.prisma.procedure.findMany({
-      where: { isActive: true },
-      orderBy: { name: 'asc' },
-      include: {
-        incidentCode: true,
-        role: true,
-      },
-    });
-  }
+  const procedures = getAllProcedures();
+
+  return procedures.map(p => ({
+    id: p.id,
+    code: p.code,
+    titleFR: p.titleFR,
+    titleEN: p.titleEN,
+    icon: p.icon,
+    headerColor: p.headerColor,
+    activationRule: p.activationRule,
+    documentTypes: p.documentTypes,
+    phase: p.phase,
+    status: 'PUBLISHED',
+    roleSections: p.roleSections.map(rs => ({
+      roleCode: rs.roleCode,
+      roleLabelFR: rs.roleLabelFR,
+      roleLabelEN: rs.roleLabelEN,
+      headerColor: rs.headerColor,
+      stepCount: rs.steps.length,
+    })),
+    totalSteps: p.roleSections.reduce((acc, rs) => acc + rs.steps.length, 0),
+  }));
+}
 
   async createProcedure(data: any) {
     return this.prisma.procedure.create({ data });

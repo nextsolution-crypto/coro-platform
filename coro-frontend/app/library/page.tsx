@@ -39,6 +39,7 @@ export default function LibraryPage() {
   const [roles, setRoles]                 = useState<Role[]>([]);
   const [procedures, setProcedures]       = useState<Procedure[]>([]);
   const [loading, setLoading]             = useState(true);
+  const [expandedProc, setExpandedProc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
@@ -207,60 +208,132 @@ export default function LibraryPage() {
           )}
 
           {/* Procédures */}
-          {activeTab === 'procedures' && (
-            procedures.length === 0 ? (
-              <div className="rounded-xl p-12 text-center"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <p className="text-sm" style={{ color: '#ADB5BD' }}>
-                  Aucune procédure pour l'instant
+{activeTab === 'procedures' && (
+  procedures.length === 0 ? (
+    <div className="rounded-xl p-12 text-center"
+      style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+      <p className="text-sm" style={{ color: '#ADB5BD' }}>
+        Aucune procédure pour l'instant
+      </p>
+    </div>
+  ) : (
+    <div className="grid gap-4">
+      {(procedures as any[]).map(proc => (
+        <div key={proc.id} className="rounded-xl overflow-hidden"
+  style={{
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E9ECEF',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+  }}>
+
+  {/* Header cliquable */}
+  <div
+    className="px-5 py-3 flex items-center gap-3 cursor-pointer"
+    style={{ backgroundColor: proc.headerColor }}
+    onClick={() => setExpandedProc(expandedProc === proc.id ? null : proc.id)}
+  >
+    {proc.icon && <span className="text-lg">{proc.icon}</span>}
+    <div className="flex-1">
+      <div className="flex items-center gap-2">
+        <span className="text-white/70 text-xs font-mono font-bold">
+          {proc.code}
+        </span>
+        {proc.phase && (
+          <span className="text-xs px-2 py-0.5 rounded font-medium"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              color: '#FFFFFF',
+            }}>
+            {proc.phase === 'alerte' ? 'Alerte' : 'Alarme'}
+          </span>
+        )}
+      </div>
+      <p className="text-white font-bold text-sm uppercase tracking-wide">
+        {proc.titleFR}
+      </p>
+    </div>
+    <div className="flex items-center gap-3 text-white/70 text-xs">
+      <span>{proc.roleSections?.length || 0} rôle(s)</span>
+      <span>•</span>
+      <span>{proc.totalSteps} étape(s)</span>
+      <span className="px-2 py-0.5 rounded text-xs font-medium"
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.15)',
+          color: '#FFFFFF',
+        }}>
+        {proc.activationRule === 'always' ? 'Toujours actif' :
+         proc.activationRule === 'double_signal' ? 'Double signal' :
+         proc.activationRule === 'has_gas' ? 'Gaz naturel' :
+         proc.activationRule === 'has_ammonia' ? 'Ammoniac' :
+         proc.activationRule === 'has_sprinklers' ? 'Gicleurs' :
+         proc.activationRule === 'boma_certified' ? 'BOMA' :
+         proc.activationRule}
+      </span>
+      {/* Bouton expand */}
+      <span className="ml-2 text-white font-bold text-base">
+        {expandedProc === proc.id ? '−' : '+'}
+      </span>
+    </div>
+  </div>
+
+  {/* Rôles — visible seulement si expanded */}
+  {expandedProc === proc.id && (
+    <>
+      <div className="divide-y" style={{ borderColor: '#F8F9FA' }}>
+        {(proc.roleSections || []).map((rs: any, idx: number) => (
+          <div key={idx}
+            className="flex items-center justify-between px-5 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: rs.headerColor }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+                  {rs.roleLabelFR}
                 </p>
-                <p className="text-xs mt-1" style={{ color: '#CED4DA' }}>
-                  Les procédures sont générées avec le configurateur
+                <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                  {rs.roleLabelEN}
                 </p>
               </div>
-            ) : (
-              <div className="grid gap-2">
-                {procedures.map(proc => (
-                  <div
-                    key={proc.id}
-                    className="rounded-xl p-4 flex items-center justify-between"
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E9ECEF',
-                    }}
-                  >
-                    <div>
-                      <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-                        {proc.name}
-                      </h3>
-                      <div className="flex gap-2 mt-1">
-                        {proc.documentTypes.map(dt => (
-                          <span key={dt} className="text-xs px-2 py-0.5 rounded"
-                            style={{
-                              backgroundColor: '#FDEDEC',
-                              color: '#C0392B',
-                            }}>
-                            {dt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full"
-                      style={{
-                        backgroundColor: proc.status === 'PUBLISHED' ? '#EAFAF1' : '#F8F9FA',
-                        color: proc.status === 'PUBLISHED' ? '#27AE60' : '#6C757D',
-                        border: `1px solid ${proc.status === 'PUBLISHED' ? '#A9DFBF' : '#DEE2E6'}`,
-                      }}
-                    >
-                      {proc.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )
-          )}
-        </>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono px-2 py-0.5 rounded"
+                style={{
+                  backgroundColor: '#F8F9FA',
+                  color: '#6C757D',
+                  border: '1px solid #E9ECEF',
+                }}>
+                {rs.roleCode}
+              </span>
+              <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                {rs.stepCount} étape{rs.stepCount > 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="px-5 py-2 flex gap-2"
+        style={{ backgroundColor: '#F8F9FA', borderTop: '1px solid #E9ECEF' }}>
+        {proc.documentTypes.map((dt: string) => (
+          <span key={dt} className="text-xs px-2 py-0.5 rounded font-medium"
+            style={{
+              backgroundColor: '#FDEDEC',
+              color: '#C0392B',
+              border: '1px solid #F1948A',
+            }}>
+            {dt}
+          </span>
+        ))}
+      </div>
+    </>
+  )}
+</div>
+      ))}
+    </div>
+  )
+)}
+</>
       )}
     </AppLayout>
   );

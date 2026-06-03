@@ -200,12 +200,23 @@ export default function Module4ProcedureCard({
 }: Module4ProcedureCardProps) {
 
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
   const isFr = language === 'fr';
 
   const title = isFr ? procedure.titleFR : procedure.titleEN;
 
+  const toggleRole = (roleCode: string) => {
+    setExpandedRoles(prev => {
+      const next = new Set(prev);
+      if (next.has(roleCode)) next.delete(roleCode);
+      else next.add(roleCode);
+      return next;
+    });
+  };
+
   return (
-    <div className="mb-6 rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+    <div className="mb-4 rounded-lg overflow-hidden shadow-sm bg-white"
+      style={{ border: '1px solid #E9ECEF' }}>
 
       {/* Header procédure */}
       <button
@@ -227,8 +238,13 @@ export default function Module4ProcedureCard({
             {title}
           </span>
         </div>
-        <div className="text-white/70">
-          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        <div className="flex items-center gap-3">
+          <span className="text-white/60 text-xs">
+            {procedure.roleSections.length} rôle(s)
+          </span>
+          <span className="text-white font-bold text-lg">
+            {expanded ? '−' : '+'}
+          </span>
         </div>
       </button>
 
@@ -237,46 +253,14 @@ export default function Module4ProcedureCard({
         <div>
           {/* Directives générales */}
           {procedure.directivesGenerales && procedure.directivesGenerales.length > 0 && (
-            <div className="p-4 border-b border-gray-100">
-              <div className="border border-red-200 rounded p-3 bg-red-50">
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
+            <div className="p-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
+              <div className="rounded p-3"
+                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2"
+                  style={{ color: '#C0392B' }}>
                   {isFr ? 'Directives générales' : 'General directives'}
                 </p>
-                <ul className="space-y-1">
-                  {procedure.directivesGenerales.map(step => (
-                    <StepRenderer
-                      key={step.id}
-                      step={step}
-                      language={language}
-                      override={overrides[step.id]}
-                      comment={comments[step.id]}
-                      onOverride={onOverride}
-                      onComment={onComment}
-                    />
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Sections par rôle */}
-          {procedure.roleSections.map(section => (
-            <div key={section.roleCode} className="border-b border-gray-100 last:border-0">
-
-              {/* Header rôle */}
-              <div
-                className="px-4 py-2 text-white text-xs font-bold uppercase tracking-wide"
-                style={{ backgroundColor: section.headerColor }}
-              >
-                {section.roleCode === 'TOUS'
-                  ? (isFr ? section.roleLabelFR : section.roleLabelEN)
-                  : `${section.roleCode} — ${isFr ? section.roleLabelFR : section.roleLabelEN}`
-                }
-              </div>
-
-              {/* Étapes */}
-              <div className="px-4 py-3">
-                {section.steps.map(step => (
+                {procedure.directivesGenerales.map(step => (
                   <StepRenderer
                     key={step.id}
                     step={step}
@@ -289,7 +273,61 @@ export default function Module4ProcedureCard({
                 ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Sections par rôle — chacune fermée par défaut */}
+          {procedure.roleSections.map(section => {
+            const isRoleExpanded = expandedRoles.has(section.roleCode);
+            const roleLabel = isFr ? section.roleLabelFR : section.roleLabelEN;
+
+            return (
+              <div key={section.roleCode}
+                style={{ borderBottom: '1px solid #F8F9FA' }}>
+
+                {/* Header rôle cliquable */}
+                <button
+                  onClick={() => toggleRole(section.roleCode)}
+                  className="w-full flex items-center justify-between px-4 py-2.5
+                    text-left transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: section.headerColor }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-xs font-bold uppercase tracking-wide">
+                      {section.roleCode === 'TOUS'
+                        ? roleLabel
+                        : `${section.roleCode} — ${roleLabel}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/60 text-xs">
+                      {section.steps.length} étape(s)
+                    </span>
+                    <span className="text-white font-bold text-base">
+                      {isRoleExpanded ? '−' : '+'}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Étapes — visibles seulement si rôle ouvert */}
+                {isRoleExpanded && (
+                  <div className="px-4 py-3"
+                    style={{ backgroundColor: '#FFFFFF' }}>
+                    {section.steps.map(step => (
+                      <StepRenderer
+                        key={step.id}
+                        step={step}
+                        language={language}
+                        override={overrides[step.id]}
+                        comment={comments[step.id]}
+                        onOverride={onOverride}
+                        onComment={onComment}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LibraryService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const index_1 = require("../generator/procedures/index");
 let LibraryService = class LibraryService {
     prisma;
     constructor(prisma) {
@@ -30,14 +31,27 @@ let LibraryService = class LibraryService {
         });
     }
     async getProcedures() {
-        return this.prisma.procedure.findMany({
-            where: { isActive: true },
-            orderBy: { name: 'asc' },
-            include: {
-                incidentCode: true,
-                role: true,
-            },
-        });
+        const procedures = (0, index_1.getAllProcedures)();
+        return procedures.map(p => ({
+            id: p.id,
+            code: p.code,
+            titleFR: p.titleFR,
+            titleEN: p.titleEN,
+            icon: p.icon,
+            headerColor: p.headerColor,
+            activationRule: p.activationRule,
+            documentTypes: p.documentTypes,
+            phase: p.phase,
+            status: 'PUBLISHED',
+            roleSections: p.roleSections.map(rs => ({
+                roleCode: rs.roleCode,
+                roleLabelFR: rs.roleLabelFR,
+                roleLabelEN: rs.roleLabelEN,
+                headerColor: rs.headerColor,
+                stepCount: rs.steps.length,
+            })),
+            totalSteps: p.roleSections.reduce((acc, rs) => acc + rs.steps.length, 0),
+        }));
     }
     async createProcedure(data) {
         return this.prisma.procedure.create({ data });
