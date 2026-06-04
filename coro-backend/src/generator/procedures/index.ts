@@ -22,7 +22,10 @@ import { P020_MANIFESTATION } from './p020_manifestation';
 import { P021_VE_INCENDIE } from './p021_ve_incendie';
 import { P022_VENTS_VIOLENTS } from './p022_vents_violents';
 import { P023_VAGUES_CHALEUR } from './p023_vagues_chaleur';
+import { P024_INONDATIONS } from './p024_inondations';
+import { P025_VERGLAS } from './p025_verglas';
 import { P026_BATTERIE_LITHIUM } from './p026_batterie_lithium';
+import { P027_NOYADE } from './p027_noyade';
 import { P028_INCENDIE_CUISINE } from './p028_incendie_cuisine';
 
 // ============================================================
@@ -49,10 +52,11 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P021_VE_INCENDIE,
   P022_VENTS_VIOLENTS,
   P023_VAGUES_CHALEUR,
+  P024_INONDATIONS,
+  P025_VERGLAS,
   P026_BATTERIE_LITHIUM,
+  P027_NOYADE,
   P028_INCENDIE_CUISINE,
-  // P006_FUITE_AMMONIAC,     ← à venir
-  // P007_URGENCE_MEDICALE,   ← à venir
 ];
 
 // ============================================================

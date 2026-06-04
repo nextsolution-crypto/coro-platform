@@ -22,7 +22,10 @@ const p020_manifestation_1 = require("./p020_manifestation");
 const p021_ve_incendie_1 = require("./p021_ve_incendie");
 const p022_vents_violents_1 = require("./p022_vents_violents");
 const p023_vagues_chaleur_1 = require("./p023_vagues_chaleur");
+const p024_inondations_1 = require("./p024_inondations");
+const p025_verglas_1 = require("./p025_verglas");
 const p026_batterie_lithium_1 = require("./p026_batterie_lithium");
+const p027_noyade_1 = require("./p027_noyade");
 const p028_incendie_cuisine_1 = require("./p028_incendie_cuisine");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
@@ -43,7 +46,10 @@ exports.PROCEDURES_REGISTRY = [
     p021_ve_incendie_1.P021_VE_INCENDIE,
     p022_vents_violents_1.P022_VENTS_VIOLENTS,
     p023_vagues_chaleur_1.P023_VAGUES_CHALEUR,
+    p024_inondations_1.P024_INONDATIONS,
+    p025_verglas_1.P025_VERGLAS,
     p026_batterie_lithium_1.P026_BATTERIE_LITHIUM,
+    p027_noyade_1.P027_NOYADE,
     p028_incendie_cuisine_1.P028_INCENDIE_CUISINE,
 ];
 exports.ACTIVATION_RULES = {
