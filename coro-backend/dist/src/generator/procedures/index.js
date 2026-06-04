@@ -21,6 +21,7 @@ const p019_alerte_bombe_1 = require("./p019_alerte_bombe");
 const p020_manifestation_1 = require("./p020_manifestation");
 const p021_ve_incendie_1 = require("./p021_ve_incendie");
 const p026_batterie_lithium_1 = require("./p026_batterie_lithium");
+const p028_incendie_cuisine_1 = require("./p028_incendie_cuisine");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
     p002_decouverte_fumee_1.P002_DECOUVERTE_FUMEE,
@@ -39,6 +40,7 @@ exports.PROCEDURES_REGISTRY = [
     p020_manifestation_1.P020_MANIFESTATION,
     p021_ve_incendie_1.P021_VE_INCENDIE,
     p026_batterie_lithium_1.P026_BATTERIE_LITHIUM,
+    p028_incendie_cuisine_1.P028_INCENDIE_CUISINE,
 ];
 exports.ACTIVATION_RULES = {
     always: () => true,
