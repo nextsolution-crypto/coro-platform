@@ -124,6 +124,7 @@ export default function BuildingsPage() {
           {buildings.map(building => (
             <div
               key={building.id}
+              onClick={() => router.push(`/buildings/${building.id}`)}
               className="rounded-xl p-5 flex items-center justify-between
                 cursor-pointer transition-all"
               style={{

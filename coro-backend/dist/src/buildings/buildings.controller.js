@@ -24,6 +24,9 @@ let BuildingsController = class BuildingsController {
     findAll(clientId) {
         return this.buildingsService.findAll(clientId);
     }
+    findProjects(id) {
+        return this.buildingsService.findProjects(id);
+    }
     findOne(id) {
         return this.buildingsService.findOne(id);
     }
@@ -45,6 +48,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], BuildingsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id/projects'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], BuildingsController.prototype, "findProjects", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

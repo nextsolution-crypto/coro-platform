@@ -23,6 +23,21 @@ export class BuildingsService {
     });
   }
 
+  async findProjects(buildingId: string) {
+  return this.prisma.project.findMany({
+    where: { buildingId },
+    orderBy: { updatedAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      documentType: true,
+      year: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+}
+
   async create(data: {
     name: string;
     address: string;

@@ -33,6 +33,20 @@ let BuildingsService = class BuildingsService {
             include: { client: true, projects: true },
         });
     }
+    async findProjects(buildingId) {
+        return this.prisma.project.findMany({
+            where: { buildingId },
+            orderBy: { updatedAt: 'desc' },
+            select: {
+                id: true,
+                name: true,
+                documentType: true,
+                year: true,
+                status: true,
+                updatedAt: true,
+            },
+        });
+    }
     async create(data) {
         return this.prisma.building.create({ data });
     }

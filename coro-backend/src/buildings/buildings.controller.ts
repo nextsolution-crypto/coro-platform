@@ -12,6 +12,11 @@ export class BuildingsController {
     return this.buildingsService.findAll(clientId);
   }
 
+  @Get(':id/projects')
+  findProjects(@Param('id') id: string) {
+  return this.buildingsService.findProjects(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.buildingsService.findOne(id);
