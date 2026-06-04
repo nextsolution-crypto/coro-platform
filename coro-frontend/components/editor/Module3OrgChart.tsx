@@ -171,7 +171,7 @@ function EditRoleModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg
+      <div className="bg-gray-900 border border-gray-700 rounded-md w-full max-w-lg
         shadow-2xl overflow-y-auto max-h-[90vh]">
         <div className="p-5 border-b border-gray-800">
           <h3 className="text-white font-bold">

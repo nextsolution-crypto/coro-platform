@@ -140,7 +140,7 @@ export default function ClientDetailPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="text-white font-medium px-6 py-2.5 rounded-lg transition-colors
+          className="text-white font-medium px-6 py-2.5 rounded transition-colors
             disabled:opacity-50"
           style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
           onMouseEnter={e => {
@@ -160,7 +160,7 @@ export default function ClientDetailPage() {
         <div className="col-span-1 space-y-4">
 
           {/* Logo */}
-          <div className="rounded-xl p-6"
+          <div className="rounded-md p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -172,7 +172,7 @@ export default function ClientDetailPage() {
             <div className="flex flex-col items-center gap-4">
               {logoPreview ? (
                 <div className="relative">
-                  <div className="w-32 h-32 rounded-xl overflow-hidden flex items-center
+                  <div className="w-32 h-32 rounded-md overflow-hidden flex items-center
                     justify-center bg-white"
                     style={{ border: '1px solid #E9ECEF' }}>
                     <img src={logoPreview} alt="Logo"
@@ -188,7 +188,7 @@ export default function ClientDetailPage() {
               ) : (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-32 h-32 rounded-xl flex flex-col items-center
+                  className="w-32 h-32 rounded-md flex flex-col items-center
                     justify-center cursor-pointer transition-colors"
                   style={{ border: '2px dashed #CED4DA', backgroundColor: '#F8F9FA' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
@@ -202,7 +202,7 @@ export default function ClientDetailPage() {
               )}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full text-sm py-2 rounded-lg font-medium transition-colors"
+                className="w-full text-sm py-2 rounded font-medium transition-colors"
                 style={{
                   border: '1px solid #DEE2E6',
                   color: '#6C757D',
@@ -222,7 +222,7 @@ export default function ClientDetailPage() {
           </div>
 
           {/* Stats */}
-          <div className="rounded-xl p-6"
+          <div className="rounded-md p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -252,7 +252,7 @@ export default function ClientDetailPage() {
         <div className="col-span-2 space-y-4">
 
           {/* Formulaire */}
-          <div className="rounded-xl p-6"
+          <div className="rounded-md p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -273,7 +273,7 @@ export default function ClientDetailPage() {
                     value={form[field.key] || ''}
                     onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                     required={field.required}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -285,7 +285,7 @@ export default function ClientDetailPage() {
 
           {/* Bâtiments associés */}
           {client.buildings?.length > 0 && (
-            <div className="rounded-xl p-6"
+            <div className="rounded-md p-6"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E9ECEF',
@@ -299,7 +299,7 @@ export default function ClientDetailPage() {
                   <div
                     key={building.id}
                     onClick={() => router.push('/buildings')}
-                    className="flex items-center justify-between rounded-lg px-4 py-3
+                    className="flex items-center justify-between rounded px-4 py-3
                       cursor-pointer transition-all"
                     style={{
                       backgroundColor: '#F8F9FA',

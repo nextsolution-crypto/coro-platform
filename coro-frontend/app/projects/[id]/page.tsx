@@ -189,7 +189,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Progression */}
-      <div className="rounded-xl p-6 mb-6"
+      <div className="rounded-md p-6 mb-6"
         style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #E9ECEF',
@@ -213,7 +213,7 @@ export default function ProjectDetailPage() {
       {/* 3 Étapes */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {steps.map(step => (
-          <div key={step.num} className="rounded-xl p-6"
+          <div key={step.num} className="rounded-md p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: `1px solid ${step.done ? '#A9DFBF' : step.enabled ? '#F1948A' : '#E9ECEF'}`,
@@ -239,7 +239,7 @@ export default function ProjectDetailPage() {
             <button
               onClick={step.action}
               disabled={!step.enabled || step.loading}
-              className="w-full text-sm font-medium py-2 rounded-lg transition-colors"
+              className="w-full text-sm font-medium py-2 rounded transition-colors"
               style={{
                 backgroundColor: step.enabled ? '#C0392B' : '#F8F9FA',
                 color: step.enabled ? '#FFFFFF' : '#ADB5BD',
@@ -260,7 +260,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Infos projet */}
-      <div className="rounded-xl p-6"
+      <div className="rounded-md p-6"
         style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #E9ECEF',

@@ -239,7 +239,7 @@ export default function EditorPage() {
 
         <div className="flex items-center gap-3">
           {/* Toggle FR/EN */}
-          <div className="flex items-center rounded-lg p-1 gap-1"
+          <div className="flex items-center rounded p-1 gap-1"
             style={{ backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6' }}>
             {(['fr', 'en'] as const).map(lang => (
               <button
@@ -270,7 +270,7 @@ export default function EditorPage() {
             <>
               <button
                 onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(false); }}
-                className="text-sm px-3 py-1.5 rounded-lg transition-colors"
+                className="text-sm px-3 py-1.5 rounded transition-colors"
                 style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -280,7 +280,7 @@ export default function EditorPage() {
               <button
                 onClick={handleSaveSection}
                 disabled={saving}
-                className="text-white text-sm font-medium px-4 py-1.5 rounded-lg
+                className="text-white text-sm font-medium px-4 py-1.5 rounded
                   transition-colors disabled:opacity-50"
                 style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
                 onMouseEnter={e => {
@@ -327,7 +327,7 @@ export default function EditorPage() {
                 {(mod.sections || []).length === 0 && (
                   <button
                     onClick={() => handleSectionClick(modIdx, 0)}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs mb-0.5
+                    className="w-full text-left px-3 py-2 rounded text-xs mb-0.5
                       transition-colors font-medium"
                     style={{
                       backgroundColor: activeModule === modIdx ? '#FDEDEC' : 'transparent',
@@ -358,7 +358,7 @@ export default function EditorPage() {
                     <button
                       key={section.id}
                       onClick={() => handleSectionClick(modIdx, secIdx)}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs mb-0.5
+                      className="w-full text-left px-3 py-2 rounded text-xs mb-0.5
                         transition-colors"
                       style={{
                         backgroundColor: isActive ? '#FDEDEC' : 'transparent',
@@ -444,7 +444,7 @@ export default function EditorPage() {
                           setEditingContent(currentSection?.content || '');
                           setIsEditing(true);
                         }}
-                        className="text-sm px-4 py-2 rounded-lg transition-colors
+                        className="text-sm px-4 py-2 rounded transition-colors
                           flex items-center gap-2 font-medium"
                         style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
@@ -465,7 +465,7 @@ export default function EditorPage() {
                       <textarea
                         value={editingContent}
                         onChange={e => setEditingContent(e.target.value)}
-                        className="w-full rounded-xl p-6 text-sm leading-relaxed
+                        className="w-full rounded-md p-6 text-sm leading-relaxed
                           focus:outline-none font-mono resize-none"
                         style={{
                           height: 'calc(100vh - 280px)',
@@ -481,7 +481,7 @@ export default function EditorPage() {
                             setEditingContent(currentSection?.content || '');
                             setIsEditing(false);
                           }}
-                          className="px-4 py-2 rounded-lg text-sm font-medium"
+                          className="px-4 py-2 rounded text-sm font-medium"
                           style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -491,7 +491,7 @@ export default function EditorPage() {
                         <button
                           onClick={handleSaveSection}
                           disabled={saving}
-                          className="text-white font-medium px-6 py-2 rounded-lg text-sm
+                          className="text-white font-medium px-6 py-2 rounded text-sm
                             transition-colors disabled:opacity-50"
                           style={{ backgroundColor: '#C0392B' }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
@@ -504,7 +504,7 @@ export default function EditorPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl p-8"
+                    <div className="rounded-md p-8"
                       style={{
                         backgroundColor: '#FFFFFF',
                         border: '1px solid #E9ECEF',
@@ -533,7 +533,7 @@ export default function EditorPage() {
             </h3>
 
             {/* Infos document */}
-            <div className="rounded-xl p-4 mb-4"
+            <div className="rounded-md p-4 mb-4"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
               <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>
                 Document
@@ -560,7 +560,7 @@ export default function EditorPage() {
             </div>
 
             {/* Langue active */}
-            <div className="rounded-xl p-4 mb-4"
+            <div className="rounded-md p-4 mb-4"
               style={{
                 backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
                 border: `1px solid ${language === 'fr' ? '#F1948A' : '#AED6F1'}`,
@@ -577,7 +577,7 @@ export default function EditorPage() {
             </div>
 
             {/* Navigation rapide */}
-            <div className="rounded-xl p-4"
+            <div className="rounded-md p-4"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
               <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>
                 {language === 'fr' ? 'Navigation rapide' : 'Quick navigation'}

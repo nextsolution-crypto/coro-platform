@@ -89,7 +89,7 @@ export default function Module4Library({
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-      <div className="w-full max-w-2xl rounded-2xl flex flex-col"
+      <div className="w-full max-w-2xl rounded-md flex flex-col"
         style={{
           backgroundColor: '#FFFFFF',
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
@@ -107,7 +107,7 @@ export default function Module4Library({
             </div>
           </div>
           <button onClick={onClose}
-            className="p-1 rounded-lg transition-colors"
+            className="p-1 rounded transition-colors"
             style={{ color: '#6C757D' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -126,7 +126,7 @@ export default function Module4Library({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder={t.search}
-              className="w-full rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none"
+              className="w-full rounded pl-9 pr-4 py-2 text-sm focus:outline-none"
               style={{
                 border: '1px solid #CED4DA',
                 color: '#2C3E50',
@@ -156,14 +156,14 @@ export default function Module4Library({
 
               return (
                 <div key={p.id}
-                  className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                  className="flex items-center gap-3 p-3 rounded-md transition-all"
                   style={{
                     border: `1px solid ${active ? '#F1948A' : '#E9ECEF'}`,
                     backgroundColor: active ? '#FDEDEC' : '#F8F9FA',
                   }}>
 
                   {/* Icône */}
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center
+                  <div className="w-9 h-9 rounded flex items-center justify-center
                     flex-shrink-0 text-base"
                     style={{ backgroundColor: p.headerColor }}>
                     {p.icon || '📋'}
@@ -226,7 +226,7 @@ export default function Module4Library({
                       <button
                         onClick={() => onRemove(p.id)}
                         className="flex items-center gap-1.5 text-xs px-3 py-1.5
-                          rounded-lg font-medium transition-colors"
+                          rounded font-medium transition-colors"
                         style={{
                           border: '1px solid #F1948A',
                           color: '#C0392B',
@@ -241,7 +241,7 @@ export default function Module4Library({
                       <button
                         onClick={() => onAdd(p.id)}
                         className="flex items-center gap-1.5 text-xs px-3 py-1.5
-                          rounded-lg font-medium transition-colors"
+                          rounded font-medium transition-colors"
                         style={{
                           border: '1px solid #DEE2E6',
                           color: '#6C757D',
@@ -278,7 +278,7 @@ export default function Module4Library({
           </span>
           <button
             onClick={onClose}
-            className="text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}

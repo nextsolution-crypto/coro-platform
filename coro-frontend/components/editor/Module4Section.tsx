@@ -268,7 +268,7 @@ export default function Module4Section({
           {/* Bouton bibliothèque */}
           <button
             onClick={() => setShowLibrary(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white
+            className="flex items-center gap-2 px-4 py-2 rounded text-white
               text-sm font-medium transition-colors"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
@@ -282,14 +282,14 @@ export default function Module4Section({
 
       {/* Procédures */}
       {procedures.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed rounded-xl"
+        <div className="text-center py-16 border-2 border-dashed rounded-md"
           style={{ borderColor: '#DEE2E6' }}>
           <BookOpen size={32} className="mx-auto mb-3" style={{ color: '#ADB5BD' }} />
           <p className="font-medium" style={{ color: '#6C757D' }}>{t.empty}</p>
           <p className="text-sm mt-1" style={{ color: '#ADB5BD' }}>{t.emptyHint}</p>
           <button
             onClick={() => setShowLibrary(true)}
-            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-white
+            className="mt-4 flex items-center gap-2 px-4 py-2 rounded text-white
               text-sm font-medium transition-colors mx-auto"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}

@@ -215,7 +215,7 @@ export default function Module4ProcedureCard({
   };
 
   return (
-    <div className="mb-4 rounded-lg overflow-hidden shadow-sm bg-white"
+    <div className="mb-4 rounded overflow-hidden shadow-sm bg-white"
       style={{ border: '1px solid #E9ECEF' }}>
 
       {/* Header procédure */}

@@ -23,6 +23,16 @@ async function main() {
         { code: 'ALERTE_INCENDIE', name: 'Alerte incendie', color: '#FF6600', description: 'Phase alerte (double signal)' },
         { code: 'ALARME_INCENDIE', name: 'Alarme incendie', color: '#FF0000', description: 'Phase alarme générale' },
         { code: 'CODE_TEAL', name: 'Code Teal', color: '#008B8B', description: 'Personne coincée dans un ascenseur' },
+        { code: 'CODE_ARDOISE', name: 'Code Ardoise', color: '#607D8B', description: 'Directives générales' },
+        { code: 'CODE_OLIVE', name: 'Code Olive', color: '#808000', description: 'Gaz toxique / confinement' },
+        { code: 'CODE_AMBRE', name: 'Code Ambre', color: '#FF8F00', description: 'Coupure de courant' },
+        { code: 'CODE_ONYX', name: 'Code Onyx', color: '#353839', description: 'Menace ou alerte à la bombe' },
+        { code: 'CODE_ACIER', name: 'Code Acier', color: '#4682B4', description: 'Vents violents' },
+        { code: 'CODE_CORAIL', name: 'Code Corail', color: '#FF6B6B', description: 'Vagues de chaleur' },
+        { code: 'CODE_SAPHIR', name: 'Code Saphir', color: '#0057A8', description: 'Inondations' },
+        { code: 'CODE_GLACIER', name: 'Code Glacier', color: '#A8D8EA', description: 'Verglas' },
+        { code: 'CODE_COBALT', name: 'Code Cobalt', color: '#0047AB', description: 'Noyade' },
+        { code: 'CODE_ECARLATE', name: 'Code Écarlate', color: '#FF2400', description: 'Incendie service alimentaire' },
     ];
     for (const code of incidentCodes) {
         await prisma.incidentCode.upsert({

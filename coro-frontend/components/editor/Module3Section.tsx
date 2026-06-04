@@ -263,14 +263,14 @@ export default function Module3Section({
       </div>
 
       {/* Info sync */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-2
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded px-4 py-2
         mb-6 text-xs text-blue-400 flex items-center gap-2">
         <span>🔗</span>
         <span>{t.syncInfo}</span>
       </div>
 
       {/* Tabs 3.1 / 3.2 */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded p-1 w-fit">
         <button
           onClick={() => setActiveTab('3.1')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors

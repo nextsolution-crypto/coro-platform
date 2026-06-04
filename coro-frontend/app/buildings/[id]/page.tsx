@@ -161,7 +161,7 @@ export default function BuildingDetailPage() {
       </button>
 
       {/* Carte bâtiment */}
-      <div className="rounded-xl p-6 mb-6"
+      <div className="rounded-md p-6 mb-6"
         style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #E9ECEF',
@@ -170,7 +170,7 @@ export default function BuildingDetailPage() {
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             {/* Icône */}
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            <div className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: '#FDEDEC' }}>
               <Building2 size={22} style={{ color: '#C0392B' }} />
             </div>
@@ -211,7 +211,7 @@ export default function BuildingDetailPage() {
           {/* Bouton modifier */}
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = '#F8F9FA';
@@ -238,7 +238,7 @@ export default function BuildingDetailPage() {
         </div>
         <button
           onClick={() => setShowProjectModal(true)}
-          className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
@@ -250,7 +250,7 @@ export default function BuildingDetailPage() {
 
       {/* Liste projets */}
       {projects.length === 0 ? (
-        <div className="rounded-xl p-12 text-center"
+        <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '2px dashed #DEE2E6' }}>
           <FolderOpen size={32} className="mx-auto mb-3" style={{ color: '#ADB5BD' }} />
           <p className="text-sm font-medium" style={{ color: '#6C757D' }}>
@@ -261,7 +261,7 @@ export default function BuildingDetailPage() {
           </p>
           <button
             onClick={() => setShowProjectModal(true)}
-            className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg mx-auto transition-colors"
+            className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded mx-auto transition-colors"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
@@ -278,7 +278,7 @@ export default function BuildingDetailPage() {
               <div
                 key={project.id}
                 onClick={() => router.push(`/projects/${project.id}`)}
-                className="rounded-xl p-5 flex items-center justify-between cursor-pointer transition-all"
+                className="rounded-md p-5 flex items-center justify-between cursor-pointer transition-all"
                 style={{
                   backgroundColor: '#FFFFFF',
                   border: '1px solid #E9ECEF',
@@ -295,7 +295,7 @@ export default function BuildingDetailPage() {
               >
                 <div className="flex items-center gap-4">
                   {/* Badge type document */}
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm"
+                  <div className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 font-bold text-sm"
                     style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
                     {project.documentType}
                   </div>
@@ -329,7 +329,7 @@ export default function BuildingDetailPage() {
       {showEditModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-2xl p-8 overflow-y-auto max-h-[90vh]"
+          <div className="w-full max-w-lg rounded-md p-8 overflow-y-auto max-h-[90vh]"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Modifier le bâtiment
@@ -341,7 +341,7 @@ export default function BuildingDetailPage() {
                 </label>
                 <input type="text" value={form.name} required
                   onChange={e => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -353,7 +353,7 @@ export default function BuildingDetailPage() {
                 </label>
                 <select value={form.buildingType}
                   onChange={e => setForm({ ...form, buildingType: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -368,7 +368,7 @@ export default function BuildingDetailPage() {
                 </label>
                 <input type="text" value={form.address} required
                   onChange={e => setForm({ ...form, address: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -381,7 +381,7 @@ export default function BuildingDetailPage() {
                   </label>
                   <input type="text" value={form.city} required
                     onChange={e => setForm({ ...form, city: e.target.value })}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -393,7 +393,7 @@ export default function BuildingDetailPage() {
                   </label>
                   <input type="text" value={form.province} required
                     onChange={e => setForm({ ...form, province: e.target.value })}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -407,7 +407,7 @@ export default function BuildingDetailPage() {
                   </label>
                   <input type="text" value={form.postalCode}
                     onChange={e => setForm({ ...form, postalCode: e.target.value })}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -419,7 +419,7 @@ export default function BuildingDetailPage() {
                   </label>
                   <input type="number" value={form.floors}
                     onChange={e => setForm({ ...form, floors: e.target.value })}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -428,7 +428,7 @@ export default function BuildingDetailPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowEditModal(false)}
-                  className="flex-1 font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 font-medium py-2.5 rounded text-sm"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -436,7 +436,7 @@ export default function BuildingDetailPage() {
                   Annuler
                 </button>
                 <button type="submit"
-                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
@@ -453,7 +453,7 @@ export default function BuildingDetailPage() {
       {showProjectModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-md rounded-2xl p-8"
+          <div className="w-full max-w-md rounded-md p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Nouveau projet
@@ -466,7 +466,7 @@ export default function BuildingDetailPage() {
                 <input type="text" value={projectForm.name} required
                   onChange={e => setProjectForm({ ...projectForm, name: e.target.value })}
                   placeholder="Ex: PMU Tour ABC 2026"
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -478,7 +478,7 @@ export default function BuildingDetailPage() {
                 </label>
                 <select value={projectForm.documentType}
                   onChange={e => setProjectForm({ ...projectForm, documentType: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -492,7 +492,7 @@ export default function BuildingDetailPage() {
                 </label>
                 <input type="number" value={projectForm.year} required
                   onChange={e => setProjectForm({ ...projectForm, year: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -500,7 +500,7 @@ export default function BuildingDetailPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowProjectModal(false)}
-                  className="flex-1 font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 font-medium py-2.5 rounded text-sm"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -508,7 +508,7 @@ export default function BuildingDetailPage() {
                   Annuler
                 </button>
                 <button type="submit"
-                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}

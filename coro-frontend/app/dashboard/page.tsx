@@ -37,7 +37,7 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         {kpis.map(kpi => (
-          <div key={kpi.label} className="rounded-xl p-6"
+          <div key={kpi.label} className="rounded-md p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -52,7 +52,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Projets récents */}
-      <div className="rounded-xl p-6"
+      <div className="rounded-md p-6"
         style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #E9ECEF',
@@ -67,7 +67,7 @@ export default function DashboardPage() {
           </p>
           <button
             onClick={() => router.push('/projects')}
-            className="mt-4 text-white text-sm font-medium px-4 py-2 rounded-lg"
+            className="mt-4 text-white text-sm font-medium px-4 py-2 rounded"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}

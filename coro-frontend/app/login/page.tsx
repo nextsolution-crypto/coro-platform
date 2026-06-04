@@ -46,7 +46,7 @@ export default function LoginPage() {
         </div>
 
         {/* Carte */}
-        <div className="bg-white rounded-2xl p-8"
+        <div className="bg-white rounded-md p-8"
           style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1px solid #E9ECEF' }}>
 
           <h2 className="text-xl font-semibold mb-6" style={{ color: '#2C3E50' }}>
@@ -65,7 +65,7 @@ export default function LoginPage() {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="admin@coro.app"
                 required
-                className="w-full rounded-lg px-4 py-3 text-sm transition-colors
+                className="w-full rounded px-4 py-3 text-sm transition-colors
                   focus:outline-none"
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -88,7 +88,7 @@ export default function LoginPage() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full rounded-lg px-4 py-3 text-sm transition-colors
+                className="w-full rounded px-4 py-3 text-sm transition-colors
                   focus:outline-none"
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -101,7 +101,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="rounded-lg px-4 py-3"
+              <div className="rounded px-4 py-3"
                 style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
                 <p className="text-sm" style={{ color: '#C0392B' }}>{error}</p>
               </div>
@@ -110,7 +110,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full text-white font-semibold rounded-lg px-4 py-3
+              className="w-full text-white font-semibold rounded px-4 py-3
                 text-sm transition-colors mt-2"
               style={{
                 backgroundColor: loading ? '#E8A89C' : '#C0392B',

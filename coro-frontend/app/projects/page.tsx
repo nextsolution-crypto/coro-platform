@@ -120,7 +120,7 @@ export default function ProjectsPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -137,14 +137,14 @@ export default function ProjectsPage() {
           </p>
         </div>
       ) : projects.length === 0 ? (
-        <div className="rounded-xl p-12 text-center"
+        <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
             Aucun projet pour l'instant
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+            className="text-white text-sm font-medium px-4 py-2 rounded"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -161,7 +161,7 @@ export default function ProjectsPage() {
               <div
                 key={project.id}
                 onClick={() => router.push(`/projects/${project.id}`)}
-                className="rounded-xl p-5 cursor-pointer transition-all"
+                className="rounded-md p-5 cursor-pointer transition-all"
                 style={{
                   backgroundColor: '#FFFFFF',
                   border: '1px solid #E9ECEF',
@@ -239,7 +239,7 @@ export default function ProjectsPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-2xl p-8"
+          <div className="w-full max-w-lg rounded-md p-8"
             style={{
               backgroundColor: '#FFFFFF',
               boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
@@ -263,7 +263,7 @@ export default function ProjectsPage() {
                     onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                     placeholder={field.placeholder}
                     required
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={{
                       border: '1px solid #CED4DA',
                       color: '#2C3E50',
@@ -285,7 +285,7 @@ export default function ProjectsPage() {
                   value={form.documentType}
                   onChange={e => setForm({ ...form, documentType: e.target.value })}
                   required
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -307,7 +307,7 @@ export default function ProjectsPage() {
                   value={form.clientId}
                   onChange={e => setForm({ ...form, clientId: e.target.value })}
                   required
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -330,7 +330,7 @@ export default function ProjectsPage() {
                   onChange={e => setForm({ ...form, buildingId: e.target.value })}
                   required
                   disabled={!form.clientId}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none
                     disabled:opacity-50"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -347,7 +347,7 @@ export default function ProjectsPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 font-medium py-2.5 rounded-lg text-sm transition-colors"
+                  className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -356,7 +356,7 @@ export default function ProjectsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}

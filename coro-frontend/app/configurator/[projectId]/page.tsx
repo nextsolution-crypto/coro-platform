@@ -96,13 +96,13 @@ function DynamicListEditor({ field, items, onChange }: {
       .map(sf => sf.type === 'boolean' ? (item[sf.key] ? sf.label : null) : item[sf.key])
       .filter(Boolean).join(' — ');
 
-  const inputCls = "w-full rounded-lg px-3 py-2 text-sm focus:outline-none";
+  const inputCls = "w-full rounded px-3 py-2 text-sm focus:outline-none";
   const inputSty = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
 
   return (
     <div className="space-y-2">
       {items.map((item, idx) => (
-        <div key={idx} className="rounded-lg overflow-hidden"
+        <div key={idx} className="rounded overflow-hidden"
           style={{ border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF' }}>
           <div className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
@@ -160,7 +160,7 @@ function DynamicListEditor({ field, items, onChange }: {
                       {[true, false].map(val => (
                         <button key={String(val)}
                           onClick={() => handleUpdate(idx, sf.key, val)}
-                          className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                          className="flex-1 py-1.5 rounded text-xs font-medium transition-colors"
                           style={{
                             backgroundColor: item[sf.key] === val
                               ? (val ? '#EAFAF1' : '#FDEDEC')
@@ -184,7 +184,7 @@ function DynamicListEditor({ field, items, onChange }: {
         </div>
       ))}
       <button onClick={handleAdd}
-        className="w-full text-sm py-3 rounded-lg transition-all flex items-center
+        className="w-full text-sm py-3 rounded transition-all flex items-center
           justify-center gap-2 font-medium"
         style={{
           border: '2px dashed #F1948A',
@@ -216,7 +216,7 @@ function CheckboxGroupField({ field, value, onChange }: {
         const checked = value.includes(opt);
         return (
           <label key={opt}
-            className="flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer
+            className="flex items-center gap-2.5 p-2.5 rounded cursor-pointer
               transition-colors"
             style={{
               backgroundColor: checked ? '#FDEDEC' : '#F8F9FA',
@@ -384,7 +384,7 @@ export default function ConfiguratorPage() {
     </div>
   );
 
-  const inputCls = "w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none";
+  const inputCls = "w-full rounded px-3 py-2.5 text-sm focus:outline-none";
   const inputSty = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
 
   return (
@@ -411,7 +411,7 @@ export default function ConfiguratorPage() {
         </div>
         <div className="flex items-center gap-3">
           {analysis && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
               <span className="text-xs" style={{ color: '#6C757D' }}>Conformité</span>
               <span className="font-bold text-base" style={{
@@ -424,7 +424,7 @@ export default function ConfiguratorPage() {
           )}
           <button
             onClick={() => router.push(`/projects/${projectId}`)}
-            className="text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-medium px-4 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -434,7 +434,7 @@ export default function ConfiguratorPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="text-white text-sm font-medium px-4 py-2 rounded-lg
+            className="text-white text-sm font-medium px-4 py-2 rounded
               transition-colors disabled:opacity-50"
             style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
             onMouseEnter={e => {
@@ -464,7 +464,7 @@ export default function ConfiguratorPage() {
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(idx)}
-                  className="w-full text-left px-3 py-2.5 rounded-lg text-xs mb-1
+                  className="w-full text-left px-3 py-2.5 rounded text-xs mb-1
                     transition-colors flex items-center gap-2 font-medium"
                   style={{
                     backgroundColor: isActive ? '#FDEDEC' : 'transparent',
@@ -509,7 +509,7 @@ export default function ConfiguratorPage() {
 
               <div className="grid gap-3 max-w-2xl">
                 {visibleFields.map(field => (
-                  <div key={field.key} className="rounded-xl p-4 transition-all"
+                  <div key={field.key} className="rounded-md p-4 transition-all"
                     style={{
                       backgroundColor: '#FFFFFF',
                       border: '1px solid #E9ECEF',
@@ -528,7 +528,7 @@ export default function ConfiguratorPage() {
                         {[true, false].map(val => (
                           <button key={String(val)}
                             onClick={() => updateConfig(field.key, val)}
-                            className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+                            className="flex-1 py-2 rounded text-sm font-medium transition-colors"
                             style={{
                               backgroundColor: config[field.key] === val
                                 ? (val ? '#EAFAF1' : '#FDEDEC')
@@ -615,7 +615,7 @@ export default function ConfiguratorPage() {
               <div className="flex gap-3 mt-6 max-w-2xl">
                 {activeSection > 0 && (
                   <button onClick={() => setActiveSection(activeSection - 1)}
-                    className="flex-1 font-medium py-3 rounded-xl text-sm transition-colors"
+                    className="flex-1 font-medium py-3 rounded-md text-sm transition-colors"
                     style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -625,7 +625,7 @@ export default function ConfiguratorPage() {
                 )}
                 {activeSection < sections.length - 1 && (
                   <button onClick={() => setActiveSection(activeSection + 1)}
-                    className="flex-1 text-white font-medium py-3 rounded-xl text-sm"
+                    className="flex-1 text-white font-medium py-3 rounded-md text-sm"
                     style={{ backgroundColor: '#C0392B' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
@@ -635,7 +635,7 @@ export default function ConfiguratorPage() {
                 )}
                 {activeSection === sections.length - 1 && (
                   <button onClick={handleSave}
-                    className="flex-1 text-white font-medium py-3 rounded-xl text-sm"
+                    className="flex-1 text-white font-medium py-3 rounded-md text-sm"
                     style={{ backgroundColor: '#27AE60' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}
@@ -676,7 +676,7 @@ export default function ConfiguratorPage() {
               <div className="space-y-4">
 
                 {/* Score */}
-                <div className="rounded-xl p-4"
+                <div className="rounded-md p-4"
                   style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
                   <p className="text-xs mb-2" style={{ color: '#6C757D' }}>
                     Score de conformité
@@ -776,7 +776,7 @@ export default function ConfiguratorPage() {
                       {analysis.validations.map((v, idx) => {
                         const vs = validationStyles[v.type] || validationStyles.INFO;
                         return (
-                          <div key={idx} className="rounded-lg p-2.5"
+                          <div key={idx} className="rounded p-2.5"
                             style={{
                               backgroundColor: vs.bg,
                               border: `1px solid ${vs.border}`,

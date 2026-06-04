@@ -47,7 +47,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
           <button
             onClick={handleLogout}
-            className="text-sm px-3 py-1.5 rounded-lg transition-colors"
+            className="text-sm px-3 py-1.5 rounded transition-colors"
             style={{ color: '#6C757D', border: '1px solid #DEE2E6' }}
             onMouseEnter={e => {
               (e.currentTarget).style.backgroundColor = '#F8F9FA';
@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <button
                   key={item.label}
                   onClick={() => router.push(item.path)}
-                  className="w-full text-left px-4 py-2.5 rounded-lg text-sm
+                  className="w-full text-left px-4 py-2.5 rounded text-sm
                     transition-colors font-medium"
                   style={{
                     backgroundColor: isActive ? '#FDEDEC' : 'transparent',

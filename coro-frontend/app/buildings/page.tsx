@@ -87,7 +87,7 @@ export default function BuildingsPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+          className="text-white text-sm font-medium px-4 py-2 rounded"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -104,14 +104,14 @@ export default function BuildingsPage() {
           </p>
         </div>
       ) : buildings.length === 0 ? (
-        <div className="rounded-xl p-12 text-center"
+        <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
             Aucun bâtiment pour l'instant
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="text-white text-sm font-medium px-4 py-2 rounded-lg"
+            className="text-white text-sm font-medium px-4 py-2 rounded"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -125,7 +125,7 @@ export default function BuildingsPage() {
             <div
               key={building.id}
               onClick={() => router.push(`/buildings/${building.id}`)}
-              className="rounded-xl p-5 flex items-center justify-between
+              className="rounded-md p-5 flex items-center justify-between
                 cursor-pointer transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
@@ -194,7 +194,7 @@ export default function BuildingsPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-2xl p-8 overflow-y-auto max-h-[90vh]"
+          <div className="w-full max-w-lg rounded-md p-8 overflow-y-auto max-h-[90vh]"
             style={{
               backgroundColor: '#FFFFFF',
               boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
@@ -212,7 +212,7 @@ export default function BuildingsPage() {
                   value={form.clientId}
                   onChange={e => setForm({ ...form, clientId: e.target.value })}
                   required
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -234,7 +234,7 @@ export default function BuildingsPage() {
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   required
                   placeholder="Ex: Tour ABC"
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -248,7 +248,7 @@ export default function BuildingsPage() {
                 <select
                   value={form.buildingType}
                   onChange={e => setForm({ ...form, buildingType: e.target.value })}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -269,7 +269,7 @@ export default function BuildingsPage() {
                   value={form.address}
                   onChange={e => setForm({ ...form, address: e.target.value })}
                   required
-                  className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -286,7 +286,7 @@ export default function BuildingsPage() {
                     value={form.city}
                     onChange={e => setForm({ ...form, city: e.target.value })}
                     required
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -301,7 +301,7 @@ export default function BuildingsPage() {
                     onChange={e => setForm({ ...form, province: e.target.value })}
                     required
                     placeholder="QC"
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -318,7 +318,7 @@ export default function BuildingsPage() {
                     type="text"
                     value={form.postalCode}
                     onChange={e => setForm({ ...form, postalCode: e.target.value })}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -331,7 +331,7 @@ export default function BuildingsPage() {
                     type="number"
                     value={form.floors}
                     onChange={e => setForm({ ...form, floors: e.target.value })}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm focus:outline-none"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
@@ -343,7 +343,7 @@ export default function BuildingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 font-medium py-2.5 rounded text-sm"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -352,7 +352,7 @@ export default function BuildingsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 text-white font-medium py-2.5 rounded-lg text-sm"
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
