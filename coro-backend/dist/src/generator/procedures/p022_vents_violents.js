@@ -9,7 +9,7 @@ exports.P022_VENTS_VIOLENTS = {
     titleFR: 'PROCÉDURES EN CAS DE VENTS VIOLENTS',
     titleEN: 'HIGH WINDS PROCEDURES',
     icon: '🌬️',
-    headerColor: types_1.COLORS.silver,
+    headerColor: types_1.COLORS.steel,
     activationRule: 'boma_certified',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P022_VENTS_VIOLENTS = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Coordonnateur d\'urgence',
             roleLabelEN: 'Emergency Coordinator',
-            headerColor: types_1.COLORS.silver,
+            headerColor: types_1.COLORS.steel,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

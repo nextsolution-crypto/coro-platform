@@ -13,7 +13,7 @@ export const P025_VERGLAS: ProcedureTemplate = {
   titleFR: 'PROCÉDURES EN CAS DE VERGLAS',
   titleEN: 'ICE STORM PROCEDURES',
   icon: '🧊',
-  headerColor: COLORS.silver,
+  headerColor: COLORS.glacier,
   activationRule: 'boma_certified',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
@@ -21,7 +21,7 @@ export const P025_VERGLAS: ProcedureTemplate = {
       roleCode: 'ROLE-CU',
       roleLabelFR: 'Coordonnateur d\'urgence — Agent de sécurité console',
       roleLabelEN: 'Emergency Coordinator — Console Security Agent',
-      headerColor: COLORS.silver,
+      headerColor: COLORS.glacier,
       steps: [
         // ── Mandat ──────────────────────────────────────────
         {

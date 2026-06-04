@@ -12,7 +12,7 @@ export const P001_DIRECTIVES_GENERALES: ProcedureTemplate = {
   code: CODE,
   titleFR: 'DIRECTIVES GÉNÉRALES LORS D\'UNE URGENCE',
   titleEN: 'GENERAL DIRECTIVES DURING AN EMERGENCY',
-  headerColor: COLORS.dark,
+  headerColor: COLORS.slate,
   activationRule: 'always',
   documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'],
   directivesGenerales: [

@@ -13,7 +13,7 @@ export const P014_GAZ_TOXIQUE: ProcedureTemplate = {
   titleFR: 'PROCÉDURES DE CONFINEMENT EN CAS DE PRÉSENCE DE GAZ TOXIQUE',
   titleEN: 'CONTAINMENT PROCEDURES IN CASE OF TOXIC GAS PRESENCE',
   icon: '☁️',
-  headerColor: COLORS.gray,
+  headerColor: COLORS.olive,
   activationRule: 'has_gas',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
@@ -21,7 +21,7 @@ export const P014_GAZ_TOXIQUE: ProcedureTemplate = {
       roleCode: 'ROLE-CU',
       roleLabelFR: 'Coordonnateur d\'urgence',
       roleLabelEN: 'Emergency Coordinator',
-      headerColor: COLORS.gray,
+      headerColor: COLORS.olive,
       steps: [
         // ── Mandat ──────────────────────────────────────────
         {

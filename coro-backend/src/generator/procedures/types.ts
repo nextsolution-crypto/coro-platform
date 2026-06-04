@@ -52,24 +52,36 @@ export interface ProcedureImage {
 
 export const COLORS = {
   // Codes incidents officiels
-  red:       '#C0392B',  // Code Rouge / Alarme incendie
+  red:       '#C0392B',  // P004 Alarme incendie / Code Rouge
   green:     '#27AE60',  // Code Vert
-  blue:      '#2980B9',  // Code Bleu
-  gray:      '#7F8C8D',  // Code Gris
-  white:     '#ECF0F1',  // Code Blanc
-  dark:      '#2C3E50',  // Code Noir
-  orange:    '#E67E22',  // Code Orange
+  blue:      '#2980B9',  // P013 Urgence médicale / Code Bleu
+  gray:      '#7F8C8D',  // P005 Fuite de gaz / Code Gris
+  white:     '#ECF0F1',  // P011 Menace active / Code Blanc
+  dark:      '#2C3E50',  // P015 Colis suspect / Code Noir
+  orange:    '#E67E22',  // P002 Découverte fumée / Code Orange
   yellow:    '#F1C40F',  // Code Jaune
-  brown:     '#8B4513',  // Code Brun
-  turquoise: '#1ABC9C',  // Code Turquoise
-  garnet:    '#8B0000',  // Code Grenat
+  brown:     '#8B4513',  // P018 Mat. dangereuses / Code Brun
+  turquoise: '#1ABC9C',  // P017 Bris gicleurs / Code Turquoise
+  garnet:    '#8B0000',  // P021 VE incendie + P026 Batterie lithium / Code Grenat
   pink:      '#E91E63',  // Code Rose
-  purple:    '#8E44AD',  // Code Violet
+  purple:    '#8E44AD',  // P020 Manifestation / Code Violet
   silver:    '#95A5A6',  // Code Argent
   indigo:    '#4B0082',  // Protocole-18
-  fireAlert: '#FF6600',  // Alerte incendie
+  fireAlert: '#FF6600',  // P003 Alerte incendie
   fireAlarm: '#FF0000',  // Alarme incendie
-  teal:      '#008B8B',  // Ascenseur / urgence technique
+  teal:      '#008B8B',  // P012 Ascenseur
+
+  // Couleurs procédures uniquement
+  slate:     '#607D8B',  // P001 Directives générales
+  olive:     '#808000',  // P014 Gaz toxique
+  amber:     '#FF8F00',  // P016 Coupure de courant
+  onyx:      '#353839',  // P019 Alerte bombe
+  steel:     '#4682B4',  // P022 Vents violents
+  coral:     '#FF6B6B',  // P023 Vagues de chaleur
+  sapphire:  '#0057A8',  // P024 Inondations
+  glacier:   '#A8D8EA',  // P025 Verglas
+  cobalt:    '#0047AB',  // P027 Noyade
+  scarlet:   '#FF2400',  // P028 Incendie cuisine
 };
 
 // ============================================================

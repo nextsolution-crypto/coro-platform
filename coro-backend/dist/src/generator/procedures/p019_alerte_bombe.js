@@ -9,7 +9,7 @@ exports.P019_ALERTE_BOMBE = {
     titleFR: 'MENACE OU ALERTE À LA BOMBE',
     titleEN: 'BOMB THREAT OR ALERT',
     icon: '💣',
-    headerColor: types_1.COLORS.dark,
+    headerColor: types_1.COLORS.onyx,
     activationRule: 'always',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P019_ALERTE_BOMBE = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Coordonnateur d\'urgence',
             roleLabelEN: 'Emergency Coordinator',
-            headerColor: types_1.COLORS.dark,
+            headerColor: types_1.COLORS.onyx,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

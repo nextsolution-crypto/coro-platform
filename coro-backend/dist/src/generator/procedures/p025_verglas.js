@@ -9,7 +9,7 @@ exports.P025_VERGLAS = {
     titleFR: 'PROCÉDURES EN CAS DE VERGLAS',
     titleEN: 'ICE STORM PROCEDURES',
     icon: '🧊',
-    headerColor: types_1.COLORS.silver,
+    headerColor: types_1.COLORS.glacier,
     activationRule: 'boma_certified',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P025_VERGLAS = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Coordonnateur d\'urgence — Agent de sécurité console',
             roleLabelEN: 'Emergency Coordinator — Console Security Agent',
-            headerColor: types_1.COLORS.silver,
+            headerColor: types_1.COLORS.glacier,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

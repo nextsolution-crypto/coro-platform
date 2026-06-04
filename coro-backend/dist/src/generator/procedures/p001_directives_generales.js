@@ -8,7 +8,7 @@ exports.P001_DIRECTIVES_GENERALES = {
     code: CODE,
     titleFR: 'DIRECTIVES GÉNÉRALES LORS D\'UNE URGENCE',
     titleEN: 'GENERAL DIRECTIVES DURING AN EMERGENCY',
-    headerColor: types_1.COLORS.dark,
+    headerColor: types_1.COLORS.slate,
     activationRule: 'always',
     documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'],
     directivesGenerales: [

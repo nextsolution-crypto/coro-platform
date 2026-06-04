@@ -13,7 +13,7 @@ export const P019_ALERTE_BOMBE: ProcedureTemplate = {
   titleFR: 'MENACE OU ALERTE À LA BOMBE',
   titleEN: 'BOMB THREAT OR ALERT',
   icon: '💣',
-  headerColor: COLORS.dark,
+  headerColor: COLORS.onyx,
   activationRule: 'always',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
@@ -22,7 +22,7 @@ export const P019_ALERTE_BOMBE: ProcedureTemplate = {
       roleCode: 'ROLE-CU',
       roleLabelFR: 'Coordonnateur d\'urgence',
       roleLabelEN: 'Emergency Coordinator',
-      headerColor: COLORS.dark,
+      headerColor: COLORS.onyx,
       steps: [
         // ── Principes de base ───────────────────────────────
         {

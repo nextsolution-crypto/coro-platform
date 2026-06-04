@@ -9,7 +9,7 @@ exports.P023_VAGUES_CHALEUR = {
     titleFR: 'PROCÉDURES EN CAS DE VAGUES DE CHALEUR',
     titleEN: 'HEAT WAVE PROCEDURES',
     icon: '🌡️',
-    headerColor: types_1.COLORS.orange,
+    headerColor: types_1.COLORS.coral,
     activationRule: 'boma_certified',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P023_VAGUES_CHALEUR = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Coordonnateur d\'urgence — Agent de sécurité console',
             roleLabelEN: 'Emergency Coordinator — Console Security Agent',
-            headerColor: types_1.COLORS.orange,
+            headerColor: types_1.COLORS.coral,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

@@ -21,24 +21,14 @@ interface Role {
   description?: string;
 }
 
-interface Procedure {
-  id: string;
-  name: string;
-  status: string;
-  documentTypes: string[];
-  phase?: string;
-  incidentCode?: IncidentCode;
-  role?: Role;
-}
-
 export default function LibraryPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'codes' | 'roles' | 'procedures'>('codes');
   const [incidentCodes, setIncidentCodes] = useState<IncidentCode[]>([]);
-  const [roles, setRoles]                 = useState<Role[]>([]);
-  const [procedures, setProcedures]       = useState<Procedure[]>([]);
-  const [loading, setLoading]             = useState(true);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [procedures, setProcedures] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedProc, setExpandedProc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,6 +50,22 @@ export default function LibraryPage() {
     finally { setLoading(false); }
   };
 
+  const getActivationLabel = (rule: string) => {
+    const map: Record<string, string> = {
+      always:         'Toujours actif',
+      double_signal:  'Double signal',
+      has_gas:        'Gaz naturel',
+      has_ammonia:    'Ammoniac',
+      has_sprinklers: 'Gicleurs',
+      has_elevators:  'Ascenseurs',
+      has_hazmat:     'Mat. dangereuses',
+      boma_certified: 'BOMA',
+      has_pool:       'Piscine',
+      has_kitchen:    'Cuisine commerciale',
+    };
+    return map[rule] || rule;
+  };
+
   const tabs = [
     { key: 'codes',      label: 'Codes incidents', count: incidentCodes.length },
     { key: 'roles',      label: 'Rôles',           count: roles.length },
@@ -69,7 +75,7 @@ export default function LibraryPage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
           Bibliothèque centrale
         </h2>
@@ -79,28 +85,25 @@ export default function LibraryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b" style={{ borderColor: '#DEE2E6' }}>
+      <div className="flex gap-0 mb-6" style={{ borderBottom: '1px solid #DEE2E6' }}>
         {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className="px-4 py-2.5 text-sm font-medium transition-colors relative"
+            className="px-5 py-2.5 text-sm font-medium transition-colors"
             style={{
               color: activeTab === tab.key ? '#C0392B' : '#6C757D',
-              borderBottom: activeTab === tab.key
-                ? '2px solid #C0392B'
-                : '2px solid transparent',
+              borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent',
               marginBottom: '-1px',
+              backgroundColor: 'transparent',
             }}
           >
             {tab.label}
-            <span
-              className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded"
               style={{
                 backgroundColor: activeTab === tab.key ? '#FDEDEC' : '#F8F9FA',
                 color: activeTab === tab.key ? '#C0392B' : '#ADB5BD',
-              }}
-            >
+              }}>
               {tab.count}
             </span>
           </button>
@@ -109,97 +112,74 @@ export default function LibraryPage() {
 
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>
-            Chargement...
-          </p>
+          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
         </div>
       ) : (
         <>
-          {/* Codes incidents */}
+          {/* ── CODES INCIDENTS ── */}
           {activeTab === 'codes' && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {incidentCodes.map(code => (
-                <div
-                  key={code.id}
-                  className="rounded-xl p-4 flex items-center gap-4 transition-all"
+                <div key={code.id}
+                  className="flex items-center gap-3 p-3 transition-colors"
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #E9ECEF',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                    borderLeft: `3px solid ${code.color}`,
+                    borderRadius: '4px',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                    e.currentTarget.style.borderColor = '#CED4DA';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                    e.currentTarget.style.borderColor = '#E9ECEF';
-                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                 >
-                  <div
-                    className="w-10 h-10 rounded-lg flex-shrink-0"
-                    style={{
-                      backgroundColor: code.color,
-                      boxShadow: `0 2px 8px ${code.color}40`,
-                    }}
-                  />
-                  <div>
-                    <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+                  <div className="w-7 h-7 rounded flex-shrink-0"
+                    style={{ backgroundColor: code.color }} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: '#2C3E50' }}>
                       {code.name}
-                    </h3>
-                    {code.description && (
-                      <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
-                        {code.description}
-                      </p>
-                    )}
-                    <span className="text-xs font-mono mt-1 block" style={{ color: '#ADB5BD' }}>
+                    </p>
+                    <p className="text-xs truncate" style={{ color: '#6C757D' }}>
+                      {code.description}
+                    </p>
+                    <p className="text-xs font-mono mt-0.5" style={{ color: '#ADB5BD' }}>
                       {code.code}
-                    </span>
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Rôles */}
+          {/* ── RÔLES ── */}
           {activeTab === 'roles' && (
-            <div className="grid gap-2">
+            <div className="grid gap-1.5">
               {roles.map(role => (
-                <div
-                  key={role.id}
-                  className="rounded-xl p-4 flex items-center justify-between transition-all"
+                <div key={role.id}
+                  className="flex items-center justify-between p-3 transition-colors"
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #E9ECEF',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                    borderRadius: '4px',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                    e.currentTarget.style.borderColor = '#CED4DA';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                    e.currentTarget.style.borderColor = '#E9ECEF';
-                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                 >
                   <div>
-                    <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
                       {role.name}
-                    </h3>
+                    </p>
                     {role.description && (
                       <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
                         {role.description}
                       </p>
                     )}
                   </div>
-                  <span
-                    className="text-xs font-mono px-2.5 py-1 rounded flex-shrink-0 ml-4"
+                  <span className="text-xs font-mono px-2 py-1 ml-4 flex-shrink-0"
                     style={{
                       backgroundColor: '#F8F9FA',
                       color: '#495057',
                       border: '1px solid #DEE2E6',
-                    }}
-                  >
+                      borderRadius: '3px',
+                    }}>
                     {role.roleCode}
                   </span>
                 </div>
@@ -207,133 +187,137 @@ export default function LibraryPage() {
             </div>
           )}
 
-          {/* Procédures */}
-{activeTab === 'procedures' && (
-  procedures.length === 0 ? (
-    <div className="rounded-xl p-12 text-center"
-      style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-      <p className="text-sm" style={{ color: '#ADB5BD' }}>
-        Aucune procédure pour l'instant
-      </p>
-    </div>
-  ) : (
-    <div className="grid gap-4">
-      {(procedures as any[]).map(proc => (
-        <div key={proc.id} className="rounded-xl overflow-hidden"
-  style={{
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E9ECEF',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-  }}>
+          {/* ── PROCÉDURES ── */}
+          {activeTab === 'procedures' && (
+            <div className="grid gap-1.5">
+              {procedures.map(proc => (
+                <div key={proc.id}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E9ECEF',
+                    borderLeft: `3px solid ${proc.headerColor}`,
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                  }}>
 
-  {/* Header cliquable */}
-  <div
-    className="px-5 py-3 flex items-center gap-3 cursor-pointer"
-    style={{ backgroundColor: proc.headerColor }}
-    onClick={() => setExpandedProc(expandedProc === proc.id ? null : proc.id)}
-  >
-    {proc.icon && <span className="text-lg">{proc.icon}</span>}
-    <div className="flex-1">
-      <div className="flex items-center gap-2">
-        <span className="text-white/70 text-xs font-mono font-bold">
-          {proc.code}
-        </span>
-        {proc.phase && (
-          <span className="text-xs px-2 py-0.5 rounded font-medium"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              color: '#FFFFFF',
-            }}>
-            {proc.phase === 'alerte' ? 'Alerte' : 'Alarme'}
-          </span>
-        )}
-      </div>
-      <p className="text-white font-bold text-sm uppercase tracking-wide">
-        {proc.titleFR}
-      </p>
-    </div>
-    <div className="flex items-center gap-3 text-white/70 text-xs">
-      <span>{proc.roleSections?.length || 0} rôle(s)</span>
-      <span>•</span>
-      <span>{proc.totalSteps} étape(s)</span>
-      <span className="px-2 py-0.5 rounded text-xs font-medium"
-        style={{
-          backgroundColor: 'rgba(255,255,255,0.15)',
-          color: '#FFFFFF',
-        }}>
-        {proc.activationRule === 'always' ? 'Toujours actif' :
-         proc.activationRule === 'double_signal' ? 'Double signal' :
-         proc.activationRule === 'has_gas' ? 'Gaz naturel' :
-         proc.activationRule === 'has_ammonia' ? 'Ammoniac' :
-         proc.activationRule === 'has_sprinklers' ? 'Gicleurs' :
-         proc.activationRule === 'boma_certified' ? 'BOMA' :
-         proc.activationRule}
-      </span>
-      {/* Bouton expand */}
-      <span className="ml-2 text-white font-bold text-base">
-        {expandedProc === proc.id ? '−' : '+'}
-      </span>
-    </div>
-  </div>
+                  {/* Ligne principale cliquable */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
+                    style={{ backgroundColor: '#FFFFFF' }}
+                    onClick={() => setExpandedProc(expandedProc === proc.id ? null : proc.id)}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  >
+                    {/* Icône + couleur */}
+                    <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 text-sm"
+                      style={{ backgroundColor: proc.headerColor }}>
+                      {proc.icon || '📋'}
+                    </div>
 
-  {/* Rôles — visible seulement si expanded */}
-  {expandedProc === proc.id && (
-    <>
-      <div className="divide-y" style={{ borderColor: '#F8F9FA' }}>
-        {(proc.roleSections || []).map((rs: any, idx: number) => (
-          <div key={idx}
-            className="flex items-center justify-between px-5 py-3">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: rs.headerColor }} />
-              <div>
-                <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
-                  {rs.roleLabelFR}
-                </p>
-                <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                  {rs.roleLabelEN}
-                </p>
-              </div>
+                    {/* Code + titre */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold"
+                          style={{ color: '#ADB5BD' }}>
+                          {proc.code}
+                        </span>
+                        {proc.phase && (
+                          <span className="text-xs px-1.5 py-0.5 rounded font-medium"
+                            style={{
+                              backgroundColor: proc.phase === 'alerte' ? '#FEF9E7' : '#FDEDEC',
+                              color: proc.phase === 'alerte' ? '#F39C12' : '#C0392B',
+                              border: `1px solid ${proc.phase === 'alerte' ? '#FAD7A0' : '#F1948A'}`,
+                            }}>
+                            {proc.phase === 'alerte' ? 'Alerte' : 'Alarme'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold truncate"
+                        style={{ color: '#2C3E50' }}>
+                        {proc.titleFR}
+                      </p>
+                    </div>
+
+                    {/* Méta */}
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                        {proc.roleSections?.length || 0} rôle(s)
+                      </span>
+                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                        {proc.totalSteps} étape(s)
+                      </span>
+                      <span className="text-xs px-2 py-0.5 font-medium"
+                        style={{
+                          backgroundColor: '#F8F9FA',
+                          color: '#495057',
+                          border: '1px solid #DEE2E6',
+                          borderRadius: '3px',
+                        }}>
+                        {getActivationLabel(proc.activationRule)}
+                      </span>
+                      <span className="text-sm font-medium w-4 text-center"
+                        style={{ color: '#ADB5BD' }}>
+                        {expandedProc === proc.id ? '−' : '+'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Rôles expandés */}
+                  {expandedProc === proc.id && (
+                    <>
+                      <div style={{ borderTop: '1px solid #F0F0F0' }}>
+                        {(proc.roleSections || []).map((rs: any, idx: number) => (
+                          <div key={idx}
+                            className="flex items-center justify-between px-4 py-2.5"
+                            style={{
+                              borderBottom: idx < proc.roleSections.length - 1
+                                ? '1px solid #F8F9FA' : 'none',
+                              backgroundColor: '#FAFAFA',
+                            }}>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: rs.headerColor }} />
+                              <p className="text-xs font-medium" style={{ color: '#495057' }}>
+                                {rs.roleLabelFR}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-mono px-1.5 py-0.5"
+                                style={{
+                                  backgroundColor: '#F0F0F0',
+                                  color: '#6C757D',
+                                  borderRadius: '2px',
+                                }}>
+                                {rs.roleCode}
+                              </span>
+                              <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                                {rs.stepCount} étape{rs.stepCount > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-4 py-2 flex gap-2"
+                        style={{ backgroundColor: '#F8F9FA', borderTop: '1px solid #EFEFEF' }}>
+                        {proc.documentTypes.map((dt: string) => (
+                          <span key={dt} className="text-xs px-2 py-0.5 font-medium"
+                            style={{
+                              backgroundColor: '#FDEDEC',
+                              color: '#C0392B',
+                              border: '1px solid #F1948A',
+                              borderRadius: '3px',
+                            }}>
+                            {dt}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono px-2 py-0.5 rounded"
-                style={{
-                  backgroundColor: '#F8F9FA',
-                  color: '#6C757D',
-                  border: '1px solid #E9ECEF',
-                }}>
-                {rs.roleCode}
-              </span>
-              <span className="text-xs" style={{ color: '#ADB5BD' }}>
-                {rs.stepCount} étape{rs.stepCount > 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <div className="px-5 py-2 flex gap-2"
-        style={{ backgroundColor: '#F8F9FA', borderTop: '1px solid #E9ECEF' }}>
-        {proc.documentTypes.map((dt: string) => (
-          <span key={dt} className="text-xs px-2 py-0.5 rounded font-medium"
-            style={{
-              backgroundColor: '#FDEDEC',
-              color: '#C0392B',
-              border: '1px solid #F1948A',
-            }}>
-            {dt}
-          </span>
-        ))}
-      </div>
-    </>
-  )}
-</div>
-      ))}
-    </div>
-  )
-)}
-</>
+          )}
+        </>
       )}
     </AppLayout>
   );

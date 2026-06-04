@@ -9,7 +9,7 @@ exports.P027_NOYADE = {
     titleFR: 'NOYADE — ÉTABLISSEMENT SANS SAUVETEUR',
     titleEN: 'DROWNING — FACILITY WITHOUT LIFEGUARD',
     icon: '🏊',
-    headerColor: types_1.COLORS.blue,
+    headerColor: types_1.COLORS.cobalt,
     activationRule: 'has_pool',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P027_NOYADE = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Personne qui constate l\'incident',
             roleLabelEN: 'Person who discovers the incident',
-            headerColor: types_1.COLORS.blue,
+            headerColor: types_1.COLORS.cobalt,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

@@ -13,7 +13,7 @@ export const P024_INONDATIONS: ProcedureTemplate = {
   titleFR: 'PROCÉDURES EN CAS D\'INONDATIONS',
   titleEN: 'FLOOD PROCEDURES',
   icon: '🌊',
-  headerColor: COLORS.turquoise,
+  headerColor: COLORS.sapphire,
   activationRule: 'boma_certified',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
@@ -21,7 +21,7 @@ export const P024_INONDATIONS: ProcedureTemplate = {
       roleCode: 'ROLE-CU',
       roleLabelFR: 'Coordonnateur d\'urgence — Agent de sécurité console',
       roleLabelEN: 'Emergency Coordinator — Console Security Agent',
-      headerColor: COLORS.turquoise,
+      headerColor: COLORS.sapphire,
       steps: [
         // ── Mandat ──────────────────────────────────────────
         {

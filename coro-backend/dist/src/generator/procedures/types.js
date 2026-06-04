@@ -21,6 +21,16 @@ exports.COLORS = {
     fireAlert: '#FF6600',
     fireAlarm: '#FF0000',
     teal: '#008B8B',
+    slate: '#607D8B',
+    olive: '#808000',
+    amber: '#FF8F00',
+    onyx: '#353839',
+    steel: '#4682B4',
+    coral: '#FF6B6B',
+    sapphire: '#0057A8',
+    glacier: '#A8D8EA',
+    cobalt: '#0047AB',
+    scarlet: '#FF2400',
 };
 function sid(procedureCode, index) {
     return `${procedureCode}_step_${index.toString().padStart(3, '0')}`;

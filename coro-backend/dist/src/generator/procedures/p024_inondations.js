@@ -9,7 +9,7 @@ exports.P024_INONDATIONS = {
     titleFR: 'PROCÉDURES EN CAS D\'INONDATIONS',
     titleEN: 'FLOOD PROCEDURES',
     icon: '🌊',
-    headerColor: types_1.COLORS.turquoise,
+    headerColor: types_1.COLORS.sapphire,
     activationRule: 'boma_certified',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P024_INONDATIONS = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Coordonnateur d\'urgence — Agent de sécurité console',
             roleLabelEN: 'Emergency Coordinator — Console Security Agent',
-            headerColor: types_1.COLORS.turquoise,
+            headerColor: types_1.COLORS.sapphire,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

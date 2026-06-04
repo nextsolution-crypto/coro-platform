@@ -9,7 +9,7 @@ exports.P016_COUPURE_COURANT = {
     titleFR: 'COUPURE DE COURANT',
     titleEN: 'POWER OUTAGE',
     icon: '⚡',
-    headerColor: types_1.COLORS.orange,
+    headerColor: types_1.COLORS.amber,
     activationRule: 'always',
     documentTypes: ['PMU', 'PSI'],
     roleSections: [
@@ -17,7 +17,7 @@ exports.P016_COUPURE_COURANT = {
             roleCode: 'ROLE-CU',
             roleLabelFR: 'Coordonnateur d\'urgence',
             roleLabelEN: 'Emergency Coordinator',
-            headerColor: types_1.COLORS.orange,
+            headerColor: types_1.COLORS.amber,
             steps: [
                 {
                     id: (0, types_1.sid)(CODE, 1),

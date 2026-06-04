@@ -56,5 +56,15 @@ export declare const COLORS: {
     fireAlert: string;
     fireAlarm: string;
     teal: string;
+    slate: string;
+    olive: string;
+    amber: string;
+    onyx: string;
+    steel: string;
+    coral: string;
+    sapphire: string;
+    glacier: string;
+    cobalt: string;
+    scarlet: string;
 };
 export declare function sid(procedureCode: string, index: number): string;

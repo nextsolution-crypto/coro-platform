@@ -13,7 +13,7 @@ export const P028_INCENDIE_CUISINE: ProcedureTemplate = {
   titleFR: 'INCENDIE SERVICE ALIMENTAIRE',
   titleEN: 'FOOD SERVICE FIRE',
   icon: '🍳',
-  headerColor: COLORS.red,
+  headerColor: COLORS.scarlet,
   activationRule: 'has_kitchen',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
@@ -21,7 +21,7 @@ export const P028_INCENDIE_CUISINE: ProcedureTemplate = {
       roleCode: 'ROLE-RS',
       roleLabelFR: 'Personne qui constate le début d\'incendie',
       roleLabelEN: 'Person who discovers the fire',
-      headerColor: COLORS.red,
+      headerColor: COLORS.scarlet,
       steps: [
         // ── Assurer la sécurité ─────────────────────────────
         {

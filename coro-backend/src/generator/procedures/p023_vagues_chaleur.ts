@@ -13,7 +13,7 @@ export const P023_VAGUES_CHALEUR: ProcedureTemplate = {
   titleFR: 'PROCÉDURES EN CAS DE VAGUES DE CHALEUR',
   titleEN: 'HEAT WAVE PROCEDURES',
   icon: '🌡️',
-  headerColor: COLORS.orange,
+  headerColor: COLORS.coral,
   activationRule: 'boma_certified',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
@@ -21,7 +21,7 @@ export const P023_VAGUES_CHALEUR: ProcedureTemplate = {
       roleCode: 'ROLE-CU',
       roleLabelFR: 'Coordonnateur d\'urgence — Agent de sécurité console',
       roleLabelEN: 'Emergency Coordinator — Console Security Agent',
-      headerColor: COLORS.orange,
+      headerColor: COLORS.coral,
       steps: [
         // ── Mandat ──────────────────────────────────────────
         {
