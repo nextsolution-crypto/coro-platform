@@ -15,6 +15,7 @@ import { P013_URGENCE_MEDICALE } from './p013_urgence_medicale';
 import { P015_COLIS_SUSPECT } from './p015_colis_suspect';
 import { P016_COUPURE_COURANT } from './p016_coupure_courant';
 import { P019_ALERTE_BOMBE } from './p019_alerte_bombe';
+import { P020_MANIFESTATION } from './p020_manifestation';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -33,6 +34,7 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P015_COLIS_SUSPECT,
   P016_COUPURE_COURANT,
   P019_ALERTE_BOMBE,
+  P020_MANIFESTATION,
   // P006_FUITE_AMMONIAC,     ← à venir
   // P007_URGENCE_MEDICALE,   ← à venir
 ];
