@@ -17,6 +17,7 @@ import { P016_COUPURE_COURANT } from './p016_coupure_courant';
 import { P019_ALERTE_BOMBE } from './p019_alerte_bombe';
 import { P020_MANIFESTATION } from './p020_manifestation';
 import { P021_VE_INCENDIE } from './p021_ve_incendie';
+import { P026_BATTERIE_LITHIUM } from './p026_batterie_lithium';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -37,6 +38,7 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P019_ALERTE_BOMBE,
   P020_MANIFESTATION,
   P021_VE_INCENDIE,
+  P026_BATTERIE_LITHIUM,
   // P006_FUITE_AMMONIAC,     ← à venir
   // P007_URGENCE_MEDICALE,   ← à venir
 ];
