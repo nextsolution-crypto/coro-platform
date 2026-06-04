@@ -20,6 +20,7 @@ const p018_matieres_dangereuses_1 = require("./p018_matieres_dangereuses");
 const p019_alerte_bombe_1 = require("./p019_alerte_bombe");
 const p020_manifestation_1 = require("./p020_manifestation");
 const p021_ve_incendie_1 = require("./p021_ve_incendie");
+const p022_vents_violents_1 = require("./p022_vents_violents");
 const p026_batterie_lithium_1 = require("./p026_batterie_lithium");
 const p028_incendie_cuisine_1 = require("./p028_incendie_cuisine");
 exports.PROCEDURES_REGISTRY = [
@@ -39,6 +40,7 @@ exports.PROCEDURES_REGISTRY = [
     p019_alerte_bombe_1.P019_ALERTE_BOMBE,
     p020_manifestation_1.P020_MANIFESTATION,
     p021_ve_incendie_1.P021_VE_INCENDIE,
+    p022_vents_violents_1.P022_VENTS_VIOLENTS,
     p026_batterie_lithium_1.P026_BATTERIE_LITHIUM,
     p028_incendie_cuisine_1.P028_INCENDIE_CUISINE,
 ];
