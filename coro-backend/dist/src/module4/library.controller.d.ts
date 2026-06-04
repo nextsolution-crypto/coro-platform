@@ -16,4 +16,5 @@ export declare class LibraryController {
             roleCount: number;
         }[];
     }>;
+    getProcedureFull(procedureId: string): Promise<import("../generator/procedures").ProcedureTemplate>;
 }

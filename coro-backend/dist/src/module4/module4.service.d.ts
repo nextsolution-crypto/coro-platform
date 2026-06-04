@@ -20,6 +20,7 @@ export declare class Module4Service {
             roleCount: number;
         }[];
     }>;
+    getProcedureFull(procedureId: string): Promise<import("../generator/procedures").ProcedureTemplate>;
     saveModule4(projectId: string, dto: any): Promise<{
         success: boolean;
         message: string;

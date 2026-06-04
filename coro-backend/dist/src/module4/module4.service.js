@@ -48,6 +48,13 @@ let Module4Service = class Module4Service {
             })),
         };
     }
+    async getProcedureFull(procedureId) {
+        const proc = (0, module4_templates_1.getProcedureById)(procedureId);
+        if (!proc) {
+            throw new common_1.NotFoundException(`Procédure ${procedureId} introuvable`);
+        }
+        return proc;
+    }
     async saveModule4(projectId, dto) {
         const document = await this.prisma.document.findFirst({
             where: { projectId },

@@ -240,7 +240,7 @@ export default function Module4ProcedureCard({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-white/60 text-xs">
-            {procedure.roleSections.length} rôle(s)
+            {(procedure.roleSections || []).length} rôle(s)
           </span>
           <span className="text-white font-bold text-lg">
             {expanded ? '−' : '+'}
@@ -276,7 +276,7 @@ export default function Module4ProcedureCard({
           )}
 
           {/* Sections par rôle — chacune fermée par défaut */}
-          {procedure.roleSections.map(section => {
+          {(procedure.roleSections || []).map(section => {
             const isRoleExpanded = expandedRoles.has(section.roleCode);
             const roleLabel = isFr ? section.roleLabelFR : section.roleLabelEN;
 

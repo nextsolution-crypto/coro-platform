@@ -38,17 +38,17 @@ export default function Module4Section({
   const isFr = language === 'fr';
   const isFirstLoad = useRef(true);
 
-  const [procedures, setProcedures]             = useState<Procedure[]>([]);
-  const [directives, setDirectives]             = useState<any>(null);
+  const [procedures, setProcedures]                 = useState<Procedure[]>([]);
+  const [directives, setDirectives]                 = useState<any>(null);
   const [customProcedureIds, setCustomProcedureIds] = useState<string[]>([]);
-  const [autoActivatedIds, setAutoActivatedIds] = useState<string[]>([]);
-  const [overrides, setOverrides]               = useState<Record<string, string>>({});
-  const [comments, setComments]                 = useState<Record<string, string>>({});
-  const [showLibrary, setShowLibrary]           = useState(false);
-  const [saving, setSaving]                     = useState(false);
-  const [lastSaved, setLastSaved]               = useState<Date | null>(null);
-  const [isDirty, setIsDirty]                   = useState(false);
-  const [loadingData, setLoadingData]           = useState(true);
+  const [autoActivatedIds, setAutoActivatedIds]     = useState<string[]>([]);
+  const [overrides, setOverrides]                   = useState<Record<string, string>>({});
+  const [comments, setComments]                     = useState<Record<string, string>>({});
+  const [showLibrary, setShowLibrary]               = useState(false);
+  const [saving, setSaving]                         = useState(false);
+  const [lastSaved, setLastSaved]                   = useState<Date | null>(null);
+  const [isDirty, setIsDirty]                       = useState(false);
+  const [loadingData, setLoadingData]               = useState(true);
 
   // ============================================================
   // CHARGEMENT
@@ -61,19 +61,38 @@ export default function Module4Section({
         const res = await api.get(`/projects/${projectId}/module4`);
         const saved = res.data?.module4;
 
+        const autoIds = (initialData.procedures || []).map((p: Procedure) => p.id);
+        setAutoActivatedIds(autoIds);
+        setDirectives(initialData.directivesGenerales || null);
+
         if (saved) {
           setCustomProcedureIds(saved.customProcedureIds || []);
           setOverrides(saved.procedureOverrides?.steps || {});
           setComments(saved.procedureOverrides?.comments || {});
+
+          // Charger les procédures custom COMPLÈTES avec roleSections
+          const customIds: string[] = saved.customProcedureIds || [];
+          if (customIds.length > 0) {
+            const customProcs = await Promise.all(
+              customIds
+                .filter(id => !autoIds.includes(id))
+                .map(async id => {
+                  try {
+                    const r = await api.get(`/procedures/${id}/full`);
+                    return { ...r.data, sectionNumber: '' };
+                  } catch { return null; }
+                })
+            );
+            setProcedures([
+              ...(initialData.procedures || []),
+              ...customProcs.filter(Boolean),
+            ]);
+          } else {
+            setProcedures(initialData.procedures || []);
+          }
+        } else {
+          setProcedures(initialData.procedures || []);
         }
-
-        // Données initiales du générateur
-        setProcedures(initialData.procedures || []);
-        setDirectives(initialData.directivesGenerales || null);
-
-        // IDs auto-activés = ceux dans initialData
-        const autoIds = (initialData.procedures || []).map((p: Procedure) => p.id);
-        setAutoActivatedIds(autoIds);
 
       } catch {
         setProcedures(initialData.procedures || []);
@@ -133,14 +152,32 @@ export default function Module4Section({
     setIsDirty(true);
   }, []);
 
-  const handleAddProcedure = useCallback((id: string) => {
-    setCustomProcedureIds(prev => [...prev, id]);
-    setIsDirty(true);
-  }, []);
+  const handleAddProcedure = useCallback(async (id: string) => {
+  setCustomProcedureIds(prev => [...prev, id]);
+  setIsDirty(true);
+
+  // Charger la procédure COMPLÈTE avec roleSections
+  try {
+    const res = await api.get(`/procedures/${id}/full`);
+    const proc = res.data;
+    if (proc) {
+      setProcedures(prev => [...prev, { ...proc, sectionNumber: '' }]);
+    }
+  } catch (err) {
+    console.error('Erreur chargement procédure complète:', err);
+  }
+}, []);
 
   const handleRemoveProcedure = useCallback((id: string) => {
     setCustomProcedureIds(prev => prev.filter(p => p !== id));
     setIsDirty(true);
+    // Retirer de l'affichage seulement si ce n'est pas une procédure auto
+    setAutoActivatedIds(autoIds => {
+      if (!autoIds.includes(id)) {
+        setProcedures(prev => prev.filter(p => p.id !== id));
+      }
+      return autoIds;
+    });
   }, []);
 
   // Toutes les procédures actives = auto + custom
@@ -154,27 +191,25 @@ export default function Module4Section({
   // ============================================================
 
   const t = isFr ? {
-    module:   'PROCÉDURES DES MEMBRES',
-    subtitle: 'DE L\'ÉQUIPE D\'URGENCE',
-    library:  'Bibliothèque de procédures',
-    saving:   'Sauvegarde...',
-    saved:    'Sauvegardé',
-    unsaved:  'Non sauvegardé',
-    loading:  'Chargement...',
-    empty:    'Aucune procédure active',
-    emptyHint:'Utilisez la bibliothèque pour ajouter des procédures.',
-    directives: 'DIRECTIVES GÉNÉRALES LORS D\'UNE URGENCE',
+    module:    'PROCÉDURES DES MEMBRES',
+    subtitle:  'DE L\'ÉQUIPE D\'URGENCE',
+    library:   'Bibliothèque de procédures',
+    saving:    'Sauvegarde...',
+    saved:     'Sauvegardé',
+    unsaved:   'Non sauvegardé',
+    loading:   'Chargement...',
+    empty:     'Aucune procédure active',
+    emptyHint: 'Utilisez la bibliothèque pour ajouter des procédures.',
   } : {
-    module:   'EMERGENCY TEAM MEMBER',
-    subtitle: 'PROCEDURES',
-    library:  'Procedure Library',
-    saving:   'Saving...',
-    saved:    'Saved',
-    unsaved:  'Unsaved changes',
-    loading:  'Loading...',
-    empty:    'No active procedures',
-    emptyHint:'Use the library to add procedures.',
-    directives: 'GENERAL DIRECTIVES DURING AN EMERGENCY',
+    module:    'EMERGENCY TEAM MEMBER',
+    subtitle:  'PROCEDURES',
+    library:   'Procedure Library',
+    saving:    'Saving...',
+    saved:     'Saved',
+    unsaved:   'Unsaved changes',
+    loading:   'Loading...',
+    empty:     'No active procedures',
+    emptyHint: 'Use the library to add procedures.',
   };
 
   // ============================================================
@@ -208,7 +243,7 @@ export default function Module4Section({
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Autosave */}
+          {/* Indicateur autosave */}
           <div className="text-xs">
             {saving && (
               <span className="flex items-center gap-1.5 text-blue-600">
@@ -233,9 +268,11 @@ export default function Module4Section({
           {/* Bouton bibliothèque */}
           <button
             onClick={() => setShowLibrary(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg
-              bg-orange-500 hover:bg-orange-600 text-white text-sm
-              font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white
+              text-sm font-medium transition-colors"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
           >
             <BookOpen size={15} />
             {t.library}
@@ -243,20 +280,20 @@ export default function Module4Section({
         </div>
       </div>
 
-      {/* Directives générales */}
-      {/* Directives générales — supprimées, gérées via P001 dans la liste des procédures */}
-
       {/* Procédures */}
       {procedures.length === 0 ? (
-        <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-xl">
-          <BookOpen size={32} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">{t.empty}</p>
-          <p className="text-gray-400 text-sm mt-1">{t.emptyHint}</p>
+        <div className="text-center py-16 border-2 border-dashed rounded-xl"
+          style={{ borderColor: '#DEE2E6' }}>
+          <BookOpen size={32} className="mx-auto mb-3" style={{ color: '#ADB5BD' }} />
+          <p className="font-medium" style={{ color: '#6C757D' }}>{t.empty}</p>
+          <p className="text-sm mt-1" style={{ color: '#ADB5BD' }}>{t.emptyHint}</p>
           <button
             onClick={() => setShowLibrary(true)}
-            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg
-              bg-orange-500 hover:bg-orange-600 text-white text-sm
-              font-medium transition-colors mx-auto"
+            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg text-white
+              text-sm font-medium transition-colors mx-auto"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
           >
             <Plus size={15} />
             {t.library}
@@ -277,7 +314,7 @@ export default function Module4Section({
         ))
       )}
 
-      {/* Bibliothèque modal */}
+      {/* Modal bibliothèque */}
       {showLibrary && (
         <Module4Library
           activeProcedureIds={allActiveProcedureIds}

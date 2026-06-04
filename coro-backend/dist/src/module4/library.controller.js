@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LibraryController = void 0;
 const common_1 = require("@nestjs/common");
@@ -21,16 +24,26 @@ let LibraryController = class LibraryController {
     async getLibrary() {
         return this.module4Service.getLibrary();
     }
+    async getProcedureFull(procedureId) {
+        return this.module4Service.getProcedureFull(procedureId);
+    }
 };
 exports.LibraryController = LibraryController;
 __decorate([
-    (0, common_1.Get)(),
+    (0, common_1.Get)('library'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], LibraryController.prototype, "getLibrary", null);
+__decorate([
+    (0, common_1.Get)(':procedureId/full'),
+    __param(0, (0, common_1.Param)('procedureId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], LibraryController.prototype, "getProcedureFull", null);
 exports.LibraryController = LibraryController = __decorate([
-    (0, common_1.Controller)('procedures/library'),
+    (0, common_1.Controller)('procedures'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     __metadata("design:paramtypes", [module4_service_1.Module4Service])
 ], LibraryController);

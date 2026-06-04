@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { getAllProcedures } from '../generator/module4.templates';
+import { getAllProcedures, getProcedureById } from '../generator/module4.templates';
 
 @Injectable()
 export class Module4Service {
@@ -24,7 +24,7 @@ export class Module4Service {
     };
   }
 
-  // ── GET bibliothèque complète ──────────────────────────
+  // ── GET bibliothèque complète (résumé) ─────────────────
 
   async getLibrary() {
     return {
@@ -43,7 +43,17 @@ export class Module4Service {
     };
   }
 
-  // ── PUT sauvegarde module4 ────────────────────────────
+  // ── GET procédure complète avec roleSections ───────────
+
+  async getProcedureFull(procedureId: string) {
+    const proc = getProcedureById(procedureId);
+    if (!proc) {
+      throw new NotFoundException(`Procédure ${procedureId} introuvable`);
+    }
+    return proc;
+  }
+
+  // ── PUT sauvegarde module4 ─────────────────────────────
 
   async saveModule4(projectId: string, dto: any) {
     const document = await this.prisma.document.findFirst({
@@ -58,20 +68,20 @@ export class Module4Service {
     const updatedContent = {
       ...existingContent,
       module4: {
-        customProcedureIds:    dto.customProcedureIds    || [],
-        procedureOverrides:    dto.procedureOverrides    || {},
-        updatedAt: new Date().toISOString(),
+        customProcedureIds: dto.customProcedureIds    || [],
+        procedureOverrides: dto.procedureOverrides    || {},
+        updatedAt:          new Date().toISOString(),
       },
     };
 
     await this.prisma.document.update({
       where: { id: document.id },
-      data: { content: updatedContent },
+      data:  { content: updatedContent },
     });
 
     return {
-      success: true,
-      message: 'Module 4 sauvegardé',
+      success:   true,
+      message:   'Module 4 sauvegardé',
       updatedAt: updatedContent.module4.updatedAt,
     };
   }
