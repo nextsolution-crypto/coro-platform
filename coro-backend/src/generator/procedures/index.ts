@@ -27,6 +27,7 @@ import { P025_VERGLAS } from './p025_verglas';
 import { P026_BATTERIE_LITHIUM } from './p026_batterie_lithium';
 import { P027_NOYADE } from './p027_noyade';
 import { P028_INCENDIE_CUISINE } from './p028_incendie_cuisine';
+import { P101_ALERTE_INCENDIE_IND } from './p101_alerte_incendie_ind';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -57,6 +58,7 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P026_BATTERIE_LITHIUM,
   P027_NOYADE,
   P028_INCENDIE_CUISINE,
+  P101_ALERTE_INCENDIE_IND,
 ];
 
 // ============================================================
@@ -77,6 +79,7 @@ export const ACTIVATION_RULES: Record<string, (config: any) => boolean> = {
   has_pool:        (c)     => !!c?.piscine,
   has_kitchen:     (c)     => !!c?.cuisineCommerciale,
   manual:          ()      => false, // Jamais auto — seulement via bibliothèque
+  is_industrial:   (c)     => c?.buildingType === 'Industriel',
 };
 
 // ============================================================

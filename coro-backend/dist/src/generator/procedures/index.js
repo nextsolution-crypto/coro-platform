@@ -27,6 +27,7 @@ const p025_verglas_1 = require("./p025_verglas");
 const p026_batterie_lithium_1 = require("./p026_batterie_lithium");
 const p027_noyade_1 = require("./p027_noyade");
 const p028_incendie_cuisine_1 = require("./p028_incendie_cuisine");
+const p101_alerte_incendie_ind_1 = require("./p101_alerte_incendie_ind");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
     p002_decouverte_fumee_1.P002_DECOUVERTE_FUMEE,
@@ -51,6 +52,7 @@ exports.PROCEDURES_REGISTRY = [
     p026_batterie_lithium_1.P026_BATTERIE_LITHIUM,
     p027_noyade_1.P027_NOYADE,
     p028_incendie_cuisine_1.P028_INCENDIE_CUISINE,
+    p101_alerte_incendie_ind_1.P101_ALERTE_INCENDIE_IND,
 ];
 exports.ACTIVATION_RULES = {
     always: () => true,
@@ -66,6 +68,7 @@ exports.ACTIVATION_RULES = {
     has_pool: (c) => !!c?.piscine,
     has_kitchen: (c) => !!c?.cuisineCommerciale,
     manual: () => false,
+    is_industrial: (c) => c?.buildingType === 'Industriel',
 };
 function getActiveProcedures(config, documentType, activeRoleCodes) {
     return exports.PROCEDURES_REGISTRY
