@@ -14,11 +14,12 @@ const p012_ascenseur_1 = require("./p012_ascenseur");
 const p013_urgence_medicale_1 = require("./p013_urgence_medicale");
 const p015_colis_suspect_1 = require("./p015_colis_suspect");
 const p016_coupure_courant_1 = require("./p016_coupure_courant");
+const p017_bris_gicleurs_1 = require("./p017_bris_gicleurs");
+const p018_matieres_dangereuses_1 = require("./p018_matieres_dangereuses");
 const p019_alerte_bombe_1 = require("./p019_alerte_bombe");
 const p020_manifestation_1 = require("./p020_manifestation");
 const p021_ve_incendie_1 = require("./p021_ve_incendie");
 const p026_batterie_lithium_1 = require("./p026_batterie_lithium");
-const p018_matieres_dangereuses_1 = require("./p018_matieres_dangereuses");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
     p002_decouverte_fumee_1.P002_DECOUVERTE_FUMEE,
@@ -30,11 +31,12 @@ exports.PROCEDURES_REGISTRY = [
     p013_urgence_medicale_1.P013_URGENCE_MEDICALE,
     p015_colis_suspect_1.P015_COLIS_SUSPECT,
     p016_coupure_courant_1.P016_COUPURE_COURANT,
+    p017_bris_gicleurs_1.P017_BRIS_GICLEURS,
+    p018_matieres_dangereuses_1.P018_MATIERES_DANGEREUSES,
     p019_alerte_bombe_1.P019_ALERTE_BOMBE,
     p020_manifestation_1.P020_MANIFESTATION,
     p021_ve_incendie_1.P021_VE_INCENDIE,
     p026_batterie_lithium_1.P026_BATTERIE_LITHIUM,
-    p018_matieres_dangereuses_1.P018_MATIERES_DANGEREUSES,
 ];
 exports.ACTIVATION_RULES = {
     always: () => true,
