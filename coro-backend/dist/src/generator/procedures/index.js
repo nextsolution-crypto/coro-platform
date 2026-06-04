@@ -12,6 +12,7 @@ const p005_fuite_gaz_1 = require("./p005_fuite_gaz");
 const p011_menace_active_1 = require("./p011_menace_active");
 const p012_ascenseur_1 = require("./p012_ascenseur");
 const p013_urgence_medicale_1 = require("./p013_urgence_medicale");
+const p014_gaz_toxique_1 = require("./p014_gaz_toxique");
 const p015_colis_suspect_1 = require("./p015_colis_suspect");
 const p016_coupure_courant_1 = require("./p016_coupure_courant");
 const p017_bris_gicleurs_1 = require("./p017_bris_gicleurs");
@@ -29,6 +30,7 @@ exports.PROCEDURES_REGISTRY = [
     p011_menace_active_1.P011_MENACE_ACTIVE,
     p012_ascenseur_1.P012_ASCENSEUR,
     p013_urgence_medicale_1.P013_URGENCE_MEDICALE,
+    p014_gaz_toxique_1.P014_GAZ_TOXIQUE,
     p015_colis_suspect_1.P015_COLIS_SUSPECT,
     p016_coupure_courant_1.P016_COUPURE_COURANT,
     p017_bris_gicleurs_1.P017_BRIS_GICLEURS,

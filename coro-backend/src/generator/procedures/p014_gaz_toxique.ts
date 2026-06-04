@@ -1,0 +1,548 @@
+// ============================================================
+// CORO — P014 : Confinement en cas de présence de gaz toxique
+// Activé si : has_gas
+// ============================================================
+
+import { ProcedureTemplate, COLORS, sid } from './types';
+
+const CODE = 'P014';
+
+export const P014_GAZ_TOXIQUE: ProcedureTemplate = {
+  id: 'p014_gaz_toxique',
+  code: CODE,
+  titleFR: 'PROCÉDURES DE CONFINEMENT EN CAS DE PRÉSENCE DE GAZ TOXIQUE',
+  titleEN: 'CONTAINMENT PROCEDURES IN CASE OF TOXIC GAS PRESENCE',
+  icon: '☁️',
+  headerColor: COLORS.gray,
+  activationRule: 'has_gas',
+  documentTypes: ['PMU', 'PSI'],
+  roleSections: [
+    {
+      roleCode: 'ROLE-CU',
+      roleLabelFR: 'Coordonnateur d\'urgence',
+      roleLabelEN: 'Emergency Coordinator',
+      headerColor: COLORS.gray,
+      steps: [
+        // ── Mandat ──────────────────────────────────────────
+        {
+          id: sid(CODE, 1),
+          textFR: '**Mandat**',
+          textEN: '**Mandate**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 2),
+          textFR: 'Assurer la protection immédiate des occupants en cas de présence réelle ou suspectée de gaz toxique, coordonner le confinement du bâtiment, maintenir une communication claire avec les autorités et préparer la réintégration sécuritaire des lieux',
+          textEN: 'Ensure the immediate protection of occupants in case of real or suspected toxic gas presence, coordinate building containment, maintain clear communication with authorities, and prepare for safe re-entry',
+          isBold: false,
+        },
+        // ── Déclenchement ───────────────────────────────────
+        {
+          id: sid(CODE, 3),
+          textFR: '**Déclenchement**',
+          textEN: '**Activation**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 4),
+          textFR: 'La procédure est déclenchée dès qu\'une alerte officielle ou un signalement crédible indique la présence possible de gaz toxique à proximité ou à l\'intérieur du bâtiment',
+          textEN: 'The procedure is activated as soon as an official alert or credible report indicates the possible presence of toxic gas near or inside the building',
+          isBold: false,
+        },
+        // ── Détection et identification ─────────────────────
+        {
+          id: sid(CODE, 5),
+          textFR: '**Détection et identification de la menace**',
+          textEN: '**Detection and identification of the threat**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 6),
+          textFR: '1. Réception de l\'alerte :',
+          textEN: '1. Receiving the alert:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 7),
+              textFR: 'Prendre connaissance de l\'alerte transmise par les autorités, le système de surveillance ou un signalement interne (odeur inhabituelle, fumée, symptômes)',
+              textEN: 'Acknowledge the alert transmitted by authorities, the monitoring system, or an internal report (unusual odour, smoke, symptoms)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 8),
+              textFR: 'Vérifier si un avis officiel de confinement a été émis par la municipalité ou les services d\'urgence',
+              textEN: 'Verify if an official containment notice has been issued by the municipality or emergency services',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 9),
+          textFR: '2. Évaluation de la situation :',
+          textEN: '2. Situation assessment:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 10),
+              textFR: 'Identifier la source présumée de la fuite (installation voisine, transport de matières dangereuses, incident industriel)',
+              textEN: 'Identify the presumed source of the leak (neighbouring facility, hazardous materials transport, industrial incident)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 11),
+              textFR: 'Vérifier les conditions météorologiques, notamment la direction du vent',
+              textEN: 'Check weather conditions, particularly wind direction',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 12),
+              textFR: 'Si possible, communiquer avec l\'entreprise voisine pour obtenir des précisions sur la nature du produit impliqué',
+              textEN: 'If possible, communicate with the neighbouring company to obtain details on the nature of the product involved',
+              isList: true,
+            },
+          ],
+        },
+        // ── Déclenchement du confinement ────────────────────
+        {
+          id: sid(CODE, 13),
+          textFR: '**Déclenchement du confinement**',
+          textEN: '**Activating containment**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 14),
+          textFR: '3. Alerte interne :',
+          textEN: '3. Internal alert:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 15),
+              textFR: 'Diffuser immédiatement une alerte de confinement via les moyens de communication du bâtiment (intercom, courriel, SMS)',
+              textEN: 'Immediately broadcast a containment alert via the building\'s communication means (intercom, email, SMS)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 16),
+              textFR: 'Utiliser un message clair et concis indiquant de demeurer à l\'intérieur et de suivre les consignes',
+              textEN: 'Use a clear and concise message indicating to remain inside and follow instructions',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 17),
+          textFR: '4. Fermeture et isolation :',
+          textEN: '4. Closing and isolation:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 18),
+              textFR: 'Interdire toute sortie du bâtiment jusqu\'à nouvel ordre',
+              textEN: 'Prohibit any exit from the building until further notice',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 19),
+          textFR: '⚠️ Aucune tentative d\'évacuation ne doit être effectuée en présence d\'un nuage toxique sans directive des autorités. Un confinement bien appliqué offre une protection supérieure à une évacuation improvisée.',
+          textEN: '⚠️ No evacuation attempt should be made in the presence of a toxic cloud without authority directives. A well-applied containment provides better protection than an improvised evacuation.',
+          isBold: false,
+          isRed: true,
+        },
+        // ── Désactivation de la ventilation ─────────────────
+        {
+          id: sid(CODE, 20),
+          textFR: '**Désactivation de la ventilation**',
+          textEN: '**Deactivating ventilation**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 21),
+          textFR: 'Faire désactiver la ventilation :',
+          textEN: 'Have ventilation deactivated:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 22),
+              textFR: 'Demander au responsable mécanique de fermer les prises d\'air extérieur et d\'arrêter les systèmes de CVAC, si requis',
+              textEN: 'Ask the mechanical supervisor to close exterior air intakes and stop HVAC systems if required',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 23),
+          textFR: 'Assurer l\'étanchéité du bâtiment :',
+          textEN: 'Ensure building airtightness:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 24),
+              textFR: 'Fermer toutes les portes et fenêtres',
+              textEN: 'Close all doors and windows',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 25),
+              textFR: 'Bloquer les ouvertures avec des linges humides si nécessaire',
+              textEN: 'Block openings with damp cloths if necessary',
+              isList: true,
+            },
+          ],
+        },
+        // ── Gestion des occupants ───────────────────────────
+        {
+          id: sid(CODE, 26),
+          textFR: '**Gestion des occupants**',
+          textEN: '**Occupant management**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 27),
+          textFR: '5. Confinement des personnes :',
+          textEN: '5. Confining persons:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 28),
+              textFR: 'Diriger les employés et visiteurs vers des zones intérieures sécuritaires, loin des portes et fenêtres',
+              textEN: 'Direct employees and visitors to safe interior areas, away from doors and windows',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 29),
+              textFR: 'Éviter les sous-sols si la matière toxique est plus dense que l\'air',
+              textEN: 'Avoid basements if the toxic substance is denser than air',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 30),
+              textFR: 'S\'assurer qu\'aucune personne ne quitte les lieux sans autorisation',
+              textEN: 'Ensure no person leaves the premises without authorization',
+              isList: true,
+            },
+          ],
+        },
+        // ── Communication et coordination ───────────────────
+        {
+          id: sid(CODE, 31),
+          textFR: '**Communication et coordination**',
+          textEN: '**Communication and coordination**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 32),
+          textFR: '6. Contact avec les services d\'urgence (9-1-1) :',
+          textEN: '6. Contact with emergency services (9-1-1):',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 33),
+              textFR: 'Adresse complète du bâtiment',
+              textEN: 'Complete building address',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 34),
+              textFR: 'Nature de l\'incident (présence de gaz toxique)',
+              textEN: 'Nature of the incident (toxic gas presence)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 35),
+              textFR: 'Source présumée de la fuite',
+              textEN: 'Presumed source of the leak',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 36),
+              textFR: 'Nombre d\'occupants confinés',
+              textEN: 'Number of confined occupants',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 37),
+              textFR: 'Symptômes rapportés, le cas échéant',
+              textEN: 'Reported symptoms, if applicable',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 38),
+          textFR: '7. Coordination avec l\'entreprise voisine :',
+          textEN: '7. Coordination with the neighbouring company:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 39),
+              textFR: 'Si applicable, maintenir un contact avec les responsables de l\'entreprise à l\'origine de l\'incident afin de suivre l\'évolution de la situation',
+              textEN: 'If applicable, maintain contact with the company responsible for the incident to monitor the situation',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 40),
+          textFR: '8. Suivi de la situation :',
+          textEN: '8. Situation monitoring:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 41),
+              textFR: 'Informer les occupants à intervalles réguliers de l\'évolution de la situation',
+              textEN: 'Inform occupants at regular intervals of the situation\'s evolution',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 42),
+              textFR: 'Ne lever le confinement qu\'après validation officielle des autorités compétentes',
+              textEN: 'Lift containment only after official validation by competent authorities',
+              isList: true,
+            },
+          ],
+        },
+        // ── Réintégration ───────────────────────────────────
+        {
+          id: sid(CODE, 43),
+          textFR: '**Réintégration**',
+          textEN: '**Re-entry**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 44),
+          textFR: '9. Autorisation de sortie :',
+          textEN: '9. Exit authorization:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 45),
+              textFR: 'Attendre le feu vert des autorités avant d\'autoriser la reprise des activités',
+              textEN: 'Wait for the green light from authorities before authorizing the resumption of activities',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 46),
+              textFR: 'Si des symptômes sont signalés, demander une évaluation médicale (811 ou services d\'urgence)',
+              textEN: 'If symptoms are reported, request a medical evaluation (811 or emergency services)',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 47),
+          textFR: '10. Inspection et ventilation :',
+          textEN: '10. Inspection and ventilation:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 48),
+              textFR: 'Faire inspecter les systèmes mécaniques',
+              textEN: 'Have mechanical systems inspected',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 49),
+              textFR: 'Demander la réactivation contrôlée de la ventilation et l\'aération complète du bâtiment avant la réintégration totale',
+              textEN: 'Request controlled reactivation of ventilation and complete building aeration before full re-entry',
+              isList: true,
+            },
+          ],
+        },
+        // ── Débriefing et rapport ───────────────────────────
+        {
+          id: sid(CODE, 50),
+          textFR: '**Débriefing et rapport**',
+          textEN: '**Debriefing and report**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 51),
+          textFR: '11. Débriefing :',
+          textEN: '11. Debriefing:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 52),
+              textFR: 'Organiser une rencontre post-événement avec l\'équipe d\'urgence',
+              textEN: 'Organize a post-event meeting with the emergency team',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 53),
+              textFR: 'Rédiger un rapport d\'incident incluant la chronologie des événements, les mesures prises, les impacts observés et les recommandations d\'amélioration',
+              textEN: 'Write an incident report including the chronology of events, measures taken, observed impacts, and improvement recommendations',
+              isList: true,
+            },
+          ],
+        },
+        // ── Consignes internes ──────────────────────────────
+        {
+          id: sid(CODE, 54),
+          textFR: '**Consignes internes — équipe de gestion et de sécurité** *(Non diffusées aux occupants)*',
+          textEN: '**Internal guidance — management and security team** *(Not distributed to occupants)*',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 55),
+          textFR: 'Utiliser des messages directifs et non techniques',
+          textEN: 'Use directive and non-technical messages',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 56),
+          textFR: 'Ne jamais identifier ou nommer le gaz sans confirmation officielle',
+          textEN: 'Never identify or name the gas without official confirmation',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 57),
+          textFR: 'Éviter toute spéculation ou interprétation personnelle',
+          textEN: 'Avoid any personal speculation or interpretation',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 58),
+          textFR: 'Prioriser le confinement tant que la source n\'est pas maîtrisée',
+          textEN: 'Prioritize containment as long as the source is not controlled',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 59),
+          textFR: 'Coordonner toute évacuation avec les services d\'urgence uniquement',
+          textEN: 'Coordinate any evacuation with emergency services only',
+          isBold: false,
+        },
+        // ── Messages types ──────────────────────────────────
+        {
+          id: sid(CODE, 60),
+          textFR: '**Messages types à diffuser aux occupants** *(Les messages doivent être mentionnés 2 fois de suite)*',
+          textEN: '**Standard messages to broadcast to occupants** *(Messages must be repeated twice consecutively)*',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 61),
+          textFR: 'Cadence de communication recommandée :',
+          textEN: 'Recommended communication cadence:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 62),
+              textFR: 'Au minimum toutes les 15 minutes, même en l\'absence de changement',
+              textEN: 'At least every 15 minutes, even if there is no change',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 63),
+              textFR: 'Immédiatement lors de tout changement de situation (aggravation, stabilisation, nouvelles consignes)',
+              textEN: 'Immediately upon any change in situation (aggravation, stabilization, new instructions)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 64),
+              textFR: 'À la levée des mesures ou lors du retour progressif à la normale',
+              textEN: 'When measures are lifted or when the situation gradually returns to normal',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 65),
+          textFR: '① Message — Alerte initiale (canaux : intercom, SMS, courriel, agents sur le terrain) :',
+          textEN: '① Message — Initial alert (channels: intercom, SMS, email, field agents):',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 66),
+          textFR: 'ATTENTION, ATTENTION. Une présence de gaz toxique a été détectée ou est suspectée dans le secteur. Pour votre sécurité : demeurez à l\'intérieur du bâtiment ; éloignez-vous immédiatement de la zone concernée ; suivez strictement les consignes émises par l\'équipe de sécurité. D\'autres instructions suivront.',
+          textEN: 'ATTENTION, ATTENTION. The presence of toxic gas has been detected or is suspected in the area. For your safety: stay inside the building; move away from the affected area immediately; strictly follow the instructions issued by the security team. Further instructions will follow.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 67),
+          textFR: '② Message — Consignes de confinement (canaux : intercom, SMS) :',
+          textEN: '② Message — Containment instructions (channels: intercom, SMS):',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 68),
+          textFR: 'CONSIGNE DE SÉCURITÉ – GAZ TOXIQUE. ATTENTION ATTENTION. Ne sortez pas du bâtiment. Veuillez : fermer les portes et les fenêtres ; vous diriger vers des espaces intérieurs fermés, si possible ; couper toute ventilation ou appareil amenant de l\'air de l\'extérieur, si applicable. Attendez les instructions officielles.',
+          textEN: 'SAFETY NOTICE – TOXIC GAS. ATTENTION ATTENTION. Do not leave the building. Please: close doors and windows; direct yourself to closed indoor spaces, if possible; turn off any ventilation or appliances that bring in outside air, if applicable. Wait for official instructions.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 69),
+          textFR: '③ Message — Restriction de zones (canaux : intercom, affichage, agents) :',
+          textEN: '③ Message — Zone restriction (channels: intercom, display, agents):',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 70),
+          textFR: 'AVIS IMPORTANT – ZONE RESTREINTE. ATTENTION ATTENTION. Certaines zones du bâtiment sont temporairement interdites d\'accès en raison d\'un risque lié à un gaz toxique. Merci de respecter les périmètres établis et de ne pas circuler inutilement.',
+          textEN: 'IMPORTANT NOTICE – RESTRICTED AREA. ATTENTION ATTENTION. Some areas of the building are temporarily closed due to a risk related to a toxic gas. Please respect the established perimeters and do not move unnecessarily.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 71),
+          textFR: '④ Message — Mise à jour de situation (canaux : intercom, SMS, courriel) :',
+          textEN: '④ Message — Status update (channels: intercom, SMS, email):',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 72),
+          textFR: 'MISE À JOUR – SITUATION SOUS CONTRÔLE. ATTENTION ATTENTION. La situation fait présentement l\'objet d\'une surveillance par les équipes d\'intervention. Les consignes de confinement demeurent en vigueur jusqu\'à nouvel avis. Merci de demeurer calmes et attentifs aux prochaines communications.',
+          textEN: 'UPDATE – SITUATION UNDER CONTROL. ATTENTION ATTENTION. The situation is currently being monitored by the intervention teams. Lockdown orders remain in effect until further notice. Please remain calm and attentive to future communications.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 73),
+          textFR: '⑤ Message — Évacuation ciblée (sur instruction des services d\'urgence seulement) (canaux : intercom, agents, SMS) :',
+          textEN: '⑤ Message — Targeted evacuation (on emergency services instructions only) (channels: intercom, agents, SMS):',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 74),
+          textFR: 'CONSIGNE OFFICIELLE – ÉVACUATION DIRIGÉE. ATTENTION ATTENTION. Sur instruction des services d\'urgence, une évacuation contrôlée est en cours. Veuillez suivre les directives de l\'équipe de sécurité et utiliser uniquement les cheminements indiqués. N\'évacuez pas de votre propre initiative.',
+          textEN: 'OFFICIAL DIRECTION – DIRECTED EVACUATION. ATTENTION ATTENTION. On the instructions of the emergency services, a controlled evacuation is underway. Please follow the instructions of the security team and use only the routes indicated. Do not evacuate on your own initiative.',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 75),
+          textFR: '⑥ Message — Fin de l\'événement (canaux : intercom, courriel, affichage) :',
+          textEN: '⑥ Message — End of event (channels: intercom, email, display):',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 76),
+          textFR: 'FIN DES CONSIGNES – RETOUR PROGRESSIF À LA NORMALE. ATTENTION ATTENTION. Le risque lié à la présence de gaz toxique est maintenant levé. Les activités normales peuvent reprendre progressivement, selon les directives communiquées. Merci de votre collaboration.',
+          textEN: 'END OF INSTRUCTIONS – GRADUAL RETURN TO NORMAL. ATTENTION ATTENTION. The risk associated with the presence of toxic gas is now lifted. Normal activities can resume gradually, according to the directives communicated. Thank you for your cooperation.',
+          isBold: false,
+          isRed: true,
+        },
+      ],
+    },
+  ],
+};

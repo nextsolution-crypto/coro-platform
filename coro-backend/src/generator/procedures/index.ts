@@ -12,6 +12,7 @@ import { P005_FUITE_GAZ } from './p005_fuite_gaz';
 import { P011_MENACE_ACTIVE } from './p011_menace_active';
 import { P012_ASCENSEUR } from './p012_ascenseur';
 import { P013_URGENCE_MEDICALE } from './p013_urgence_medicale';
+import { P014_GAZ_TOXIQUE } from './p014_gaz_toxique';
 import { P015_COLIS_SUSPECT } from './p015_colis_suspect';
 import { P016_COUPURE_COURANT } from './p016_coupure_courant';
 import { P017_BRIS_GICLEURS } from './p017_bris_gicleurs';
@@ -35,6 +36,7 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P011_MENACE_ACTIVE,
   P012_ASCENSEUR,
   P013_URGENCE_MEDICALE,
+  P014_GAZ_TOXIQUE,
   P015_COLIS_SUSPECT,
   P016_COUPURE_COURANT,
   P017_BRIS_GICLEURS,
