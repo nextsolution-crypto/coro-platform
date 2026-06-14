@@ -28,6 +28,9 @@ const p026_batterie_lithium_1 = require("./p026_batterie_lithium");
 const p027_noyade_1 = require("./p027_noyade");
 const p028_incendie_cuisine_1 = require("./p028_incendie_cuisine");
 const p101_alerte_incendie_ind_1 = require("./p101_alerte_incendie_ind");
+const p102_alarme_incendie_ind_1 = require("./p102_alarme_incendie_ind");
+const p103_fuite_gaz_ind_1 = require("./p103_fuite_gaz_ind");
+const p104_fuite_ammoniac_ind_1 = require("./p104_fuite_ammoniac_ind");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
     p002_decouverte_fumee_1.P002_DECOUVERTE_FUMEE,
@@ -53,6 +56,9 @@ exports.PROCEDURES_REGISTRY = [
     p027_noyade_1.P027_NOYADE,
     p028_incendie_cuisine_1.P028_INCENDIE_CUISINE,
     p101_alerte_incendie_ind_1.P101_ALERTE_INCENDIE_IND,
+    p102_alarme_incendie_ind_1.P102_ALARME_INCENDIE_IND,
+    p103_fuite_gaz_ind_1.P103_FUITE_GAZ_IND,
+    p104_fuite_ammoniac_ind_1.P104_FUITE_AMMONIAC_IND,
 ];
 exports.ACTIVATION_RULES = {
     always: () => true,

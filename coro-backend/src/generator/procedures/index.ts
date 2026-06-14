@@ -28,6 +28,9 @@ import { P026_BATTERIE_LITHIUM } from './p026_batterie_lithium';
 import { P027_NOYADE } from './p027_noyade';
 import { P028_INCENDIE_CUISINE } from './p028_incendie_cuisine';
 import { P101_ALERTE_INCENDIE_IND } from './p101_alerte_incendie_ind';
+import { P102_ALARME_INCENDIE_IND } from './p102_alarme_incendie_ind';
+import { P103_FUITE_GAZ_IND } from './p103_fuite_gaz_ind';
+import { P104_FUITE_AMMONIAC_IND } from './p104_fuite_ammoniac_ind';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -59,6 +62,9 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P027_NOYADE,
   P028_INCENDIE_CUISINE,
   P101_ALERTE_INCENDIE_IND,
+  P102_ALARME_INCENDIE_IND,
+  P103_FUITE_GAZ_IND,
+  P104_FUITE_AMMONIAC_IND,
 ];
 
 // ============================================================

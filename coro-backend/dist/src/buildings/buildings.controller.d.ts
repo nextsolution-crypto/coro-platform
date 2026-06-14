@@ -12,6 +12,9 @@ export declare class BuildingsController {
         };
     } & {
         id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
         name: string;
         address: string;
         city: string;
@@ -20,50 +23,50 @@ export declare class BuildingsController {
         floors: number | null;
         units: number | null;
         buildingType: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         clientId: string;
     })[]>;
     findProjects(id: string): Promise<{
         id: string;
-        name: string;
         updatedAt: Date;
+        name: string;
+        year: number;
         documentType: import("@prisma/client").$Enums.DocumentType;
         status: import("@prisma/client").$Enums.ProjectStatus;
-        year: number;
     }[]>;
     findOne(id: string): Promise<({
         client: {
             id: string;
-            name: string;
-            address: string | null;
-            city: string | null;
-            province: string | null;
+            email: string | null;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
-            email: string | null;
+            name: string;
             phone: string | null;
+            address: string | null;
+            city: string | null;
+            province: string | null;
             logoUrl: string | null;
             logoBase64: string | null;
         };
         projects: {
             id: string;
-            name: string;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
+            name: string;
+            year: number;
             clientId: string;
             documentType: import("@prisma/client").$Enums.DocumentType;
             status: import("@prisma/client").$Enums.ProjectStatus;
-            year: number;
             progress: number;
             buildingId: string;
             userId: string;
         }[];
     } & {
         id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
         name: string;
         address: string;
         city: string;
@@ -72,13 +75,13 @@ export declare class BuildingsController {
         floors: number | null;
         units: number | null;
         buildingType: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         clientId: string;
     }) | null>;
     create(body: any): Promise<{
         id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
         name: string;
         address: string;
         city: string;
@@ -87,13 +90,13 @@ export declare class BuildingsController {
         floors: number | null;
         units: number | null;
         buildingType: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         clientId: string;
     }>;
     update(id: string, body: any): Promise<{
         id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
         name: string;
         address: string;
         city: string;
@@ -102,13 +105,13 @@ export declare class BuildingsController {
         floors: number | null;
         units: number | null;
         buildingType: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         clientId: string;
     }>;
     remove(id: string): Promise<{
         id: string;
+        isActive: boolean;
+        createdAt: Date;
+        updatedAt: Date;
         name: string;
         address: string;
         city: string;
@@ -117,9 +120,6 @@ export declare class BuildingsController {
         floors: number | null;
         units: number | null;
         buildingType: string | null;
-        isActive: boolean;
-        createdAt: Date;
-        updatedAt: Date;
         clientId: string;
     }>;
 }
