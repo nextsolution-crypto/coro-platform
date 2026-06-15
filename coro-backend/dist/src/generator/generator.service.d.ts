@@ -20,44 +20,44 @@ export declare class GeneratorService {
         project: {
             client: {
                 id: string;
-                email: string | null;
+                name: string;
                 isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
-                phone: string | null;
-                address: string | null;
                 city: string | null;
                 province: string | null;
+                email: string | null;
+                phone: string | null;
+                address: string | null;
                 logoUrl: string | null;
                 logoBase64: string | null;
             };
             building: {
                 id: string;
+                name: string;
                 isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
-                name: string;
-                address: string;
+                clientId: string;
                 city: string;
                 province: string;
-                postalCode: string | null;
                 floors: number | null;
-                units: number | null;
                 buildingType: string | null;
-                clientId: string;
+                address: string;
+                postalCode: string | null;
+                units: number | null;
             };
         } & {
             id: string;
+            name: string;
             isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
-            year: number;
-            clientId: string;
-            documentType: import("@prisma/client").$Enums.DocumentType;
             status: import("@prisma/client").$Enums.ProjectStatus;
+            documentType: import("@prisma/client").$Enums.DocumentType;
+            year: number;
             progress: number;
+            clientId: string;
             buildingId: string;
             userId: string;
         };
@@ -68,8 +68,8 @@ export declare class GeneratorService {
         status: import("@prisma/client").$Enums.DocumentStatus;
         content: import("@prisma/client/runtime/library").JsonValue | null;
         version: number;
-        projectId: string;
         title: string;
+        projectId: string;
     }) | null>;
     updateModuleContent(documentId: string, moduleId: string, sectionId: string, content: string, language?: string): Promise<{
         success: boolean;

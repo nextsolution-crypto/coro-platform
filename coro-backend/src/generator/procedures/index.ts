@@ -31,6 +31,22 @@ import { P101_ALERTE_INCENDIE_IND } from './p101_alerte_incendie_ind';
 import { P102_ALARME_INCENDIE_IND } from './p102_alarme_incendie_ind';
 import { P103_FUITE_GAZ_IND } from './p103_fuite_gaz_ind';
 import { P104_FUITE_AMMONIAC_IND } from './p104_fuite_ammoniac_ind';
+import { P105_EXPOSITION_AMMONIAC_IND } from './p105_exposition_ammoniac_ind';
+import { P106_URGENCE_MEDICALE_IND } from './p106_urgence_medicale_ind';
+import { P107_DEVERSEMENT_MATDANG_IND } from './p107_deversement_matdang_ind';
+import { P108_BRIS_GICLEUR_IND } from './p108_bris_gicleur_ind';
+import { P111_DECOUVERTE_FUMEE_OCC } from './p111_decouverte_fumee_occ';
+import { P112_ALERTE_INCENDIE_OCC } from './p112_alerte_incendie_occ';
+import { P113_ALARME_INCENDIE_OCC } from './p113_alarme_incendie_occ';
+import { P114_BATTERIE_LITHIUM_OCC } from './p114_batterie_lithium_occ';
+import { P115_FUITE_AMMONIAC_OCC } from './p115_fuite_ammoniac_occ';
+import { P116_EXPOSITION_AMMONIAC_OCC } from './p116_exposition_ammoniac_occ';
+import { P117_ALARME_OXYGENE_OCC } from './p117_alarme_oxygene_occ';
+import { P118_ALARME_CO2_OCC } from './p118_alarme_co2_occ';
+import { P119_URGENCE_MEDICALE_OCC } from './p119_urgence_medicale_occ';
+import { P120_PANNE_COURANT_OCC } from './p120_panne_courant_occ';
+import { P121_ASCENSEUR_OCC } from './p121_ascenseur_occ';
+import { P122_DEVERSEMENT_MATDANG_OCC } from './p122_deversement_matdang_occ';
 
 // ============================================================
 // REGISTRE OFFICIEL
@@ -65,6 +81,22 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P102_ALARME_INCENDIE_IND,
   P103_FUITE_GAZ_IND,
   P104_FUITE_AMMONIAC_IND,
+  P105_EXPOSITION_AMMONIAC_IND,
+  P106_URGENCE_MEDICALE_IND,
+  P107_DEVERSEMENT_MATDANG_IND,
+  P108_BRIS_GICLEUR_IND,
+  P111_DECOUVERTE_FUMEE_OCC,
+  P112_ALERTE_INCENDIE_OCC,
+  P113_ALARME_INCENDIE_OCC,
+  P114_BATTERIE_LITHIUM_OCC,
+  P115_FUITE_AMMONIAC_OCC,
+  P116_EXPOSITION_AMMONIAC_OCC,
+  P117_ALARME_OXYGENE_OCC,
+  P118_ALARME_CO2_OCC,
+  P119_URGENCE_MEDICALE_OCC,
+  P120_PANNE_COURANT_OCC,
+  P121_ASCENSEUR_OCC,
+  P122_DEVERSEMENT_MATDANG_OCC,
 ];
 
 // ============================================================

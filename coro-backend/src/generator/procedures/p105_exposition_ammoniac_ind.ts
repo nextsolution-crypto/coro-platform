@@ -1,0 +1,302 @@
+// ============================================================
+// CORO — P105 : Exposition à l'ammoniac (Industriel)
+// Activé si : is_industrial + has_ammonia
+// ============================================================
+
+import { ProcedureTemplate, COLORS, sid } from './types';
+
+const CODE = 'P105';
+
+export const P105_EXPOSITION_AMMONIAC_IND: ProcedureTemplate = {
+  id: 'p105_exposition_ammoniac_ind',
+  code: CODE,
+  titleFR: 'EXPOSITION À L\'AMMONIAC',
+  titleEN: 'AMMONIA EXPOSURE',
+  icon: '🧪',
+  headerColor: COLORS.purple,
+  activationRule: 'is_industrial',
+  documentTypes: ['PMU', 'PSI'],
+  roleSections: [
+    {
+      roleCode: 'ROLE-CU',
+      roleLabelFR: 'Premiers soins selon la voie d\'exposition',
+      roleLabelEN: 'First aid according to exposure route',
+      headerColor: COLORS.purple,
+      steps: [
+        // ── 1. Inhalation ───────────────────────────────────
+        {
+          id: sid(CODE, 1),
+          textFR: '**1. Inhalation**',
+          textEN: '**1. Inhalation**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 2),
+          textFR: 'Objectif : évacuer la victime vers un environnement sûr et limiter les lésions respiratoires',
+          textEN: 'Objective: evacuate the victim to a safe environment and limit respiratory injuries',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 3),
+          textFR: 'Amener la personne à l\'air frais :',
+          textEN: 'Bring the person to fresh air:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 4),
+              textFR: 'Déplacer immédiatement la victime dans une zone ventilée, à l\'abri du nuage gazeux',
+              textEN: 'Immediately move the victim to a ventilated area, away from the gas cloud',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 5),
+              textFR: 'S\'assurer qu\'elle reste calme et éviter les mouvements brusques qui pourraient augmenter la respiration et l\'absorption des vapeurs',
+              textEN: 'Ensure they remain calm and avoid abrupt movements that could increase breathing and vapor absorption',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 6),
+          textFR: 'Desserrer les vêtements : libérer les voies respiratoires en desserrant cravate, col et ceinture',
+          textEN: 'Loosen clothing: clear the airways by loosening tie, collar, and belt',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 7),
+          textFR: 'Surveiller les signes vitaux :',
+          textEN: 'Monitor vital signs:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 8),
+              textFR: 'Si des symptômes tels que difficulté respiratoire, toux persistante, brûlure de la gorge, douleur thoracique ou perte de conscience apparaissent : appeler immédiatement le 9-1-1 et mentionner une exposition à l\'ammoniac gazeux (produit corrosif et irritant)',
+              textEN: 'If symptoms such as breathing difficulty, persistent cough, throat burning, chest pain, or loss of consciousness appear: immediately call 9-1-1 and mention ammonia gas exposure (corrosive and irritating product)',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 9),
+          textFR: 'Position de repos : placer la victime en position assise ou semi-assise pour faciliter la respiration — ne pas donner à boire ni à manger avant avis médical — éviter la respiration bouche à bouche sans dispositif de protection (risque de contamination du secouriste)',
+          textEN: 'Rest position: place victim in sitting or semi-sitting position to facilitate breathing — do not give food or drink before medical advice — avoid mouth-to-mouth without protective device (risk of contaminating the rescuer)',
+          isBold: false,
+        },
+        // ── 2. Contact cutané ───────────────────────────────
+        {
+          id: sid(CODE, 10),
+          textFR: '**2. Contact cutané**',
+          textEN: '**2. Skin contact**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 11),
+          textFR: 'Objectif : éliminer le contaminant et prévenir les brûlures chimiques',
+          textEN: 'Objective: eliminate the contaminant and prevent chemical burns',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 12),
+          textFR: 'Retirer immédiatement les vêtements contaminés : retirer tous les vêtements, gants, bijoux ou équipements souillés par l\'ammoniac — utiliser des gants de protection pour éviter une contamination secondaire',
+          textEN: 'Immediately remove contaminated clothing: remove all clothing, gloves, jewelry, or equipment soiled by ammonia — use protective gloves to avoid secondary contamination',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 13),
+          textFR: 'Rinçage prolongé à l\'eau : laver la zone touchée avec de l\'eau propre et courante pendant au moins 15 minutes — ne pas utiliser de savons abrasifs, de détergents ou de produits chimiques',
+          textEN: 'Prolonged water rinse: wash the affected area with clean running water for at least 15 minutes — do not use abrasive soaps, detergents, or chemical products',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 14),
+          textFR: 'Évaluation médicale : si des rougeurs, brûlures ou douleurs persistent après rinçage, consulter immédiatement un médecin ou le service médical d\'entreprise',
+          textEN: 'Medical evaluation: if redness, burns, or pain persist after rinsing, immediately consult a doctor or company medical service',
+          isBold: false,
+        },
+        // ── 3. Contact oculaire ─────────────────────────────
+        {
+          id: sid(CODE, 15),
+          textFR: '**3. Contact oculaire**',
+          textEN: '**3. Eye contact**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 16),
+          textFR: 'Objectif : réduire rapidement la concentration du produit et limiter les lésions cornéennes',
+          textEN: 'Objective: quickly reduce product concentration and limit corneal damage',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 17),
+          textFR: 'Rinçage immédiat et continu : si l\'ammoniac entre en contact avec les yeux, rincer immédiatement avec de l\'eau tiède à faible débit pendant 15 à 20 minutes — maintenir les paupières ouvertes en continu pour assurer un rinçage complet',
+          textEN: 'Immediate and continuous rinsing: if ammonia contacts the eyes, immediately rinse with warm water at low flow for 15 to 20 minutes — keep eyelids open continuously to ensure complete rinsing',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 18),
+          textFR: 'Éviter tout frottement : ne pas frotter les yeux, cela pourrait aggraver les brûlures chimiques',
+          textEN: 'Avoid all rubbing: do not rub the eyes, as this could worsen chemical burns',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 19),
+          textFR: 'Consultation urgente : consulter sans délai un médecin ophtalmologiste ou se rendre au service d\'urgence — même si la douleur diminue après rinçage, un examen médical reste obligatoire (risque de kératite chimique)',
+          textEN: 'Urgent consultation: immediately consult an ophthalmologist or go to the emergency department — even if pain decreases after rinsing, medical examination remains mandatory (risk of chemical keratitis)',
+          isBold: false,
+        },
+        // ── 4. Ingestion ────────────────────────────────────
+        {
+          id: sid(CODE, 20),
+          textFR: '**4. Ingestion**',
+          textEN: '**4. Ingestion**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 21),
+          textFR: 'Objectif : prévenir l\'aggravation des lésions internes',
+          textEN: 'Objective: prevent aggravation of internal injuries',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 22),
+          textFR: 'Ne pas provoquer le vomissement : éviter toute tentative d\'évacuation spontanée du produit, qui pourrait brûler de nouveau l\'œsophage — le vomissement NE DOIT PAS être provoqué sauf recommandation expresse d\'un médecin ou du Centre antipoison',
+          textEN: 'Do not induce vomiting: avoid any attempt to spontaneously expel the product, which could re-burn the esophagus — vomiting MUST NOT be induced unless expressly recommended by a doctor or Poison Control',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 23),
+          textFR: 'Rinçage buccal : demander à la victime de rincer la bouche avec de l\'eau propre, sans avaler',
+          textEN: 'Oral rinse: ask the victim to rinse their mouth with clean water, without swallowing',
+          isBold: false,
+        },
+        // ── 4. Appel centre antipoison ──────────────────────
+        {
+          id: sid(CODE, 24),
+          textFR: '**Appel au centre antipoison ou au 9-1-1**',
+          textEN: '**Call to Poison Control or 9-1-1**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 25),
+          textFR: 'Contacter immédiatement le Centre antipoison du Québec (1-800-463-5060) ou le 9-1-1 et fournir :',
+          textEN: 'Immediately contact the Quebec Poison Control Centre (1-800-463-5060) or 9-1-1 and provide:',
+          isBold: false,
+          isRed: true,
+          subSteps: [
+            {
+              id: sid(CODE, 26),
+              textFR: 'Nature du produit (ammoniac)',
+              textEN: 'Nature of the product (ammonia)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 27),
+              textFR: 'Quantité approximative ingérée (si applicable)',
+              textEN: 'Approximate quantity ingested (if applicable)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 28),
+              textFR: 'Heure de l\'incident et symptômes observés (brûlures, douleurs abdominales, vomissements)',
+              textEN: 'Time of incident and observed symptoms (burns, abdominal pain, vomiting)',
+              isList: true,
+            },
+          ],
+        },
+        {
+          id: sid(CODE, 29),
+          textFR: 'Suivre rigoureusement les instructions du spécialiste',
+          textEN: 'Strictly follow the specialist\'s instructions',
+          isBold: false,
+        },
+        // ── 5. Appel aux services médicaux d'urgence ────────
+        {
+          id: sid(CODE, 30),
+          textFR: '**5. Appel aux services médicaux d\'urgence**',
+          textEN: '**5. Call to emergency medical services**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 31),
+          textFR: 'Objectif : assurer une intervention adaptée et rapide',
+          textEN: 'Objective: ensure an appropriate and rapid intervention',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 32),
+          textFR: 'Contacter immédiatement le 9-1-1 en cas d\'exposition modérée à sévère (inhalation prolongée, ingestion, brûlures étendues) et fournir les informations précises :',
+          textEN: 'Immediately contact 9-1-1 for moderate to severe exposure (prolonged inhalation, ingestion, extensive burns) and provide precise information:',
+          isBold: false,
+          subSteps: [
+            {
+              id: sid(CODE, 33),
+              textFR: 'Nature du produit chimique (ammoniac anhydre ou solution aqueuse)',
+              textEN: 'Nature of the chemical product (anhydrous ammonia or aqueous solution)',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 34),
+              textFR: 'Durée et type d\'exposition',
+              textEN: 'Duration and type of exposure',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 35),
+              textFR: 'Symptômes observés et nombre de victimes',
+              textEN: 'Observed symptoms and number of victims',
+              isList: true,
+            },
+            {
+              id: sid(CODE, 36),
+              textFR: 'Mesures de premiers soins déjà appliquées',
+              textEN: 'First aid measures already applied',
+              isList: true,
+            },
+          ],
+        },
+        // ── 6. Mesures complémentaires et prévention ────────
+        {
+          id: sid(CODE, 37),
+          textFR: '**6. Mesures complémentaires et prévention**',
+          textEN: '**6. Complementary measures and prevention**',
+          isBold: true,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 38),
+          textFR: 'Éviter toute exposition secondaire : s\'éloigner immédiatement de la zone contaminée et suivre les consignes du coordonnateur d\'urgence',
+          textEN: 'Avoid any secondary exposure: immediately move away from the contaminated area and follow emergency coordinator instructions',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 39),
+          textFR: 'Documentation : noter les circonstances de l\'exposition (lieu, heure, secteur, conditions météo, EPI portés) — ces informations doivent être annexées au rapport d\'incident et au registre CNESST',
+          textEN: 'Documentation: record the exposure circumstances (location, time, sector, weather conditions, PPE worn) — this information must be appended to the incident report and CNESST register',
+          isBold: false,
+        },
+        {
+          id: sid(CODE, 40),
+          textFR: 'Suivi médical : toutes les victimes d\'exposition doivent passer un examen médical complet (voies respiratoires, peau, yeux)',
+          textEN: 'Medical follow-up: all exposure victims must undergo a complete medical examination (respiratory tract, skin, eyes)',
+          isBold: false,
+          isRed: true,
+        },
+        {
+          id: sid(CODE, 41),
+          textFR: 'Formation continue : s\'assurer que le personnel est formé aux premiers secours chimiques et connaît les consignes spécifiques liées à l\'ammoniac (utilisation des douches oculaires, zones de décontamination)',
+          textEN: 'Ongoing training: ensure personnel is trained in chemical first aid and knows the specific instructions related to ammonia (use of eye wash stations, decontamination areas)',
+          isBold: false,
+        },
+      ],
+    },
+  ],
+};

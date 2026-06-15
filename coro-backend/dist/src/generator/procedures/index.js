@@ -31,6 +31,22 @@ const p101_alerte_incendie_ind_1 = require("./p101_alerte_incendie_ind");
 const p102_alarme_incendie_ind_1 = require("./p102_alarme_incendie_ind");
 const p103_fuite_gaz_ind_1 = require("./p103_fuite_gaz_ind");
 const p104_fuite_ammoniac_ind_1 = require("./p104_fuite_ammoniac_ind");
+const p105_exposition_ammoniac_ind_1 = require("./p105_exposition_ammoniac_ind");
+const p106_urgence_medicale_ind_1 = require("./p106_urgence_medicale_ind");
+const p107_deversement_matdang_ind_1 = require("./p107_deversement_matdang_ind");
+const p108_bris_gicleur_ind_1 = require("./p108_bris_gicleur_ind");
+const p111_decouverte_fumee_occ_1 = require("./p111_decouverte_fumee_occ");
+const p112_alerte_incendie_occ_1 = require("./p112_alerte_incendie_occ");
+const p113_alarme_incendie_occ_1 = require("./p113_alarme_incendie_occ");
+const p114_batterie_lithium_occ_1 = require("./p114_batterie_lithium_occ");
+const p115_fuite_ammoniac_occ_1 = require("./p115_fuite_ammoniac_occ");
+const p116_exposition_ammoniac_occ_1 = require("./p116_exposition_ammoniac_occ");
+const p117_alarme_oxygene_occ_1 = require("./p117_alarme_oxygene_occ");
+const p118_alarme_co2_occ_1 = require("./p118_alarme_co2_occ");
+const p119_urgence_medicale_occ_1 = require("./p119_urgence_medicale_occ");
+const p120_panne_courant_occ_1 = require("./p120_panne_courant_occ");
+const p121_ascenseur_occ_1 = require("./p121_ascenseur_occ");
+const p122_deversement_matdang_occ_1 = require("./p122_deversement_matdang_occ");
 exports.PROCEDURES_REGISTRY = [
     p001_directives_generales_1.P001_DIRECTIVES_GENERALES,
     p002_decouverte_fumee_1.P002_DECOUVERTE_FUMEE,
@@ -59,6 +75,22 @@ exports.PROCEDURES_REGISTRY = [
     p102_alarme_incendie_ind_1.P102_ALARME_INCENDIE_IND,
     p103_fuite_gaz_ind_1.P103_FUITE_GAZ_IND,
     p104_fuite_ammoniac_ind_1.P104_FUITE_AMMONIAC_IND,
+    p105_exposition_ammoniac_ind_1.P105_EXPOSITION_AMMONIAC_IND,
+    p106_urgence_medicale_ind_1.P106_URGENCE_MEDICALE_IND,
+    p107_deversement_matdang_ind_1.P107_DEVERSEMENT_MATDANG_IND,
+    p108_bris_gicleur_ind_1.P108_BRIS_GICLEUR_IND,
+    p111_decouverte_fumee_occ_1.P111_DECOUVERTE_FUMEE_OCC,
+    p112_alerte_incendie_occ_1.P112_ALERTE_INCENDIE_OCC,
+    p113_alarme_incendie_occ_1.P113_ALARME_INCENDIE_OCC,
+    p114_batterie_lithium_occ_1.P114_BATTERIE_LITHIUM_OCC,
+    p115_fuite_ammoniac_occ_1.P115_FUITE_AMMONIAC_OCC,
+    p116_exposition_ammoniac_occ_1.P116_EXPOSITION_AMMONIAC_OCC,
+    p117_alarme_oxygene_occ_1.P117_ALARME_OXYGENE_OCC,
+    p118_alarme_co2_occ_1.P118_ALARME_CO2_OCC,
+    p119_urgence_medicale_occ_1.P119_URGENCE_MEDICALE_OCC,
+    p120_panne_courant_occ_1.P120_PANNE_COURANT_OCC,
+    p121_ascenseur_occ_1.P121_ASCENSEUR_OCC,
+    p122_deversement_matdang_occ_1.P122_DEVERSEMENT_MATDANG_OCC,
 ];
 exports.ACTIVATION_RULES = {
     always: () => true,
