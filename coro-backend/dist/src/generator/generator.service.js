@@ -75,14 +75,26 @@ let GeneratorService = class GeneratorService {
             ];
         const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
         const module4Result = (0, module4_templates_1.generateModule4)(ctx, config, activeRoleCodes, customProcedureIds);
+        const module6FR = {
+            moduleNumber: 6,
+            title: 'PLANS TECHNIQUES DU BÂTIMENT',
+            language: 'fr',
+            sections: [],
+        };
+        const module6EN = {
+            moduleNumber: 6,
+            title: 'TECHNICAL PLANS OF THE BUILDING',
+            language: 'en',
+            sections: [],
+        };
         const existing = await this.prisma.document.findFirst({
             where: { projectId },
         });
         const documentData = {
             title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
             content: {
-                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result],
-                modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result],
+                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR],
+                modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN],
                 config,
                 generatedAt: new Date(),
             },

@@ -17,106 +17,119 @@ export class GeneratorService {
     if (!project) throw new Error('Projet introuvable');
 
     return {
-  clientName: project.client.name,
-  buildingName: project.building.name,
-  buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
-  city: project.building.city,
-  province: config.province || 'Quebec',
-  year: project.year,
-  documentType: project.documentType,
-  responsableNom: config.responsableNom || '',
-  responsableTitre: config.responsableTitre || 'Directeur de la securite',
-  dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
-  floors: config.floors || 0,
-  hauteurBatiment: config.hauteurBatiment || false,
-  multiLocataires: config.multiLocataires || false,
-  companyName: project.user.companyName || 'CORO',
-  buildingType: project.building.buildingType || 'office',
-  has_sprinklers: false,
-  has_generator: false,
-  has_elevators: false,
-  has_hazardous_materials: false,
-};
+      clientName: project.client.name,
+      buildingName: project.building.name,
+      buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
+      city: project.building.city,
+      province: config.province || 'Quebec',
+      year: project.year,
+      documentType: project.documentType,
+      responsableNom: config.responsableNom || '',
+      responsableTitre: config.responsableTitre || 'Directeur de la securite',
+      dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
+      floors: config.floors || 0,
+      hauteurBatiment: config.hauteurBatiment || false,
+      multiLocataires: config.multiLocataires || false,
+      companyName: project.user.companyName || 'CORO',
+      buildingType: project.building.buildingType || 'office',
+      has_sprinklers: false,
+      has_generator: false,
+      has_elevators: false,
+      has_hazardous_materials: false,
+    };
   }
 
   async generateAndSave(projectId: string, config: any) {
-  const ctx = await this.buildContext(projectId, config);
-  const module1Result = generateModule1(ctx);
-  const module2Result = generateModule2(ctx);
+    const ctx = await this.buildContext(projectId, config);
+    const module1Result = generateModule1(ctx);
+    const module2Result = generateModule2(ctx);
 
-// Récupère section2_2 sauvegardée si elle existe
-const existingDoc = await this.prisma.document.findFirst({
-  where: { projectId },
-  select: { content: true },
-});
-const existingContent = (existingDoc?.content as any) || {};
-const section2_2 = existingContent?.module2?.section2_2 || [];
-const existingCustomRoles = existingContent?.module3?.customRoles || [];
+    // Récupère section2_2 sauvegardée si elle existe
+    const existingDoc = await this.prisma.document.findFirst({
+      where: { projectId },
+      select: { content: true },
+    });
+    const existingContent = (existingDoc?.content as any) || {};
+    const section2_2 = existingContent?.module2?.section2_2 || [];
+    const existingCustomRoles = existingContent?.module3?.customRoles || [];
 
-const module3Result = generateModule3(ctx, config, section2_2, existingCustomRoles);
+    const module3Result = generateModule3(ctx, config, section2_2, existingCustomRoles);
 
-// Récupère les rôles actifs depuis Module 3
-// Cherche dans orgRoles sauvegardés OU utilise tous les roleCodes système par défaut
-const savedOrgRoles = existingContent?.module3?.orgRoles || [];
+    // Récupère les rôles actifs depuis Module 3
+    const savedOrgRoles = existingContent?.module3?.orgRoles || [];
 
-const activeRoleCodes = savedOrgRoles.length > 0
-  ? savedOrgRoles
-      .filter((r: any) => r.isActive)
-      .map((r: any) => r.roleCode)
-      .filter(Boolean)
-  : [
-      // Rôles actifs par défaut si Module 3 pas encore configuré
-      'ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM',
-      'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS',
-      'ROLE-CHE', 'ROLE-ACC',
-    ];
+    const activeRoleCodes = savedOrgRoles.length > 0
+      ? savedOrgRoles
+          .filter((r: any) => r.isActive)
+          .map((r: any) => r.roleCode)
+          .filter(Boolean)
+      : [
+          'ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM',
+          'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS',
+          'ROLE-CHE', 'ROLE-ACC',
+        ];
 
-// Récupère les procédures manuelles ajoutées
-const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
+    // Récupère les procédures manuelles ajoutées
+    const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
 
-const module4Result = generateModule4(
-  ctx,
-  config,
-  activeRoleCodes,
-  customProcedureIds,
-);
-
-  const existing = await this.prisma.document.findFirst({
-    where: { projectId },
-  });
-
-  const documentData = {
-    title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
-    content: {
-      modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result],
-      modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result],
+    const module4Result = generateModule4(
+      ctx,
       config,
-      generatedAt: new Date(),
-    },
-    status: 'IN_PROGRESS' as any,
-    version: existing ? existing.version + 1 : 1,
-    projectId,
-  };
+      activeRoleCodes,
+      customProcedureIds,
+    );
 
-  let document;
-  if (existing) {
-    document = await this.prisma.document.update({
-      where: { id: existing.id },
-      data: documentData,
+    // Module 6 — Plans techniques (structure vide, contenu géré via BuildingPlans)
+    const module6FR = {
+      moduleNumber: 6,
+      title: 'PLANS TECHNIQUES DU BÂTIMENT',
+      language: 'fr',
+      sections: [],
+    };
+
+    const module6EN = {
+      moduleNumber: 6,
+      title: 'TECHNICAL PLANS OF THE BUILDING',
+      language: 'en',
+      sections: [],
+    };
+
+    const existing = await this.prisma.document.findFirst({
+      where: { projectId },
     });
-  } else {
-    document = await this.prisma.document.create({
-      data: documentData,
+
+    const documentData = {
+      title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
+      content: {
+        modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR],
+        modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN],
+        config,
+        generatedAt: new Date(),
+      },
+      status: 'IN_PROGRESS' as any,
+      version: existing ? existing.version + 1 : 1,
+      projectId,
+    };
+
+    let document;
+    if (existing) {
+      document = await this.prisma.document.update({
+        where: { id: existing.id },
+        data: documentData,
+      });
+    } else {
+      document = await this.prisma.document.create({
+        data: documentData,
+      });
+    }
+
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { status: 'IN_PROGRESS', progress: 50 },
     });
+
+    return { documentId: document.id, ...documentData };
   }
-
-  await this.prisma.project.update({
-    where: { id: projectId },
-    data: { status: 'IN_PROGRESS', progress: 50 },
-  });
-
-  return { documentId: document.id, ...documentData };
-}
 
   async getDocument(projectId: string) {
     return this.prisma.document.findFirst({
@@ -126,32 +139,32 @@ const module4Result = generateModule4(
   }
 
   async updateModuleContent(
-  documentId: string,
-  moduleId: string,
-  sectionId: string,
-  content: string,
-  language: string = 'fr',
-) {
-  const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
-  if (!doc) throw new Error('Document introuvable');
+    documentId: string,
+    moduleId: string,
+    sectionId: string,
+    content: string,
+    language: string = 'fr',
+  ) {
+    const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
+    if (!doc) throw new Error('Document introuvable');
 
-  const docContent = doc.content as any;
-  const modulesKey = language === 'en' ? 'modules_en' : 'modules_fr';
-  const modules = docContent[modulesKey] || [];
+    const docContent = doc.content as any;
+    const modulesKey = language === 'en' ? 'modules_en' : 'modules_fr';
+    const modules = docContent[modulesKey] || [];
 
-  const moduleIdx = modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleId));
-  if (moduleIdx === -1) throw new Error('Module introuvable');
+    const moduleIdx = modules.findIndex((m: any) => m.moduleNumber === parseInt(moduleId));
+    if (moduleIdx === -1) throw new Error('Module introuvable');
 
-  const sectionIdx = modules[moduleIdx].sections.findIndex((s: any) => s.id === sectionId);
-  if (sectionIdx === -1) throw new Error('Section introuvable');
+    const sectionIdx = modules[moduleIdx].sections.findIndex((s: any) => s.id === sectionId);
+    if (sectionIdx === -1) throw new Error('Section introuvable');
 
-  modules[moduleIdx].sections[sectionIdx].content = content;
+    modules[moduleIdx].sections[sectionIdx].content = content;
 
-  await this.prisma.document.update({
-    where: { id: documentId },
-    data: { content: { ...docContent, [modulesKey]: modules } },
-  });
+    await this.prisma.document.update({
+      where: { id: documentId },
+      data: { content: { ...docContent, [modulesKey]: modules } },
+    });
 
-  return { success: true, moduleId, sectionId, language };
-}
+    return { success: true, moduleId, sectionId, language };
+  }
 }

@@ -13,6 +13,7 @@ import { GeneratorModule } from './generator/generator.module';
 import { Module2Module } from './module2/module2.module';
 import { Module3Module } from './module3/module3.module';
 import { Module4Module } from './module4/module4.module';
+import { BuildingPlansModule } from './building-plans/building-plans.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { Module4Module } from './module4/module4.module';
   Module2Module,
   Module3Module,
   Module4Module,
+  BuildingPlansModule,
 ],
   controllers: [AppController],
   providers: [AppService],

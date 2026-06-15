@@ -13,6 +13,7 @@ import {
   ROLES_INTERNES_INDUSTRIEL_FR, ROLES_INTERNES_INDUSTRIEL_EN,
   ALL_EQUIPEMENTS_FR, ALL_EQUIPEMENTS_EN,
 } from '@/lib/module2.roles';
+import Module6Section from '@/components/editor/Module6Section';
 
 interface Section {
   id: string;
@@ -323,33 +324,36 @@ export default function EditorPage() {
                   M{mod.moduleNumber} — {mod.title}
                 </div>
 
-                {/* Module sans sections (Module 4) */}
-                {(mod.sections || []).length === 0 && (
-                  <button
-                    onClick={() => handleSectionClick(modIdx, 0)}
-                    className="w-full text-left px-3 py-2 rounded text-xs mb-0.5
-                      transition-colors font-medium"
-                    style={{
-                      backgroundColor: activeModule === modIdx ? '#FDEDEC' : 'transparent',
-                      color: activeModule === modIdx ? '#C0392B' : '#495057',
-                      border: activeModule === modIdx
-                        ? '1px solid #F1948A'
-                        : '1px solid transparent',
-                    }}
-                    onMouseEnter={e => {
-                      if (activeModule !== modIdx) {
-                        e.currentTarget.style.backgroundColor = '#F8F9FA';
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (activeModule !== modIdx) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }
-                    }}
-                  >
-                    {language === 'fr' ? 'Voir les procédures' : 'View procedures'}
-                  </button>
-                )}
+                {/* Module sans sections (Module 4, Module 6) */}
+{(mod.sections || []).length === 0 && (
+  <button
+    onClick={() => handleSectionClick(modIdx, 0)}
+    className="w-full text-left px-3 py-2 rounded text-xs mb-0.5
+      transition-colors font-medium"
+    style={{
+      backgroundColor: activeModule === modIdx ? '#FDEDEC' : 'transparent',
+      color: activeModule === modIdx ? '#C0392B' : '#495057',
+      border: activeModule === modIdx
+        ? '1px solid #F1948A'
+        : '1px solid transparent',
+    }}
+    onMouseEnter={e => {
+      if (activeModule !== modIdx) {
+        e.currentTarget.style.backgroundColor = '#F8F9FA';
+      }
+    }}
+    onMouseLeave={e => {
+      if (activeModule !== modIdx) {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }
+    }}
+  >
+    {mod.moduleNumber === 6
+      ? (language === 'fr' ? 'Plans techniques' : 'Technical plans')
+      : (language === 'fr' ? 'Voir les procédures' : 'View procedures')
+    }
+  </button>
+)}
 
                 {/* Sections normales */}
                 {(mod.sections || []).map((section, secIdx) => {
@@ -384,20 +388,25 @@ export default function EditorPage() {
 
         {/* Colonne centre — Contenu */}
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#F8F9FA' }}>
-          {(currentSection || currentModule?.moduleNumber === 4) && (
+          {(currentSection || currentModule?.moduleNumber === 4 || currentModule?.moduleNumber === 6) && (
             <div className="max-w-4xl mx-auto p-8">
 
-              {currentModule.moduleNumber === 4 ? (
-                <Module4Section
-                  projectId={projectId}
-                  language={language}
-                  initialData={{
-                    directivesGenerales: null,
-                    procedures: currentModule.procedures || [],
-                    customProcedureIds: currentModule.customProcedureIds || [],
-                  }}
-                />
-              ) : currentModule.moduleNumber === 3 ? (
+              {currentModule.moduleNumber === 6 ? (
+  <Module6Section
+    projectId={projectId}
+    language={language}
+  />
+) : currentModule.moduleNumber === 4 ? (
+  <Module4Section
+    projectId={projectId}
+    language={language}
+    initialData={{
+      directivesGenerales: null,
+      procedures: currentModule.procedures || [],
+      customProcedureIds: currentModule.customProcedureIds || [],
+    }}
+  />
+) : currentModule.moduleNumber === 3 ? (
                 <Module3Section
                   projectId={projectId}
                   language={language}
