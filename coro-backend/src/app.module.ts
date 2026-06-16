@@ -15,6 +15,7 @@ import { Module3Module } from './module3/module3.module';
 import { Module4Module } from './module4/module4.module';
 import { BuildingPlansModule } from './building-plans/building-plans.module';
 import { Module7Module } from './module7/module7.module';
+import { Module8Module } from './module8/module8.module';
 
 @Module({
   imports: [
@@ -32,6 +33,8 @@ import { Module7Module } from './module7/module7.module';
   Module4Module,
   BuildingPlansModule,
   Module7Module,
+  Module7Module,
+  Module8Module,
 ],
   controllers: [AppController],
   providers: [AppService],

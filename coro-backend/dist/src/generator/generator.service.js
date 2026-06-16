@@ -16,6 +16,7 @@ const module1_templates_1 = require("./module1.templates");
 const module2_templates_1 = require("./module2.templates");
 const module3_templates_1 = require("./module3.templates");
 const module4_templates_1 = require("./module4.templates");
+const module8_templates_1 = require("./module8.templates");
 let GeneratorService = class GeneratorService {
     prisma;
     constructor(prisma) {
@@ -99,14 +100,15 @@ let GeneratorService = class GeneratorService {
             language: 'en',
             sections: [],
         };
+        const module8Result = (0, module8_templates_1.generateModule8)(ctx);
         const existing = await this.prisma.document.findFirst({
             where: { projectId },
         });
         const documentData = {
             title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
             content: {
-                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR, module7FR],
-                modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN, module7EN],
+                modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR, module7FR, module8Result.fr],
+                modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN, module7EN, module8Result.en],
                 config,
                 generatedAt: new Date(),
             },
