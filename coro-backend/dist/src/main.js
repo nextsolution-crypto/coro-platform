@@ -40,8 +40,8 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         bodyParser: false,
     });
-    app.use(bodyParser.json({ limit: '10mb' }));
-    app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+    app.use(bodyParser.json({ limit: '25mb' }));
+    app.use(bodyParser.urlencoded({ limit: '25mb', extended: true }));
     app.enableCors();
     app.setGlobalPrefix('api');
     await app.listen(3002);

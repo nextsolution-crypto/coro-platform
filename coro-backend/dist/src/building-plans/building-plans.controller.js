@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BuildingPlansController = void 0;
 const common_1 = require("@nestjs/common");
@@ -84,6 +83,6 @@ __decorate([
 exports.BuildingPlansController = BuildingPlansController = __decorate([
     (0, common_1.Controller)('projects/:projectId/building-plans'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
-    __metadata("design:paramtypes", [typeof (_a = typeof building_plans_service_1.BuildingPlansService !== "undefined" && building_plans_service_1.BuildingPlansService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [building_plans_service_1.BuildingPlansService])
 ], BuildingPlansController);
 //# sourceMappingURL=building-plans.controller.js.map

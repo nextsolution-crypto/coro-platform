@@ -94,6 +94,21 @@ export class GeneratorService {
       sections: [],
     };
 
+    // Module 7 — Description du site (contenu géré via Module7Data)
+const module7FR = {
+  moduleNumber: 7,
+  title: 'DESCRIPTION DU SITE ET ÉQUIPEMENTS DE SÉCURITÉ',
+  language: 'fr',
+  sections: [],
+};
+
+const module7EN = {
+  moduleNumber: 7,
+  title: 'SITE DESCRIPTION AND SAFETY EQUIPMENT',
+  language: 'en',
+  sections: [],
+};
+
     const existing = await this.prisma.document.findFirst({
       where: { projectId },
     });
@@ -101,8 +116,8 @@ export class GeneratorService {
     const documentData = {
       title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
       content: {
-        modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR],
-        modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN],
+        modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR, module7FR],
+        modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN, module7EN],
         config,
         generatedAt: new Date(),
       },

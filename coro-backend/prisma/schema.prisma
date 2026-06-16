@@ -92,6 +92,7 @@ model Project {
 
   documents     Document[]
   buildingPlans BuildingPlan[]
+  module7       Module7Data?
 }
 
 enum DocumentType {
@@ -221,4 +222,22 @@ enum PlanSection {
   OPERATION
   SECTEURS
   DIVERS
+}
+
+model Module7Data {
+  id        String   @id @default(uuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  // Quarts de travail détaillés
+  quartsData      Json?
+
+  // Photos des équipements (base64)
+  photosData      Json?
+
+  // Champs complémentaires non couverts par le configurateur
+  extraData       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
