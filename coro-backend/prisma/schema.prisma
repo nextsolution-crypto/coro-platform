@@ -19,9 +19,12 @@ model User {
   firstName String
   lastName  String
   role      UserRole @default(OPERATOR)
-  companyName    String?
-  companyLogo    String?
-  companyLogoB64 String?
+  companyName         String?
+  companyLogo         String?
+  companyLogoB64      String?
+  companyLogoFullB64  String?
+  companyPhone        String?
+  companyEmail        String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,6 +66,9 @@ model Building {
   floors       Int?
   units        Int?
   buildingType String?
+  photoBase64         String?
+  responsableNom      String?
+  responsableTitre    String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -79,6 +85,7 @@ model Project {
   status       ProjectStatus @default(DRAFT)
   year         Int
   progress     Int           @default(0)
+  configData   Json?
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
