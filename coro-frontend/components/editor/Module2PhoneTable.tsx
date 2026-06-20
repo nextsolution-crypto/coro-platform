@@ -35,6 +35,7 @@ interface PhoneTableProps {
   useDropdown?: boolean;
   onChange: (entries: (PhoneEntry | ExternalEntry)[]) => void;
   language?: 'fr' | 'en';
+  columnLabels?: [string, string];
 }
 
 // ============================================================
@@ -89,14 +90,15 @@ export default function Module2PhoneTable({
   useDropdown = false,
   onChange,
   language = 'fr',
+  columnLabels,
 }: PhoneTableProps) {
 
   const isFr = language === 'fr';
 
   const labels = {
-    role:     isFr ? 'RÔLE / ÉQUIPEMENT'   : 'ROLE / EQUIPMENT',
+    role:     columnLabels?.[0] || (isFr ? 'RÔLE / ÉQUIPEMENT'   : 'ROLE / EQUIPMENT'),
     name:     isFr ? 'NOM'                 : 'NAME',
-    phone:    isFr ? 'TÉLÉPHONE'           : 'PHONE',
+    phone:    columnLabels?.[1] || (isFr ? 'TÉLÉPHONE'           : 'PHONE'),
     addRow:   isFr ? 'Ajouter une ligne'   : 'Add a row',
     rolePh:   isFr ? 'Sélectionner...'     : 'Select...',
     namePh:   isFr ? 'Nom complet'         : 'Full name',
