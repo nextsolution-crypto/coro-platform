@@ -27,10 +27,48 @@ export function renderModule1(sections: any[]): string {
 
 export function renderModule2(sections: any[], lang: 'fr' | 'en'): string {
   return sections.map((section, idx) => {
+    // Cas spécial — 2.1 Numéros d'urgence : 2 colonnes, sans en-tête, 9-1-1 fusionné
+    if (section.id === '2.1') {
+      const entries21 = section.entries || [];
+      const rows21 = entries21.map((entry: any, i: number) => `
+        <tr>
+          <td style="width:60%;">${escapeHtml(entry.role || '')}</td>
+          ${i === 0 ? `
+            <td rowspan="${entries21.length}" style="text-align:center;font-size:22pt;font-weight:800;color:#C0392B;vertical-align:middle;">
+              ${escapeHtml(entries21[0]?.phone || '9-1-1')}
+            </td>
+          ` : ''}
+        </tr>
+      `).join('');
+
+      const internalEmergencyHtml = section.internalEmergencyNumber ? `
+        <div style="margin-top:20px;display:flex;align-items:center;gap:10px;">
+          <span style="font-weight:600;color:#2C3E50;">${lang === 'fr' ? 'Numéro d\'urgence interne' : 'Internal emergency number'} :</span>
+          <span style="font-size:14pt;font-weight:800;color:#C0392B;">${escapeHtml(section.internalEmergencyNumber)}</span>
+        </div>
+      ` : '';
+
+      return `
+        <div class="${idx > 0 ? 'page-break' : ''}">
+          <div class="section-header">
+            <span class="section-id">${section.id}</span>
+            <span class="section-title-line2">${escapeHtml(section.title)}</span>
+            <div class="section-bar"></div>
+          </div>
+          <table>
+            <tbody>${rows21}</tbody>
+          </table>
+          ${internalEmergencyHtml}
+        </div>
+      `;
+    }
+
     const isExternal = section.type === 'external_table';
-    const headerLabels = isExternal
-      ? (lang === 'fr' ? ['Rôle / Équipement', 'Téléphone'] : ['Role / Equipment', 'Phone'])
-      : (lang === 'fr' ? ['Rôle / Équipement', 'Nom', 'Téléphone'] : ['Role / Equipment', 'Name', 'Phone']);
+    const headerLabels = section.columns
+      ? section.columns
+      : isExternal
+        ? (lang === 'fr' ? ['Rôle / Équipement', 'Téléphone'] : ['Role / Equipment', 'Phone'])
+        : (lang === 'fr' ? ['Rôle / Équipement', 'Nom', 'Téléphone'] : ['Role / Equipment', 'Name', 'Phone']);
 
     const rows = (section.entries || []).map((entry: any) => {
       if (isExternal) {
