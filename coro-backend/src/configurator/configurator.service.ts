@@ -434,7 +434,7 @@ export class ConfiguratorService {
             },
           ],
         },
-      ],
+        ],
     };
   }
 }
