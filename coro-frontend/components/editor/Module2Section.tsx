@@ -146,7 +146,7 @@ export default function Module2Section({
     module:  'LISTE TÉLÉPHONIQUE',
     s211:    'NUMÉROS', s212: 'D\'URGENCE',
     s221:    'RESSOURCES', s222: 'INTERNES',
-    s231:    'ÉQUIPEMENTS TECHNIQUES', s232: 'DU BÂTIMENT',
+    s231:    'CONTRACTEURS TECHNIQUES', s232: 'DU BÂTIMENT',
     s241:    'RESSOURCES', s242: 'EXTERNES',
     s251:    'RESSOURCES', s252: 'CORPORATIVES',
     toggleLabel: 'Inclure la section Ressources corporatives',
@@ -157,7 +157,7 @@ export default function Module2Section({
     module:  'PHONE DIRECTORY',
     s211:    'EMERGENCY', s212: 'NUMBERS',
     s221:    'INTERNAL', s222: 'RESOURCES',
-    s231:    'BUILDING TECHNICAL', s232: 'EQUIPMENT',
+    s231:    'BUILDING TECHNICAL', s232: 'CONTRACTORS',
     s241:    'EXTERNAL', s242: 'RESOURCES',
     s251:    'CORPORATE', s252: 'RESOURCES',
     toggleLabel: 'Include Corporate Resources section',
@@ -233,26 +233,8 @@ export default function Module2Section({
             focus:outline-none focus:border-red-500"
         />
       </div>
-      <Module2PhoneTable
-        sectionId="2.2" title={t.s221} titleLine2={t.s222}
-        type="phone_table" entries={section2_2}
-        useDropdown={true} availableRoles={availableRoles2_2}
-        onChange={handle2_2} language={language}
-        columnLabels={isFr ? ['RÔLE / TITRE', 'TÉLÉPHONE'] : ['ROLE / TITLE', 'PHONE']}
-      />
-      <Module2PhoneTable
-        sectionId="2.3" title={t.s231} titleLine2={t.s232}
-        type="phone_table" entries={section2_3}
-        useDropdown={true} availableRoles={availableRoles2_3}
-        onChange={handle2_3} language={language}
-      />
-      <Module2PhoneTable
-        sectionId="2.4" title={t.s241} titleLine2={t.s242}
-        type="external_table" entries={section2_4}
-        useDropdown={false} onChange={handle2_4} language={language}
-      />
 
-      <div className="flex items-center gap-3 mb-4 mt-8 px-4 py-3 rounded border border-gray-200 bg-gray-50">
+      <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded border border-gray-200 bg-gray-50">
         <input
           type="checkbox"
           id="toggle2_5"
@@ -267,12 +249,31 @@ export default function Module2Section({
 
       {section2_5Enabled && (
         <Module2PhoneTable
-          sectionId="2.5" title={t.s251} titleLine2={t.s252}
+          sectionId="2.2" title={t.s251} titleLine2={t.s252}
           type="external_table" entries={section2_5}
           useDropdown={false} onChange={handle2_5} language={language}
           columnLabels={isFr ? ['NOM, TITRE', 'CONTACT'] : ['NAME, TITLE', 'CONTACT']}
         />
       )}
+
+      <Module2PhoneTable
+        sectionId={section2_5Enabled ? '2.3' : '2.2'} title={t.s221} titleLine2={t.s222}
+        type="phone_table" entries={section2_2}
+        useDropdown={true} availableRoles={availableRoles2_2}
+        onChange={handle2_2} language={language}
+        columnLabels={isFr ? ['RÔLE / TITRE', 'TÉLÉPHONE'] : ['ROLE / TITLE', 'PHONE']}
+      />
+      <Module2PhoneTable
+        sectionId={section2_5Enabled ? '2.4' : '2.3'} title={t.s231} titleLine2={t.s232}
+        type="phone_table" entries={section2_3}
+        useDropdown={true} availableRoles={availableRoles2_3}
+        onChange={handle2_3} language={language}
+      />
+      <Module2PhoneTable
+        sectionId={section2_5Enabled ? '2.5' : '2.4'} title={t.s241} titleLine2={t.s242}
+        type="external_table" entries={section2_4}
+        useDropdown={false} onChange={handle2_4} language={language}
+      />
     </div>
   );
 }
