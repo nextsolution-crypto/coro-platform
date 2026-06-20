@@ -16,6 +16,9 @@ interface Building {
   postalCode?: string;
   floors?: number;
   buildingType?: string;
+  photoBase64?: string;
+  responsableNom?: string;
+  responsableTitre?: string;
   client: { id: string; name: string };
 }
 
@@ -47,7 +50,8 @@ export default function BuildingDetailPage() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
-    postalCode: '', floors: '', buildingType: '',
+    postalCode: '', floors: '', buildingType: '', photoBase64: '',
+    responsableNom: '', responsableTitre: '',
   });
   const [projectForm, setProjectForm] = useState({
     name: '', documentType: 'PMU', year: new Date().getFullYear().toString(),
@@ -74,13 +78,16 @@ export default function BuildingDetailPage() {
       setBuilding(br.data);
       setProjects(pr.data);
       setForm({
-        name:         br.data.name || '',
-        address:      br.data.address || '',
-        city:         br.data.city || '',
-        province:     br.data.province || '',
-        postalCode:   br.data.postalCode || '',
-        floors:       br.data.floors?.toString() || '',
-        buildingType: br.data.buildingType || '',
+        name:             br.data.name || '',
+        address:          br.data.address || '',
+        city:              br.data.city || '',
+        province:          br.data.province || '',
+        postalCode:        br.data.postalCode || '',
+        floors:            br.data.floors?.toString() || '',
+        buildingType:      br.data.buildingType || '',
+        photoBase64:       br.data.photoBase64 || '',
+        responsableNom:    br.data.responsableNom || '',
+        responsableTitre:  br.data.responsableTitre || '',
       });
     } catch (err) {
       console.error(err);
@@ -99,6 +106,20 @@ export default function BuildingDetailPage() {
       setShowEditModal(false);
       fetchData();
     } catch (err) { console.error(err); }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('La photo ne doit pas dépasser 10MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm({ ...form, photoBase64: reader.result as string });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -361,6 +382,61 @@ export default function BuildingDetailPage() {
                   <option value="">Sélectionner un type</option>
                   {buildingTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Nom du responsable
+                  </label>
+                  <input type="text" value={form.responsableNom}
+                    onChange={e => setForm({ ...form, responsableNom: e.target.value })}
+                    placeholder="Ex: Jean Tremblay"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Titre du responsable
+                  </label>
+                  <input type="text" value={form.responsableTitre}
+                    onChange={e => setForm({ ...form, responsableTitre: e.target.value })}
+                    placeholder="Ex: Directeur de la sécurité"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  Photo du bâtiment
+                </label>
+                <p className="text-xs mb-2" style={{ color: '#ADB5BD' }}>
+                  Cette photo sera utilisée comme page de couverture des documents générés.
+                </p>
+                {form.photoBase64 && (
+                  <div className="mb-3 rounded overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
+                    <img src={form.photoBase64} alt="Aperçu du bâtiment"
+                      className="w-full h-32 object-cover" />
+                  </div>
+                )}
+                <label
+                  className="flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded cursor-pointer transition-colors"
+                  style={{ border: '1px dashed #CED4DA', color: '#6C757D' }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.color = '#2C3E50'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6C757D'; }}
+                >
+                  {form.photoBase64 ? 'Changer la photo' : 'Téléverser une photo'}
+                  <input type="file" accept="image/jpeg,image/jpg,image/png"
+                    onChange={handlePhotoChange} className="hidden" />
+                </label>
+                <p className="text-xs mt-1.5" style={{ color: '#ADB5BD' }}>
+                  JPG ou PNG — Max 10MB
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
