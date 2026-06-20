@@ -41,6 +41,8 @@ export const ROLES_INTERNES_BUREAU_FR = [
   'Directeur, Exploitation',
   'Gestionnaire d\'immeuble',
   'Gestionnaire de maintenance',
+  'Directeur/Directrice immobilier(ère)',
+  'Technicien(ne) 24/7',
   'Responsable sécurité',
   'Responsable entretien',
   'Coordonnateur d\'urgence',
@@ -49,13 +51,14 @@ export const ROLES_INTERNES_BUREAU_FR = [
   'Responsable des ressources humaines',
   'Agent de sécurité',
   'Concierge',
-  'Autre',
 ];
 
 export const ROLES_INTERNES_BUREAU_EN = [
   'Director, Operations',
   'Building Manager',
   'Maintenance Manager',
+  'Real Estate Director',
+  '24/7 Technician',
   'Security Officer',
   'Maintenance Supervisor',
   'Emergency Coordinator',
@@ -64,7 +67,6 @@ export const ROLES_INTERNES_BUREAU_EN = [
   'Human Resources Manager',
   'Security Agent',
   'Concierge',
-  'Other',
 ];
 
 export const ROLES_INTERNES_INDUSTRIEL_FR = [
@@ -212,7 +214,7 @@ const RESSOURCES_COMMUNES_FR: ExternalResource[] = [
   { role: 'Séismes Canada', phone: '1 (613) 995-0600', url: 'https://www.seismescanada.rncan.gc.ca' },
   { role: 'Urgence environnement fédéral (Env. Canada)', phone: '1 (866) 283-2333' },
   { role: 'Énergir', phone: '1 (800) 361-8003' },
-  { role: 'Siège social de GardaWorld (Montréal)', phone: '(514) 281-2811', isBold: true, isFixed: true },
+  { role: 'Siège social de GardaWorld (Montréal)', phone: '(514) 281-2811', isBold: true },
 ];
 
 const RESSOURCES_COMMUNES_EN: ExternalResource[] = [
@@ -222,7 +224,7 @@ const RESSOURCES_COMMUNES_EN: ExternalResource[] = [
   { role: 'Earthquakes Canada', phone: '1 (613) 995-0600', url: 'https://www.earthquakescanada.nrcan.gc.ca' },
   { role: 'Federal Environmental Emergency (Env. Canada)', phone: '1 (866) 283-2333' },
   { role: 'Énergir', phone: '1 (800) 361-8003' },
-  { role: 'GardaWorld Head Office (Montréal)', phone: '(514) 281-2811', isBold: true, isFixed: true },
+  { role: 'GardaWorld Head Office (Montréal)', phone: '(514) 281-2811', isBold: true },
 ];
 
 const RESSOURCES_QC_FR: ExternalResource[] = [
@@ -374,7 +376,7 @@ function buildSection2_3(ctx: DocumentContext, lang: 'fr' | 'en'): PhoneEntry[] 
   const entries: PhoneEntry[] = [
     ...base.map(role => ({ role, name: '', phone: '' })),
     ...extra.map(role => ({ role, name: '', phone: '' })),
-    { role: gardaRole, name: 'GardaWorld', phone: '514 791-7871', isBold: true, isFixed: true },
+    { role: gardaRole, name: 'GardaWorld', phone: '(514) 123-4567', isBold: true },
   ];
 
   return entries;
@@ -402,6 +404,8 @@ function generateModule2FR(ctx: DocumentContext): any {
         allowAdd: true,        // Peut ajouter des lignes
         allowDelete: true,     // Peut supprimer des lignes
         useDropdown: false,    // Pas de dropdown pour 2.1
+        internalEmergencyLabel: 'Numéro d\'urgence interne',
+        internalEmergencyNumber: '',
         entries: [
           { role: 'Pompier',   name: '', phone: '9-1-1', isFixed: false },
           { role: 'Police',    name: '', phone: '9-1-1', isFixed: false },
@@ -412,7 +416,7 @@ function generateModule2FR(ctx: DocumentContext): any {
         id: '2.2',
         title: 'RESSOURCES INTERNES',
         type: 'phone_table',
-        columns: ['RÔLE / ÉQUIPEMENT', 'NOM', 'TÉLÉPHONE'],
+        columns: ['RÔLE / TITRE', 'NOM', 'TÉLÉPHONE'],
         editable: true,
         allowAdd: true,
         allowDelete: true,
@@ -443,6 +447,19 @@ function generateModule2FR(ctx: DocumentContext): any {
         useDropdown: false,
         entries: getExternalResources(ctx.province, 'fr'),
       },
+      {
+        id: '2.5',
+        title: 'RESSOURCES CORPORATIVES',
+        type: 'external_table',
+        columns: ['NOM, TITRE', 'CONTACT'],
+        editable: true,
+        allowAdd: true,
+        allowDelete: true,
+        useDropdown: false,
+        isOptional: true,
+        isEnabled: false,
+        entries: [] as ExternalResource[],
+      },
     ],
   };
 }
@@ -469,6 +486,8 @@ function generateModule2EN(ctx: DocumentContext): any {
         allowAdd: true,
         allowDelete: true,
         useDropdown: false,
+        internalEmergencyLabel: 'Internal emergency number',
+        internalEmergencyNumber: '',
         entries: [
           { role: 'Fire Department', name: '', phone: '9-1-1', isFixed: false },
           { role: 'Police',          name: '', phone: '9-1-1', isFixed: false },
@@ -479,7 +498,7 @@ function generateModule2EN(ctx: DocumentContext): any {
         id: '2.2',
         title: 'INTERNAL RESOURCES',
         type: 'phone_table',
-        columns: ['ROLE / EQUIPMENT', 'NAME', 'PHONE'],
+        columns: ['ROLE / TITLE', 'NAME', 'PHONE'],
         editable: true,
         allowAdd: true,
         allowDelete: true,
@@ -509,6 +528,19 @@ function generateModule2EN(ctx: DocumentContext): any {
         allowDelete: true,
         useDropdown: false,
         entries: getExternalResources(ctx.province, 'en'),
+      },
+      {
+        id: '2.5',
+        title: 'CORPORATE RESOURCES',
+        type: 'external_table',
+        columns: ['NAME, TITLE', 'CONTACT'],
+        editable: true,
+        allowAdd: true,
+        allowDelete: true,
+        useDropdown: false,
+        isOptional: true,
+        isEnabled: false,
+        entries: [] as ExternalResource[],
       },
     ],
   };
