@@ -3,6 +3,8 @@
 // Sections 7.1 à 7.9 complètes
 // ============================================================
 
+import { PASS_EXTINGUISHER_IMAGE } from './pass-image.asset';
+
 function val(v: any, fallback = '—'): string {
   if (v === undefined || v === null || v === '' || v === false || v === 0) return fallback;
   return String(v);
@@ -197,10 +199,10 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
         </tbody>
       </table>
       ${config.generatriceEquipements?.length > 0 ? `
-        <p style="font-size:10pt;color:#495057;margin-top:8px;">
-          <strong>${isFr ? 'Équipements sur alimentation de secours' : 'Equipment on backup power'} :</strong>
-          ${config.generatriceEquipements.map((e: string) => escapeHtml(e)).join(', ')}
-        </p>
+        ${subHeading(isFr ? 'Équipements sur alimentation de secours' : 'Equipment on backup power')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+          ${config.generatriceEquipements.map((e: string) => checklistItem(escapeHtml(e), true)).join('')}
+        </div>
       ` : ''}
     </div>
   `;
@@ -236,13 +238,26 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
         </tbody>
       </table>
 
-      ${subHeading(isFr ? 'Relais auxiliaires' : 'Auxiliary relays')}
-      ${relaisItems.map(item => checklistItem(isFr ? item.fr : item.en, !!config[item.key])).join('')}
-
-      ${subHeading(isFr ? 'Éléments de détection' : 'Detection elements')}
-      ${detectionItems.map(item => checklistItem(isFr ? item.fr : item.en, !!config[item.key])).join('')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin-top:16px;">
+        <div>
+          ${subHeading(isFr ? 'Relais auxiliaires' : 'Auxiliary relays')}
+          ${relaisItems.map(item => checklistItem(isFr ? item.fr : item.en, !!config[item.key])).join('')}
+        </div>
+        <div>
+          ${subHeading(isFr ? 'Éléments de détection' : 'Detection elements')}
+          ${detectionItems.map(item => checklistItem(isFr ? item.fr : item.en, !!config[item.key])).join('')}
+        </div>
+      </div>
     </div>
   `;
+
+  const gicleursSystemesRows = (config.gicleursSystemes || []).map((s: any) => `
+    <tr>
+      <td style="font-weight:600;">${escapeHtml(s.type) || '—'}</td>
+      <td>${escapeHtml(s.lieu) || '—'}</td>
+      <td style="text-align:center;">${s.complet ? '✓' : '—'}</td>
+    </tr>
+  `).join('');
 
   const html74 = `
     <div class="page-break">
@@ -256,20 +271,19 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
         </tbody>
       </table>
 
-      ${subHeading(isFr ? 'Équipements' : 'Equipment')}
-      <table>
-        <tbody>
-          ${infoRow(isFr ? 'Prise de refoulement' : 'Fire department connection', bool(config.priseRefoulement, isFr))}
-          ${infoRow(isFr ? 'Pompe incendie' : 'Fire pump', bool(config.pompeIncendie, isFr))}
-          ${infoRow('GAPM/USGPM', val(config.gapmUsgpm))}
-          ${infoRow(isFr ? 'Système spécial d\'extinction' : 'Special suppression system', bool(config.systemeExtinctionFixe, isFr))}
-          ${infoRow(isFr ? 'Boyau incendie / Cabinet' : 'Fire hose / Cabinet', bool(config.boyauIncendie, isFr))}
-          ${infoRow(isFr ? 'Raccord pompier' : 'Fire department connection point', bool(config.raccordPompier, isFr))}
-          ${infoRow(isFr ? 'Emplacement raccord' : 'Connection location', val(config.raccordPompierLieu))}
-          ${infoRow(isFr ? 'Borne-fontaine' : 'Fire hydrant', bool(config.bornesFontaine, isFr))}
-          ${infoRow(isFr ? 'Emplacement borne-fontaine' : 'Hydrant location', val(config.bornesFontaineLieu))}
-        </tbody>
-      </table>
+      ${config.gicleursSystemes?.length > 0 ? `
+        ${subHeading(isFr ? 'Systèmes de gicleurs' : 'Sprinkler systems')}
+        <table>
+          <thead>
+            <tr>
+              <th>${isFr ? 'Type de système' : 'System type'}</th>
+              <th>${isFr ? 'Lieu / secteur couvert' : 'Location / covered area'}</th>
+              <th>${isFr ? 'Système complet' : 'Complete system'}</th>
+            </tr>
+          </thead>
+          <tbody>${gicleursSystemesRows}</tbody>
+        </table>
+      ` : ''}
     </div>
   `;
 
@@ -318,9 +332,53 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
     </tr>
   `).join('');
 
+  const procedureSteps = isFr ? [
+    { label: 'Alerte', text: 'Prévenez immédiatement les occupants à proximité.' },
+    { label: 'Avertisseur', text: 'Activez la station manuelle d\'alarme incendie la plus proche.' },
+    { label: 'Sécurité personnelle', text: 'Assurez-vous que votre sécurité n\'est pas en danger.' },
+    { label: 'Préparation', text: 'Retirez l\'extincteur de son support.' },
+    { label: 'Positionnement', text: 'Placez-vous entre le feu et une sortie pour assurer une voie de fuite.' },
+    { label: 'Approche', text: 'Avancez à une distance de 2-3 mètres (6-10 pieds) du feu.' },
+    { label: 'Activation', text: 'Retirez la goupille en la tournant et en la tirant pour briser le scellé.' },
+    { label: 'Ciblage', text: 'Tenez le boyau (si présent) et dirigez-le vers la base des flammes.' },
+    { label: 'Extinction', text: 'Appuyez sur le levier et faites des mouvements de balayage de va-et-vient à la base des flammes, couvrant toute la largeur du feu.' },
+    { label: 'Départ', text: 'Déposez l\'extincteur au bas du mur et évacuez par la sortie la plus proche.' },
+    { label: 'Point de rassemblement', text: 'Rejoignez le point de rassemblement extérieur pour un comptage sécuritaire.' },
+  ] : [
+    { label: 'Alert', text: 'Immediately warn occupants nearby.' },
+    { label: 'Alarm', text: 'Activate the nearest manual fire alarm station.' },
+    { label: 'Personal safety', text: 'Make sure your own safety is not at risk.' },
+    { label: 'Preparation', text: 'Remove the extinguisher from its mount.' },
+    { label: 'Positioning', text: 'Stand between the fire and an exit to ensure an escape route.' },
+    { label: 'Approach', text: 'Move to a distance of 2-3 meters (6-10 feet) from the fire.' },
+    { label: 'Activation', text: 'Pull the pin by twisting and pulling to break the seal.' },
+    { label: 'Aiming', text: 'Hold the hose (if present) and aim it at the base of the flames.' },
+    { label: 'Extinguishing', text: 'Squeeze the lever and sweep side to side at the base of the flames, covering the full width of the fire.' },
+    { label: 'Departure', text: 'Set the extinguisher down at the base of the wall and evacuate via the nearest exit.' },
+    { label: 'Assembly point', text: 'Join the outdoor assembly point for a safety headcount.' },
+  ];
+
+  const procedureStepsHtml = procedureSteps.map((s, idx) => `
+    <li><strong>${s.label}</strong> : ${s.text}</li>
+  `).join('');
+
+  const pictosHtml = `
+    <img src="${PASS_EXTINGUISHER_IMAGE}" style="width:100%;max-width:480px;display:block;margin:0 auto;" />
+  `;
+
   const html76 = `
     <div class="page-break">
       ${sectionHeader('7.6', isFr ? 'EXTINCTEUR PORTATIF' : 'PORTABLE FIRE EXTINGUISHER')}
+
+      ${subHeading(isFr ? 'Utilisation' : 'Usage')}
+      <ol style="margin:8px 0;padding-left:22px;">
+        ${procedureStepsHtml}
+      </ol>
+      <div style="display:flex;justify-content:center;gap:24px;margin:16px 0 24px 0;">
+        ${pictosHtml}
+      </div>
+
+      ${subHeading(isFr ? 'Localisation' : 'Location')}
       ${config.extincteursList?.length > 0 ? `
         <table>
           <thead>
