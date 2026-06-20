@@ -51,6 +51,8 @@ export default function ProjectDetailPage() {
   const [loading,     setLoading]     = useState(true);
   const [generating,  setGenerating]  = useState(false);
   const [hasDocument, setHasDocument] = useState(false);
+  const [justGenerated, setJustGenerated] = useState(false);
+  const [exportingTest, setExportingTest] = useState(false);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -86,12 +88,40 @@ export default function ProjectDetailPage() {
       await api.post(`/generator/generate/${projectId}`, config);
       setHasDocument(true);
       await fetchData();
-      router.push(`/editor/${projectId}`);
+      setJustGenerated(true);
+      setTimeout(() => setJustGenerated(false), 5000);
     } catch (err) {
       console.error(err);
       alert('Erreur lors de la génération.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleTestExport = async () => {
+    setExportingTest(true);
+    try {
+      const res = await api.post(
+        `/projects/${projectId}/export`,
+        {
+          selectedModules: [1, 2, 3, 4, 7, 8],
+          moduleOrder: [1, 2, 3, 4, 7, 8],
+          language: 'fr',
+        },
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${project?.name || 'document'}-TEST.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de l\'export PDF de test.');
+    } finally {
+      setExportingTest(false);
     }
   };
 
@@ -188,6 +218,19 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
+      {justGenerated && (
+        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+          style={{
+            backgroundColor: '#EAFAF1',
+            border: '1px solid #A9DFBF',
+          }}>
+          <span style={{ color: '#27AE60', fontSize: '20px' }}>✓</span>
+          <p className="text-sm font-medium" style={{ color: '#1E8449' }}>
+            Document généré avec succès. Vous pouvez maintenant ouvrir l'éditeur ou tester l'export PDF.
+          </p>
+        </div>
+      )}
+
       {/* Progression */}
       <div className="rounded-md p-6 mb-6"
         style={{
@@ -196,7 +239,7 @@ export default function ProjectDetailPage() {
           boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Progression</h3>
+          <h3 className="font-semibold" style={{ color: '#2C3E50' }} title="Avancement des grandes étapes du projet (Configuration → Génération → Éditeur), pas le détail du formulaire de configuration">Progression ⓘ</h3>
           <span className="font-bold" style={{ color: '#C0392B' }}>
             {project.progress}%
           </span>
@@ -257,6 +300,32 @@ export default function ProjectDetailPage() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* BOUTON DE TEST TEMPORAIRE — Export PDF */}
+      <div className="rounded-md p-6 mb-6"
+        style={{
+          backgroundColor: '#FFF9E6',
+          border: '1px dashed #F39C12',
+        }}>
+        <h3 className="font-semibold mb-2" style={{ color: '#2C3E50' }}>
+          🧪 Test Export PDF (temporaire)
+        </h3>
+        <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
+          Génère un PDF avec M1, M2, M3, M4, M7, M8 en français (sans M6 pour l'instant).
+        </p>
+        <button
+          onClick={handleTestExport}
+          disabled={!hasDocument || exportingTest}
+          className="text-sm font-medium px-4 py-2 rounded transition-colors"
+          style={{
+            backgroundColor: hasDocument ? '#F39C12' : '#F8F9FA',
+            color: hasDocument ? '#FFFFFF' : '#ADB5BD',
+            cursor: hasDocument ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {exportingTest ? 'Génération du PDF...' : 'Tester l\'export PDF'}
+        </button>
       </div>
 
       {/* Infos projet */}
