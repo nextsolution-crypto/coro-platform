@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { formatPhone } from '@/lib/formatPhone';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -13,10 +14,13 @@ export default function SettingsPage() {
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFullPreview, setLogoFullPreview] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', companyName: '',
+    companyPhone: '', companyEmail: '',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputFullRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -32,12 +36,15 @@ export default function SettingsPage() {
     try {
       const res = await api.get('/users/me');
       setForm({
-        firstName:   res.data.firstName   || '',
-        lastName:    res.data.lastName    || '',
-        email:       res.data.email       || '',
-        companyName: res.data.companyName || '',
+        firstName:    res.data.firstName    || '',
+        lastName:     res.data.lastName     || '',
+        email:        res.data.email        || '',
+        companyName:  res.data.companyName  || '',
+        companyPhone: res.data.companyPhone || '',
+        companyEmail: res.data.companyEmail || '',
       });
       if (res.data.companyLogoB64) setLogoPreview(res.data.companyLogoB64);
+      if (res.data.companyLogoFullB64) setLogoFullPreview(res.data.companyLogoFullB64);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -69,6 +76,26 @@ export default function SettingsPage() {
   const handleRemoveLogo = async () => {
     setLogoPreview(null);
     try { await api.put('/users/me/logo', { companyLogoB64: null }); }
+    catch (err) { console.error(err); }
+  };
+
+  const handleLogoFullUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Le logo doit faire moins de 2MB'); return; }
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      setLogoFullPreview(base64);
+      try { await api.put('/users/me/logo-full', { companyLogoFullB64: base64 }); }
+      catch (err) { console.error(err); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogoFull = async () => {
+    setLogoFullPreview(null);
+    try { await api.put('/users/me/logo-full', { companyLogoFullB64: null }); }
     catch (err) { console.error(err); }
   };
 
@@ -192,6 +219,79 @@ export default function SettingsPage() {
                 onChange={handleLogoUpload} className="hidden" />
             </div>
           </div>
+
+          {/* Logo complet (icône + nom) */}
+          <div className="rounded-md p-6 mt-6"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E9ECEF',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            }}>
+            <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>
+              Logo complet
+            </h3>
+            <p className="text-xs mb-4" style={{ color: '#ADB5BD' }}>
+              Icône + nom — utilisé sur la page de couverture des documents
+            </p>
+
+            <div className="flex flex-col items-center gap-4">
+              {logoFullPreview ? (
+                <div className="relative w-full">
+                  <div className="w-full h-20 rounded-md overflow-hidden flex items-center
+                    justify-center bg-white"
+                    style={{ border: '1px solid #E9ECEF' }}>
+                    <img src={logoFullPreview} alt="Logo complet"
+                      className="max-w-full max-h-full object-contain p-2" />
+                  </div>
+                  <button
+                    onClick={handleRemoveLogoFull}
+                    className="absolute -top-2 -right-2 text-white rounded-full w-6 h-6
+                      flex items-center justify-center text-xs"
+                    style={{ backgroundColor: '#C0392B' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputFullRef.current?.click()}
+                  className="w-full h-20 rounded-md flex flex-col items-center
+                    justify-center cursor-pointer transition-colors"
+                  style={{
+                    border: '2px dashed #CED4DA',
+                    backgroundColor: '#F8F9FA',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = '#CED4DA'}
+                >
+                  <span className="text-xs text-center" style={{ color: '#ADB5BD' }}>
+                    Cliquer pour ajouter
+                  </span>
+                </div>
+              )}
+
+              <button
+                onClick={() => fileInputFullRef.current?.click()}
+                className="w-full text-sm py-2 rounded transition-colors font-medium"
+                style={{
+                  border: '1px solid #DEE2E6',
+                  color: '#6C757D',
+                  backgroundColor: '#F8F9FA',
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#E9ECEF'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              >
+                {logoFullPreview ? 'Changer le logo complet' : 'Ajouter le logo complet'}
+              </button>
+
+              <p className="text-xs text-center" style={{ color: '#CED4DA' }}>
+                PNG, JPG, SVG — Max 2MB
+              </p>
+
+              <input ref={fileInputFullRef} type="file" accept="image/*"
+                onChange={handleLogoFullUpload} className="hidden" />
+            </div>
+          </div>
         </div>
 
         {/* Infos */}
@@ -207,7 +307,7 @@ export default function SettingsPage() {
             <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>
               Informations entreprise
             </h3>
-            <div>
+            <div className="mb-4">
               <label className="block text-sm font-medium mb-1.5"
                 style={{ color: '#495057' }}>
                 Nom de l'entreprise
@@ -222,6 +322,43 @@ export default function SettingsPage() {
                 onFocus={e => e.target.style.borderColor = '#C0392B'}
                 onBlur={e => e.target.style.borderColor = '#CED4DA'}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>
+                  Téléphone de l'entreprise
+                </label>
+                <input
+                  type="text"
+                  value={form.companyPhone}
+                  onChange={e => setForm({ ...form, companyPhone: e.target.value })}
+                  placeholder="Ex: 514-555-1234"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => {
+                    e.target.style.borderColor = '#CED4DA';
+                    setForm({ ...form, companyPhone: formatPhone(e.target.value) });
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>
+                  Courriel de l'entreprise
+                </label>
+                <input
+                  type="email"
+                  value={form.companyEmail}
+                  onChange={e => setForm({ ...form, companyEmail: e.target.value })}
+                  placeholder="Ex: info@coro.ca"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                />
+              </div>
             </div>
           </div>
 
