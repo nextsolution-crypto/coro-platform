@@ -76,6 +76,10 @@ export class ExportService {
 
     // ── Page de couverture (générée en PDF séparé, marges 0) ──
     const docTypeLabel = DOCUMENT_TYPE_LABELS[project.documentType]?.[lang] || project.documentType;
+    const historiqueList = content.config?.historiqueList || [];
+    const lastEntry = historiqueList.length > 0 ? historiqueList[historiqueList.length - 1] : null;
+    const versionNumber = historiqueList.length > 0 ? historiqueList.length : 1;
+
     const coverHtml = generateCoverPage({
       documentType: project.documentType,
       documentTypeLabel: docTypeLabel,
@@ -91,6 +95,9 @@ export class ExportService {
       coroLogoBase64: project.user?.companyLogoFullB64 || project.user?.companyLogoB64 || undefined,
       coroPhone: project.user?.companyPhone || undefined,
       coroEmail: project.user?.companyEmail || undefined,
+      revisionDate: lastEntry?.date || content.config?.dateReleve || undefined,
+      revisionType: lastEntry?.type || content.config?.versionDocument || undefined,
+      versionNumber,
     });
 
     const coverPdfBuffer = await this.coverHtmlToPdf(coverHtml);

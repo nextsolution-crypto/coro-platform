@@ -17,6 +17,9 @@ export interface CoverData {
   coroLogoBase64?: string;
   coroPhone?: string;
   coroEmail?: string;
+  revisionDate?: string;
+  revisionType?: string;
+  versionNumber?: number;
 }
 
 export function generateCoverPage(data: CoverData): string {
@@ -38,10 +41,24 @@ export function generateCoverPage(data: CoverData): string {
     : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   const now = new Date();
-  const currentMonth = monthNames[now.getMonth()];
-  const fullDate = isFr
-    ? `${now.getDate()} ${currentMonth} ${now.getFullYear()}`
-    : `${currentMonth} ${now.getDate()}, ${now.getFullYear()}`;
+
+  // Utilise la date du relevé/révision si disponible, sinon la date système
+  let fullDate: string;
+  if (data.revisionDate) {
+    const revDate = new Date(data.revisionDate + 'T00:00:00');
+    const revMonth = monthNames[revDate.getMonth()];
+    fullDate = isFr
+      ? `${revDate.getDate()} ${revMonth} ${revDate.getFullYear()}`
+      : `${revMonth} ${revDate.getDate()}, ${revDate.getFullYear()}`;
+  } else {
+    const currentMonth = monthNames[now.getMonth()];
+    fullDate = isFr
+      ? `${now.getDate()} ${currentMonth} ${now.getFullYear()}`
+      : `${currentMonth} ${now.getDate()}, ${now.getFullYear()}`;
+  }
+
+  const revisionTypeLabel = data.revisionType || (isFr ? 'Création initiale' : 'Initial creation');
+  const versionLabel = `${data.versionNumber || 1}.0`;
 
   // Sépare le label de type de document en deux lignes
   const words = data.documentTypeLabel.split(' ');
@@ -115,8 +132,8 @@ export function generateCoverPage(data: CoverData): string {
       </div>
 
       <div class="cover-footer-dark">
-        <span>${labels.creationDate} : ${fullDate}</span>
-        <span>${labels.version} : 1.0</span>
+        <span>${revisionTypeLabel} : ${fullDate}</span>
+        <span>${labels.version} : ${versionLabel}</span>
         <span>${labels.confidential}</span>
       </div>
     </div>
