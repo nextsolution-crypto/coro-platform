@@ -342,68 +342,52 @@ export default function Module7Section({ projectId, language = 'fr' }: Module7Se
           <InfoRow label="Trousseau de clés pompier" value={bool(config.trousseClesPompier)} />
         </div>
 
-        {/* Quarts de travail — ÉDITABLE */}
+        {/* Quarts de travail — LECTURE SEULE (configurateur) */}
         <div className="mt-4">
-          <p className="text-xs font-semibold mb-3" style={{ color: '#6C757D' }}>
-            Occupation des lieux
-            <span className="text-xs px-2 py-0.5 ml-2 font-medium"
-              style={{
-                backgroundColor: '#EAFAF1',
-                color: '#27AE60',
-                border: '1px solid #A9DFBF',
-                borderRadius: '3px',
-              }}>
-              Éditable
-            </span>
+          <p className="text-xs font-semibold mb-3 flex items-center" style={{ color: '#6C757D' }}>
+            Occupation des lieux <ReadonlyBadge />
           </p>
-          <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F8F9FA' }}>
-                <th className="text-left px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
-                  Quart de travail
-                </th>
-                <th className="text-center px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
-                  Semaine
-                </th>
-                <th className="text-center px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
-                  Samedi
-                </th>
-                <th className="text-center px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
-                  Dimanche
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { key: 'jour' as const, label: 'Jour (6h00 – 18h00)', active: config.occupationJour },
-                { key: 'soir' as const, label: 'Soir (18h00 – 24h00)', active: config.occupationSoir },
-                { key: 'nuit' as const, label: 'Nuit (00h00 – 06h00)', active: config.occupationNuit },
-              ].map(row => (
-                <tr key={row.key}>
-                  <td className="px-3 py-2 text-xs" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
-                    {row.label}
-                    {!row.active && (
-                      <span className="ml-2 text-xs" style={{ color: '#ADB5BD' }}>(non actif)</span>
-                    )}
-                  </td>
-                  {(['semaine', 'samedi', 'dimanche'] as const).map(day => (
-                    <td key={day} className="px-2 py-1" style={{ border: '1px solid #E9ECEF' }}>
-                      <input
-                        type="text"
-                        value={quarts[row.key][day]}
-                        onChange={e => updateQuart(row.key, day, e.target.value)}
-                        placeholder="—"
-                        style={{ ...inputStyle, textAlign: 'center' }}
-                        onFocus={e => e.target.style.borderColor = '#C0392B'}
-                        onBlur={e => e.target.style.borderColor = '#CED4DA'}
-                      />
-                    </td>
-                  ))}
+          {config.quartsOccupation?.length > 0 ? (
+            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#F8F9FA' }}>
+                  <th className="text-left px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
+                    Quart de travail
+                  </th>
+                  <th className="text-center px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
+                    Semaine
+                  </th>
+                  <th className="text-center px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
+                    Samedi
+                  </th>
+                  <th className="text-center px-3 py-2 text-xs font-semibold" style={{ color: '#495057', border: '1px solid #E9ECEF' }}>
+                    Dimanche
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mt-2">
+              </thead>
+              <tbody>
+                {config.quartsOccupation.map((q: any, idx: number) => (
+                  <tr key={idx}>
+                    <td className="px-3 py-2 text-xs font-medium" style={{ border: '1px solid #E9ECEF', color: '#2C3E50' }}>
+                      {q.nomQuart} ({q.heureDebut} – {q.heureFin})
+                    </td>
+                    <td className="px-3 py-2 text-xs text-center" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+                      {q.occupantsSemaine || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-center" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+                      {q.occupantsSamedi || '—'}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-center" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+                      {q.occupantsDimanche || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucun quart de travail déclaré</p>
+          )}
+          <div className="mt-3">
             <label className="text-xs font-medium mb-1 block" style={{ color: '#495057' }}>
               Informations supplémentaires
             </label>
