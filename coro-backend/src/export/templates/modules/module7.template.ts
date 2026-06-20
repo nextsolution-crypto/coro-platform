@@ -65,32 +65,16 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
     </div>
   `;
 
-  const quartsRows = (['jour', 'soir', 'nuit'] as const).map(period => {
-    const labels = isFr
-      ? { jour: 'Jour (6h00 – 18h00)', soir: 'Soir (18h00 – 24h00)', nuit: 'Nuit (00h00 – 06h00)' }
-      : { jour: 'Day (6:00 AM – 6:00 PM)', soir: 'Evening (6:00 PM – 12:00 AM)', nuit: 'Night (12:00 AM – 6:00 AM)' };
-    const q = quarts[period] || { semaine: '', samedi: '', dimanche: '' };
-    return `
-      <tr>
-        <td style="font-weight:600;">${labels[period]}</td>
-        <td style="text-align:center;">${val(q.semaine)}</td>
-        <td style="text-align:center;">${val(q.samedi)}</td>
-        <td style="text-align:center;">${val(q.dimanche)}</td>
-      </tr>
-    `;
-  }).join('');
+  const quartsOccupation = config.quartsOccupation || [];
 
-  const occupantsRows = (['Jour', 'Soir', 'Nuit'] as const).map(period => {
-    const key = `nbOccupants${period}`;
-    const occupied = config[`occupation${period}`];
-    if (!occupied) return '';
-    const labelFr: Record<string, string> = { Jour: 'Jour', Soir: 'Soir', Nuit: 'Nuit' };
-    const labelEn: Record<string, string> = { Jour: 'Day', Soir: 'Evening', Nuit: 'Night' };
-    return infoRow(
-      isFr ? `Nombre approximatif d'occupants — ${labelFr[period]}` : `Approximate occupant count — ${labelEn[period]}`,
-      val(config[key])
-    );
-  }).join('');
+  const quartsRows = quartsOccupation.map((q: any) => `
+    <tr>
+      <td style="font-weight:600;">${q.nomQuart || '—'} (${q.heureDebut || '—'} – ${q.heureFin || '—'})</td>
+      <td style="text-align:center;">${val(q.occupantsSemaine)}</td>
+      <td style="text-align:center;">${val(q.occupantsSamedi)}</td>
+      <td style="text-align:center;">${val(q.occupantsDimanche)}</td>
+    </tr>
+  `).join('');
 
   const html71 = `
     <div>
@@ -119,18 +103,19 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
       </table>
 
       ${subHeading(isFr ? 'Occupation des lieux' : 'Building occupancy')}
-      <table>
-        <thead>
-          <tr>
-            <th>${isFr ? 'Quart de travail' : 'Shift'}</th>
-            <th style="text-align:center;">${isFr ? 'Semaine' : 'Weekday'}</th>
-            <th style="text-align:center;">${isFr ? 'Samedi' : 'Saturday'}</th>
-            <th style="text-align:center;">${isFr ? 'Dimanche' : 'Sunday'}</th>
-          </tr>
-        </thead>
-        <tbody>${quartsRows}</tbody>
-      </table>
-      ${occupantsRows ? `<table style="margin-top:8px;"><tbody>${occupantsRows}</tbody></table>` : ''}
+      ${quartsOccupation.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>${isFr ? 'Quart de travail' : 'Shift'}</th>
+              <th style="text-align:center;">${isFr ? 'Semaine' : 'Weekday'}</th>
+              <th style="text-align:center;">${isFr ? 'Samedi' : 'Saturday'}</th>
+              <th style="text-align:center;">${isFr ? 'Dimanche' : 'Sunday'}</th>
+            </tr>
+          </thead>
+          <tbody>${quartsRows}</tbody>
+        </table>
+      ` : `<p style="color:#ADB5BD;">${isFr ? 'Aucun quart de travail déclaré' : 'No work shift declared'}</p>`}
       ${quarts.infosSup ? `<p style="margin-top:8px;font-size:10pt;color:#495057;"><strong>${isFr ? 'Informations supplémentaires' : 'Additional information'} :</strong> ${escapeHtml(quarts.infosSup)}</p>` : ''}
     </div>
   `;
