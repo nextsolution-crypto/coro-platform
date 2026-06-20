@@ -25,4 +25,7 @@ export class SaveModule2Dto {
   section2_2: PhoneEntryDto[];
   section2_3: PhoneEntryDto[];
   section2_4: ExternalEntryDto[];
+  section2_5: ExternalEntryDto[];
+  section2_5Enabled: boolean;
+  internalEmergencyNumber: string;
 }

@@ -54,6 +54,9 @@ export class Module2Service {
         section2_2: dto.section2_2,
         section2_3: dto.section2_3,
         section2_4: dto.section2_4,
+        section2_5: dto.section2_5 || [],
+        section2_5Enabled: dto.section2_5Enabled || false,
+        internalEmergencyNumber: dto.internalEmergencyNumber || '',
         updatedAt: new Date().toISOString(),
       },
     };
