@@ -119,6 +119,8 @@ export class GeneratorService {
       where: { projectId },
     });
 
+    const previousContent = (existing?.content as any) || {};
+
     const documentData = {
       title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
       content: {
@@ -126,6 +128,10 @@ export class GeneratorService {
         modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN, module7EN, module8Result.en],
         config,
         generatedAt: new Date(),
+        // Préserve les données éditées manuellement, non régénérées automatiquement
+        module2: previousContent.module2 || undefined,
+        module3: previousContent.module3 || undefined,
+        module8: previousContent.module8 || undefined,
       },
       status: 'IN_PROGRESS' as any,
       version: existing ? existing.version + 1 : 1,
