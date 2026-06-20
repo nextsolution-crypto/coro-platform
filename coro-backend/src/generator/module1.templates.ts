@@ -9,6 +9,8 @@ export interface DocumentContext {
   responsableNom: string;
   responsableTitre: string;
   dateReleve: string;
+  versionDocument: string;
+  historiqueList: { date: string; type: string; responsable: string }[];
   floors: number;
   hauteurBatiment: boolean;
   multiLocataires: boolean;
@@ -343,9 +345,10 @@ La responsabilité de cette révision incombe au ${responsableTitre} ou à une p
 
 | Date | Description de la modification | Personne responsable |
 |---|---|---|
-| ${ctx.year}-01-01 | Création initiale du document | ${ctx.responsableNom || '[NOM]'} |
-| | | |
-| | | |
+${(ctx.historiqueList && ctx.historiqueList.length > 0
+  ? ctx.historiqueList.map(h => `| ${h.date || '—'} | ${h.type || '—'} | ${h.responsable || '—'} |`).join('\n')
+  : `| ${ctx.dateReleve || '—'} | ${ctx.versionDocument || 'Création initiale'} | ${ctx.responsableNom || '—'} |`
+)}
 
 **Révisions périodiques et déclencheurs particuliers**
 
@@ -675,9 +678,10 @@ The responsibility for this review rests with the ${responsableTitre} or a desig
 
 | Date | Description of Modification | Responsible Person |
 |---|---|---|
-| ${ctx.year}-01-01 | Initial document creation | ${ctx.responsableNom || '[NAME]'} |
-| | | |
-| | | |
+${(ctx.historiqueList && ctx.historiqueList.length > 0
+  ? ctx.historiqueList.map(h => `| ${h.date || '—'} | ${h.type || '—'} | ${h.responsable || '—'} |`).join('\n')
+  : `| ${ctx.dateReleve || '—'} | ${ctx.versionDocument || 'Initial creation'} | ${ctx.responsableNom || '—'} |`
+)}
 
 **Periodic Reviews and Specific Triggers**
 

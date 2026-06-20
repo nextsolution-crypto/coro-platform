@@ -28,6 +28,8 @@ export class GeneratorService {
       responsableNom: `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`,
       responsableTitre: project.building.responsableTitre || config.responsableTitre || 'Directeur de la sécurité',
       dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
+      versionDocument: config.versionDocument || 'Création initiale',
+      historiqueList: config.historiqueList || [],
       floors: config.floors || 0,
       hauteurBatiment: config.hauteurBatiment || false,
       multiLocataires: config.multiLocataires || false,
