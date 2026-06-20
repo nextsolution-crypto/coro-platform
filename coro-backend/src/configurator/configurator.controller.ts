@@ -21,4 +21,9 @@ export class ConfiguratorController {
   save(@Param('projectId') projectId: string, @Body() config: any) {
     return this.configuratorService.saveConfiguration(projectId, config);
   }
+
+  @Get('load/:projectId')
+  load(@Param('projectId') projectId: string) {
+    return this.configuratorService.getConfiguration(projectId);
+  }
 }

@@ -17,9 +17,17 @@ export class ConfiguratorService {
     const analysis = this.rulesEngine.analyzeConfiguration(config);
     await this.prisma.project.update({
       where: { id: projectId },
-      data: { status: 'IN_PROGRESS', progress: 25 },
+      data: { status: 'IN_PROGRESS', progress: 25, configData: config as any },
     });
     return { projectId, config, analysis, savedAt: new Date() };
+  }
+
+  async getConfiguration(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { configData: true },
+    });
+    return project?.configData || {};
   }
 
   async getQuestions() {
@@ -116,8 +124,11 @@ export class ConfiguratorService {
             { key: 'multiLocataires', label: 'Multi-locataires', type: 'boolean' },
             { key: 'nbLocataires', label: 'Nombre de locataires', type: 'number' },
             { key: 'occupationJour', label: 'Occupation de jour (6h00-18h00)', type: 'boolean' },
+            { key: 'nbOccupantsJour', label: 'Nombre approximatif d occupants - Jour', type: 'number' },
             { key: 'occupationSoir', label: 'Occupation de soir (18h00-24h00)', type: 'boolean' },
+            { key: 'nbOccupantsSoir', label: 'Nombre approximatif d occupants - Soir', type: 'number' },
             { key: 'occupationNuit', label: 'Occupation de nuit (00h00-6h00)', type: 'boolean' },
+            { key: 'nbOccupantsNuit', label: 'Nombre approximatif d occupants - Nuit', type: 'number' },
             { key: 'lieuSommeil', label: 'Lieu de sommeil (hotel, residence)', type: 'boolean' },
             { key: 'securite24h', label: 'Securite 24h/7', type: 'boolean' },
             { key: 'agentSecurite', label: 'Agent de securite sur place', type: 'boolean' },
