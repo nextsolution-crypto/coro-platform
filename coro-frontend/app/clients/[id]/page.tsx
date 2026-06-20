@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { formatPhone } from '@/lib/formatPhone';
 
 interface Client {
   id: string;
@@ -276,7 +277,12 @@ export default function ClientDetailPage() {
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    onBlur={e => {
+                      e.target.style.borderColor = '#CED4DA';
+                      if (field.key === 'phone') {
+                        setForm({ ...form, phone: formatPhone(e.target.value) });
+                      }
+                    }}
                   />
                 </div>
               ))}
