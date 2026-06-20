@@ -153,7 +153,7 @@ Le plan est conçu pour être appliqué en collaboration avec :
         title: 'RESPONSABILITÉ DU CONTENU',
         content: `**Responsable principal du plan**
 
-La responsabilité de l'élaboration, de la mise à jour annuelle, de la diffusion et de l'application du présent plan de mesures d'urgence (${docType}) revient au [${responsableTitre}] de ${ctx.clientName}.
+La responsabilité de l'élaboration, de la mise à jour annuelle, de la diffusion et de l'application du présent plan de mesures d'urgence (${docType}) revient au ${responsableTitre} de ${ctx.clientName}.
 
 Ce dernier s'assure que le plan est :
 - Conforme aux lois et règlements en vigueur, incluant la ${ref.article} du ${ref.code} ;
@@ -165,7 +165,7 @@ Les informations contenues dans ce document reflètent l'état du bâtiment à c
 
 **Responsabilités liées au plan de mesures d'urgence**
 
-Le [${responsableTitre}] ou son délégué doit :
+Le ${responsableTitre} ou son délégué doit :
 - Mettre en œuvre et actualiser le ${docType} au moins une fois par année, ou à la suite de toute modification significative du bâtiment ou de son occupation ;
 - Conserver une copie physique du plan, facilement accessible à l'entrée du bâtiment tel que demandé par le code applicable ;
 - Désigner un coordonnateur d'urgence responsable des interventions initiales, de l'évacuation et de la communication avec les services d'urgence ;${ctx.multiLocataires ? '\n- Diffuser le guide du locataire ou les consignes pertinentes à chaque nouvelle occupation, déménagement ou modification de configuration.' : ''}
@@ -339,7 +339,7 @@ Tous les rapports sont conservés minimum 24 mois dans la section Registres et A
 
 Ce plan de mesures d'urgence (${docType}) est un document évolutif qui doit être révisé au moins une fois tous les 12 mois, conformément à l'${ref.articleRevision} du ${ref.description}.
 
-La responsabilité de cette révision incombe au [${responsableTitre}] ou à une personne désignée. Les modifications sont consignées dans le tableau suivant, qui sert d'historique officiel des mises à jour du document.
+La responsabilité de cette révision incombe au ${responsableTitre} ou à une personne désignée. Les modifications sont consignées dans le tableau suivant, qui sert d'historique officiel des mises à jour du document.
 
 | Date | Description de la modification | Personne responsable |
 |---|---|---|
@@ -485,7 +485,7 @@ The plan is designed to be implemented in collaboration with:
         title: 'CONTENT RESPONSIBILITY',
         content: `**Primary Responsible Party**
 
-The responsibility for developing, annually updating, distributing, and implementing this Emergency Response Plan (${docType}) rests with the [${responsableTitre}] of ${ctx.clientName}.
+The responsibility for developing, annually updating, distributing, and implementing this Emergency Response Plan (${docType}) rests with the ${responsableTitre} of ${ctx.clientName}.
 
 This individual ensures that the plan is:
 - Compliant with applicable laws and regulations, including ${ref.article_en} of the ${ref.code_en};
@@ -497,7 +497,7 @@ The information contained in this document reflects the condition of the buildin
 
 **Responsibilities Related to the Emergency Response Plan**
 
-The [${responsableTitre}] or their delegate must:
+The ${responsableTitre} or their delegate must:
 - Implement and update the ${docType} at least once per year, or following any significant change to the building or its occupancy;
 - Maintain a physical copy of the plan, easily accessible at the building entrance as required by applicable code;
 - Designate an emergency coordinator responsible for initial response, evacuation, and communication with emergency services;${ctx.multiLocataires ? '\n- Distribute the tenant guide or relevant instructions at each new occupancy, relocation, or configuration change.' : ''}
@@ -671,7 +671,7 @@ All reports are retained for a minimum of 24 months in the Registers and Appendi
 
 This Emergency Response Plan (${docType}) is a living document that must be reviewed at least once every 12 months, in accordance with ${ref.articleRevision_en} of the ${ref.description_en}.
 
-The responsibility for this review rests with the [${responsableTitre}] or a designated individual. Modifications are recorded in the table below, which serves as the official revision history for this document.
+The responsibility for this review rests with the ${responsableTitre} or a designated individual. Modifications are recorded in the table below, which serves as the official revision history for this document.
 
 | Date | Description of Modification | Responsible Person |
 |---|---|---|
