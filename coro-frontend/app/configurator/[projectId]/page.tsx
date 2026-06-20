@@ -8,7 +8,7 @@ import api from '@/lib/api';
 interface SchemaField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'boolean' | 'checkbox_group';
+  type: 'text' | 'number' | 'select' | 'boolean' | 'checkbox_group' | 'date' | 'time';
   options?: string[];
   checkboxOptions?: string[];
 }
@@ -16,7 +16,7 @@ interface SchemaField {
 interface Field {
   key: string;
   label: string;
-  type: 'boolean' | 'text' | 'number' | 'select' | 'dynamic_list' | 'checkbox_group' | 'date';
+  type: 'boolean' | 'text' | 'number' | 'select' | 'dynamic_list' | 'checkbox_group' | 'date' | 'schedule_grid';
   options?: string[];
   checkboxOptions?: string[];
   schema?: SchemaField[];
@@ -150,11 +150,24 @@ function DynamicListEditor({ field, items, onChange }: {
                       className={inputCls} style={inputSty}
                       placeholder="Entrer une valeur..." />
                   )}
-                  {sf.type === 'number' && (
-                    <input type="number" value={item[sf.key] || ''}
-                      onChange={e => handleUpdate(idx, sf.key, parseInt(e.target.value) || 0)}
+                  {sf.type === 'date' && (
+                    <input type="date" value={item[sf.key] || ''}
+                      onChange={e => handleUpdate(idx, sf.key, e.target.value)}
                       className={inputCls} style={inputSty} />
                   )}
+
+                  {sf.type === 'time' && (
+                    <input type="time" value={item[sf.key] || ''}
+                      onChange={e => handleUpdate(idx, sf.key, e.target.value)}
+                      className={inputCls} style={inputSty} />
+                  )}
+
+                  {sf.type === 'number' && (
+                    <input type="number" value={item[sf.key] === 0 ? '' : item[sf.key]}
+                      onChange={e => handleUpdate(idx, sf.key, e.target.value === '' ? 0 : parseInt(e.target.value))}
+                      className={inputCls} style={inputSty} />
+                  )}
+
                   {sf.type === 'boolean' && (
                     <div className="flex gap-2">
                       {[true, false].map(val => (
@@ -239,6 +252,101 @@ function CheckboxGroupField({ field, value, onChange }: {
           </label>
         );
       })}
+    </div>
+  );
+}
+
+// ── ScheduleGrid ─────────────────────────────────────────────
+
+interface ScheduleCell { heure: string; occupants: string; }
+interface ScheduleData {
+  jour:  { semaine: ScheduleCell; samedi: ScheduleCell; dimanche: ScheduleCell };
+  soir:  { semaine: ScheduleCell; samedi: ScheduleCell; dimanche: ScheduleCell };
+  nuit:  { semaine: ScheduleCell; samedi: ScheduleCell; dimanche: ScheduleCell };
+}
+
+const emptyCell = (): ScheduleCell => ({ heure: '', occupants: '' });
+const defaultSchedule = (): ScheduleData => ({
+  jour:  { semaine: emptyCell(), samedi: emptyCell(), dimanche: emptyCell() },
+  soir:  { semaine: emptyCell(), samedi: emptyCell(), dimanche: emptyCell() },
+  nuit:  { semaine: emptyCell(), samedi: emptyCell(), dimanche: emptyCell() },
+});
+
+function ScheduleGrid({ value, onChange }: {
+  value: ScheduleData;
+  onChange: (value: ScheduleData) => void;
+}) {
+  const data = value && value.jour ? value : defaultSchedule();
+
+  const rows: { key: 'jour' | 'soir' | 'nuit'; label: string }[] = [
+    { key: 'jour', label: 'Jour (6h00 – 18h00)' },
+    { key: 'soir', label: 'Soir (18h00 – 24h00)' },
+    { key: 'nuit', label: 'Nuit (00h00 – 06h00)' },
+  ];
+  const cols: { key: 'semaine' | 'samedi' | 'dimanche'; label: string }[] = [
+    { key: 'semaine', label: 'Semaine' },
+    { key: 'samedi', label: 'Samedi' },
+    { key: 'dimanche', label: 'Dimanche' },
+  ];
+
+  const updateCell = (rowKey: 'jour' | 'soir' | 'nuit', colKey: 'semaine' | 'samedi' | 'dimanche', field: 'heure' | 'occupants', val: string) => {
+    onChange({
+      ...data,
+      [rowKey]: {
+        ...data[rowKey],
+        [colKey]: { ...data[rowKey][colKey], [field]: val },
+      },
+    });
+  };
+
+  const cellInputStyle = {
+    width: '100%',
+    border: '1px solid #DEE2E6',
+    borderRadius: '4px',
+    padding: '4px 6px',
+    fontSize: '12px',
+    color: '#2C3E50',
+    backgroundColor: '#FFFFFF',
+    marginBottom: '4px',
+  };
+
+  return (
+    <div className="overflow-x-auto rounded" style={{ border: '1px solid #DEE2E6' }}>
+      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ backgroundColor: '#F8F9FA' }}>
+            <th className="px-3 py-2 text-left font-semibold" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+              Quart de travail
+            </th>
+            {cols.map(c => (
+              <th key={c.key} className="px-3 py-2 text-center font-semibold" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
+                {c.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.key}>
+              <td className="px-3 py-2 font-medium" style={{ border: '1px solid #E9ECEF', color: '#2C3E50' }}>
+                {r.label}
+              </td>
+              {cols.map(c => (
+                <td key={c.key} className="px-2 py-2" style={{ border: '1px solid #E9ECEF' }}>
+                  <input type="text" placeholder="Heure (ex: 6h-18h)"
+                    value={data[r.key][c.key].heure}
+                    onChange={e => updateCell(r.key, c.key, 'heure', e.target.value)}
+                    style={cellInputStyle} />
+                  <input type="number" placeholder="Nb occupants"
+                    value={data[r.key][c.key].occupants}
+                    onChange={e => updateCell(r.key, c.key, 'occupants', e.target.value)}
+                    style={cellInputStyle} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -349,9 +457,6 @@ export default function ConfiguratorPage() {
     if (field.key === 'certBOMANiveau') return config['certBOMA'] === true;
     if (field.key === 'certLEEDNiveau') return config['certLEED'] === true;
     if (field.key === 'nbLocataires') return config['multiLocataires'] === true;
-    if (field.key === 'nbOccupantsJour') return config['occupationJour'] === true;
-    if (field.key === 'nbOccupantsSoir') return config['occupationSoir'] === true;
-    if (field.key === 'nbOccupantsNuit') return config['occupationNuit'] === true;
     if (field.key === 'panneauAnnonciateurLieu') return config['panneauAnnonciateurDistance'] === true;
     if (['centraleSurveillance','centraleTelephone','centraleCodeClient'].includes(field.key)) return config['teleSurveillance'] === true;
     if (['nbAscenseurs','typeAscenseur','salleAscenseur','ascenseurPompier','rappelAscenseursLieu','telephoneAscenseurs','fonctionneSecours'].includes(field.key)) return config['ascenseurs'] === true;
@@ -620,6 +725,13 @@ export default function ConfiguratorPage() {
                         field={field}
                         items={lists[field.key] || []}
                         onChange={items => updateList(field.key, items)}
+                      />
+                    )}
+
+                    {field.type === 'schedule_grid' && (
+                      <ScheduleGrid
+                        value={config[field.key]}
+                        onChange={val => updateConfig(field.key, val)}
                       />
                     )}
                   </div>
