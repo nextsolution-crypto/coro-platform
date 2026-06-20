@@ -274,27 +274,39 @@ export default function ConfiguratorPage() {
 
   const fetchData = async () => {
     try {
-      const [questionsRes, projectRes] = await Promise.all([
+      const [questionsRes, projectRes, savedConfigRes] = await Promise.all([
         api.get('/configurator/questions'),
         api.get(`/projects/${projectId}`),
+        api.get(`/configurator/load/${projectId}`).catch(() => ({ data: {} })),
       ]);
       setSections(questionsRes.data.sections);
       setProjectName(projectRes.data.name);
+
+      const savedConfig = savedConfigRes.data || {};
 
       const defaults: Record<string, any> = {};
       const defaultLists: Record<string, any[]> = {};
       questionsRes.data.sections.forEach((s: Section) => {
         s.fields.forEach((f: Field) => {
-          if (f.type === 'boolean')        defaults[f.key] = false;
-          else if (f.type === 'number')    defaults[f.key] = 0;
-          else if (f.type === 'text')      defaults[f.key] = '';
-          else if (f.type === 'select')    defaults[f.key] = '';
-          else if (f.type === 'checkbox_group') defaults[f.key] = [];
-          else if (f.type === 'dynamic_list')   defaultLists[f.key] = [];
+          if (f.type === 'dynamic_list') {
+            defaultLists[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : [];
+          } else if (f.type === 'boolean') {
+            defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : false;
+          } else if (f.type === 'number') {
+            defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : 0;
+          } else if (f.type === 'checkbox_group') {
+            defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : [];
+          } else {
+            defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : '';
+          }
         });
       });
       setConfig(defaults);
       setLists(defaultLists);
+
+      if (Object.keys(savedConfig).length > 0) {
+        triggerAnalysis(defaults, defaultLists);
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -337,6 +349,9 @@ export default function ConfiguratorPage() {
     if (field.key === 'certBOMANiveau') return config['certBOMA'] === true;
     if (field.key === 'certLEEDNiveau') return config['certLEED'] === true;
     if (field.key === 'nbLocataires') return config['multiLocataires'] === true;
+    if (field.key === 'nbOccupantsJour') return config['occupationJour'] === true;
+    if (field.key === 'nbOccupantsSoir') return config['occupationSoir'] === true;
+    if (field.key === 'nbOccupantsNuit') return config['occupationNuit'] === true;
     if (field.key === 'panneauAnnonciateurLieu') return config['panneauAnnonciateurDistance'] === true;
     if (['centraleSurveillance','centraleTelephone','centraleCodeClient'].includes(field.key)) return config['teleSurveillance'] === true;
     if (['nbAscenseurs','typeAscenseur','salleAscenseur','ascenseurPompier','rappelAscenseursLieu','telephoneAscenseurs','fonctionneSecours'].includes(field.key)) return config['ascenseurs'] === true;
@@ -413,7 +428,7 @@ export default function ConfiguratorPage() {
           {analysis && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-              <span className="text-xs" style={{ color: '#6C757D' }}>Conformité</span>
+              <span className="text-xs" title="Mesure la conformité réglementaire de votre configuration — pas le pourcentage de champs remplis" style={{ color: '#6C757D', cursor: 'help' }}>Conformité ⓘ</span>
               <span className="font-bold text-base" style={{
                 color: analysis.score >= 80 ? '#27AE60' :
                        analysis.score >= 60 ? '#F39C12' : '#C0392B',
@@ -659,6 +674,9 @@ export default function ConfiguratorPage() {
               <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
                 Analyse en temps réel
               </h3>
+              <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                Le score de conformité évalue le respect des normes réglementaires, pas l'avancement de votre saisie.
+              </p>
               {analyzing && (
                 <span className="text-xs animate-pulse" style={{ color: '#C0392B' }}>
                   Analyse...
