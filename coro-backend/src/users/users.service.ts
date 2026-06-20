@@ -39,6 +39,9 @@ export class UsersService {
       role: true,
       companyName: true,
       companyLogoB64: true,
+      companyLogoFullB64: true,
+      companyPhone: true,
+      companyEmail: true,
     },
   });
 }

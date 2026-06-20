@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { BuildingsService } from './buildings.service';
 
@@ -27,7 +27,7 @@ export class BuildingsController {
     return this.buildingsService.create(body);
   }
 
-  @Put(':id')
+  @Patch(':id')
   update(@Param('id') id: string, @Body() body: any) {
     return this.buildingsService.update(id, body);
   }

@@ -23,4 +23,10 @@ export class UsersController {
   async updateLogo(@Request() req: any, @Body() body: { companyLogoB64: string }) {
     return this.usersService.updateUser(req.user.userId, { companyLogoB64: body.companyLogoB64 });
   }
+
+  @Put('me/logo-full')
+  @UseGuards(AuthGuard('jwt'))
+  async updateLogoFull(@Request() req: any, @Body() body: { companyLogoFullB64: string }) {
+    return this.usersService.updateUser(req.user.userId, { companyLogoFullB64: body.companyLogoFullB64 });
+  }
 }
