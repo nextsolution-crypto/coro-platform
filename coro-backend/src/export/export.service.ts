@@ -114,7 +114,10 @@ export class ExportService {
         bodyHtml += renderModule1(mod?.sections || []);
       } else if (moduleNum === 2) {
         const mod = modules.find((m: any) => m.moduleNumber === 2);
-        bodyHtml += renderModule2(mod?.sections || [], lang);
+        const savedModule2 = content.module2;
+        const mergedSections = this.mergeModule2SavedData(mod?.sections || [], savedModule2, lang);
+        console.log('mergedSections IDs:', mergedSections.map((s: any) => s.id));
+        bodyHtml += renderModule2(mergedSections, lang);
       } else if (moduleNum === 3) {
         const mod = modules.find((m: any) => m.moduleNumber === 3);
         bodyHtml += renderModule3(mod?.sections || [], lang);
@@ -171,6 +174,51 @@ export class ExportService {
       project.documentType,
       activeRoleCodes,
     );
+  }
+
+// ============================================================
+  // FUSIONNE LES SECTIONS GÉNÉRÉES AVEC LES DONNÉES RÉELLEMENT
+  // SAUVEGARDÉES PAR L'UTILISATEUR DANS L'ÉDITEUR MODULE 2
+  // ============================================================
+
+  private mergeModule2SavedData(generatedSections: any[], savedModule2: any, lang: 'fr' | 'en'): any[] {
+    if (!savedModule2) return generatedSections;
+
+    const sectionKeyMap: Record<string, string> = {
+      '2.1': 'section2_1',
+      '2.2': 'section2_2',
+      '2.3': 'section2_3',
+      '2.4': 'section2_4',
+    };
+
+    const merged = generatedSections.map(section => {
+      const savedKey = sectionKeyMap[section.id];
+      if (savedKey && savedModule2[savedKey]) {
+        const updated = { ...section, entries: savedModule2[savedKey] };
+        if (section.id === '2.1') {
+          updated.internalEmergencyNumber = savedModule2.internalEmergencyNumber || '';
+        }
+        return updated;
+      }
+      return section;
+    });
+
+    // Retire toute section 2.5 préexistante (générée par défaut, vide) pour éviter les doublons
+    const withoutDefault25 = merged.filter(s => s.id !== '2.5');
+
+    // Ajoute la section 2.5 seulement si elle a été activée dans l'éditeur
+    if (savedModule2.section2_5Enabled && savedModule2.section2_5?.length > 0) {
+      const isFr = lang === 'fr';
+      withoutDefault25.push({
+        id: '2.5',
+        title: isFr ? 'RESSOURCES CORPORATIVES' : 'CORPORATE RESOURCES',
+        type: 'external_table',
+        columns: isFr ? ['NOM, TITRE', 'CONTACT'] : ['NAME, TITLE', 'CONTACT'],
+        entries: savedModule2.section2_5,
+      });
+    }
+
+    return withoutDefault25;
   }
 
   // ============================================================
