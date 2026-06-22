@@ -17,6 +17,7 @@ import { BuildingPlansModule } from './building-plans/building-plans.module';
 import { Module7Module } from './module7/module7.module';
 import { Module8Module } from './module8/module8.module';
 import { ExportModule } from './export/export.module';
+import { LanguageCheckModule } from './language-check/language-check.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { ExportModule } from './export/export.module';
   Module7Module,
   Module7Module,
   Module8Module,
-  ExportModule
+  ExportModule,
+  LanguageCheckModule
 ],
   controllers: [AppController],
   providers: [AppService],
