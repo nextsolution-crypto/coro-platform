@@ -12,6 +12,7 @@ import Module4Section from '@/components/editor/Module4Section';
 import Module6Section from '@/components/editor/Module6Section';
 import Module7Section from '@/components/editor/Module7Section';
 import Module8Section from '@/components/editor/Module8Section';
+import SpellCheckedTextarea from '@/components/editor/SpellCheckedTextarea';
 
 // ── Types & constantes ──────────────────────────────────────
 import { ShiftType } from '@/components/editor/Module3MemberTable';
@@ -347,12 +348,12 @@ export default function EditorPage() {
             <p className="text-xs" style={{ color: '#ADB5BD' }}>
               {language === 'fr' ? 'Mode édition — Modifiez le texte directement' : 'Edit mode — Modify the text directly'}
             </p>
-            <textarea
+            <SpellCheckedTextarea
               value={editingContent}
-              onChange={e => setEditingContent(e.target.value)}
+              onChange={val => setEditingContent(val)}
+              language={language}
               className="w-full rounded-md p-6 text-sm leading-relaxed focus:outline-none font-mono resize-none"
               style={{ height: 'calc(100vh - 280px)', backgroundColor: '#FFFFFF', border: '1px solid #C0392B', color: '#2C3E50' }}
-              spellCheck={false}
             />
             <div className="flex gap-3">
               <button
