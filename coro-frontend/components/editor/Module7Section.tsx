@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { Settings, Camera, Upload, X, Check, ExternalLink, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import SpellCheckedTextarea from './SpellCheckedTextarea';
 
 // ============================================================
 // TYPES
@@ -391,14 +392,13 @@ export default function Module7Section({ projectId, language = 'fr' }: Module7Se
             <label className="text-xs font-medium mb-1 block" style={{ color: '#495057' }}>
               Informations supplémentaires
             </label>
-            <textarea
+            <SpellCheckedTextarea
               value={quarts.infosSup}
-              onChange={e => { setQuarts(prev => ({ ...prev, infosSup: e.target.value })); setIsDirty(true); }}
+              onChange={val => { setQuarts(prev => ({ ...prev, infosSup: val })); setIsDirty(true); }}
               placeholder="Informations supplémentaires sur l'occupation..."
               rows={2}
-              style={{ ...inputStyle, resize: 'none' }}
-              onFocus={e => e.target.style.borderColor = '#C0392B'}
-              onBlur={e => e.target.style.borderColor = '#CED4DA'}
+              language="fr"
+              style={{ ...inputStyle, resize: 'none', width: '100%' }}
             />
           </div>
         </div>
