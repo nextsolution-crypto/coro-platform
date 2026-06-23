@@ -184,6 +184,7 @@ export class ConfiguratorService {
           fields: [
             { key: 'panneauAlarme', label: 'Panneau alarme incendie present', type: 'boolean' },
             { key: 'panneauType', label: 'Type de signal', type: 'select', options: ['SIMPLE', 'DOUBLE', 'AUCUN'] },
+            { key: 'heuresFonctionnement', label: 'Heures de fonctionnement double signal', type: 'text' },
             { key: 'panneauMarque', label: 'Marque du panneau', type: 'text' },
             { key: 'panneauModele', label: 'Modele du panneau', type: 'text' },
             { key: 'panneauLocalisation', label: 'Emplacement du panneau', type: 'text' },
@@ -203,7 +204,6 @@ export class ConfiguratorService {
             { key: 'desenfumageAutomatique', label: 'Relais : Desenfumage automatique', type: 'boolean' },
             { key: 'deverrouillagePorces', label: 'Relais : Deverrouillage acces controle', type: 'boolean' },
             { key: 'fermeturePortesCoupeFeu', label: 'Relais : Fermeture portes coupe-feu', type: 'boolean' },
-            { key: 'heuresFonctionnement', label: 'Heures de fonctionnement double signal', type: 'text' },
           ],
         },
         {

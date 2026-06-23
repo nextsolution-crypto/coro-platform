@@ -103,6 +103,7 @@ const REFERENCES: Record<string, ReglementRef> = {
 function generateModule1FR(ctx: DocumentContext): any {
   const ref = REFERENCES[ctx.province] || REFERENCES['Quebec'];
   const exerciceFrequence = ctx.hauteurBatiment ? ref.exerciceBGH : ref.exerciceStandard;
+  const exerciceFrequenceCourt = ctx.hauteurBatiment ? 'Deux fois par an' : 'Une fois par an';
   const docType = ctx.documentType;
   const responsableTitre = ctx.responsableTitre || 'Directeur(trice) de la sécurité';
 
@@ -248,7 +249,7 @@ La formation est assurée selon une combinaison des approches suivantes :
 |---|---|---|
 | À l'entrée en fonction | Formation initiale | Obligatoire pour tout nouveau membre de l'équipe d'urgence |
 | Chaque année | Formation de maintien des compétences | Obligatoire pour tous les membres actifs |
-| Deux fois par an | Exercices pratiques (évacuation, simulations) | Recommandé pour renforcer l'application des connaissances |
+| ${exerciceFrequenceCourt} | Exercices pratiques (évacuation, simulations) | ${ctx.hauteurBatiment ? 'Obligatoire pour les bâtiments à grande hauteur (BGH)' : 'Recommandé pour renforcer l\'application des connaissances'} |
 | En tout temps | Formation spécifique | Recommandée si un employé a besoin de plus de support |
 
 **Suivi et traçabilité**
@@ -436,6 +437,7 @@ Cependant :
 function generateModule1EN(ctx: DocumentContext): any {
   const ref = REFERENCES[ctx.province] || REFERENCES['Quebec'];
   const exerciceFrequence = ctx.hauteurBatiment ? ref.exerciceBGH_en : ref.exerciceStandard_en;
+  const exerciceFrequenceCourt = ctx.hauteurBatiment ? 'Twice per year' : 'Once per year';
   const docType = ctx.documentType;
   const responsableTitre = ctx.responsableTitre || 'Director of Security';
 
@@ -581,7 +583,7 @@ Training is delivered through a combination of the following approaches:
 |---|---|---|
 | Upon hiring | Initial training | Mandatory for all new emergency team members |
 | Annually | Skills maintenance training | Mandatory for all active members |
-| Twice per year | Practical exercises (evacuation, simulations) | Recommended to reinforce knowledge application |
+| ${exerciceFrequenceCourt} | Practical exercises (evacuation, simulations) | ${ctx.hauteurBatiment ? 'Mandatory for high-rise buildings (HRB)' : 'Recommended to reinforce knowledge application'} |
 | As needed | Specific training | Recommended if an employee requires additional support |
 
 **Tracking and Traceability**

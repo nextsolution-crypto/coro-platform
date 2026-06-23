@@ -458,6 +458,7 @@ export default function ConfiguratorPage() {
     if (field.key === 'certLEEDNiveau') return config['certLEED'] === true;
     if (field.key === 'nbLocataires') return config['multiLocataires'] === true;
     if (field.key === 'panneauAnnonciateurLieu') return config['panneauAnnonciateurDistance'] === true;
+    if (field.key === 'heuresFonctionnement') return config['panneauType'] === 'DOUBLE';
     if (['centraleSurveillance','centraleTelephone','centraleCodeClient'].includes(field.key)) return config['teleSurveillance'] === true;
     if (['nbAscenseurs','typeAscenseur','salleAscenseur','ascenseurPompier','rappelAscenseursLieu','telephoneAscenseurs','fonctionneSecours'].includes(field.key)) return config['ascenseurs'] === true;
     if (field.key === 'ascenseurPompierLequel') return config['ascenseurPompier'] === true;
