@@ -53,6 +53,16 @@ const validationStyles: Record<string, { bg: string; text: string; border: strin
   CRITIQUE:       { bg: '#FADBD8', text: '#922B21', border: '#F1948A', icon: '🚨' },
 };
 
+// ── Normalisation province ───────────────────────────────────
+
+function normalizeProvince(raw: string): string {
+  const v = raw.trim().toLowerCase();
+  if (v === 'qc' || v === 'québec' || v === 'quebec') return 'Quebec';
+  if (v === 'on' || v === 'ontario') return 'Ontario';
+  if (v === 'ab' || v === 'alberta') return 'Alberta';
+  return raw; // valeur inconnue, laissée telle quelle (le select affichera vide)
+}
+
 // ── DynamicListEditor ────────────────────────────────────────
 
 function DynamicListEditor({ field, items, onChange }: {
@@ -392,9 +402,27 @@ export default function ConfiguratorPage() {
 
       const savedConfig = savedConfigRes.data || {};
 
-      // Pré-remplit buildingType depuis la fiche bâtiment si pas déjà configuré
-      if (!savedConfig.buildingType && projectRes.data.building?.buildingType) {
-        savedConfig.buildingType = projectRes.data.building.buildingType;
+      // Pré-remplit les champs déjà connus depuis la fiche bâtiment, si pas encore configurés
+      const building = projectRes.data.building;
+      if (building) {
+        if (!savedConfig.buildingType && building.buildingType) {
+          savedConfig.buildingType = building.buildingType;
+        }
+        if (!savedConfig.province && building.province) {
+          savedConfig.province = normalizeProvince(building.province);
+        }
+        if (!savedConfig.ville && building.city) {
+          savedConfig.ville = building.city;
+        }
+        if (!savedConfig.responsableNom && building.responsableNom) {
+          savedConfig.responsableNom = building.responsableNom;
+        }
+        if (!savedConfig.responsableTitre && building.responsableTitre) {
+          savedConfig.responsableTitre = building.responsableTitre;
+        }
+        if (!savedConfig.floors && building.floors) {
+          savedConfig.floors = building.floors;
+        }
       }
 
       const defaults: Record<string, any> = {};
