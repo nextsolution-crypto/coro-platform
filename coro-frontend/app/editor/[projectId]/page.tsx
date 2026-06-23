@@ -15,7 +15,6 @@ import Module8Section from '@/components/editor/Module8Section';
 import SpellCheckedTextarea from '@/components/editor/SpellCheckedTextarea';
 
 // ── Types & constantes ──────────────────────────────────────
-import { ShiftType } from '@/components/editor/Module3MemberTable';
 import {
   ROLES_INTERNES_BUREAU_FR, ROLES_INTERNES_BUREAU_EN,
   ROLES_INTERNES_INDUSTRIEL_FR, ROLES_INTERNES_INDUSTRIEL_EN,
@@ -36,6 +35,7 @@ interface Section {
   orgRoles?: any[];
   members?: any[];
   activeShifts?: string[];
+  internalEmergencyNumber?: string;
 }
 
 interface Module {
@@ -250,7 +250,7 @@ export default function EditorPage() {
   const currentModule  = modules[activeModule];
   const currentSection = currentModule?.sections?.[activeSection];
   const isSpecialModule = SPECIAL_MODULES.includes(currentModule?.moduleNumber);
-  const isBureau = document.project.building.buildingType !== 'industrial';
+  const isBureau = document.project.building.buildingType?.toLowerCase() !== 'industriel';
 
   // ============================================================
   // RENDU DU CONTENU CENTRAL
@@ -289,12 +289,16 @@ export default function EditorPage() {
 
     if (n === 3) return (
       <Module3Section
+        key={activeSection}
         projectId={projectId}
         language={language}
+        isIndustriel={!isBureau}
+        initialActiveTab={activeSection === 1 ? '3.2' : '3.1'}
+        quartsOccupation={document?.content?.config?.quartsOccupation || []}
         initialData={{
           orgRoles:     currentModule.sections.find((s: any) => s.id === '3.1')?.orgRoles || [],
           members:      currentModule.sections.find((s: any) => s.id === '3.2')?.members  || [],
-          activeShifts: (currentModule.sections.find((s: any) => s.id === '3.2')?.activeShifts || ['jour']) as ShiftType[],
+          activeShifts: currentModule.sections.find((s: any) => s.id === '3.2')?.activeShifts || ['jour'],
         }}
       />
     );
@@ -308,6 +312,9 @@ export default function EditorPage() {
           section2_2: currentModule.sections.find((s: any) => s.id === '2.2')?.entries || [],
           section2_3: currentModule.sections.find((s: any) => s.id === '2.3')?.entries || [],
           section2_4: currentModule.sections.find((s: any) => s.id === '2.4')?.entries || [],
+          section2_5: currentModule.sections.find((s: any) => s.id === '2.5')?.entries || [],
+          section2_5Enabled: false,
+          internalEmergencyNumber: currentModule.sections.find((s: any) => s.id === '2.1')?.internalEmergencyNumber || '',
         }}
         availableRoles2_2={
           language === 'fr'
@@ -496,6 +503,8 @@ export default function EditorPage() {
 
                 {/* Sections normales */}
                 {(mod.sections || []).map((section, secIdx) => {
+                  // Cache 3.2 (Liste des membres) pour les bâtiments non industriels
+                  if (mod.moduleNumber === 3 && section.id === '3.2' && isBureau) return null;
                   const isActive = activeModule === modIdx && activeSection === secIdx;
                   return (
                     <button key={section.id}
