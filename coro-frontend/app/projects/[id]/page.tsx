@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import ExportModal from '@/components/ExportModal';
 
 interface Project {
   id: string;
@@ -53,6 +54,8 @@ export default function ProjectDetailPage() {
   const [hasDocument, setHasDocument] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
   const [exportingTest, setExportingTest] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [hasPlans, setHasPlans] = useState(false);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -67,12 +70,14 @@ export default function ProjectDetailPage() {
   const fetchData = async () => {
   if (!projectId) return;
   try {
-      const [projectRes, docRes] = await Promise.all([
+      const [projectRes, docRes, plansRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/generator/document/${projectId}`).catch(() => ({ data: null })),
+        api.get(`/projects/${projectId}/building-plans`).catch(() => ({ data: [] })),
       ]);
       setProject(projectRes.data);
       setHasDocument(!!docRes.data);
+      setHasPlans((plansRes.data || []).length > 0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -302,31 +307,43 @@ export default function ProjectDetailPage() {
         ))}
       </div>
 
-      {/* BOUTON DE TEST TEMPORAIRE — Export PDF */}
+      {/* Export PDF */}
       <div className="rounded-md p-6 mb-6"
         style={{
-          backgroundColor: '#FFF9E6',
-          border: '1px dashed #F39C12',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E9ECEF',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
         <h3 className="font-semibold mb-2" style={{ color: '#2C3E50' }}>
-          🧪 Test Export PDF (temporaire)
+          Export PDF
         </h3>
         <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
-          Génère un PDF avec M1, M2, M3, M4, M6, M7, M8 en français.
+          Choisissez les modules à inclure, leur ordre, et la langue du document.
         </p>
         <button
-          onClick={handleTestExport}
-          disabled={!hasDocument || exportingTest}
-          className="text-sm font-medium px-4 py-2 rounded transition-colors"
+          onClick={() => setShowExportModal(true)}
+          disabled={!hasDocument}
+          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{
-            backgroundColor: hasDocument ? '#F39C12' : '#F8F9FA',
+            backgroundColor: hasDocument ? '#C0392B' : '#F8F9FA',
             color: hasDocument ? '#FFFFFF' : '#ADB5BD',
             cursor: hasDocument ? 'pointer' : 'not-allowed',
           }}
+          onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#A93226'; }}
+          onMouseLeave={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#C0392B'; }}
         >
-          {exportingTest ? 'Génération du PDF...' : 'Tester l\'export PDF'}
+          Exporter le document
         </button>
       </div>
+
+      {showExportModal && project && (
+        <ExportModal
+          projectId={project.id}
+          projectName={project.name}
+          hasPlans={hasPlans}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
 
       {/* Infos projet */}
       <div className="rounded-md p-6"
