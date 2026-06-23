@@ -12,6 +12,7 @@ export type ScheduleType = 'semaine' | 'weekend';
 export interface QuartDef {
   id: string;     // identifiant stable du quart (ex: nom slugifié)
   label: string;  // nom affiché (ex: "Jour")
+  hasWeekend?: boolean; // true si ce quart a une occupation samedi ou dimanche
 }
 
 export interface MemberEntry {
@@ -82,6 +83,9 @@ export default function Module3MemberTable({
 
   // Si aucun quart n'est configuré, on retombe sur un seul quart générique
   const activeQuarts: QuartDef[] = quarts.length > 0 ? quarts : [{ id: 'general', label: isFr ? 'Général' : 'General' }];
+
+  // Affiche la colonne Fin de semaine seulement si AU MOINS un quart a une occupation weekend
+  const showWeekend = activeQuarts.some(q => q.hasWeekend);
 
   // ── Handlers ──────────────────────────────────────────────
 
@@ -203,11 +207,13 @@ export default function Module3MemberTable({
                 text-gray-700 uppercase border-l-2 border-l-blue-400" colSpan={2}>
                 {labels.weekdays}
               </th>
-              {/* Fin de semaine */}
-              <th className="border border-gray-300 px-2 py-2 text-center font-semibold
-                text-gray-700 uppercase border-l-2 border-l-red-400" colSpan={2}>
-                {labels.weekend}
-              </th>
+              {/* Fin de semaine — seulement si au moins un quart en a besoin */}
+              {showWeekend && (
+                <th className="border border-gray-300 px-2 py-2 text-center font-semibold
+                  text-gray-700 uppercase border-l-2 border-l-red-400" colSpan={2}>
+                  {labels.weekend}
+                </th>
+              )}
               <th className="border border-gray-300 px-1 py-2 w-[30px]" rowSpan={2} />
             </tr>
             {/* Ligne 2 — sous-headers */}
@@ -220,14 +226,18 @@ export default function Module3MemberTable({
                 font-medium w-[140px]">
                 {labels.substitute}
               </th>
-              <th className="border border-gray-300 px-2 py-1 text-center text-gray-600
-                font-medium border-l-2 border-l-red-400 w-[140px]">
-                {labels.designated}
-              </th>
-              <th className="border border-gray-300 px-2 py-1 text-center text-gray-600
-                font-medium w-[140px]">
-                {labels.substitute}
-              </th>
+              {showWeekend && (
+                <>
+                  <th className="border border-gray-300 px-2 py-1 text-center text-gray-600
+                    font-medium border-l-2 border-l-red-400 w-[140px]">
+                    {labels.designated}
+                  </th>
+                  <th className="border border-gray-300 px-2 py-1 text-center text-gray-600
+                    font-medium w-[140px]">
+                    {labels.substitute}
+                  </th>
+                </>
+              )}
             </tr>
           </thead>
 
@@ -305,20 +315,36 @@ export default function Module3MemberTable({
                       )}
                     </td>
 
-                    {/* Weekend — Désignée */}
-                    <td className="border border-gray-300 px-1 py-1
-                      border-l-2 border-l-red-400">
-                      {weekendMember && (
-                        <input
-                          type="text"
-                          value={weekendMember.personneDesignee}
-                          onChange={e => updateMember(weekendMember.id, 'personneDesignee', e.target.value)}
-                          placeholder={labels.namePh}
-                          className="w-full px-1 py-0.5 text-xs bg-transparent border-0
-                            outline-none focus:bg-blue-50 rounded text-gray-800"
-                        />
-                      )}
-                    </td>
+                    {/* Weekend — seulement si au moins un quart en a besoin */}
+                    {showWeekend && (
+                      <>
+                        <td className="border border-gray-300 px-1 py-1
+                          border-l-2 border-l-red-400">
+                          {weekendMember && (
+                            <input
+                              type="text"
+                              value={weekendMember.personneDesignee}
+                              onChange={e => updateMember(weekendMember.id, 'personneDesignee', e.target.value)}
+                              placeholder={labels.namePh}
+                              className="w-full px-1 py-0.5 text-xs bg-transparent border-0
+                                outline-none focus:bg-blue-50 rounded text-gray-800"
+                            />
+                          )}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-1">
+                          {weekendMember && (
+                            <input
+                              type="text"
+                              value={weekendMember.substitut}
+                              onChange={e => updateMember(weekendMember.id, 'substitut', e.target.value)}
+                              placeholder={labels.namePh}
+                              className="w-full px-1 py-0.5 text-xs bg-transparent border-0
+                                outline-none focus:bg-blue-50 rounded text-gray-800"
+                            />
+                          )}
+                        </td>
+                      </>
+                    )}
 
                     {/* Weekend — Substitut */}
                     <td className="border border-gray-300 px-1 py-1">

@@ -56,9 +56,10 @@ export default function Module3Section({
   const isFirstLoad = useRef(true);
 
   // Convertit quartsOccupation (configurateur) en QuartDef pour le tableau 3.2
-  const quarts: QuartDef[] = quartsOccupation.map(q => ({
+  const quarts: QuartDef[] = quartsOccupation.map((q: any) => ({
     id: q.nomQuart.toLowerCase().replace(/\s+/g, '_'),
     label: q.nomQuart,
+    hasWeekend: !!(q.occupantsSamedi || q.occupantsDimanche),
   }));
 
   const [orgRoles, setOrgRoles]       = useState<OrgRole[]>([]);
