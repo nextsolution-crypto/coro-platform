@@ -7,15 +7,19 @@ import { Plus, Trash2 } from 'lucide-react';
 // TYPES
 // ============================================================
 
-export type ShiftType    = 'jour' | 'soir' | 'nuit';
 export type ScheduleType = 'semaine' | 'weekend';
+
+export interface QuartDef {
+  id: string;     // identifiant stable du quart (ex: nom slugifié)
+  label: string;  // nom affiché (ex: "Jour")
+}
 
 export interface MemberEntry {
   id: string;
   roleId: string;
   roleLabel: string;
   roleLabel_en: string;
-  shift: ShiftType;
+  shift: string;       // référence l'id du QuartDef
   schedule: ScheduleType;
   personneDesignee: string;
   substitut: string;
@@ -23,7 +27,7 @@ export interface MemberEntry {
 
 interface Module3MemberTableProps {
   members: MemberEntry[];
-  activeShifts: ShiftType[];
+  quarts: QuartDef[];   // quarts dynamiques venant du configurateur
   onChange: (members: MemberEntry[]) => void;
   language?: 'fr' | 'en';
 }
@@ -52,7 +56,7 @@ function getUniqueRoles(members: MemberEntry[], lang: 'fr' | 'en') {
 
 export default function Module3MemberTable({
   members,
-  activeShifts,
+  quarts,
   onChange,
   language = 'fr',
 }: Module3MemberTableProps) {
@@ -63,18 +67,21 @@ export default function Module3MemberTable({
     title1:    isFr ? 'LISTE DES MEMBRES DE' : 'EMERGENCY TEAM',
     title2:    isFr ? 'L\'ÉQUIPE D\'URGENCE' : 'MEMBER LIST',
     role:      isFr ? 'Rôle' : 'Role',
-    period:    isFr ? 'Période' : 'Period',
-    weekdays:  isFr ? 'Lundi au vendredi' : 'Monday to Friday',
-    weekend:   isFr ? 'Samedi au dimanche' : 'Saturday to Sunday',
+    period:    isFr ? 'Quart' : 'Shift',
+    weekdays:  isFr ? 'Semaine' : 'Weekdays',
+    weekend:   isFr ? 'Fin de semaine' : 'Weekend',
     designated:isFr ? 'Personne désignée' : 'Designated Person',
     substitute:isFr ? 'Substitut' : 'Substitute',
-    jour:      isFr ? 'Jour' : 'Day',
-    soir:      isFr ? 'Soir' : 'Evening',
-    nuit:      isFr ? 'Nuit' : 'Night',
     addRole:   isFr ? 'Ajouter un rôle' : 'Add a role',
     namePh:    isFr ? 'Nom complet' : 'Full name',
     delete:    isFr ? 'Supprimer ce rôle' : 'Delete this role',
+    noQuarts:  isFr
+      ? 'Aucun quart de travail configuré. Configurez les quarts dans le configurateur (Description générale → Occupation des lieux).'
+      : 'No work shift configured. Configure shifts in the configurator (General description → Building occupancy).',
   };
+
+  // Si aucun quart n'est configuré, on retombe sur un seul quart générique
+  const activeQuarts: QuartDef[] = quarts.length > 0 ? quarts : [{ id: 'general', label: isFr ? 'Général' : 'General' }];
 
   // ── Handlers ──────────────────────────────────────────────
 
@@ -91,13 +98,13 @@ export default function Module3MemberTable({
     const schedules: ScheduleType[] = ['semaine', 'weekend'];
 
     for (const schedule of schedules) {
-      for (const shift of activeShifts) {
+      for (const quart of activeQuarts) {
         newEntries.push({
-          id: `${newRoleId}_${schedule}_${shift}`,
+          id: `${newRoleId}_${schedule}_${quart.id}`,
           roleId: newRoleId,
           roleLabel: newLabel,
           roleLabel_en: newLabel_en,
-          shift,
+          shift: quart.id,
           schedule,
           personneDesignee: '',
           substitut: '',
@@ -106,7 +113,7 @@ export default function Module3MemberTable({
     }
 
     onChange([...members, ...newEntries]);
-  }, [members, onChange, activeShifts, isFr]);
+  }, [members, onChange, activeQuarts, isFr]);
 
   const deleteRole = useCallback((roleId: string) => {
     onChange(members.filter(m => m.roleId !== roleId));
@@ -125,16 +132,10 @@ export default function Module3MemberTable({
 
   const uniqueRoles = getUniqueRoles(members, language);
 
-  // getMember : trouve l'entrée pour un rôle+shift+schedule
-  const getMember = (roleId: string, schedule: ScheduleType, shift: ShiftType) =>
-    members.find(m =>
-      m.roleId === roleId &&
-      m.schedule === schedule &&
-      m.shift === shift
-    );
+  const getMember = (roleId: string, schedule: ScheduleType, shift: string) =>
+    members.find(m => m.roleId === roleId && m.schedule === schedule && m.shift === shift);
 
-  // Assure qu'une entrée existe, sinon la crée
-  const ensureMember = (roleId: string, schedule: ScheduleType, shift: ShiftType) => {
+  const ensureMember = (roleId: string, schedule: ScheduleType, shift: string) => {
     const existing = getMember(roleId, schedule, shift);
     if (existing) return existing;
 
@@ -149,7 +150,6 @@ export default function Module3MemberTable({
       personneDesignee: '',
       substitut: '',
     };
-    // Ajoute en background sans re-render boucle
     setTimeout(() => onChange([...members, newEntry]), 0);
     return newEntry;
   };
@@ -178,6 +178,12 @@ export default function Module3MemberTable({
         <div className="h-0.5 bg-red-600 mt-1 mb-4" />
       </div>
 
+      {quarts.length === 0 && (
+        <div className="mb-4 px-4 py-3 rounded border border-amber-300 bg-amber-50 text-xs text-amber-700">
+          {labels.noQuarts}
+        </div>
+      )}
+
       {/* Tableau */}
       <div className="overflow-x-auto rounded border border-gray-300 shadow-sm">
         <table className="w-full border-collapse text-xs bg-white">
@@ -192,12 +198,12 @@ export default function Module3MemberTable({
                 text-gray-700 uppercase w-[60px]" rowSpan={2}>
                 {labels.period}
               </th>
-              {/* Lundi-Vendredi */}
+              {/* Semaine */}
               <th className="border border-gray-300 px-2 py-2 text-center font-semibold
                 text-gray-700 uppercase border-l-2 border-l-blue-400" colSpan={2}>
                 {labels.weekdays}
               </th>
-              {/* Samedi-Dimanche */}
+              {/* Fin de semaine */}
               <th className="border border-gray-300 px-2 py-2 text-center font-semibold
                 text-gray-700 uppercase border-l-2 border-l-red-400" colSpan={2}>
                 {labels.weekend}
@@ -227,19 +233,17 @@ export default function Module3MemberTable({
 
           <tbody>
             {uniqueRoles.map((roleRef, roleIdx) => {
-              const roleMembers = members.filter(m => m.roleId === roleRef.roleId);
               const isCustomRole = roleRef.roleId.startsWith('custom_role_');
               const isEven = roleIdx % 2 === 0;
 
-              return activeShifts.map((shift, shiftIdx) => {
-                const semaineMember  = ensureMember(roleRef.roleId, 'semaine', shift);
-                const weekendMember  = ensureMember(roleRef.roleId, 'weekend', shift);
-                const isFirstShift   = shiftIdx === 0;
-                const shiftLabel     = labels[shift as keyof typeof labels] as string;
+              return activeQuarts.map((quart, quartIdx) => {
+                const semaineMember  = ensureMember(roleRef.roleId, 'semaine', quart.id);
+                const weekendMember  = ensureMember(roleRef.roleId, 'weekend', quart.id);
+                const isFirstShift   = quartIdx === 0;
 
                 return (
                   <tr
-                    key={`${roleRef.roleId}_${shift}`}
+                    key={`${roleRef.roleId}_${quart.id}`}
                     className={`${isEven ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50
                       transition-colors`}
                   >
@@ -248,7 +252,7 @@ export default function Module3MemberTable({
                       <td
                         className="border border-gray-300 px-1 py-1 text-center align-middle
                           font-semibold text-gray-700"
-                        rowSpan={activeShifts.length}
+                        rowSpan={activeQuarts.length}
                         style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                       >
                         {isCustomRole ? (
@@ -266,10 +270,10 @@ export default function Module3MemberTable({
                       </td>
                     )}
 
-                    {/* Colonne Période */}
+                    {/* Colonne Quart */}
                     <td className="border border-gray-300 px-2 py-1 text-center text-gray-600
                       font-medium whitespace-nowrap">
-                      {shiftLabel}
+                      {quart.label}
                     </td>
 
                     {/* Semaine — Désignée */}
