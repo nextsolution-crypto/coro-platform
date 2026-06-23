@@ -392,6 +392,11 @@ export default function ConfiguratorPage() {
 
       const savedConfig = savedConfigRes.data || {};
 
+      // Pré-remplit buildingType depuis la fiche bâtiment si pas déjà configuré
+      if (!savedConfig.buildingType && projectRes.data.building?.buildingType) {
+        savedConfig.buildingType = projectRes.data.building.buildingType;
+      }
+
       const defaults: Record<string, any> = {};
       const defaultLists: Record<string, any[]> = {};
       questionsRes.data.sections.forEach((s: Section) => {
@@ -580,11 +585,12 @@ export default function ConfiguratorPage() {
           }}>
           <div className="p-3">
             {sections.map((section, idx) => {
-              const isActive = activeSection === idx;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(idx)}
+  if (section.id === 'industriel' && config['buildingType'] !== 'Industriel') return null;
+  const isActive = activeSection === idx;
+  return (
+    <button
+      key={section.id}
+      onClick={() => setActiveSection(idx)}
                   className="w-full text-left px-3 py-2.5 rounded text-xs mb-1
                     transition-colors flex items-center gap-2 font-medium"
                   style={{
