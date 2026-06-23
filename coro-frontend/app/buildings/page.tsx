@@ -25,6 +25,38 @@ const buildingTypes = [
   'Commercial', 'Institutionnel', 'Hôtel', 'Centre commercial', 'Autre',
 ];
 
+// ── Parsing intelligent d'adresse collée (format Google Maps) ──
+// Ex: "630 Boulevard René-Lévesque O, Montréal, QC H3B 1S6, Canada"
+function parsePastedAddress(raw: string): { address: string; city: string; province: string; postalCode: string } | null {
+  const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+
+  const address = parts[0] || '';
+  const city = parts[1] || '';
+
+  // Le 3e segment contient généralement "QC H3B 1S6" ou juste "QC"
+  let province = '';
+  let postalCode = '';
+  if (parts[2]) {
+    const match = parts[2].match(/^([A-Za-zÀ-ÿ]+)\s*([A-Za-z]\d[A-Za-z]\s*\d[A-Za-z]\d)?$/);
+    if (match) {
+      province = match[1] || '';
+      postalCode = (match[2] || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    } else {
+      province = parts[2];
+    }
+  }
+
+  const provinceMap: Record<string, string> = {
+    'qc': 'QC', 'québec': 'QC', 'quebec': 'QC',
+    'on': 'ON', 'ontario': 'ON',
+    'ab': 'AB', 'alberta': 'AB',
+  };
+  const normalizedProvince = provinceMap[province.toLowerCase()] || province;
+
+  return { address, city, province: normalizedProvince, postalCode };
+}
+
 export default function BuildingsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
@@ -35,7 +67,9 @@ export default function BuildingsPage() {
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
     postalCode: '', floors: '', buildingType: '', clientId: '',
+    responsableNom: '', responsableTitre: '', photoBase64: '',
   });
+  const [addressPaste, setAddressPaste] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
@@ -54,6 +88,34 @@ export default function BuildingsPage() {
     finally { setLoading(false); }
   };
 
+  const handleAddressPaste = (value: string) => {
+    setAddressPaste(value);
+    const parsed = parsePastedAddress(value);
+    if (parsed) {
+      setForm(prev => ({
+        ...prev,
+        address: parsed.address || prev.address,
+        city: parsed.city || prev.city,
+        province: parsed.province || prev.province,
+        postalCode: parsed.postalCode || prev.postalCode,
+      }));
+    }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert('La photo ne doit pas dépasser 10MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm(prev => ({ ...prev, photoBase64: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -62,7 +124,8 @@ export default function BuildingsPage() {
         floors: form.floors ? parseInt(form.floors) : undefined,
       });
       setShowModal(false);
-      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '' });
+      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '', responsableNom: '', responsableTitre: '', photoBase64: '' });
+      setAddressPaste('');
       fetchData();
     } catch (err) { console.error(err); }
   };
@@ -260,6 +323,27 @@ export default function BuildingsPage() {
                 </select>
               </div>
 
+              {/* Collage adresse intelligent */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5"
+                  style={{ color: '#495057' }}>
+                  Coller une adresse complète (optionnel)
+                </label>
+                <p className="text-xs mb-1.5" style={{ color: '#ADB5BD' }}>
+                  Copiez l'adresse depuis Google Maps — les champs ci-dessous se rempliront automatiquement.
+                </p>
+                <input
+                  type="text"
+                  value={addressPaste}
+                  onChange={e => handleAddressPaste(e.target.value)}
+                  placeholder="Ex: 630 Boulevard René-Lévesque O, Montréal, QC H3B 1S6, Canada"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                />
+              </div>
+
               {/* Adresse */}
               <div>
                 <label className="block text-sm font-medium mb-1.5"
@@ -337,6 +421,69 @@ export default function BuildingsPage() {
                     onBlur={e => e.target.style.borderColor = '#CED4DA'}
                   />
                 </div>
+              </div>
+
+              {/* Responsable */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Nom du responsable
+                  </label>
+                  <input
+                    type="text"
+                    value={form.responsableNom}
+                    onChange={e => setForm({ ...form, responsableNom: e.target.value })}
+                    placeholder="Ex: Jean Tremblay"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Titre du responsable
+                  </label>
+                  <input
+                    type="text"
+                    value={form.responsableTitre}
+                    onChange={e => setForm({ ...form, responsableTitre: e.target.value })}
+                    placeholder="Ex: Directeur de la sécurité"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
+                </div>
+              </div>
+
+              {/* Photo */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  Photo du bâtiment
+                </label>
+                <p className="text-xs mb-2" style={{ color: '#ADB5BD' }}>
+                  Cette photo sera utilisée comme page de couverture des documents générés.
+                </p>
+                {form.photoBase64 && (
+                  <div className="mb-3 rounded overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
+                    <img src={form.photoBase64} alt="Aperçu du bâtiment"
+                      className="w-full h-32 object-cover" />
+                  </div>
+                )}
+                <label
+                  className="flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded cursor-pointer transition-colors"
+                  style={{ border: '1px dashed #CED4DA', color: '#6C757D' }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.color = '#2C3E50'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6C757D'; }}
+                >
+                  {form.photoBase64 ? 'Changer la photo' : 'Téléverser une photo'}
+                  <input type="file" accept="image/jpeg,image/jpg,image/png"
+                    onChange={handlePhotoChange} className="hidden" />
+                </label>
+                <p className="text-xs mt-1.5" style={{ color: '#ADB5BD' }}>
+                  JPG ou PNG — Max 10MB
+                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
