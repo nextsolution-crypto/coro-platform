@@ -20,6 +20,10 @@ export interface ExportOptions {
   language: 'fr' | 'en' | 'both';
 }
 
+type PdfSegment =
+  | { type: 'html'; content: string }
+  | { type: 'plans'; buffers: Buffer[] };
+
 const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
   PMU: { fr: 'Plan de mesures d\'urgence', en: 'Emergency Response Plan' },
   PSI: { fr: 'Plan de sécurité incendie',  en: 'Fire Safety Plan' },
@@ -74,7 +78,7 @@ export class ExportService {
     const project = doc.project;
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
 
-    // ── Page de couverture (générée en PDF séparé, marges 0) ──
+    // ── Page de couverture ──
     const docTypeLabel = DOCUMENT_TYPE_LABELS[project.documentType]?.[lang] || project.documentType;
     const historiqueList = content.config?.historiqueList || [];
     const lastEntry = historiqueList.length > 0 ? historiqueList[historiqueList.length - 1] : null;
@@ -100,59 +104,143 @@ export class ExportService {
       versionNumber,
     });
 
-    const coverPdfBuffer = await this.coverHtmlToPdf(coverHtml);
+    const fullCoverHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          ${COVER_STYLES}
+          @page { size: letter portrait; margin: 0; }
+        </style>
+      </head>
+      <body>${coverHtml}</body>
+      </html>
+    `;
 
-    // ── Corps du document selon modules sélectionnés + ordre ──
-    let bodyHtml = '';
+    // ── Construit les segments dans l'ordre choisi : HTML (rendu via Puppeteer) ──
+    // ── ou plans déjà en PDF (insérés tels quels, sans passer par Puppeteer)    ──
     const orderedModules = options.moduleOrder.filter(n => options.selectedModules.includes(n));
+    const pdfSegments: PdfSegment[] = [];
+    let currentHtmlChunk = '';
 
     for (const moduleNum of orderedModules) {
-      bodyHtml += `<div class="page-break">`;
+      if (moduleNum === 6) {
+        // Clôt le segment HTML en cours, s'il y en a un
+        if (currentHtmlChunk) {
+          pdfSegments.push({ type: 'html', content: currentHtmlChunk });
+          currentHtmlChunk = '';
+        }
+        const planBuffers = await this.getBuildingPlansSorted(project.id);
+        if (planBuffers.length > 0) {
+          pdfSegments.push({ type: 'plans', buffers: planBuffers });
+        }
+        continue;
+      }
+
+      currentHtmlChunk += `<div class="page-break">`;
 
       if (moduleNum === 1) {
         const mod = modules.find((m: any) => m.moduleNumber === 1);
-        bodyHtml += renderModule1(mod?.sections || []);
+        currentHtmlChunk += renderModule1(mod?.sections || []);
       } else if (moduleNum === 2) {
         const mod = modules.find((m: any) => m.moduleNumber === 2);
         const savedModule2 = content.module2;
         const mergedSections = this.mergeModule2SavedData(mod?.sections || [], savedModule2, lang);
-        console.log('mergedSections IDs:', mergedSections.map((s: any) => s.id));
-        bodyHtml += renderModule2(mergedSections, lang);
+        currentHtmlChunk += renderModule2(mergedSections, lang);
       } else if (moduleNum === 3) {
         const mod = modules.find((m: any) => m.moduleNumber === 3);
-        bodyHtml += renderModule3(mod?.sections || [], lang);
+        currentHtmlChunk += renderModule3(mod?.sections || [], lang);
       } else if (moduleNum === 4) {
         const procedures = this.getModule4Procedures(content, project);
         const buildingAddress = `${project.building.address}, ${project.building.city}, ${project.building.province}`;
-        bodyHtml += renderModule4(procedures, lang, buildingAddress);
+        currentHtmlChunk += renderModule4(procedures, lang, buildingAddress);
       } else if (moduleNum === 7) {
         const module7Data = await this.prisma.module7Data.findUnique({ where: { projectId: project.id } });
-        bodyHtml += renderModule7(module7Data, content.config, lang);
+        currentHtmlChunk += renderModule7(module7Data, content.config, lang);
       } else if (moduleNum === 8) {
-        bodyHtml += renderModule8(content.module8, lang);
+        currentHtmlChunk += renderModule8(content.module8, lang);
       }
-      // moduleNum === 6 (plans) géré séparément lors de la fusion finale
 
-      bodyHtml += `</div>`;
+      currentHtmlChunk += `</div>`;
     }
 
-    const fullBodyHtml = `
-      <!DOCTYPE html>
-      <html lang="${lang}">
-      <head>
-        <meta charset="UTF-8" />
-        <style>${BASE_STYLES}</style>
-      </head>
-      <body>
-        ${bodyHtml}
-      </body>
-      </html>
-    `;
+    if (currentHtmlChunk) {
+      pdfSegments.push({ type: 'html', content: currentHtmlChunk });
+    }
 
-    const bodyPdfBuffer = await this.htmlToPdf(fullBodyHtml, doc.title, docTypeLabel);
+    // ── UN SEUL NAVIGATEUR PARTAGÉ pour tous les segments HTML ──
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
-    // ── Fusion couverture (marges 0) + corps (marges normales) ──
-    return this.mergePdfs([coverPdfBuffer, bodyPdfBuffer]);
+    const allBuffers: Buffer[] = [];
+
+    try {
+      // Couverture
+      const coverPage = await browser.newPage();
+      await coverPage.setContent(fullCoverHtml, { waitUntil: 'load' });
+      const coverBytes = await coverPage.pdf({
+        format: 'Letter',
+        printBackground: true,
+        displayHeaderFooter: false,
+        margin: { top: '0', bottom: '0', left: '0', right: '0' },
+      });
+      allBuffers.push(Buffer.from(coverBytes));
+      await coverPage.close();
+
+      const headerTemplate = `
+        <div style="width:100%;font-size:8px;padding:10px 50px 0 50px;color:#6C757D;"></div>
+      `;
+      const footerTemplate = `
+        <div style="width:100%;font-size:9px;padding:0 50px 10px 50px;
+          display:flex;justify-content:space-between;color:#ADB5BD;
+          font-family:Arial,sans-serif;">
+          <span>CORO</span>
+          <span>${docTypeLabel} — <span class="pageNumber"></span></span>
+        </div>
+      `;
+
+      // Chaque segment, dans l'ordre — HTML rendu via Puppeteer, ou plans insérés tels quels
+      for (const segment of pdfSegments) {
+        if (segment.type === 'html') {
+          const segmentHtml = `
+            <!DOCTYPE html>
+            <html lang="${lang}">
+            <head>
+              <meta charset="UTF-8" />
+              <style>${BASE_STYLES}</style>
+            </head>
+            <body>${segment.content}</body>
+            </html>
+          `;
+          const segPage = await browser.newPage();
+          await segPage.setContent(segmentHtml, { waitUntil: 'load' });
+          const segBytes = await segPage.pdf({
+            format: 'Letter',
+            printBackground: true,
+            displayHeaderFooter: true,
+            headerTemplate,
+            footerTemplate,
+            margin: { top: '100px', bottom: '80px', left: '50px', right: '50px' },
+          });
+          allBuffers.push(Buffer.from(segBytes));
+          await segPage.close();
+        } else {
+          // Plans déjà en PDF — insérés directement, sans passer par Puppeteer
+          allBuffers.push(...segment.buffers);
+        }
+      }
+    } finally {
+      try {
+        await browser.close();
+      } catch (err) {
+        console.warn('Avertissement fermeture navigateur (ignoré) :', err);
+      }
+    }
+
+    return this.mergePdfs(allBuffers);
   }
 
   // ============================================================
@@ -176,7 +264,7 @@ export class ExportService {
     );
   }
 
-// ============================================================
+  // ============================================================
   // FUSIONNE LES SECTIONS GÉNÉRÉES AVEC LES DONNÉES RÉELLEMENT
   // SAUVEGARDÉES PAR L'UTILISATEUR DANS L'ÉDITEUR MODULE 2
   // ============================================================
@@ -219,90 +307,29 @@ export class ExportService {
   }
 
   // ============================================================
-  // PUPPETEER — HTML du corps vers PDF avec header/footer + marges
+  // RÉCUPÈRE LES PLANS TECHNIQUES (MODULE 6) TRIÉS PAR SECTION
+  // Ordre fixe : Implantation → Coupe → Opération → Secteurs → Divers
+  // Seules les sections ayant au moins un plan uploadé apparaissent
   // ============================================================
 
-  private async htmlToPdf(html: string, documentTitle: string, docTypeLabel: string): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  private async getBuildingPlansSorted(projectId: string): Promise<Buffer[]> {
+    const plans = await this.prisma.buildingPlan.findMany({
+      where: { projectId },
+      orderBy: { order: 'asc' },
     });
 
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'load' });
+    const sectionOrder = ['IMPLANTATION', 'COUPE', 'OPERATION', 'SECTEURS', 'DIVERS'];
 
-      const headerTemplate = `
-        <div style="width:100%;font-size:8px;padding:10px 50px 0 50px;color:#6C757D;">
-        </div>
-      `;
+    const sorted = sectionOrder.flatMap(section => plans.filter(p => p.section === section));
 
-      const footerTemplate = `
-        <div style="width:100%;font-size:9px;padding:0 50px 10px 50px;
-          display:flex;justify-content:space-between;color:#ADB5BD;
-          font-family:Arial,sans-serif;">
-          <span>CORO</span>
-          <span>${docTypeLabel} — <span class="pageNumber"></span></span>
-        </div>
-      `;
-
-      const pdfBuffer = await page.pdf({
-        format: 'Letter',
-        printBackground: true,
-        displayHeaderFooter: true,
-        headerTemplate,
-        footerTemplate,
-        margin: { top: '100px', bottom: '80px', left: '50px', right: '50px' },
-      });
-
-      return Buffer.from(pdfBuffer);
-    } finally {
-      await browser.close();
-    }
-  }
-
-  // ============================================================
-  // PUPPETEER — HTML de la couverture vers PDF SANS marges
-  // ============================================================
-
-  private async coverHtmlToPdf(coverHtml: string): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-
-    try {
-      const page = await browser.newPage();
-      const fullCoverHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8" />
-          <style>
-            ${COVER_STYLES}
-            @page { size: letter portrait; margin: 0; }
-          </style>
-        </head>
-        <body>${coverHtml}</body>
-        </html>
-      `;
-      await page.setContent(fullCoverHtml, { waitUntil: 'load' });
-
-      const pdfBuffer = await page.pdf({
-        format: 'Letter',
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: '0', bottom: '0', left: '0', right: '0' },
-      });
-
-      return Buffer.from(pdfBuffer);
-    } finally {
-      await browser.close();
-    }
+    return sorted.map(plan => Buffer.from(plan.fileBase64, 'base64'));
   }
 
   // ============================================================
   // PDF-LIB — Fusionne plusieurs buffers PDF en un seul document
+  // Chaque buffer peut avoir un format/orientation différent
+  // (ex: plans techniques 11x17 paysage) — pdf-lib préserve
+  // les dimensions natives de chaque page lors de la copie
   // ============================================================
 
   private async mergePdfs(buffers: Buffer[]): Promise<Buffer> {
