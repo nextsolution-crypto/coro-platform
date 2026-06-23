@@ -150,7 +150,9 @@ export class ExportService {
         currentHtmlChunk += renderModule2(mergedSections, lang);
       } else if (moduleNum === 3) {
         const mod = modules.find((m: any) => m.moduleNumber === 3);
-        currentHtmlChunk += renderModule3(mod?.sections || [], lang);
+        const savedModule3 = content.module3;
+        const mergedSections3 = this.mergeModule3SavedData(mod?.sections || [], savedModule3);
+        currentHtmlChunk += renderModule3(mergedSections3, lang);
       } else if (moduleNum === 4) {
         const procedures = this.getModule4Procedures(content, project);
         const buildingAddress = `${project.building.address}, ${project.building.city}, ${project.building.province}`;
@@ -304,6 +306,26 @@ export class ExportService {
       });
 
     return merged;
+  }
+
+  // ============================================================
+  // FUSIONNE LES SECTIONS GÉNÉRÉES AVEC LES DONNÉES RÉELLEMENT
+  // SAUVEGARDÉES PAR L'UTILISATEUR DANS L'ÉDITEUR MODULE 3
+  // (rôles actifs, couleurs, positions, membres de l'équipe)
+  // ============================================================
+
+  private mergeModule3SavedData(generatedSections: any[], savedModule3: any): any[] {
+    if (!savedModule3) return generatedSections;
+
+    return generatedSections.map(section => {
+      if (section.id === '3.1' && savedModule3.orgRoles) {
+        return { ...section, orgRoles: savedModule3.orgRoles };
+      }
+      if (section.id === '3.2' && savedModule3.members) {
+        return { ...section, members: savedModule3.members };
+      }
+      return section;
+    });
   }
 
   // ============================================================
