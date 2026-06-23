@@ -203,17 +203,43 @@ export default function Module7Section({ projectId, language = 'fr' }: Module7Se
   // ── Upload photo ──────────────────────────────────────────
   const handlePhotoUpload = (key: string, file: File) => {
     if (!file.type.startsWith('image/')) return;
-    if (file.size > 10 * 4096 * 2304) { alert('Image max 10MB'); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = (reader.result as string).split(',')[1];
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      // Redimensionne à une largeur max de 1000px pour limiter la taille du PDF
+      const MAX_WIDTH = 1000;
+      const scale = Math.min(1, MAX_WIDTH / img.width);
+      const targetWidth = Math.round(img.width * scale);
+      const targetHeight = Math.round(img.height * scale);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+      // Compresse en JPEG qualité 80%
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const base64 = compressedDataUrl.split(',')[1];
+
       setPhotos(prev => ({
         ...prev,
         [key]: { base64, fileName: file.name, label: key },
       }));
       setIsDirty(true);
     };
-    reader.readAsDataURL(file);
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      alert('Erreur lors du chargement de l\'image.');
+    };
+
+    img.src = objectUrl;
   };
 
   const removePhoto = (key: string) => {
