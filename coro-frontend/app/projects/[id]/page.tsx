@@ -104,8 +104,8 @@ export default function ProjectDetailPage() {
       const res = await api.post(
         `/projects/${projectId}/export`,
         {
-          selectedModules: [1, 2, 3, 4, 7, 8],
-          moduleOrder: [1, 2, 3, 4, 7, 8],
+          selectedModules: [1, 2, 3, 4, 6, 7, 8],
+          moduleOrder: [1, 2, 3, 4, 6, 7, 8],
           language: 'fr',
         },
         { responseType: 'blob' }
@@ -312,7 +312,7 @@ export default function ProjectDetailPage() {
           🧪 Test Export PDF (temporaire)
         </h3>
         <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
-          Génère un PDF avec M1, M2, M3, M4, M7, M8 en français (sans M6 pour l'instant).
+          Génère un PDF avec M1, M2, M3, M4, M6, M7, M8 en français.
         </p>
         <button
           onClick={handleTestExport}
