@@ -377,7 +377,7 @@ export default function Module6Section({ projectId, language = 'fr' }: Module6Se
   const [plans, setPlans] = useState<BuildingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<PlanSection>>(
-    new Set(['IMPLANTATION', 'COUPE', 'OPERATION', 'SECTEURS', 'DIVERS'])
+    new Set<PlanSection>(['IMPLANTATION', 'COUPE', 'OPERATION', 'SECTEURS', 'DIVERS'])
   );
   const [modal, setModal] = useState<{
     open: boolean;
