@@ -97,6 +97,14 @@ export function renderModule3(sections: any[], lang: 'fr' | 'en'): string {
   // ── 3.2 — Tableau des membres ──
   const members = s32?.members || [];
 
+  // N'affiche les lignes "Fin de semaine" que si au moins une contient une vraie donnée
+  const hasWeekendData = members.some((m: any) =>
+    m.schedule === 'weekend' && (m.personneDesignee || m.substitut)
+  );
+  const visibleMembers = hasWeekendData
+    ? members
+    : members.filter((m: any) => m.schedule !== 'weekend');
+
   const shiftLabel: Record<string, string> = isFr
     ? { jour: 'Jour', soir: 'Soir', nuit: 'Nuit' }
     : { jour: 'Day', soir: 'Evening', nuit: 'Night' };
@@ -105,7 +113,7 @@ export function renderModule3(sections: any[], lang: 'fr' | 'en'): string {
     ? { semaine: 'Semaine', weekend: 'Fin de semaine' }
     : { semaine: 'Weekday', weekend: 'Weekend' };
 
-  const memberRows = members.map((m: any) => `
+  const memberRows = visibleMembers.map((m: any) => `
     <tr>
       <td style="font-weight:600;">${escapeHtml(isFr ? m.roleLabel : m.roleLabel_en)}</td>
       <td>${scheduleLabel[m.schedule] || m.schedule}</td>
