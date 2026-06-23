@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Module3OrgChart, { OrgRole } from './Module3OrgChart';
-import Module3MemberTable, { MemberEntry, ShiftType } from './Module3MemberTable';
+import Module3MemberTable, { MemberEntry, QuartDef } from './Module3MemberTable';
 import api from '@/lib/api';
 
 // ============================================================
@@ -12,7 +12,7 @@ import api from '@/lib/api';
 interface Module3Data {
   orgRoles: OrgRole[];
   members: MemberEntry[];
-  activeShifts: ShiftType[];
+  activeShifts: string[];
   customRoles?: OrgRole[];
 }
 
@@ -20,6 +20,9 @@ interface Module3SectionProps {
   projectId: string;
   initialData: Module3Data;
   language?: 'fr' | 'en';
+  isIndustriel?: boolean;
+  initialActiveTab?: '3.1' | '3.2';
+  quartsOccupation?: { nomQuart: string; heureDebut: string; heureFin: string }[];
   onSave?: (data: Module3Data) => void;
 }
 
@@ -43,20 +46,29 @@ export default function Module3Section({
   projectId,
   initialData,
   language = 'fr',
+  isIndustriel = false,
+  initialActiveTab = '3.1',
+  quartsOccupation = [],
   onSave,
 }: Module3SectionProps) {
 
   const isFr = language === 'fr';
   const isFirstLoad = useRef(true);
 
+  // Convertit quartsOccupation (configurateur) en QuartDef pour le tableau 3.2
+  const quarts: QuartDef[] = quartsOccupation.map(q => ({
+    id: q.nomQuart.toLowerCase().replace(/\s+/g, '_'),
+    label: q.nomQuart,
+  }));
+
   const [orgRoles, setOrgRoles]       = useState<OrgRole[]>([]);
   const [members, setMembers]         = useState<MemberEntry[]>([]);
-  const [activeShifts, setActiveShifts] = useState<ShiftType[]>(['jour']);
+  const [activeShifts, setActiveShifts] = useState<string[]>(['jour']);
   const [saving, setSaving]           = useState(false);
   const [lastSaved, setLastSaved]     = useState<Date | null>(null);
   const [isDirty, setIsDirty]         = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const [activeTab, setActiveTab]     = useState<'3.1' | '3.2'>('3.1');
+  const [activeTab, setActiveTab]     = useState<'3.1' | '3.2'>(initialActiveTab);
 
   // ============================================================
   // CHARGEMENT — backend d'abord, fallback initialData
@@ -100,17 +112,18 @@ export default function Module3Section({
   const syncMembersFromRoles = useCallback((
     roles: OrgRole[],
     currentMembers: MemberEntry[],
-    shifts: ShiftType[]
+    shifts: string[]
   ): MemberEntry[] => {
     const activeRoles = roles.filter(r =>
       r.isActive && r.id !== 'sys_agent_liaison'
     );
     const schedules: Array<'semaine' | 'weekend'> = ['semaine', 'weekend'];
     const updatedMembers: MemberEntry[] = [];
+    const shiftsToUse = quarts.length > 0 ? quarts.map(q => q.id) : shifts;
 
     for (const role of activeRoles) {
       for (const schedule of schedules) {
-        for (const shift of shifts) {
+        for (const shift of shiftsToUse) {
           const entryId = `${role.id}_${schedule}_${shift}`;
           // Garde les données existantes si la ligne existe déjà
           const existing = currentMembers.find(m =>
@@ -269,7 +282,7 @@ export default function Module3Section({
         <span>{t.syncInfo}</span>
       </div>
 
-      {/* Tabs 3.1 / 3.2 */}
+      {/* Tabs 3.1 / 3.2 — 3.2 visible seulement pour bâtiments industriels */}
       <div className="flex gap-1 mb-6 bg-gray-100 rounded p-1 w-fit">
         <button
           onClick={() => setActiveTab('3.1')}
@@ -280,15 +293,17 @@ export default function Module3Section({
         >
           {t.tab31}
         </button>
-        <button
-          onClick={() => setActiveTab('3.2')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors
-            ${activeTab === '3.2'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          {t.tab32}
-        </button>
+        {isIndustriel && (
+          <button
+            onClick={() => setActiveTab('3.2')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors
+              ${activeTab === '3.2'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {t.tab32}
+          </button>
+        )}
       </div>
 
       {/* Contenu onglet actif */}
@@ -300,10 +315,10 @@ export default function Module3Section({
         />
       )}
 
-      {activeTab === '3.2' && (
+      {activeTab === '3.2' && isIndustriel && (
         <Module3MemberTable
           members={members}
-          activeShifts={activeShifts}
+          quarts={quarts}
           onChange={handleMembersChange}
           language={language}
         />
