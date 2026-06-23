@@ -479,7 +479,7 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
   `).join('');
 
   const html78 = `
-    <div class="page-break">
+    <div style="margin-top:28px;">
       ${sectionHeader('7.8', isFr ? 'DÉTECTEURS DE GAZ' : 'GAS DETECTORS')}
       ${detectors.length > 0 ? detectorsHtml : `<p style="color:#ADB5BD;">${isFr ? 'Aucun détecteur de gaz déclaré' : 'No gas detector declared'}</p>`}
     </div>
