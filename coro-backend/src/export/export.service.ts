@@ -27,7 +27,7 @@ export interface ExportOptions {
 type PdfSegment =
   | { type: 'html'; content: string; sequentialNumber: number; subsectionId?: string }
   | { type: 'separator'; html: string; sequentialNumber: number }
-  | { type: 'plans'; buffers: Buffer[]; sequentialNumber: number };
+  | { type: 'plans'; plans: { buffer: Buffer; section: string }[]; sequentialNumber: number };
 
 const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
   PMU: { fr: 'Plan de mesures d\'urgence', en: 'Emergency Response Plan' },
@@ -165,12 +165,24 @@ export class ExportService {
           pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
           currentHtmlChunk = '';
         }
-        const planBuffers = await this.getBuildingPlansSorted(project.id);
-        if (planBuffers.length > 0) {
+        const planEntries = await this.getBuildingPlansSorted(project.id);
+        if (planEntries.length > 0) {
           const sepHtml = buildSeparatorHtml(6);
           pdfSegments.push({ type: 'separator', html: sepHtml, sequentialNumber });
-          pdfSegments.push({ type: 'plans', buffers: planBuffers, sequentialNumber });
-          subsectionsByModule[sequentialNumber] = [];
+          pdfSegments.push({ type: 'plans', plans: planEntries, sequentialNumber });
+
+          const sectionLabels: Record<string, { fr: string; en: string }> = {
+            IMPLANTATION: { fr: 'Plan d\'implantation', en: 'Site Plan' },
+            COUPE: { fr: 'Plan de coupe', en: 'Cross-Section Plan' },
+            OPERATION: { fr: 'Plan d\'opération', en: 'Operations Plan' },
+            SECTEURS: { fr: 'Plan des secteurs', en: 'Sector Plan' },
+            DIVERS: { fr: 'Divers', en: 'Miscellaneous' },
+          };
+          const presentSections = Array.from(new Set(planEntries.map(p => p.section)));
+          presentSections.forEach(section => {
+            const label = sectionLabels[section]?.[lang] || section;
+            subsectionTitlesById[`${sequentialNumber}:plan_${section}`] = label;
+          });
         }
         continue;
       }
@@ -256,6 +268,23 @@ if (moduleNum === 2) {
         continue;
       }
 
+      if (moduleNum === 7) {
+        const module7Data = await this.prisma.module7Data.findUnique({ where: { projectId: project.id } });
+        const sections7 = renderModule7(module7Data, content.config, lang, sequentialNumber);
+
+        sections7.forEach((section, idx) => {
+          const displayNumber = `${sequentialNumber}.${idx + 1}`;
+          subsectionTitlesById[`${sequentialNumber}:${section.id}`] = `${displayNumber} — ${section.title}`;
+          pdfSegments.push({
+            type: 'html',
+            content: `<div>${section.html}</div>`,
+            sequentialNumber,
+            subsectionId: section.id,
+          });
+        });
+        continue;
+      }
+
       currentHtmlChunk += `<div>`;
 
       if (moduleNum === 4) {
@@ -279,10 +308,7 @@ if (moduleNum === 2) {
 
       currentHtmlChunk += `<div>`;
 
-      if (moduleNum === 7) {
-        const module7Data = await this.prisma.module7Data.findUnique({ where: { projectId: project.id } });
-        currentHtmlChunk += renderModule7(module7Data, content.config, lang);
-      } else if (moduleNum === 8) {
+      if (moduleNum === 8) {
         currentHtmlChunk += renderModule8(content.module8, lang);
       }
 
@@ -368,8 +394,13 @@ if (moduleNum === 2) {
           });
           await segPage.close();
         } else {
-          for (const planBuffer of segment.buffers) {
-            bodyBuffersWithMeta.push({ buffer: planBuffer, sequentialNumber: segment.sequentialNumber, isSeparator: false });
+          for (const planEntry of segment.plans) {
+            bodyBuffersWithMeta.push({
+              buffer: planEntry.buffer,
+              sequentialNumber: segment.sequentialNumber,
+              isSeparator: false,
+              subsectionId: `plan_${planEntry.section}`,
+            });
           }
         }
       }
@@ -602,7 +633,7 @@ if (moduleNum === 2) {
   // Seules les sections ayant au moins un plan uploadé apparaissent
   // ============================================================
 
-  private async getBuildingPlansSorted(projectId: string): Promise<Buffer[]> {
+  private async getBuildingPlansSorted(projectId: string): Promise<{ buffer: Buffer; section: string }[]> {
     const plans = await this.prisma.buildingPlan.findMany({
       where: { projectId },
       orderBy: { order: 'asc' },
@@ -612,7 +643,10 @@ if (moduleNum === 2) {
 
     const sorted = sectionOrder.flatMap(section => plans.filter(p => p.section === section));
 
-    return sorted.map(plan => Buffer.from(plan.fileBase64, 'base64'));
+    return sorted.map(plan => ({
+      buffer: Buffer.from(plan.fileBase64, 'base64'),
+      section: plan.section,
+    }));
   }
 
   // ============================================================
