@@ -50,7 +50,7 @@ function subHeading(text: string): string {
   return `<p style="font-size:9pt;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px 0;">${text}</p>`;
 }
 
-export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'): string {
+export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', moduleSeqNumber: number = 7): { id: string; title: string; html: string }[] {
   const isFr = lang === 'fr';
   config = config || {};
   const extra = module7Data?.extraData || {};
@@ -59,13 +59,18 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
 
   const isIndustriel = config.buildingType === 'Industriel' || config.usagePrincipal?.startsWith('F');
 
-  const sectionHeader = (id: string, line2: string) => `
-    <div class="section-header">
-      <span class="section-id">${id}</span>
-      <span class="section-title-line2">${line2}</span>
-      <div class="section-bar"></div>
-    </div>
-  `;
+  let subsectionCounter = 0;
+  const sectionHeader = (_unusedId: string, line2: string) => {
+    subsectionCounter += 1;
+    const displayId = `${moduleSeqNumber}.${subsectionCounter}`;
+    return `
+      <div class="section-header">
+        <span class="section-id">${displayId}</span>
+        <span class="section-title-line2">${line2}</span>
+        <div class="section-bar"></div>
+      </div>
+    `;
+  };
 
   const quartsOccupation = config.quartsOccupation || [];
 
@@ -509,5 +514,15 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en'):
     </div>
   `;
 
-  return html71 + html72 + html73 + html74 + html75 + html76 + html77 + html78 + html79;
+  return [
+    { id: 'site_general', title: isFr ? 'Description générale' : 'General Description', html: html71 },
+    { id: 'site_mecanique', title: isFr ? 'Mécanique du bâtiment' : 'Building Mechanical Systems', html: html72 },
+    { id: 'site_alarme', title: isFr ? 'Réseau d\'alarme incendie' : 'Fire Alarm System', html: html73 },
+    { id: 'site_gicleurs', title: isFr ? 'Système de gicleurs et protection incendie' : 'Sprinkler and Fire Protection System', html: html74 },
+    { id: 'site_matieres', title: isFr ? 'Matières dangereuses' : 'Hazardous Materials', html: html75 },
+    { id: 'site_extincteur', title: isFr ? 'Extincteur portatif' : 'Portable Fire Extinguisher', html: html76 },
+    { id: 'site_soins', title: isFr ? 'Équipements de premiers soins' : 'First Aid Equipment', html: html77 },
+    { id: 'site_detecteurs', title: isFr ? 'Détecteurs de gaz' : 'Gas Detectors', html: html78 },
+    { id: 'site_photos', title: isFr ? 'Photos des équipements de protection' : 'Protection Equipment Photos', html: html79 },
+  ];
 }
