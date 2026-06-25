@@ -27,34 +27,40 @@ export function generateTocPage(data: TocData): string {
 
   const title = isFr ? 'TABLE DES MATIÈRES' : 'TABLE OF CONTENTS';
 
-  const entriesHtml = entries.map(entry => {
-    const subsectionsHtml = entry.subsections.length > 0
-      ? entry.subsections.map(sub => `
-          <div class="toc-subrow">
-            <a href="#toc-target-module-${entry.sequentialNumber}" class="toc-sub-link">
-              <span class="toc-sub-title">${escapeHtmlLocal(sub.title)}</span>
-              <span class="toc-sub-dots"></span>
-              <span class="toc-sub-page">${sub.page}</span>
-            </a>
-          </div>
-        `).join('')
-      : '';
+  const renderSubrow = (sequentialNumber: number, sub: TocSubsection) => `
+    <div class="toc-subrow">
+      <a href="#toc-target-module-${sequentialNumber}" class="toc-sub-link">
+        <span class="toc-sub-title">${escapeHtmlLocal(sub.title)}</span>
+        <span class="toc-sub-dots"></span>
+        <span class="toc-sub-pagenum">${sub.page}</span>
+      </a>
+    </div>
+  `;
 
-    return `
-      <div class="toc-entry">
+  const entriesHtml = entries.map(entry => {
+    const [firstSub, ...restSubs] = entry.subsections;
+
+    // Le titre du module + sa 1ère sous-section restent groupés (jamais coupés)
+    const headerBlock = `
+      <div class="toc-entry-header">
         <a href="#toc-target-module-${entry.sequentialNumber}" class="toc-main-link">
           <span class="toc-number">${entry.sequentialNumber}</span>
           <span class="toc-title">${escapeHtmlLocal(entry.moduleTitle)}</span>
           <span class="toc-dots"></span>
-          <span class="toc-page">${entry.pageNumber}</span>
+          <span class="toc-main-pagenum">${entry.pageNumber}</span>
         </a>
-        ${subsectionsHtml}
+        ${firstSub ? renderSubrow(entry.sequentialNumber, firstSub) : ''}
       </div>
     `;
+
+    // Les sous-sections suivantes se répartissent librement entre les pages
+    const restHtml = restSubs.map(sub => renderSubrow(entry.sequentialNumber, sub)).join('');
+
+    return `<div class="toc-entry">${headerBlock}${restHtml}</div>`;
   }).join('');
 
   return `
-    <div class="toc-page">
+    <div class="toc-container">
       <h1 class="toc-main-title">${title}</h1>
       <div class="toc-bar"></div>
       <div class="toc-list">
@@ -70,8 +76,7 @@ export const TOC_STYLES = `
     padding: 0;
   }
 
-  .toc-page {
-    padding: 60px 70px;
+  .toc-container {
     font-family: Arial, sans-serif;
     color: #2C3E50;
   }
@@ -102,11 +107,16 @@ export const TOC_STYLES = `
     margin-bottom: 6px;
   }
 
+  .toc-entry-header {
+    break-inside: avoid;
+  }
+
   .toc-main-link, .toc-sub-link {
     display: flex;
     align-items: baseline;
     text-decoration: none;
     color: inherit;
+    flex-wrap: wrap;
   }
 
   .toc-main-link {
@@ -132,18 +142,19 @@ export const TOC_STYLES = `
     font-size: 14px;
     font-weight: 700;
     color: #2C3E50;
-    flex-shrink: 0;
-    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .toc-dots {
-    flex: 1;
+    flex: 1 1 60px;
+    min-width: 60px;
     border-bottom: 1px dotted #CED4DA;
     margin: 0 8px;
     transform: translateY(-4px);
   }
 
-  .toc-page {
+  .toc-main-pagenum {
     font-size: 13px;
     font-weight: 700;
     color: #C0392B;
@@ -163,18 +174,19 @@ export const TOC_STYLES = `
   .toc-sub-title {
     font-size: 11.5pt;
     color: #6C757D;
-    flex-shrink: 0;
-    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
   }
 
   .toc-sub-dots {
-    flex: 1;
+    flex: 1 1 60px;
+    min-width: 60px;
     border-bottom: 1px dotted #E9ECEF;
     margin: 0 8px;
     transform: translateY(-3px);
   }
 
-  .toc-sub-page {
+  .toc-sub-pagenum {
     font-size: 11pt;
     color: #ADB5BD;
     flex-shrink: 0;
