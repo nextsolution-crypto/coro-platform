@@ -156,7 +156,7 @@ function renderStopReflechirAgir(lang: 'fr' | 'en'): string {
 // (P001 directives générales = cas spécial sans rôles)
 // ============================================================
 
-function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buildingAddress: string): string {
+export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buildingAddress: string): string {
   const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
   const colorBar = renderColorBar(proc.headerColor);
 
