@@ -5,9 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BASE_STYLES } from './templates/base.styles';
 import { COVER_STYLES } from './templates/cover.styles';
 import { generateCoverPage } from './templates/cover.template';
+import { generateSeparatorPage, SEPARATOR_STYLES } from './templates/separator.template';
+import { generateTocPage, TOC_STYLES, TocEntry } from './templates/toc.template';
 import {
   renderModule1,
+  renderModule1Section,
   renderModule2,
+  renderModule2Section,
   renderModule8,
 } from './templates/modules/simple-modules.template';
 import { renderModule7 } from './templates/modules/module7.template';
@@ -21,8 +25,9 @@ export interface ExportOptions {
 }
 
 type PdfSegment =
-  | { type: 'html'; content: string }
-  | { type: 'plans'; buffers: Buffer[] };
+  | { type: 'html'; content: string; sequentialNumber: number; subsectionId?: string }
+  | { type: 'separator'; html: string; sequentialNumber: number }
+  | { type: 'plans'; buffers: Buffer[]; sequentialNumber: number };
 
 const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
   PMU: { fr: 'Plan de mesures d\'urgence', en: 'Emergency Response Plan' },
@@ -31,6 +36,16 @@ const DOCUMENT_TYPE_LABELS: Record<string, { fr: string; en: string }> = {
   PGC: { fr: 'Plan de gestion de crise',   en: 'Crisis Management Plan' },
   PRA: { fr: 'Plan de reprise des activités', en: 'Disaster Recovery Plan' },
   PUE: { fr: 'Plan d\'urgence environnementale', en: 'Environmental Emergency Plan' },
+};
+
+const MODULE_TITLES: Record<number, { fr: string; en: string }> = {
+  1: { fr: 'Introduction', en: 'Introduction' },
+  2: { fr: 'Liste téléphonique', en: 'Phone Directory' },
+  3: { fr: 'Rôles et responsabilités de l\'équipe d\'urgence', en: 'Emergency Team Roles and Responsibilities' },
+  4: { fr: 'Procédures', en: 'Procedures' },
+  6: { fr: 'Plans techniques du bâtiment', en: 'Technical Building Plans' },
+  7: { fr: 'Description du site et équipements de sécurité', en: 'Site Description and Safety Equipment' },
+  8: { fr: 'Registres et annexes', en: 'Records and Appendices' },
 };
 
 @Injectable()
@@ -77,6 +92,8 @@ export class ExportService {
   ): Promise<Buffer> {
     const project = doc.project;
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
+    const isFr = lang === 'fr';
+    const isIndustrielForExport = project.building.buildingType?.toLowerCase() === 'industriel';
 
     // ── Page de couverture ──
     const docTypeLabel = DOCUMENT_TYPE_LABELS[project.documentType]?.[lang] || project.documentType;
@@ -118,42 +135,130 @@ export class ExportService {
       </html>
     `;
 
-    // ── Construit les segments dans l'ordre choisi : HTML (rendu via Puppeteer) ──
-    // ── ou plans déjà en PDF (insérés tels quels, sans passer par Puppeteer)    ──
+    // ── Construit les segments dans l'ordre choisi : séparateur + HTML (rendu via ──
+    // ── Puppeteer), ou séparateur + plans déjà en PDF (insérés tels quels)         ──
     const orderedModules = options.moduleOrder.filter(n => options.selectedModules.includes(n));
     const pdfSegments: PdfSegment[] = [];
     let currentHtmlChunk = '';
+    let currentHtmlSeqNumber = 0;
+    let sequentialNumber = 0;
+
+    // Collecte les sous-sections pour le sommaire, par numéro séquentiel
+    const subsectionsByModule: Record<number, { id: string; title: string }[]> = {};
+    const subsectionTitlesById: Record<string, string> = {}; // "seqNum:subsectionId" -> titre affiché
+
+    const buildSeparatorHtml = (moduleNum: number): string => {
+      sequentialNumber += 1;
+      const moduleTitle = MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
+      return generateSeparatorPage({
+        sequentialNumber,
+        moduleTitle,
+        documentTypeLabel: docTypeLabel,
+        buildingName: project.building.name,
+        year: project.year,
+      });
+    };
 
     for (const moduleNum of orderedModules) {
       if (moduleNum === 6) {
-        // Clôt le segment HTML en cours, s'il y en a un
         if (currentHtmlChunk) {
-          pdfSegments.push({ type: 'html', content: currentHtmlChunk });
+          pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
           currentHtmlChunk = '';
         }
         const planBuffers = await this.getBuildingPlansSorted(project.id);
         if (planBuffers.length > 0) {
-          pdfSegments.push({ type: 'plans', buffers: planBuffers });
+          const sepHtml = buildSeparatorHtml(6);
+          pdfSegments.push({ type: 'separator', html: sepHtml, sequentialNumber });
+          pdfSegments.push({ type: 'plans', buffers: planBuffers, sequentialNumber });
+          subsectionsByModule[sequentialNumber] = [];
         }
         continue;
       }
 
-      currentHtmlChunk += `<div class="page-break">`;
+      if (currentHtmlChunk) {
+        pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
+        currentHtmlChunk = '';
+      }
+      const sepHtml = buildSeparatorHtml(moduleNum);
+      pdfSegments.push({ type: 'separator', html: sepHtml, sequentialNumber });
+      currentHtmlSeqNumber = sequentialNumber;
+
+      // Note: la collecte des titres pour Module 1, 2, 3 se fait maintenant
+      // directement dans leur bloc respectif plus bas (pour respecter les vraies
+      // données fusionnées et les filtres comme isIndustrielForExport)
+      subsectionsByModule[sequentialNumber] = []; // rempli plus tard avec les vraies pages
 
       if (moduleNum === 1) {
         const mod = modules.find((m: any) => m.moduleNumber === 1);
-        currentHtmlChunk += renderModule1(mod?.sections || []);
-      } else if (moduleNum === 2) {
+        const sections1 = mod?.sections || [];
+        sections1.forEach((s: any) => {
+          subsectionTitlesById[`${sequentialNumber}:${s.id}`] = `${s.id} — ${s.title}`;
+        });
+        for (let i = 0; i < sections1.length; i++) {
+          const sectionHtml = `<div>${renderModule1Section(sections1[i], false)}</div>`;
+          pdfSegments.push({
+            type: 'html',
+            content: sectionHtml,
+            sequentialNumber,
+            subsectionId: sections1[i].id,
+          });
+        }
+        continue;
+      }
+if (moduleNum === 2) {
         const mod = modules.find((m: any) => m.moduleNumber === 2);
         const savedModule2 = content.module2;
         const mergedSections = this.mergeModule2SavedData(mod?.sections || [], savedModule2, lang);
-        currentHtmlChunk += renderModule2(mergedSections, lang);
-      } else if (moduleNum === 3) {
+        mergedSections.forEach((s: any, i: number) => {
+          subsectionTitlesById[`${sequentialNumber}:${s.id}`] = `2.${i + 1} — ${s.title}`;
+        });
+        for (let i = 0; i < mergedSections.length; i++) {
+          const sectionHtml = `<div>${renderModule2Section(mergedSections[i], i, lang)}</div>`;
+          pdfSegments.push({
+            type: 'html',
+            content: sectionHtml,
+            sequentialNumber,
+            subsectionId: mergedSections[i].id,
+          });
+        }
+        continue;
+      }
+
+      if (moduleNum === 3) {
         const mod = modules.find((m: any) => m.moduleNumber === 3);
         const savedModule3 = content.module3;
         const mergedSections3 = this.mergeModule3SavedData(mod?.sections || [], savedModule3);
-        currentHtmlChunk += renderModule3(mergedSections3, lang);
-      } else if (moduleNum === 4) {
+        const { html31, html32, has32 } = renderModule3(mergedSections3, lang);
+
+        const s31Title = mergedSections3.find((s: any) => s.id === '3.1')?.title
+          || (isFr ? 'ORGANIGRAMME' : 'ORGANIZATIONAL CHART');
+        subsectionTitlesById[`${sequentialNumber}:3.1`] = `3.1 — ${s31Title}`;
+
+        pdfSegments.push({
+          type: 'html',
+          content: `<div>${html31}</div>`,
+          sequentialNumber,
+          subsectionId: '3.1',
+        });
+
+        if (has32 && isIndustrielForExport) {
+          const s32Title = mergedSections3.find((s: any) => s.id === '3.2')?.title
+            || (isFr ? 'LISTE DES MEMBRES' : 'MEMBER LIST');
+          subsectionTitlesById[`${sequentialNumber}:3.2`] = `3.2 — ${s32Title}`;
+
+          pdfSegments.push({
+            type: 'html',
+            content: `<div>${html32}</div>`,
+            sequentialNumber,
+            subsectionId: '3.2',
+          });
+        }
+        continue;
+      }
+
+      currentHtmlChunk += `<div>`;
+
+      if (moduleNum === 4) {
         const procedures = this.getModule4Procedures(content, project);
         const buildingAddress = `${project.building.address}, ${project.building.city}, ${project.building.province}`;
         currentHtmlChunk += renderModule4(procedures, lang, buildingAddress);
@@ -168,7 +273,7 @@ export class ExportService {
     }
 
     if (currentHtmlChunk) {
-      pdfSegments.push({ type: 'html', content: currentHtmlChunk });
+      pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
     }
 
     // ── UN SEUL NAVIGATEUR PARTAGÉ pour tous les segments HTML ──
@@ -177,36 +282,47 @@ export class ExportService {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
-    const allBuffers: Buffer[] = [];
+    // Buffers de couverture + corps (sans le sommaire, généré après coup une fois les pages connues)
+    const bodyBuffersWithMeta: { buffer: Buffer; sequentialNumber: number; isSeparator: boolean; subsectionId?: string }[] = [];
 
     try {
-      // Couverture
-      const coverPage = await browser.newPage();
-      await coverPage.setContent(fullCoverHtml, { waitUntil: 'load' });
-      const coverBytes = await coverPage.pdf({
-        format: 'Letter',
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: '0', bottom: '0', left: '0', right: '0' },
-      });
-      allBuffers.push(Buffer.from(coverBytes));
-      await coverPage.close();
-
       const headerTemplate = `
         <div style="width:100%;font-size:8px;padding:10px 50px 0 50px;color:#6C757D;"></div>
       `;
       const footerTemplate = `
         <div style="width:100%;font-size:9px;padding:0 50px 10px 50px;
-          display:flex;justify-content:space-between;color:#ADB5BD;
+          display:flex;justify-content:center;color:#ADB5BD;
           font-family:Arial,sans-serif;">
-          <span>CORO</span>
-          <span>${docTypeLabel} — <span class="pageNumber"></span></span>
+          <span>${docTypeLabel}</span>
         </div>
       `;
 
-      // Chaque segment, dans l'ordre — HTML rendu via Puppeteer, ou plans insérés tels quels
       for (const segment of pdfSegments) {
-        if (segment.type === 'html') {
+        if (segment.type === 'separator') {
+          const separatorFullHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8" />
+              <style>
+                ${SEPARATOR_STYLES}
+                @page { size: letter portrait; margin: 0; }
+              </style>
+            </head>
+            <body>${segment.html}</body>
+            </html>
+          `;
+          const sepPage = await browser.newPage();
+          await sepPage.setContent(separatorFullHtml, { waitUntil: 'load' });
+          const sepBytes = await sepPage.pdf({
+            format: 'Letter',
+            printBackground: true,
+            displayHeaderFooter: false,
+            margin: { top: '0', bottom: '0', left: '0', right: '0' },
+          });
+          bodyBuffersWithMeta.push({ buffer: Buffer.from(sepBytes), sequentialNumber: segment.sequentialNumber, isSeparator: true });
+          await sepPage.close();
+        } else if (segment.type === 'html') {
           const segmentHtml = `
             <!DOCTYPE html>
             <html lang="${lang}">
@@ -227,13 +343,144 @@ export class ExportService {
             footerTemplate,
             margin: { top: '100px', bottom: '80px', left: '50px', right: '50px' },
           });
-          allBuffers.push(Buffer.from(segBytes));
+          bodyBuffersWithMeta.push({
+            buffer: Buffer.from(segBytes),
+            sequentialNumber: segment.sequentialNumber,
+            isSeparator: false,
+            subsectionId: segment.type === 'html' ? segment.subsectionId : undefined,
+          });
           await segPage.close();
         } else {
-          // Plans déjà en PDF — insérés directement, sans passer par Puppeteer
-          allBuffers.push(...segment.buffers);
+          for (const planBuffer of segment.buffers) {
+            bodyBuffersWithMeta.push({ buffer: planBuffer, sequentialNumber: segment.sequentialNumber, isSeparator: false });
+          }
         }
       }
+
+      // ── Helper : calcule la page de départ de chaque module ET de chaque
+      // ── sous-section, étant donné le nombre de pages du sommaire ──
+      const computePageStarts = (tocPageCount: number): {
+        moduleStarts: Record<number, number>;
+        subsectionStarts: Record<string, number>; // clé "seqNum:subsectionId"
+      } => {
+        const moduleStarts: Record<number, number> = {};
+        const subsectionStarts: Record<string, number> = {};
+        let runningPageCount = 1 + tocPageCount;
+
+        for (const item of bodyBuffersWithMeta) {
+          const pageCount = pageCountsBySegment.get(item) as number;
+
+          if (item.isSeparator && moduleStarts[item.sequentialNumber] === undefined) {
+            moduleStarts[item.sequentialNumber] = runningPageCount + 1;
+          }
+          if (item.subsectionId) {
+            const key = `${item.sequentialNumber}:${item.subsectionId}`;
+            if (subsectionStarts[key] === undefined) {
+              subsectionStarts[key] = runningPageCount + 1;
+            }
+          }
+          runningPageCount += pageCount;
+        }
+        return { moduleStarts, subsectionStarts };
+      };
+
+      // Précalcule le nombre de pages de chaque buffer (évite de recharger 2x)
+      const pageCountsBySegment = new Map<typeof bodyBuffersWithMeta[number], number>();
+      for (const item of bodyBuffersWithMeta) {
+        const pdf = await PDFDocument.load(item.buffer);
+        pageCountsBySegment.set(item, pdf.getPageCount());
+      }
+
+      const buildTocEntries = (
+        moduleStarts: Record<number, number>,
+        subsectionStarts: Record<string, number>,
+      ): TocEntry[] => {
+        return Object.keys(moduleStarts)
+          .map(Number)
+          .sort((a, b) => a - b)
+          .map(seqNum => {
+            // Reconstruit les sous-sections de ce module avec leur vraie page
+            const subsectionsForModule = Object.keys(subsectionTitlesById)
+              .filter(key => key.startsWith(`${seqNum}:`))
+              .map(key => {
+                const subsectionId = key.split(':')[1];
+                return {
+                  id: subsectionId,
+                  title: subsectionTitlesById[key],
+                  page: subsectionStarts[key] ?? moduleStarts[seqNum],
+                };
+              });
+
+            return {
+              sequentialNumber: seqNum,
+              moduleTitle: this.findModuleTitleBySeq(orderedModules, seqNum, lang),
+              pageNumber: moduleStarts[seqNum],
+              subsections: subsectionsForModule,
+            };
+          });
+      };
+
+      const renderTocToPdf = async (entries: TocEntry[]): Promise<Uint8Array> => {
+        const tocHtml = generateTocPage({ entries, isFr });
+        const fullTocHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8" />
+            <style>
+              ${TOC_STYLES}
+              @page { size: letter portrait; margin: 0; }
+            </style>
+          </head>
+          <body>${tocHtml}</body>
+          </html>
+        `;
+        const tocPage = await browser.newPage();
+        await tocPage.setContent(fullTocHtml, { waitUntil: 'load' });
+        const bytes = await tocPage.pdf({
+          format: 'Letter',
+          printBackground: true,
+          displayHeaderFooter: false,
+          margin: { top: '0', bottom: '0', left: '0', right: '0' },
+        });
+        await tocPage.close();
+        return bytes;
+      };
+
+      // ── PASSE 1 — sommaire provisoire (numéros approximatifs) juste pour mesurer sa taille ──
+      const provisional = computePageStarts(1); // suppose 1 page pour la mesure initiale
+      const provisionalEntries = buildTocEntries(provisional.moduleStarts, provisional.subsectionStarts);
+      const provisionalTocBytes = await renderTocToPdf(provisionalEntries);
+      const provisionalTocPdf = await PDFDocument.load(provisionalTocBytes);
+      const realTocPageCount = provisionalTocPdf.getPageCount();
+
+      // ── PASSE 2 — sommaire final, avec les vrais numéros de page une fois la taille réelle connue ──
+      const final = computePageStarts(realTocPageCount);
+      const finalEntries = buildTocEntries(final.moduleStarts, final.subsectionStarts);
+      const tocBytes = await renderTocToPdf(finalEntries);
+
+      // ── Couverture ──
+      const coverPage = await browser.newPage();
+      await coverPage.setContent(fullCoverHtml, { waitUntil: 'load' });
+      const coverBytes = await coverPage.pdf({
+        format: 'Letter',
+        printBackground: true,
+        displayHeaderFooter: false,
+        margin: { top: '0', bottom: '0', left: '0', right: '0' },
+      });
+      await coverPage.close();
+
+      // ── Assemblage final : Couverture → Sommaire → Corps (avec séparateurs et plans) ──
+      const allBuffers = [
+        Buffer.from(coverBytes),
+        Buffer.from(tocBytes),
+        ...bodyBuffersWithMeta.map(b => b.buffer),
+      ];
+
+      const mergedPdf = await this.mergePdfsAndGetCounts(allBuffers);
+      await this.drawPageNumbers(mergedPdf.pdfDoc, mergedPdf.pageRanges);
+      const finalBytes = await mergedPdf.pdfDoc.save();
+      return Buffer.from(finalBytes);
     } finally {
       try {
         await browser.close();
@@ -241,8 +488,15 @@ export class ExportService {
         console.warn('Avertissement fermeture navigateur (ignoré) :', err);
       }
     }
+  }
 
-    return this.mergePdfs(allBuffers);
+  // ============================================================
+  // RETROUVE LE TITRE DU MODULE POUR UN NUMÉRO SÉQUENTIEL DONNÉ
+  // ============================================================
+
+  private findModuleTitleBySeq(orderedModules: number[], seqNum: number, lang: 'fr' | 'en'): string {
+    const moduleNum = orderedModules[seqNum - 1];
+    return MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
   }
 
   // ============================================================
@@ -348,22 +602,65 @@ export class ExportService {
   }
 
   // ============================================================
-  // PDF-LIB — Fusionne plusieurs buffers PDF en un seul document
-  // Chaque buffer peut avoir un format/orientation différent
-  // (ex: plans techniques 11x17 paysage) — pdf-lib préserve
-  // les dimensions natives de chaque page lors de la copie
+  // FUSIONNE LES PDF ET RETOURNE LES PLAGES DE PAGES PAR BUFFER
+  // SOURCE — permet de savoir quelles pages sont la couverture,
+  // le sommaire, un séparateur, du contenu, ou un plan
   // ============================================================
 
-  private async mergePdfs(buffers: Buffer[]): Promise<Buffer> {
+  private async mergePdfsAndGetCounts(buffers: Buffer[]): Promise<{
+    pdfDoc: PDFDocument;
+    pageRanges: { start: number; end: number; sourceIndex: number }[];
+  }> {
     const mergedPdf = await PDFDocument.create();
+    const pageRanges: { start: number; end: number; sourceIndex: number }[] = [];
+    let currentPage = 0;
 
-    for (const buffer of buffers) {
-      const pdf = await PDFDocument.load(buffer);
+    for (let i = 0; i < buffers.length; i++) {
+      const pdf = await PDFDocument.load(buffers[i]);
       const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
       pages.forEach(page => mergedPdf.addPage(page));
+
+      const pageCount = pdf.getPageCount();
+      pageRanges.push({ start: currentPage, end: currentPage + pageCount - 1, sourceIndex: i });
+      currentPage += pageCount;
     }
 
-    const mergedBytes = await mergedPdf.save();
-    return Buffer.from(mergedBytes);
+    return { pdfDoc: mergedPdf, pageRanges };
+  }
+
+  // ============================================================
+  // DESSINE LE NUMÉRO DE PAGE CONTINU (1, 2, 3...) SUR CHAQUE
+  // PAGE DE CONTENU — exclut couverture (index 0) et sommaire
+  // (index 1, peu importe son nombre réel de pages)
+  // ============================================================
+
+  private async drawPageNumbers(
+    pdfDoc: PDFDocument,
+    pageRanges: { start: number; end: number; sourceIndex: number }[],
+  ): Promise<void> {
+    const { rgb, StandardFonts } = await import('pdf-lib');
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const pages = pdfDoc.getPages();
+
+    // index 0 = couverture, index 1 = sommaire — jamais numérotés
+    const SKIP_SOURCE_INDICES = new Set([0, 1]);
+
+    for (const range of pageRanges) {
+      if (SKIP_SOURCE_INDICES.has(range.sourceIndex)) continue;
+
+      for (let pageIdx = range.start; pageIdx <= range.end; pageIdx++) {
+        const page = pages[pageIdx];
+        const { width } = page.getSize();
+        const pageNumberLabel = `${pageIdx + 1}`;
+
+        page.drawText(pageNumberLabel, {
+          x: width - 65,
+          y: 28,
+          size: 10,
+          font,
+          color: rgb(0.663, 0.196, 0.149), // équivalent #A93226
+        });
+      }
+    }
   }
 }
