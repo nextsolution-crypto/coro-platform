@@ -16,7 +16,7 @@ import {
 } from './templates/modules/simple-modules.template';
 import { renderModule7 } from './templates/modules/module7.template';
 import { renderModule3 } from './templates/modules/module3.template';
-import { renderModule4 } from './templates/modules/module4.template';
+import { renderModule4, renderProcedure } from './templates/modules/module4.template';
 
 export interface ExportOptions {
   selectedModules: number[];   // ex: [1, 2, 3, 4, 7, 8]
@@ -261,8 +261,25 @@ if (moduleNum === 2) {
       if (moduleNum === 4) {
         const procedures = this.getModule4Procedures(content, project);
         const buildingAddress = `${project.building.address}, ${project.building.city}, ${project.building.province}`;
-        currentHtmlChunk += renderModule4(procedures, lang, buildingAddress);
-      } else if (moduleNum === 7) {
+
+        procedures.forEach((proc: any) => {
+          const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
+          subsectionTitlesById[`${sequentialNumber}:${proc.id}`] = `${proc.code} — ${title}`;
+
+          const procHtml = `<div>${renderProcedure(proc, lang, buildingAddress)}</div>`;
+          pdfSegments.push({
+            type: 'html',
+            content: procHtml,
+            sequentialNumber,
+            subsectionId: proc.id,
+          });
+        });
+        continue;
+      }
+
+      currentHtmlChunk += `<div>`;
+
+      if (moduleNum === 7) {
         const module7Data = await this.prisma.module7Data.findUnique({ where: { projectId: project.id } });
         currentHtmlChunk += renderModule7(module7Data, content.config, lang);
       } else if (moduleNum === 8) {
@@ -427,10 +444,7 @@ if (moduleNum === 2) {
           <html>
           <head>
             <meta charset="UTF-8" />
-            <style>
-              ${TOC_STYLES}
-              @page { size: letter portrait; margin: 0; }
-            </style>
+            <style>${TOC_STYLES}</style>
           </head>
           <body>${tocHtml}</body>
           </html>
@@ -441,7 +455,7 @@ if (moduleNum === 2) {
           format: 'Letter',
           printBackground: true,
           displayHeaderFooter: false,
-          margin: { top: '0', bottom: '0', left: '0', right: '0' },
+          margin: { top: '100px', bottom: '80px', left: '70px', right: '70px' },
         });
         await tocPage.close();
         return bytes;
