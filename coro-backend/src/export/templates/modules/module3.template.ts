@@ -5,7 +5,7 @@
 
 import { escapeHtml } from '../cover.template';
 
-export function renderModule3(sections: any[], lang: 'fr' | 'en'): string {
+export function renderModule3(sections: any[], lang: 'fr' | 'en'): { html31: string; html32: string; has32: boolean } {
   const isFr = lang === 'fr';
   const s31 = sections.find((s: any) => s.id === '3.1');
   const s32 = sections.find((s: any) => s.id === '3.2');
@@ -141,5 +141,5 @@ export function renderModule3(sections: any[], lang: 'fr' | 'en'): string {
     </div>
   `;
 
-  return html31 + html32;
+  return { html31, html32, has32: !!s32 };
 }
