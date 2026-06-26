@@ -25,7 +25,7 @@ export interface ExportOptions {
 }
 
 type PdfSegment =
-  | { type: 'html'; content: string; sequentialNumber: number; subsectionId?: string }
+  | { type: 'html'; content: string; sequentialNumber: number; subsectionId?: string; colorBar?: string }
   | { type: 'separator'; html: string; sequentialNumber: number }
   | { type: 'plans'; plans: { buffer: Buffer; section: string }[]; sequentialNumber: number };
 
@@ -301,6 +301,7 @@ if (moduleNum === 2) {
             content: procHtml,
             sequentialNumber,
             subsectionId: proc.id,
+            colorBar: proc.headerColor,
           });
         });
         continue;
@@ -334,7 +335,7 @@ if (moduleNum === 2) {
     });
 
     // Buffers de couverture + corps (sans le sommaire, généré après coup une fois les pages connues)
-    const bodyBuffersWithMeta: { buffer: Buffer; sequentialNumber: number; isSeparator: boolean; subsectionId?: string }[] = [];
+    const bodyBuffersWithMeta: { buffer: Buffer; sequentialNumber: number; isSeparator: boolean; subsectionId?: string; colorBar?: string }[] = [];
 
     try {
       const headerTemplate = `
@@ -395,6 +396,7 @@ if (moduleNum === 2) {
             sequentialNumber: segment.sequentialNumber,
             isSeparator: false,
             subsectionId: segment.type === 'html' ? segment.subsectionId : undefined,
+            colorBar: segment.type === 'html' ? segment.colorBar : undefined,
           });
           await segPage.close();
         } else {
@@ -551,6 +553,8 @@ if (moduleNum === 2) {
         planSourceIndices,
         separatorSourceIndices,
       );
+      await this.drawProcedureColorBars(mergedPdf.pdfDoc, mergedPdf.pageRanges, bodyBuffersWithMeta);
+
       const finalBytes = await mergedPdf.pdfDoc.save();
       return Buffer.from(finalBytes);
     } finally {
@@ -834,6 +838,53 @@ if (moduleNum === 2) {
             opacity: OPACITY,
           });
         }
+      }
+    }
+  }
+
+  // ============================================================
+  // DESSINE LA BANDE COLORÉE 10PX PLEINE LARGEUR EN HAUT DE
+  // CHAQUE PAGE APPARTENANT À UNE PROCÉDURE (Module 4), avec
+  // la couleur officielle headerColor de cette procédure
+  // ============================================================
+
+  private async drawProcedureColorBars(
+    pdfDoc: PDFDocument,
+    pageRanges: { start: number; end: number; sourceIndex: number }[],
+    bodyBuffersWithMeta: { colorBar?: string }[],
+  ): Promise<void> {
+    const { rgb } = await import('pdf-lib');
+    const pages = pdfDoc.getPages();
+    const BAR_HEIGHT = 10;
+
+    const hexToRgb = (hex: string) => {
+      const clean = hex.replace('#', '');
+      const r = parseInt(clean.substring(0, 2), 16) / 255;
+      const g = parseInt(clean.substring(2, 4), 16) / 255;
+      const b = parseInt(clean.substring(4, 6), 16) / 255;
+      return rgb(r, g, b);
+    };
+
+    for (const range of pageRanges) {
+      // sourceIndex 0=couverture, 1=sommaire — décalage de 2 vers bodyBuffersWithMeta
+      const metaIdx = range.sourceIndex - 2;
+      if (metaIdx < 0 || metaIdx >= bodyBuffersWithMeta.length) continue;
+
+      const colorBar = bodyBuffersWithMeta[metaIdx]?.colorBar;
+      if (!colorBar) continue;
+
+      const color = hexToRgb(colorBar);
+
+      for (let pageIdx = range.start; pageIdx <= range.end; pageIdx++) {
+        const page = pages[pageIdx];
+        const { width, height } = page.getSize();
+        page.drawRectangle({
+          x: 0,
+          y: height - BAR_HEIGHT,
+          width,
+          height: BAR_HEIGHT,
+          color,
+        });
       }
     }
   }
