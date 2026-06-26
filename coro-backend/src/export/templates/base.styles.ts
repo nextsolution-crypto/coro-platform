@@ -141,29 +141,18 @@ export const BASE_STYLES = `
   }
 
   .procedure-header {
-    background-color: #2C3E50;
-    color: #FFFFFF;
-    padding: 16px 20px;
-    border-radius: 6px;
     margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
   }
 
   .procedure-header .proc-code {
+    display: inline-block;
     font-size: 10pt;
     font-weight: 700;
-    background-color: rgba(255,255,255,0.15);
-    padding: 3px 10px;
+    color: #6C757D;
+    background-color: #F8F9FA;
+    border: 1px solid #DEE2E6;
+    padding: 4px 10px;
     border-radius: 4px;
-  }
-
-  .procedure-header h2 {
-    font-size: 16pt;
-    font-weight: 800;
-    margin: 0;
-    text-transform: uppercase;
   }
 
   .role-page {
@@ -171,14 +160,15 @@ export const BASE_STYLES = `
   }
 
   .role-header {
-    background-color: #F39C12;
-    color: #FFFFFF;
+    background-color: #F8F9FA;
+    color: #2C3E50;
     padding: 10px 18px;
     border-radius: 6px;
     margin-bottom: 18px;
     font-size: 13pt;
     font-weight: 700;
     text-transform: uppercase;
+    border: 1px solid #E9ECEF;
   }
 
   .step {
