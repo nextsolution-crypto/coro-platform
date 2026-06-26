@@ -219,8 +219,8 @@ export const P005_FUITE_GAZ: ProcedureTemplate = {
         },
         {
           id: sid(CODE, 30),
-          textFR: 'Informer que la valve interne est située ________________',
-          textEN: 'Inform that the internal valve is located ________________',
+          textFR: 'Informer que la valve interne est située [LOCALISATION VALVE GAZ]',
+          textEN: 'Inform that the internal valve is located [GAS VALVE LOCATION]',
           isBold: false,
         },
         {
