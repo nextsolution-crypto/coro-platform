@@ -530,8 +530,31 @@ if (moduleNum === 2) {
         ...bodyBuffersWithMeta.map(b => b.buffer),
       ];
 
+      // Identifie les sourceIndex correspondant aux pages de plans (Module 6),
+      // pour les exclure du filigrane — leur subsectionId commence par 'plan_'
+      const planSourceIndices = new Set<number>();
+      bodyBuffersWithMeta.forEach((b, idx) => {
+        if (b.subsectionId?.startsWith('plan_')) {
+          planSourceIndices.add(idx + 2); // +2 car couverture(0) et sommaire(1) précèdent
+        }
+      });
+
       const mergedPdf = await this.mergePdfsAndGetCounts(allBuffers);
       await this.drawPageNumbers(mergedPdf.pdfDoc, mergedPdf.pageRanges);
+      // Identifie les sourceIndex correspondant aux pages séparateurs de module
+      const separatorSourceIndices = new Set<number>();
+      bodyBuffersWithMeta.forEach((b, idx) => {
+        if (b.isSeparator) separatorSourceIndices.add(idx + 2);
+      });
+
+      await this.drawWatermarks(
+        mergedPdf.pdfDoc,
+        mergedPdf.pageRanges,
+        project.user?.companyLogoFullB64 || project.user?.companyLogoB64,
+        project.client?.logoBase64,
+        planSourceIndices,
+        separatorSourceIndices,
+      );
       const finalBytes = await mergedPdf.pdfDoc.save();
       return Buffer.from(finalBytes);
     } finally {
@@ -716,6 +739,87 @@ if (moduleNum === 2) {
           font,
           color: rgb(0.663, 0.196, 0.149), // équivalent #A93226
         });
+      }
+    }
+  }
+
+  // ============================================================
+  // DESSINE LES LOGOS EN FILIGRANE (CORO en bas à gauche,
+  // client en haut à gauche) sur toutes les pages SAUF
+  // couverture (index 0) et plans techniques (sans page de
+  // contenu HTML — détectés via sourceIndex sans correspondance HTML)
+  // ============================================================
+
+  private async drawWatermarks(
+    pdfDoc: PDFDocument,
+    pageRanges: { start: number; end: number; sourceIndex: number }[],
+    coroLogoBase64: string | undefined,
+    clientLogoBase64: string | undefined,
+    planSourceIndices: Set<number>,
+    separatorSourceIndices: Set<number>,
+  ): Promise<void> {
+    const pages = pdfDoc.getPages();
+    const MAX_LOGO_WIDTH = 100;
+    const MAX_LOGO_HEIGHT = 30;
+    const OPACITY = 0.35;
+
+    const computeFittedSize = (imgWidth: number, imgHeight: number): { width: number; height: number } => {
+      const scaleByWidth = MAX_LOGO_WIDTH / imgWidth;
+      const scaleByHeight = MAX_LOGO_HEIGHT / imgHeight;
+      const scale = Math.min(scaleByWidth, scaleByHeight);
+      return { width: imgWidth * scale, height: imgHeight * scale };
+    };
+
+    const embedLogo = async (base64?: string) => {
+      if (!base64) return null;
+      try {
+        const cleaned = base64.includes(',') ? base64.split(',')[1] : base64;
+        const bytes = Buffer.from(cleaned, 'base64');
+        const isPng = base64.includes('image/png') || bytes[0] === 0x89;
+        return isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+      } catch (err) {
+        console.warn('Avertissement: impossible d\'intégrer un logo filigrane :', err);
+        return null;
+      }
+    };
+
+    const coroImage = await embedLogo(coroLogoBase64);
+    const clientImage = await embedLogo(clientLogoBase64);
+
+    if (!coroImage && !clientImage) return;
+
+    // index 0 = couverture — jamais de filigrane
+    // les pages de plans (Module 6) sont aussi exclues (PDF externes insérés tels quels)
+    const SKIP_SOURCE_INDICES = new Set([0, ...planSourceIndices, ...separatorSourceIndices]);
+
+    for (const range of pageRanges) {
+      if (SKIP_SOURCE_INDICES.has(range.sourceIndex)) continue;
+
+      for (let pageIdx = range.start; pageIdx <= range.end; pageIdx++) {
+        const page = pages[pageIdx];
+        const { width, height } = page.getSize();
+
+        if (coroImage) {
+          const { width: logoW, height: logoH } = computeFittedSize(coroImage.width, coroImage.height);
+          page.drawImage(coroImage, {
+            x: 40,
+            y: 30,
+            width: logoW,
+            height: logoH,
+            opacity: OPACITY,
+          });
+        }
+
+        if (clientImage) {
+          const { width: logoW, height: logoH } = computeFittedSize(clientImage.width, clientImage.height);
+          page.drawImage(clientImage, {
+            x: 40,
+            y: height - logoH - 30,
+            width: logoW,
+            height: logoH,
+            opacity: OPACITY,
+          });
+        }
       }
     }
   }
