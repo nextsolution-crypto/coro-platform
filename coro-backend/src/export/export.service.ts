@@ -22,6 +22,7 @@ export interface ExportOptions {
   selectedModules: number[];   // ex: [1, 2, 3, 4, 7, 8]
   moduleOrder: number[];       // ordre choisi par l'utilisateur
   language: 'fr' | 'en' | 'both';
+  isPreview?: boolean;
 }
 
 type PdfSegment =
@@ -539,6 +540,10 @@ if (moduleNum === 2) {
 
       const mergedPdf = await this.mergePdfsAndGetCounts(allBuffers);
       await this.drawPageNumbers(mergedPdf.pdfDoc, mergedPdf.pageRanges, docTypeLabel);
+
+      if (options.isPreview) {
+        await this.drawPreviewWatermark(mergedPdf.pdfDoc, isFr);
+      }
       // Identifie les sourceIndex correspondant aux pages séparateurs de module
       const separatorSourceIndices = new Set<number>();
       bodyBuffersWithMeta.forEach((b, idx) => {
@@ -886,6 +891,42 @@ if (moduleNum === 2) {
           color,
         });
       }
+    }
+  }
+
+  // ============================================================
+  // DESSINE LE FILIGRANE "APERÇU"/"PREVIEW" EN DIAGONALE, AU
+  // CENTRE DE CHAQUE PAGE — appliqué uniformément, couverture
+  // incluse, quand l'utilisateur active la case "version aperçu"
+  // ============================================================
+
+  private async drawPreviewWatermark(pdfDoc: PDFDocument, isFr: boolean): Promise<void> {
+    const { rgb, StandardFonts, degrees } = await import('pdf-lib');
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const label = isFr ? 'APERÇU' : 'PREVIEW';
+    const fontSize = 110;
+    const textWidth = font.widthOfTextAtSize(label, fontSize);
+    const angleRad = (45 * Math.PI) / 180;
+
+    for (const page of pdfDoc.getPages()) {
+      const { width, height } = page.getSize();
+
+      // Centre réel du texte après rotation 45° : on ajuste x/y pour compenser
+      // le décalage causé par la rotation autour du coin inférieur gauche du texte
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const x = centerX - (textWidth / 2) * Math.cos(angleRad);
+      const y = centerY - (textWidth / 2) * Math.sin(angleRad);
+
+      page.drawText(label, {
+        x,
+        y,
+        size: fontSize,
+        font,
+        color: rgb(0.6, 0.6, 0.6),
+        opacity: 0.25,
+        rotate: degrees(45),
+      });
     }
   }
 }
