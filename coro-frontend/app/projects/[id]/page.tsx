@@ -56,6 +56,7 @@ export default function ProjectDetailPage() {
   const [exportingTest, setExportingTest] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [hasPlans, setHasPlans] = useState(false);
+  const [statusChanging, setStatusChanging] = useState(false);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -82,6 +83,19 @@ export default function ProjectDetailPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+const handleChangeStatus = async (newStatus: string) => {
+    setStatusChanging(true);
+    try {
+      await api.put(`/projects/${projectId}`, { status: newStatus });
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors du changement de statut.');
+    } finally {
+      setStatusChanging(false);
     }
   };
 
@@ -221,6 +235,33 @@ export default function ProjectDetailPage() {
             <span>{project.year}</span>
           </div>
         </div>
+
+        {project.status !== 'ARCHIVED' && (
+          <div className="flex items-center gap-2">
+            {project.status !== 'EXPORTED' && (
+              <button
+                onClick={() => handleChangeStatus('EXPORTED')}
+                disabled={statusChanging}
+                className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
+                style={{ border: '1px solid #D2B4DE', color: '#8E44AD' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F4ECF7'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                Terminer
+              </button>
+            )}
+            <button
+              onClick={() => handleChangeStatus('ARCHIVED')}
+              disabled={statusChanging}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              Archiver
+            </button>
+          </div>
+        )}
       </div>
 
       {justGenerated && (
