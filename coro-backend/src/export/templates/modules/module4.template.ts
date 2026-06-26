@@ -49,9 +49,9 @@ interface ProcedureTemplate {
 // RENDU D'UNE ÉTAPE (avec sous-étapes récursives)
 // ============================================================
 
-function renderStep(step: ProcedureStep, lang: 'fr' | 'en', buildingAddress: string): string {
+function renderStep(step: ProcedureStep, lang: 'fr' | 'en', buildingAddress: string, config: any = {}): string {
   const text = lang === 'fr' ? step.textFR : step.textEN;
-  const formattedText = formatStepText(text, buildingAddress);
+  const formattedText = formatStepText(text, buildingAddress, config);
 
   const classes = ['step'];
   if (step.isRed) classes.push('step-red');
@@ -62,7 +62,7 @@ function renderStep(step: ProcedureStep, lang: 'fr' | 'en', buildingAddress: str
     html += `<ul class="substeps">`;
     for (const sub of step.subSteps) {
       const subText = lang === 'fr' ? sub.textFR : sub.textEN;
-      html += `<li>${formatStepText(subText, buildingAddress)}</li>`;
+      html += `<li>${formatStepText(subText, buildingAddress, config)}</li>`;
     }
     html += `</ul>`;
   }
@@ -71,9 +71,9 @@ function renderStep(step: ProcedureStep, lang: 'fr' | 'en', buildingAddress: str
 }
 
 // Convertit **gras** en <strong>, puis remplace les placeholders
-function formatStepText(text: string, buildingAddress: string): string {
+function formatStepText(text: string, buildingAddress: string, config: any = {}): string {
   if (!text) return '';
-  const replaced = replacePlaceholders(text, buildingAddress);
+  const replaced = replacePlaceholders(text, buildingAddress, config);
   const escaped = escapeHtml(replaced);
   return escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
@@ -89,9 +89,10 @@ function renderRoleContent(
   buildingAddress: string,
   phase?: string,
   procCode?: string,
+  config: any = {},
 ): string {
   const roleLabel = lang === 'fr' ? role.roleLabelFR : role.roleLabelEN;
-  const stepsHtml = role.steps.map(s => renderStep(s, lang, buildingAddress)).join('');
+  const stepsHtml = role.steps.map(s => renderStep(s, lang, buildingAddress, config)).join('');
 
   // Pastille Alerte (orange) / Alarme (rouge) — uniquement pour P003/P004
   let phaseDot = '';
@@ -171,7 +172,7 @@ function renderStopReflechirAgir(lang: 'fr' | 'en'): string {
 // (P001 directives générales = cas spécial sans rôles)
 // ============================================================
 
-export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buildingAddress: string): string {
+export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buildingAddress: string, config: any = {}): string {
   const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
 
   // Cas spécial — P001 Directives générales
@@ -182,7 +183,7 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
       return `
         <li style="${style}">
           <span class="checkbox-icon">☑</span>
-          <span>${formatStepText(text, buildingAddress)}</span>
+          <span>${formatStepText(text, buildingAddress, config)}</span>
         </li>
       `;
     }).join('');
@@ -207,13 +208,13 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
       <div class="procedure-header">
         <span class="proc-code">${proc.code}</span>
       </div>
-      ${firstRole ? renderRoleContent(firstRole, lang, title, buildingAddress, proc.phase, proc.code) : ''}
+      ${firstRole ? renderRoleContent(firstRole, lang, title, buildingAddress, proc.phase, proc.code, config) : ''}
     </div>
   `;
 
   const remainingRolesHtml = remainingRoles.map(role => `
     <div class="role-page">
-      ${renderRoleContent(role, lang, title, buildingAddress, proc.phase, proc.code)}
+      ${renderRoleContent(role, lang, title, buildingAddress, proc.phase, proc.code, config)}
     </div>
   `).join('');
 
@@ -224,17 +225,28 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
 // EXPORT PRINCIPAL — Rendu de toutes les procédures du Module 4
 // ============================================================
 
-export function renderModule4(procedures: ProcedureTemplate[], lang: 'fr' | 'en', buildingAddress: string): string {
-  return procedures.map(proc => renderProcedure(proc, lang, buildingAddress)).join('');
+export function renderModule4(procedures: ProcedureTemplate[], lang: 'fr' | 'en', buildingAddress: string, config: any = {}): string {
+  return procedures.map(proc => renderProcedure(proc, lang, buildingAddress, config)).join('');
 }
 
 // ============================================================
 // REMPLACE LES PLACEHOLDERS PAR LES VRAIES DONNÉES DU BÂTIMENT
 // ============================================================
 
-function replacePlaceholders(text: string, buildingAddress: string): string {
+function replacePlaceholders(text: string, buildingAddress: string, config: any = {}): string {
   if (!text) return text;
+
+  // Recherche la localisation du DEA dans la liste équipements de premiers soins
+  const deaEntry = (config.equipementsSoins || []).find((e: any) => e.type === 'Defibrillateur (DEA)');
+  const deaLieu = deaEntry?.lieu || '[emplacement à préciser]';
+  const gazLieu = config.gazNaturelLieu || '[emplacement à préciser]';
+
   return text
     .replace(/\[ADRESSE COMPLÈTE DU SITE\]/gi, buildingAddress)
-    .replace(/\[lieu\]/gi, buildingAddress);
+    .replace(/\[COMPLETE SITE ADDRESS\]/gi, buildingAddress)
+    .replace(/\[lieu\]/gi, buildingAddress)
+    .replace(/\[LOCALISATION VALVE GAZ\]/gi, gazLieu)
+    .replace(/\[GAS VALVE LOCATION\]/gi, gazLieu)
+    .replace(/\[LOCALISATION DEA\]/gi, deaLieu)
+    .replace(/\[DEA LOCATION\]/gi, deaLieu);
 }
