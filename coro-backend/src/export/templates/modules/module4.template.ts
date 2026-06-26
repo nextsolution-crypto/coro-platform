@@ -32,6 +32,7 @@ interface ProcedureTemplate {
   titleFR: string;
   titleEN: string;
   headerColor?: string;
+  phase?: string;
   directivesGenerales?: ProcedureStep[];
   roleSections: RoleSection[];
 }
@@ -40,10 +41,9 @@ interface ProcedureTemplate {
 // BANDEAU DE COULEUR — 10px pleine largeur, collé en haut de page
 // ============================================================
 
-function renderColorBar(color?: string): string {
-  // Désactivé temporairement — à revisiter avec une approche plus stable
-  return '';
-}
+// renderColorBar retirée — la bande colorée est maintenant dessinée
+// directement avec pdf-lib après fusion, voir drawProcedureColorBars
+// dans export.service.ts (cohérent avec filigranes et numéros de page)
 
 // ============================================================
 // RENDU D'UNE ÉTAPE (avec sous-étapes récursives)
@@ -82,13 +82,28 @@ function formatStepText(text: string, buildingAddress: string): string {
 // RENDU DU CONTENU D'UN RÔLE (sans le wrapper de page)
 // ============================================================
 
-function renderRoleContent(role: RoleSection, lang: 'fr' | 'en', procTitle: string, buildingAddress: string): string {
+function renderRoleContent(
+  role: RoleSection,
+  lang: 'fr' | 'en',
+  procTitle: string,
+  buildingAddress: string,
+  phase?: string,
+  procCode?: string,
+): string {
   const roleLabel = lang === 'fr' ? role.roleLabelFR : role.roleLabelEN;
   const stepsHtml = role.steps.map(s => renderStep(s, lang, buildingAddress)).join('');
 
+  // Pastille Alerte (orange) / Alarme (rouge) — uniquement pour P003/P004
+  let phaseDot = '';
+  if (procCode === 'P003' && phase === 'alerte') {
+    phaseDot = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background-color:#FF6600;margin-right:6px;vertical-align:middle;"></span>`;
+  } else if (procCode === 'P004') {
+    phaseDot = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background-color:#FF0000;margin-right:6px;vertical-align:middle;"></span>`;
+  }
+
   return `
     <p style="font-size:9pt;color:#ADB5BD;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">
-      ${escapeHtml(procTitle)}
+      ${phaseDot}${escapeHtml(procTitle)}
     </p>
     <div class="role-header">${escapeHtml(roleLabel)}</div>
     ${stepsHtml}
@@ -158,7 +173,6 @@ function renderStopReflechirAgir(lang: 'fr' | 'en'): string {
 
 export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buildingAddress: string): string {
   const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
-  const colorBar = renderColorBar(proc.headerColor);
 
   // Cas spécial — P001 Directives générales
   if (proc.directivesGenerales && proc.directivesGenerales.length > 0) {
@@ -175,10 +189,8 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
 
     return `
       <div class="procedure-page">
-        ${colorBar}
         <div class="procedure-header">
           <span class="proc-code">${proc.code}</span>
-          <h2>${escapeHtml(title)}</h2>
         </div>
         <ul class="checklist">${items}</ul>
         ${renderStopReflechirAgir(lang)}
@@ -192,19 +204,16 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
 
   const firstPageHtml = `
     <div class="procedure-page">
-      ${colorBar}
       <div class="procedure-header">
         <span class="proc-code">${proc.code}</span>
-        <h2>${escapeHtml(title)}</h2>
       </div>
-      ${firstRole ? renderRoleContent(firstRole, lang, title, buildingAddress) : ''}
+      ${firstRole ? renderRoleContent(firstRole, lang, title, buildingAddress, proc.phase, proc.code) : ''}
     </div>
   `;
 
   const remainingRolesHtml = remainingRoles.map(role => `
     <div class="role-page">
-      ${colorBar}
-      ${renderRoleContent(role, lang, title, buildingAddress)}
+      ${renderRoleContent(role, lang, title, buildingAddress, proc.phase, proc.code)}
     </div>
   `).join('');
 
