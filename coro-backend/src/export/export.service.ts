@@ -341,11 +341,7 @@ if (moduleNum === 2) {
         <div style="width:100%;font-size:8px;padding:10px 50px 0 50px;color:#6C757D;"></div>
       `;
       const footerTemplate = `
-        <div style="width:100%;font-size:9px;padding:0 50px 10px 50px;
-          display:flex;justify-content:center;color:#ADB5BD;
-          font-family:Arial,sans-serif;">
-          <span>${docTypeLabel}</span>
-        </div>
+        <div style="width:100%;font-size:9px;padding:0;color:transparent;"></div>
       `;
 
       for (const segment of pdfSegments) {
@@ -540,7 +536,7 @@ if (moduleNum === 2) {
       });
 
       const mergedPdf = await this.mergePdfsAndGetCounts(allBuffers);
-      await this.drawPageNumbers(mergedPdf.pdfDoc, mergedPdf.pageRanges);
+      await this.drawPageNumbers(mergedPdf.pdfDoc, mergedPdf.pageRanges, docTypeLabel);
       // Identifie les sourceIndex correspondant aux pages séparateurs de module
       const separatorSourceIndices = new Set<number>();
       bodyBuffersWithMeta.forEach((b, idx) => {
@@ -716,10 +712,14 @@ if (moduleNum === 2) {
   private async drawPageNumbers(
     pdfDoc: PDFDocument,
     pageRanges: { start: number; end: number; sourceIndex: number }[],
+    docTypeLabel: string,
   ): Promise<void> {
     const { rgb, StandardFonts } = await import('pdf-lib');
-    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const pages = pdfDoc.getPages();
+
+    const FOOTER_Y = 28;
 
     // index 0 = couverture, index 1 = sommaire — jamais numérotés
     const SKIP_SOURCE_INDICES = new Set([0, 1]);
@@ -732,11 +732,23 @@ if (moduleNum === 2) {
         const { width } = page.getSize();
         const pageNumberLabel = `${pageIdx + 1}`;
 
+        // Type de document — centré horizontalement, même hauteur que le numéro
+        const docTypeFontSize = 9;
+        const docTypeTextWidth = regularFont.widthOfTextAtSize(docTypeLabel, docTypeFontSize);
+        page.drawText(docTypeLabel, {
+          x: (width - docTypeTextWidth) / 2,
+          y: FOOTER_Y,
+          size: docTypeFontSize,
+          font: regularFont,
+          color: rgb(0.678, 0.678, 0.678), // équivalent #ADB5BD
+        });
+
+        // Numéro de page — coin droit, même hauteur
         page.drawText(pageNumberLabel, {
           x: width - 65,
-          y: 28,
+          y: FOOTER_Y,
           size: 10,
-          font,
+          font: boldFont,
           color: rgb(0.663, 0.196, 0.149), // équivalent #A93226
         });
       }
@@ -801,9 +813,11 @@ if (moduleNum === 2) {
 
         if (coroImage) {
           const { width: logoW, height: logoH } = computeFittedSize(coroImage.width, coroImage.height);
+          // Centre verticalement le logo sur la même ligne que le texte/numéro (FOOTER_Y=28, taille texte ~9-10px)
+          const footerCenterY = 28 + 5;
           page.drawImage(coroImage, {
             x: 40,
-            y: 30,
+            y: footerCenterY - logoH / 2,
             width: logoW,
             height: logoH,
             opacity: OPACITY,
