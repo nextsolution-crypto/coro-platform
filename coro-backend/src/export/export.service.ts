@@ -296,7 +296,7 @@ if (moduleNum === 2) {
           const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
           subsectionTitlesById[`${sequentialNumber}:${proc.id}`] = `${proc.code} — ${title}`;
 
-          const procHtml = `<div>${renderProcedure(proc, lang, buildingAddress)}</div>`;
+          const procHtml = `<div>${renderProcedure(proc, lang, buildingAddress, content.config)}</div>`;
           pdfSegments.push({
             type: 'html',
             content: procHtml,
