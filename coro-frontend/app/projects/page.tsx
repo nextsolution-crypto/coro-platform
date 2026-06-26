@@ -57,6 +57,7 @@ export default function ProjectsPage() {
   const [filteredBuildings, setFilteredBuildings] = useState<Building[]>([]);
   const [loading, setLoading]                 = useState(true);
   const [showModal, setShowModal]             = useState(false);
+  const [activeTab, setActiveTab]             = useState<'actifs' | 'archives'>('actifs');
   const [form, setForm] = useState({
     name: '', documentType: '',
     year: new Date().getFullYear().toString(),
@@ -96,6 +97,18 @@ export default function ProjectsPage() {
     finally { setLoading(false); }
   };
 
+const visibleProjects = projects.filter(p =>
+    activeTab === 'archives' ? p.status === 'ARCHIVED' : p.status !== 'ARCHIVED'
+  );
+
+  const handleReactivate = async (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await api.put(`/projects/${projectId}`, { status: 'IN_PROGRESS' });
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -109,13 +122,13 @@ export default function ProjectsPage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Projets
           </h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            {projects.length} projet{projects.length !== 1 ? 's' : ''}
+            {visibleProjects.length} projet{visibleProjects.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
@@ -129,6 +142,26 @@ export default function ProjectsPage() {
         </button>
       </div>
 
+      {/* Onglets Actifs / Archivés */}
+      <div className="flex gap-1 mb-6" style={{ borderBottom: '1px solid #E9ECEF' }}>
+        {([
+          { key: 'actifs', label: 'Actifs' },
+          { key: 'archives', label: 'Archivés' },
+        ] as const).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className="px-4 py-2.5 text-sm font-medium transition-colors"
+            style={{
+              color: activeTab === tab.key ? '#C0392B' : '#6C757D',
+              borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Contenu */}
       {loading ? (
         <div className="text-center py-12">
@@ -136,7 +169,7 @@ export default function ProjectsPage() {
             Chargement...
           </p>
         </div>
-      ) : projects.length === 0 ? (
+      ) : visibleProjects.length === 0 ? (
         <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
@@ -154,7 +187,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid gap-3">
-          {projects.map(project => {
+          {visibleProjects.map(project => {
             const sc = statusColors[project.status] || statusColors.DRAFT;
             const dc = docTypeColors[project.documentType] || '#6C757D';
             return (
@@ -166,6 +199,7 @@ export default function ProjectsPage() {
                   backgroundColor: '#FFFFFF',
                   border: '1px solid #E9ECEF',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  position: 'relative',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
@@ -229,6 +263,18 @@ export default function ProjectsPage() {
                     />
                   </div>
                 </div>
+
+                {activeTab === 'archives' && (
+                  <button
+                    onClick={e => handleReactivate(project.id, e)}
+                    className="mt-3 text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                    style={{ border: '1px solid #DEE2E6', color: '#27AE60' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    Réactiver
+                  </button>
+                )}
               </div>
             );
           })}
