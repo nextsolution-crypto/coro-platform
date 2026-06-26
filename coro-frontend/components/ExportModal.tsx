@@ -33,6 +33,7 @@ export default function ExportModal({ projectId, projectName, hasPlans, onClose 
   const [orderedModules, setOrderedModules] = useState<ModuleOption[]>(availableModules);
   const [selected, setSelected] = useState<Set<number>>(new Set(availableModules.map(m => m.num)));
   const [language, setLanguage] = useState<'fr' | 'en' | 'both'>('fr');
+  const [isPreview, setIsPreview] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -80,6 +81,7 @@ export default function ExportModal({ projectId, projectName, hasPlans, onClose 
           selectedModules,
           moduleOrder: selectedModules,
           language,
+          isPreview,
         },
         { responseType: language === 'both' ? 'json' : 'blob' }
       );
@@ -202,6 +204,19 @@ export default function ExportModal({ projectId, projectName, hasPlans, onClose 
             </button>
           ))}
         </div>
+
+        {/* Version aperçu */}
+        <label className="flex items-center gap-2 mb-5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isPreview}
+            onChange={e => setIsPreview(e.target.checked)}
+            style={{ accentColor: '#C0392B', width: '16px', height: '16px' }}
+          />
+          <span className="text-sm" style={{ color: '#495057' }}>
+            Version aperçu (ajoute un filigrane "APERÇU" — pour envoi au client avant approbation)
+          </span>
+        </label>
 
         {error && (
           <p className="text-sm mb-4" style={{ color: '#C0392B' }}>{error}</p>
