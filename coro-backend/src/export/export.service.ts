@@ -306,13 +306,21 @@ if (moduleNum === 2) {
         continue;
       }
 
-      currentHtmlChunk += `<div>`;
-
       if (moduleNum === 8) {
-        currentHtmlChunk += renderModule8(content.module8, lang);
-      }
+        const sections8 = renderModule8(content.module8, lang, sequentialNumber);
 
-      currentHtmlChunk += `</div>`;
+        sections8.forEach((section, idx) => {
+          const displayNumber = `${sequentialNumber}.${idx + 1}`;
+          subsectionTitlesById[`${sequentialNumber}:${section.id}`] = `${displayNumber} — ${section.title}`;
+          pdfSegments.push({
+            type: 'html',
+            content: `<div>${section.html}</div>`,
+            sequentialNumber,
+            subsectionId: section.id,
+          });
+        });
+        continue;
+      }
     }
 
     if (currentHtmlChunk) {
