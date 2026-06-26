@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
+import Module8Section10, { LithiumAnnexeData, DEFAULT_LITHIUM_ANNEXE_DATA } from './Module8Section10';
 
 // ============================================================
 // TYPES
@@ -245,6 +246,7 @@ export default function Module8Section({
   const [section8_7, setSection8_7] = useState('');
   const [section8_8, setSection8_8] = useState('');
   const [section8_9, setSection8_9] = useState('');
+  const [section8_10, setSection8_10] = useState<LithiumAnnexeData>(DEFAULT_LITHIUM_ANNEXE_DATA);
 
   const [activeSection, setActiveSection] = useState('8.1');
   const [saving,        setSaving]        = useState(false);
@@ -280,6 +282,7 @@ export default function Module8Section({
           setSection8_7(saved.section8_7 || '');
           setSection8_8(saved.section8_8 || '');
           setSection8_9(saved.section8_9 || '');
+          setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
         } else {
           const sections = initialData?.sections || [];
           setSection8_1(ensureIds(getSection(sections, '8.1')?.entries || []));
@@ -320,7 +323,7 @@ export default function Module8Section({
     try {
       await api.put(`/projects/${projectId}/module8`, {
         section8_1, section8_2, section8_3, section8_4,
-        section8_5, section8_6, section8_7, section8_8, section8_9,
+        section8_5, section8_6, section8_7, section8_8, section8_9, section8_10,
       });
       setLastSaved(new Date());
       setIsDirty(false);
@@ -330,14 +333,14 @@ export default function Module8Section({
       setSaving(false);
     }
   }, [projectId, section8_1, section8_2, section8_3, section8_4,
-      section8_5, section8_6, section8_7, section8_8, section8_9]);
+      section8_5, section8_6, section8_7, section8_8, section8_9, section8_10]);
 
   useEffect(() => {
     if (isFirstLoad.current || !isDirty) return;
     const timer = setTimeout(saveData, 2000);
     return () => clearTimeout(timer);
   }, [section8_1, section8_2, section8_3, section8_4,
-      section8_5, section8_6, section8_7, section8_8, section8_9, isDirty]);
+      section8_5, section8_6, section8_7, section8_8, section8_9, section8_10, isDirty]);
 
   const markDirty = () => setIsDirty(true);
 
@@ -357,6 +360,7 @@ export default function Module8Section({
       { id: '8.7', title: 'CADENASSAGE ET ESPACE CLOS' },
       { id: '8.8', title: 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT' },
       { id: '8.9', title: 'COPIE À L\'ENTREPRENEUR' },
+      { id: '8.10', title: 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION' },
     ],
     addRow: 'Ajouter une ligne',
     saving: 'Sauvegarde...', saved: 'Sauvegardé', unsaved: 'Non sauvegardé',
@@ -373,6 +377,7 @@ export default function Module8Section({
       { id: '8.7', title: 'LOCKOUT/TAGOUT AND CONFINED SPACES' },
       { id: '8.8', title: 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST' },
       { id: '8.9', title: 'COPY TO CONTRACTOR' },
+      { id: '8.10', title: 'APPENDIX — LITHIUM-ION BATTERY FIRE' },
     ],
     addRow: 'Add a row',
     saving: 'Saving...', saved: 'Saved', unsaved: 'Unsaved changes',
@@ -735,6 +740,7 @@ export default function Module8Section({
       case '8.7': return <TextSection sectionId="8.7" title={currentSectionMeta.title} value={section8_7} setValue={setSection8_7} markDirty={markDirty} language={language} />;
       case '8.8': return <TextSection sectionId="8.8" title={currentSectionMeta.title} value={section8_8} setValue={setSection8_8} markDirty={markDirty} language={language} />;
       case '8.9': return <TextSection sectionId="8.9" title={currentSectionMeta.title} value={section8_9} setValue={setSection8_9} markDirty={markDirty} language={language} />;
+      case '8.10': return <Module8Section10 data={section8_10} onChange={setSection8_10} markDirty={markDirty} language={language} />;
       default: return null;
     }
   };
