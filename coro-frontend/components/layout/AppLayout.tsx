@@ -18,6 +18,7 @@ const adminNavItems = [
 
 const superAdminNavItems = [
   { label: 'Organisations', path: '/admin/organizations' },
+  { label: 'Tous les projets', path: '/admin/projects' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
