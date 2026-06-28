@@ -12,10 +12,19 @@ export class Module2Service {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private async assertProjectOwnership(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+  }
+
   // --------------------------------------------------------
   // GET — Récupère module2 depuis document.content JSON
   // --------------------------------------------------------
-  async getModule2(projectId: string) {
+  async getModule2(projectId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
+
     const document = await this.prisma.document.findFirst({
       where: { projectId },
       select: { id: true, content: true },
@@ -35,7 +44,9 @@ export class Module2Service {
   // --------------------------------------------------------
   // PUT — Sauvegarde module2 dans document.content JSON
   // --------------------------------------------------------
-  async saveModule2(projectId: string, dto: SaveModule2Dto) {
+  async saveModule2(projectId: string, dto: SaveModule2Dto, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
+
     const document = await this.prisma.document.findFirst({
       where: { projectId },
       select: { id: true, content: true },

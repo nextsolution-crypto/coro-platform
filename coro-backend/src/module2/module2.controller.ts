@@ -13,6 +13,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module2Service } from './module2.service';
@@ -28,8 +29,8 @@ export class Module2Controller {
   // GET — Charger les données Module 2 d'un projet
   // --------------------------------------------------------
   @Get()
-  async getModule2(@Param('projectId') projectId: string) {
-    return this.module2Service.getModule2(projectId);
+  async getModule2(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.module2Service.getModule2(projectId, req.user.organizationId);
   }
 
   // --------------------------------------------------------
@@ -40,7 +41,8 @@ export class Module2Controller {
   async saveModule2(
     @Param('projectId') projectId: string,
     @Body() dto: SaveModule2Dto,
+    @Request() req: any,
   ) {
-    return this.module2Service.saveModule2(projectId, dto);
+    return this.module2Service.saveModule2(projectId, dto, req.user.organizationId);
   }
 }
