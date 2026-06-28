@@ -12,6 +12,10 @@ const navItems = [
   { label: 'Paramètres',   path: '/settings' },
 ];
 
+const adminNavItems = [
+  { label: 'Équipe', path: '/settings/users' },
+];
+
 const superAdminNavItems = [
   { label: 'Organisations', path: '/admin/organizations' },
 ];
@@ -106,6 +110,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               );
             })}
+
+            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+              <>
+                <div className="my-3 mx-2" style={{ borderTop: '1px solid #E9ECEF' }} />
+                <p className="px-4 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                  Administration
+                </p>
+                {adminNavItems.map(item => {
+                  const isActive = pathname.startsWith(item.path);
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => router.push(item.path)}
+                      className="w-full text-left px-4 py-2.5 rounded text-sm transition-colors font-medium"
+                      style={{
+                        backgroundColor: isActive ? '#FDEDEC' : 'transparent',
+                        color: isActive ? '#C0392B' : '#495057',
+                        border: isActive ? '1px solid #F1948A' : '1px solid transparent',
+                      }}
+                      onMouseEnter={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.backgroundColor = '#F8F9FA';
+                          e.currentTarget.style.color = '#2C3E50';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isActive) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = '#495057';
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </>
+            )}
 
             {user?.role === 'SUPER_ADMIN' && (
               <>
