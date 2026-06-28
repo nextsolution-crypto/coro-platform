@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateModule1, DocumentContext } from './module1.templates';
 import { generateModule2 } from './module2.templates';
@@ -9,6 +9,13 @@ import { generateModule8 } from './module8.templates';
 @Injectable()
 export class GeneratorService {
   constructor(private prisma: PrismaService) {}
+
+  private async assertProjectOwnership(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+  }
 
   private async buildContext(projectId: string, config: any): Promise<DocumentContext> {
     const project = await this.prisma.project.findUnique({
@@ -42,7 +49,8 @@ export class GeneratorService {
     };
   }
 
-  async generateAndSave(projectId: string, config: any) {
+  async generateAndSave(projectId: string, config: any, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     const ctx = await this.buildContext(projectId, config);
     const module1Result = generateModule1(ctx);
     const module2Result = generateModule2(ctx);
@@ -158,7 +166,8 @@ export class GeneratorService {
     return { documentId: document.id, ...documentData };
   }
 
-  async getDocument(projectId: string) {
+  async getDocument(projectId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     return this.prisma.document.findFirst({
       where: { projectId },
       include: { project: { include: { client: true, building: true } } },
@@ -171,8 +180,11 @@ export class GeneratorService {
     sectionId: string,
     content: string,
     language: string = 'fr',
+    organizationId: string,
   ) {
-    const doc = await this.prisma.document.findUnique({ where: { id: documentId } });
+    const doc = await this.prisma.document.findFirst({
+      where: { id: documentId, project: { organizationId } },
+    });
     if (!doc) throw new Error('Document introuvable');
 
     const docContent = doc.content as any;
