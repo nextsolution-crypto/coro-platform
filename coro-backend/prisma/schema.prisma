@@ -292,5 +292,6 @@ model ChangelogEntry {
   id          String   @id @default(uuid())
   title       String
   description String
+  entryDate   DateTime @default(now())
   createdAt   DateTime @default(now())
 }
