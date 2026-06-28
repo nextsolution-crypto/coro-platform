@@ -7,7 +7,15 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB en bytes
 export class BuildingPlansService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(projectId: string) {
+  private async assertProjectOwnership(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+  }
+
+  async findAll(projectId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     const plans = await this.prisma.buildingPlan.findMany({
       where: { projectId },
       orderBy: [{ section: 'asc' }, { order: 'asc' }],
@@ -29,7 +37,8 @@ export class BuildingPlansService {
     return plans;
   }
 
-  async findOne(projectId: string, planId: string) {
+  async findOne(projectId: string, planId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     const plan = await this.prisma.buildingPlan.findFirst({
       where: { id: planId, projectId },
     });
@@ -37,12 +46,8 @@ export class BuildingPlansService {
     return plan;
   }
 
-  async create(projectId: string, dto: any) {
-    // Vérifier que le projet existe
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-    });
-    if (!project) throw new NotFoundException('Projet introuvable');
+  async create(projectId: string, dto: any, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
 
     // Vérifier la taille du fichier
     if (dto.fileBase64) {
@@ -88,7 +93,8 @@ export class BuildingPlansService {
     });
   }
 
-  async update(projectId: string, planId: string, dto: any) {
+  async update(projectId: string, planId: string, dto: any, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     const plan = await this.prisma.buildingPlan.findFirst({
       where: { id: planId, projectId },
     });
@@ -137,7 +143,8 @@ export class BuildingPlansService {
     });
   }
 
-  async remove(projectId: string, planId: string) {
+  async remove(projectId: string, planId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     const plan = await this.prisma.buildingPlan.findFirst({
       where: { id: planId, projectId },
     });
@@ -146,7 +153,8 @@ export class BuildingPlansService {
     await this.prisma.buildingPlan.delete({ where: { id: planId } });
   }
 
-  async reorder(projectId: string, planId: string, newOrder: number) {
+  async reorder(projectId: string, planId: string, newOrder: number, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
     const plan = await this.prisma.buildingPlan.findFirst({
       where: { id: planId, projectId },
     });
