@@ -5,7 +5,16 @@ import { PrismaService } from '../prisma/prisma.service';
 export class Module8Service {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getData(projectId: string) {
+  private async assertProjectOwnership(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+  }
+
+  async getData(projectId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
+
     const doc = await this.prisma.document.findFirst({
       where: { projectId },
       select: { content: true },
@@ -15,7 +24,9 @@ export class Module8Service {
     return { module8: content.module8 || null };
   }
 
-  async saveData(projectId: string, dto: any) {
+  async saveData(projectId: string, dto: any, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
+
     const doc = await this.prisma.document.findFirst({
       where: { projectId },
     });
