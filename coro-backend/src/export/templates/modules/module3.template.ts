@@ -5,18 +5,22 @@
 
 import { escapeHtml } from '../cover.template';
 
-export function renderModule3(sections: any[], lang: 'fr' | 'en'): { html31: string; html32: string; has32: boolean } {
+export function renderModule3(sections: any[], lang: 'fr' | 'en', moduleSeqNumber: number = 3): { html31: string; html32: string; has32: boolean } {
   const isFr = lang === 'fr';
   const s31 = sections.find((s: any) => s.id === '3.1');
   const s32 = sections.find((s: any) => s.id === '3.2');
 
-  const sectionHeader = (id: string, title: string) => `
-    <div class="section-header">
-      <span class="section-id">${id}</span>
-      <span class="section-title-line2">${escapeHtml(title)}</span>
-      <div class="section-bar"></div>
-    </div>
-  `;
+  const sectionHeader = (id: string, title: string) => {
+    const subNum = id.split('.')[1];
+    const displayId = `${moduleSeqNumber}.${subNum}`;
+    return `
+      <div class="section-header">
+        <span class="section-id">${displayId}</span>
+        <span class="section-title-line2">${escapeHtml(title)}</span>
+        <div class="section-bar"></div>
+      </div>
+    `;
+  };
 
   // ── 3.1 — Organigramme (reproduit la structure top/full/left/right) ──
   const allRoles = (s31?.orgRoles || []).filter((r: any) => r.isActive);
