@@ -58,6 +58,7 @@ export default function ProjectsPage() {
   const [loading, setLoading]                 = useState(true);
   const [showModal, setShowModal]             = useState(false);
   const [activeTab, setActiveTab]             = useState<'actifs' | 'archives'>('actifs');
+  const [maxProjects, setMaxProjects]         = useState<number | null>(null);
   const [form, setForm] = useState({
     name: '', documentType: '',
     year: new Date().getFullYear().toString(),
@@ -85,14 +86,22 @@ export default function ProjectsPage() {
 
   const fetchData = async () => {
     try {
-      const [pr, cl, bl] = await Promise.all([
+      const [pr, cl, bl, orgRes] = await Promise.all([
         api.get('/projects'),
         api.get('/clients'),
         api.get('/buildings'),
+        api.get('/organizations/me/info').catch(() => ({ data: null })),
       ]);
       setProjects(pr.data);
       setClients(cl.data);
       setBuildings(bl.data);
+
+      if (orgRes.data) {
+        const limits: Record<string, number | null> = {
+          ESSAI_GRATUIT: 1, STANDARD: null, ENTREPRISE: null,
+        };
+        setMaxProjects(limits[orgRes.data.licenseType] ?? null);
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -128,19 +137,31 @@ const visibleProjects = projects.filter(p =>
             Projets
           </h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            {visibleProjects.length} projet{visibleProjects.length !== 1 ? 's' : ''}
+            {visibleProjects.length} / {maxProjects === null ? 'illimité' : maxProjects} projet{visibleProjects.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+          disabled={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects}
+          title={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects ? `Limite de ${maxProjects} projet(s) atteinte pour votre licence` : ''}
+          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#C0392B' }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+          onMouseEnter={e => { if (!(maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
         >
           + Nouveau projet
         </button>
       </div>
+
+      {maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects && (
+        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+          style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+          <span style={{ color: '#F39C12', fontSize: '18px' }}>⚠</span>
+          <p className="text-sm" style={{ color: '#7D6608' }}>
+            Vous avez atteint la limite de projets pour votre licence actuelle. Contactez CORO pour mettre à niveau votre abonnement.
+          </p>
+        </div>
+      )}
 
       {/* Onglets Actifs / Archivés */}
       <div className="flex gap-1 mb-6" style={{ borderBottom: '1px solid #E9ECEF' }}>
