@@ -223,10 +223,10 @@ if (moduleNum === 2) {
         const savedModule2 = content.module2;
         const mergedSections = this.mergeModule2SavedData(mod?.sections || [], savedModule2, lang);
         mergedSections.forEach((s: any, i: number) => {
-          subsectionTitlesById[`${sequentialNumber}:${s.id}`] = `2.${i + 1} — ${s.title}`;
+          subsectionTitlesById[`${sequentialNumber}:${s.id}`] = `${sequentialNumber}.${i + 1} — ${s.title}`;
         });
         for (let i = 0; i < mergedSections.length; i++) {
-          const sectionHtml = `<div>${renderModule2Section(mergedSections[i], i, lang)}</div>`;
+          const sectionHtml = `<div>${renderModule2Section(mergedSections[i], i, lang, sequentialNumber)}</div>`;
           pdfSegments.push({
             type: 'html',
             content: sectionHtml,
@@ -241,11 +241,11 @@ if (moduleNum === 2) {
         const mod = modules.find((m: any) => m.moduleNumber === 3);
         const savedModule3 = content.module3;
         const mergedSections3 = this.mergeModule3SavedData(mod?.sections || [], savedModule3);
-        const { html31, html32, has32 } = renderModule3(mergedSections3, lang);
+        const { html31, html32, has32 } = renderModule3(mergedSections3, lang, sequentialNumber);
 
         const s31Title = mergedSections3.find((s: any) => s.id === '3.1')?.title
           || (isFr ? 'ORGANIGRAMME' : 'ORGANIZATIONAL CHART');
-        subsectionTitlesById[`${sequentialNumber}:3.1`] = `3.1 — ${s31Title}`;
+        subsectionTitlesById[`${sequentialNumber}:3.1`] = `${sequentialNumber}.1 — ${s31Title}`;
 
         pdfSegments.push({
           type: 'html',
@@ -257,7 +257,7 @@ if (moduleNum === 2) {
         if (has32 && isIndustrielForExport) {
           const s32Title = mergedSections3.find((s: any) => s.id === '3.2')?.title
             || (isFr ? 'LISTE DES MEMBRES' : 'MEMBER LIST');
-          subsectionTitlesById[`${sequentialNumber}:3.2`] = `3.2 — ${s32Title}`;
+          subsectionTitlesById[`${sequentialNumber}:3.2`] = `${sequentialNumber}.2 — ${s32Title}`;
 
           pdfSegments.push({
             type: 'html',
