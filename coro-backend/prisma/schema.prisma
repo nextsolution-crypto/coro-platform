@@ -12,6 +12,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  isInternal  Boolean  @default(false)
+  licenseType String   @default("ESSAI_GRATUIT")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users     User[]
+  clients   Client[]
+  buildings Building[]
+  projects  Project[]
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -19,6 +34,8 @@ model User {
   firstName String
   lastName  String
   role      UserRole @default(OPERATOR)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
   companyName         String?
   companyLogo         String?
   companyLogoB64      String?
@@ -52,6 +69,9 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   buildings Building[]
   projects  Project[]
 }
@@ -73,6 +93,9 @@ model Building {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
   clientId  String
   client    Client    @relation(fields: [clientId], references: [id])
   projects  Project[]
@@ -89,6 +112,9 @@ model Project {
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   clientId   String
   client     Client    @relation(fields: [clientId], references: [id])
