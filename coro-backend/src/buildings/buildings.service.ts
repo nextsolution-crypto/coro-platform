@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class BuildingsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(clientId?: string) {
+  async findAll(organizationId: string, clientId?: string) {
     return this.prisma.building.findMany({
-      where: { isActive: true, ...(clientId && { clientId }) },
+      where: { isActive: true, organizationId, ...(clientId && { clientId }) },
       orderBy: { createdAt: 'desc' },
       include: {
         client: { select: { id: true, name: true } },
@@ -16,9 +16,9 @@ export class BuildingsService {
     });
   }
 
-  async findOne(id: string) {
-    return this.prisma.building.findUnique({
-      where: { id },
+  async findOne(id: string, organizationId: string) {
+    return this.prisma.building.findFirst({
+      where: { id, organizationId },
       include: { client: true, projects: true },
     });
   }
@@ -48,18 +48,28 @@ export class BuildingsService {
     units?: number;
     buildingType?: string;
     clientId: string;
+    organizationId: string;
   }) {
     return this.prisma.building.create({ data });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: any, organizationId: string) {
+    await this.assertOwnership(id, organizationId);
     return this.prisma.building.update({ where: { id }, data });
   }
 
-  async remove(id: string) {
+  async remove(id: string, organizationId: string) {
+    await this.assertOwnership(id, organizationId);
     return this.prisma.building.update({
       where: { id },
       data: { isActive: false },
     });
+  }
+
+  private async assertOwnership(id: string, organizationId: string) {
+    const building = await this.prisma.building.findFirst({ where: { id, organizationId } });
+    if (!building) {
+      throw new ForbiddenException('Accès refusé à cette ressource.');
+    }
   }
 }
