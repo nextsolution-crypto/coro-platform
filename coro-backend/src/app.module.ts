@@ -19,6 +19,7 @@ import { Module8Module } from './module8/module8.module';
 import { ExportModule } from './export/export.module';
 import { LanguageCheckModule } from './language-check/language-check.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { ChangelogModule } from './changelog/changelog.module';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { OrganizationsModule } from './organizations/organizations.module';
   Module8Module,
   ExportModule,
   LanguageCheckModule,
-  OrganizationsModule
+  OrganizationsModule,
+  ChangelogModule
 ],
   controllers: [AppController],
   providers: [AppService],
