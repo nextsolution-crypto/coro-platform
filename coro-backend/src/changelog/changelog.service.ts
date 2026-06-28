@@ -7,12 +7,18 @@ export class ChangelogService {
 
   async findAll() {
     return this.prisma.changelogEntry.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { entryDate: 'desc' },
     });
   }
 
-  async create(data: { title: string; description: string }) {
-    return this.prisma.changelogEntry.create({ data });
+  async create(data: { title: string; description: string; entryDate?: string }) {
+    return this.prisma.changelogEntry.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        entryDate: data.entryDate ? new Date(data.entryDate) : new Date(),
+      },
+    });
   }
 
   async remove(id: string) {
