@@ -1,10 +1,41 @@
-import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}
+
+  private assertAdmin(req: any) {
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Accès réservé aux administrateurs.');
+    }
+  }
+
+  @Get('organization')
+  @UseGuards(AuthGuard('jwt'))
+  async getOrganizationUsers(@Request() req: any) {
+    this.assertAdmin(req);
+    return this.usersService.findByOrganization(req.user.organizationId);
+  }
+
+  @Post('organization')
+  @UseGuards(AuthGuard('jwt'))
+  async createOrganizationUser(@Body() body: any, @Request() req: any) {
+    this.assertAdmin(req);
+    return this.usersService.createInOrganization(req.user.organizationId, body);
+  }
+
+  @Put('organization/:id/active')
+  @UseGuards(AuthGuard('jwt'))
+  async toggleOrganizationUserActive(
+    @Param('id') id: string,
+    @Body() body: { isActive: boolean },
+    @Request() req: any,
+  ) {
+    this.assertAdmin(req);
+    return this.usersService.toggleActiveInOrganization(id, req.user.organizationId, body.isActive);
+  }
 
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
