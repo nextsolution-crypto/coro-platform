@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module7Service } from './module7.service';
 
@@ -8,20 +8,21 @@ export class Module7Controller {
   constructor(private readonly service: Module7Service) {}
 
   @Get()
-  getData(@Param('projectId') projectId: string) {
-    return this.service.getData(projectId);
+  getData(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.service.getData(projectId, req.user.organizationId);
   }
 
   @Get('config')
-  getConfig(@Param('projectId') projectId: string) {
-    return this.service.getConfigForProject(projectId);
+  getConfig(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.service.getConfigForProject(projectId, req.user.organizationId);
   }
 
   @Put()
   saveData(
     @Param('projectId') projectId: string,
     @Body() dto: any,
+    @Request() req: any,
   ) {
-    return this.service.saveData(projectId, dto);
+    return this.service.saveData(projectId, dto, req.user.organizationId);
   }
 }

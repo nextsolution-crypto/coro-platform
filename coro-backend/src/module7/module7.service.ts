@@ -5,9 +5,9 @@ import { PrismaService } from '../prisma/prisma.service';
 export class Module7Service {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getData(projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
+  async getData(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
       include: { module7: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
@@ -23,9 +23,9 @@ export class Module7Service {
     quartsData?: any;
     photosData?: any;
     extraData?:  any;
-  }) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
+  }, organizationId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
       include: { module7: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
@@ -53,8 +53,10 @@ export class Module7Service {
     return { success: true, updatedAt: new Date().toISOString() };
   }
 
-  async getConfigForProject(projectId: string) {
-    // Récupère la config sauvegardée dans localStorage via le document
+  async getConfigForProject(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) throw new NotFoundException('Projet introuvable');
+
     const doc = await this.prisma.document.findFirst({
       where: { projectId },
       select: { content: true },
