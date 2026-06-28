@@ -9,12 +9,13 @@ import { formatPhone } from '@/lib/formatPhone';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { isAuthenticated, initAuth } = useAuthStore();
+  const { user, isAuthenticated, initAuth } = useAuthStore();
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFullPreview, setLogoFullPreview] = useState<string | null>(null);
+  const [orgInfo, setOrgInfo] = useState<{ name: string; licenseType: string; _count: any } | null>(null);
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', companyName: '',
     companyPhone: '', companyEmail: '',
@@ -45,6 +46,13 @@ export default function SettingsPage() {
       });
       if (res.data.companyLogoB64) setLogoPreview(res.data.companyLogoB64);
       if (res.data.companyLogoFullB64) setLogoFullPreview(res.data.companyLogoFullB64);
+
+      if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+        try {
+          const orgRes = await api.get('/organizations/me/info');
+          setOrgInfo(orgRes.data);
+        } catch (err) { console.error(err); }
+      }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -414,6 +422,52 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+
+          {/* Organisation — visible seulement pour ADMIN/SUPER_ADMIN */}
+          {orgInfo && (
+            <div className="rounded-md p-6"
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E9ECEF',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+              }}>
+              <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>
+                Mon organisation
+              </h3>
+              <p className="text-xs mb-4" style={{ color: '#ADB5BD' }}>
+                Informations sur votre licence CORO
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Nom</p>
+                  <p className="text-sm mt-1 font-medium" style={{ color: '#2C3E50' }}>
+                    {orgInfo.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Niveau de licence</p>
+                  <p className="text-sm mt-1 font-medium" style={{ color: '#C0392B' }}>
+                    {orgInfo.licenseType === 'ESSAI_GRATUIT' ? 'Essai gratuit'
+                      : orgInfo.licenseType === 'STANDARD' ? 'Standard'
+                      : orgInfo.licenseType === 'ENTREPRISE' ? 'Entreprise'
+                      : orgInfo.licenseType}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Membres de l'équipe</p>
+                  <p className="text-sm mt-1 font-medium" style={{ color: '#2C3E50' }}>
+                    {orgInfo._count?.users ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets actifs</p>
+                  <p className="text-sm mt-1 font-medium" style={{ color: '#2C3E50' }}>
+                    {orgInfo._count?.projects ?? '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* À propos */}
           <div className="rounded-md p-6"
