@@ -37,9 +37,9 @@ export function renderModule2(sections: any[], lang: 'fr' | 'en'): string {
 
 // Rend une seule section de Module 2 — permet à export.service.ts de générer
 // chaque section dans son propre appel Puppeteer, pour connaître sa vraie page
-export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en'): string {
+export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en', moduleSeqNumber: number = 2): string {
   {
-    const displayNumber = `2.${idx + 1}`;
+    const displayNumber = `${moduleSeqNumber}.${idx + 1}`;
 
     // Cas spécial — 2.1 Numéros d'urgence : 2 colonnes, sans en-tête, 9-1-1 fusionné
     if (section.id === '2.1') {
