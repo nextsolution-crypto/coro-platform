@@ -48,4 +48,10 @@ export class OrganizationsController {
   getMyOrganization(@Request() req: any) {
     return this.organizationsService.findOne(req.user.organizationId);
   }
+
+  @Get('admin/all-projects')
+  getAllProjectsGlobal(@Request() req: any) {
+    this.assertSuperAdmin(req);
+    return this.organizationsService.findAllProjectsGlobal();
+  }
 }

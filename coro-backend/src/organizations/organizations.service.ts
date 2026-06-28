@@ -71,4 +71,17 @@ export class OrganizationsService {
       data: { isActive },
     });
   }
+
+  async findAllProjectsGlobal() {
+    return this.prisma.project.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organization: { select: { id: true, name: true, isInternal: true } },
+        client: { select: { id: true, name: true } },
+        building: { select: { id: true, name: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+  }
 }
