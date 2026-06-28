@@ -7,9 +7,18 @@ export class Module4Service {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private async assertProjectOwnership(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+  }
+
   // ── GET module4 sauvegardé ─────────────────────────────
 
-  async getModule4(projectId: string) {
+  async getModule4(projectId: string, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
+
     const document = await this.prisma.document.findFirst({
       where: { projectId },
       select: { id: true, content: true },
@@ -24,7 +33,7 @@ export class Module4Service {
     };
   }
 
-  // ── GET bibliothèque complète (résumé) ─────────────────
+  // ── GET bibliothèque complète (résumé) — partagée, pas liée à un projet ──
 
   async getLibrary() {
     return {
@@ -43,7 +52,7 @@ export class Module4Service {
     };
   }
 
-  // ── GET procédure complète avec roleSections ───────────
+  // ── GET procédure complète avec roleSections — partagée, pas liée à un projet ──
 
   async getProcedureFull(procedureId: string) {
     const proc = getProcedureById(procedureId);
@@ -55,7 +64,9 @@ export class Module4Service {
 
   // ── PUT sauvegarde module4 ─────────────────────────────
 
-  async saveModule4(projectId: string, dto: any) {
+  async saveModule4(projectId: string, dto: any, organizationId: string) {
+    await this.assertProjectOwnership(projectId, organizationId);
+
     const document = await this.prisma.document.findFirst({
       where: { projectId },
       select: { id: true, content: true },
