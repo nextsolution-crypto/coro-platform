@@ -42,4 +42,10 @@ export class OrganizationsController {
     this.assertSuperAdmin(req);
     return this.organizationsService.toggleActive(id, body.isActive);
   }
+
+  // Accessible à tout utilisateur connecté — uniquement sa propre organisation
+  @Get('me/info')
+  getMyOrganization(@Request() req: any) {
+    return this.organizationsService.findOne(req.user.organizationId);
+  }
 }
