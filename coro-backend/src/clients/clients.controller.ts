@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
 
@@ -8,32 +8,32 @@ export class ClientsController {
   constructor(private clientsService: ClientsService) {}
 
   @Get()
-  findAll() {
-    return this.clientsService.findAll();
+  findAll(@Request() req: any) {
+    return this.clientsService.findAll(req.user.organizationId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.clientsService.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.clientsService.findOne(id, req.user.organizationId);
   }
 
   @Post()
-  create(@Body() body: any) {
-    return this.clientsService.create(body);
+  create(@Body() body: any, @Request() req: any) {
+    return this.clientsService.create({ ...body, organizationId: req.user.organizationId });
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.clientsService.update(id, body);
+  update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+    return this.clientsService.update(id, body, req.user.organizationId);
   }
 
   @Put(':id/logo')
-  uploadLogo(@Param('id') id: string, @Body() body: { logoBase64: string }) {
-    return this.clientsService.uploadLogo(id, body.logoBase64);
+  uploadLogo(@Param('id') id: string, @Body() body: { logoBase64: string }, @Request() req: any) {
+    return this.clientsService.uploadLogo(id, body.logoBase64, req.user.organizationId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.clientsService.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.clientsService.remove(id, req.user.organizationId);
   }
 }
