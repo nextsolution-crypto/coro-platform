@@ -1,5 +1,6 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { getLimitsForLicense } from '../organizations/license-limits';
 
 @Injectable()
 export class ProjectsService {
@@ -39,6 +40,23 @@ export class ProjectsService {
     userId: string;
     organizationId: string;
   }) {
+    const organization = await this.prisma.organization.findUnique({ where: { id: data.organizationId } });
+    if (!organization) {
+      throw new NotFoundException('Organisation introuvable');
+    }
+
+    const limits = getLimitsForLicense(organization.licenseType);
+    if (limits.maxProjects !== null) {
+      const currentCount = await this.prisma.project.count({
+        where: { organizationId: data.organizationId, isActive: true },
+      });
+      if (currentCount >= limits.maxProjects) {
+        throw new ForbiddenException(
+          `Votre licence ${organization.licenseType} est limitée à ${limits.maxProjects} projet(s). Contactez CORO pour mettre à niveau.`
+        );
+      }
+    }
+
     return this.prisma.project.create({
       data,
       include: {
