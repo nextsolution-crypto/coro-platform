@@ -17,7 +17,7 @@ export class AuthService {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) throw new UnauthorizedException('Identifiants invalides');
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -26,6 +26,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        organizationId: user.organizationId,
       },
     };
   }
