@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Body, UseGuards, Res } from '@nestjs/common';
+import { Controller, Post, Param, Body, UseGuards, Res, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { ExportService } from './export.service';
@@ -14,8 +14,9 @@ export class ExportController {
     @Param('projectId') projectId: string,
     @Body() options: ExportOptions,
     @Res() res: Response,
+    @Request() req: any,
   ) {
-    const result = await this.exportService.generatePdf(projectId, options);
+    const result = await this.exportService.generatePdf(projectId, options, req.user.organizationId);
 
     // Si une seule langue demandée → retourne le PDF directement
     if (result.fr && !result.en) {

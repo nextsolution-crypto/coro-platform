@@ -57,9 +57,9 @@ export class ExportService {
   // POINT D'ENTRÉE PRINCIPAL
   // ============================================================
 
-  async generatePdf(projectId: string, options: ExportOptions): Promise<{ fr?: Buffer; en?: Buffer }> {
+  async generatePdf(projectId: string, options: ExportOptions, organizationId: string): Promise<{ fr?: Buffer; en?: Buffer }> {
     const doc = await this.prisma.document.findFirst({
-      where: { projectId },
+      where: { projectId, project: { organizationId } },
       include: {
         project: {
           include: { client: true, building: true, user: true },
