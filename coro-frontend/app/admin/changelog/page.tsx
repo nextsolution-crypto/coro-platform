@@ -10,7 +10,7 @@ interface ChangelogEntry {
   id: string;
   title: string;
   description: string;
-  createdAt: string;
+  entryDate: string;
 }
 
 export default function ChangelogAdminPage() {
@@ -21,7 +21,7 @@ export default function ChangelogAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '' });
+  const [form, setForm] = useState({ title: '', description: '', entryDate: new Date().toISOString().split('T')[0] });
 
   useEffect(() => { initAuth(); }, []);
 
@@ -55,7 +55,7 @@ export default function ChangelogAdminPage() {
     try {
       await api.post('/changelog', form);
       setShowModal(false);
-      setForm({ title: '', description: '' });
+      setForm({ title: '', description: '', entryDate: new Date().toISOString().split('T')[0] });
       fetchData();
     } catch (err) {
       console.error(err);
@@ -118,7 +118,7 @@ export default function ChangelogAdminPage() {
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-semibold" style={{ color: '#2C3E50' }}>{entry.title}</h3>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-xs" style={{ color: '#ADB5BD' }}>{formatDate(entry.createdAt)}</span>
+                  <span className="text-xs" style={{ color: '#ADB5BD' }}>{formatDate(entry.entryDate)}</span>
                   <button
                     onClick={() => handleDelete(entry.id)}
                     className="text-xs opacity-0 group-hover:opacity-100 transition-opacity"
@@ -145,6 +145,13 @@ export default function ChangelogAdminPage() {
               Nouvelle entrée de changelog
             </h3>
             <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Date *</label>
+                <input type="date" required value={form.entryDate}
+                  onChange={e => setForm({ ...form, entryDate: e.target.value })}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Titre *</label>
                 <input type="text" required value={form.title}
