@@ -3,12 +3,72 @@ import { PrismaService } from '../prisma/prisma.service';
 import { generateModule1, DocumentContext } from './module1.templates';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
-import { generateModule4 } from './module4.templates';
+import { generateModule4, getActiveProcedures } from './module4.templates';
 import { generateModule8 } from './module8.templates';
 
 @Injectable()
 export class GeneratorService {
   constructor(private prisma: PrismaService) {}
+
+private async loadProceduresFromDB(
+    organizationId: string,
+    config: any,
+    documentType: string,
+    activeRoleCodes: string[],
+    customProcedureIds: string[],
+  ): Promise<any[]> {
+    try {
+      // Charger toutes les procédures par défaut actives
+      const defaults = await this.prisma.procedureDefault.findMany({
+        where: { isActive: true },
+        orderBy: { code: 'asc' },
+      });
+
+      // Charger les overrides de cette organisation
+      const overrides = await this.prisma.procedureOverride.findMany({
+        where: { organizationId },
+      });
+
+      const overrideMap = new Map(overrides.map(o => [o.procedureId, o.content]));
+
+      // Fusionner défaut + override
+      const allProcs = defaults.map(d => {
+        const content = overrideMap.has(d.id)
+          ? overrideMap.get(d.id) as any
+          : d.content as any;
+        return { ...content, _dbId: d.id };
+      });
+
+      // Filtrer selon activationRule (même logique que getActiveProcedures)
+      const autoFromTS = getActiveProcedures(config, documentType, activeRoleCodes);
+      const autoIds = new Set(autoFromTS.map(p => p?.code));
+
+      // Procédures auto = celles dont le code est dans la liste auto TS
+      const autoProcedures = allProcs
+        .filter(p => autoIds.has(p.code))
+        .map(p => ({
+          ...p,
+          roleSections: (p.roleSections || []).filter((rs: any) =>
+            rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+          ),
+        }));
+
+      // Procédures custom = ajoutées manuellement
+      const manualProcedures = allProcs
+        .filter(p => customProcedureIds.includes(p.id) && !autoIds.has(p.code))
+        .map(p => ({
+          ...p,
+          roleSections: (p.roleSections || []).filter((rs: any) =>
+            rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+          ),
+        }));
+
+      return [...autoProcedures, ...manualProcedures];
+    } catch (err) {
+      console.warn('Fallback aux procédures TypeScript:', err);
+      return []; // Retourne vide → generateModule4 utilisera le fallback TS
+    }
+  }
 
   private async assertProjectOwnership(projectId: string, organizationId: string) {
     const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
@@ -83,11 +143,21 @@ export class GeneratorService {
     // Récupère les procédures manuelles ajoutées
     const customProcedureIds = existingContent?.module4?.customProcedureIds || [];
 
+    // Charger les procédures depuis la DB (avec overrides par organisation)
+    const proceduresFromDB = await this.loadProceduresFromDB(
+      organizationId,
+      config,
+      ctx.documentType,
+      activeRoleCodes,
+      customProcedureIds,
+    );
+
     const module4Result = generateModule4(
       ctx,
       config,
       activeRoleCodes,
       customProcedureIds,
+      proceduresFromDB,
     );
 
     // Module 6 — Plans techniques (structure vide, contenu géré via BuildingPlans)
