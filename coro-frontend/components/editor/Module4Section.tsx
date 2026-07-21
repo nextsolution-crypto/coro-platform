@@ -58,8 +58,16 @@ export default function Module4Section({
     const loadData = async () => {
       setLoadingData(true);
       try {
-        const res = await api.get(`/projects/${projectId}/module4`);
-        const saved = res.data?.module4;
+        const [savedRes, activeRes] = await Promise.all([
+          api.get(`/projects/${projectId}/module4`),
+          api.get(`/procedures/project/${projectId}`),
+        ]);
+
+        const saved = savedRes.data?.module4;
+        const activeMap: Record<string, boolean> = {};
+        (activeRes.data || []).forEach((p: any) => {
+          activeMap[p.id] = p.isActive !== false;
+        });
 
         const autoIds = (initialData.procedures || []).map((p: Procedure) => p.id);
         setAutoActivatedIds(autoIds);
@@ -70,8 +78,9 @@ export default function Module4Section({
           setOverrides(saved.procedureOverrides?.steps || {});
           setComments(saved.procedureOverrides?.comments || {});
 
-          // Charger les procédures custom COMPLÈTES avec roleSections
           const customIds: string[] = saved.customProcedureIds || [];
+          let allProcs = [...(initialData.procedures || [])];
+
           if (customIds.length > 0) {
             const customProcs = await Promise.all(
               customIds
@@ -83,15 +92,18 @@ export default function Module4Section({
                   } catch { return null; }
                 })
             );
-            setProcedures([
-              ...(initialData.procedures || []),
-              ...customProcs.filter(Boolean),
-            ]);
-          } else {
-            setProcedures(initialData.procedures || []);
+            allProcs = [...allProcs, ...customProcs.filter(Boolean)];
           }
+
+          setProcedures(allProcs.map(p => ({
+            ...p,
+            _isActive: activeMap[p.id] !== undefined ? activeMap[p.id] : true,
+          })));
         } else {
-          setProcedures(initialData.procedures || []);
+          setProcedures((initialData.procedures || []).map(p => ({
+            ...p,
+            _isActive: activeMap[p.id] !== undefined ? activeMap[p.id] : true,
+          })));
         }
 
       } catch {
@@ -167,6 +179,15 @@ export default function Module4Section({
     console.error('Erreur chargement procédure complète:', err);
   }
 }, []);
+
+const handleToggleActive = useCallback(async (id: string, active: boolean) => {
+    try {
+      await api.put(`/procedures/${id}/project/${projectId}/toggle`, { isActive: active });
+      setProcedures(prev => prev.map(p => p.id === id ? { ...p, _isActive: active } : p));
+    } catch (err) {
+      console.error('Erreur toggle procédure:', err);
+    }
+  }, [projectId]);
 
   const handleRemoveProcedure = useCallback((id: string) => {
     setCustomProcedureIds(prev => prev.filter(p => p !== id));
@@ -305,6 +326,8 @@ export default function Module4Section({
             key={procedure.id}
             procedure={procedure}
             projectId={projectId}
+            isActive={(procedure as any)._isActive !== false}
+            onToggleActive={handleToggleActive}
             language={language}
             overrides={overrides}
             comments={comments}

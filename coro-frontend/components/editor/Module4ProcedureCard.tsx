@@ -43,6 +43,8 @@ export interface Procedure {
 interface Module4ProcedureCardProps {
   procedure: Procedure;
   projectId?: string;
+  isActive?: boolean;
+  onToggleActive?: (id: string, isActive: boolean) => void;
   language?: 'fr' | 'en';
   overrides?: Record<string, string>;
   comments?: Record<string, string>;
@@ -161,6 +163,8 @@ function StepRenderer({
 export default function Module4ProcedureCard({
   procedure,
   projectId,
+  isActive = true,
+  onToggleActive,
   language = 'fr',
   overrides = {},
   comments = {},
@@ -184,7 +188,8 @@ export default function Module4ProcedureCard({
   };
 
   return (
-    <div className="mb-4 rounded overflow-hidden shadow-sm bg-white" style={{ border: '1px solid #E9ECEF' }}>
+    <div className="mb-4 rounded overflow-hidden shadow-sm bg-white"
+      style={{ border: '1px solid #E9ECEF', opacity: isActive ? 1 : 0.5 }}>
 
       {/* Header procédure */}
       <div className="flex items-center" style={{ borderLeft: `4px solid ${procedure.headerColor}`, backgroundColor: '#F8F9FA' }}>
@@ -218,17 +223,31 @@ export default function Module4ProcedureCard({
           </div>
         </button>
 
-        {/* Bouton Modifier */}
+        {/* Toggle actif/inactif + Bouton Modifier */}
         {projectId && (
-          <Link
-            href={`/editor/${projectId}/procedures/${procedure.id}`}
-            className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded transition-colors mx-2"
-            style={{ border: '1px solid #DEE2E6', color: '#6C757D', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}
-          >
-            Modifier
-          </Link>
+          <div className="flex items-center gap-2 mx-2 flex-shrink-0">
+            <button
+              onClick={() => onToggleActive?.(procedure.id, !isActive)}
+              className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded transition-colors"
+              style={{
+                border: `1px solid ${isActive ? '#A9DFBF' : '#DEE2E6'}`,
+                backgroundColor: isActive ? '#EAFAF1' : '#F8F9FA',
+                color: isActive ? '#27AE60' : '#ADB5BD',
+              }}
+              title={isActive ? 'Désactiver cette procédure pour ce projet' : 'Activer cette procédure pour ce projet'}
+            >
+              {isActive ? '✓ Active' : '○ Inactive'}
+            </button>
+            <Link
+              href={`/editor/${projectId}/procedures/${procedure.id}`}
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded transition-colors"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D', whiteSpace: 'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}
+            >
+              Modifier
+            </Link>
+          </div>
         )}
       </div>
 
