@@ -26,6 +26,15 @@ interface RoleSection {
   steps: ProcedureStep[];
 }
 
+interface ReferenceImage {
+  id: string;
+  captionFR: string;
+  captionEN: string;
+  base64FR: string;  // data:image/png;base64,... ou data:image/jpeg;base64,...
+  base64EN: string;
+  mimeType?: string; // 'image/png' ou 'image/jpeg', optionnel (utilisé pour validation)
+}
+
 interface ProcedureTemplate {
   id: string;
   code: string;
@@ -35,6 +44,7 @@ interface ProcedureTemplate {
   phase?: string;
   directivesGenerales?: ProcedureStep[];
   roleSections: RoleSection[];
+  referenceImages?: ReferenceImage[];
 }
 
 // ============================================================
@@ -109,6 +119,39 @@ function renderRoleContent(
     <div class="role-header">${escapeHtml(roleLabel)}</div>
     ${stepsHtml}
   `;
+}
+
+// ============================================================
+// RENDU DES IMAGES DE RÉFÉRENCE (à la fin de la procédure)
+// ============================================================
+
+function renderReferenceImages(images: ReferenceImage[] | undefined, lang: 'fr' | 'en'): string {
+  if (!images || images.length === 0) {
+    return '';
+  }
+
+  let html = `<div class="reference-images-section" style="margin-top:24px;padding-top:16px;border-top:1px solid #DEE2E6;">`;
+
+  for (const img of images) {
+    const base64 = lang === 'fr' ? img.base64FR : img.base64EN;
+    const caption = lang === 'fr' ? img.captionFR : img.captionEN;
+
+    html += `
+      <div class="reference-image-item" style="text-align:center;margin-bottom:16px;">
+        <img 
+          src="${escapeHtml(base64)}" 
+          alt="${escapeHtml(caption)}"
+          style="max-width:100%;max-height:800px;height:auto;display:block;margin:0 auto 8px;"
+        />
+        <p style="font-size:8pt;color:#6C757D;margin:0;font-style:italic;">
+          ${escapeHtml(caption)}
+        </p>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  return html;
 }
 
 // ============================================================
@@ -195,6 +238,7 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
         </div>
         <ul class="checklist">${items}</ul>
         ${renderStopReflechirAgir(lang)}
+        ${renderReferenceImages(proc.referenceImages, lang)}
       </div>
     `;
   }
@@ -218,7 +262,10 @@ export function renderProcedure(proc: ProcedureTemplate, lang: 'fr' | 'en', buil
     </div>
   `).join('');
 
-  return firstPageHtml + remainingRolesHtml;
+  // Ajouter les images de référence APRÈS tous les rôles
+  const imagesHtml = renderReferenceImages(proc.referenceImages, lang);
+
+  return firstPageHtml + remainingRolesHtml + imagesHtml;
 }
 
 // ============================================================
