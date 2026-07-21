@@ -19,6 +19,15 @@ export class ProceduresController {
     return this.proceduresService.findAllForProject(req.user.organizationId, projectId);
   }
 
+  // ── Créer une nouvelle procédure par défaut (SUPER_ADMIN) ──
+  @Post('default')
+  createDefault(@Body() body: { content: any }, @Request() req: any) {
+    if (req.user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Accès réservé au super-administrateur.');
+    }
+    return this.proceduresService.createDefault(body.content);
+  }
+
   // ── Une procédure (avec override projet ou org si applicable) ──
   @Get(':id')
   findOne(@Param('id') id: string, @Query('projectId') projectId: string, @Request() req: any) {

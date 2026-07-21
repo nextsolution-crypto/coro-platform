@@ -111,6 +111,20 @@ export class ProceduresService {
     });
   }
 
+  // ── Créer une nouvelle procédure par défaut (SUPER_ADMIN) ──
+  async createDefault(content: any) {
+    const existing = await this.prisma.procedureDefault.findUnique({
+      where: { code: content.code },
+    });
+    if (existing) {
+      throw new Error(`Une procédure avec le code ${content.code} existe déjà.`);
+    }
+
+    return this.prisma.procedureDefault.create({
+      data: { code: content.code, content },
+    });
+  }
+
   // ── Anciennes méthodes par organisation (compatibilité) ────
   async findOne_legacy(id: string, organizationId: string) {
     return this.findOne(id, organizationId);
