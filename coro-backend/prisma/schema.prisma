@@ -124,10 +124,11 @@ model Project {
   userId     String
   user       User      @relation(fields: [userId], references: [id])
 
-  documents        Document[]
-  buildingPlans    BuildingPlan[]
-  module7          Module7Data?
-  revisionHistory  RevisionHistory[]
+  documents           Document[]
+  buildingPlans       BuildingPlan[]
+  module7             Module7Data?
+  revisionHistory     RevisionHistory[]
+  procedureOverrides  ProcedureOverride[]
 }
 
 model RevisionHistory {
@@ -312,12 +313,15 @@ model ProcedureOverride {
   id             String   @id @default(uuid())
   procedureId    String
   organizationId String
+  projectId      String?
   content        Json
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   procedure    ProcedureDefault @relation(fields: [procedureId], references: [id])
   organization Organization     @relation(fields: [organizationId], references: [id])
+  project      Project?         @relation(fields: [projectId], references: [id])
 
-  @@unique([procedureId, organizationId])
+  @@unique([procedureId, organizationId, projectId])
 }
