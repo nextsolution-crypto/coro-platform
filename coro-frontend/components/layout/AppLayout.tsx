@@ -19,6 +19,7 @@ const adminNavItems = [
 const superAdminNavItems = [
   { label: 'Organisations', path: '/admin/organizations' },
   { label: 'Tous les projets', path: '/admin/projects' },
+  { label: 'Procédures', path: '/admin/procedures' },
   { label: 'Changelog', path: '/admin/changelog' },
 ];
 
