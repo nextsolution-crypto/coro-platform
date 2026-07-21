@@ -221,28 +221,32 @@ export default function Module4ProcedureCard({
       {/* Header procédure */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left
-          hover:opacity-90 transition-opacity"
-        style={{ backgroundColor: procedure.headerColor }}
+        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+        style={{
+          backgroundColor: '#F8F9FA',
+          borderLeft: `4px solid ${procedure.headerColor}`,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F0F1F2')}
+        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
       >
         <div className="flex items-center gap-3">
           {procedure.sectionNumber && (
-            <span className="text-white/80 text-sm font-mono font-bold">
+            <span className="text-sm font-mono font-bold" style={{ color: '#6C757D' }}>
               {procedure.sectionNumber}
             </span>
           )}
           {procedure.icon && (
             <span className="text-lg">{procedure.icon}</span>
           )}
-          <span className="text-white font-bold text-sm uppercase tracking-wide">
+          <span className="font-bold text-sm uppercase tracking-wide" style={{ color: '#2C3E50' }}>
             {title}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-white/60 text-xs">
+          <span className="text-xs" style={{ color: '#ADB5BD' }}>
             {(procedure.roleSections || []).length} rôle(s)
           </span>
-          <span className="text-white font-bold text-lg">
+          <span className="font-bold text-lg" style={{ color: '#6C757D' }}>
             {expanded ? '−' : '+'}
           </span>
         </div>
@@ -287,22 +291,27 @@ export default function Module4ProcedureCard({
                 {/* Header rôle cliquable */}
                 <button
                   onClick={() => toggleRole(section.roleCode)}
-                  className="w-full flex items-center justify-between px-4 py-2.5
-                    text-left transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: section.headerColor }}
+                  className="w-full flex items-center justify-between px-4 py-2 text-left transition-colors"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderLeft: `3px solid ${section.headerColor}`,
+                    borderTop: '1px solid #F0F1F2',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-white text-xs font-bold uppercase tracking-wide">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#495057' }}>
                       {section.roleCode === 'TOUS'
                         ? roleLabel
                         : `${section.roleCode} — ${roleLabel}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-white/60 text-xs">
+                    <span className="text-xs" style={{ color: '#ADB5BD' }}>
                       {section.steps.length} étape(s)
                     </span>
-                    <span className="text-white font-bold text-base">
+                    <span className="font-bold text-sm" style={{ color: '#6C757D' }}>
                       {isRoleExpanded ? '−' : '+'}
                     </span>
                   </div>
