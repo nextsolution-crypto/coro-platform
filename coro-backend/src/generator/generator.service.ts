@@ -36,7 +36,7 @@ private async loadProceduresFromDB(
         const content = overrideMap.has(d.id)
           ? overrideMap.get(d.id) as any
           : d.content as any;
-        return { ...content, _dbId: d.id };
+        return { ...content, id: d.id, _originalId: content.id };
       });
 
       // Filtrer selon activationRule (même logique que getActiveProcedures)
