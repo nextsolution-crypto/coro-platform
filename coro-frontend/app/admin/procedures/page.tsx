@@ -27,6 +27,12 @@ export default function ProceduresAdminPage() {
   const [procedures, setProcedures] = useState<ProcedureDefault[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [newProc, setNewProc] = useState({
+    code: '', titleFR: '', titleEN: '', headerColor: '#7F8C8D', icon: '', activationRule: 'always',
+  });
 
   useEffect(() => { initAuth(); }, []);
 
@@ -53,6 +59,36 @@ export default function ProceduresAdminPage() {
     p.content?.titleFR?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError('');
+    try {
+      const content = {
+        id: newProc.code.toLowerCase().replace(/-/g, '_'),
+        code: newProc.code.toUpperCase(),
+        titleFR: newProc.titleFR,
+        titleEN: newProc.titleEN,
+        headerColor: newProc.headerColor,
+        icon: newProc.icon,
+        activationRule: newProc.activationRule,
+        documentTypes: ['PMU', 'PSI'],
+        roleSections: [],
+        directivesGenerales: [],
+      };
+      const res = await api.post('/procedures/default', { content });
+      setShowModal(false);
+      setNewProc({ code: '', titleFR: '', titleEN: '', headerColor: '#7F8C8D', icon: '', activationRule: 'always' });
+      await fetchData();
+      // Rediriger vers l'éditeur de la nouvelle procédure
+      router.push(`/admin/procedures/${res.data.id}`);
+    } catch (err: any) {
+      setCreateError(err.response?.data?.message || 'Erreur lors de la création.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -74,6 +110,15 @@ export default function ProceduresAdminPage() {
             {procedures.length} procédures par défaut — modifications appliquées à toutes les organisations
           </p>
         </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+          style={{ backgroundColor: '#C0392B' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+        >
+          + Nouvelle procédure
+        </button>
       </div>
 
       {/* Recherche */}
@@ -126,6 +171,98 @@ export default function ProceduresAdminPage() {
           </div>
         ))}
       </div>
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-md p-8"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
+              Nouvelle procédure
+            </h3>
+            {createError && (
+              <div className="rounded p-3 mb-4 text-sm"
+                style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}>
+                {createError}
+              </div>
+            )}
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Code *</label>
+                  <input type="text" required value={newProc.code}
+                    onChange={e => setNewProc({ ...newProc, code: e.target.value.toUpperCase() })}
+                    placeholder="ex: P029"
+                    className="w-full text-sm rounded px-3 py-2 focus:outline-none font-mono"
+                    style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Icône</label>
+                  <input type="text" value={newProc.icon}
+                    onChange={e => setNewProc({ ...newProc, icon: e.target.value })}
+                    placeholder="ex: 🔥"
+                    className="w-full text-sm rounded px-3 py-2 focus:outline-none"
+                    style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Titre FR *</label>
+                <input type="text" required value={newProc.titleFR}
+                  onChange={e => setNewProc({ ...newProc, titleFR: e.target.value })}
+                  placeholder="ex: INCENDIE MAJEUR"
+                  className="w-full text-sm rounded px-3 py-2 focus:outline-none"
+                  style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Titre EN *</label>
+                <input type="text" required value={newProc.titleEN}
+                  onChange={e => setNewProc({ ...newProc, titleEN: e.target.value })}
+                  placeholder="ex: MAJOR FIRE"
+                  className="w-full text-sm rounded px-3 py-2 focus:outline-none"
+                  style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Couleur</label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={newProc.headerColor}
+                    onChange={e => setNewProc({ ...newProc, headerColor: e.target.value })}
+                    className="w-10 h-9 rounded cursor-pointer border-0" />
+                  <input type="text" value={newProc.headerColor}
+                    onChange={e => setNewProc({ ...newProc, headerColor: e.target.value })}
+                    className="flex-1 text-sm rounded px-3 py-2 focus:outline-none font-mono"
+                    style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Règle d'activation</label>
+                <select value={newProc.activationRule}
+                  onChange={e => setNewProc({ ...newProc, activationRule: e.target.value })}
+                  className="w-full text-sm rounded px-3 py-2 focus:outline-none"
+                  style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }}>
+                  <option value="always">Toujours active</option>
+                  <option value="has_gas">Gaz naturel</option>
+                  <option value="has_sprinklers">Gicleurs</option>
+                  <option value="has_generator">Génératrice</option>
+                  <option value="has_elevators">Ascenseurs</option>
+                  <option value="has_hazardous_materials">Matières dangereuses</option>
+                  <option value="industriel">Bâtiment industriel</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowModal(false); setCreateError(''); }}
+                  className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
+                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>
+                  Annuler
+                </button>
+                <button type="submit" disabled={creating}
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
+                  style={{ backgroundColor: '#C0392B' }}>
+                  {creating ? 'Création...' : 'Créer et éditer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
