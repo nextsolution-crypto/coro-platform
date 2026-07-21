@@ -21,10 +21,11 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users     User[]
-  clients   Client[]
-  buildings Building[]
-  projects  Project[]
+  users      User[]
+  clients    Client[]
+  buildings  Building[]
+  projects   Project[]
+  procedureOverrides ProcedureOverride[]
 }
 
 model User {
@@ -294,4 +295,29 @@ model ChangelogEntry {
   description String
   entryDate   DateTime @default(now())
   createdAt   DateTime @default(now())
+}
+
+model ProcedureDefault {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  content   Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  overrides ProcedureOverride[]
+}
+
+model ProcedureOverride {
+  id             String   @id @default(uuid())
+  procedureId    String
+  organizationId String
+  content        Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  procedure    ProcedureDefault @relation(fields: [procedureId], references: [id])
+  organization Organization     @relation(fields: [organizationId], references: [id])
+
+  @@unique([procedureId, organizationId])
 }
