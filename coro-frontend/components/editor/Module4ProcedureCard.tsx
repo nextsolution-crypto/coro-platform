@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { ChevronDown, ChevronUp, MessageSquare, GripVertical } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import Link from 'next/link';
 
 // ============================================================
 // TYPES
@@ -16,7 +17,7 @@ export interface ProcedureStep {
   isCommentable?: boolean;
   isList?: boolean;
   subSteps?: ProcedureStep[];
-  comment?: string; // Commentaire éditable par l'utilisateur
+  comment?: string;
 }
 
 export interface RoleSection {
@@ -41,9 +42,10 @@ export interface Procedure {
 
 interface Module4ProcedureCardProps {
   procedure: Procedure;
+  projectId?: string;
   language?: 'fr' | 'en';
-  overrides?: Record<string, string>; // stepId → texte modifié
-  comments?: Record<string, string>;  // stepId → commentaire
+  overrides?: Record<string, string>;
+  comments?: Record<string, string>;
   onOverride?: (stepId: string, text: string) => void;
   onComment?: (stepId: string, comment: string) => void;
   defaultExpanded?: boolean;
@@ -77,16 +79,11 @@ function StepRenderer({
   const displayText = override || rawText;
   const isFr = language === 'fr';
 
-  // Parse le texte : **mot** → gras, [9-1-1] → rouge
   const renderText = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return (
-          <strong key={i} className="font-bold">
-            {part.slice(2, -2)}
-          </strong>
-        );
+        return <strong key={i} className="font-bold">{part.slice(2, -2)}</strong>;
       }
       return <span key={i}>{part}</span>;
     });
@@ -97,32 +94,17 @@ function StepRenderer({
 
   return (
     <div className={`${indent} mb-1`}>
-      <div className={`group flex items-start gap-2 py-1 px-2 rounded
-        hover:bg-gray-50 transition-colors
-        ${step.isRed ? 'text-red-600' : 'text-gray-800'}`}>
-
-        {/* Puce */}
-        {bullet && (
-          <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{bullet}</span>
-        )}
-
-        {/* Texte */}
+      <div className={`group flex items-start gap-2 py-1 px-2 rounded hover:bg-gray-50 transition-colors ${step.isRed ? 'text-red-600' : 'text-gray-800'}`}>
+        {bullet && <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{bullet}</span>}
         <div className="flex-1 text-sm leading-relaxed">
           {editingStep ? (
-            <div className="space-y-1">
-              <textarea
-                defaultValue={displayText}
-                onBlur={e => {
-                  onOverride?.(step.id, e.target.value);
-                  setEditingStep(false);
-                }}
-                autoFocus
-                className="w-full text-sm border border-orange-300 rounded px-2 py-1
-                  focus:outline-none focus:border-orange-500 bg-white text-gray-800
-                  resize-none"
-                rows={3}
-              />
-            </div>
+            <textarea
+              defaultValue={displayText}
+              onBlur={e => { onOverride?.(step.id, e.target.value); setEditingStep(false); }}
+              autoFocus
+              className="w-full text-sm border border-orange-300 rounded px-2 py-1 focus:outline-none focus:border-orange-500 bg-white text-gray-800 resize-none"
+              rows={3}
+            />
           ) : (
             <span
               onClick={() => setEditingStep(true)}
@@ -130,23 +112,14 @@ function StepRenderer({
               title={isFr ? 'Cliquer pour modifier' : 'Click to edit'}
             >
               {renderText(displayText)}
-              {override && (
-                <span className="ml-1 text-xs text-orange-400 font-normal">
-                  ✎
-                </span>
-              )}
+              {override && <span className="ml-1 text-xs text-orange-400 font-normal">✎</span>}
             </span>
           )}
         </div>
-
-        {/* Bouton commentaire */}
         {step.isCommentable && (
           <button
             onClick={() => setEditingComment(!editingComment)}
-            className={`flex-shrink-0 p-0.5 rounded transition-colors mt-0.5
-              ${comment
-                ? 'text-orange-500 bg-orange-50'
-                : 'text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100'}`}
+            className={`flex-shrink-0 p-0.5 rounded transition-colors mt-0.5 ${comment ? 'text-orange-500 bg-orange-50' : 'text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100'}`}
             title={isFr ? 'Ajouter un commentaire' : 'Add a comment'}
           >
             <MessageSquare size={13} />
@@ -154,22 +127,18 @@ function StepRenderer({
         )}
       </div>
 
-      {/* Champ commentaire */}
       {step.isCommentable && (editingComment || comment) && (
         <div className="ml-6 mt-1 mb-2">
           <textarea
             value={comment || ''}
             onChange={e => onComment?.(step.id, e.target.value)}
             placeholder={isFr ? 'Ajouter une note spécifique à ce bâtiment...' : 'Add a building-specific note...'}
-            className="w-full text-xs border border-orange-200 rounded px-2 py-1.5
-              focus:outline-none focus:border-orange-400 bg-orange-50
-              text-gray-700 resize-none"
+            className="w-full text-xs border border-orange-200 rounded px-2 py-1.5 focus:outline-none focus:border-orange-400 bg-orange-50 text-gray-700 resize-none"
             rows={2}
           />
         </div>
       )}
 
-      {/* Sous-étapes */}
       {step.subSteps?.map(sub => (
         <StepRenderer
           key={sub.id}
@@ -191,6 +160,7 @@ function StepRenderer({
 
 export default function Module4ProcedureCard({
   procedure,
+  projectId,
   language = 'fr',
   overrides = {},
   comments = {},
@@ -202,7 +172,6 @@ export default function Module4ProcedureCard({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
   const isFr = language === 'fr';
-
   const title = isFr ? procedure.titleFR : procedure.titleEN;
 
   const toggleRole = (roleCode: string) => {
@@ -215,53 +184,61 @@ export default function Module4ProcedureCard({
   };
 
   return (
-    <div className="mb-4 rounded overflow-hidden shadow-sm bg-white"
-      style={{ border: '1px solid #E9ECEF' }}>
+    <div className="mb-4 rounded overflow-hidden shadow-sm bg-white" style={{ border: '1px solid #E9ECEF' }}>
 
       {/* Header procédure */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
-        style={{
-          backgroundColor: '#F8F9FA',
-          borderLeft: `4px solid ${procedure.headerColor}`,
-        }}
-        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F0F1F2')}
-        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
-      >
-        <div className="flex items-center gap-3">
-          {procedure.sectionNumber && (
-            <span className="text-sm font-mono font-bold" style={{ color: '#6C757D' }}>
-              {procedure.sectionNumber}
+      <div className="flex items-center" style={{ borderLeft: `4px solid ${procedure.headerColor}`, backgroundColor: '#F8F9FA' }}>
+
+        {/* Bouton expand */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 flex items-center justify-between px-4 py-3 text-left transition-colors"
+          style={{ backgroundColor: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F0F1F2')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+        >
+          <div className="flex items-center gap-3">
+            {procedure.sectionNumber && (
+              <span className="text-sm font-mono font-bold" style={{ color: '#6C757D' }}>
+                {procedure.sectionNumber}
+              </span>
+            )}
+            {procedure.icon && <span className="text-lg">{procedure.icon}</span>}
+            <span className="font-bold text-sm uppercase tracking-wide" style={{ color: '#2C3E50' }}>
+              {title}
             </span>
-          )}
-          {procedure.icon && (
-            <span className="text-lg">{procedure.icon}</span>
-          )}
-          <span className="font-bold text-sm uppercase tracking-wide" style={{ color: '#2C3E50' }}>
-            {title}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs" style={{ color: '#ADB5BD' }}>
-            {(procedure.roleSections || []).length} rôle(s)
-          </span>
-          <span className="font-bold text-lg" style={{ color: '#6C757D' }}>
-            {expanded ? '−' : '+'}
-          </span>
-        </div>
-      </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs" style={{ color: '#ADB5BD' }}>
+              {(procedure.roleSections || []).length} rôle(s)
+            </span>
+            <span className="font-bold text-lg" style={{ color: '#6C757D' }}>
+              {expanded ? '−' : '+'}
+            </span>
+          </div>
+        </button>
+
+        {/* Bouton Modifier */}
+        {projectId && (
+          <Link
+            href={`/editor/${projectId}/procedures/${procedure.id}`}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded transition-colors mx-2"
+            style={{ border: '1px solid #DEE2E6', color: '#6C757D', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}
+          >
+            Modifier
+          </Link>
+        )}
+      </div>
 
       {/* Contenu */}
       {expanded && (
         <div>
-          {/* Directives générales */}
           {procedure.directivesGenerales && procedure.directivesGenerales.length > 0 && (
             <div className="p-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
-              <div className="rounded p-3"
-                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2"
-                  style={{ color: '#C0392B' }}>
+              <div className="rounded p-3" style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#C0392B' }}>
                   {isFr ? 'Directives générales' : 'General directives'}
                 </p>
                 {procedure.directivesGenerales.map(step => (
@@ -279,48 +256,32 @@ export default function Module4ProcedureCard({
             </div>
           )}
 
-          {/* Sections par rôle — chacune fermée par défaut */}
           {(procedure.roleSections || []).map(section => {
             const isRoleExpanded = expandedRoles.has(section.roleCode);
             const roleLabel = isFr ? section.roleLabelFR : section.roleLabelEN;
 
             return (
-              <div key={section.roleCode}
-                style={{ borderBottom: '1px solid #F8F9FA' }}>
-
-                {/* Header rôle cliquable */}
+              <div key={section.roleCode} style={{ borderBottom: '1px solid #F8F9FA' }}>
                 <button
                   onClick={() => toggleRole(section.roleCode)}
                   className="w-full flex items-center justify-between px-4 py-2 text-left transition-colors"
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    borderLeft: `3px solid ${section.headerColor}`,
-                    borderTop: '1px solid #F0F1F2',
-                  }}
+                  style={{ backgroundColor: '#FFFFFF', borderLeft: `3px solid ${section.headerColor}`, borderTop: '1px solid #F0F1F2' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#495057' }}>
-                      {section.roleCode === 'TOUS'
-                        ? roleLabel
-                        : `${section.roleCode} — ${roleLabel}`}
+                      {section.roleCode === 'TOUS' ? roleLabel : `${section.roleCode} — ${roleLabel}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: '#ADB5BD' }}>
-                      {section.steps.length} étape(s)
-                    </span>
-                    <span className="font-bold text-sm" style={{ color: '#6C757D' }}>
-                      {isRoleExpanded ? '−' : '+'}
-                    </span>
+                    <span className="text-xs" style={{ color: '#ADB5BD' }}>{section.steps.length} étape(s)</span>
+                    <span className="font-bold text-sm" style={{ color: '#6C757D' }}>{isRoleExpanded ? '−' : '+'}</span>
                   </div>
                 </button>
 
-                {/* Étapes — visibles seulement si rôle ouvert */}
                 {isRoleExpanded && (
-                  <div className="px-4 py-3"
-                    style={{ backgroundColor: '#FFFFFF' }}>
+                  <div className="px-4 py-3" style={{ backgroundColor: '#FFFFFF' }}>
                     {section.steps.map(step => (
                       <StepRenderer
                         key={step.id}

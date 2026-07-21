@@ -304,6 +304,7 @@ export default function Module4Section({
           <Module4ProcedureCard
             key={procedure.id}
             procedure={procedure}
+            projectId={projectId}
             language={language}
             overrides={overrides}
             comments={comments}
