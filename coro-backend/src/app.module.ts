@@ -20,6 +20,7 @@ import { ExportModule } from './export/export.module';
 import { LanguageCheckModule } from './language-check/language-check.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { ChangelogModule } from './changelog/changelog.module';
+import { ProceduresModule } from './procedures/procedures.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { ChangelogModule } from './changelog/changelog.module';
   ExportModule,
   LanguageCheckModule,
   OrganizationsModule,
-  ChangelogModule
+  ChangelogModule,
+  ProceduresModule
 ],
   controllers: [AppController],
   providers: [AppService],
