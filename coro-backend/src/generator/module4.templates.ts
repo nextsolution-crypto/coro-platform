@@ -21,28 +21,36 @@ export function generateModule4(
   ctx: DocumentContext,
   config: any = {},
   activeRoleCodes: string[] = [],
-  customProcedureIds: string[] = [], // IDs ajoutés manuellement depuis la bibliothèque
+  customProcedureIds: string[] = [],
+  allProceduresFromDB?: any[], // Si fourni, utilise la DB au lieu des fichiers TS
 ): any {
-  // Procédures auto selon config
-  const autoProcedures = getActiveProcedures(
-    config,
-    ctx.documentType,
-    activeRoleCodes,
-  );
 
-  // Procédures manuelles ajoutées depuis la bibliothèque
-  const manualProcedures = customProcedureIds
-    .map(id => getProcedureById(id))
-    .filter(Boolean)
-    .filter(p => !autoProcedures.find(a => a!.id === p!.id)) // Évite les doublons
-    .map(p => ({
-      ...p!,
-      roleSections: p!.roleSections.filter(rs =>
-        rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
-      ),
-    }));
+  let allProcedures: any[];
 
-  const allProcedures = [...autoProcedures, ...manualProcedures];
+  if (allProceduresFromDB && allProceduresFromDB.length > 0) {
+    // Mode DB : procédures déjà filtrées et fournies par le service
+    allProcedures = allProceduresFromDB;
+  } else {
+    // Mode fallback : fichiers TypeScript (compatibilité ascendante)
+    const autoProcedures = getActiveProcedures(
+      config,
+      ctx.documentType,
+      activeRoleCodes,
+    );
+
+    const manualProcedures = customProcedureIds
+      .map(id => getProcedureById(id))
+      .filter(Boolean)
+      .filter(p => !autoProcedures.find(a => a!.id === p!.id))
+      .map(p => ({
+        ...p!,
+        roleSections: p!.roleSections.filter(rs =>
+          rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+        ),
+      }));
+
+    allProcedures = [...autoProcedures, ...manualProcedures];
+  }
 
   // Numérotation dynamique (4.1, 4.2, etc.)
   // P001 directives générales = pas numérotée
