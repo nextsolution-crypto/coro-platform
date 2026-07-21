@@ -4,6 +4,7 @@
 // ============================================================
 
 import { ProcedureTemplate, COLORS, sid } from './types';
+import { P015_IMAGES } from './p015_images.asset';
 
 const CODE = 'P015';
 
@@ -615,11 +616,12 @@ export const P015_COLIS_SUSPECT: ProcedureTemplate = {
   ],
   referenceImages: [
     {
-      id: 'p015_img_01',
-      captionFR: 'Gestion de courrier suspect — Défense nationale Canada',
-      captionEN: 'Managing Suspicious Mail — National Defence Canada',
-      srcFR: '/procedures/p015_colis_suspect_fr.jpg',
-      srcEN: '/procedures/p015_colis_suspect_en.jpg',
+      id: P015_IMAGES.id,
+      captionFR: P015_IMAGES.captionFR,
+      captionEN: P015_IMAGES.captionEN,
+      base64FR: P015_IMAGES.base64FR,
+      base64EN: P015_IMAGES.base64EN,
+      mimeType: P015_IMAGES.mimeType,
     },
   ],
 };

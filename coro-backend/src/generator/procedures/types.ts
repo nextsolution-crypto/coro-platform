@@ -42,8 +42,11 @@ export interface ProcedureImage {
   id: string;
   captionFR: string;
   captionEN: string;
-  srcFR: string;   // chemin ou URL image FR
-  srcEN: string;   // chemin ou URL image EN
+  srcFR?: string;         // chemin ou URL image FR (héritage)
+  srcEN?: string;         // chemin ou URL image EN (héritage)
+  base64FR?: string;      // data:image/png;base64,... ou data:image/jpeg;base64,...
+  base64EN?: string;      // data:image/jpeg;base64,... ou data:image/png;base64,...
+  mimeType?: string;      // 'image/png' ou 'image/jpeg'
 }
 
 // ============================================================
