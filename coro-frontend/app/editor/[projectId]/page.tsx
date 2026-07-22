@@ -13,6 +13,7 @@ import Module6Section from '@/components/editor/Module6Section';
 import Module7Section from '@/components/editor/Module7Section';
 import Module8Section from '@/components/editor/Module8Section';
 import SpellCheckedTextarea from '@/components/editor/SpellCheckedTextarea';
+import VersionHistory from '@/components/editor/VersionHistory';
 
 // ── Types & constantes ──────────────────────────────────────
 import {
@@ -103,6 +104,7 @@ export default function EditorPage() {
   const [saving,         setSaving]         = useState(false);
   const [saved,          setSaved]          = useState(false);
   const [isEditing,      setIsEditing]      = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // ── Init ────────────────────────────────────────────────
 
@@ -432,6 +434,16 @@ export default function EditorPage() {
             ))}
           </div>
 
+          <button
+            onClick={() => setShowVersionHistory(true)}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-colors"
+            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            🕐 Historique
+          </button>
+
           <button onClick={() => router.push(`/projects/${projectId}`)}
             className="text-sm transition-colors" style={{ color: '#6C757D' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#2C3E50')}
@@ -594,6 +606,13 @@ export default function EditorPage() {
         </div>
 
       </div>
+    {showVersionHistory && (
+        <VersionHistory
+          projectId={projectId}
+          onRestore={() => { fetchDocument(); setShowVersionHistory(false); }}
+          onClose={() => setShowVersionHistory(false)}
+        />
+      )}
     </div>
   );
 }
