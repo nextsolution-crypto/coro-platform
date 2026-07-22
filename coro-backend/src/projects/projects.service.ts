@@ -9,11 +9,12 @@ export class ProjectsService {
   async findAll(organizationId: string) {
     return this.prisma.project.findMany({
       where: { isActive: true, organizationId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       include: {
         client: { select: { id: true, name: true } },
         building: { select: { id: true, name: true, address: true } },
         user: { select: { id: true, firstName: true, lastName: true } },
+        lastEditedBy: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { documents: true } },
       },
     });
@@ -26,6 +27,7 @@ export class ProjectsService {
         client: true,
         building: true,
         user: true,
+        lastEditedBy: { select: { id: true, firstName: true, lastName: true } },
         documents: true,
       },
     });
@@ -66,9 +68,15 @@ export class ProjectsService {
     });
   }
 
-  async update(id: string, data: any, organizationId: string) {
+  async update(id: string, data: any, organizationId: string, userId?: string) {
     await this.assertOwnership(id, organizationId);
-    return this.prisma.project.update({ where: { id }, data });
+    return this.prisma.project.update({
+      where: { id },
+      data: {
+        ...data,
+        ...(userId ? { lastEditedById: userId } : {}),
+      },
+    });
   }
 
   async remove(id: string, organizationId: string) {

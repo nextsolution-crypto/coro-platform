@@ -126,7 +126,7 @@ private async loadProceduresFromDB(
     };
   }
 
-  async generateAndSave(projectId: string, config: any, organizationId: string) {
+  async generateAndSave(projectId: string, config: any, organizationId: string, userId?: string) {
     await this.assertProjectOwnership(projectId, organizationId);
     const ctx = await this.buildContext(projectId, config);
     const module1Result = generateModule1(ctx);
@@ -247,7 +247,11 @@ private async loadProceduresFromDB(
 
     await this.prisma.project.update({
       where: { id: projectId },
-      data: { status: 'IN_PROGRESS', progress: 50 },
+      data: {
+        status: 'IN_PROGRESS',
+        progress: 50,
+        ...(userId ? { lastEditedById: userId } : {}),
+      },
     });
 
     return { documentId: document.id, ...documentData };

@@ -9,7 +9,7 @@ export class GeneratorController {
 
   @Post('generate/:projectId')
   generate(@Param('projectId') projectId: string, @Body() config: any, @Request() req: any) {
-    return this.generatorService.generateAndSave(projectId, config, req.user.organizationId);
+    return this.generatorService.generateAndSave(projectId, config, req.user.organizationId, req.user.userId);
   }
 
   @Get('document/:projectId')
