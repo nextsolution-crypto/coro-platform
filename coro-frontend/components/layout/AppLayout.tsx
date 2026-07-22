@@ -14,12 +14,14 @@ const navItems = [
 
 const adminNavItems = [
   { label: 'Équipe', path: '/settings/users' },
+  { label: 'Nous écrire', path: '/settings/feedback' },
 ];
 
 const superAdminNavItems = [
   { label: 'Organisations', path: '/admin/organizations' },
   { label: 'Tous les projets', path: '/admin/projects' },
   { label: 'Procédures', path: '/admin/procedures' },
+  { label: 'Feedbacks', path: '/admin/feedback' },
   { label: 'Changelog', path: '/admin/changelog' },
 ];
 
