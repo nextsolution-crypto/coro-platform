@@ -411,6 +411,22 @@ export default function ProcedureEditPage() {
         <div className="flex items-center gap-3">
           {error && <p className="text-sm" style={{ color: '#C0392B' }}>{error}</p>}
           {saved && <p className="text-sm" style={{ color: '#27AE60' }}>✓ Sauvegardé</p>}
+          <button
+            onClick={async () => {
+              if (!confirm('Supprimer définitivement cette procédure ? Tous les overrides liés seront aussi supprimés.')) return;
+              try {
+                await api.delete(`/procedures/${id}/default`);
+                router.push('/admin/procedures');
+              } catch (err: any) {
+                setError(err.response?.data?.message || 'Erreur lors de la suppression.');
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors"
+            style={{ border: '1px solid #DEE2E6', color: '#C0392B' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+            Supprimer
+          </button>
           <button onClick={handleSave} disabled={saving}
             className="flex items-center gap-2 px-4 py-2 rounded text-white text-sm font-medium disabled:opacity-50"
             style={{ backgroundColor: '#C0392B' }}
