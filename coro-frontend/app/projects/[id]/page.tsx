@@ -57,6 +57,7 @@ export default function ProjectDetailPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [hasPlans, setHasPlans] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
+  const [validations, setValidations] = useState<any[]>([]);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -79,6 +80,13 @@ export default function ProjectDetailPage() {
       setProject(projectRes.data);
       setHasDocument(!!docRes.data);
       setHasPlans((plansRes.data || []).length > 0);
+
+      if (docRes.data) {
+        try {
+          const valRes = await api.get(`/generator/validate/${projectId}`);
+          setValidations(valRes.data || []);
+        } catch { setValidations([]); }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -361,17 +369,36 @@ const handleChangeStatus = async (newStatus: string) => {
         <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
           Choisissez les modules à inclure, leur ordre, et la langue du document.
         </p>
+        {validations.some(v => v.level === 'CRITIQUE') && (
+          <div className="rounded p-3 mb-4 flex items-start gap-2"
+            style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+            <span style={{ color: '#C0392B', flexShrink: 0 }}>🔴</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#C0392B' }}>
+                Export bloqué — {validations.filter(v => v.level === 'CRITIQUE').length} erreur(s) critique(s)
+              </p>
+              {validations.filter(v => v.level === 'CRITIQUE').map(v => (
+                <p key={v.id} className="text-xs mt-1" style={{ color: '#922B21' }}>
+                  • {v.message}
+                </p>
+              ))}
+              <p className="text-xs mt-2" style={{ color: '#6C757D' }}>
+                Corrigez ces erreurs dans l'éditeur avant d'exporter.
+              </p>
+            </div>
+          </div>
+        )}
         <button
           onClick={() => setShowExportModal(true)}
-          disabled={!hasDocument}
-          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE')}
+          title={validations.some(v => v.level === 'CRITIQUE') ? 'Corrigez les erreurs critiques avant d\'exporter' : ''}
+          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            backgroundColor: hasDocument ? '#C0392B' : '#F8F9FA',
-            color: hasDocument ? '#FFFFFF' : '#ADB5BD',
-            cursor: hasDocument ? 'pointer' : 'not-allowed',
+            backgroundColor: hasDocument && !validations.some(v => v.level === 'CRITIQUE') ? '#C0392B' : '#F8F9FA',
+            color: hasDocument && !validations.some(v => v.level === 'CRITIQUE') ? '#FFFFFF' : '#ADB5BD',
           }}
-          onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#A93226'; }}
-          onMouseLeave={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#C0392B'; }}
+          onMouseEnter={e => { if (hasDocument && !validations.some(v => v.level === 'CRITIQUE')) e.currentTarget.style.backgroundColor = '#A93226'; }}
+          onMouseLeave={e => { if (hasDocument && !validations.some(v => v.level === 'CRITIQUE')) e.currentTarget.style.backgroundColor = '#C0392B'; }}
         >
           Exporter le document
         </button>
