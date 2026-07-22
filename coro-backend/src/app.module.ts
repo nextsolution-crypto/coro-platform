@@ -22,6 +22,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { ChangelogModule } from './changelog/changelog.module';
 import { ProceduresModule } from './procedures/procedures.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { VersionsModule } from './versions/versions.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { FeedbackModule } from './feedback/feedback.module';
   ChangelogModule,
   ProceduresModule,
   FeedbackModule,
+  VersionsModule,
 ],
   controllers: [AppController],
   providers: [AppService],
