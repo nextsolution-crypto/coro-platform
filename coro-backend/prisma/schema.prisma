@@ -26,6 +26,8 @@ model Organization {
   buildings  Building[]
   projects   Project[]
   procedureOverrides ProcedureOverride[]
+
+  feedbacks   Feedback[]
 }
 
 model User {
@@ -48,6 +50,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   projects  Project[]
+  feedbacks   Feedback[]
 }
 
 enum UserRole {
@@ -324,4 +327,17 @@ model ProcedureOverride {
   project      Project?         @relation(fields: [projectId], references: [id])
 
   @@unique([procedureId, organizationId, projectId])
+}
+
+model Feedback {
+  id             String   @id @default(uuid())
+  category       String   // BUG, SUGGESTION, QUESTION, AUTRE
+  message        String
+  status         String   @default("NOUVEAU") // NOUVEAU, LU, EN_COURS, RESOLU
+  userId         String
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
 }
