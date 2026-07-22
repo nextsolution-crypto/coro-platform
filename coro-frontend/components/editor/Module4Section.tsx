@@ -87,8 +87,9 @@ export default function Module4Section({
                 .filter(id => !autoIds.includes(id))
                 .map(async id => {
                   try {
-                    const r = await api.get(`/procedures/${id}/full`);
-                    return { ...r.data, sectionNumber: '' };
+                    const r = await api.get(`/procedures/${id}`);
+                    const content = r.data?.content;
+                    return content ? { ...content, id, sectionNumber: '' } : null;
                   } catch { return null; }
                 })
             );
@@ -165,20 +166,25 @@ export default function Module4Section({
   }, []);
 
   const handleAddProcedure = useCallback(async (id: string) => {
-  setCustomProcedureIds(prev => [...prev, id]);
-  setIsDirty(true);
-
-  // Charger la procédure COMPLÈTE avec roleSections
-  try {
-    const res = await api.get(`/procedures/${id}/full`);
-    const proc = res.data;
-    if (proc) {
-      setProcedures(prev => [...prev, { ...proc, sectionNumber: '' }]);
+    try {
+      const res = await api.get(`/procedures/${id}`);
+      const proc = res.data?.content;
+      if (proc) {
+        setProcedures(prev => [...prev, { ...proc, id, sectionNumber: '', _isActive: true }]);
+        setCustomProcedureIds(prev => {
+          const updated = [...prev, id];
+          // Sauvegarder immédiatement avec la nouvelle liste
+          api.put(`/projects/${projectId}/module4`, {
+            customProcedureIds: updated,
+            procedureOverrides: { steps: {}, comments: {} },
+          }).catch(err => console.error('Sauvegarde ajout procédure:', err));
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error('Erreur chargement procédure complète:', err);
     }
-  } catch (err) {
-    console.error('Erreur chargement procédure complète:', err);
-  }
-}, []);
+  }, [projectId]);
 
 const handleToggleActive = useCallback(async (id: string, active: boolean) => {
     try {
@@ -321,21 +327,43 @@ const handleToggleActive = useCallback(async (id: string, active: boolean) => {
           </button>
         </div>
       ) : (
-        procedures.map(procedure => (
-          <Module4ProcedureCard
-            key={procedure.id}
-            procedure={procedure}
-            projectId={projectId}
-            isActive={(procedure as any)._isActive !== false}
-            onToggleActive={handleToggleActive}
-            language={language}
-            overrides={overrides}
-            comments={comments}
-            onOverride={handleOverride}
-            onComment={handleComment}
-            defaultExpanded={false}
-          />
-        ))
+        (() => {
+          // Les procédures générées ont déjà leur sectionNumber
+          // On calcule seulement pour celles qui n'en ont pas
+          const maxExisting = procedures.reduce((max, p) => {
+            if (!p.sectionNumber) return max;
+            const num = parseInt(p.sectionNumber.split('.')[1] || '0');
+            return num > max ? num : max;
+          }, 0);
+
+          let extraCounter = maxExisting;
+
+          return procedures.map(procedure => {
+            const isP001 = (procedure as any).code === 'P001';
+            let sectionNumber = procedure.sectionNumber;
+
+            if (!isP001 && !sectionNumber) {
+              extraCounter++;
+              sectionNumber = `4.${extraCounter}`;
+            }
+
+            return (
+              <Module4ProcedureCard
+                key={procedure.id}
+                procedure={{ ...procedure, sectionNumber: isP001 ? '' : sectionNumber }}
+                projectId={projectId}
+                isActive={(procedure as any)._isActive !== false}
+                onToggleActive={handleToggleActive}
+                language={language}
+                overrides={overrides}
+                comments={comments}
+                onOverride={handleOverride}
+                onComment={handleComment}
+                defaultExpanded={false}
+              />
+            );
+          });
+        })()
       )}
 
       {/* Modal bibliothèque */}

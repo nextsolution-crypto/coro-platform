@@ -53,8 +53,19 @@ export default function Module4Library({
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get('/procedures/library');
-        setProcedures(res.data.procedures || []);
+        const res = await api.get('/procedures');
+        setProcedures((res.data || []).map((p: any) => ({
+          id: p.id,
+          code: p.content?.code || p.code,
+          titleFR: p.content?.titleFR || '',
+          titleEN: p.content?.titleEN || '',
+          icon: p.content?.icon,
+          headerColor: p.content?.headerColor || '#7F8C8D',
+          activationRule: p.content?.activationRule || 'always',
+          documentTypes: p.content?.documentTypes || [],
+          phase: p.content?.phase,
+          roleCount: (p.content?.roleSections || []).length,
+        })));
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
