@@ -137,4 +137,13 @@ export class ProceduresService {
   async restore(id: string, organizationId: string) {
     return this.restoreForProject(id, organizationId, 'org-level');
   }
+
+  // ── Supprimer une procédure par défaut (SUPER_ADMIN) ───────
+  async deleteDefault(id: string) {
+    const proc = await this.prisma.procedureDefault.findUnique({ where: { id } });
+    if (!proc) throw new NotFoundException('Procédure introuvable');
+
+    await this.prisma.procedureOverride.deleteMany({ where: { procedureId: id } });
+    return this.prisma.procedureDefault.delete({ where: { id } });
+  }
 }

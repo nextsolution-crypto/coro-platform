@@ -3,8 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { generateModule1, DocumentContext } from './module1.templates';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
-import { generateModule4, getActiveProcedures } from './module4.templates';
+import { generateModule4, getActiveProcedures, getAllProcedures } from './module4.templates';
 import { generateModule8 } from './module8.templates';
+
 
 @Injectable()
 export class GeneratorService {
@@ -53,7 +54,23 @@ private async loadProceduresFromDB(
           ),
         }));
 
-      // Procédures custom = ajoutées manuellement
+      // Procédures nouvelles créées en DB (pas dans les fichiers TS) avec activationRule 'always'
+      const tsCodeSet = new Set(autoFromTS.map(p => p?.code));
+      const allTSCodes = new Set(getAllProcedures().map(p => p?.code));
+      const newDefaultProcedures = allProcs
+        .filter(p =>
+          !allTSCodes.has(p.code) &&
+          !customProcedureIds.includes(p.id) &&
+          p.activationRule === 'always'
+        )
+        .map(p => ({
+          ...p,
+          roleSections: (p.roleSections || []).filter((rs: any) =>
+            rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+          ),
+        }));
+
+      // Procédures custom = ajoutées manuellement par l'utilisateur pour ce projet
       const manualProcedures = allProcs
         .filter(p => customProcedureIds.includes(p.id) && !autoIds.has(p.code))
         .map(p => ({
@@ -63,7 +80,7 @@ private async loadProceduresFromDB(
           ),
         }));
 
-      return [...autoProcedures, ...manualProcedures];
+      return [...autoProcedures, ...newDefaultProcedures, ...manualProcedures];
     } catch (err) {
       console.warn('Fallback aux procédures TypeScript:', err);
       return []; // Retourne vide → generateModule4 utilisera le fallback TS

@@ -28,6 +28,15 @@ export class ProceduresController {
     return this.proceduresService.createDefault(body.content);
   }
 
+// ── Supprimer une procédure par défaut (SUPER_ADMIN) ───────
+  @Delete(':id/default')
+  deleteDefault(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Accès réservé au super-administrateur.');
+    }
+    return this.proceduresService.deleteDefault(id);
+  }
+
   // ── Une procédure (avec override projet ou org si applicable) ──
   @Get(':id')
   findOne(@Param('id') id: string, @Query('projectId') projectId: string, @Request() req: any) {
