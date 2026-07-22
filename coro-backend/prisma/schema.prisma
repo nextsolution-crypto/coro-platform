@@ -132,6 +132,7 @@ model Project {
   module7             Module7Data?
   revisionHistory     RevisionHistory[]
   procedureOverrides  ProcedureOverride[]
+  projectVersions     ProjectVersion[]
 }
 
 model RevisionHistory {
@@ -340,4 +341,15 @@ model Feedback {
 
   user         User         @relation(fields: [userId], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model ProjectVersion {
+  id          String   @id @default(uuid())
+  projectId   String
+  versionNumber Int
+  label       String?
+  snapshot    Json     // Contenu complet du document à ce moment
+  createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id])
 }
