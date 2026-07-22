@@ -1,11 +1,15 @@
 import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GeneratorService } from './generator.service';
+import { ValidationService } from './validation.service';
 
 @Controller('generator')
 @UseGuards(AuthGuard('jwt'))
 export class GeneratorController {
-  constructor(private generatorService: GeneratorService) {}
+  constructor(
+    private generatorService: GeneratorService,
+    private validationService: ValidationService,
+  ) {}
 
   @Post('generate/:projectId')
   generate(@Param('projectId') projectId: string, @Body() config: any, @Request() req: any) {
@@ -18,15 +22,20 @@ export class GeneratorController {
   }
 
   @Put('document/:documentId/module/:moduleId/section/:sectionId')
-updateSection(
-  @Param('documentId') documentId: string,
-  @Param('moduleId') moduleId: string,
-  @Param('sectionId') sectionId: string,
-  @Body() body: { content: string; language?: string },
-  @Request() req: any,
-) {
-  return this.generatorService.updateModuleContent(
-    documentId, moduleId, sectionId, body.content, body.language || 'fr', req.user.organizationId
-  );
-}
+  updateSection(
+    @Param('documentId') documentId: string,
+    @Param('moduleId') moduleId: string,
+    @Param('sectionId') sectionId: string,
+    @Body() body: { content: string; language?: string },
+    @Request() req: any,
+  ) {
+    return this.generatorService.updateModuleContent(
+      documentId, moduleId, sectionId, body.content, body.language || 'fr', req.user.organizationId
+    );
+  }
+
+  @Get('validate/:projectId')
+  validate(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.validationService.validate(projectId, req.user.organizationId);
+  }
 }
