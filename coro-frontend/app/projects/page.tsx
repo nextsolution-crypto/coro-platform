@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -13,9 +13,17 @@ interface Project {
   status: string;
   year: number;
   progress: number;
+  updatedAt: string;
   client: { id: string; name: string };
   building: { id: string; name: string; address: string };
   user: { id: string; firstName: string; lastName: string };
+  lastEditedBy?: { id: string; firstName: string; lastName: string } | null;
+}
+
+interface OrgUser {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface Client   { id: string; name: string; }
@@ -31,27 +39,32 @@ const statusColors: Record<string, { bg: string; text: string; border: string }>
 };
 
 const statusLabels: Record<string, string> = {
-  DRAFT:       'Brouillon',
-  IN_PROGRESS: 'En cours',
-  REVIEW:      'En révision',
-  VALIDATED:   'Validé',
-  EXPORTED:    'Exporté',
-  ARCHIVED:    'Archivé',
+  DRAFT: 'Brouillon', IN_PROGRESS: 'En cours', REVIEW: 'En révision',
+  VALIDATED: 'Validé', EXPORTED: 'Exporté', ARCHIVED: 'Archivé',
 };
 
 const docTypeColors: Record<string, string> = {
-  PSI: '#C0392B',
-  PMU: '#2980B9',
-  PCA: '#27AE60',
-  PGC: '#8E44AD',
-  PRA: '#F39C12',
-  PUE: '#E67E22',
+  PSI: '#C0392B', PMU: '#2980B9', PCA: '#27AE60',
+  PGC: '#8E44AD', PRA: '#F39C12', PUE: '#E67E22',
 };
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'à l\'instant';
+  if (mins < 60) return `il y a ${mins} min`;
+  if (hours < 24) return `il y a ${hours}h`;
+  return `il y a ${days}j`;
+}
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { isAuthenticated, initAuth } = useAuthStore();
+  const { user, isAuthenticated, initAuth } = useAuthStore();
+
   const [projects, setProjects]               = useState<Project[]>([]);
+  const [orgUsers, setOrgUsers]               = useState<OrgUser[]>([]);
   const [clients, setClients]                 = useState<Client[]>([]);
   const [buildings, setBuildings]             = useState<Building[]>([]);
   const [filteredBuildings, setFilteredBuildings] = useState<Building[]>([]);
@@ -59,6 +72,7 @@ export default function ProjectsPage() {
   const [showModal, setShowModal]             = useState(false);
   const [activeTab, setActiveTab]             = useState<'actifs' | 'archives'>('actifs');
   const [maxProjects, setMaxProjects]         = useState<number | null>(null);
+  const [userFilter, setUserFilter]           = useState<string>('tous');
   const [form, setForm] = useState({
     name: '', documentType: '',
     year: new Date().getFullYear().toString(),
@@ -66,15 +80,20 @@ export default function ProjectsPage() {
   });
 
   const documentTypes = ['PSI', 'PMU', 'PCA', 'PGC', 'PRA', 'PUE'];
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
-    if (isAuthenticated) fetchData();
-    else {
+    if (isAuthenticated) {
+      fetchData();
+      // Polling toutes les 30 secondes pour détecter les modifications d'autres utilisateurs
+      pollRef.current = setInterval(() => fetchProjectsOnly(), 30000);
+    } else {
       const token = localStorage.getItem('coro_token');
       if (!token) router.push('/login');
     }
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -84,17 +103,26 @@ export default function ProjectsPage() {
     }
   }, [form.clientId, buildings]);
 
+  const fetchProjectsOnly = async () => {
+    try {
+      const res = await api.get('/projects');
+      setProjects(res.data);
+    } catch (err) { console.error(err); }
+  };
+
   const fetchData = async () => {
     try {
-      const [pr, cl, bl, orgRes] = await Promise.all([
+      const [pr, cl, bl, orgRes, usersRes] = await Promise.all([
         api.get('/projects'),
         api.get('/clients'),
         api.get('/buildings'),
         api.get('/organizations/me/info').catch(() => ({ data: null })),
+        api.get('/users/organization').catch(() => ({ data: [] })),
       ]);
       setProjects(pr.data);
       setClients(cl.data);
       setBuildings(bl.data);
+      setOrgUsers(usersRes.data || []);
 
       if (orgRes.data) {
         const limits: Record<string, number | null> = {
@@ -106,9 +134,15 @@ export default function ProjectsPage() {
     finally { setLoading(false); }
   };
 
-const visibleProjects = projects.filter(p =>
-    activeTab === 'archives' ? p.status === 'ARCHIVED' : p.status !== 'ARCHIVED'
-  );
+  // Filtres combinés
+  const visibleProjects = projects.filter(p => {
+    const archiveMatch = activeTab === 'archives' ? p.status === 'ARCHIVED' : p.status !== 'ARCHIVED';
+    const userMatch =
+      userFilter === 'tous' ? true :
+      userFilter === 'moi' ? p.user.id === user?.id :
+      p.user.id === userFilter;
+    return archiveMatch && userMatch;
+  });
 
   const handleReactivate = async (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -131,7 +165,7 @@ const visibleProjects = projects.filter(p =>
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Projets
@@ -143,7 +177,6 @@ const visibleProjects = projects.filter(p =>
         <button
           onClick={() => setShowModal(true)}
           disabled={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects}
-          title={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects ? `Limite de ${maxProjects} projet(s) atteinte pour votre licence` : ''}
           className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => { if (!(maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
@@ -154,14 +187,54 @@ const visibleProjects = projects.filter(p =>
       </div>
 
       {maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects && (
-        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+        <div className="rounded-md p-4 mb-4 flex items-center gap-3"
           style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
           <span style={{ color: '#F39C12', fontSize: '18px' }}>⚠</span>
           <p className="text-sm" style={{ color: '#7D6608' }}>
-            Vous avez atteint la limite de projets pour votre licence actuelle. Contactez CORO pour mettre à niveau votre abonnement.
+            Vous avez atteint la limite de projets pour votre licence actuelle. Contactez CORO pour mettre à niveau.
           </p>
         </div>
       )}
+
+      {/* Filtres par utilisateur */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          onClick={() => setUserFilter('tous')}
+          className="px-3 py-1.5 text-xs rounded-full font-medium transition-colors"
+          style={{
+            backgroundColor: userFilter === 'tous' ? '#2C3E50' : '#F8F9FA',
+            color: userFilter === 'tous' ? '#FFFFFF' : '#6C757D',
+            border: `1px solid ${userFilter === 'tous' ? '#2C3E50' : '#DEE2E6'}`,
+          }}
+        >
+          Tous les projets ({projects.filter(p => p.status !== 'ARCHIVED').length})
+        </button>
+        <button
+          onClick={() => setUserFilter('moi')}
+          className="px-3 py-1.5 text-xs rounded-full font-medium transition-colors"
+          style={{
+            backgroundColor: userFilter === 'moi' ? '#C0392B' : '#F8F9FA',
+            color: userFilter === 'moi' ? '#FFFFFF' : '#6C757D',
+            border: `1px solid ${userFilter === 'moi' ? '#C0392B' : '#DEE2E6'}`,
+          }}
+        >
+          Mes projets ({projects.filter(p => p.user.id === user?.id && p.status !== 'ARCHIVED').length})
+        </button>
+        {orgUsers.filter(u => u.id !== user?.id).map(u => (
+          <button
+            key={u.id}
+            onClick={() => setUserFilter(u.id)}
+            className="px-3 py-1.5 text-xs rounded-full font-medium transition-colors"
+            style={{
+              backgroundColor: userFilter === u.id ? '#2980B9' : '#F8F9FA',
+              color: userFilter === u.id ? '#FFFFFF' : '#6C757D',
+              border: `1px solid ${userFilter === u.id ? '#2980B9' : '#DEE2E6'}`,
+            }}
+          >
+            {u.firstName} {u.lastName} ({projects.filter(p => p.user.id === u.id && p.status !== 'ARCHIVED').length})
+          </button>
+        ))}
+      </div>
 
       {/* Onglets Actifs / Archivés */}
       <div className="flex gap-1 mb-6" style={{ borderBottom: '1px solid #E9ECEF' }}>
@@ -169,58 +242,45 @@ const visibleProjects = projects.filter(p =>
           { key: 'actifs', label: 'Actifs' },
           { key: 'archives', label: 'Archivés' },
         ] as const).map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className="px-4 py-2.5 text-sm font-medium transition-colors"
             style={{
               color: activeTab === tab.key ? '#C0392B' : '#6C757D',
               borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent',
-            }}
-          >
+            }}>
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Contenu */}
+      {/* Liste projets */}
       {loading ? (
         <div className="text-center py-12">
-          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>
-            Chargement...
-          </p>
+          <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
         </div>
       ) : visibleProjects.length === 0 ? (
         <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
-            Aucun projet pour l'instant
-          </p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="text-white text-sm font-medium px-4 py-2 rounded"
-            style={{ backgroundColor: '#C0392B' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
-          >
-            Créer le premier projet
-          </button>
+          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>Aucun projet dans cette vue</p>
         </div>
       ) : (
         <div className="grid gap-3">
           {visibleProjects.map(project => {
             const sc = statusColors[project.status] || statusColors.DRAFT;
             const dc = docTypeColors[project.documentType] || '#6C757D';
+            const isMyProject = project.user.id === user?.id;
+            const lastEditor = project.lastEditedBy;
+            const wasRecentlyEdited = project.updatedAt &&
+              Date.now() - new Date(project.updatedAt).getTime() < 5 * 60 * 1000; // 5 min
+
             return (
-              <div
-                key={project.id}
+              <div key={project.id}
                 onClick={() => router.push(`/projects/${project.id}`)}
                 className="rounded-md p-5 cursor-pointer transition-all"
                 style={{
                   backgroundColor: '#FFFFFF',
-                  border: '1px solid #E9ECEF',
+                  border: `1px solid ${wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF'}`,
                   boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                  position: 'relative',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
@@ -228,35 +288,32 @@ const visibleProjects = projects.filter(p =>
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                  e.currentTarget.style.borderColor = '#E9ECEF';
-                }}
-              >
+                  e.currentTarget.style.borderColor = wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF';
+                }}>
+
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <span
-                      className="text-white text-xs font-bold px-2.5 py-1 rounded"
-                      style={{ backgroundColor: dc }}
-                    >
+                    <span className="text-white text-xs font-bold px-2.5 py-1 rounded"
+                      style={{ backgroundColor: dc }}>
                       {project.documentType}
                     </span>
                     <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
                       {project.name}
                     </h3>
+                    {!isMyProject && (
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}>
+                        {project.user.firstName} {project.user.lastName}
+                      </span>
+                    )}
                   </div>
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{
-                      backgroundColor: sc.bg,
-                      color: sc.text,
-                      border: `1px solid ${sc.border}`,
-                    }}
-                  >
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                     {statusLabels[project.status]}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 text-sm mb-4"
-                  style={{ color: '#6C757D' }}>
+                <div className="flex items-center gap-3 text-sm mb-3" style={{ color: '#6C757D' }}>
                   <span>{project.client.name}</span>
                   <span style={{ color: '#DEE2E6' }}>•</span>
                   <span>{project.building.name}</span>
@@ -264,38 +321,53 @@ const visibleProjects = projects.filter(p =>
                   <span>{project.year}</span>
                 </div>
 
-                <div>
+                {/* Barre de progression */}
+                <div className="mb-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: '#ADB5BD' }}>
-                      Progression
-                    </span>
-                    <span className="text-xs font-medium" style={{ color: '#6C757D' }}>
-                      {project.progress}%
-                    </span>
+                    <span className="text-xs" style={{ color: '#ADB5BD' }}>Progression</span>
+                    <span className="text-xs font-medium" style={{ color: '#6C757D' }}>{project.progress}%</span>
                   </div>
-                  <div className="w-full rounded-full h-1.5"
-                    style={{ backgroundColor: '#E9ECEF' }}>
-                    <div
-                      className="h-1.5 rounded-full transition-all"
+                  <div className="w-full rounded-full h-1.5" style={{ backgroundColor: '#E9ECEF' }}>
+                    <div className="h-1.5 rounded-full transition-all"
                       style={{
                         width: `${project.progress}%`,
                         backgroundColor: project.progress === 100 ? '#27AE60' : '#C0392B',
-                      }}
-                    />
+                      }} />
                   </div>
                 </div>
 
-                {activeTab === 'archives' && (
-                  <button
-                    onClick={e => handleReactivate(project.id, e)}
-                    className="mt-3 text-xs font-medium px-3 py-1.5 rounded transition-colors"
-                    style={{ border: '1px solid #DEE2E6', color: '#27AE60' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    Réactiver
-                  </button>
-                )}
+                {/* Dernière modification */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    {wasRecentlyEdited && lastEditor && lastEditor.id !== user?.id ? (
+                      <span className="flex items-center gap-1.5 text-xs"
+                        style={{ color: '#2980B9' }}>
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse"
+                          style={{ backgroundColor: '#2980B9' }} />
+                        {lastEditor.firstName} {lastEditor.lastName} travaille dans ce projet
+                      </span>
+                    ) : lastEditor ? (
+                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                        Modifié par {lastEditor.firstName} {lastEditor.lastName} — {timeAgo(project.updatedAt)}
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                        Créé par {project.user.firstName} {project.user.lastName}
+                      </span>
+                    )}
+                  </div>
+
+                  {activeTab === 'archives' && (
+                    <button
+                      onClick={e => handleReactivate(project.id, e)}
+                      className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                      style={{ border: '1px solid #DEE2E6', color: '#27AE60' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      Réactiver
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -307,10 +379,7 @@ const visibleProjects = projects.filter(p =>
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <div className="w-full max-w-lg rounded-md p-8"
-            style={{
-              backgroundColor: '#FFFFFF',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-            }}>
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Nouveau projet
             </h3>
@@ -320,114 +389,75 @@ const visibleProjects = projects.filter(p =>
                 { label: 'Année *', key: 'year', type: 'number', placeholder: '' },
               ].map(field => (
                 <div key={field.key}>
-                  <label className="block text-sm font-medium mb-1.5"
-                    style={{ color: '#495057' }}>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                     {field.label}
                   </label>
-                  <input
-                    type={field.type}
+                  <input type={field.type}
                     value={form[field.key as keyof typeof form]}
                     onChange={e => setForm({ ...form, [field.key]: e.target.value })}
-                    placeholder={field.placeholder}
-                    required
+                    placeholder={field.placeholder} required
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
-                    style={{
-                      border: '1px solid #CED4DA',
-                      color: '#2C3E50',
-                      backgroundColor: '#FFFFFF',
-                    }}
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
-                  />
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                 </div>
               ))}
 
-              {/* Type document */}
               <div>
-                <label className="block text-sm font-medium mb-1.5"
-                  style={{ color: '#495057' }}>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                   Type de document *
                 </label>
-                <select
-                  value={form.documentType}
-                  onChange={e => setForm({ ...form, documentType: e.target.value })}
-                  required
+                <select value={form.documentType}
+                  onChange={e => setForm({ ...form, documentType: e.target.value })} required
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
-                >
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}>
                   <option value="">Sélectionner un type</option>
-                  {documentTypes.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
+                  {documentTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
 
-              {/* Client */}
               <div>
-                <label className="block text-sm font-medium mb-1.5"
-                  style={{ color: '#495057' }}>
-                  Client *
-                </label>
-                <select
-                  value={form.clientId}
-                  onChange={e => setForm({ ...form, clientId: e.target.value })}
-                  required
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Client *</label>
+                <select value={form.clientId}
+                  onChange={e => setForm({ ...form, clientId: e.target.value })} required
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
-                >
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}>
                   <option value="">Sélectionner un client</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
 
-              {/* Bâtiment */}
               <div>
-                <label className="block text-sm font-medium mb-1.5"
-                  style={{ color: '#495057' }}>
-                  Bâtiment *
-                </label>
-                <select
-                  value={form.buildingId}
-                  onChange={e => setForm({ ...form, buildingId: e.target.value })}
-                  required
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Bâtiment *</label>
+                <select value={form.buildingId}
+                  onChange={e => setForm({ ...form, buildingId: e.target.value })} required
                   disabled={!form.clientId}
-                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none
-                    disabled:opacity-50"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none disabled:opacity-50"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
-                  onBlur={e => e.target.style.borderColor = '#CED4DA'}
-                >
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'}>
                   <option value="">Sélectionner un bâtiment</option>
-                  {filteredBuildings.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
+                  {filteredBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
+                <button type="button" onClick={() => setShowModal(false)}
                   className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                   Annuler
                 </button>
-                <button
-                  type="submit"
+                <button type="submit"
                   className="flex-1 text-white font-medium py-2.5 rounded text-sm"
                   style={{ backgroundColor: '#C0392B' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
-                >
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}>
                   Créer
                 </button>
               </div>
