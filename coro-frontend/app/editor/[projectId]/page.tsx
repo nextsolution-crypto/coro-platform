@@ -104,6 +104,7 @@ export default function EditorPage() {
   const [saving,         setSaving]         = useState(false);
   const [saved,          setSaved]          = useState(false);
   const [isEditing,      setIsEditing]      = useState(false);
+  const [validations,    setValidations]    = useState<any[]>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // ── Init ────────────────────────────────────────────────
@@ -122,6 +123,11 @@ export default function EditorPage() {
     try {
       const res = await api.get(`/generator/document/${projectId}`);
       setDocument(res.data);
+      // Charger les validations en parallèle
+      try {
+        const valRes = await api.get(`/generator/validate/${projectId}`);
+        setValidations(valRes.data || []);
+      } catch { setValidations([]); }
     } catch (err) {
       console.error(err);
       router.push(`/projects/${projectId}`);
@@ -489,11 +495,24 @@ export default function EditorPage() {
               </span>
             </div>
 
-            {modules.map((mod, modIdx) => (
+            {modules.map((mod, modIdx) => {
+              const modValidations = validations.filter(v => v.moduleNumber === mod.moduleNumber);
+              const hasCritique = modValidations.some(v => v.level === 'CRITIQUE');
+              const hasErreur = modValidations.some(v => v.level === 'ERREUR');
+              const hasAvert = modValidations.some(v => v.level === 'AVERTISSEMENT');
+              const badgeColor = hasCritique ? '#C0392B' : hasErreur ? '#E74C3C' : hasAvert ? '#F39C12' : undefined;
+              const badgeLabel = hasCritique ? '●' : hasErreur ? '●' : hasAvert ? '●' : undefined;
+
+              return (
               <div key={mod.moduleNumber} className="mb-2">
-                <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1"
+                <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between"
                   style={{ color: activeModule === modIdx ? '#C0392B' : '#ADB5BD' }}>
-                  M{mod.moduleNumber} — {mod.title}
+                  <span>M{mod.moduleNumber} — {mod.title}</span>
+                  {badgeLabel && (
+                    <span className="text-xs" style={{ color: badgeColor }} title={`${modValidations.length} validation(s)`}>
+                      {badgeLabel}
+                    </span>
+                  )}
                 </div>
 
                 {/* Modules spéciaux — bouton unique */}
@@ -536,7 +555,8 @@ export default function EditorPage() {
                   );
                 })}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -544,6 +564,36 @@ export default function EditorPage() {
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#F8F9FA' }}>
           {(currentSection || isSpecialModule) && (
             <div className="max-w-4xl mx-auto p-8">
+              {/* Résumé validations */}
+              {validations.length > 0 && (
+                <div className="rounded-md p-4 mb-6"
+                  style={{
+                    backgroundColor: validations.some(v => v.level === 'CRITIQUE') ? '#FDEDEC' : '#FEF9E7',
+                    border: `1px solid ${validations.some(v => v.level === 'CRITIQUE') ? '#F1948A' : '#FAD7A0'}`,
+                  }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold"
+                      style={{ color: validations.some(v => v.level === 'CRITIQUE') ? '#C0392B' : '#F39C12' }}>
+                      {validations.filter(v => v.level === 'CRITIQUE').length > 0 && `${validations.filter(v => v.level === 'CRITIQUE').length} critique(s) `}
+                      {validations.filter(v => v.level === 'ERREUR').length > 0 && `${validations.filter(v => v.level === 'ERREUR').length} erreur(s) `}
+                      {validations.filter(v => v.level === 'AVERTISSEMENT').length > 0 && `${validations.filter(v => v.level === 'AVERTISSEMENT').length} avertissement(s)`}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    {validations.map(v => (
+                      <div key={v.id} className="flex items-start gap-2 text-xs">
+                        <span style={{ color: v.level === 'CRITIQUE' ? '#C0392B' : v.level === 'ERREUR' ? '#E74C3C' : '#F39C12', flexShrink: 0 }}>
+                          {v.level === 'CRITIQUE' ? '🔴' : v.level === 'ERREUR' ? '🟠' : '🟡'}
+                        </span>
+                        <span style={{ color: '#495057' }}>
+                          <strong>{v.level}</strong> — {v.message}
+                          {v.action && <span style={{ color: '#6C757D' }}> → {v.action}</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {renderModuleContent()}
             </div>
           )}
