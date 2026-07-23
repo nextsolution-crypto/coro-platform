@@ -33,6 +33,7 @@ export default function DashboardPage() {
     projetsRecents: [],
   });
   const [loading, setLoading] = useState(true);
+  const [updates, setUpdates] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
@@ -67,6 +68,12 @@ export default function DashboardPage() {
           exportsPDF: 0,
           projetsRecents: recents,
         });
+      // Charger les mises à jour à venir
+        try {
+          const updatesRes = await api.get('/projects/upcoming-updates');
+          setUpdates(updatesRes.data || []);
+        } catch { setUpdates([]); }
+
       } catch (err) {
         console.error('Erreur chargement stats dashboard :', err);
       } finally {
@@ -120,6 +127,68 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+{/* Mises à jour à venir */}
+      {updates.length > 0 && (
+        <div className="rounded-md p-6 mb-6"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: `1px solid ${updates.some(u => u.level === 'URGENT') ? '#F1948A' : '#FAD7A0'}`,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+          }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: '18px' }}>🔔</span>
+              <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+                Mises à jour à venir
+              </h3>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{
+                  backgroundColor: updates.some(u => u.level === 'URGENT') ? '#FDEDEC' : '#FEF9E7',
+                  color: updates.some(u => u.level === 'URGENT') ? '#C0392B' : '#F39C12',
+                }}>
+                {updates.length} document{updates.length > 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {updates.map(u => (
+              <div key={u.id}
+                onClick={() => router.push(`/projects/${u.id}`)}
+                className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                style={{
+                  backgroundColor: u.level === 'URGENT' ? '#FDEDEC' : '#FEF9E7',
+                  border: `1px solid ${u.level === 'URGENT' ? '#F1948A' : '#FAD7A0'}`,
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
+                    style={{ backgroundColor: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
+                    {u.documentType}
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{u.name}</p>
+                    <p className="text-xs" style={{ color: '#6C757D' }}>
+                      {u.clientName} — {u.buildingName}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold"
+                    style={{ color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
+                    {u.monthsAgo} mois
+                  </p>
+                  <p className="text-xs" style={{ color: '#6C757D' }}>
+                    {u.level === 'URGENT' ? '⚠ À renouveler' : '○ Bientôt dû'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Projets récents */}
       <div className="rounded-md p-6"
