@@ -53,11 +53,11 @@ export default function ProjectDetailPage() {
   const [generating,  setGenerating]  = useState(false);
   const [hasDocument, setHasDocument] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
-  const [exportingTest, setExportingTest] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [hasPlans, setHasPlans] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
   const [validations, setValidations] = useState<any[]>([]);
+  const [qualityScore, setQualityScore] = useState<any>(null);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -83,8 +83,12 @@ export default function ProjectDetailPage() {
 
       if (docRes.data) {
         try {
-          const valRes = await api.get(`/generator/validate/${projectId}`);
+          const [valRes, scoreRes] = await Promise.all([
+            api.get(`/generator/validate/${projectId}`),
+            api.get(`/projects/${projectId}/quality-score`),
+          ]);
           setValidations(valRes.data || []);
+          setQualityScore(scoreRes.data || null);
         } catch { setValidations([]); }
       }
     } catch (err) {
@@ -122,33 +126,6 @@ const handleChangeStatus = async (newStatus: string) => {
       alert('Erreur lors de la génération.');
     } finally {
       setGenerating(false);
-    }
-  };
-
-  const handleTestExport = async () => {
-    setExportingTest(true);
-    try {
-      const res = await api.post(
-        `/projects/${projectId}/export`,
-        {
-          selectedModules: [1, 2, 3, 4, 6, 7, 8],
-          moduleOrder: [1, 2, 3, 4, 6, 7, 8],
-          language: 'fr',
-        },
-        { responseType: 'blob' }
-      );
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${project?.name || 'document'}-TEST.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error(err);
-      alert('Erreur lors de l\'export PDF de test.');
-    } finally {
-      setExportingTest(false);
     }
   };
 
@@ -355,6 +332,72 @@ const handleChangeStatus = async (newStatus: string) => {
           </div>
         ))}
       </div>
+
+{/* Score de qualité */}
+      {qualityScore && (
+        <div className="rounded-md p-6 mb-6"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Score de qualité documentaire</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-3xl font-black"
+                style={{
+                  color: qualityScore.level === 'EXCELLENT' ? '#27AE60' :
+                         qualityScore.level === 'BON' ? '#2980B9' :
+                         qualityScore.level === 'A_AMELIORER' ? '#F39C12' : '#C0392B',
+                }}>
+                {qualityScore.score}
+              </span>
+              <span className="text-sm" style={{ color: '#ADB5BD' }}>/100</span>
+              <span className="text-sm font-bold px-3 py-1 rounded-full"
+                style={{
+                  backgroundColor: qualityScore.level === 'EXCELLENT' ? '#EAFAF1' :
+                                   qualityScore.level === 'BON' ? '#EBF5FB' :
+                                   qualityScore.level === 'A_AMELIORER' ? '#FEF9E7' : '#FDEDEC',
+                  color: qualityScore.level === 'EXCELLENT' ? '#27AE60' :
+                         qualityScore.level === 'BON' ? '#2980B9' :
+                         qualityScore.level === 'A_AMELIORER' ? '#F39C12' : '#C0392B',
+                }}>
+                {qualityScore.level === 'EXCELLENT' ? '⭐ Excellent' :
+                 qualityScore.level === 'BON' ? '✓ Bon' :
+                 qualityScore.level === 'A_AMELIORER' ? '⚠ À améliorer' : '✗ Incomplet'}
+              </span>
+            </div>
+          </div>
+
+          {/* Barre globale */}
+          <div className="w-full rounded-full h-2 mb-5" style={{ backgroundColor: '#E9ECEF' }}>
+            <div className="h-2 rounded-full transition-all"
+              style={{
+                width: `${qualityScore.score}%`,
+                backgroundColor: qualityScore.level === 'EXCELLENT' ? '#27AE60' :
+                                 qualityScore.level === 'BON' ? '#2980B9' :
+                                 qualityScore.level === 'A_AMELIORER' ? '#F39C12' : '#C0392B',
+              }} />
+          </div>
+
+          {/* Détail des critères */}
+          <div className="space-y-2">
+            {qualityScore.details?.map((d: any) => (
+              <div key={d.label} className="flex items-center justify-between py-2"
+                style={{ borderBottom: '1px solid #F8F9FA' }}>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: d.ok ? '#27AE60' : d.earned > 0 ? '#F39C12' : '#C0392B', fontSize: '13px' }}>
+                    {d.ok ? '✓' : d.earned > 0 ? '◐' : '✗'}
+                  </span>
+                  <span className="text-sm" style={{ color: d.ok ? '#2C3E50' : '#6C757D' }}>
+                    {d.label}
+                  </span>
+                </div>
+                <span className="text-xs font-bold"
+                  style={{ color: d.ok ? '#27AE60' : d.earned > 0 ? '#F39C12' : '#ADB5BD' }}>
+                  {d.earned}/{d.points} pts
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Export PDF */}
       <div className="rounded-md p-6 mb-6"
