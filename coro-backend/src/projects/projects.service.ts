@@ -93,4 +93,53 @@ export class ProjectsService {
       throw new ForbiddenException('Accès refusé à cette ressource.');
     }
   }
+  async findUpcomingUpdates(organizationId: string) {
+    const projects = await this.prisma.project.findMany({
+      where: { organizationId, isActive: true, status: { not: 'ARCHIVED' } },
+      include: {
+        client: { select: { name: true } },
+        building: { select: { name: true } },
+        documents: {
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+          select: { updatedAt: true, version: true },
+        },
+      },
+    });
+
+    const now = new Date();
+    const results: {
+      id: string;
+      name: string;
+      documentType: string;
+      clientName: string;
+      buildingName: string;
+      lastUpdated: Date;
+      monthsAgo: number;
+      level: string;
+    }[] = [];
+
+    for (const project of projects) {
+      const lastDoc = project.documents[0];
+      if (!lastDoc) continue;
+
+      const monthsAgo = (now.getTime() - new Date(lastDoc.updatedAt).getTime())
+        / (1000 * 60 * 60 * 24 * 30.44);
+
+      if (monthsAgo >= 10) {
+        results.push({
+          id: project.id,
+          name: project.name,
+          documentType: project.documentType,
+          clientName: project.client.name,
+          buildingName: project.building.name,
+          lastUpdated: lastDoc.updatedAt,
+          monthsAgo: Math.floor(monthsAgo),
+          level: monthsAgo >= 12 ? 'URGENT' : 'AVERTISSEMENT',
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.monthsAgo - a.monthsAgo);
+  }
 }

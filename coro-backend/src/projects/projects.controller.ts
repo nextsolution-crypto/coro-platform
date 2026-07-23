@@ -12,6 +12,11 @@ export class ProjectsController {
     return this.projectsService.findAll(req.user.organizationId);
   }
 
+  @Get('upcoming-updates')
+  findUpcomingUpdates(@Request() req: any) {
+    return this.projectsService.findUpcomingUpdates(req.user.organizationId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.projectsService.findOne(id, req.user.organizationId);
