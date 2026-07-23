@@ -287,4 +287,51 @@ export class ProjectsService {
       return order[a.complianceStatus] - order[b.complianceStatus];
     });
   }
+  async submitForApproval(id: string, organizationId: string, userId: string) {
+    await this.assertOwnership(id, organizationId);
+    return this.prisma.project.update({
+      where: { id },
+      data: { status: 'REVIEW', submittedById: userId },
+    });
+  }
+
+  async approve(id: string, organizationId: string, userId: string, comment?: string) {
+    const project = await this.prisma.project.findFirst({ where: { id, organizationId } });
+    if (!project) throw new ForbiddenException('Accès refusé.');
+    if (project.submittedById === userId) {
+      throw new ForbiddenException('Vous ne pouvez pas approuver un document que vous avez soumis.');
+    }
+    return this.prisma.project.update({
+      where: { id },
+      data: { status: 'VALIDATED' },
+    });
+  }
+
+  async reject(id: string, organizationId: string, userId: string, comment?: string) {
+    const project = await this.prisma.project.findFirst({ where: { id, organizationId } });
+    if (!project) throw new ForbiddenException('Accès refusé.');
+    if (project.submittedById === userId) {
+      throw new ForbiddenException('Vous ne pouvez pas rejeter un document que vous avez soumis.');
+    }
+    return this.prisma.project.update({
+      where: { id },
+      data: { status: 'IN_PROGRESS', submittedById: null },
+    });
+  }
+
+  async findPendingApproval(organizationId: string, userId: string) {
+    return this.prisma.project.findMany({
+      where: {
+        organizationId,
+        status: 'REVIEW',
+        submittedById: { not: userId },
+      },
+      include: {
+        client: { select: { name: true } },
+        building: { select: { name: true } },
+        submittedBy: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
 }

@@ -63,8 +63,69 @@ export class ProjectsController {
     return result;
   }
 
+  @Get('pending-approval')
+  findPendingApproval(@Request() req: any) {
+    return this.projectsService.findPendingApproval(req.user.organizationId, req.user.userId);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
     return this.projectsService.remove(id, req.user.organizationId);
+  }
+
+  @Post(':id/submit')
+  async submit(@Param('id') id: string, @Request() req: any) {
+    const result = await this.projectsService.submitForApproval(id, req.user.organizationId, req.user.userId);
+    await this.auditService.log({
+      action: 'STATUS_CHANGE',
+      entityType: 'PROJECT',
+      entityId: id,
+      projectId: id,
+      description: 'Document soumis pour approbation',
+      metadata: { newStatus: 'REVIEW' },
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+    });
+    return result;
+  }
+
+  @Post(':id/approve')
+  async approve(
+    @Param('id') id: string,
+    @Body() body: { comment?: string },
+    @Request() req: any,
+  ) {
+    const result = await this.projectsService.approve(id, req.user.organizationId, req.user.userId, body.comment);
+    await this.auditService.log({
+      action: 'STATUS_CHANGE',
+      entityType: 'PROJECT',
+      entityId: id,
+      projectId: id,
+      description: `Document approuvé${body.comment ? ` — "${body.comment}"` : ''}`,
+      metadata: { newStatus: 'VALIDATED', comment: body.comment },
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+    });
+    return result;
+  }
+
+  @Post(':id/reject')
+  async reject(
+    @Param('id') id: string,
+    @Body() body: { comment: string },
+    @Request() req: any,
+  ) {
+    const result = await this.projectsService.reject(id, req.user.organizationId, req.user.userId, body.comment);
+    await this.auditService.log({
+      action: 'STATUS_CHANGE',
+      entityType: 'PROJECT',
+      entityId: id,
+      projectId: id,
+      description: `Document rejeté — "${body.comment}"`,
+      metadata: { newStatus: 'IN_PROGRESS', comment: body.comment },
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+    });
+    return result;
   }
 }
