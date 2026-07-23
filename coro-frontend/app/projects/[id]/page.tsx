@@ -70,7 +70,7 @@ export default function ProjectDetailPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
 
-  const [showApprovalModal, setShowApprovalModal] = useState<'approve' | 'reject' | null>(null);
+  const [showApprovalModal, setShowApprovalModal] = useState<'approve' | 'reject' | 'request-revision' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
   const [processingApproval, setProcessingApproval] = useState(false);
 
@@ -174,15 +174,17 @@ const handleChangeStatus = async (newStatus: string) => {
     finally { setLoadingAudit(false); }
   };
 
-  const handleApproval = async (action: 'submit' | 'approve' | 'reject') => {
+  const handleApproval = async (action: 'submit' | 'approve' | 'reject' | 'request-revision') => {
     setProcessingApproval(true);
     try {
       if (action === 'submit') {
         await api.post(`/projects/${projectId}/submit`);
       } else if (action === 'approve') {
         await api.post(`/projects/${projectId}/approve`, { comment: approvalComment });
-      } else {
+      } else if (action === 'reject') {
         await api.post(`/projects/${projectId}/reject`, { comment: approvalComment });
+      } else {
+        await api.post(`/projects/${projectId}/request-revision`, { comment: approvalComment });
       }
       setShowApprovalModal(null);
       setApprovalComment('');
@@ -380,17 +382,28 @@ const handleChangeStatus = async (newStatus: string) => {
       )}
 
       {project.status === 'VALIDATED' && (
-        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+        <div className="rounded-md p-4 mb-6 flex items-center justify-between gap-3"
           style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}>
-          <span style={{ fontSize: '20px' }}>✓</span>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: '#27AE60' }}>
-              Document approuvé et verrouillé
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
-              Ce document a été validé officiellement. Il est en lecture seule.
-            </p>
+          <div className="flex items-center gap-3">
+            <span style={{ fontSize: '20px' }}>✓</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#27AE60' }}>
+                Document approuvé et verrouillé
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                Ce document a été validé officiellement. Il est en lecture seule.
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => setShowApprovalModal('request-revision')}
+            className="text-xs font-medium px-3 py-1.5 rounded transition-colors flex-shrink-0"
+            style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D5F5E3'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            ✏️ Apporter une mise à jour
+          </button>
         </div>
       )}
 
@@ -647,17 +660,23 @@ const handleChangeStatus = async (newStatus: string) => {
           <div className="w-full max-w-md rounded-md p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-2" style={{ color: '#2C3E50' }}>
-              {showApprovalModal === 'approve' ? '✓ Approuver le document' : '✕ Rejeter le document'}
+              {showApprovalModal === 'approve' ? '✓ Approuver le document' :
+               showApprovalModal === 'reject' ? '✕ Rejeter le document' :
+               '✏️ Apporter une mise à jour'}
             </h3>
             <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
               {showApprovalModal === 'approve'
                 ? 'Le document sera verrouillé en lecture seule après approbation.'
-                : 'Le document retournera en statut "En cours" pour modification.'}
+                : showApprovalModal === 'reject'
+                ? 'Le document retournera en statut "En cours" pour modification.'
+                : 'Le document sera déverrouillé pour modification et devra être soumis à nouveau pour approbation.'}
             </p>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
-                  {showApprovalModal === 'approve' ? 'Commentaire (optionnel)' : 'Motif du rejet *'}
+                  {showApprovalModal === 'approve' ? 'Commentaire (optionnel)' :
+                   showApprovalModal === 'reject' ? 'Motif du rejet *' :
+                   'Raison de la mise à jour (optionnel)'}
                 </label>
                 <textarea
                   value={approvalComment}
@@ -682,9 +701,14 @@ const handleChangeStatus = async (newStatus: string) => {
                   onClick={() => handleApproval(showApprovalModal)}
                   disabled={processingApproval || (showApprovalModal === 'reject' && !approvalComment.trim())}
                   className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
-                  style={{ backgroundColor: showApprovalModal === 'approve' ? '#27AE60' : '#C0392B' }}>
+                  style={{
+                    backgroundColor: showApprovalModal === 'approve' ? '#27AE60' :
+                                     showApprovalModal === 'request-revision' ? '#2980B9' : '#C0392B'
+                  }}>
                   {processingApproval ? 'Traitement...' :
-                   showApprovalModal === 'approve' ? '✓ Approuver' : '✕ Rejeter'}
+                   showApprovalModal === 'approve' ? '✓ Approuver' :
+                   showApprovalModal === 'request-revision' ? '✏️ Déverrouiller pour mise à jour' :
+                   '✕ Rejeter'}
                 </button>
               </div>
             </div>
