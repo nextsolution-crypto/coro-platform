@@ -63,6 +63,7 @@ interface Document {
   project: {
     name: string;
     documentType: string;
+    status: string;
     client: { name: string };
     building: { name: string; buildingType: string };
     year: number;
@@ -259,6 +260,7 @@ export default function EditorPage() {
   const currentSection = currentModule?.sections?.[activeSection];
   const isSpecialModule = SPECIAL_MODULES.includes(currentModule?.moduleNumber);
   const isBureau = document.project.building.buildingType?.toLowerCase() !== 'industriel';
+  const isReadOnly = ['REVIEW', 'VALIDATED'].includes(document.project.status || '');
 
   // ============================================================
   // RENDU DU CONTENU CENTRAL
@@ -345,7 +347,7 @@ export default function EditorPage() {
               {currentSection?.id} — {currentSection?.title}
             </h2>
           </div>
-          {!isEditing && (
+          {!isEditing && !isReadOnly && (
             <button
               onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(true); }}
               className="text-sm px-4 py-2 rounded transition-colors flex items-center gap-2 font-medium"
@@ -355,6 +357,12 @@ export default function EditorPage() {
             >
               ✏️ {language === 'fr' ? 'Modifier' : 'Edit'}
             </button>
+          )}
+          {!isEditing && isReadOnly && (
+            <span className="text-xs px-3 py-1.5 rounded"
+              style={{ backgroundColor: '#FEF9E7', color: '#F39C12', border: '1px solid #FAD7A0' }}>
+              🔒 {document.project.status === 'VALIDATED' ? 'Document approuvé' : 'En attente d\'approbation'}
+            </span>
           )}
         </div>
 
@@ -564,6 +572,24 @@ export default function EditorPage() {
         <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#F8F9FA' }}>
           {(currentSection || isSpecialModule) && (
             <div className="max-w-4xl mx-auto p-8">
+
+{/* Bannière lecture seule */}
+              {isReadOnly && (
+                <div className="rounded-md p-3 mb-4 flex items-center gap-2"
+                  style={{
+                    backgroundColor: document.project.status === 'VALIDATED' ? '#EAFAF1' : '#FEF9E7',
+                    border: `1px solid ${document.project.status === 'VALIDATED' ? '#A9DFBF' : '#FAD7A0'}`,
+                  }}>
+                  <span>{document.project.status === 'VALIDATED' ? '✓' : '🔒'}</span>
+                  <p className="text-sm font-medium"
+                    style={{ color: document.project.status === 'VALIDATED' ? '#27AE60' : '#F39C12' }}>
+                    {document.project.status === 'VALIDATED'
+                      ? 'Document approuvé et verrouillé — lecture seule'
+                      : 'Document en attente d\'approbation — lecture seule'}
+                  </p>
+                </div>
+              )}
+
               {/* Résumé validations */}
               {validations.length > 0 && (
                 <div className="rounded-md p-4 mb-6"
