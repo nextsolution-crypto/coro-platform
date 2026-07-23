@@ -142,4 +142,86 @@ export class ProjectsService {
 
     return results.sort((a, b) => b.monthsAgo - a.monthsAgo);
   }
+  async calculateQualityScore(projectId: string, organizationId: string): Promise<{
+    score: number;
+    level: 'EXCELLENT' | 'BON' | 'A_AMELIORER' | 'INCOMPLET';
+    details: { label: string; points: number; earned: number; ok: boolean }[];
+  }> {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+    });
+    if (!project) return { score: 0, level: 'INCOMPLET', details: [] };
+
+    const doc = await this.prisma.document.findFirst({ where: { projectId } });
+    const plans = await this.prisma.buildingPlan.count({ where: { projectId } });
+    const module7 = await this.prisma.module7Data.findFirst({ where: { projectId } });
+
+    const content = doc?.content as any;
+    const config = content?.config || {};
+    const modules = content?.modules_fr || [];
+
+    const details: { label: string; points: number; earned: number; ok: boolean }[] = [];
+    let totalScore = 0;
+
+    // ── 1. Configuration complète (20 pts) ────────────────────
+    const configKeys = Object.keys(config).filter(k => config[k] !== null && config[k] !== '' && config[k] !== false);
+    const hasConfig = configKeys.length >= 20;
+    const pts1 = hasConfig ? 20 : Math.floor((configKeys.length / 20) * 20);
+    details.push({ label: 'Configuration complète', points: 20, earned: pts1, ok: hasConfig });
+    totalScore += pts1;
+
+    // ── 2. Document généré (15 pts) ───────────────────────────
+    const hasDoc = !!doc;
+    details.push({ label: 'Document généré', points: 15, earned: hasDoc ? 15 : 0, ok: hasDoc });
+    totalScore += hasDoc ? 15 : 0;
+
+    // ── 3. Liste téléphonique renseignée (10 pts) ─────────────
+    const m2 = modules.find((m: any) => m.moduleNumber === 2);
+    const entries = m2?.sections?.find((s: any) => s.id === '2.1')?.entries || [];
+    const hasContacts = entries.length >= 3;
+    details.push({ label: 'Liste téléphonique (min. 3 contacts)', points: 10, earned: hasContacts ? 10 : entries.length > 0 ? 5 : 0, ok: hasContacts });
+    totalScore += hasContacts ? 10 : entries.length > 0 ? 5 : 0;
+
+    // ── 4. Organigramme actif (10 pts) ────────────────────────
+    const m3 = modules.find((m: any) => m.moduleNumber === 3);
+    const orgRoles = m3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
+    const activeRoles = orgRoles.filter((r: any) => r.isActive).length;
+    const hasRoles = activeRoles >= 3;
+    details.push({ label: 'Organigramme (min. 3 rôles actifs)', points: 10, earned: hasRoles ? 10 : activeRoles > 0 ? 5 : 0, ok: hasRoles });
+    totalScore += hasRoles ? 10 : activeRoles > 0 ? 5 : 0;
+
+    // ── 5. Procédures actives (10 pts) ────────────────────────
+    const m4 = modules.find((m: any) => m.moduleNumber === 4);
+    const procedures = m4?.procedures || [];
+    const hasProcs = procedures.length >= 5;
+    details.push({ label: 'Procédures actives (min. 5)', points: 10, earned: hasProcs ? 10 : procedures.length > 0 ? 5 : 0, ok: hasProcs });
+    totalScore += hasProcs ? 10 : procedures.length > 0 ? 5 : 0;
+
+    // ── 6. Plans techniques (10 pts) ──────────────────────────
+    const hasPlans = plans >= 1;
+    details.push({ label: 'Plans techniques téléversés', points: 10, earned: hasPlans ? 10 : 0, ok: hasPlans });
+    totalScore += hasPlans ? 10 : 0;
+
+    // ── 7. Photos équipements (10 pts) ────────────────────────
+    const photos = module7?.photosData as any;
+    const photoCount = photos ? Object.values(photos).filter((v: any) => v && v !== '').length : 0;
+    const hasPhotos = photoCount >= 3;
+    details.push({ label: 'Photos équipements (min. 3)', points: 10, earned: hasPhotos ? 10 : photoCount > 0 ? 5 : 0, ok: hasPhotos });
+    totalScore += hasPhotos ? 10 : photoCount > 0 ? 5 : 0;
+
+    // ── 8. Aucune validation critique (15 pts) ────────────────
+    // On réutilise la logique de validation simplifiée
+    const hasCU = orgRoles.some((r: any) => r.isActive && (r.roleCode === 'ROLE-CU' || r.roleCode === 'ROLE-CHE'));
+    const hasGaz = config.gazNaturel === true;
+    const hasGazProc = procedures.some((p: any) => p.code === 'P005');
+    const hasMat = config.matieresDangereuses === true;
+    const hasMatProc = procedures.some((p: any) => p.code === 'P018');
+    const noBlockers = hasCU && (!hasGaz || hasGazProc) && (!hasMat || hasMatProc);
+    details.push({ label: 'Aucune validation critique', points: 15, earned: noBlockers ? 15 : 0, ok: noBlockers });
+    totalScore += noBlockers ? 15 : 0;
+
+    const level = totalScore >= 80 ? 'EXCELLENT' : totalScore >= 60 ? 'BON' : totalScore >= 40 ? 'A_AMELIORER' : 'INCOMPLET';
+
+    return { score: totalScore, level, details };
+  }
 }
