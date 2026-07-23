@@ -69,6 +69,10 @@ export default function ProjectDetailPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
 
+  const [showApprovalModal, setShowApprovalModal] = useState<'approve' | 'reject' | null>(null);
+  const [approvalComment, setApprovalComment] = useState('');
+  const [processingApproval, setProcessingApproval] = useState(false);
+
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
@@ -169,6 +173,26 @@ const handleChangeStatus = async (newStatus: string) => {
     finally { setLoadingAudit(false); }
   };
 
+  const handleApproval = async (action: 'submit' | 'approve' | 'reject') => {
+    setProcessingApproval(true);
+    try {
+      if (action === 'submit') {
+        await api.post(`/projects/${projectId}/submit`);
+      } else if (action === 'approve') {
+        await api.post(`/projects/${projectId}/approve`, { comment: approvalComment });
+      } else {
+        await api.post(`/projects/${projectId}/reject`, { comment: approvalComment });
+      }
+      setShowApprovalModal(null);
+      setApprovalComment('');
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessingApproval(false);
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center"
       style={{ backgroundColor: '#F8F9FA' }}>
@@ -262,51 +286,105 @@ const handleChangeStatus = async (newStatus: string) => {
         </div>
 
         {project.status !== 'ARCHIVED' && (
-          <div className="flex items-center gap-2">
-            {project.status !== 'EXPORTED' && (
+          <div className="flex items-center gap-2 flex-wrap">
+
+            {/* Soumettre pour approbation */}
+            {project.status === 'IN_PROGRESS' && hasDocument && (
               <button
-                onClick={() => handleChangeStatus('EXPORTED')}
+                onClick={() => handleApproval('submit')}
                 disabled={statusChanging}
                 className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
-                style={{ border: '1px solid #D2B4DE', color: '#8E44AD' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F4ECF7'}
+                style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                Terminer
+                ✓ Soumettre pour approbation
               </button>
             )}
-            <button
-              onClick={handleShowAudit}
+
+            {/* Approuver / Rejeter */}
+            {project.status === 'REVIEW' && (
+              <>
+                <button
+                  onClick={() => setShowApprovalModal('approve')}
+                  className="text-sm font-medium px-4 py-2 rounded transition-colors text-white"
+                  style={{ backgroundColor: '#27AE60' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}
+                >
+                  ✓ Approuver
+                </button>
+                <button
+                  onClick={() => setShowApprovalModal('reject')}
+                  className="text-sm font-medium px-4 py-2 rounded transition-colors"
+                  style={{ border: '1px solid #F1948A', color: '#C0392B' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  ✕ Rejeter
+                </button>
+              </>
+            )}
+
+            <button onClick={handleShowAudit}
               className="text-sm font-medium px-4 py-2 rounded transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              📋 Journal d'audit
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              📋 Journal
             </button>
-            <button
-              onClick={() => setShowTemplateModal(true)}
-              disabled={!hasDocument}
+
+            <button onClick={() => setShowTemplateModal(true)} disabled={!hasDocument}
               className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
               style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
               onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              💾 Enregistrer comme modèle
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              💾 Modèle
             </button>
-            <button
-              onClick={() => handleChangeStatus('ARCHIVED')}
-              disabled={statusChanging}
-              className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
-              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              Archiver
-            </button>
+
+            {project.status !== 'VALIDATED' && (
+              <button onClick={() => handleChangeStatus('ARCHIVED')} disabled={statusChanging}
+                className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
+                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                Archiver
+              </button>
+            )}
           </div>
         )}
       </div>
+
+{/* Bannière statut approbation */}
+      {project.status === 'REVIEW' && (
+        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+          style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+          <span style={{ fontSize: '20px' }}>⏳</span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#F39C12' }}>
+              Document en attente d'approbation
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+              L'éditeur est en lecture seule jusqu'à l'approbation ou le rejet.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {project.status === 'VALIDATED' && (
+        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+          style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}>
+          <span style={{ fontSize: '20px' }}>✓</span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#27AE60' }}>
+              Document approuvé et verrouillé
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+              Ce document a été validé officiellement. Il est en lecture seule.
+            </p>
+          </div>
+        </div>
+      )}
 
       {justGenerated && (
         <div className="rounded-md p-4 mb-6 flex items-center gap-3"
@@ -553,6 +631,59 @@ const handleChangeStatus = async (newStatus: string) => {
           ))}
         </div>
       </div>
+
+{/* Modal approbation/rejet */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-md p-8"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 className="font-semibold text-lg mb-2" style={{ color: '#2C3E50' }}>
+              {showApprovalModal === 'approve' ? '✓ Approuver le document' : '✕ Rejeter le document'}
+            </h3>
+            <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
+              {showApprovalModal === 'approve'
+                ? 'Le document sera verrouillé en lecture seule après approbation.'
+                : 'Le document retournera en statut "En cours" pour modification.'}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  {showApprovalModal === 'approve' ? 'Commentaire (optionnel)' : 'Motif du rejet *'}
+                </label>
+                <textarea
+                  value={approvalComment}
+                  onChange={e => setApprovalComment(e.target.value)}
+                  placeholder={showApprovalModal === 'approve'
+                    ? 'Ex: Document conforme aux exigences réglementaires'
+                    : 'Ex: Section 2.1 incomplète, manque les numéros d\'urgence'}
+                  rows={4}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setShowApprovalModal(null); setApprovalComment(''); }}
+                  className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
+                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  Annuler
+                </button>
+                <button
+                  onClick={() => handleApproval(showApprovalModal)}
+                  disabled={processingApproval || (showApprovalModal === 'reject' && !approvalComment.trim())}
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
+                  style={{ backgroundColor: showApprovalModal === 'approve' ? '#27AE60' : '#C0392B' }}>
+                  {processingApproval ? 'Traitement...' :
+                   showApprovalModal === 'approve' ? '✓ Approuver' : '✕ Rejeter'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTemplateModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
