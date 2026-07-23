@@ -26,6 +26,11 @@ export class ProjectsController {
     return this.projectsService.getBuildingsCompliance(req.user.organizationId);
   }
 
+  @Get('pending-approval')
+  findPendingApproval(@Request() req: any) {
+    return this.projectsService.findPendingApproval(req.user.organizationId, req.user.userId);
+  }
+
   @Get(':id/quality-score')
   getQualityScore(@Param('id') id: string, @Request() req: any) {
     return this.projectsService.calculateQualityScore(id, req.user.organizationId);
@@ -61,11 +66,6 @@ export class ProjectsController {
       });
     }
     return result;
-  }
-
-  @Get('pending-approval')
-  findPendingApproval(@Request() req: any) {
-    return this.projectsService.findPendingApproval(req.user.organizationId, req.user.userId);
   }
 
   @Delete(':id')
