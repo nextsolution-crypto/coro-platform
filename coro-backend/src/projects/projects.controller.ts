@@ -128,4 +128,24 @@ export class ProjectsController {
     });
     return result;
   }
+
+  @Post(':id/request-revision')
+  async requestRevision(
+    @Param('id') id: string,
+    @Body() body: { comment?: string },
+    @Request() req: any,
+  ) {
+    const result = await this.projectsService.requestRevision(id, req.user.organizationId, body.comment);
+    await this.auditService.log({
+      action: 'STATUS_CHANGE',
+      entityType: 'PROJECT',
+      entityId: id,
+      projectId: id,
+      description: `Mise à jour demandée${body.comment ? ` — "${body.comment}"` : ''}`,
+      metadata: { newStatus: 'IN_PROGRESS', comment: body.comment },
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+    });
+    return result;
+  }
 }

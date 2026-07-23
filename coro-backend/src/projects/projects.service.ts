@@ -334,4 +334,12 @@ export class ProjectsService {
       orderBy: { updatedAt: 'desc' },
     });
   }
+
+  async requestRevision(id: string, organizationId: string, comment?: string) {
+    await this.assertOwnership(id, organizationId);
+    return this.prisma.project.update({
+      where: { id },
+      data: { status: 'IN_PROGRESS', submittedById: null },
+    });
+  }
 }
