@@ -17,6 +17,7 @@ interface Project {
   client: { id: string; name: string };
   building: { id: string; name: string; address: string };
   user: { id: string; firstName: string; lastName: string };
+  submittedById?: string | null;
 }
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -46,7 +47,7 @@ export default function ProjectDetailPage() {
   const router    = useRouter();
   const params    = useParams();
   const projectId = params?.id as string;
-  const { isAuthenticated, initAuth } = useAuthStore();
+  const { user: authUser, isAuthenticated, initAuth } = useAuthStore();
 
   const [project,     setProject]     = useState<Project | null>(null);
   const [loading,     setLoading]     = useState(true);
@@ -303,7 +304,7 @@ const handleChangeStatus = async (newStatus: string) => {
             )}
 
             {/* Approuver / Rejeter */}
-            {project.status === 'REVIEW' && (
+            {project.status === 'REVIEW' && project.submittedById !== authUser?.id && (
               <>
                 <button
                   onClick={() => setShowApprovalModal('approve')}
@@ -324,6 +325,13 @@ const handleChangeStatus = async (newStatus: string) => {
                   ✕ Rejeter
                 </button>
               </>
+            )}
+
+            {project.status === 'REVIEW' && project.submittedById === authUser?.id && (
+              <span className="text-xs px-3 py-1.5 rounded"
+                style={{ backgroundColor: '#FEF9E7', color: '#F39C12', border: '1px solid #FAD7A0' }}>
+                ⏳ En attente d'approbation par un collègue
+              </span>
             )}
 
             <button onClick={handleShowAudit}
