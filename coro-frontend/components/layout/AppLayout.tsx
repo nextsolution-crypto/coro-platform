@@ -47,15 +47,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [updates, setUpdates] = useState<UpcomingUpdate[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchUpdates = async () => {
+    const fetchNotifications = async () => {
       try {
-        const res = await api.get('/projects/upcoming-updates');
-        setUpdates(res.data || []);
-      } catch { setUpdates([]); }
+        const [updatesRes, approvalsRes] = await Promise.all([
+          api.get('/projects/upcoming-updates'),
+          api.get('/projects/pending-approval'),
+        ]);
+        setUpdates(updatesRes.data || []);
+        setPendingApprovals(approvalsRes.data || []);
+      } catch {
+        setUpdates([]);
+        setPendingApprovals([]);
+      }
     };
-    fetchUpdates();
+    fetchNotifications();
   }, []);
 
   // Fermer le panneau si clic en dehors
@@ -107,10 +115,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               title="Mises à jour à venir"
             >
               <span style={{ fontSize: '18px' }}>🔔</span>
-              {totalCount > 0 && (
+              {(totalCount + pendingApprovals.length) > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs font-bold rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: urgentCount > 0 ? '#C0392B' : '#F39C12', fontSize: '10px' }}>
-                  {totalCount}
+                  style={{ backgroundColor: pendingApprovals.length > 0 ? '#C0392B' : urgentCount > 0 ? '#C0392B' : '#F39C12', fontSize: '10px' }}>
+                  {totalCount + pendingApprovals.length}
                 </span>
               )}
             </button>
@@ -127,7 +135,46 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <div className="max-h-80 overflow-y-auto">
-                  {updates.length === 0 ? (
+                  {/* Approbations en attente */}
+                  {pendingApprovals.length > 0 && (
+                    <div>
+                      <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide"
+                        style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
+                        ✓ Approbations en attente ({pendingApprovals.length})
+                      </p>
+                      {pendingApprovals.map(p => (
+                        <div key={p.id}
+                          onClick={() => { router.push(`/projects/${p.id}`); setShowNotif(false); }}
+                          className="px-4 py-3 cursor-pointer transition-colors"
+                          style={{ borderBottom: '1px solid #F8F9FA' }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-xs font-bold px-1.5 py-0.5 rounded text-white"
+                                  style={{ backgroundColor: '#C0392B' }}>
+                                  {p.documentType}
+                                </span>
+                                <span className="text-xs font-medium truncate" style={{ color: '#2C3E50' }}>
+                                  {p.name}
+                                </span>
+                              </div>
+                              <p className="text-xs" style={{ color: '#6C757D' }}>
+                                Soumis par {p.submittedBy?.firstName} {p.submittedBy?.lastName}
+                              </p>
+                            </div>
+                            <span className="text-xs font-medium flex-shrink-0"
+                              style={{ color: '#C0392B' }}>
+                              À réviser →
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {updates.length === 0 && pendingApprovals.length === 0 ? (
                     <div className="px-4 py-6 text-center">
                       <p className="text-sm" style={{ color: '#ADB5BD' }}>✓ Tous les documents sont à jour</p>
                     </div>
