@@ -3,11 +3,15 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { ExportService } from './export.service';
 import type { ExportOptions } from './export.service';
+import { AuditService } from '../audit/audit.service';
 
 @Controller('projects/:projectId/export')
 @UseGuards(AuthGuard('jwt'))
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(
+    private readonly exportService: ExportService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post()
   async exportPdf(
@@ -17,6 +21,17 @@ export class ExportController {
     @Request() req: any,
   ) {
     const result = await this.exportService.generatePdf(projectId, options, req.user.organizationId);
+
+    await this.auditService.log({
+      action: 'EXPORT',
+      entityType: 'DOCUMENT',
+      entityId: projectId,
+      projectId,
+      description: `Export PDF — langue(s): ${[options.language].filter(Boolean).join(', ')}`,
+      metadata: { language: options.language, modules: options.selectedModules },
+      userId: req.user.userId,
+      organizationId: req.user.organizationId,
+    });
 
     // Si une seule langue demandée → retourne le PDF directement
     if (result.fr && !result.en) {
