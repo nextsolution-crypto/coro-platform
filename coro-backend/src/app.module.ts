@@ -23,6 +23,7 @@ import { ChangelogModule } from './changelog/changelog.module';
 import { ProceduresModule } from './procedures/procedures.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { VersionsModule } from './versions/versions.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { VersionsModule } from './versions/versions.module';
   ProceduresModule,
   FeedbackModule,
   VersionsModule,
+  TemplatesModule,
 ],
   controllers: [AppController],
   providers: [AppService],
