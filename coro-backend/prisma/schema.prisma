@@ -28,6 +28,7 @@ model Organization {
   procedureOverrides ProcedureOverride[]
 
   feedbacks   Feedback[]
+  projectTemplates ProjectTemplate[]
 }
 
 model User {
@@ -52,6 +53,7 @@ model User {
   projects  Project[]
   feedbacks   Feedback[]
   lastEditedProjects Project[] @relation("lastEditedProjects")
+  createdTemplates ProjectTemplate[] @relation("createdTemplates")
 }
 
 enum UserRole {
@@ -356,4 +358,19 @@ model ProjectVersion {
   createdAt   DateTime @default(now())
 
   project     Project  @relation(fields: [projectId], references: [id])
+}
+
+model ProjectTemplate {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  documentType   String
+  configData     Json?
+  organizationId String
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  createdBy    User         @relation("createdTemplates", fields: [createdById], references: [id])
 }
