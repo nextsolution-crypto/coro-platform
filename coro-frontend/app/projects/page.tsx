@@ -18,6 +18,7 @@ interface Project {
   building: { id: string; name: string; address: string };
   user: { id: string; firstName: string; lastName: string };
   lastEditedBy?: { id: string; firstName: string; lastName: string } | null;
+  qualityScore?: { score: number; level: string } | null;
 }
 
 interface OrgUser {
@@ -119,7 +120,17 @@ export default function ProjectsPage() {
         api.get('/organizations/me/info').catch(() => ({ data: null })),
         api.get('/users/organization').catch(() => ({ data: [] })),
       ]);
-      setProjects(pr.data);
+      const projectsData = pr.data;
+      // Charger les scores de qualité en parallèle
+      const scores = await Promise.all(
+        projectsData.map((p: any) =>
+          api.get(`/projects/${p.id}/quality-score`)
+            .then(r => ({ id: p.id, score: r.data }))
+            .catch(() => ({ id: p.id, score: null }))
+        )
+      );
+      const scoreMap = Object.fromEntries(scores.map(s => [s.id, s.score]));
+      setProjects(projectsData.map((p: any) => ({ ...p, qualityScore: scoreMap[p.id] })));
       setClients(cl.data);
       setBuildings(bl.data);
       setOrgUsers(usersRes.data || []);
@@ -321,20 +332,49 @@ export default function ProjectsPage() {
                   <span>{project.year}</span>
                 </div>
 
-                {/* Barre de progression */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: '#ADB5BD' }}>Progression</span>
-                    <span className="text-xs font-medium" style={{ color: '#6C757D' }}>{project.progress}%</span>
-                  </div>
-                  <div className="w-full rounded-full h-1.5" style={{ backgroundColor: '#E9ECEF' }}>
-                    <div className="h-1.5 rounded-full transition-all"
+                {/* Score de qualité */}
+                {project.qualityScore ? (
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs" style={{ color: '#ADB5BD' }}>Score qualité</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor:
+                            project.qualityScore.level === 'EXCELLENT' ? '#EAFAF1' :
+                            project.qualityScore.level === 'BON' ? '#EBF5FB' :
+                            project.qualityScore.level === 'A_AMELIORER' ? '#FEF9E7' : '#FDEDEC',
+                          color:
+                            project.qualityScore.level === 'EXCELLENT' ? '#27AE60' :
+                            project.qualityScore.level === 'BON' ? '#2980B9' :
+                            project.qualityScore.level === 'A_AMELIORER' ? '#F39C12' : '#C0392B',
+                        }}>
+                        {project.qualityScore.level === 'EXCELLENT' ? '⭐ Excellent' :
+                         project.qualityScore.level === 'BON' ? '✓ Bon' :
+                         project.qualityScore.level === 'A_AMELIORER' ? '⚠ À améliorer' : '✗ Incomplet'}
+                      </span>
+                    </div>
+                    <span className="text-lg font-black"
                       style={{
-                        width: `${project.progress}%`,
-                        backgroundColor: project.progress === 100 ? '#27AE60' : '#C0392B',
-                      }} />
+                        color:
+                          project.qualityScore.level === 'EXCELLENT' ? '#27AE60' :
+                          project.qualityScore.level === 'BON' ? '#2980B9' :
+                          project.qualityScore.level === 'A_AMELIORER' ? '#F39C12' : '#C0392B',
+                      }}>
+                      {project.qualityScore.score}/100
+                    </span>
                   </div>
-                </div>
+                ) : (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs" style={{ color: '#ADB5BD' }}>Progression</span>
+                      <span className="text-xs font-medium" style={{ color: '#6C757D' }}>{project.progress}%</span>
+                    </div>
+                    <div className="w-full rounded-full h-1.5" style={{ backgroundColor: '#E9ECEF' }}>
+                      <div className="h-1.5 rounded-full transition-all"
+                        style={{ width: `${project.progress}%`, backgroundColor: '#C0392B' }} />
+                    </div>
+                  </div>
+                )}
 
                 {/* Dernière modification */}
                 <div className="flex items-center justify-between">
