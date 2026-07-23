@@ -24,6 +24,7 @@ import { ProceduresModule } from './procedures/procedures.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { VersionsModule } from './versions/versions.module';
 import { TemplatesModule } from './templates/templates.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { TemplatesModule } from './templates/templates.module';
   FeedbackModule,
   VersionsModule,
   TemplatesModule,
+  AuditModule,
 ],
   controllers: [AppController],
   providers: [AppService],
