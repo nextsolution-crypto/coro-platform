@@ -54,6 +54,7 @@ model User {
   projects  Project[]
   feedbacks   Feedback[]
   lastEditedProjects Project[] @relation("lastEditedProjects")
+  submittedProjects Project[] @relation("submittedProjects")
   createdTemplates ProjectTemplate[] @relation("createdTemplates")
   auditLogs AuditLog[]
 }
@@ -124,6 +125,8 @@ model Project {
 
   lastEditedById String?
   lastEditedBy   User?    @relation("lastEditedProjects", fields: [lastEditedById], references: [id])
+  submittedById  String?
+  submittedBy    User?    @relation("submittedProjects", fields: [submittedById], references: [id])
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
