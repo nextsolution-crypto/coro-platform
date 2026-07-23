@@ -65,6 +65,10 @@ export default function ProjectDetailPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
 
+  const [showAudit, setShowAudit] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
@@ -153,6 +157,16 @@ const handleChangeStatus = async (newStatus: string) => {
     } finally {
       setSavingTemplate(false);
     }
+  };
+
+  const handleShowAudit = async () => {
+    setShowAudit(true);
+    setLoadingAudit(true);
+    try {
+      const res = await api.get(`/audit/project/${projectId}`);
+      setAuditLogs(res.data || []);
+    } catch { setAuditLogs([]); }
+    finally { setLoadingAudit(false); }
   };
 
   if (loading) return (
@@ -261,6 +275,15 @@ const handleChangeStatus = async (newStatus: string) => {
                 Terminer
               </button>
             )}
+            <button
+              onClick={handleShowAudit}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              📋 Journal d'audit
+            </button>
             <button
               onClick={() => setShowTemplateModal(true)}
               disabled={!hasDocument}
@@ -582,6 +605,86 @@ const handleChangeStatus = async (newStatus: string) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Panneau journal d'audit */}
+      {showAudit && (
+        <div className="fixed inset-0 flex items-center justify-end z-50"
+          style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAudit(false); }}>
+          <div className="h-full w-full max-w-lg flex flex-col"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '-4px 0 24px rgba(0,0,0,0.12)' }}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4"
+              style={{ borderBottom: '1px solid #E9ECEF' }}>
+              <div>
+                <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Journal d'audit</h3>
+                <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                  Historique de toutes les actions sur ce projet
+                </p>
+              </div>
+              <button onClick={() => setShowAudit(false)}
+                className="p-1 rounded" style={{ color: '#6C757D' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                ✕
+              </button>
+            </div>
+
+            {/* Contenu */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingAudit ? (
+                <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>
+                  Chargement...
+                </p>
+              ) : auditLogs.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune action enregistrée</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {auditLogs.map(log => {
+                    const actionConfig: Record<string, { icon: string; color: string }> = {
+                      GENERATE:         { icon: '⚙', color: '#2980B9' },
+                      EDIT_SECTION:     { icon: '✏️', color: '#F39C12' },
+                      EXPORT:           { icon: '📄', color: '#27AE60' },
+                      STATUS_CHANGE:    { icon: '🔄', color: '#8E44AD' },
+                      VERSION_SAVE:     { icon: '💾', color: '#2980B9' },
+                      VERSION_RESTORE:  { icon: '↩️', color: '#E67E22' },
+                      PROCEDURE_TOGGLE: { icon: '🔧', color: '#6C757D' },
+                      PROCEDURE_EDIT:   { icon: '📝', color: '#F39C12' },
+                      TEMPLATE_CREATE:  { icon: '📋', color: '#27AE60' },
+                    };
+                    const cfg = actionConfig[log.action] || { icon: '○', color: '#ADB5BD' };
+
+                    return (
+                      <div key={log.id} className="flex items-start gap-3 p-3 rounded-md"
+                        style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                        <span className="text-base flex-shrink-0 mt-0.5">{cfg.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+                            {log.description}
+                          </p>
+                          <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                            {log.user.firstName} {log.user.lastName}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                            {new Date(log.createdAt).toLocaleDateString('fr-CA', {
+                              month: 'short', day: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
