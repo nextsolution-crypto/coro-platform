@@ -59,6 +59,12 @@ export default function ProjectDetailPage() {
   const [validations, setValidations] = useState<any[]>([]);
   const [qualityScore, setQualityScore] = useState<any>(null);
 
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDesc, setTemplateDesc] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateSaved, setTemplateSaved] = useState(false);
+
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
@@ -126,6 +132,26 @@ const handleChangeStatus = async (newStatus: string) => {
       alert('Erreur lors de la génération.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleSaveAsTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingTemplate(true);
+    try {
+      await api.post(`/templates/from-project/${projectId}`, {
+        name: templateName,
+        description: templateDesc,
+      });
+      setTemplateSaved(true);
+      setShowTemplateModal(false);
+      setTemplateName('');
+      setTemplateDesc('');
+      setTimeout(() => setTemplateSaved(false), 4000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -236,6 +262,16 @@ const handleChangeStatus = async (newStatus: string) => {
               </button>
             )}
             <button
+              onClick={() => setShowTemplateModal(true)}
+              disabled={!hasDocument}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
+              style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+              onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              💾 Enregistrer comme modèle
+            </button>
+            <button
               onClick={() => handleChangeStatus('ARCHIVED')}
               disabled={statusChanging}
               className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
@@ -258,6 +294,16 @@ const handleChangeStatus = async (newStatus: string) => {
           <span style={{ color: '#27AE60', fontSize: '20px' }}>✓</span>
           <p className="text-sm font-medium" style={{ color: '#1E8449' }}>
             Document généré avec succès. Vous pouvez maintenant ouvrir l'éditeur ou tester l'export PDF.
+          </p>
+        </div>
+      )}
+
+      {templateSaved && (
+        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+          style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+          <span style={{ color: '#2980B9', fontSize: '20px' }}>✓</span>
+          <p className="text-sm font-medium" style={{ color: '#1A5276' }}>
+            Modèle enregistré avec succès. Il sera disponible à la création d'un nouveau projet.
           </p>
         </div>
       )}
@@ -484,6 +530,61 @@ const handleChangeStatus = async (newStatus: string) => {
           ))}
         </div>
       </div>
+      {showTemplateModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-md p-8"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 className="font-semibold text-lg mb-2" style={{ color: '#2C3E50' }}>
+              Enregistrer comme modèle
+            </h3>
+            <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
+              La configuration de ce projet sera sauvegardée comme point de départ pour de nouveaux projets similaires.
+            </p>
+            <form onSubmit={handleSaveAsTemplate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  Nom du modèle *
+                </label>
+                <input type="text" required value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  placeholder="Ex: PMU Tour à bureaux standard"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#2980B9'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  Description (optionnel)
+                </label>
+                <textarea value={templateDesc}
+                  onChange={e => setTemplateDesc(e.target.value)}
+                  placeholder="Ex: Pour les tours à bureaux de plus de 20 étages avec double signal"
+                  rows={3}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#2980B9'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowTemplateModal(false)}
+                  className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
+                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  Annuler
+                </button>
+                <button type="submit" disabled={savingTemplate}
+                  className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
+                  style={{ backgroundColor: '#2980B9' }}>
+                  {savingTemplate ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

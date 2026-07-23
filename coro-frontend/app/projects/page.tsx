@@ -80,6 +80,9 @@ export default function ProjectsPage() {
     clientId: '', buildingId: '',
   });
 
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+
   const documentTypes = ['PSI', 'PMU', 'PCA', 'PGC', 'PRA', 'PUE'];
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -134,6 +137,12 @@ export default function ProjectsPage() {
       setClients(cl.data);
       setBuildings(bl.data);
       setOrgUsers(usersRes.data || []);
+
+      // Charger les modèles disponibles
+      try {
+        const templatesRes = await api.get('/templates');
+        setTemplates(templatesRes.data || []);
+      } catch { setTemplates([]); }
 
       if (orgRes.data) {
         const limits: Record<string, number | null> = {
@@ -424,6 +433,50 @@ export default function ProjectsPage() {
               Nouveau projet
             </h3>
             <form onSubmit={handleCreate} className="space-y-4">
+              {/* Sélecteur de modèle */}
+              {templates.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Partir d'un modèle (optionnel)
+                  </label>
+                  <select
+                    value={selectedTemplate}
+                    onChange={async e => {
+                      setSelectedTemplate(e.target.value);
+                      if (e.target.value) {
+                        try {
+                          const res = await api.get(`/templates/${e.target.value}`);
+                          const t = res.data;
+                          setForm(prev => ({
+                            ...prev,
+                            documentType: t.documentType || prev.documentType,
+                          }));
+                          // Sauvegarder la config du modèle pour le configurateur
+                          if (t.configData?.documentConfig) {
+                            localStorage.setItem('coro_template_config', JSON.stringify(t.configData.documentConfig));
+                          }
+                        } catch { console.error('Erreur chargement modèle'); }
+                      } else {
+                        localStorage.removeItem('coro_template_config');
+                      }
+                    }}
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  >
+                    <option value="">— Projet vierge —</option>
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.documentType})
+                      </option>
+                    ))}
+                  </select>
+                  {selectedTemplate && (
+                    <p className="text-xs mt-1" style={{ color: '#2980B9' }}>
+                      ✓ La configuration de ce modèle sera appliquée automatiquement
+                    </p>
+                  )}
+                </div>
+              )}
               {[
                 { label: 'Nom du projet *', key: 'name', type: 'text', placeholder: 'Ex: PMU Tour ABC 2026' },
                 { label: 'Année *', key: 'year', type: 'number', placeholder: '' },
