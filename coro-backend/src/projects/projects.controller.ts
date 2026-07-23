@@ -17,6 +17,11 @@ export class ProjectsController {
     return this.projectsService.findUpcomingUpdates(req.user.organizationId);
   }
 
+  @Get('buildings-compliance')
+  getBuildingsCompliance(@Request() req: any) {
+    return this.projectsService.getBuildingsCompliance(req.user.organizationId);
+  }
+
   @Get(':id/quality-score')
   getQualityScore(@Param('id') id: string, @Request() req: any) {
     return this.projectsService.calculateQualityScore(id, req.user.organizationId);

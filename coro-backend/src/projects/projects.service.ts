@@ -224,4 +224,67 @@ export class ProjectsService {
 
     return { score: totalScore, level, details };
   }
+  async getBuildingsCompliance(organizationId: string) {
+    const buildings = await this.prisma.building.findMany({
+      where: { organizationId, isActive: true },
+      include: {
+        client: { select: { name: true } },
+        projects: {
+          where: { isActive: true, status: { not: 'ARCHIVED' } },
+          orderBy: { updatedAt: 'desc' },
+          take: 1,
+          include: {
+            documents: {
+              orderBy: { updatedAt: 'desc' },
+              take: 1,
+              select: { updatedAt: true, status: true },
+            },
+          },
+        },
+      },
+    });
+
+    const now = new Date();
+
+    return buildings.map(b => {
+      const lastProject = b.projects[0];
+      const lastDoc = lastProject?.documents[0];
+
+      let complianceStatus: 'CONFORME' | 'AVERTISSEMENT' | 'EXPIRE' | 'AUCUN_DOCUMENT';
+      let monthsAgo: number | null = null;
+      let lastUpdated: Date | null = null;
+
+      if (!lastDoc) {
+        complianceStatus = 'AUCUN_DOCUMENT';
+      } else {
+        lastUpdated = new Date(lastDoc.updatedAt);
+        monthsAgo = Math.floor(
+          (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+        );
+        complianceStatus = monthsAgo >= 12 ? 'EXPIRE' : monthsAgo >= 10 ? 'AVERTISSEMENT' : 'CONFORME';
+      }
+
+      return {
+        id: b.id,
+        name: b.name,
+        address: b.address,
+        city: b.city,
+        province: b.province,
+        buildingType: b.buildingType,
+        clientName: b.client.name,
+        projectId: lastProject?.id || null,
+        projectName: lastProject?.name || null,
+        documentType: lastProject?.documentType || null,
+        lastUpdated,
+        monthsAgo,
+        complianceStatus,
+      };
+    }).sort((a, b) => {
+      // Trier d'abord par client, puis par état de conformité
+      const clientCompare = a.clientName.localeCompare(b.clientName, 'fr');
+      if (clientCompare !== 0) return clientCompare;
+      const order = { EXPIRE: 0, AVERTISSEMENT: 1, AUCUN_DOCUMENT: 2, CONFORME: 3 };
+      return order[a.complianceStatus] - order[b.complianceStatus];
+    });
+  }
 }

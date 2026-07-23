@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Projets',      path: '/projects' },
   { label: 'Clients',      path: '/clients' },
   { label: 'Bâtiments',    path: '/buildings' },
+  { label: 'Conformité',   path: '/buildings/compliance' },
   { label: 'Bibliothèque', path: '/library' },
   { label: 'Paramètres',   path: '/settings' },
 ];
