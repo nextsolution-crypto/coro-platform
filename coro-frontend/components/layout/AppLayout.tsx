@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
+import { useState, useEffect, useRef } from 'react';
+import api from '@/lib/api';
 
 const navItems = [
   { label: 'Dashboard',    path: '/dashboard' },
@@ -25,15 +27,54 @@ const superAdminNavItems = [
   { label: 'Changelog', path: '/admin/changelog' },
 ];
 
+interface UpcomingUpdate {
+  id: string;
+  name: string;
+  documentType: string;
+  clientName: string;
+  buildingName: string;
+  lastUpdated: string;
+  monthsAgo: number;
+  level: 'URGENT' | 'AVERTISSEMENT';
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
 
+  const [updates, setUpdates] = useState<UpcomingUpdate[]>([]);
+  const [showNotif, setShowNotif] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      try {
+        const res = await api.get('/projects/upcoming-updates');
+        setUpdates(res.data || []);
+      } catch { setUpdates([]); }
+    };
+    fetchUpdates();
+  }, []);
+
+  // Fermer le panneau si clic en dehors
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotif(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
+
+  const urgentCount = updates.filter(u => u.level === 'URGENT').length;
+  const totalCount = updates.length;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
@@ -53,6 +94,99 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           CO<span style={{ color: '#C0392B' }}>RO</span>
         </h1>
         <div className="flex items-center gap-4">
+
+          {/* Cloche notifications */}
+          <div ref={notifRef} className="relative">
+            <button
+              onClick={() => setShowNotif(!showNotif)}
+              className="relative p-2 rounded transition-colors"
+              style={{ color: '#6C757D' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              title="Mises à jour à venir"
+            >
+              <span style={{ fontSize: '18px' }}>🔔</span>
+              {totalCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: urgentCount > 0 ? '#C0392B' : '#F39C12', fontSize: '10px' }}>
+                  {totalCount}
+                </span>
+              )}
+            </button>
+
+            {/* Panneau notifications */}
+            {showNotif && (
+              <div className="absolute right-0 top-full mt-2 w-96 rounded-md shadow-lg z-50"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+                <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9ECEF' }}>
+                  <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Mises à jour à venir</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                    Documents approchant ou dépassant 12 mois
+                  </p>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {updates.length === 0 ? (
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm" style={{ color: '#ADB5BD' }}>✓ Tous les documents sont à jour</p>
+                    </div>
+                  ) : (
+                    updates.map(u => (
+                      <div key={u.id}
+                        onClick={() => { router.push(`/projects/${u.id}`); setShowNotif(false); }}
+                        className="px-4 py-3 cursor-pointer transition-colors"
+                        style={{ borderBottom: '1px solid #F8F9FA' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-xs font-bold px-1.5 py-0.5 rounded"
+                                style={{
+                                  backgroundColor: u.level === 'URGENT' ? '#FDEDEC' : '#FEF9E7',
+                                  color: u.level === 'URGENT' ? '#C0392B' : '#F39C12',
+                                }}>
+                                {u.documentType}
+                              </span>
+                              <span className="text-xs font-medium truncate" style={{ color: '#2C3E50' }}>
+                                {u.name}
+                              </span>
+                            </div>
+                            <p className="text-xs truncate" style={{ color: '#6C757D' }}>
+                              {u.clientName} — {u.buildingName}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-xs font-bold"
+                              style={{ color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
+                              {u.monthsAgo} mois
+                            </p>
+                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                              {u.level === 'URGENT' ? '⚠ À renouveler' : '○ Bientôt'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {updates.length > 0 && (
+                  <div className="px-4 py-2.5" style={{ borderTop: '1px solid #E9ECEF' }}>
+                    <button
+                      onClick={() => { router.push('/dashboard'); setShowNotif(false); }}
+                      className="text-xs font-medium w-full text-center transition-colors"
+                      style={{ color: '#C0392B' }}
+                    >
+                      Voir toutes les mises à jour →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {user && (
             <span className="text-sm font-medium" style={{ color: '#495057' }}>
               {user.firstName} {user.lastName}
@@ -91,8 +225,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <button
                   key={item.label}
                   onClick={() => router.push(item.path)}
-                  className="w-full text-left px-4 py-2.5 rounded text-sm
-                    transition-colors font-medium"
+                  className="w-full text-left px-4 py-2.5 rounded text-sm transition-colors font-medium"
                   style={{
                     backgroundColor: isActive ? '#FDEDEC' : 'transparent',
                     color: isActive ? '#C0392B' : '#495057',
