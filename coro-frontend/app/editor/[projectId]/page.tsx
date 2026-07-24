@@ -273,7 +273,9 @@ export default function EditorPage() {
       <Module8Section
         projectId={projectId}
         language={language}
-        initialData={{ sections: currentModule.sections || [] }}
+        initialData={{
+          sections: document?.content?.modules_fr?.find((m: any) => m.moduleNumber === 8)?.sections || [],
+        }}
       />
     );
 

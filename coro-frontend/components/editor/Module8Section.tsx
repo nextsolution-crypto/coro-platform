@@ -247,6 +247,7 @@ export default function Module8Section({
   const [section8_8, setSection8_8] = useState('');
   const [section8_9, setSection8_9] = useState('');
   const [section8_10, setSection8_10] = useState<LithiumAnnexeData>(DEFAULT_LITHIUM_ANNEXE_DATA);
+  const [section8_11, setSection8_11] = useState<any>(null);
 
   const [activeSection, setActiveSection] = useState('8.1');
   const [saving,        setSaving]        = useState(false);
@@ -283,6 +284,14 @@ export default function Module8Section({
           setSection8_8(saved.section8_8 || '');
           setSection8_9(saved.section8_9 || '');
           setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
+          setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
+          // Pour 8.11, si pas en DB, charger depuis initialData
+          if (saved.section8_11) {
+            setSection8_11(saved.section8_11);
+          } else {
+            const s11 = getSection(initialData?.sections || [], '8.11');
+            setSection8_11(s11 || null);
+          }
         } else {
           const sections = initialData?.sections || [];
           const newS1 = ensureIds(getSection(sections, '8.1')?.entries || []) as TrainingEntry[];
@@ -294,6 +303,9 @@ export default function Module8Section({
           const newS7 = getSection(sections, '8.7')?.content || '';
           const newS8 = getSection(sections, '8.8')?.content || '';
           const newS9 = getSection(sections, '8.9')?.content || '';
+          // section8_11 sera chargée depuis le document généré
+          const s11 = getSection(sections, '8.11');
+          setSection8_11(s11 || null);
 
           setSection8_1(newS1);
           setSection8_2(newS2);
@@ -342,7 +354,7 @@ export default function Module8Section({
     try {
       await api.put(`/projects/${projectId}/module8`, {
         section8_1, section8_2, section8_3, section8_4,
-        section8_5, section8_6, section8_7, section8_8, section8_9, section8_10,
+        section8_5, section8_6, section8_7, section8_8, section8_9, section8_10, section8_11,
       });
       setLastSaved(new Date());
       setIsDirty(false);
@@ -359,7 +371,7 @@ export default function Module8Section({
     const timer = setTimeout(saveData, 2000);
     return () => clearTimeout(timer);
   }, [section8_1, section8_2, section8_3, section8_4,
-      section8_5, section8_6, section8_7, section8_8, section8_9, section8_10, isDirty]);
+      section8_5, section8_6, section8_7, section8_8, section8_9, section8_10, section8_11, isDirty]);
 
   const markDirty = () => setIsDirty(true);
 
@@ -380,6 +392,7 @@ export default function Module8Section({
       { id: '8.8', title: 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT' },
       { id: '8.9', title: 'COPIE À L\'ENTREPRENEUR' },
       { id: '8.10', title: 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION' },
+      { id: '8.11', title: 'REGISTRE D\'ANALYSE DE RISQUE — BOMA' },
     ],
     addRow: 'Ajouter une ligne',
     saving: 'Sauvegarde...', saved: 'Sauvegardé', unsaved: 'Non sauvegardé',
@@ -397,6 +410,7 @@ export default function Module8Section({
       { id: '8.8', title: 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST' },
       { id: '8.9', title: 'COPY TO CONTRACTOR' },
       { id: '8.10', title: 'APPENDIX — LITHIUM-ION BATTERY FIRE' },
+      { id: '8.11', title: 'RISK ANALYSIS REGISTER — BOMA' },
     ],
     addRow: 'Add a row',
     saving: 'Saving...', saved: 'Saved', unsaved: 'Unsaved changes',
@@ -793,6 +807,117 @@ export default function Module8Section({
       case '8.8': return <TextSection sectionId="8.8" title={currentSectionMeta.title} value={section8_8} setValue={setSection8_8} markDirty={markDirty} language={language} />;
       case '8.9': return <TextSection sectionId="8.9" title={currentSectionMeta.title} value={section8_9} setValue={setSection8_9} markDirty={markDirty} language={language} />;
       case '8.10': return <Module8Section10 data={section8_10} onChange={setSection8_10} markDirty={markDirty} language={language} />;
+      case '8.11': return (
+        <div>
+          <SectionHeader sectionId="8.11" title={currentSectionMeta.title} />
+          <div className="rounded-md p-3 mb-4 flex items-start gap-2"
+            style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+            <span style={{ color: '#2980B9' }}>ℹ</span>
+            <p className="text-sm" style={{ color: '#2980B9' }}>
+              {isFr
+                ? 'Modifiez les zones, risques et priorités selon votre contexte. Ces tableaux sont générés automatiquement dans le PDF pour les bâtiments certifiés BOMA.'
+                : 'Edit zones, risks and priorities according to your context. These tables are automatically generated in the PDF for BOMA-certified buildings.'}
+            </p>
+          </div>
+          {(section8_11?.tables || []).map((table: any, tIdx: number) => (
+            <div key={table.id} className="mb-6">
+              <div className="px-4 py-2 rounded-t font-bold text-sm text-white"
+                style={{ backgroundColor: ['#2980B9','#E67E22','#27AE60','#8E44AD'][tIdx] }}>
+                {table.procedure} — {table.title}
+              </div>
+              <div className="rounded-b overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
+                <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8F9FA' }}>
+                      {[isFr ? 'Catégorie' : 'Category', isFr ? 'Zones / éléments' : 'Zones / Elements', isFr ? 'Risque associé' : 'Associated Risk', isFr ? 'Priorité' : 'Priority'].map(col => (
+                        <th key={col} className="px-3 py-2 text-left font-semibold text-xs uppercase"
+                          style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(table.rows || []).map((row: any, rIdx: number) => (
+                      <tr key={rIdx} style={{ backgroundColor: rIdx % 2 === 0 ? '#FFFFFF' : '#F8F9FA' }}>
+                        <td style={{ border: '1px solid #DEE2E6', padding: '2px 4px', width: '20%' }}>
+                          <input type="text" value={row.categorie || ''}
+                            onChange={e => {
+                              const updated = JSON.parse(JSON.stringify(section8_11));
+                              updated.tables[tIdx].rows[rIdx].categorie = e.target.value;
+                              setSection8_11(updated);
+                              markDirty();
+                            }}
+                            className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none"
+                            style={{ color: '#2C3E50', fontWeight: '600' }} />
+                        </td>
+                        <td style={{ border: '1px solid #DEE2E6', padding: '2px 4px', width: '32%' }}>
+                          <textarea value={row.zones || ''}
+                            onChange={e => {
+                              const updated = JSON.parse(JSON.stringify(section8_11));
+                              updated.tables[tIdx].rows[rIdx].zones = e.target.value;
+                              setSection8_11(updated);
+                              markDirty();
+                            }}
+                            rows={2}
+                            className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
+                            style={{ color: '#495057' }} />
+                        </td>
+                        <td style={{ border: '1px solid #DEE2E6', padding: '2px 4px', width: '33%' }}>
+                          <textarea value={row.risque || ''}
+                            onChange={e => {
+                              const updated = JSON.parse(JSON.stringify(section8_11));
+                              updated.tables[tIdx].rows[rIdx].risque = e.target.value;
+                              setSection8_11(updated);
+                              markDirty();
+                            }}
+                            rows={2}
+                            className="w-full px-2 py-1 text-xs bg-transparent border-0 outline-none resize-none"
+                            style={{ color: '#495057' }} />
+                        </td>
+                        <td style={{ border: '1px solid #DEE2E6', padding: '2px 4px', width: '15%' }}>
+                          <select value={row.priorite || ''}
+                            onChange={e => {
+                              const updated = JSON.parse(JSON.stringify(section8_11));
+                              updated.tables[tIdx].rows[rIdx].priorite = e.target.value;
+                              setSection8_11(updated);
+                              markDirty();
+                            }}
+                            className="w-full px-1 py-1 text-xs rounded border-0 outline-none"
+                            style={{
+                              backgroundColor: row.priorite === 'Élevée' || row.priorite === 'High' ? '#FDEDEC' : row.priorite === 'Moyenne' || row.priorite === 'Medium' ? '#FEF9E7' : '#EAFAF1',
+                              color: row.priorite === 'Élevée' || row.priorite === 'High' ? '#C0392B' : row.priorite === 'Moyenne' || row.priorite === 'Medium' ? '#F39C12' : '#27AE60',
+                              fontWeight: '700',
+                            }}>
+                            {isFr ? (
+                              <>
+                                <option value="Élevée">🔴 Élevée</option>
+                                <option value="Moyenne">🟠 Moyenne</option>
+                                <option value="Faible">🟢 Faible</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="High">🔴 High</option>
+                                <option value="Medium">🟠 Medium</option>
+                                <option value="Low">🟢 Low</option>
+                              </>
+                            )}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+          {(!section8_11 || !section8_11.tables) && (
+            <div className="text-center py-8" style={{ color: '#ADB5BD' }}>
+              <p className="text-sm">{isFr ? 'Régénérez le document pour charger les tableaux d\'analyse de risque.' : 'Regenerate the document to load the risk analysis tables.'}</p>
+            </div>
+          )}
+        </div>
+      );
       default: return null;
     }
   };
