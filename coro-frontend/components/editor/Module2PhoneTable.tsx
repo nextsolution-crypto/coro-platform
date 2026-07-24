@@ -178,20 +178,38 @@ export default function Module2PhoneTable({
                           ${entry.isFixed ? 'text-gray-500 cursor-default' : 'text-gray-800'}`}
                       />
                     ) : (
-                      <select
-                        value={entry.role}
-                        onChange={e => updateEntry(entry.id, 'role', e.target.value)}
-                        disabled={entry.isFixed}
-                        className={`w-full px-2 py-1 text-sm bg-transparent border-0 outline-none
-                          focus:bg-blue-50 rounded transition-colors cursor-pointer
-                          ${entry.isBold ? 'font-bold' : ''}
-                          ${entry.isFixed ? 'text-gray-500 cursor-default' : 'text-gray-800'}`}
-                      >
-                        <option value="">{labels.rolePh}</option>
-                        {availableRoles.map(r => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
-                      </select>
+                      <div>
+                        <select
+                          value={availableRoles.includes(entry.role) ? entry.role : (entry.role === '' ? '' : labels.other)}
+                          onChange={e => {
+                            if (e.target.value === labels.other) {
+                              updateEntry(entry.id, 'role', '_autre_');
+                            } else {
+                              updateEntry(entry.id, 'role', e.target.value);
+                            }
+                          }}
+                          disabled={entry.isFixed}
+                          className={`w-full px-2 py-1 text-sm bg-transparent border-0 outline-none
+                            focus:bg-blue-50 rounded transition-colors cursor-pointer
+                            ${entry.isBold ? 'font-bold' : ''}
+                            ${entry.isFixed ? 'text-gray-500 cursor-default' : 'text-gray-800'}`}
+                        >
+                          <option value="">{labels.rolePh}</option>
+                          {availableRoles.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                        {(entry.role === '_autre_' || (!availableRoles.includes(entry.role) && entry.role !== '')) && (
+                          <input
+                            type="text"
+                            value={entry.role === '_autre_' ? '' : entry.role}
+                            onChange={e => updateEntry(entry.id, 'role', e.target.value || '_autre_')}
+                            placeholder={labels.customPh}
+                            autoFocus
+                            className="w-full mt-1 px-2 py-1 text-sm border border-blue-300 bg-blue-50 outline-none rounded text-gray-800"
+                          />
+                        )}
+                      </div>
                     )}
                   </td>
 
