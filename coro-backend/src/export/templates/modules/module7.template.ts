@@ -494,23 +494,51 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
     .filter(([_, p]: [string, any]) => p && p.base64)
     .sort(([a], [b]) => a.localeCompare(b));
 
-  const photoCells = photoEntries.map(([key, photo]: [string, any]) => `
-    <div style="border:1px solid #E9ECEF;border-radius:4px;overflow:hidden;margin-bottom:14px;">
-      <div style="background-color:#C0392B;color:#FFFFFF;padding:6px 12px;font-size:9pt;font-weight:700;">
-        ${escapeHtml(photo.label || '')}
-      </div>
-      <img src="data:image/jpeg;base64,${photo.base64}" style="width:100%;height:180px;object-fit:cover;display:block;" />
-    </div>
-  `).join('');
+  // Grouper les photos par 6 (max par page)
+  const photoGroups: Array<Array<[string, any]>> = [];
+  for (let i = 0; i < photoEntries.length; i += 6) {
+    photoGroups.push(photoEntries.slice(i, i + 6));
+  }
+
+  const renderPhotoGroup = (group: Array<[string, any]>): string => {
+    const rows: string[] = [];
+    for (let i = 0; i < group.length; i += 2) {
+      const [, photo1] = group[i] as [string, any];
+      const pair = group[i + 1];
+      const cell1 = `
+        <td style="width:50%;padding:6px;vertical-align:top;border:none;">
+          <div style="border:1px solid #E9ECEF;border-radius:4px;overflow:hidden;">
+            <div style="background-color:#C0392B;color:#FFFFFF;padding:6px 12px;font-size:9pt;font-weight:700;">
+              ${escapeHtml(photo1.label || '')}
+            </div>
+            <img src="data:image/jpeg;base64,${photo1.base64}" style="width:100%;height:175px;object-fit:cover;display:block;" />
+          </div>
+        </td>`;
+      const cell2 = pair ? `
+        <td style="width:50%;padding:6px;vertical-align:top;border:none;">
+          <div style="border:1px solid #E9ECEF;border-radius:4px;overflow:hidden;">
+            <div style="background-color:#C0392B;color:#FFFFFF;padding:6px 12px;font-size:9pt;font-weight:700;">
+              ${escapeHtml((pair[1] as any).label || '')}
+            </div>
+            <img src="data:image/jpeg;base64,${(pair[1] as any).base64}" style="width:100%;height:175px;object-fit:cover;display:block;" />
+          </div>
+        </td>` : '<td style="width:50%;padding:6px;border:none;"></td>';
+      rows.push(`<tr style="page-break-inside:avoid;">${cell1}${cell2}</tr>`);
+    }
+    return `<table style="width:100%;border-collapse:collapse;border:none;page-break-inside:avoid;">${rows.join('')}</table>`;
+  };
 
   const html79 = `
     <div class="page-break">
       ${sectionHeader('7.9', isFr ? 'PHOTOS DES ÉQUIPEMENTS DE PROTECTION' : 'PROTECTION EQUIPMENT PHOTOS')}
-      ${photoEntries.length > 0 ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          ${photoCells}
-        </div>
-      ` : `<p style="color:#ADB5BD;">${isFr ? 'Aucune photo ajoutée' : 'No photos added'}</p>`}
+      ${photoEntries.length > 0
+        ? photoGroups.map((group, idx) => `
+            <div style="${idx > 0 ? 'page-break-before:always;' : ''}">
+              ${renderPhotoGroup(group)}
+            </div>
+          `).join('')
+        : `<p style="color:#ADB5BD;">${isFr ? 'Aucune photo ajoutée' : 'No photos added'}</p>`
+      }
     </div>
   `;
 
