@@ -495,7 +495,9 @@ export default function ConfiguratorPage() {
     if (['centraleSurveillance','centraleTelephone','centraleCodeClient'].includes(field.key)) return config['teleSurveillance'] === true;
     if (['nbAscenseurs','typeAscenseur','salleAscenseur','ascenseurPompier','rappelAscenseursLieu','telephoneAscenseurs','fonctionneSecours'].includes(field.key)) return config['ascenseurs'] === true;
     if (field.key === 'ascenseurPompierLequel') return config['ascenseurPompier'] === true;
-    if (['gicleursSystemes','salleGicleurs','pompeIncendie','gapmUsgpm','boyauIncendie','boyauCabinet','priseRefoulement','raccordPompier','raccordPompierLieu','bornesFontaine','bornesFontaineLieu','vannesIsolement','vannesIsolementLieu'].includes(field.key)) return config['gicleurs'] === true;
+    if (['gicleursSystemes','salleGicleurs','pompeIncendie','pompeIncendieLieu','gapmUsgpm','boyauIncendie','boyauCabinet','priseRefoulement','raccordPompier','raccordPompierLieu','bornesFontaine','bornesFontaineLieu','vannesIsolement','vannesIsolementLieu','valve2_5','valve2_5Lieu','valve1_5','valve1_5Lieu'].includes(field.key)) return config['gicleurs'] === true;
+    if (field.key === 'valve2_5Lieu') return config['gicleurs'] === true && config['valve2_5'] === true;
+    if (field.key === 'valve1_5Lieu') return config['gicleurs'] === true && config['valve1_5'] === true;
     if (field.key === 'extincteursList') return config['extincteurPortatif'] === true;
     if (field.key === 'systemeExtinctionFixeLieu') return config['systemeExtinctionFixe'] === true;
     if (field.key === 'systemePreActionLieu') return config['systemePreAction'] === true;
@@ -503,7 +505,14 @@ export default function ConfiguratorPage() {
     if (field.key === 'systemeCO2Lieu') return config['systemeCO2'] === true;
     if (['cvacType','cvacLocalisation'].includes(field.key)) return config['cvac'] === true;
     if (field.key === 'desenfumageLieu') return config['desenfumage'] === true;
-    if (['nbGeneratrices','generatriceNom','generatriceLieu','generatriceCarburant','autonomieGeneratrice','capaciteReservoir','generatriceEquipements'].includes(field.key)) return config['generatrice'] === true;
+    if (['nbGeneratrices','generatriceNom','generatriceLieu','generatriceCarburant','autonomieGeneratrice','capaciteReservoir','reservoirsAuxiliaires','generatriceEquipements','generatriceEquipementsPersonnalises'].includes(field.key)) return config['generatrice'] === true;
+    if (['reservoirsAuxiliairesLieu','reservoirsAuxiliairesCapacite','autonomieTotale'].includes(field.key)) return config['generatrice'] === true && config['reservoirsAuxiliaires'] === true;
+    if (['generatriceEquipementsPersonnalises'].includes(field.key)) return config['generatrice'] === true;
+    if (field.key === 'trousseDeversementListe') return config['trousseDeversement'] === true;
+    if (field.key === 'trousseClesPompierLieu') return config['trousseClesPompier'] === true;
+    if (field.key === 'compacteurGicleurs') return config['compacteur'] === true;
+    if (['compacteurGicleursType','compacteurVanneIsolement'].includes(field.key)) return config['compacteur'] === true && config['compacteurGicleurs'] === true;
+    if (field.key === 'pompeIncendieLieu') return config['pompeIncendie'] === true;
     if (field.key === 'gazNaturelLieu') return config['gazNaturel'] === true;
     if (field.key === 'propaneLieu') return config['propane'] === true;
     if (['detecteurCOSeuil1','detecteurCOSeuil2','detecteurCOLieu'].includes(field.key)) return config['detecteurCO'] === true;
