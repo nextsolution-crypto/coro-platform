@@ -154,7 +154,14 @@ function DynamicListEditor({ field, items, onChange }: {
                       {sf.options?.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   )}
-                  {sf.type === 'text' && (
+                  {sf.type === 'text' && sf.key === 'lieu' && (
+                    <textarea value={item[sf.key] || ''}
+                      onChange={e => handleUpdate(idx, sf.key, e.target.value)}
+                      rows={3}
+                      className={inputCls} style={{ ...inputSty, resize: 'vertical' }}
+                      placeholder="Ex: SS1, SS2&#10;Rampe d'accès&#10;Étages RDC au 12ème" />
+                  )}
+                  {sf.type === 'text' && sf.key !== 'lieu' && (
                     <input type="text" value={item[sf.key] || ''}
                       onChange={e => handleUpdate(idx, sf.key, e.target.value)}
                       className={inputCls} style={inputSty}
