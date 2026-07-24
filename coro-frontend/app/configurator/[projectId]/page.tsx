@@ -533,6 +533,9 @@ export default function ConfiguratorPage() {
     if (field.key === 'espaceClosLieu') return config['espaceClos'] === true;
     if (['systemePhonicType','messagesAutomatises'].includes(field.key)) return config['systemePhonic'] === true;
     if (field.key === 'nbRadios') return config['radiosCommunication'] === true;
+    if (field.key === 'accesSousSolDetails') return (config['accesSousSol'] || []).length > 0;
+    if (field.key === 'accesEtagesDetails') return (config['accesEtages'] || []).length > 0;
+    if (field.key === 'infosBatiment') return config['treizeEtage'] === true;
     return true;
   };
 
