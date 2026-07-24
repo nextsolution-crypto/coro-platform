@@ -20,6 +20,7 @@ interface Field {
   options?: string[];
   checkboxOptions?: string[];
   schema?: SchemaField[];
+  tooltip?: string;
 }
 
 interface Section {
@@ -692,9 +693,18 @@ export default function ConfiguratorPage() {
                     onMouseEnter={e => e.currentTarget.style.borderColor = '#CED4DA'}
                     onMouseLeave={e => e.currentTarget.style.borderColor = '#E9ECEF'}
                   >
-                    <label className="block text-sm font-medium mb-2.5"
+                    <label className="block text-sm font-medium mb-2.5 flex items-center gap-2"
                       style={{ color: '#2C3E50' }}>
                       {field.label}
+                      {field.tooltip && (
+                        <span
+                          title={field.tooltip}
+                          className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs cursor-help flex-shrink-0"
+                          style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1', fontSize: '10px' }}
+                        >
+                          i
+                        </span>
+                      )}
                     </label>
 
                     {field.type === 'boolean' && (
