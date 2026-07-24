@@ -309,7 +309,16 @@ if (moduleNum === 2) {
       }
 
       if (moduleNum === 8) {
-        const sections8 = renderModule8(content.module8, lang, sequentialNumber);
+        // Recharger le contenu du document pour avoir les données module8 à jour
+        let module8Data = content.module8;
+        if (!module8Data) {
+          const freshDoc = await this.prisma.document.findFirst({
+            where: { projectId: project.id },
+            select: { content: true },
+          });
+          module8Data = (freshDoc?.content as any)?.module8 || null;
+        }
+        const sections8 = renderModule8(module8Data, lang, sequentialNumber);
 
         sections8.forEach((section, idx) => {
           const displayNumber = `${sequentialNumber}.${idx + 1}`;
