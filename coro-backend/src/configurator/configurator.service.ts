@@ -245,7 +245,7 @@ export class ConfiguratorService {
               schema: [
                 { key: 'type', label: 'Type de reseau', type: 'select',
                   options: ['Sous eau', 'Sous air', 'Pre-action', 'Diluvien', 'Brouillard d eau', 'Autre'] },
-                { key: 'lieu', label: 'Emplacement(s) couvert(s)', type: 'text' },
+                { key: 'lieu', label: 'Secteurs / lieux desservis (un par ligne ou separes par virgule)', type: 'text' },
                 { key: 'complet', label: 'Systeme complet (tout le batiment)', type: 'boolean' },
               ],
             },
