@@ -285,15 +285,34 @@ export default function Module8Section({
           setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
         } else {
           const sections = initialData?.sections || [];
-          setSection8_1(ensureIds(getSection(sections, '8.1')?.entries || []));
-          setSection8_2(ensureIds(getSection(sections, '8.2')?.entries || []));
-          setSection8_3(getSection(sections, '8.3')?.data || defaultReport);
-          setSection8_4(ensureIds(getSection(sections, '8.4')?.entries || []));
-          setSection8_5(ensureIds(getSection(sections, '8.5')?.entries || []));
-          setSection8_6(getSection(sections, '8.6')?.content || '');
-          setSection8_7(getSection(sections, '8.7')?.content || '');
-          setSection8_8(getSection(sections, '8.8')?.content || '');
-          setSection8_9(getSection(sections, '8.9')?.content || '');
+          const newS1 = ensureIds(getSection(sections, '8.1')?.entries || []) as TrainingEntry[];
+          const newS2 = ensureIds(getSection(sections, '8.2')?.entries || []) as PhoneticMessage[];
+          const newS3 = (getSection(sections, '8.3')?.data || defaultReport) as EvacuationReport;
+          const newS4 = ensureIds(getSection(sections, '8.4')?.entries || []) as RiskRow[];
+          const newS5 = ensureIds(getSection(sections, '8.5')?.entries || []) as SectorRow[];
+          const newS6 = getSection(sections, '8.6')?.content || '';
+          const newS7 = getSection(sections, '8.7')?.content || '';
+          const newS8 = getSection(sections, '8.8')?.content || '';
+          const newS9 = getSection(sections, '8.9')?.content || '';
+
+          setSection8_1(newS1);
+          setSection8_2(newS2);
+          setSection8_3(newS3);
+          setSection8_4(newS4);
+          setSection8_5(newS5);
+          setSection8_6(newS6);
+          setSection8_7(newS7);
+          setSection8_8(newS8);
+          setSection8_9(newS9);
+
+          // Sauvegarder immédiatement les données initiales en DB
+          try {
+            await api.put(`/projects/${projectId}/module8`, {
+              section8_1: newS1, section8_2: newS2, section8_3: newS3, section8_4: newS4,
+              section8_5: newS5, section8_6: newS6, section8_7: newS7, section8_8: newS8,
+              section8_9: newS9, section8_10: DEFAULT_LITHIUM_ANNEXE_DATA,
+            });
+          } catch (err) { console.error('Sauvegarde initiale module8 échouée:', err); }
         }
       } catch {
         const sections = initialData?.sections || [];
