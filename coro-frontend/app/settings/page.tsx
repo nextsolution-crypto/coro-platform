@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const [saved, setSaved]       = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFullPreview, setLogoFullPreview] = useState<string | null>(null);
-  const [orgInfo, setOrgInfo] = useState<{ name: string; licenseType: string; _count: any } | null>(null);
+  const [orgInfo, setOrgInfo] = useState<{ name: string; licenseType: string; _count: any; users?: any[] } | null>(null);
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', companyName: '',
     companyPhone: '', companyEmail: '',
@@ -31,6 +31,17 @@ export default function SettingsPage() {
       const token = localStorage.getItem('coro_token');
       if (!token) router.push('/login');
     }
+  }, [isAuthenticated]);
+
+  // Recharger les infos org à chaque fois que la page devient visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && isAuthenticated) {
+        fetchUser();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [isAuthenticated]);
 
   const fetchUser = async () => {
@@ -456,7 +467,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Membres de l'équipe</p>
                   <p className="text-sm mt-1 font-medium" style={{ color: '#2C3E50' }}>
-                    {orgInfo._count?.users ?? '—'}
+                    {orgInfo.users?.length ?? orgInfo._count?.users ?? '—'}
                   </p>
                 </div>
                 <div>
