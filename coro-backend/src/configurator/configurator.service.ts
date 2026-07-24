@@ -130,7 +130,8 @@ export class ConfiguratorService {
             { key: 'accesEtagesDetails', label: 'Details acces etages (optionnel)', type: 'text' },
             { key: 'treizeEtage', label: 'Le batiment a un 13e etage', type: 'boolean' },
             { key: 'infosBatiment', label: 'Informations supplementaires sur le batiment (optionnel)', type: 'text' },
-            { key: 'hauteurBatiment', label: 'Batiment a grande hauteur (+ de 18m)', type: 'boolean' },
+            { key: 'hauteurBatiment', label: 'Batiment a grande hauteur (+ de 18m)', type: 'boolean',
+              tooltip: 'Un batiment est considere a grande hauteur si le plancher du dernier etage occupe est a plus de 18m au-dessus du niveau moyen du sol.' },
             { key: 'multiLocataires', label: 'Multi-locataires', type: 'boolean' },
             { key: 'nbLocataires', label: 'Nombre de locataires', type: 'number' },
             {
@@ -149,7 +150,8 @@ export class ConfiguratorService {
             { key: 'lieuSommeil', label: 'Lieu de sommeil (hotel, residence)', type: 'boolean' },
             { key: 'securite24h', label: 'Securite 24h/7', type: 'boolean' },
             { key: 'agentSecurite', label: 'Agent de securite sur place', type: 'boolean' },
-            { key: 'posteSurveillance', label: 'Poste de securite', type: 'boolean' },
+            { key: 'posteSurveillance', label: 'Poste de securite', type: 'boolean',
+              tooltip: 'Poste physique occupe par un agent de securite qui surveille les systemes de securite, les cameras et les acces du batiment.' },
             { key: 'personnelHandicap', label: 'Personnes necessitant aide evacuation (PPNAE)', type: 'boolean' },
             { key: 'controleAcces', label: 'Systeme de controle d acces', type: 'boolean' },
             { key: 'cameras', label: 'Cameras de surveillance (CCTV)', type: 'boolean' },
@@ -186,7 +188,8 @@ export class ConfiguratorService {
             { key: 'boiteClePompier', label: 'Boite a cles pompier (lieu)', type: 'text' },
             { key: 'trousseClesPompier', label: 'Trousseau de cles pompier present', type: 'boolean' },
             { key: 'trousseClesPompierLieu', label: 'Localisation du trousseau de cles pompier', type: 'text' },
-            { key: 'lieuDocument', label: 'Lieu ou est conserve le document (PMU/PSI/etc.)', type: 'text' },
+            { key: 'lieuDocument', label: 'Lieu ou est conserve le document (PMU/PSI/etc.)', type: 'text',
+              tooltip: 'Indiquer l endroit precis ou est conserve l exemplaire papier officiel du document en cas d urgence. Ex: Poste de securite, bureau du gestionnaire.' },
           ],
         },
         {
@@ -195,7 +198,8 @@ export class ConfiguratorService {
           icon: '🚨',
           fields: [
             { key: 'panneauAlarme', label: 'Panneau alarme incendie present', type: 'boolean' },
-            { key: 'panneauType', label: 'Type de signal', type: 'select', options: ['SIMPLE', 'DOUBLE', 'AUCUN'] },
+            { key: 'panneauType', label: 'Type de signal', type: 'select', options: ['SIMPLE', 'DOUBLE', 'AUCUN'],
+              tooltip: 'SIMPLE : un seul signal sonore declenche l evacuation immediate. DOUBLE : alerte puis alarme pour l evacuation — necessite une equipe de Premiere Intervention (EPI) actif dans l organigramme.' },
             { key: 'heuresFonctionnement', label: 'Heures de fonctionnement double signal', type: 'text' },
             { key: 'panneauMarque', label: 'Marque du panneau', type: 'text' },
             { key: 'panneauModele', label: 'Modele du panneau', type: 'text' },
@@ -252,7 +256,8 @@ export class ConfiguratorService {
             { key: 'salleGicleurs', label: 'Localisation salle gicleurs', type: 'text' },
             { key: 'pompeIncendie', label: 'Pompe incendie presente', type: 'boolean' },
             { key: 'pompeIncendieLieu', label: 'Localisation pompe incendie', type: 'text' },
-            { key: 'gapmUsgpm', label: 'GAPM / USGPM de la pompe', type: 'text' },
+            { key: 'gapmUsgpm', label: 'GAPM / USGPM de la pompe', type: 'text',
+              tooltip: 'GAPM = Gallons par minute (canadien). USGPM = US Gallons per minute. Indique la capacite de debit de la pompe incendie.' },
             { key: 'boyauIncendie', label: 'Boyaux incendie presents', type: 'boolean' },
             { key: 'boyauCabinet', label: 'Cabinet boyau incendie present', type: 'boolean' },
             { key: 'priseRefoulement', label: 'Prise de refoulement presente', type: 'boolean' },
@@ -400,10 +405,8 @@ export class ConfiguratorService {
           icon: '⚠️',
           fields: [
             { key: 'matieresDangereuses', label: 'Matieres dangereuses presentes dans le batiment', type: 'boolean' },
-            {
-              key: 'matieresList',
-              label: 'Liste des matieres dangereuses (ajouter chaque matiere)',
-              type: 'dynamic_list',
+            { key: 'matieresList', label: 'Liste des matieres dangereuses (ajouter chaque matiere)', type: 'dynamic_list',
+              tooltip: 'Le numero UN identifie les matieres dangereuses selon les normes internationales de transport (TMD). Ex: UN1202 = carburant diesel, UN1075 = propane.',
               schema: [
                 { key: 'nom', label: 'Nom du produit', type: 'text' },
                 { key: 'numeroUN', label: 'Numero UN (ex: UN1202)', type: 'text' },
