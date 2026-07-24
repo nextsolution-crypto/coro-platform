@@ -409,9 +409,42 @@ export default function Module8Section({
   // SECTION 8.1 — Registre de formation
   // ============================================================
 
+  const [printingAttendance, setPrintingAttendance] = useState(false);
+
+  const handlePrintAttendance = async () => {
+    setPrintingAttendance(true);
+    try {
+      const res = await api.post(
+        `/projects/${projectId}/module8/print-attendance`,
+        { language },
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `feuille-presence.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) { console.error(err); }
+    finally { setPrintingAttendance(false); }
+  };
+
   const render8_1 = () => (
     <div>
-      <SectionHeader sectionId="8.1" title={currentSectionMeta.title} />
+      <div className="flex items-center justify-between mb-4">
+        <SectionHeader sectionId="8.1" title={currentSectionMeta.title} />
+        <button
+          onClick={handlePrintAttendance}
+          disabled={printingAttendance}
+          className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+          style={{ border: '1px solid #A9DFBF', color: '#27AE60', backgroundColor: '#FFFFFF' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+        >
+          🖨️ {printingAttendance ? 'Génération...' : (isFr ? 'Imprimer la feuille de présence' : 'Print attendance sheet')}
+        </button>
+      </div>
       <div className="rounded overflow-hidden shadow-sm" style={{ border: '1px solid #DEE2E6' }}>
         <table className="w-full border-collapse text-sm">
           <thead>
