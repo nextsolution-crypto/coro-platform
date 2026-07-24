@@ -139,6 +139,7 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
     '8.8': 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT',
     '8.9': 'COPIE À L\'ENTREPRENEUR',
     '8.10': 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION',
+    '8.11': 'REGISTRE D\'ANALYSE DE RISQUE — PROCÉDURES CLIMATIQUES BOMA',
   } : {
     '8.1': 'TRAINING REGISTER',
     '8.2': 'EXAMPLES OF PHONETIC MESSAGES',
@@ -150,6 +151,7 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
     '8.8': 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST',
     '8.9': 'COPY TO CONTRACTOR',
     '8.10': 'APPENDIX — LITHIUM-ION BATTERY FIRE',
+    '8.11': 'RISK ANALYSIS REGISTER — BOMA CLIMATE PROCEDURES',
   };
 
   const sectionHeader = (id: string) => {
@@ -287,6 +289,68 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
   const s89 = textSection('8.9', module8Data.section8_9);
   const s810 = renderLithiumAnnexe(module8Data.section8_10, isFr, sectionHeader, moduleSeqNumber);
 
+  // 8.11 — Registre d'analyse de risque BOMA
+  const priorityColor = (p: string) => {
+    if (p === 'Élevée' || p === 'High') return '#C0392B';
+    if (p === 'Moyenne' || p === 'Medium') return '#F39C12';
+    return '#27AE60';
+  };
+  const priorityBg = (p: string) => {
+    if (p === 'Élevée' || p === 'High') return '#FDEDEC';
+    if (p === 'Moyenne' || p === 'Medium') return '#FEF9E7';
+    return '#EAFAF1';
+  };
+  const priorityIcon = (p: string) => {
+    if (p === 'Élevée' || p === 'High') return '🔴';
+    if (p === 'Moyenne' || p === 'Medium') return '🟠';
+    return '🟢';
+  };
+
+  const s811Data = module8Data.section8_11 || null;
+  const s811Tables = s811Data?.tables || [];
+
+  const s811Html = s811Tables.length === 0 ? `
+    <div>
+      ${sectionHeader('8.11')}
+      <p style="color:#ADB5BD;">${isFr ? 'Aucune donnée d\'analyse de risque.' : 'No risk analysis data.'}</p>
+    </div>
+  ` : `
+    <div>
+      ${sectionHeader('8.11')}
+      ${s811Tables.map((table: any, tIdx: number) => `
+        <div style="${tIdx > 0 ? 'margin-top:32px;' : ''}">
+          <p style="font-size:10pt;font-weight:700;color:#C0392B;text-transform:uppercase;margin-bottom:8px;">
+            ${table.procedure} — ${table.title}
+          </p>
+          <table style="width:100%;border-collapse:collapse;font-size:9pt;">
+            <thead>
+              <tr style="background-color:#2C3E50;">
+                <th style="color:#FFFFFF;padding:8px;text-align:left;border:1px solid #4A6278;width:20%;">${isFr ? 'Catégorie' : 'Category'}</th>
+                <th style="color:#FFFFFF;padding:8px;text-align:left;border:1px solid #4A6278;width:32%;">${isFr ? 'Zones / éléments à vérifier' : 'Zones / Elements to Check'}</th>
+                <th style="color:#FFFFFF;padding:8px;text-align:left;border:1px solid #4A6278;width:33%;">${isFr ? 'Risque associé' : 'Associated Risk'}</th>
+                <th style="color:#FFFFFF;padding:8px;text-align:center;border:1px solid #4A6278;width:15%;">${isFr ? 'Priorité' : 'Priority'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(table.rows || []).map((row: any, rIdx: number) => `
+                <tr style="background-color:${rIdx % 2 === 0 ? '#FFFFFF' : '#F8F9FA'};">
+                  <td style="padding:7px 8px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${escapeHtml(row.categorie || '')}</td>
+                  <td style="padding:7px 8px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(row.zones || '')}</td>
+                  <td style="padding:7px 8px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(row.risque || '')}</td>
+                  <td style="padding:7px 8px;border:1px solid #DEE2E6;text-align:center;">
+                    <span style="display:inline-block;padding:3px 8px;border-radius:12px;font-size:8pt;font-weight:700;background-color:${priorityBg(row.priorite)};color:${priorityColor(row.priorite)};">
+                      ${priorityIcon(row.priorite)} ${escapeHtml(row.priorite || '')}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
   return [
     { id: '8.1', title: titles['8.1'], html: s81 },
     { id: '8.2', title: titles['8.2'], html: s82 },
@@ -298,6 +362,7 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
     { id: '8.8', title: titles['8.8'], html: s88 },
     { id: '8.9', title: titles['8.9'], html: s89 },
     { id: '8.10', title: titles['8.10'], html: s810 },
+    { id: '8.11', title: titles['8.11'], html: s811Html },
   ];
 }
 
