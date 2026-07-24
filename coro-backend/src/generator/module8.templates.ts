@@ -189,7 +189,12 @@ function generateModule8FR(ctx: DocumentContext): any {
         columns: ['NOM', 'TITRE / FONCTION', 'DATE', 'FORMATEUR'],
         allowAdd: true,
         allowDelete: true,
-        entries: [] as TrainingEntry[],
+        entries: Array.from({ length: 20 }, () => ({
+          nom: '',
+          titre: '',
+          date: '',
+          formateur: '',
+        })) as TrainingEntry[],
       },
       {
         id: '8.2',
@@ -360,7 +365,12 @@ function generateModule8EN(ctx: DocumentContext): any {
         columns: ['NAME', 'TITLE / FUNCTION', 'DATE', 'TRAINER'],
         allowAdd: true,
         allowDelete: true,
-        entries: [] as TrainingEntry[],
+        entries: Array.from({ length: 20 }, () => ({
+          nom: '',
+          titre: '',
+          date: '',
+          formateur: '',
+        })) as TrainingEntry[],
       },
       {
         id: '8.2',

@@ -165,20 +165,34 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
   };
 
   // 8.1 — Registre de formation
-  const s81Rows = (module8Data.section8_1 || []).map((e: any) => `
-    <tr>
-      <td>${escapeHtml(e.nom || '')}</td>
-      <td>${escapeHtml(e.titre || '')}</td>
-      <td>${escapeHtml(e.date || '')}</td>
-      <td>${escapeHtml(e.formateur || '')}</td>
+  const defaultRows = Array.from({ length: 18 }, () => ({ nom: '', titre: '', date: '', formateur: '' }));
+  const s81Entries = (module8Data.section8_1 && module8Data.section8_1.length > 0)
+    ? module8Data.section8_1
+    : defaultRows;
+  const s81Rows = s81Entries.map((e: any) => `
+    <tr style="height:36px;">
+      <td style="min-height:36px;">${escapeHtml(e.nom || '')}</td>
+      <td style="min-height:36px;">${escapeHtml(e.titre || '')}</td>
+      <td style="min-height:36px;width:15%;">${escapeHtml(e.date || '')}</td>
+      <td style="min-height:36px;width:20%;">${escapeHtml(e.formateur || '')}</td>
     </tr>
   `).join('');
   const s81 = `
     <div>
       ${sectionHeader('8.1')}
-      <table>
-        <thead><tr><th>${isFr ? 'Nom' : 'Name'}</th><th>${isFr ? 'Titre / Fonction' : 'Title / Function'}</th><th>Date</th><th>${isFr ? 'Formateur' : 'Trainer'}</th></tr></thead>
-        <tbody>${s81Rows || `<tr><td colspan="4" style="text-align:center;color:#ADB5BD;">—</td></tr>`}</tbody>
+      <p style="font-size:9pt;color:#6C757D;margin-bottom:12px;font-style:italic;">
+        ${isFr ? 'À compléter manuellement lors des formations.' : 'To be completed manually during training sessions.'}
+      </p>
+      <table style="width:100%;">
+        <thead>
+          <tr>
+            <th style="width:30%;">${isFr ? 'Nom' : 'Name'}</th>
+            <th style="width:35%;">${isFr ? 'Titre / Fonction' : 'Title / Function'}</th>
+            <th style="width:15%;">Date</th>
+            <th style="width:20%;">${isFr ? 'Formateur' : 'Trainer'}</th>
+          </tr>
+        </thead>
+        <tbody>${s81Rows}</tbody>
       </table>
     </div>
   `;
