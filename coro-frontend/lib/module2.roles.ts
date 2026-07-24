@@ -5,30 +5,32 @@ export const ROLES_INTERNES_BUREAU_FR = [
   'Directrice, Exploitation', 'Directeur, Exploitation',
   'Gestionnaire d\'immeuble', 'Gestionnaire de maintenance',
   'Responsable sécurité', 'Responsable entretien',
-  'Coordonnateur d\'urgence', 'Directeur général',
-  'Directeur des opérations', 'Responsable des ressources humaines',
+  'Coordonnateur d\'urgence', 'Coordonnateur SST',
+  'Directeur général', 'Directeur des opérations',
+  'Responsable des ressources humaines',
   'Agent de sécurité', 'Concierge', 'Autre',
 ];
 
 export const ROLES_INTERNES_BUREAU_EN = [
   'Director, Operations', 'Building Manager', 'Maintenance Manager',
   'Security Officer', 'Maintenance Supervisor', 'Emergency Coordinator',
-  'General Manager', 'Director of Operations', 'Human Resources Manager',
-  'Security Agent', 'Concierge', 'Other',
+  'HSE Coordinator', 'General Manager', 'Director of Operations',
+  'Human Resources Manager', 'Security Agent', 'Concierge', 'Other',
 ];
 
 export const ROLES_INTERNES_INDUSTRIEL_FR = [
   'Directeur de l\'usine', 'Surintendant', 'Gestionnaire de maintenance',
   'Responsable Sécurité', 'Concierge', 'Coordonnateur d\'urgence',
-  'Directeur général', 'Responsable environnement', 'Chef d\'équipe',
-  'Agent de sécurité', 'Responsable des ressources humaines', 'Autre',
+  'Coordonnateur SST', 'Directeur général', 'Responsable environnement',
+  'Chef d\'équipe', 'Agent de sécurité',
+  'Responsable des ressources humaines', 'Autre',
 ];
 
 export const ROLES_INTERNES_INDUSTRIEL_EN = [
   'Plant Director', 'Superintendent', 'Maintenance Manager',
   'Safety Officer', 'Janitor', 'Emergency Coordinator',
-  'General Manager', 'Environmental Manager', 'Team Lead',
-  'Security Agent', 'Human Resources Manager', 'Other',
+  'HSE Coordinator', 'General Manager', 'Environmental Manager',
+  'Team Lead', 'Security Agent', 'Human Resources Manager', 'Other',
 ];
 
 export const ALL_EQUIPEMENTS_FR = [
