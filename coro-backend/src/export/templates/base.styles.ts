@@ -85,6 +85,18 @@ export const BASE_STYLES = `
     color: #495057;
   }
 
+  .boma-table-title {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #2C3E50 !important;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background-color: #EBF5FB;
+    border-left: 5px solid #C0392B;
+    border-radius: 2px;
+  }
+
   strong {
     color: #2C3E50;
     font-weight: 700;

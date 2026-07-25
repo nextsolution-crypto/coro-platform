@@ -319,16 +319,16 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
       ${sectionHeader('8.11')}
       ${s811Tables.map((table: any, tIdx: number) => `
         <div style="${tIdx > 0 ? 'margin-top:32px;' : ''}">
-          <p style="font-size:10pt;font-weight:700;color:#C0392B;text-transform:uppercase;margin-bottom:8px;">
+          <div class="boma-table-title">
             ${table.procedure} — ${table.title}
-          </p>
+          </div>
           <table style="width:100%;border-collapse:collapse;font-size:9pt;">
             <thead>
-              <tr style="background-color:#2C3E50;">
-                <th style="color:#FFFFFF;padding:8px;text-align:left;border:1px solid #4A6278;width:20%;">${isFr ? 'Catégorie' : 'Category'}</th>
-                <th style="color:#FFFFFF;padding:8px;text-align:left;border:1px solid #4A6278;width:32%;">${isFr ? 'Zones / éléments à vérifier' : 'Zones / Elements to Check'}</th>
-                <th style="color:#FFFFFF;padding:8px;text-align:left;border:1px solid #4A6278;width:33%;">${isFr ? 'Risque associé' : 'Associated Risk'}</th>
-                <th style="color:#FFFFFF;padding:8px;text-align:center;border:1px solid #4A6278;width:15%;">${isFr ? 'Priorité' : 'Priority'}</th>
+              <tr>
+                <th style="padding:8px;text-align:left;border:1px solid #DEE2E6;width:20%;background-color:#F8F9FA;color:#2C3E50;">${isFr ? 'Catégorie' : 'Category'}</th>
+                <th style="padding:8px;text-align:left;border:1px solid #DEE2E6;width:32%;background-color:#F8F9FA;color:#2C3E50;">${isFr ? 'Zones / éléments à vérifier' : 'Zones / Elements to Check'}</th>
+                <th style="padding:8px;text-align:left;border:1px solid #DEE2E6;width:33%;background-color:#F8F9FA;color:#2C3E50;">${isFr ? 'Risque associé' : 'Associated Risk'}</th>
+                <th style="padding:8px;text-align:center;border:1px solid #DEE2E6;width:15%;background-color:#F8F9FA;color:#2C3E50;">${isFr ? 'Priorité' : 'Priority'}</th>
               </tr>
             </thead>
             <tbody>
