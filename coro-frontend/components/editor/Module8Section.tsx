@@ -58,6 +58,7 @@ interface SectorRow {
 interface Module8SectionProps {
   projectId: string;
   language?: 'fr' | 'en';
+  certBOMA?: boolean;
   initialData: {
     sections: any[];
   };
@@ -226,6 +227,7 @@ function TextSection({
 export default function Module8Section({
   projectId,
   language = 'fr',
+  certBOMA = false,
   initialData,
 }: Module8SectionProps) {
 
@@ -402,7 +404,7 @@ export default function Module8Section({
       { id: '8.8', title: 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT' },
       { id: '8.9', title: 'COPIE À L\'ENTREPRENEUR' },
       { id: '8.10', title: 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION' },
-      { id: '8.11', title: 'REGISTRE D\'ANALYSE DE RISQUE — BOMA' },
+      ...(certBOMA ? [{ id: '8.11', title: 'REGISTRE D\'ANALYSE DE RISQUE — BOMA' }] : []),
     ],
     addRow: 'Ajouter une ligne',
     saving: 'Sauvegarde...', saved: 'Sauvegardé', unsaved: 'Non sauvegardé',
@@ -420,6 +422,7 @@ export default function Module8Section({
       { id: '8.8', title: 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST' },
       { id: '8.9', title: 'COPY TO CONTRACTOR' },
       { id: '8.10', title: 'APPENDIX — LITHIUM-ION BATTERY FIRE' },
+      ...(certBOMA ? [{ id: '8.11', title: 'RISK ANALYSIS REGISTER — BOMA' }] : []),
       { id: '8.11', title: 'RISK ANALYSIS REGISTER — BOMA' },
     ],
     addRow: 'Add a row',

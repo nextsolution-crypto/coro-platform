@@ -273,6 +273,7 @@ export default function EditorPage() {
       <Module8Section
         projectId={projectId}
         language={language}
+        certBOMA={document?.content?.config?.certBOMA === true}
         initialData={{
           sections: document?.content?.modules_fr?.find((m: any) => m.moduleNumber === 8)?.sections || [],
         }}
