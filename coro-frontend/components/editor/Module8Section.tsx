@@ -285,12 +285,21 @@ export default function Module8Section({
           setSection8_9(saved.section8_9 || '');
           setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
           setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
-          // Pour 8.11, si pas en DB, charger depuis initialData
+          // Pour 8.11, si pas en DB, charger depuis initialData ET sauvegarder
           if (saved.section8_11) {
             setSection8_11(saved.section8_11);
           } else {
             const s11 = getSection(initialData?.sections || [], '8.11');
             setSection8_11(s11 || null);
+            // Sauvegarder section8_11 en DB immédiatement
+            if (s11) {
+              try {
+                await api.put(`/projects/${projectId}/module8`, {
+                  ...saved,
+                  section8_11: s11,
+                });
+              } catch (err) { console.error('Sauvegarde section8_11 échouée:', err); }
+            }
           }
         } else {
           const sections = initialData?.sections || [];
@@ -323,6 +332,7 @@ export default function Module8Section({
               section8_1: newS1, section8_2: newS2, section8_3: newS3, section8_4: newS4,
               section8_5: newS5, section8_6: newS6, section8_7: newS7, section8_8: newS8,
               section8_9: newS9, section8_10: DEFAULT_LITHIUM_ANNEXE_DATA,
+              section8_11: s11 || null,
             });
           } catch (err) { console.error('Sauvegarde initiale module8 échouée:', err); }
         }
