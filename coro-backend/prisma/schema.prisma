@@ -144,6 +144,8 @@ model Project {
   revisionHistory     RevisionHistory[]
   procedureOverrides  ProcedureOverride[]
   projectVersions     ProjectVersion[]
+
+  activities     ProjectActivity[]
 }
 
 model RevisionHistory {
@@ -394,4 +396,29 @@ model AuditLog {
 
   user         User         @relation(fields: [userId], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model ProjectActivity {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type        String   // clé de l'activité (ex: "formation_equipe_urgence")
+  label       String   // libellé affiché
+  duration    String   // ex: "2h00"
+  mode        String   @default("presentiel") // "presentiel" ou "teams"
+  customLabel String?  // si type = "autre"
+  customDuration String? // si type = "autre"
+
+  scheduledDate DateTime?
+  status        String   @default("a_faire") // a_faire, fait, reporte, annule, termine
+  reportedDate  DateTime? // nouvelle date si reporté
+
+  assigneeEmail String?  // email conseiller CORO
+  clientEmail   String?  // email contact client
+  notes         String?
+
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
