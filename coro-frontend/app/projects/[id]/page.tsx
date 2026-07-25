@@ -344,6 +344,16 @@ const handleChangeStatus = async (newStatus: string) => {
               📋 Journal
             </button>
 
+            <button
+              onClick={() => router.push(`/projects/${projectId}/activities`)}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors flex items-center gap-2"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              📅 Activités
+            </button>
+
             <button onClick={() => setShowTemplateModal(true)} disabled={!hasDocument}
               className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
               style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
