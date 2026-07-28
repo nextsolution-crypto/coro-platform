@@ -139,6 +139,15 @@ export default function ClientDetailPage() {
           </h2>
         </div>
         <button
+          onClick={() => router.push(`/clients/${clientId}/portfolio`)}
+          className="text-sm font-medium px-4 py-2.5 rounded transition-colors flex items-center gap-2"
+          style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          📅 Portefeuille
+        </button>
+        <button
           onClick={handleSave}
           disabled={saving}
           className="text-white font-medium px-6 py-2.5 rounded transition-colors
