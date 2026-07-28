@@ -92,11 +92,24 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${infoRow(isFr ? 'Usage secondaire' : 'Secondary use', val(config.usageSecondaire))}
           ${infoRow(isFr ? 'Nombre de sous-sols' : 'Number of basements', val(config.basements, '0'))}
           ${infoRow(isFr ? 'Nombre d\'étages' : 'Number of floors', val(config.floors, '0'))}
+          ${infoRow(isFr ? '13e étage présent' : '13th floor present', bool(config.treizeEtage, isFr))}
           ${infoRow(isFr ? 'Grande hauteur (+18m)' : 'High-rise (+18m)', bool(config.hauteurBatiment, isFr))}
-          ${infoRow(isFr ? 'Construction du bâtiment' : 'Building construction', val(config.typeConstruction))}
+          ${infoRow(isFr ? 'Construction — Étages supérieurs' : 'Construction — Upper floors', val(config.typeConstructionEtages))}
+          ${infoRow(isFr ? 'Construction — Toit' : 'Construction — Roof', val(config.typeConstructionToit))}
           ${infoRow(isFr ? 'Année de construction' : 'Year built', val(config.anneeConstruction))}
           ${infoRow(isFr ? 'Dernière rénovation majeure' : 'Last major renovation', val(config.derniereRenovation))}
           ${infoRow(isFr ? 'Superficie (pi²)' : 'Area (sq ft)', val(config.superficie))}
+          ${config.infosBatiment ? infoRow(isFr ? 'Informations supplémentaires' : 'Additional information', val(config.infosBatiment)) : ''}
+        </tbody>
+      </table>
+
+      ${subHeading(isFr ? 'Accès' : 'Access')}
+      <table>
+        <tbody>
+          ${infoRow(isFr ? 'Accès aux sous-sols' : 'Basement access', Array.isArray(config.accesSousSol) && config.accesSousSol.length > 0 ? config.accesSousSol.join(', ') : '—')}
+          ${config.accesSousSolDetails ? infoRow(isFr ? 'Détails accès sous-sol' : 'Basement access details', val(config.accesSousSolDetails)) : ''}
+          ${infoRow(isFr ? 'Accès aux étages' : 'Floor access', Array.isArray(config.accesEtages) && config.accesEtages.length > 0 ? config.accesEtages.join(', ') : '—')}
+          ${config.accesEtagesDetails ? infoRow(isFr ? 'Détails accès étages' : 'Floor access details', val(config.accesEtagesDetails)) : ''}
         </tbody>
       </table>
 
@@ -104,8 +117,12 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
       <table>
         <tbody>
           ${infoRow(isFr ? 'Poste de commandement' : 'Command post', val(config.posteCommandement))}
-          ${infoRow(isFr ? 'Point de rassemblement' : 'Assembly point', val(config.pointRassemblement))}
+          ${infoRow(isFr ? 'Point de rassemblement principal' : 'Main assembly point', val(config.pointRassemblement))}
+          ${config.pointRassemblement2 ? infoRow(isFr ? 'Point de rassemblement secondaire' : 'Secondary assembly point', val(config.pointRassemblement2)) : ''}
+          ${config.lieuAccueilTemporaire ? infoRow(isFr ? 'Lieu d\'accueil temporaire' : 'Temporary shelter location', val(config.lieuAccueilTemporaire)) : ''}
           ${infoRow(isFr ? 'Trousseau de clés pompier' : 'Fire department key box', bool(config.trousseClesPompier, isFr))}
+          ${config.trousseClesPompierLieu ? infoRow(isFr ? 'Localisation trousseau pompier' : 'Fire key box location', val(config.trousseClesPompierLieu)) : ''}
+          ${config.lieuDocument ? infoRow(isFr ? 'Lieu de conservation du document' : 'Document storage location', val(config.lieuDocument)) : ''}
         </tbody>
       </table>
 
@@ -209,6 +226,40 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${config.generatriceEquipements.map((e: string) => checklistItem(escapeHtml(e), true)).join('')}
         </div>
       ` : ''}
+      ${config.generatriceEquipementsPersonnalises?.length > 0 ? `
+        ${subHeading(isFr ? 'Autres équipements alimentés' : 'Other powered equipment')}
+        <table><tbody>
+          ${config.generatriceEquipementsPersonnalises.map((e: any) => infoRow('', escapeHtml(e.nom || ''))).join('')}
+        </tbody></table>
+      ` : ''}
+      ${config.reservoirsAuxiliaires ? `
+        ${subHeading(isFr ? 'Réservoirs auxiliaires' : 'Auxiliary tanks')}
+        <table><tbody>
+          ${infoRow(isFr ? 'Emplacement' : 'Location', val(config.reservoirsAuxiliairesLieu))}
+          ${infoRow(isFr ? 'Capacité' : 'Capacity', config.reservoirsAuxiliairesCapacite ? `${config.reservoirsAuxiliairesCapacite}L` : '—')}
+          ${infoRow(isFr ? 'Autonomie totale' : 'Total runtime', config.autonomieTotale ? `${config.autonomieTotale}h` : '—')}
+        </tbody></table>
+      ` : ''}
+
+      ${subHeading(isFr ? 'Vannes d\'arrêt' : 'Shutoff valves')}
+      <table><tbody>
+        ${config.vannesArretSalleGicleurs ? infoRow(isFr ? 'Salle de gicleurs' : 'Sprinkler room', val(config.vannesArretSalleGicleurs)) : ''}
+        ${config.vannesArretGazNaturel ? infoRow(isFr ? 'Entrée de gaz naturel' : 'Natural gas inlet', val(config.vannesArretGazNaturel)) : ''}
+        ${config.vannesArretEauDomestique ? infoRow(isFr ? 'Arrivée eau domestique' : 'Domestic water supply', val(config.vannesArretEauDomestique)) : ''}
+        ${config.vannesArretSalleElectrique ? infoRow(isFr ? 'Salle électrique' : 'Electrical room', val(config.vannesArretSalleElectrique)) : ''}
+      </tbody></table>
+
+      ${config.emplacementBac || config.compacteur || config.chuteADechets ? `
+        ${subHeading(isFr ? 'Déchets et matières résiduelles' : 'Waste and residual materials')}
+        <table><tbody>
+          ${config.emplacementBac ? infoRow(isFr ? 'Emplacement bac à déchets' : 'Waste bin location', val(config.emplacementBac)) : ''}
+          ${infoRow(isFr ? 'Compacteur présent' : 'Compactor present', bool(config.compacteur, isFr))}
+          ${config.compacteur ? infoRow(isFr ? 'Gicleurs dans le compacteur' : 'Sprinklers in compactor', bool(config.compacteurGicleurs, isFr)) : ''}
+          ${config.compacteur && config.compacteurGicleurs ? infoRow(isFr ? 'Type gicleurs compacteur' : 'Compactor sprinkler type', val(config.compacteurGicleursType)) : ''}
+          ${config.compacteur && config.compacteurGicleurs ? infoRow(isFr ? 'Vanne isolement compacteur' : 'Compactor isolation valve', val(config.compacteurVanneIsolement)) : ''}
+          ${infoRow(isFr ? 'Chute à déchets présente' : 'Waste chute present', bool(config.chuteADechets, isFr))}
+        </tbody></table>
+      ` : ''}
     </div>
   `;
 
@@ -281,13 +332,36 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         <table>
           <thead>
             <tr>
-              <th>${isFr ? 'Type de système' : 'System type'}</th>
-              <th>${isFr ? 'Lieu / secteur couvert' : 'Location / covered area'}</th>
-              <th>${isFr ? 'Système complet' : 'Complete system'}</th>
+              <th>${isFr ? 'Type de réseau' : 'Network type'}</th>
+              <th>${isFr ? 'Secteurs / lieux desservis' : 'Covered areas / sectors'}</th>
             </tr>
           </thead>
-          <tbody>${gicleursSystemesRows}</tbody>
+          <tbody>
+            ${config.gicleursSystemes.map((s: any) => `
+              <tr>
+                <td style="font-weight:600;">${escapeHtml(s.type) || '—'}</td>
+                <td>${escapeHtml(s.lieu) || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
         </table>
+      ` : ''}
+
+      ${config.pompeIncendie ? `
+        ${subHeading(isFr ? 'Pompe incendie' : 'Fire pump')}
+        <table><tbody>
+          ${infoRow(isFr ? 'Présente' : 'Present', bool(config.pompeIncendie, isFr))}
+          ${config.pompeIncendieLieu ? infoRow(isFr ? 'Localisation' : 'Location', val(config.pompeIncendieLieu)) : ''}
+          ${config.gapmUsgpm ? infoRow(isFr ? 'Débit (GAPM/USGPM)' : 'Flow rate (GAPM/USGPM)', val(config.gapmUsgpm)) : ''}
+        </tbody></table>
+      ` : ''}
+
+      ${config.valve2_5 || config.valve1_5 ? `
+        ${subHeading(isFr ? 'Valves de raccordement' : 'Connection valves')}
+        <table><tbody>
+          ${config.valve2_5 ? infoRow(isFr ? 'Valve 2½ — Localisation' : 'Valve 2½ — Location', val(config.valve2_5Lieu)) : ''}
+          ${config.valve1_5 ? infoRow(isFr ? 'Valve 1½ — Localisation' : 'Valve 1½ — Location', val(config.valve1_5Lieu)) : ''}
+        </tbody></table>
       ` : ''}
     </div>
   `;
@@ -324,7 +398,11 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
       <table>
         <tbody>
           ${infoRow(isFr ? 'Présente' : 'Present', bool(config.trousseDeversement, isFr))}
-          ${infoRow(isFr ? 'Emplacement' : 'Location', val(config.trousseDeversementLieu))}
+          ${config.trousseDeversementListe?.length > 0 ? `
+            ${config.trousseDeversementListe.map((t: any, idx: number) => 
+              infoRow(isFr ? `Emplacement ${idx + 1}` : `Location ${idx + 1}`, val(t.lieu))
+            ).join('')}
+          ` : config.trousseDeversementLieu ? infoRow(isFr ? 'Emplacement' : 'Location', val(config.trousseDeversementLieu)) : ''}
         </tbody>
       </table>
     </div>

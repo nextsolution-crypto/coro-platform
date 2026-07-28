@@ -116,13 +116,14 @@ export class MandateService {
   async initTasksFromTemplate(projectId: string, organizationId: string, documentType: string) {
     await this.assertOwnership(projectId, organizationId);
 
-    // Vérifier si des tâches existent déjà
     const existing = await this.prisma.projectTask.count({ where: { projectId } });
     if (existing > 0) return { message: 'Tâches déjà initialisées' };
 
-    const templates = await this.prisma.taskTemplate.findMany({
+    // Prendre d'abord les templates de l'organisation, sinon les globaux
+    let templates = await this.prisma.taskTemplate.findMany({
       where: {
         isActive: true,
+        organizationId,
         OR: [
           { documentTypes: { has: documentType } },
           { documentTypes: { isEmpty: true } },
@@ -130,6 +131,21 @@ export class MandateService {
       },
       orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
     });
+
+    // Si aucun template org, prendre les globaux
+    if (templates.length === 0) {
+      templates = await this.prisma.taskTemplate.findMany({
+        where: {
+          isActive: true,
+          organizationId: null,
+          OR: [
+            { documentTypes: { has: documentType } },
+            { documentTypes: { isEmpty: true } },
+          ],
+        },
+        orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
+      });
+    }
 
     if (templates.length === 0) return { message: 'Aucun template disponible' };
 

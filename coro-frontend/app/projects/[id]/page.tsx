@@ -362,6 +362,16 @@ const handleChangeStatus = async (newStatus: string) => {
               💾 Modèle
             </button>
 
+            <button
+              onClick={() => router.push(`/projects/${projectId}/mandate`)}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors flex items-center gap-2"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              💼 Mandat
+            </button>
+
             {project.status !== 'VALIDATED' && (
               <button onClick={() => handleChangeStatus('ARCHIVED')} disabled={statusChanging}
                 className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"

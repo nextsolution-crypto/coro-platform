@@ -25,6 +25,9 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { VersionsModule } from './versions/versions.module';
 import { TemplatesModule } from './templates/templates.module';
 import { AuditModule } from './audit/audit.module';
+import { ActivitiesModule } from './activities/activities.module';
+import { MandateModule } from './mandate/mandate.module';
+import { TaskTemplatesModule } from './task-templates/task-templates.module';
 
 @Module({
   imports: [
@@ -52,6 +55,9 @@ import { AuditModule } from './audit/audit.module';
   VersionsModule,
   TemplatesModule,
   AuditModule,
+  ActivitiesModule,
+  MandateModule,
+  TaskTemplatesModule,
 ],
   controllers: [AppController],
   providers: [AppService],
