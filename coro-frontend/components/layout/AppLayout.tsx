@@ -18,6 +18,7 @@ const navItems = [
 
 const adminNavItems = [
   { label: 'Équipe', path: '/settings/users' },
+  { label: 'Templates de tâches', path: '/settings/task-templates' },
   { label: 'Nous écrire', path: '/settings/feedback' },
 ];
 
@@ -25,6 +26,7 @@ const superAdminNavItems = [
   { label: 'Organisations', path: '/admin/organizations' },
   { label: 'Tous les projets', path: '/admin/projects' },
   { label: 'Procédures', path: '/admin/procedures' },
+  { label: 'Templates de tâches', path: '/admin/task-templates' },
   { label: 'Feedbacks', path: '/admin/feedback' },
   { label: 'Changelog', path: '/admin/changelog' },
 ];

@@ -5,13 +5,51 @@ import { PrismaService } from '../prisma/prisma.service';
 export class TaskTemplatesService {
   constructor(private prisma: PrismaService) {}
 
+  // Tous les templates globaux (SuperAdmin)
   async getAll() {
     const templates = await this.prisma.taskTemplate.findMany({
-      where: { isActive: true },
+      where: { isActive: true, organizationId: null },
       orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
     });
 
-    // Grouper par catégorie
+    const grouped: Record<string, any[]> = {};
+    templates.forEach(t => {
+      if (!grouped[t.categoryName]) grouped[t.categoryName] = [];
+      grouped[t.categoryName].push(t);
+    });
+
+    return { templates, grouped };
+  }
+
+  // Templates d'une organisation spécifique (Admin client)
+  async getAllForOrg(organizationId: string) {
+    const templates = await this.prisma.taskTemplate.findMany({
+      where: { isActive: true, organizationId },
+      orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
+    });
+
+    const grouped: Record<string, any[]> = {};
+    templates.forEach(t => {
+      if (!grouped[t.categoryName]) grouped[t.categoryName] = [];
+      grouped[t.categoryName].push(t);
+    });
+
+    return { templates, grouped };
+  }
+
+  // Templates globaux + organisation combinés (pour affichage référence)
+  async getAllWithGlobal(organizationId: string) {
+    const templates = await this.prisma.taskTemplate.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { organizationId: null },
+          { organizationId },
+        ],
+      },
+      orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
+    });
+
     const grouped: Record<string, any[]> = {};
     templates.forEach(t => {
       if (!grouped[t.categoryName]) grouped[t.categoryName] = [];
@@ -39,9 +77,9 @@ export class TaskTemplatesService {
     return this.prisma.taskTemplate.update({
       where: { id },
       data: {
-        categoryName: dto.categoryName,
-        taskTitle: dto.taskTitle,
-        documentTypes: dto.documentTypes || [],
+        categoryName: dto.categoryName ?? template.categoryName,
+        taskTitle: dto.taskTitle ?? template.taskTitle,
+        documentTypes: dto.documentTypes ?? template.documentTypes,
         order: dto.order ?? template.order,
         isActive: dto.isActive ?? template.isActive,
       },

@@ -7,6 +7,7 @@ import { TaskTemplatesService } from './task-templates.service';
 export class TaskTemplatesController {
   constructor(private readonly service: TaskTemplatesService) {}
 
+  // SuperAdmin — templates globaux
   @Get()
   getAll() {
     return this.service.getAll();
@@ -30,5 +31,22 @@ export class TaskTemplatesController {
   @Post('seed')
   seed() {
     return this.service.seedDefaultTemplates();
+  }
+
+  // Admin client — templates de son organisation
+  @Get('my')
+  getMyTemplates(@Request() req: any) {
+    return this.service.getAllForOrg(req.user.organizationId);
+  }
+
+  @Post('my')
+  createForOrg(@Body() dto: any, @Request() req: any) {
+    return this.service.create({ ...dto, organizationId: req.user.organizationId });
+  }
+
+  // Templates globaux + organisation combinés (référence pour admin client)
+  @Get('combined')
+  getCombined(@Request() req: any) {
+    return this.service.getAllWithGlobal(req.user.organizationId);
   }
 }
