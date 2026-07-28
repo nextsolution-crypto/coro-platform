@@ -26,17 +26,18 @@ export class MandateController {
 
   @Post('comments')
   addComment(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
-    return this.service.addComment(projectId, req.user.organizationId, req.user.id, dto.contenu);
+    const userId = req.user.userId;
+    return this.service.addComment(projectId, req.user.organizationId, userId, dto.contenu);
   }
 
   @Put('comments/:commentId')
   updateComment(@Param('commentId') commentId: string, @Body() dto: any, @Request() req: any) {
-    return this.service.updateComment(commentId, req.user.id, dto.contenu);
+    return this.service.updateComment(commentId, req.user.userId, dto.contenu);
   }
 
   @Delete('comments/:commentId')
   deleteComment(@Param('commentId') commentId: string, @Request() req: any) {
-    return this.service.deleteComment(commentId, req.user.id);
+    return this.service.deleteComment(commentId, req.user.userId);
   }
 
   // Tâches
