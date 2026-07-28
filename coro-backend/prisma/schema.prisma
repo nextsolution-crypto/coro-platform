@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -21,42 +19,44 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users      User[]
-  clients    Client[]
-  buildings  Building[]
-  projects   Project[]
+  users              User[]
+  clients            Client[]
+  buildings          Building[]
+  projects           Project[]
   procedureOverrides ProcedureOverride[]
-
-  feedbacks   Feedback[]
-  projectTemplates ProjectTemplate[]
-  auditLogs AuditLog[]
+  feedbacks          Feedback[]
+  projectTemplates   ProjectTemplate[]
+  auditLogs          AuditLog[]
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  firstName String
-  lastName  String
-  role      UserRole @default(OPERATOR)
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           UserRole @default(OPERATOR)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
-  companyName         String?
-  companyLogo         String?
-  companyLogoB64      String?
-  companyLogoFullB64  String?
-  companyPhone        String?
-  companyEmail        String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  companyName        String?
+  companyLogo        String?
+  companyLogoB64     String?
+  companyLogoFullB64 String?
+  companyPhone       String?
+  companyEmail       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  projects  Project[]
-  feedbacks   Feedback[]
-  lastEditedProjects Project[] @relation("lastEditedProjects")
-  submittedProjects Project[] @relation("submittedProjects")
-  createdTemplates ProjectTemplate[] @relation("createdTemplates")
-  auditLogs AuditLog[]
+  projects            Project[]
+  feedbacks           Feedback[]
+  lastEditedProjects  Project[]             @relation("lastEditedProjects")
+  submittedProjects   Project[]             @relation("submittedProjects")
+  createdTemplates    ProjectTemplate[]     @relation("createdTemplates")
+  auditLogs           AuditLog[]
+  taskAssignees       ProjectTaskAssignee[]
+  timeEntries         TaskTimeEntry[]
+  projectComments     ProjectComment[]
 }
 
 enum UserRole {
@@ -66,18 +66,18 @@ enum UserRole {
 }
 
 model Client {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?
-  phone     String?
-  address   String?
-  city      String?
-  province  String?
-  logoUrl      String?
-  logoBase64   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  province       String?
+  logoUrl        String?
+  logoBase64     String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -87,28 +87,28 @@ model Client {
 }
 
 model Building {
-  id           String   @id @default(uuid())
-  name         String
-  address      String
-  city         String
-  province     String
-  postalCode   String?
-  floors       Int?
-  units        Int?
-  buildingType String?
-  photoBase64         String?
-  responsableNom      String?
-  responsableTitre    String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  address        String
+  city           String
+  province       String
+  postalCode     String?
+  floors         Int?
+  units          Int?
+  buildingType   String?
+  photoBase64    String?
+  responsableNom   String?
+  responsableTitre String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  clientId  String
-  client    Client    @relation(fields: [clientId], references: [id])
-  projects  Project[]
+  clientId String
+  client   Client   @relation(fields: [clientId], references: [id])
+  projects Project[]
 }
 
 model Project {
@@ -124,39 +124,39 @@ model Project {
   updatedAt    DateTime      @updatedAt
 
   lastEditedById String?
-  lastEditedBy   User?    @relation("lastEditedProjects", fields: [lastEditedById], references: [id])
+  lastEditedBy   User?  @relation("lastEditedProjects", fields: [lastEditedById], references: [id])
   submittedById  String?
-  submittedBy    User?    @relation("submittedProjects", fields: [submittedById], references: [id])
+  submittedBy    User?  @relation("submittedProjects", fields: [submittedById], references: [id])
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   clientId   String
-  client     Client    @relation(fields: [clientId], references: [id])
+  client     Client   @relation(fields: [clientId], references: [id])
   buildingId String
-  building   Building  @relation(fields: [buildingId], references: [id])
+  building   Building @relation(fields: [buildingId], references: [id])
   userId     String
-  user       User      @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
-  documents           Document[]
-  buildingPlans       BuildingPlan[]
-  module7             Module7Data?
-  revisionHistory     RevisionHistory[]
-  procedureOverrides  ProcedureOverride[]
-  projectVersions     ProjectVersion[]
-
-  activities     ProjectActivity[]
+  documents          Document[]
+  buildingPlans      BuildingPlan[]
+  module7            Module7Data?
+  revisionHistory    RevisionHistory[]
+  procedureOverrides ProcedureOverride[]
+  projectVersions    ProjectVersion[]
+  activities         ProjectActivity[]
+  projectTasks       ProjectTask[]
+  mandate            ProjectMandate?
+  comments           ProjectComment[]
 }
 
 model RevisionHistory {
   id          String   @id @default(uuid())
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id])
-
   date        String
   description String
   responsable String
-
   createdAt   DateTime @default(now())
 }
 
@@ -209,7 +209,7 @@ model IncidentCode {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  procedures  Procedure[]
+  procedures Procedure[]
 }
 
 model Role {
@@ -222,7 +222,7 @@ model Role {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  procedures  Procedure[]
+  procedures Procedure[]
 }
 
 model Procedure {
@@ -263,10 +263,9 @@ model LibrarySection {
 }
 
 model BuildingPlan {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   projectId    String
-  project      Project  @relation(fields: [projectId], references: [id])
-
+  project      Project     @relation(fields: [projectId], references: [id])
   section      PlanSection
   name         String
   description  String?
@@ -275,10 +274,9 @@ model BuildingPlan {
   fileSize     Int
   emissionDate String?
   revision     String?
-  order        Int      @default(0)
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  order        Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 enum PlanSection {
@@ -290,18 +288,13 @@ enum PlanSection {
 }
 
 model Module7Data {
-  id        String   @id @default(uuid())
-  projectId String   @unique
-  project   Project  @relation(fields: [projectId], references: [id])
+  id        String  @id @default(uuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id])
 
-  // Quarts de travail détaillés
-  quartsData      Json?
-
-  // Photos des équipements (base64)
-  photosData      Json?
-
-  // Champs complémentaires non couverts par le configurateur
-  extraData       Json?
+  quartsData Json?
+  photosData Json?
+  extraData  Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -345,9 +338,9 @@ model ProcedureOverride {
 
 model Feedback {
   id             String   @id @default(uuid())
-  category       String   // BUG, SUGGESTION, QUESTION, AUTRE
+  category       String
   message        String
-  status         String   @default("NOUVEAU") // NOUVEAU, LU, EN_COURS, RESOLU
+  status         String   @default("NOUVEAU")
   userId         String
   organizationId String
   createdAt      DateTime @default(now())
@@ -357,14 +350,14 @@ model Feedback {
 }
 
 model ProjectVersion {
-  id          String   @id @default(uuid())
-  projectId   String
+  id            String   @id @default(uuid())
+  projectId     String
   versionNumber Int
-  label       String?
-  snapshot    Json     // Contenu complet du document à ce moment
-  createdAt   DateTime @default(now())
+  label         String?
+  snapshot      Json
+  createdAt     DateTime @default(now())
 
-  project     Project  @relation(fields: [projectId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
 }
 
 model ProjectTemplate {
@@ -384,8 +377,8 @@ model ProjectTemplate {
 
 model AuditLog {
   id             String   @id @default(uuid())
-  action         String   // GENERATE, EDIT_SECTION, EXPORT, STATUS_CHANGE, etc.
-  entityType     String   // PROJECT, DOCUMENT, PROCEDURE, etc.
+  action         String
+  entityType     String
   entityId       String
   projectId      String?
   description    String
@@ -399,25 +392,105 @@ model AuditLog {
 }
 
 model ProjectActivity {
-  id          String   @id @default(uuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String    @id @default(uuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type           String
+  label          String
+  duration       String
+  mode           String    @default("presentiel")
+  customLabel    String?
+  customDuration String?
+  scheduledDate  DateTime?
+  status         String    @default("a_faire")
+  reportedDate   DateTime?
+  assigneeEmail  String?
+  clientEmail    String?
+  notes          String?
+  organizationId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
 
-  type        String   // clé de l'activité (ex: "formation_equipe_urgence")
-  label       String   // libellé affiché
-  duration    String   // ex: "2h00"
-  mode        String   @default("presentiel") // "presentiel" ou "teams"
-  customLabel String?  // si type = "autre"
-  customDuration String? // si type = "autre"
+model TaskTemplate {
+  id             String   @id @default(uuid())
+  categoryName   String
+  taskTitle      String
+  documentTypes  String[]
+  order          Int      @default(0)
+  isActive       Boolean  @default(true)
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  scheduledDate DateTime?
-  status        String   @default("a_faire") // a_faire, fait, reporte, annule, termine
-  reportedDate  DateTime? // nouvelle date si reporté
+  projectTasks ProjectTask[]
+}
 
-  assigneeEmail String?  // email conseiller CORO
-  clientEmail   String?  // email contact client
-  notes         String?
+model ProjectTask {
+  id             String        @id @default(uuid())
+  projectId      String
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  templateId     String?
+  template       TaskTemplate? @relation(fields: [templateId], references: [id])
+  categoryName   String
+  taskTitle      String
+  status         String        @default("a_faire")
+  dueDate        DateTime?
+  order          Int           @default(0)
+  organizationId String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
+  timeEntries TaskTimeEntry[]
+  assignees   ProjectTaskAssignee[]
+}
+
+model ProjectTaskAssignee {
+  id        String      @id @default(uuid())
+  taskId    String
+  task      ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+
+  @@unique([taskId, userId])
+}
+
+model TaskTimeEntry {
+  id             String      @id @default(uuid())
+  taskId         String
+  task           ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  date           DateTime
+  heures         Float
+  note           String?
+  organizationId String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model ProjectMandate {
+  id              String   @id @default(uuid())
+  projectId       String   @unique
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description     String?
+  montantVendu    Float?
+  tauxHoraire     Float?
+  heuresBudgetees Float?
+  lienDrive       String?
+  organizationId  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProjectComment {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  contenu        String
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
