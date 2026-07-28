@@ -410,6 +410,8 @@ model ProjectActivity {
   organizationId String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  isRecurring    Boolean  @default(false)
+  sourceMandate  Boolean  @default(false)
 }
 
 model TaskTemplate {

@@ -99,7 +99,7 @@ export class ActivitiesService {
   async duplicateActivities(projectId: string, organizationId: string) {
     await this.assertOwnership(projectId, organizationId);
     const activities = await this.prisma.projectActivity.findMany({
-      where: { projectId, organizationId },
+      where: { projectId, organizationId, isRecurring: true },
     });
 
     const duplicated = await Promise.all(
@@ -122,6 +122,8 @@ export class ActivitiesService {
             assigneeEmail: a.assigneeEmail,
             clientEmail: a.clientEmail,
             notes: a.notes,
+            isRecurring: a.isRecurring,
+            sourceMandate: a.sourceMandate,
           },
         });
       })
@@ -211,5 +213,57 @@ export class ActivitiesService {
         percentage: total > 0 ? Math.round((done / total) * 100) : 0,
       },
     };
+  }
+  async generateFromMandate(projectId: string, organizationId: string, services: { type: string; isRecurring: boolean }[]) {
+    await this.assertOwnership(projectId, organizationId);
+
+    const results: any[] = [];
+    for (const service of services) {
+      const catalog = ACTIVITY_CATALOG.find(a => a.type === service.type);
+      if (!catalog) continue;
+
+      // Vérifier si une activité de ce type existe déjà
+      const existing = await this.prisma.projectActivity.findFirst({
+        where: { projectId, organizationId, type: service.type, sourceMandate: true },
+      });
+
+      if (existing) {
+        // Mettre à jour isRecurring si changé
+        const updated = await this.prisma.projectActivity.update({
+          where: { id: existing.id },
+          data: { isRecurring: service.isRecurring },
+        });
+        results.push(updated);
+      } else {
+        // Créer nouvelle activité
+        const created = await this.prisma.projectActivity.create({
+          data: {
+            projectId,
+            organizationId,
+            type: service.type,
+            label: catalog.label,
+            duration: catalog.duration,
+            mode: catalog.mode,
+            status: 'a_faire',
+            isRecurring: service.isRecurring,
+            sourceMandate: true,
+          },
+        });
+        results.push(created);
+      }
+    }
+
+    // Supprimer les activités sourceMandate qui ne sont plus cochées
+    const selectedTypes = services.map(s => s.type);
+    await this.prisma.projectActivity.deleteMany({
+      where: {
+        projectId,
+        organizationId,
+        sourceMandate: true,
+        type: { notIn: selectedTypes },
+      },
+    });
+
+    return results;
   }
 }

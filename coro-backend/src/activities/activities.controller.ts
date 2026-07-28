@@ -33,6 +33,11 @@ export class ActivitiesController {
     return this.service.deleteActivity(activityId, req.user.organizationId);
   }
 
+  @Post('projects/:projectId/activities/from-mandate')
+  generateFromMandate(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
+    return this.service.generateFromMandate(projectId, req.user.organizationId, dto.services);
+  }
+
   @Post('projects/:projectId/activities/duplicate')
   duplicateActivities(@Param('projectId') projectId: string, @Request() req: any) {
     return this.service.duplicateActivities(projectId, req.user.organizationId);
