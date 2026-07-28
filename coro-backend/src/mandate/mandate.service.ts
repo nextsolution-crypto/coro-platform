@@ -109,7 +109,7 @@ export class MandateService {
           include: { user: { select: { firstName: true, lastName: true, id: true } } },
         },
       },
-      orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
+      orderBy: [{ order: 'asc' }],
     });
   }
 

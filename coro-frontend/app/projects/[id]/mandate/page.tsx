@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ExternalLink, Save } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import TasksTab from './TasksTab';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
@@ -396,10 +397,7 @@ export default function MandatePage() {
       )}
 
       {activeTab === 'tasks' && (
-        <div className="text-center py-16 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <p className="text-4xl mb-4">✅</p>
-          <p className="text-sm font-medium" style={{ color: '#6C757D' }}>Module Tâches — En développement</p>
-        </div>
+        <TasksTab projectId={projectId} documentType={project?.documentType} />
       )}
 
       {activeTab === 'comments' && (
