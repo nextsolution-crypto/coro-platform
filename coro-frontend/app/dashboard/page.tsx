@@ -6,34 +6,33 @@ import { useAuthStore } from '@/stores/auth.store';
 import AppLayout from '@/components/layout/AppLayout';
 import api from '@/lib/api';
 
-interface Stats {
-  projetsActifs: number;
-  documentsGeneres: number;
-  validationsEnAttente: number;
-  exportsPDF: number;
-  projetsRecents: {
-    id: string;
-    name: string;
-    documentType: string;
-    status: string;
-    updatedAt: string;
-    client: { name: string };
-    building: { name: string };
-  }[];
-}
+const statusConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
+  DRAFT:       { label: 'Brouillon',   bg: '#F8F9FA', color: '#6C757D', border: '#DEE2E6' },
+  IN_PROGRESS: { label: 'En cours',    bg: '#EBF5FB', color: '#2980B9', border: '#AED6F1' },
+  REVIEW:      { label: 'En révision', bg: '#FEF9E7', color: '#F39C12', border: '#FAD7A0' },
+  VALIDATED:   { label: 'Validé',      bg: '#EAFAF1', color: '#27AE60', border: '#A9DFBF' },
+  EXPORTED:    { label: 'Exporté',     bg: '#F4ECF7', color: '#8E44AD', border: '#D2B4DE' },
+  ARCHIVED:    { label: 'Archivé',     bg: '#FDEDEC', color: '#C0392B', border: '#F1948A' },
+};
+
+const activityStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
+  fait:     { label: 'Fait',     color: '#27AE60', bg: '#EAFAF1' },
+  reporte:  { label: 'Reporté',  color: '#E67E22', bg: '#FEF9E7' },
+  annule:   { label: 'Annulé',   color: '#95A5A6', bg: '#F8F9FA' },
+  termine:  { label: 'Terminé',  color: '#1A5276', bg: '#D6EAF8' },
+};
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const [stats, setStats] = useState<Stats>({
-    projetsActifs: 0,
-    documentsGeneres: 0,
-    validationsEnAttente: 0,
-    exportsPDF: 0,
-    projetsRecents: [],
-  });
+
   const [loading, setLoading] = useState(true);
+  const [projets, setProjets] = useState<any[]>([]);
   const [updates, setUpdates] = useState<any[]>([]);
+  const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
+  const [lateTasks, setLateTasks] = useState<any[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
@@ -41,128 +40,294 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const fetchStats = async () => {
-      try {
-        const res = await api.get('/projects');
-        const projets = res.data || [];
-
-        const actifs = projets.filter((p: any) =>
-          p.status === 'IN_PROGRESS' || p.status === 'DRAFT'
-        ).length;
-
-        const avecDoc = projets.filter((p: any) =>
-          p.status === 'IN_PROGRESS' || p.status === 'COMPLETED'
-        ).length;
-
-        // Trie par date de modification, prend les 5 plus récents
-        const recents = [...projets]
-          .sort((a: any, b: any) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-          )
-          .slice(0, 5);
-
-        setStats({
-          projetsActifs: actifs,
-          documentsGeneres: avecDoc,
-          validationsEnAttente: 0,
-          exportsPDF: 0,
-          projetsRecents: recents,
-        });
-      // Charger les mises à jour à venir
-        try {
-          const updatesRes = await api.get('/projects/upcoming-updates');
-          setUpdates(updatesRes.data || []);
-        } catch { setUpdates([]); }
-
-      } catch (err) {
-        console.error('Erreur chargement stats dashboard :', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
+    fetchAll();
   }, [isAuthenticated]);
+
+  const fetchAll = async () => {
+    try {
+      const [projetsRes, updatesRes, approvalsRes] = await Promise.all([
+        api.get('/projects?limit=200'),
+        api.get('/projects/upcoming-updates').catch(() => ({ data: [] })),
+        api.get('/projects/pending-approval').catch(() => ({ data: [] })),
+      ]);
+
+      const allProjets = projetsRes.data?.projects || projetsRes.data || [];
+      setProjets(allProjets);
+      setUpdates(updatesRes.data || []);
+      setPendingApprovals(approvalsRes.data || []);
+
+      // Charger activités et tâches de tous les projets actifs
+      const activeProjets = allProjets.filter((p: any) =>
+        ['DRAFT', 'IN_PROGRESS', 'REVIEW'].includes(p.status)
+      );
+
+      const activitiesData: any[] = [];
+      const lateTasksData: any[] = [];
+      const today = new Date();
+      const in30Days = new Date();
+      in30Days.setDate(today.getDate() + 30);
+
+      await Promise.all(activeProjets.map(async (projet: any) => {
+        try {
+          const [actRes, taskRes] = await Promise.all([
+            api.get(`/projects/${projet.id}/activities`).catch(() => ({ data: [] })),
+            api.get(`/projects/${projet.id}/tasks`).catch(() => ({ data: [] })),
+          ]);
+
+          // Activités des 30 prochains jours
+          (actRes.data || []).forEach((a: any) => {
+            if (a.scheduledDate && a.status !== 'termine' && a.status !== 'annule') {
+              const d = new Date(a.scheduledDate);
+              if (d >= today && d <= in30Days) {
+                activitiesData.push({
+                  ...a,
+                  projectName: projet.name,
+                  projectId: projet.id,
+                  clientName: projet.client?.name || '—',
+                });
+              }
+            }
+          });
+
+          // Tâches en retard
+          (taskRes.data || []).forEach((t: any) => {
+            if (t.dueDate && t.status !== 'termine') {
+              const d = new Date(t.dueDate);
+              if (d < today) {
+                lateTasksData.push({
+                  ...t,
+                  projectName: projet.name,
+                  projectId: projet.id,
+                  clientName: projet.client?.name || '—',
+                });
+              }
+            }
+          });
+        } catch { }
+      }));
+
+      // Trier activités par date
+      activitiesData.sort((a, b) =>
+        new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
+      );
+
+      setUpcomingActivities(activitiesData.slice(0, 10));
+      setLateTasks(lateTasksData.slice(0, 8));
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
 
   if (!user) return null;
 
-  const kpis = [
-    { label: 'Projets actifs',         value: loading ? '…' : String(stats.projetsActifs),    color: '#C0392B' },
-    { label: 'Documents générés',      value: loading ? '…' : String(stats.documentsGeneres), color: '#2980B9' },
-    { label: 'Validations en attente', value: loading ? '…' : String(stats.validationsEnAttente), color: '#8E44AD' },
-    { label: 'Exports PDF',            value: loading ? '…' : String(stats.exportsPDF),       color: '#27AE60' },
-  ];
+  const projetsActifs = projets.filter(p => ['DRAFT', 'IN_PROGRESS'].includes(p.status)).length;
+  const enRevision = projets.filter(p => p.status === 'REVIEW').length;
+  const valides = projets.filter(p => p.status === 'VALIDATED').length;
+  const projetsRecents = [...projets]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 5);
 
-  const statusLabel: Record<string, { label: string; color: string }> = {
-    DRAFT:       { label: 'Brouillon',   color: '#6C757D' },
-    IN_PROGRESS: { label: 'En cours',    color: '#2980B9' },
-    COMPLETED:   { label: 'Complété',    color: '#27AE60' },
-    ARCHIVED:    { label: 'Archivé',     color: '#ADB5BD' },
-  };
+  const today = new Date().toLocaleDateString('fr-CA', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  const kpis = [
+    { label: 'Projets actifs',     value: projetsActifs,               color: '#C0392B', bg: '#FDEDEC' },
+    { label: 'En révision',        value: enRevision,                  color: '#F39C12', bg: '#FEF9E7' },
+    { label: 'Validés',            value: valides,                     color: '#27AE60', bg: '#EAFAF1' },
+    { label: 'Mises à jour dues',  value: updates.filter(u => u.level === 'URGENT').length, color: '#8E44AD', bg: '#F4ECF7' },
+  ];
 
   return (
     <AppLayout>
       {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
-          Bonjour, {user.firstName} 👋
-        </h2>
-        <p className="mt-1 text-sm" style={{ color: '#6C757D' }}>
-          Bienvenue sur la plateforme CORO
-        </p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
+            {today}
+          </p>
+          <h2 className="text-2xl font-black" style={{ color: '#2C3E50' }}>
+            Bonjour, {user.firstName} 👋
+          </h2>
+          <p className="mt-1 text-sm" style={{ color: '#6C757D' }}>
+            {upcomingActivities.length > 0
+              ? `${upcomingActivities.length} activité${upcomingActivities.length > 1 ? 's' : ''} prévue${upcomingActivities.length > 1 ? 's' : ''} dans les 30 prochains jours`
+              : 'Aucune activité prévue dans les 30 prochains jours'}
+            {lateTasks.length > 0 && ` · ${lateTasks.length} tâche${lateTasks.length > 1 ? 's' : ''} en retard`}
+          </p>
+        </div>
+        <button onClick={() => router.push('/projects/new')}
+          className="text-white text-sm font-medium px-4 py-2.5 rounded flex items-center gap-2"
+          style={{ backgroundColor: '#C0392B' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
+          + Nouveau projet
+        </button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {kpis.map(kpi => (
-          <div key={kpi.label} className="rounded-md p-6"
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E9ECEF',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-            }}>
-            <p className="text-sm" style={{ color: '#6C757D' }}>{kpi.label}</p>
-            <p className="text-3xl font-bold mt-2" style={{ color: kpi.color }}>
-              {kpi.value}
+          <div key={kpi.label} className="rounded-md p-5"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+            <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>{kpi.label}</p>
+            <p className="text-3xl font-black" style={{ color: kpi.color }}>
+              {loading ? '…' : kpi.value}
             </p>
           </div>
         ))}
       </div>
 
-{/* Mises à jour à venir */}
-      {updates.length > 0 && (
-        <div className="rounded-md p-6 mb-6"
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: `1px solid ${updates.some(u => u.level === 'URGENT') ? '#F1948A' : '#FAD7A0'}`,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-          }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: '18px' }}>🔔</span>
-              <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
-                Mises à jour à venir
-              </h3>
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{
-                  backgroundColor: updates.some(u => u.level === 'URGENT') ? '#FDEDEC' : '#FEF9E7',
-                  color: updates.some(u => u.level === 'URGENT') ? '#C0392B' : '#F39C12',
-                }}>
-                {updates.length} document{updates.length > 1 ? 's' : ''}
-              </span>
+      {/* Approbations en attente */}
+      {pendingApprovals.length > 0 && (
+        <div className="rounded-md p-5 mb-6"
+          style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+          <p className="text-sm font-bold mb-3" style={{ color: '#C0392B' }}>
+            ✓ {pendingApprovals.length} document{pendingApprovals.length > 1 ? 's' : ''} en attente d'approbation
+          </p>
+          <div className="space-y-2">
+            {pendingApprovals.map(p => (
+              <div key={p.id}
+                onClick={() => router.push(`/projects/${p.id}`)}
+                className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
+                    style={{ backgroundColor: '#C0392B' }}>{p.documentType}</span>
+                  <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>{p.name}</span>
+                  <span className="text-xs" style={{ color: '#6C757D' }}>— {p.client?.name}</span>
+                </div>
+                <span className="text-xs font-medium" style={{ color: '#C0392B' }}>Réviser →</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-6 mb-6">
+
+        {/* Activités à venir */}
+        <div className="col-span-2 rounded-md"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: '1px solid #E9ECEF' }}>
+            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+              📅 Activités des 30 prochains jours
+            </h3>
+            <button onClick={() => router.push('/activities/portfolio')}
+              className="text-xs px-3 py-1.5 rounded transition-colors"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              Tout voir →
+            </button>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+          ) : upcomingActivities.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune activité prévue dans les 30 prochains jours</p>
             </div>
+          ) : (
+            <div>
+              {upcomingActivities.map((activity, idx) => {
+                const status = activityStatusConfig[activity.status] || activityStatusConfig['a_faire'];
+                const label = activity.customLabel || activity.label;
+                const daysLeft = Math.ceil((new Date(activity.scheduledDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div key={activity.id}
+                    onClick={() => router.push(`/projects/${activity.projectId}/activities`)}
+                    className="flex items-center justify-between px-5 py-3 cursor-pointer transition-colors"
+                    style={{ borderBottom: idx < upcomingActivities.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: '#2C3E50' }}>{label}</p>
+                      <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                        {activity.clientName} · {activity.projectName}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                      <span className="text-xs font-bold"
+                        style={{ color: daysLeft <= 7 ? '#C0392B' : daysLeft <= 14 ? '#F39C12' : '#27AE60' }}>
+                        {daysLeft === 0 ? "Aujourd'hui" : daysLeft === 1 ? 'Demain' : `Dans ${daysLeft}j`}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: status.bg, color: status.color }}>
+                        {status.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Tâches en retard */}
+        <div className="rounded-md"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <div className="px-5 py-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
+            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+              ⚠️ Tâches en retard
+            </h3>
+          </div>
+          {loading ? (
+            <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+          ) : lateTasks.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune tâche en retard</p>
+            </div>
+          ) : (
+            <div>
+              {lateTasks.map((task, idx) => {
+                const daysLate = Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div key={task.id}
+                    onClick={() => router.push(`/projects/${task.projectId}/mandate`)}
+                    className="px-5 py-3 cursor-pointer transition-colors"
+                    style={{ borderBottom: idx < lateTasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{task.clientName}</p>
+                    <p className="text-xs font-bold mt-1" style={{ color: '#C0392B' }}>
+                      {daysLate}j de retard
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mises à jour à venir */}
+      {updates.length > 0 && (
+        <div className="rounded-md p-5 mb-6"
+          style={{ backgroundColor: '#FFFFFF', border: `1px solid ${updates.some(u => u.level === 'URGENT') ? '#F1948A' : '#FAD7A0'}` }}>
+          <div className="flex items-center gap-2 mb-4">
+            <span style={{ fontSize: '16px' }}>🔔</span>
+            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Documents à renouveler</h3>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{
+                backgroundColor: updates.some(u => u.level === 'URGENT') ? '#FDEDEC' : '#FEF9E7',
+                color: updates.some(u => u.level === 'URGENT') ? '#C0392B' : '#F39C12',
+              }}>
+              {updates.length} document{updates.length > 1 ? 's' : ''}
+            </span>
           </div>
           <div className="space-y-2">
             {updates.map(u => (
               <div key={u.id}
                 onClick={() => router.push(`/projects/${u.id}`)}
                 className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
-                style={{
-                  backgroundColor: u.level === 'URGENT' ? '#FDEDEC' : '#FEF9E7',
-                  border: `1px solid ${u.level === 'URGENT' ? '#F1948A' : '#FAD7A0'}`,
-                }}
+                style={{ backgroundColor: u.level === 'URGENT' ? '#FDEDEC' : '#FEF9E7', border: `1px solid ${u.level === 'URGENT' ? '#F1948A' : '#FAD7A0'}` }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
                     style={{ backgroundColor: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
@@ -170,14 +335,11 @@ export default function DashboardPage() {
                   </span>
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{u.name}</p>
-                    <p className="text-xs" style={{ color: '#6C757D' }}>
-                      {u.clientName} — {u.buildingName}
-                    </p>
+                    <p className="text-xs" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold"
-                    style={{ color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
+                  <p className="text-sm font-bold" style={{ color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
                     {u.monthsAgo} mois
                   </p>
                   <p className="text-xs" style={{ color: '#6C757D' }}>
@@ -191,81 +353,72 @@ export default function DashboardPage() {
       )}
 
       {/* Projets récents */}
-      <div className="rounded-md p-6"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E9ECEF',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Projets récents</h3>
-          <button
-            onClick={() => router.push('/projects')}
+      <div className="rounded-md"
+        style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid #E9ECEF' }}>
+          <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Projets récents</h3>
+          <button onClick={() => router.push('/projects')}
             className="text-xs px-3 py-1.5 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            Voir tous les projets →
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+            Voir tous →
           </button>
         </div>
-
         {loading ? (
-          <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>
-            Chargement...
-          </p>
-        ) : stats.projetsRecents.length === 0 ? (
+          <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+        ) : projetsRecents.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucun projet pour l'instant</p>
-            <button
-              onClick={() => router.push('/projects')}
-              className="mt-4 text-white text-sm font-medium px-4 py-2 rounded"
-              style={{ backgroundColor: '#C0392B' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
-            >
-              + Nouveau projet
-            </button>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #E9ECEF' }}>
-                {['Projet', 'Client', 'Bâtiment', 'Type', 'Statut', 'Modifié'].map(col => (
-                  <th key={col} className="text-left pb-2 text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: '#ADB5BD' }}>
+              <tr style={{ backgroundColor: '#F8F9FA' }}>
+                {['Projet', 'Client', 'Bâtiment', 'Type', 'Statut', 'Progression', 'Modifié'].map(col => (
+                  <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}>
                     {col}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {stats.projetsRecents.map(projet => {
-                const s = statusLabel[projet.status] || { label: projet.status, color: '#6C757D' };
+              {projetsRecents.map((projet, idx) => {
+                const s = statusConfig[projet.status] || statusConfig['DRAFT'];
                 return (
-                  <tr
-                    key={projet.id}
+                  <tr key={projet.id}
                     onClick={() => router.push(`/projects/${projet.id}`)}
                     className="cursor-pointer transition-colors"
-                    style={{ borderBottom: '1px solid #F8F9FA' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td className="py-3 font-medium" style={{ color: '#2C3E50' }}>{projet.name}</td>
-                    <td className="py-3" style={{ color: '#495057' }}>{projet.client?.name || '—'}</td>
-                    <td className="py-3" style={{ color: '#495057' }}>{projet.building?.name || '—'}</td>
-                    <td className="py-3">
-                      <span className="px-2 py-0.5 rounded text-xs font-medium"
-                        style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
+                    style={{ borderBottom: idx < projetsRecents.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <td className="px-4 py-3 font-medium" style={{ color: '#2C3E50' }}>{projet.name}</td>
+                    <td className="px-4 py-3 text-xs" style={{ color: '#495057' }}>{projet.client?.name || '—'}</td>
+                    <td className="px-4 py-3 text-xs" style={{ color: '#495057' }}>{projet.building?.name || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded text-xs font-bold text-white"
+                        style={{ backgroundColor: '#C0392B' }}>
                         {projet.documentType}
                       </span>
                     </td>
-                    <td className="py-3">
-                      <span className="text-xs font-medium" style={{ color: s.color }}>
+                    <td className="px-4 py-3">
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
                         {s.label}
                       </span>
                     </td>
-                    <td className="py-3 text-xs" style={{ color: '#ADB5BD' }}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: '#E9ECEF' }}>
+                          <div className="h-1.5 rounded-full"
+                            style={{ width: `${projet.progress || 0}%`, backgroundColor: projet.progress === 100 ? '#27AE60' : '#C0392B' }} />
+                        </div>
+                        <span className="text-xs" style={{ color: '#ADB5BD' }}>{projet.progress || 0}%</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs" style={{ color: '#ADB5BD' }}>
                       {new Date(projet.updatedAt).toLocaleDateString('fr-CA')}
                     </td>
                   </tr>
