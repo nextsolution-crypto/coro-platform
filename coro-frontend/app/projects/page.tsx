@@ -124,16 +124,7 @@ export default function ProjectsPage() {
         api.get('/users/organization').catch(() => ({ data: [] })),
       ]);
       const projectsData = pr.data;
-      // Charger les scores de qualité en parallèle
-      const scores = await Promise.all(
-        projectsData.map((p: any) =>
-          api.get(`/projects/${p.id}/quality-score`)
-            .then(r => ({ id: p.id, score: r.data }))
-            .catch(() => ({ id: p.id, score: null }))
-        )
-      );
-      const scoreMap = Object.fromEntries(scores.map(s => [s.id, s.score]));
-      setProjects(projectsData.map((p: any) => ({ ...p, qualityScore: scoreMap[p.id] })));
+      setProjects(projectsData);
       setClients(cl.data);
       setBuildings(bl.data);
       setOrgUsers(usersRes.data || []);
@@ -279,9 +270,73 @@ export default function ProjectsPage() {
           <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
         </div>
       ) : visibleProjects.length === 0 ? (
-        <div className="rounded-md p-12 text-center"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>Aucun projet dans cette vue</p>
+        <div>
+          {projects.length === 0 && clients.length === 0 ? (
+            /* Guide onboarding — premier démarrage */
+            <div className="rounded-md p-8 mb-6"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+              <p className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: '#ADB5BD' }}>
+                Par où commencer ?
+              </p>
+              <h3 className="text-xl font-black mb-6" style={{ color: '#2C3E50' }}>
+                3 étapes pour créer votre premier projet
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  {
+                    num: '①',
+                    title: 'Créer un client',
+                    desc: 'Ajoutez le nom, courriel et logo de votre client.',
+                    color: '#C0392B',
+                    bg: '#FDEDEC',
+                    border: '#F1948A',
+                    action: () => router.push('/clients'),
+                    label: '→ Aller aux clients',
+                    done: clients.length > 0,
+                  },
+                  {
+                    num: '②',
+                    title: 'Ajouter un bâtiment',
+                    desc: 'Associez un bâtiment à ce client (adresse, étages, type).',
+                    color: '#2980B9',
+                    bg: '#EBF5FB',
+                    border: '#AED6F1',
+                    action: () => router.push('/buildings'),
+                    label: '→ Aller aux bâtiments',
+                    done: buildings.length > 0,
+                  },
+                  {
+                    num: '③',
+                    title: 'Créer un projet',
+                    desc: 'Choisissez le type de document, le client et le bâtiment.',
+                    color: '#27AE60',
+                    bg: '#EAFAF1',
+                    border: '#A9DFBF',
+                    action: () => setShowModal(true),
+                    label: '+ Nouveau projet',
+                    done: false,
+                  },
+                ].map(step => (
+                  <div key={step.num} className="rounded-md p-5"
+                    style={{ backgroundColor: step.bg, border: `1px solid ${step.border}` }}>
+                    <div className="text-3xl mb-3">{step.num}</div>
+                    <p className="font-bold text-sm mb-1" style={{ color: step.color }}>{step.title}</p>
+                    <p className="text-xs mb-4" style={{ color: '#6C757D' }}>{step.desc}</p>
+                    <button onClick={step.action}
+                      className="text-xs font-medium px-3 py-1.5 rounded transition-colors text-white"
+                      style={{ backgroundColor: step.color }}>
+                      {step.label}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md p-12 text-center"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucun projet dans cette vue</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -432,6 +487,38 @@ export default function ProjectsPage() {
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Nouveau projet
             </h3>
+            {clients.length === 0 && (
+              <div className="rounded-md p-4 mb-4"
+                style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+                <p className="text-sm font-medium mb-1" style={{ color: '#D35400' }}>
+                  ⚠️ Aucun client configuré
+                </p>
+                <p className="text-xs mb-2" style={{ color: '#7D6608' }}>
+                  Vous devez d'abord créer un client avant de pouvoir créer un projet.
+                </p>
+                <button onClick={() => { setShowModal(false); router.push('/clients'); }}
+                  className="text-xs font-medium px-3 py-1.5 rounded text-white"
+                  style={{ backgroundColor: '#E67E22' }}>
+                  → Créer un client maintenant
+                </button>
+              </div>
+            )}
+            {clients.length > 0 && buildings.length === 0 && (
+              <div className="rounded-md p-4 mb-4"
+                style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+                <p className="text-sm font-medium mb-1" style={{ color: '#D35400' }}>
+                  ⚠️ Aucun bâtiment configuré
+                </p>
+                <p className="text-xs mb-2" style={{ color: '#7D6608' }}>
+                  Vous devez d'abord ajouter un bâtiment avant de créer un projet.
+                </p>
+                <button onClick={() => { setShowModal(false); router.push('/buildings'); }}
+                  className="text-xs font-medium px-3 py-1.5 rounded text-white"
+                  style={{ backgroundColor: '#E67E22' }}>
+                  → Ajouter un bâtiment maintenant
+                </button>
+              </div>
+            )}
             <form onSubmit={handleCreate} className="space-y-4">
               {/* Sélecteur de modèle */}
               {templates.length > 0 && (

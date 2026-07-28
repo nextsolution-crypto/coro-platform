@@ -67,7 +67,7 @@ export default function DashboardPage() {
       const in30Days = new Date();
       in30Days.setDate(today.getDate() + 30);
 
-      await Promise.all(activeProjets.map(async (projet: any) => {
+      await Promise.all(activeProjets.slice(0, 5).map(async (projet: any) => {
         try {
           const [actRes, taskRes] = await Promise.all([
             api.get(`/projects/${projet.id}/activities`).catch(() => ({ data: [] })),
@@ -155,7 +155,7 @@ export default function DashboardPage() {
             {lateTasks.length > 0 && ` · ${lateTasks.length} tâche${lateTasks.length > 1 ? 's' : ''} en retard`}
           </p>
         </div>
-        <button onClick={() => router.push('/projects/new')}
+        <button onClick={() => router.push('/projects')}
           className="text-white text-sm font-medium px-4 py-2.5 rounded flex items-center gap-2"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
