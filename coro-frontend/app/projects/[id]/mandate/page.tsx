@@ -7,11 +7,13 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import TasksTab from './TasksTab';
 import CommentsTab from './CommentsTab';
+import TimesheetTab from './TimesheetTab';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
   { id: 'tasks', label: '✅ Tâches' },
   { id: 'comments', label: '💬 Commentaires' },
+  { id: 'timesheet', label: '⏱ Feuille de temps' },
 ];
 
 const ACTIVITY_CATALOG = [
@@ -403,6 +405,10 @@ export default function MandatePage() {
 
       {activeTab === 'comments' && (
         <CommentsTab projectId={projectId} />
+      )}
+
+      {activeTab === 'timesheet' && (
+        <TimesheetTab projectId={projectId} mandate={mandate} />
       )}
 
     </AppLayout>

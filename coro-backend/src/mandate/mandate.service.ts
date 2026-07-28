@@ -215,4 +215,153 @@ export class MandateService {
 
     return { entries, totalHeures };
   }
+
+  async exportTimesheetPdf(projectId: string, organizationId: string, dateFrom?: string, dateTo?: string) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      include: {
+        client: true,
+        building: true,
+        user: true,
+      },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+
+    const mandate = await this.prisma.projectMandate.findUnique({ where: { projectId } });
+
+    const where: any = { task: { projectId } };
+    if (dateFrom || dateTo) {
+      where.date = {};
+      if (dateFrom) where.date.gte = new Date(dateFrom);
+      if (dateTo) where.date.lte = new Date(dateTo);
+    }
+
+    const entries = await this.prisma.taskTimeEntry.findMany({
+      where,
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+        task: { select: { categoryName: true, taskTitle: true } },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    const totalHeures = entries.reduce((sum, e) => sum + e.heures, 0);
+    const taux = mandate?.tauxHoraire || 0;
+    const montant = mandate?.montantVendu || 0;
+    const coutReel = totalHeures * taux;
+
+    const formatDate = (d: Date) => new Date(d).toLocaleDateString('fr-CA', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    const periodLabel = dateFrom && dateTo
+      ? `Du ${formatDate(new Date(dateFrom))} au ${formatDate(new Date(dateTo))}`
+      : 'Toutes les périodes';
+
+    const rows = entries.map(e => `
+      <tr>
+        <td>${formatDate(new Date(e.date))}</td>
+        <td>${e.task?.categoryName || ''}</td>
+        <td>${e.task?.taskTitle || ''}</td>
+        <td>${e.user?.firstName} ${e.user?.lastName}</td>
+        <td class="center">${e.heures}h</td>
+        <td>${(e as any).note || '—'}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; color: #2C3E50; padding: 40px; font-size: 12px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 2px solid #C0392B; padding-bottom: 16px; }
+        .logo { font-size: 24px; font-weight: 900; color: #2C3E50; }
+        .logo span { color: #C0392B; }
+        .title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+        .subtitle { font-size: 12px; color: #6C757D; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+        .info-card { background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 6px; padding: 12px; }
+        .info-label { font-size: 10px; text-transform: uppercase; color: #ADB5BD; margin-bottom: 4px; }
+        .info-value { font-size: 14px; font-weight: 700; color: #2C3E50; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        th { background: #2C3E50; color: white; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+        td { padding: 8px 12px; border-bottom: 1px solid #E9ECEF; font-size: 11px; }
+        tr:nth-child(even) td { background: #F8F9FA; }
+        .center { text-align: center; }
+        .total-row td { background: #FDEDEC !important; font-weight: 700; color: #C0392B; border-top: 2px solid #C0392B; }
+        .footer { text-align: center; font-size: 10px; color: #ADB5BD; margin-top: 32px; border-top: 1px solid #E9ECEF; padding-top: 16px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="logo">CO<span>RO</span></div>
+          <div class="subtitle">Conformité Opérationnelle et Résilience Organisationnelle</div>
+        </div>
+        <div style="text-align:right">
+          <div class="title">Feuille de temps</div>
+          <div class="subtitle">${periodLabel}</div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">Client</div>
+          <div class="info-value">${project.client?.name || '—'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Bâtiment</div>
+          <div class="info-value">${project.building?.name || '—'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Projet</div>
+          <div class="info-value">${project.name}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Total heures</div>
+          <div class="info-value" style="color:#2980B9">${totalHeures.toFixed(1)}h</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Taux horaire</div>
+          <div class="info-value">${taux > 0 ? `${taux} $/h` : '—'}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Montant facturable</div>
+          <div class="info-value" style="color:#C0392B">${taux > 0 ? `${coutReel.toFixed(2)} $` : '—'}</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Catégorie</th>
+            <th>Tâche</th>
+            <th>Conseiller</th>
+            <th class="center">Heures</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          <tr class="total-row">
+            <td colspan="4" style="text-align:right">TOTAL</td>
+            <td class="center">${totalHeures.toFixed(1)}h</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footer">
+        Document généré par CORO · ${new Date().toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+      </div>
+    </body>
+    </html>
+    `;
+
+    return html;
+  }
 }

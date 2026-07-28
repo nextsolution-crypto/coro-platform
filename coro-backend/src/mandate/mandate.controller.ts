@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Request, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { MandateService } from './mandate.service';
+import type { Response } from 'express';
 
 @Controller('projects/:projectId')
 @UseGuards(AuthGuard('jwt'))
@@ -59,12 +60,12 @@ export class MandateController {
   // Entrées de temps
   @Post('tasks/:taskId/time')
   addTimeEntry(@Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
-    return this.service.addTimeEntry(taskId, req.user.organizationId, req.user.id, dto);
+    return this.service.addTimeEntry(taskId, req.user.organizationId, req.user.userId, dto);
   }
 
   @Delete('time/:entryId')
   deleteTimeEntry(@Param('entryId') entryId: string, @Request() req: any) {
-    return this.service.deleteTimeEntry(entryId, req.user.id);
+    return this.service.deleteTimeEntry(entryId, req.user.userId);
   }
 
   // Feuille d'heures
@@ -76,5 +77,29 @@ export class MandateController {
     @Request() req: any,
   ) {
     return this.service.getTimesheet(projectId, req.user.organizationId, from, to);
+  }
+
+  @Get('timesheet/export')
+  async exportTimesheet(
+    @Param('projectId') projectId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const html = await this.service.exportTimesheetPdf(projectId, req.user.organizationId, from, to);
+    
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'Letter', printBackground: true, margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' } });
+    await browser.close();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="feuille-temps-${from}-${to}.pdf"`,
+    });
+    res.send(pdf);
   }
 }
