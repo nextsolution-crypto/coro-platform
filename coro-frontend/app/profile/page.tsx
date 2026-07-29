@@ -14,6 +14,7 @@ export default function ProfilePage() {
     firstName: '',
     lastName: '',
     email: '',
+    horaireBase: 40,
   });
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -32,6 +33,7 @@ export default function ProfilePage() {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
+        horaireBase: (user as any).horaireBase || 40,
       });
     }
   }, [user]);
@@ -134,6 +136,30 @@ export default function ProfilePage() {
               className={inputCls} style={inputSty}
               onFocus={e => e.target.style.borderColor = '#C0392B'}
               onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
+              Horaire de base
+            </label>
+            <div className="flex gap-3">
+              {[
+                { value: 37.5, label: '37.5h / semaine', desc: 'Clause 37h30 (anciens employés)' },
+                { value: 40, label: '40h / semaine', desc: 'Standard Garda' },
+              ].map(opt => (
+                <button key={opt.value}
+                  onClick={() => setForm({ ...form, horaireBase: opt.value })}
+                  className="flex-1 p-3 rounded text-left transition-colors"
+                  style={{
+                    backgroundColor: form.horaireBase === opt.value ? '#EBF5FB' : '#F8F9FA',
+                    border: `1px solid ${form.horaireBase === opt.value ? '#2980B9' : '#DEE2E6'}`,
+                  }}>
+                  <p className="text-sm font-bold" style={{ color: form.horaireBase === opt.value ? '#2980B9' : '#2C3E50' }}>
+                    {opt.label}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{opt.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
           <button onClick={handleSave} disabled={saving}
             className="text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
