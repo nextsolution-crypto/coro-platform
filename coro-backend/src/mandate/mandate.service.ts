@@ -386,4 +386,93 @@ export class MandateService {
 
     return html;
   }
+  async getRendement(organizationId: string, userId?: string, dateFrom?: string, dateTo?: string) {
+    const where: any = { task: { project: { organizationId } } };
+    if (userId) where.userId = userId;
+    if (dateFrom || dateTo) {
+      where.date = {};
+      if (dateFrom) where.date.gte = new Date(dateFrom);
+      if (dateTo) where.date.lte = new Date(dateTo);
+    }
+
+    // Toutes les entrées de temps
+    const entries = await this.prisma.taskTimeEntry.findMany({
+      where,
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true } },
+        task: {
+          include: {
+            project: {
+              include: {
+                mandate: true,
+                client: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Grouper par conseiller
+    const byUser: Record<string, any> = {};
+    entries.forEach(e => {
+      const uid = e.user.id;
+      if (!byUser[uid]) {
+        byUser[uid] = {
+          userId: uid,
+          userName: `${e.user.firstName} ${e.user.lastName}`,
+          heuresTotal: 0,
+          revenusTotal: 0,
+          mandats: {},
+        };
+      }
+      byUser[uid].heuresTotal += e.heures;
+
+      // Par mandat
+      const projectId = e.task.projectId;
+      if (!byUser[uid].mandats[projectId]) {
+        const mandate = e.task.project.mandate;
+        byUser[uid].mandats[projectId] = {
+          projectId,
+          projectName: e.task.project.name,
+          clientName: e.task.project.client?.name || '—',
+          heures: 0,
+          montantVendu: mandate?.montantVendu || 0,
+          tauxHoraire: mandate?.tauxHoraire || 0,
+          heuresBudgetees: mandate?.heuresBudgetees || 0,
+        };
+      }
+      byUser[uid].mandats[projectId].heures += e.heures;
+    });
+
+    // Calculer revenus et marges
+    const conseillers = Object.values(byUser).map((c: any) => {
+      const mandatsList = Object.values(c.mandats).map((m: any) => {
+        const coutReel = m.heures * m.tauxHoraire;
+        const marge = m.montantVendu - coutReel;
+        const margePct = m.montantVendu > 0 ? Math.round((marge / m.montantVendu) * 100) : 0;
+        return { ...m, coutReel, marge, margePct };
+      });
+
+      const revenusTotal = mandatsList.reduce((sum, m) => sum + m.coutReel, 0);
+      const mandatsDeficitaires = mandatsList.filter(m => m.marge < 0).length;
+
+      return {
+        ...c,
+        revenusTotal,
+        mandatsList,
+        mandatsDeficitaires,
+        mandatsCount: mandatsList.length,
+      };
+    });
+
+    // Stats globales équipe
+    const teamStats = {
+      heuresTotal: conseillers.reduce((sum, c) => sum + c.heuresTotal, 0),
+      revenusTotal: conseillers.reduce((sum, c) => sum + c.revenusTotal, 0),
+      mandatsDeficitaires: conseillers.reduce((sum, c) => sum + c.mandatsDeficitaires, 0),
+    };
+
+    return { conseillers, teamStats };
+  }
 }

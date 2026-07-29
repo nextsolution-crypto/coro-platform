@@ -18,6 +18,7 @@ const navItems = [
 
 const adminNavItems = [
   { label: 'Équipe', path: '/settings/users' },
+  { label: 'Rendement', path: '/dashboard/rendement' },
   { label: 'Templates de tâches', path: '/settings/task-templates' },
   { label: 'Nous écrire', path: '/settings/feedback' },
 ];
@@ -50,6 +51,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [updates, setUpdates] = useState<UpcomingUpdate[]>([]);
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
 
   useEffect(() => {
@@ -74,6 +77,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const handleClick = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setShowNotif(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -239,25 +245,67 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           {user && (
-            <span className="text-sm font-medium" style={{ color: '#495057' }}>
-              {user.firstName} {user.lastName}
-            </span>
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded transition-colors"
+                style={{ border: '1px solid transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.borderColor = '#DEE2E6'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                  style={{ backgroundColor: '#C0392B' }}>
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </div>
+                <span className="text-sm font-medium" style={{ color: '#495057' }}>
+                  {user.firstName} {user.lastName}
+                </span>
+                <span style={{ color: '#ADB5BD', fontSize: '10px' }}>▼</span>
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-50"
+                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+                  <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9ECEF' }}>
+                    <p className="text-xs font-semibold" style={{ color: '#2C3E50' }}>{user.firstName} {user.lastName}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{user.email}</p>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { router.push('/profile'); setShowProfileMenu(false); }}
+                      className="w-full text-left px-4 py-2 text-sm transition-colors"
+                      style={{ color: '#495057' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      👤 Mon profil
+                    </button>
+                    {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
+                      <button onClick={() => { router.push('/dashboard/rendement'); setShowProfileMenu(false); }}
+                        className="w-full text-left px-4 py-2 text-sm transition-colors"
+                        style={{ color: '#495057' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        📊 Rendement équipe
+                      </button>
+                    )}
+                    <button onClick={() => { router.push('/profile/rendement'); setShowProfileMenu(false); }}
+                      className="w-full text-left px-4 py-2 text-sm transition-colors"
+                      style={{ color: '#495057' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      ⏱ Mon rendement
+                    </button>
+                    <div style={{ borderTop: '1px solid #E9ECEF', margin: '4px 0' }} />
+                    <button onClick={() => { handleLogout(); setShowProfileMenu(false); }}
+                      className="w-full text-left px-4 py-2 text-sm transition-colors"
+                      style={{ color: '#C0392B' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-          <button
-            onClick={handleLogout}
-            className="text-sm px-3 py-1.5 rounded transition-colors"
-            style={{ color: '#6C757D', border: '1px solid #DEE2E6' }}
-            onMouseEnter={e => {
-              (e.currentTarget).style.backgroundColor = '#F8F9FA';
-              (e.currentTarget).style.color = '#2C3E50';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget).style.backgroundColor = 'transparent';
-              (e.currentTarget).style.color = '#6C757D';
-            }}
-          >
-            Déconnexion
-          </button>
         </div>
       </div>
 
