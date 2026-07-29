@@ -15,7 +15,6 @@ export class UsersController {
   @Get('organization')
   @UseGuards(AuthGuard('jwt'))
   async getOrganizationUsers(@Request() req: any) {
-    this.assertAdmin(req);
     return this.usersService.findByOrganization(req.user.organizationId);
   }
 

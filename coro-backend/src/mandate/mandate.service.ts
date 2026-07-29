@@ -19,9 +19,11 @@ export class MandateService {
     await this.assertOwnership(projectId, organizationId);
     const mandate = await this.prisma.projectMandate.findUnique({
       where: { projectId },
+      include: {
+        owner: { select: { id: true, firstName: true, lastName: true } },
+      },
     });
 
-    // Calculer les heures totales saisies
     const tasks = await this.prisma.projectTask.findMany({
       where: { projectId, organizationId },
       include: { timeEntries: true },
@@ -42,6 +44,7 @@ export class MandateService {
         tauxHoraire: dto.tauxHoraire ? parseFloat(dto.tauxHoraire) : null,
         heuresBudgetees: dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : null,
         lienDrive: dto.lienDrive,
+        ownerId: dto.ownerId || null,
       },
       create: {
         projectId,
@@ -51,6 +54,7 @@ export class MandateService {
         tauxHoraire: dto.tauxHoraire ? parseFloat(dto.tauxHoraire) : null,
         heuresBudgetees: dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : null,
         lienDrive: dto.lienDrive,
+        ownerId: dto.ownerId || null,
       },
     });
   }
@@ -108,6 +112,7 @@ export class MandateService {
         assignees: {
           include: { user: { select: { firstName: true, lastName: true, id: true } } },
         },
+        assignee: { select: { id: true, firstName: true, lastName: true } },
       },
       orderBy: [{ order: 'asc' }],
     });
@@ -174,6 +179,7 @@ export class MandateService {
       data: {
         status: dto.status,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        assigneeId: dto.assigneeId !== undefined ? (dto.assigneeId || null) : undefined,
       },
     });
   }

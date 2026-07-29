@@ -57,6 +57,8 @@ model User {
   taskAssignees       ProjectTaskAssignee[]
   timeEntries         TaskTimeEntry[]
   projectComments     ProjectComment[]
+  ownedMandates   ProjectMandate[] @relation("mandateOwner")
+  assignedTasks   ProjectTask[]    @relation("taskAssignee")
 }
 
 enum UserRole {
@@ -442,6 +444,8 @@ model ProjectTask {
   organizationId String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  assigneeId     String?
+  assignee       User?    @relation("taskAssignee", fields: [assigneeId], references: [id])
 
   timeEntries TaskTimeEntry[]
   assignees   ProjectTaskAssignee[]
@@ -482,6 +486,8 @@ model ProjectMandate {
   heuresBudgetees Float?
   lienDrive       String?
   organizationId  String
+  ownerId         String?
+  owner           User?    @relation("mandateOwner", fields: [ownerId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

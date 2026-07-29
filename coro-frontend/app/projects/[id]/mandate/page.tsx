@@ -51,17 +51,21 @@ export default function MandatePage() {
     tauxHoraire: '',
     heuresBudgetees: '',
     lienDrive: '',
+    ownerId: '',
   });
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
 
   useEffect(() => { fetchData(); }, [projectId]);
 
   const fetchData = async () => {
     try {
-      const [projectRes, mandateRes, activitiesRes] = await Promise.all([
+      const [projectRes, mandateRes, activitiesRes, teamRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/projects/${projectId}/mandate`).catch(() => ({ data: null })),
         api.get(`/projects/${projectId}/activities`).catch(() => ({ data: [] })),
+        api.get('/users/organization').catch(() => ({ data: [] })),
       ]);
+      setTeamMembers(teamRes.data || []);
       setProject(projectRes.data);
       const m = mandateRes.data;
       setMandate(m);
@@ -72,6 +76,7 @@ export default function MandatePage() {
           tauxHoraire: m.tauxHoraire?.toString() || '',
           heuresBudgetees: m.heuresBudgetees?.toString() || '',
           lienDrive: m.lienDrive || '',
+          ownerId: m.ownerId || '',
         });
       }
       const mandateActivities = (activitiesRes.data || []).filter((a: any) => a.sourceMandate);
@@ -251,6 +256,24 @@ export default function MandatePage() {
                 </div>
               </div>
 
+              {/* Propriétaire du mandat */}
+              <div className="mt-4">
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
+                  Conseiller responsable du mandat
+                </label>
+                <select value={form.ownerId}
+                  onChange={e => setForm({ ...form, ownerId: e.target.value })}
+                  className="w-full px-3 py-2.5 text-sm rounded"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
+                  <option value="">— Non assigné —</option>
+                  {teamMembers.map((m: any) => (
+                    <option key={m.id} value={m.id}>
+                      {m.firstName} {m.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Services vendus */}
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-3">
@@ -400,7 +423,7 @@ export default function MandatePage() {
       )}
 
       {activeTab === 'tasks' && (
-        <TasksTab projectId={projectId} documentType={project?.documentType} />
+        <TasksTab projectId={projectId} documentType={project?.documentType} teamMembers={teamMembers} />
       )}
 
       {activeTab === 'comments' && (

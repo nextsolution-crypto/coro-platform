@@ -14,9 +14,10 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 interface Props {
   projectId: string;
   documentType: string;
+  teamMembers: any[];
 }
 
-export default function TasksTab({ projectId, documentType }: Props) {
+export default function TasksTab({ projectId, documentType, teamMembers }: Props) {
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(false);
@@ -253,6 +254,25 @@ export default function TasksTab({ projectId, documentType }: Props) {
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                             <Plus size={11} /> Temps
                           </button>
+
+                          {/* Assigné */}
+                          <select
+                            value={task.assigneeId || ''}
+                            onChange={e => {
+                              api.put(`/projects/${projectId}/tasks/${task.id}`, {
+                                assigneeId: e.target.value || null,
+                              }).then(() => fetchTasks());
+                            }}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{ border: '1px solid #DEE2E6', color: '#6C757D', maxWidth: '130px' }}
+                            title="Assigner à un conseiller">
+                            <option value="">— Assigné —</option>
+                            {teamMembers.map((m: any) => (
+                              <option key={m.id} value={m.id}>
+                                {m.firstName} {m.lastName}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         {/* Entrées de temps */}

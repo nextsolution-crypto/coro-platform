@@ -89,16 +89,19 @@ export default function DashboardPage() {
             }
           });
 
-          // Tâches en retard
+          // Tâches en retard OU assignées à moi
           (taskRes.data || []).forEach((t: any) => {
-            if (t.dueDate && t.status !== 'termine') {
-              const d = new Date(t.dueDate);
-              if (d < today) {
+            if (t.status !== 'termine') {
+              const isAssignedToMe = t.assigneeId === user?.id;
+              const isLate = t.dueDate && new Date(t.dueDate) < today;
+              if (isLate || isAssignedToMe) {
                 lateTasksData.push({
                   ...t,
                   projectName: projet.name,
                   projectId: projet.id,
                   clientName: projet.client?.name || '—',
+                  isAssignedToMe,
+                  isLate,
                 });
               }
             }
@@ -271,7 +274,7 @@ export default function DashboardPage() {
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <div className="px-5 py-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
             <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-              ⚠️ Tâches en retard
+              ⚠️ Mes tâches
             </h3>
           </div>
           {loading ? (
@@ -294,9 +297,18 @@ export default function DashboardPage() {
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
                     <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{task.clientName}</p>
-                    <p className="text-xs font-bold mt-1" style={{ color: '#C0392B' }}>
-                      {daysLate}j de retard
-                    </p>
+                    <div className="flex gap-2 mt-1">
+                      {task.isAssignedToMe && (
+                        <span className="text-xs font-medium" style={{ color: '#2980B9' }}>
+                          👤 Assigné à moi
+                        </span>
+                      )}
+                      {task.isLate && (
+                        <span className="text-xs font-bold" style={{ color: '#C0392B' }}>
+                          {Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24))}j de retard
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
