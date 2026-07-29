@@ -16,7 +16,7 @@ export class ChangelogService {
       data: {
         title: data.title,
         description: data.description,
-        entryDate: data.entryDate ? new Date(data.entryDate) : new Date(),
+        entryDate: data.entryDate ? new Date(data.entryDate + 'T12:00:00') : new Date(),
       },
     });
   }

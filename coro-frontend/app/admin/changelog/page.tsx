@@ -71,8 +71,15 @@ export default function ChangelogAdminPage() {
     } catch (err) { console.error(err); }
   };
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' });
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleDateString('fr-CA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  };
 
   if (loading) {
     return (
