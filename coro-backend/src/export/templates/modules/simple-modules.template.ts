@@ -250,25 +250,106 @@ export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumb
   `;
 
   // 8.3 — Rapport d'évacuation
-  const r = module8Data.section8_3 || {};
-  const s83 = `
-    <div class="page-break">
-      ${sectionHeader('8.3')}
-      <table>
-        <tbody>
-          <tr><td style="width:30%;font-weight:600;">${isFr ? 'Adresse' : 'Address'}</td><td>${escapeHtml(r.adresse || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Téléphone contact' : 'Contact phone'}</td><td>${escapeHtml(r.telephoneContact || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Date / Heure' : 'Date / Time'}</td><td>${escapeHtml(r.dateEvenement || '')} ${escapeHtml(r.heure || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Coordonnateur d\'urgence' : 'Emergency coordinator'}</td><td>${escapeHtml(r.coordonnateurUrgence || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Type d\'événement' : 'Event type'}</td><td>${escapeHtml(r.typeEvenement || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Cause' : 'Cause'}</td><td>${escapeHtml(r.cause || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Déroulement' : 'Course of events'}</td><td>${escapeHtml(r.deroulement || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Recommandation' : 'Recommendation'}</td><td>${escapeHtml(r.recommandation || '')}</td></tr>
-          <tr><td style="font-weight:600;">${isFr ? 'Temps d\'évacuation' : 'Evacuation time'}</td><td>${escapeHtml(r.tempsEvacuationComplete || '')}</td></tr>
-        </tbody>
-      </table>
+const r = module8Data.section8_3 || {};
+const s83 = `
+  <div class="page-break">
+    ${sectionHeader('8.3')}
+    
+    <div style="background-color:#F8F9FA;border:1px solid #DEE2E6;padding:12px;margin-bottom:16px;font-weight:600;font-size:10pt;color:#2C3E50;">
+      ${isFr ? 'Informations et détails' : 'Information and Details'}
     </div>
-  `;
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <tbody>
+        <tr>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Adresse de l\'événement :' : 'Event address:'}</td>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.adresse || '')}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Téléphone contact :' : 'Contact phone:'}</td>
+          <td style="padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.telephoneContact || '')}</td>
+        </tr>
+        <tr>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Date de l\'événement :' : 'Date of event:'}</td>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.dateEvenement || '')}</td>
+        </tr>
+        <tr>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Heure :' : 'Time:'}</td>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.heure || '')}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Coordonnateur d\'urgence :' : 'Emergency coordinator:'}</td>
+          <td style="padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.coordonnateurUrgence || '')}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-weight:600;color:#2C3E50;margin-bottom:6px;font-size:10pt;">${isFr ? 'Type d\'événement' : 'Event type'}</div>
+      <div style="display:flex;gap:20px;padding:8px 0;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:10pt;color:#495057;">
+          <span style="width:14px;height:14px;border:1px solid #DEE2E6;display:inline-block;text-align:center;line-height:14px;">${r.typeEvenement === 'exercice' ? '☑' : '☐'}</span>
+          ${isFr ? 'Exercice d\'évacuation' : 'Evacuation drill'}
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:10pt;color:#495057;">
+          <span style="width:14px;height:14px;border:1px solid #DEE2E6;display:inline-block;text-align:center;line-height:14px;">${r.typeEvenement === 'non-fondee' ? '☑' : '☐'}</span>
+          ${isFr ? 'Évacuation non-fondée' : 'Unfounded evacuation'}
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:10pt;color:#495057;">
+          <span style="width:14px;height:14px;border:1px solid #DEE2E6;display:inline-block;text-align:center;line-height:14px;">${r.typeEvenement === 'fondee' ? '☑' : '☐'}</span>
+          ${isFr ? 'Évacuation fondée' : 'Founded evacuation'}
+        </label>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <tbody>
+        <tr>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Cause' : 'Cause'}</td>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.cause || '')}</td>
+        </tr>
+        <tr>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Heure de déclenchement :' : 'Trigger time:'}</td>
+          <td style="width:50%;padding:10px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.heureDeclenchement || '')}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-bottom:8px;">
+      <div style="font-weight:600;color:#2C3E50;margin-bottom:3px;font-size:10pt;">${isFr ? 'Déroulement :' : 'Course of events:'}</div>
+      <div style="min-height:40px;padding:6px;border:1px solid #DEE2E6;background-color:#FFFFFF;color:#495057;font-size:8pt;">
+        ${escapeHtml(r.deroulement || '').replace(/\n/g, '<br/>')}
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <div style="font-weight:600;color:#2C3E50;margin-bottom:3px;font-size:10pt;">${isFr ? 'Recommandation :' : 'Recommendation:'}</div>
+      <div style="min-height:40px;padding:6px;border:1px solid #DEE2E6;background-color:#FFFFFF;color:#495057;font-size:8pt;">
+        ${escapeHtml(r.recommandation || '').replace(/\n/g, '<br/>')}
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+      <tbody>
+        <tr>
+          <td style="width:70%;padding:8px;border:1px solid #DEE2E6;font-weight:600;color:#2C3E50;">${isFr ? 'Temps pour l\'évacuation complète :' : 'Time for complete evacuation:'}</td>
+          <td style="width:30%;padding:8px;border:1px solid #DEE2E6;color:#495057;">${escapeHtml(r.tempsEvacuationComplete || '')}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="display:flex;gap:30px;margin-top:12px;">
+      <div style="width:50%;">
+        <div style="font-weight:600;color:#2C3E50;margin-bottom:8px;font-size:10pt;">${isFr ? 'Signature du responsable du PMU :' : 'Signature of PMU manager:'}</div>
+        <div style="min-height:35px;border:1px solid #DEE2E6;"></div>
+      </div>
+      <div style="width:50%;">
+        <div style="font-weight:600;color:#2C3E50;margin-bottom:8px;font-size:10pt;">Date :</div>
+        <div style="min-height:35px;border:1px solid #DEE2E6;"></div>
+      </div>
+    </div>
+  </div>
+`;
 
   // 8.4 — Inspections et surveillances
   const s84Rows = (module8Data.section8_4 || []).map((row: any) => `
