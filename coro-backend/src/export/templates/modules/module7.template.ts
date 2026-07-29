@@ -184,6 +184,18 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         </tbody>
       </table>
 
+      ${config.emplacementBac || config.compacteur || config.chuteADechets ? `
+        ${subHeading(isFr ? 'Déchets et matières résiduelles' : 'Waste and residual materials')}
+        <table><tbody>
+          ${config.emplacementBac ? infoRow(isFr ? 'Emplacement bac à déchets' : 'Waste bin location', val(config.emplacementBac)) : ''}
+          ${infoRow(isFr ? 'Compacteur présent' : 'Compactor present', bool(config.compacteur, isFr))}
+          ${config.compacteur ? infoRow(isFr ? 'Gicleurs dans le compacteur' : 'Sprinklers in compactor', bool(config.compacteurGicleurs, isFr)) : ''}
+          ${config.compacteur && config.compacteurGicleurs ? infoRow(isFr ? 'Type gicleurs compacteur' : 'Compactor sprinkler type', val(config.compacteurGicleursType)) : ''}
+          ${config.compacteur && config.compacteurGicleurs ? infoRow(isFr ? 'Vanne isolement compacteur' : 'Compactor isolation valve', val(config.compacteurVanneIsolement)) : ''}
+          ${infoRow(isFr ? 'Chute à déchets présente' : 'Waste chute present', bool(config.chuteADechets, isFr))}
+        </tbody></table>
+      ` : ''}
+
       ${subHeading('CVAC')}
       <table>
         <tbody>
@@ -220,6 +232,14 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${infoRow(isFr ? 'Capacité réservoir' : 'Tank capacity', config.capaciteReservoir ? `${config.capaciteReservoir}L` : '—')}
         </tbody>
       </table>
+      ${config.reservoirsAuxiliaires ? `
+        ${subHeading(isFr ? 'Réservoirs auxiliaires' : 'Auxiliary tanks')}
+        <table><tbody>
+          ${infoRow(isFr ? 'Emplacement' : 'Location', val(config.reservoirsAuxiliairesLieu))}
+          ${infoRow(isFr ? 'Capacité' : 'Capacity', config.reservoirsAuxiliairesCapacite ? `${config.reservoirsAuxiliairesCapacite}L` : '—')}
+          ${infoRow(isFr ? 'Autonomie totale' : 'Total runtime', config.autonomieTotale ? `${config.autonomieTotale}h` : '—')}
+        </tbody></table>
+      ` : ''}
       ${config.generatriceEquipements?.length > 0 ? `
         ${subHeading(isFr ? 'Équipements sur alimentation de secours' : 'Equipment on backup power')}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
@@ -232,14 +252,6 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${config.generatriceEquipementsPersonnalises.map((e: any) => infoRow('', escapeHtml(e.nom || ''))).join('')}
         </tbody></table>
       ` : ''}
-      ${config.reservoirsAuxiliaires ? `
-        ${subHeading(isFr ? 'Réservoirs auxiliaires' : 'Auxiliary tanks')}
-        <table><tbody>
-          ${infoRow(isFr ? 'Emplacement' : 'Location', val(config.reservoirsAuxiliairesLieu))}
-          ${infoRow(isFr ? 'Capacité' : 'Capacity', config.reservoirsAuxiliairesCapacite ? `${config.reservoirsAuxiliairesCapacite}L` : '—')}
-          ${infoRow(isFr ? 'Autonomie totale' : 'Total runtime', config.autonomieTotale ? `${config.autonomieTotale}h` : '—')}
-        </tbody></table>
-      ` : ''}
 
       ${subHeading(isFr ? 'Vannes d\'arrêt' : 'Shutoff valves')}
       <table><tbody>
@@ -248,18 +260,6 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         ${config.vannesArretEauDomestique ? infoRow(isFr ? 'Arrivée eau domestique' : 'Domestic water supply', val(config.vannesArretEauDomestique)) : ''}
         ${config.vannesArretSalleElectrique ? infoRow(isFr ? 'Salle électrique' : 'Electrical room', val(config.vannesArretSalleElectrique)) : ''}
       </tbody></table>
-
-      ${config.emplacementBac || config.compacteur || config.chuteADechets ? `
-        ${subHeading(isFr ? 'Déchets et matières résiduelles' : 'Waste and residual materials')}
-        <table><tbody>
-          ${config.emplacementBac ? infoRow(isFr ? 'Emplacement bac à déchets' : 'Waste bin location', val(config.emplacementBac)) : ''}
-          ${infoRow(isFr ? 'Compacteur présent' : 'Compactor present', bool(config.compacteur, isFr))}
-          ${config.compacteur ? infoRow(isFr ? 'Gicleurs dans le compacteur' : 'Sprinklers in compactor', bool(config.compacteurGicleurs, isFr)) : ''}
-          ${config.compacteur && config.compacteurGicleurs ? infoRow(isFr ? 'Type gicleurs compacteur' : 'Compactor sprinkler type', val(config.compacteurGicleursType)) : ''}
-          ${config.compacteur && config.compacteurGicleurs ? infoRow(isFr ? 'Vanne isolement compacteur' : 'Compactor isolation valve', val(config.compacteurVanneIsolement)) : ''}
-          ${infoRow(isFr ? 'Chute à déchets présente' : 'Waste chute present', bool(config.chuteADechets, isFr))}
-        </tbody></table>
-      ` : ''}
     </div>
   `;
 
