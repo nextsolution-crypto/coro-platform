@@ -44,14 +44,28 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
     // Cas spécial — 2.1 Numéros d'urgence : 2 colonnes, sans en-tête, 9-1-1 fusionné
     if (section.id === '2.1') {
       const entries21 = section.entries || [];
-      const rows21 = entries21.map((entry: any, i: number) => `
+      
+      // Séparer les entrées 9-1-1 (sans numéro individuel) des autres
+      const urgenceEntries = entries21.filter((e: any) => !e.phone || e.phone === '' || e.phone === '9-1-1');
+      const autresEntries = entries21.filter((e: any) => e.phone && e.phone !== '' && e.phone !== '9-1-1');
+
+      // Lignes 9-1-1 fusionnées
+      const rows911 = urgenceEntries.map((entry: any, i: number) => `
         <tr>
           <td style="width:60%;">${escapeHtml(entry.role || '')}</td>
           ${i === 0 ? `
-            <td rowspan="${entries21.length}" style="text-align:center;font-size:22pt;font-weight:800;color:#C0392B;vertical-align:middle;">
-              ${escapeHtml(entries21[0]?.phone || '9-1-1')}
+            <td rowspan="${urgenceEntries.length}" style="text-align:center;font-size:22pt;font-weight:800;color:#C0392B;vertical-align:middle;">
+              9-1-1
             </td>
           ` : ''}
+        </tr>
+      `).join('');
+
+      // Lignes avec numéro individuel (hôpital, ville, etc.)
+      const rowsAutres = autresEntries.map((entry: any) => `
+        <tr>
+          <td style="width:60%;">${escapeHtml(entry.role || '')}</td>
+          <td style="text-align:center;font-weight:700;color:#2C3E50;">${escapeHtml(entry.phone || '')}</td>
         </tr>
       `).join('');
 
@@ -70,7 +84,17 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
             <div class="section-bar"></div>
           </div>
           <table>
-            <tbody>${rows21}</tbody>
+            <tbody>
+              ${rows911}
+              ${autresEntries.length > 0 ? `
+                <tr style="background-color:#F8F9FA;">
+                  <td colspan="2" style="padding:4px 8px;font-size:8pt;color:#ADB5BD;font-style:italic;">
+                    ${lang === 'fr' ? 'Autres numéros d\'urgence' : 'Other emergency numbers'}
+                  </td>
+                </tr>
+                ${rowsAutres}
+              ` : ''}
+            </tbody>
           </table>
           ${internalEmergencyHtml}
         </div>
@@ -100,7 +124,14 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
 
     const forcePageBreak = section.id === '2.4'; // Ressources externes démarre toujours une nouvelle page
 
-    return `
+    // Définir les largeurs de colonnes selon le type
+      const colWidths = isExternal
+        ? ['70%', '30%']
+        : ['35%', '40%', '25%'];
+
+      const colGroupHtml = `<colgroup>${colWidths.map(w => `<col style="width:${w};">`).join('')}</colgroup>`;
+
+      return `
       <div class="no-break ${forcePageBreak ? 'page-break' : ''}" style="margin-top:${(!forcePageBreak && idx > 0) ? '28px' : '0'};">
         <div class="section-header">
           <span class="section-id">${displayNumber}</span>
@@ -108,6 +139,7 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
           <div class="section-bar"></div>
         </div>
         <table>
+          ${colGroupHtml}
           <thead><tr>${headerLabels.map(l => `<th>${l}</th>`).join('')}</tr></thead>
           <tbody>${rows}</tbody>
         </table>

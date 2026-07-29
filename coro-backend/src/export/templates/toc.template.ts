@@ -144,6 +144,7 @@ export const TOC_STYLES = `
     color: #2C3E50;
     flex-shrink: 1;
     min-width: 0;
+    text-transform: uppercase;
   }
 
   .toc-dots {
@@ -176,6 +177,7 @@ export const TOC_STYLES = `
     color: #6C757D;
     flex-shrink: 1;
     min-width: 0;
+    text-transform: uppercase;
   }
 
   .toc-sub-dots {
