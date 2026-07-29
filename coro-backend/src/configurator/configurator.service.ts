@@ -464,18 +464,84 @@ export class ConfiguratorService {
           title: 'Specifique industriel',
           icon: '🏭',
           fields: [
-            { key: 'espaceClos', label: 'Espaces clos presents', type: 'boolean' },
+            // 7.9 — ENTREPOSAGE ET MANUTENTION (Header uniquement)
+            { key: 'espaceClos', label: 'Espaces clos presents', type: 'boolean',
+              tooltip: 'Espaces fermes ou confines (reservoirs, silos, cuves, tunnels, fosses) oú le volume d\'air est limite et les echanges d\'air reduits ou inexistants.' },
             { key: 'espaceClosLieu', label: 'Localisation espaces clos', type: 'text' },
-            { key: 'chariotsElevateurs', label: 'Chariots elevateurs presents', type: 'boolean' },
-            { key: 'chariotsElevateursBatterie', label: 'Chariots sur batterie (recharge)', type: 'boolean' },
-            { key: 'chariotsElevateursLieu', label: 'Zone recharge chariots', type: 'text' },
-            { key: 'palettiers', label: 'Palettiers / racks d entreposage', type: 'boolean' },
-            { key: 'mezzanine', label: 'Mezzanine presente', type: 'boolean' },
-            { key: 'mezzanineLieu', label: 'Localisation mezzanine', type: 'text' },
-            { key: 'travailChaud', label: 'Travaux a chaud effectues', type: 'boolean' },
-            { key: 'procesDangereux', label: 'Procedes dangereux presents', type: 'boolean' },
-            { key: 'procesDangereuxDesc', label: 'Description procedes dangereux', type: 'text' },
-            { key: 'systemeCadenassage', label: 'Programme de cadenassage en place', type: 'boolean' },
+
+            // 7.9.1 — Palletier
+            { key: 'palettierPresent', label: '7.9.1 Palletier present', type: 'boolean' },
+            { key: 'palettierAgencement', label: 'Agencement', type: 'text',
+              tooltip: 'Estimer la superficie approximative. Ex: 50m × 40m, ou "environ 2000 pi²". Inclure aussi hauteur si connue.' },
+            { key: 'palettierGicleurs', label: 'Gicleurs', type: 'select',
+              options: ['Gicle', 'Partiellement gicle', 'Non gicle'] },
+            { key: 'palettierAlles', label: 'Allees', type: 'select',
+              options: ['2.4 metres', '3.6 metres'] },
+
+            // 7.9.2 — Ilos de stockage et palettes
+            { key: 'stockagePresent', label: '7.9.2 Ilos de stockage et palettes present', type: 'boolean' },
+            { key: 'stockagePalettes', label: 'Palettes', type: 'select',
+              options: ['Oui', 'Non'] },
+            { key: 'stockagePalettesCombustible', label: 'Type de palettes', type: 'select',
+              options: ['Bois', 'Plastique', 'Bois et plastique'] },
+            { key: 'stockageEmplacement', label: 'Entreposage', type: 'select',
+              options: ['Interieur', 'Exterieur', 'Interieur et exterieur'] },
+            { key: 'stockageHauteur', label: 'Hauteur', type: 'select',
+              options: ['-6 metres', '+8 metres'] },
+            { key: 'stockageLargeurAllee', label: 'Largeur allee principale', type: 'select',
+              options: ['2.4 metres', '3.6 metres'] },
+            { key: 'stockageClassification', label: 'Classification des produits stockes', type: 'checkbox_group',
+              checkboxOptions: [
+                'Classe I : Produits essentiellement incombustibles, emballes dans du carton ondule ou du papier ordinaire',
+                'Classe II : Memes produits que classe I, mais emballes dans des caisses en bois massif ou a claire voie',
+                'Classe III : Bois, papier, fibres naturelles, toile ou plastique du groupe C',
+                'Classe IV : Produits de classes I, II ou III emballes dans du carton ondule',
+                'Autre'
+              ] },
+
+            // 7.9.3 — Mezzanine
+            { key: 'mezzaninePresent', label: '7.9.3 Mezzanine presente', type: 'boolean' },
+            { key: 'mezzanineGicle', label: 'Gicle', type: 'select',
+              options: ['Gicle', 'Partiellement gicle', 'NON GICLE'] },
+            { key: 'mezzanineEncloisonnee', label: 'Encloisonnee', type: 'select',
+              options: ['de 10%', '+ de 40%'] },
+            { key: 'mezzanineLieu', label: 'Localisation', type: 'text' },
+
+            // 7.9.4 — Chariot élévateur
+            { key: 'chariotsPresent', label: '7.9.4 Chariots elevateurs presents', type: 'boolean' },
+            { key: 'chariotsNombre', label: 'Nombre', type: 'text',
+              tooltip: 'Nombre de chariots operationnels.' },
+            { key: 'chariotsType', label: 'Type', type: 'select',
+              options: ['Combustion', 'Accumulateur', 'Lithium'] },
+            { key: 'chariotsEmplacementRecharge', label: 'Emplacement des recharges', type: 'text',
+              tooltip: 'Localisation precis de la zone de recharge des batteries (si applicables).' },
+
+            // 7.9.5 — Batteries lithium
+            { key: 'batteriesLithiumPresent', label: '7.9.5 Batteries lithium present', type: 'boolean' },
+            { key: 'batteriesLithiumLocalEspace', label: 'Espace d\'entreposage — Les batteries sont-elles entreposees dans un local dedie, ventile et coupe-feu ?', type: 'select',
+              options: ['Oui', 'Non'] },
+            { key: 'batteriesLithiumLocalEspaceCommentaire', label: 'Commentaire', type: 'text' },
+            { key: 'batteriesLithiumDetection', label: 'Systeme de detection — Y a-t-il presence de detecteurs de fumee, chaleur ou gaz toxiques (O₂) ?', type: 'select',
+              options: ['Oui', 'Non'] },
+            { key: 'batteriesLithiumDetectionCommentaire', label: 'Commentaire', type: 'text' },
+            { key: 'batteriesLithiumSignalisation', label: 'Signalisation et consignes de securite — Les zones d\'entreposage sont-elles clairement signalees avec des consignes visibles ?', type: 'select',
+              options: ['Oui', 'Non'] },
+            { key: 'batteriesLithiumSignalisationCommentaire', label: 'Commentaire', type: 'text' },
+
+            // Procédés dangereux (section générale)
+            { key: 'procesDangereux', label: 'Procedes dangereux presents', type: 'boolean',
+              tooltip: 'Activites industrielles presentant des risques particuliers (soudure, coupage, explosifs, etc.).' },
+            { key: 'procesDangereuxDetails', label: 'Tableau des procedes dangereux (ajouter)', type: 'dynamic_list',
+              schema: [
+                { key: 'procedure', label: 'Procedure', type: 'text', tooltip: 'Ex: P007 Soudure et coupage' },
+                { key: 'type', label: 'Type', type: 'select', options: ['Soudure', 'Meulage', 'Decoupage', 'Cabine de peinture', 'Poussieres combustibles', 'Depot', 'Laboratoires', 'Autre'] },
+                { key: 'risque', label: 'Risque identifie', type: 'text' },
+                { key: 'mesures', label: 'Mesures de controle en place', type: 'text' },
+              ] },
+
+            // Programme de cadenassage
+            { key: 'systemeCadenassage', label: 'Programme de cadenassage en place', type: 'boolean',
+              tooltip: 'LOTO (Lockout / Tagout) : programme formel pour isoler les energies dangereuses avant maintenance ou reparation.' },
           ],
         },
         {

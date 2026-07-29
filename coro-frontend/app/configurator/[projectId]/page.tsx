@@ -805,7 +805,13 @@ export default function ConfiguratorPage() {
               {/* Navigation */}
               <div className="flex gap-3 mt-6 max-w-2xl">
                 {activeSection > 0 && (
-                  <button onClick={() => setActiveSection(activeSection - 1)}
+                  <button onClick={() => {
+                    let prev = activeSection - 1;
+                    while (prev > 0 && sections[prev].id === 'industriel' && config['buildingType'] !== 'Industriel') {
+                      prev--;
+                    }
+                    setActiveSection(prev);
+                  }}
                     className="flex-1 font-medium py-3 rounded-md text-sm transition-colors"
                     style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
@@ -815,7 +821,13 @@ export default function ConfiguratorPage() {
                   </button>
                 )}
                 {activeSection < sections.length - 1 && (
-                  <button onClick={() => setActiveSection(activeSection + 1)}
+                  <button onClick={() => {
+                    let next = activeSection + 1;
+                    while (next < sections.length - 1 && sections[next].id === 'industriel' && config['buildingType'] !== 'Industriel') {
+                      next++;
+                    }
+                    setActiveSection(next);
+                  }}
                     className="flex-1 text-white font-medium py-3 rounded-md text-sm"
                     style={{ backgroundColor: '#C0392B' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
