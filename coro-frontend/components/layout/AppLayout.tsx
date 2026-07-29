@@ -21,6 +21,7 @@ const adminNavItems = [
   { label: 'Équipe', path: '/settings/users' },
   { label: 'Rendement', path: '/dashboard/rendement' },
   { label: 'Templates de tâches', path: '/settings/task-templates' },
+  { label: 'Catégories timelog', path: '/settings/timelog-categories' },
   { label: 'Nous écrire', path: '/settings/feedback' },
 ];
 

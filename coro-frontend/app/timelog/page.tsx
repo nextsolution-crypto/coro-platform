@@ -140,7 +140,7 @@ export default function TimelogPage() {
     ...(data?.timelogEntries || []).map((e: any) => ({
       ...e,
       source: 'timelog',
-      label: catalog.find(c => c.key === e.category)?.label || e.category,
+      label: e.categoryLabel || catalog.find((c: any) => c.key === e.category)?.label || e.category,
       isBillable: false,
     })),
     ...(data?.taskEntries || []).map((e: any) => ({

@@ -8,16 +8,27 @@ export class TimelogController {
   constructor(private readonly service: TimelogService) {}
 
   @Get('catalog')
-  getCatalog() {
-    return this.service.getCatalog();
+  getCatalog(@Request() req: any) {
+    return this.service.getCatalog(req.user.organizationId);
+  }
+
+  @Post('catalog')
+  addCategory(@Body() dto: any, @Request() req: any) {
+    return this.service.addCategory(dto, req.user.organizationId);
+  }
+
+  @Put('catalog/:key')
+  updateCategory(@Param('key') key: string, @Body() dto: any, @Request() req: any) {
+    return this.service.updateCategory(key, dto, req.user.organizationId);
+  }
+
+  @Delete('catalog/:key')
+  deleteCategory(@Param('key') key: string, @Request() req: any) {
+    return this.service.deleteCategory(key, req.user.organizationId);
   }
 
   @Get('me')
-  getMyTimelog(
-    @Query('from') from: string,
-    @Query('to') to: string,
-    @Request() req: any,
-  ) {
+  getMyTimelog(@Query('from') from: string, @Query('to') to: string, @Request() req: any) {
     return this.service.getMyTimelog(req.user.userId, req.user.organizationId, from, to);
   }
 
@@ -37,11 +48,7 @@ export class TimelogController {
   }
 
   @Get('team')
-  getTeamTimelog(
-    @Query('from') from: string,
-    @Query('to') to: string,
-    @Request() req: any,
-  ) {
+  getTeamTimelog(@Query('from') from: string, @Query('to') to: string, @Request() req: any) {
     return this.service.getTeamTimelog(req.user.organizationId, from, to);
   }
 }

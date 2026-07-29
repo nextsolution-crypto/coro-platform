@@ -519,3 +519,16 @@ model TimelogEntry {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+model TimelogCategory {
+  id             String   @id @default(uuid())
+  key            String
+  label          String
+  organizationId String?
+  isActive       Boolean  @default(true)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([key, organizationId])
+}
