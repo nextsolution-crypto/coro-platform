@@ -20,6 +20,7 @@ export interface CoverData {
   revisionDate?: string;
   revisionType?: string;
   versionNumber?: number;
+  guideMention?: string;
 }
 
 export function generateCoverPage(data: CoverData): string {
@@ -132,9 +133,14 @@ export function generateCoverPage(data: CoverData): string {
       </div>
 
       <div class="cover-footer-dark">
-        <span>${revisionTypeLabel} : ${fullDate}</span>
-        <span>${labels.version} : ${versionLabel}</span>
-        <span>${labels.confidential}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span>${revisionTypeLabel} : ${fullDate}</span>
+            <span>${labels.version} : ${versionLabel}</span>
+            <span>${labels.confidential}</span>
+          </div>
+          ${data.guideMention ? `<span style="font-weight:700;color:#FFFFFF;border:2px solid rgba(255,255,255,0.7);border-radius:20px;padding:8px 18px;font-size:14px;">${escapeHtml(data.guideMention)}</span>` : ''}
+        </div>
       </div>
     </div>
   `;
