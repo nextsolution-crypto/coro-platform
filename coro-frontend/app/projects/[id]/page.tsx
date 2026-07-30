@@ -55,6 +55,24 @@ export default function ProjectDetailPage() {
   const [hasDocument, setHasDocument] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const handleExportGuide = async () => {
+    try {
+      const token = localStorage.getItem('coro_token');
+      const res = await fetch(`http://localhost:3002/api/projects/${projectId}/guide/export`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: 'fr' }),
+      });
+      if (!res.ok) throw new Error('Erreur export guide');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `guide-locataire-${projectId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) { console.error(err); }
+  };
   const [hasPlans, setHasPlans] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
   const [validations, setValidations] = useState<any[]>([]);
@@ -632,6 +650,21 @@ const handleChangeStatus = async (newStatus: string) => {
           onMouseLeave={e => { if (hasDocument && !validations.some(v => v.level === 'CRITIQUE')) e.currentTarget.style.backgroundColor = '#C0392B'; }}
         >
           Exporter le document
+        </button>
+
+        <button
+          onClick={handleExportGuide}
+          disabled={!hasDocument}
+          className="ml-3 text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            border: '1px solid #2980B9',
+            color: '#2980B9',
+            backgroundColor: 'transparent',
+          }}
+          onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          📋 Exporter Guide locataire
         </button>
       </div>
 

@@ -29,6 +29,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { MandateModule } from './mandate/mandate.module';
 import { TaskTemplatesModule } from './task-templates/task-templates.module';
 import { TimelogModule } from './timelog/timelog.module';
+import { GuideModule } from './guide/guide.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { TimelogModule } from './timelog/timelog.module';
   MandateModule,
   TaskTemplatesModule,
   TimelogModule,
+  GuideModule,
 ],
   controllers: [AppController],
   providers: [AppService],
