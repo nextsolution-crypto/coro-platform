@@ -15,10 +15,10 @@ export class GuideController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    const pdf = await this.service.generateGuide(projectId, req.user.organizationId, dto.language || 'fr');
+    const { pdf, filename } = await this.service.generateGuide(projectId, req.user.organizationId, dto.language || 'fr');
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="guide-locataire-${projectId}.pdf"`,
+      'Content-Disposition': `attachment; filename="${filename}"`,
     });
     res.send(pdf);
   }

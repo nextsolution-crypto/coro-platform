@@ -44,6 +44,9 @@ model User {
   companyLogoFullB64 String?
   companyPhone       String?
   companyEmail       String?
+  companyAddress     String?
+  companyWebsite     String?
+  companyTagline     String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

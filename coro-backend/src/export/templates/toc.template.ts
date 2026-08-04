@@ -170,14 +170,19 @@ export const TOC_STYLES = `
 
   .toc-sub-link {
     padding: 3px 0;
+    flex-wrap: nowrap;
   }
 
   .toc-sub-title {
-    font-size: 11.5pt;
+    font-size: 11pt;
     color: #6C757D;
     flex-shrink: 1;
     min-width: 0;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 85%;
   }
 
   .toc-sub-dots {

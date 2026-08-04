@@ -55,23 +55,49 @@ export default function ProjectDetailPage() {
   const [hasDocument, setHasDocument] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const handleExportGuide = async () => {
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [exportingGuide, setExportingGuide] = useState(false);
+  const handleExportGuide = async (language: 'fr' | 'en' | 'both') => {
+    setExportingGuide(true);
     try {
       const token = localStorage.getItem('coro_token');
-      const res = await fetch(`http://localhost:3002/api/projects/${projectId}/guide/export`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: 'fr' }),
-      });
-      if (!res.ok) throw new Error('Erreur export guide');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `guide-locataire-${projectId}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const safeName = (project?.name || 'guide').replace(/[^a-z0-9]/gi, '-');
+
+      if (language === 'both') {
+        // Exporter FR et EN séparément
+        for (const lang of ['fr', 'en'] as const) {
+          const res = await fetch(`http://localhost:3002/api/projects/${projectId}/guide/export`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language: lang }),
+          });
+          if (!res.ok) throw new Error('Erreur export guide');
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${safeName}-Guide-${lang.toUpperCase()}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } else {
+        const res = await fetch(`http://localhost:3002/api/projects/${projectId}/guide/export`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ language }),
+        });
+        if (!res.ok) throw new Error('Erreur export guide');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeName}-Guide-${language.toUpperCase()}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      setShowGuideModal(false);
     } catch (err) { console.error(err); }
+    finally { setExportingGuide(false); }
   };
   const [hasPlans, setHasPlans] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
@@ -653,7 +679,7 @@ const handleChangeStatus = async (newStatus: string) => {
         </button>
 
         <button
-          onClick={handleExportGuide}
+          onClick={() => setShowGuideModal(true)}
           disabled={!hasDocument}
           className="ml-3 text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
@@ -901,6 +927,51 @@ const handleChangeStatus = async (newStatus: string) => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {showGuideModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-sm rounded-md p-6"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <h3 className="font-semibold text-lg mb-4" style={{ color: '#2C3E50' }}>
+              📋 Exporter le Guide du locataire
+            </h3>
+            <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
+              Choisissez la langue du document.
+            </p>
+            <div className="flex gap-2 mb-6">
+              {([
+                { value: 'fr', label: 'Français' },
+                { value: 'en', label: 'English' },
+                { value: 'both', label: 'Les deux' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => !exportingGuide && handleExportGuide(opt.value)}
+                  disabled={exportingGuide}
+                  className="flex-1 py-2.5 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: '#F8F9FA',
+                    color: '#2980B9',
+                    border: '1px solid #AED6F1',
+                  }}
+                  onMouseEnter={e => { if (!exportingGuide) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                >
+                  {exportingGuide ? '⏳ Génération...' : opt.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { if (!exportingGuide) setShowGuideModal(false); }}
+              disabled={exportingGuide}
+              className="w-full py-2.5 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+            >
+              {exportingGuide ? 'Génération en cours...' : 'Annuler'}
+            </button>
           </div>
         </div>
       )}

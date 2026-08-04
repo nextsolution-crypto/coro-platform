@@ -4,7 +4,7 @@ import { PDFDocument } from 'pdf-lib';
 import { PrismaService } from '../prisma/prisma.service';
 import { BASE_STYLES } from './templates/base.styles';
 import { COVER_STYLES } from './templates/cover.styles';
-import { generateCoverPage } from './templates/cover.template';
+import { generateCoverPage, generateLastPage } from './templates/cover.template';
 import { generateSeparatorPage, SEPARATOR_STYLES } from './templates/separator.template';
 import { generateTocPage, TOC_STYLES, TocEntry } from './templates/toc.template';
 import {
@@ -531,11 +531,36 @@ if (moduleNum === 2) {
       });
       await coverPage.close();
 
-      // ── Assemblage final : Couverture → Sommaire → Corps (avec séparateurs et plans) ──
+      // ── Dernière page ──
+      const lastPageHtml = generateLastPage({
+        companyName: project.user?.companyName || undefined,
+        companyLogoFullB64: project.user?.companyLogoFullB64 || undefined,
+        companyLogoB64: project.user?.companyLogoB64 || undefined,
+        companyPhone: project.user?.companyPhone || undefined,
+        companyEmail: project.user?.companyEmail || undefined,
+        companyAddress: (project.user as any)?.companyAddress || undefined,
+        companyWebsite: (project.user as any)?.companyWebsite || undefined,
+        companyTagline: (project.user as any)?.companyTagline || undefined,
+        year: project.year,
+        language: lang,
+      });
+      const fullLastPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>@page{size:letter portrait;margin:0;}body{margin:0;padding:0;}</style></head><body>${lastPageHtml}</body></html>`;
+      const lastPage = await browser.newPage();
+      await lastPage.setContent(fullLastPageHtml, { waitUntil: 'load' });
+      const lastPageBytes = await lastPage.pdf({
+        format: 'Letter',
+        printBackground: true,
+        displayHeaderFooter: false,
+        margin: { top: '0', bottom: '0', left: '0', right: '0' },
+      });
+      await lastPage.close();
+
+      // ── Assemblage final : Couverture → Sommaire → Corps (avec séparateurs et plans) → Dernière page ──
       const allBuffers = [
         Buffer.from(coverBytes),
         Buffer.from(tocBytes),
         ...bodyBuffersWithMeta.map(b => b.buffer),
+        Buffer.from(lastPageBytes),
       ];
 
       // Identifie les sourceIndex correspondant aux pages de plans (Module 6),
@@ -736,14 +761,18 @@ if (moduleNum === 2) {
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const pages = pdfDoc.getPages();
+    const totalPages = pages.length;
 
     const FOOTER_Y = 28;
 
     // index 0 = couverture, index 1 = sommaire — jamais numérotés
+    // dernière page (totalPages - 1) = page de fin — jamais numérotée
     const SKIP_SOURCE_INDICES = new Set([0, 1]);
+    const lastSourceIndex = pageRanges[pageRanges.length - 1]?.sourceIndex;
 
     for (const range of pageRanges) {
       if (SKIP_SOURCE_INDICES.has(range.sourceIndex)) continue;
+      if (range.sourceIndex === lastSourceIndex) continue; // Skip dernière page
 
       for (let pageIdx = range.start; pageIdx <= range.end; pageIdx++) {
         const page = pages[pageIdx];
@@ -820,7 +849,9 @@ if (moduleNum === 2) {
 
     // index 0 = couverture — jamais de filigrane
     // les pages de plans (Module 6) sont aussi exclues (PDF externes insérés tels quels)
-    const SKIP_SOURCE_INDICES = new Set([0, ...planSourceIndices, ...separatorSourceIndices]);
+    // dernière page (page de fin) — aussi exclue
+    const lastSourceIndex = pageRanges[pageRanges.length - 1]?.sourceIndex;
+    const SKIP_SOURCE_INDICES = new Set([0, lastSourceIndex, ...planSourceIndices, ...separatorSourceIndices]);
 
     for (const range of pageRanges) {
       if (SKIP_SOURCE_INDICES.has(range.sourceIndex)) continue;

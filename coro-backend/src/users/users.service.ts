@@ -12,7 +12,27 @@ export class UsersService {
   }
 
   async findById(id: string) {
-    return this.prisma.user.findUnique({ where: { id } });
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        organizationId: true,
+        isActive: true,
+        horaireBase: true,
+        companyName: true,
+        companyLogoB64: true,
+        companyLogoFullB64: true,
+        companyPhone: true,
+        companyEmail: true,
+        companyAddress: true,
+        companyWebsite: true,
+        companyTagline: true,
+      },
+    });
   }
 
   async createUser(data: {
@@ -29,24 +49,28 @@ export class UsersService {
     });
   }
   async updateUser(id: string, data: any) {
-  const { password, ...safeData } = data;
-  return this.prisma.user.update({
-    where: { id },
-    data: safeData,
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      role: true,
-      companyName: true,
-      companyLogoB64: true,
-      companyLogoFullB64: true,
-      companyPhone: true,
-      companyEmail: true,
-    },
-  });
-}
+    const { password, ...safeData } = data;
+    return this.prisma.user.update({
+      where: { id },
+      data: safeData,
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        companyName: true,
+        companyLogoB64: true,
+        companyLogoFullB64: true,
+        companyPhone: true,
+        companyEmail: true,
+        companyAddress: true,
+        companyWebsite: true,
+        companyTagline: true,
+        horaireBase: true,
+      },
+    });
+  }
 
   // ============================================================
   // GESTION DES UTILISATEURS PAR ORGANISATION (ADMIN uniquement)
