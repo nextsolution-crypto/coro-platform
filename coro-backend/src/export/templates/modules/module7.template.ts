@@ -118,8 +118,41 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         <tbody>
           ${infoRow(isFr ? 'Poste de commandement' : 'Command post', val(config.posteCommandement))}
           ${infoRow(isFr ? 'Point de rassemblement principal' : 'Main assembly point', val(config.pointRassemblement))}
+          ${config.pointRassemblement_snapshot ? `
+            <tr>
+              <td colspan="2" style="padding:8px;">
+                <img src="${config.pointRassemblement_snapshot}" 
+                  style="max-width:100%;max-height:300px;object-fit:contain;border-radius:4px;border:1px solid #DEE2E6;" />
+                <p style="font-size:8pt;color:#6C757D;margin-top:4px;font-style:italic;">
+                  ${config.pointRassemblement_coords ? `📍 ${config.pointRassemblement_coords.lat.toFixed(6)}, ${config.pointRassemblement_coords.lng.toFixed(6)}` : ''}
+                </p>
+              </td>
+            </tr>
+          ` : ''}
           ${config.pointRassemblement2 ? infoRow(isFr ? 'Point de rassemblement secondaire' : 'Secondary assembly point', val(config.pointRassemblement2)) : ''}
+          ${config.pointRassemblement2_snapshot ? `
+            <tr>
+              <td colspan="2" style="padding:8px;">
+                <img src="${config.pointRassemblement2_snapshot}" 
+                  style="max-width:100%;max-height:300px;object-fit:contain;border-radius:4px;border:1px solid #DEE2E6;" />
+                <p style="font-size:8pt;color:#6C757D;margin-top:4px;font-style:italic;">
+                  ${config.pointRassemblement2_coords ? `📍 ${config.pointRassemblement2_coords.lat.toFixed(6)}, ${config.pointRassemblement2_coords.lng.toFixed(6)}` : ''}
+                </p>
+              </td>
+            </tr>
+          ` : ''}
           ${config.lieuAccueilTemporaire ? infoRow(isFr ? 'Lieu d\'accueil temporaire' : 'Temporary shelter location', val(config.lieuAccueilTemporaire)) : ''}
+          ${config.lieuAccueilTemporaire_snapshot ? `
+            <tr>
+              <td colspan="2" style="padding:8px;">
+                <img src="${config.lieuAccueilTemporaire_snapshot}" 
+                  style="max-width:100%;max-height:300px;object-fit:contain;border-radius:4px;border:1px solid #DEE2E6;" />
+                <p style="font-size:8pt;color:#6C757D;margin-top:4px;font-style:italic;">
+                  ${config.lieuAccueilTemporaire_coords ? `📍 ${config.lieuAccueilTemporaire_coords.lat.toFixed(6)}, ${config.lieuAccueilTemporaire_coords.lng.toFixed(6)}` : ''}
+                </p>
+              </td>
+            </tr>
+          ` : ''}
           ${infoRow(isFr ? 'Trousseau de clés pompier' : 'Fire department key box', bool(config.trousseClesPompier, isFr))}
           ${config.trousseClesPompierLieu ? infoRow(isFr ? 'Localisation trousseau pompier' : 'Fire key box location', val(config.trousseClesPompierLieu)) : ''}
           ${config.lieuDocument ? infoRow(isFr ? 'Lieu de conservation du document' : 'Document storage location', val(config.lieuDocument)) : ''}
