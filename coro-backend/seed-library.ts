@@ -2,7 +2,6 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding bibliothèque CORO...');
 
   // ============================================================
   // CODES INCIDENTS OFFICIELS
@@ -46,7 +45,6 @@ async function main() {
       create: code,
     });
   }
-  console.log(`✅ Codes incidents: ${incidentCodes.length}`);
 
   // ============================================================
   // RÔLES OFFICIELS CORO
@@ -332,9 +330,6 @@ async function main() {
       create: { ...role, isActive: true },
     });
   }
-  console.log(`✅ Rôles créés: ${roles.length}`);
-
-  console.log('🎉 Bibliothèque CORO prête !');
 }
 
 main()

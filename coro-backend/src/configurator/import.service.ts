@@ -71,10 +71,6 @@ export class ImportService {
       if (idx !== -1 && idx > section7Start) { section8Start = idx; break; }
     }
 
-    console.log('Section 1 position (2e occ):', section1Start);
-    console.log('Section 7 position (2e occ):', section7Start);
-    console.log('Section 8 position (2e occ):', section8Start);
-
     // Section 1
     if (section1Start !== -1) {
       const end = section7Start !== -1 ? Math.min(section1Start + 8000, section7Start) : section1Start + 8000;
@@ -88,10 +84,8 @@ export class ImportService {
     }
 
     const result = sections.join('\n\n--- SECTION SUIVANTE ---\n\n');
-    console.log('Sections extraites - longueur:', result.length);
 
     if (result.length < 500) {
-      console.log('Fallback - envoi texte complet tronqué');
       return text.substring(0, 40000);
     }
 

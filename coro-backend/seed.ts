@@ -14,7 +14,6 @@ async function main() {
       role: 'SUPER_ADMIN',
     },
   });
-  console.log('✅ Utilisateur créé:', user.email);
 }
 
 main()

@@ -11,7 +11,6 @@ async function main() {
       licenseType: 'STANDARD',
     },
   });
-  console.log('Organisation test créée :', testOrg.id);
 
   const hashedPassword = await bcrypt.hash('Test2026!', 10);
   const testUser = await prisma.user.create({
@@ -24,8 +23,6 @@ async function main() {
       organizationId: testOrg.id,
     },
   });
-  console.log('Utilisateur test créé :', testUser.email);
-  console.log('Mot de passe : Test2026!');
 }
 
 main()

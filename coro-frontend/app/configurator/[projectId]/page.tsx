@@ -412,7 +412,6 @@ export default function ConfiguratorPage() {
       const usageField = questionsRes.data.sections
         .flatMap((s: Section) => s.fields)
         .find((f: Field) => f.key === 'usagePrincipal');
-      console.log('Options usagePrincipal:', usageField?.options);
       setProjectName(projectRes.data.name);
 
       const savedConfig = savedConfigRes.data || {};
@@ -511,10 +510,6 @@ export default function ConfiguratorPage() {
           const base64 = ev.target?.result as string;
           const res = await api.post('/configurator/import-word', { base64 });
           const { config: importedConfig, fieldsFound } = res.data;
-
-          console.log('usagePrincipal:', importedConfig.usagePrincipal);
-          console.log('usageSecondaire:', importedConfig.usageSecondaire);
-          console.log('Import word - réponse complète:', importedConfig);
 
           const newConfig = { ...config };
           const newLists = { ...lists };
