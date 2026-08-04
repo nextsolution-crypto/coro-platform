@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import MapPicker from '@/components/MapPicker';
 
 interface SchemaField {
   key: string;
@@ -387,6 +388,7 @@ export default function ConfiguratorPage() {
   const [saving,        setSaving]        = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [projectName,   setProjectName]   = useState('');
+  const [buildingAddress, setBuildingAddress] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ fieldsFound: number } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -413,6 +415,9 @@ export default function ConfiguratorPage() {
         .flatMap((s: Section) => s.fields)
         .find((f: Field) => f.key === 'usagePrincipal');
       setProjectName(projectRes.data.name);
+
+      const b = projectRes.data.building;
+      if (b) setBuildingAddress(`${b.address || ''}, ${b.city || ''}, ${b.province || ''}, Canada`);
 
       const savedConfig = savedConfigRes.data || {};
 
@@ -455,6 +460,12 @@ export default function ConfiguratorPage() {
             defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : '';
           }
         });
+      });
+      // Récupérer les coords et snapshots des cartes
+      const mapKeys = ['pointRassemblement', 'pointRassemblement2', 'lieuAccueilTemporaire'];
+      mapKeys.forEach(key => {
+        if (savedConfig[`${key}_coords`]) defaults[`${key}_coords`] = savedConfig[`${key}_coords`];
+        if (savedConfig[`${key}_snapshot`]) defaults[`${key}_snapshot`] = savedConfig[`${key}_snapshot`];
       });
       setConfig(defaults);
       setLists(defaultLists);
@@ -891,7 +902,22 @@ export default function ConfiguratorPage() {
                       </select>
                     )}
 
-                    {field.type === 'text' && (
+                    {field.type === 'text' && ['pointRassemblement', 'pointRassemblement2', 'lieuAccueilTemporaire'].includes(field.key) && (
+                      <MapPicker
+                        label={field.label}
+                        value={config[field.key] || ''}
+                        coords={config[`${field.key}_coords`] || null}
+                        buildingAddress={buildingAddress}
+                        onValueChange={val => updateConfig(field.key, val)}
+                        onCoordsChange={coords => updateConfig(`${field.key}_coords`, coords)}
+                        onMapSnapshot={snapshot => updateConfig(`${field.key}_snapshot`, snapshot)}
+                      />
+                    )}
+                    {config[`${field.key}_snapshot`] && ['pointRassemblement', 'pointRassemblement2', 'lieuAccueilTemporaire'].includes(field.key) && (
+                      <img src={config[`${field.key}_snapshot`]} style={{ width: '100%', marginTop: '8px', borderRadius: '4px' }} />
+                    )}
+
+                    {field.type === 'text' && !['pointRassemblement', 'pointRassemblement2', 'lieuAccueilTemporaire'].includes(field.key) && (
                       <input type="text"
                         value={config[field.key] || ''}
                         onChange={e => updateConfig(field.key, e.target.value)}
