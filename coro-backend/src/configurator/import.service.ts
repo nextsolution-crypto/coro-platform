@@ -218,8 +218,28 @@ Retourne UNIQUEMENT un objet JSON valide sans aucun texte avant ou après, avec 
   "chariotsEmplacementRecharge": "string",
   "batteriesLithiumPresent": true|false,
   "certBOMA": true|false,
-  "certLEED": true|false
+  "certLEED": true|false,
+  "gicleursSystemes": [
+    { "type": "Sous eau|Sous air|Sous mousse|Deluge|Pre-action", "lieu": "string", "complet": true }
+  ],
+  "extincteursList": [
+    { "type": "ABC|BC|CO2|Eau|Autre", "lieu": "string" }
+  ],
+  "matieresList": [
+    { "nom": "string", "numeroUN": "string", "quantiteEmplacement": "string", "tmd": true, "simdut": true }
+  ],
+  "equipementsSoins": [
+    { "type": "Trousse de premiers soins|DEA|Douche oculaire|Douche corporelle|Masque respiratoire|Infirmerie|Autre", "lieu": "string", "quantite": 1 }
+  ],
+  "trousseDeversementListe": [
+    { "lieu": "string" }
+  ],
+  "quartsOccupation": [
+    { "nomQuart": "Jour|Soir|Nuit", "heureDebut": "string", "heureFin": "string", "occupantsSemaine": 0, "occupantsSamedi": 0, "occupantsDimanche": 0 }
+  ]
 }
+
+IMPORTANT : Pour les champs de type liste (gicleursSystemes, extincteursList, matieresList, equipementsSoins, trousseDeversementListe, quartsOccupation), retourne un tableau d'objets même s'il n'y a qu'un seul élément. Si l'information n'est pas trouvée, omets le champ entièrement.
 
 Document à analyser :
 ${this.extractRelevantSections(text)}`;
