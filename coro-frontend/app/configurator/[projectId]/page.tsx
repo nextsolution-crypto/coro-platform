@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -387,6 +387,9 @@ export default function ConfiguratorPage() {
   const [saving,        setSaving]        = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [projectName,   setProjectName]   = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ fieldsFound: number } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -493,6 +496,53 @@ export default function ConfiguratorPage() {
     finally { setSaving(false); }
   };
 
+  const handleImportWord = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const reader = new FileReader();
+      console.log('Import word - envoi au backend...');
+      reader.onload = async (ev) => {
+        const base64 = ev.target?.result as string;
+        const res = await api.post('/configurator/import-word', { base64 });
+        console.log('Import word - réponse:', res.data);
+        const { config: importedConfig, fieldsFound } = res.data;
+
+        const newConfig = { ...config };
+        const newLists = { ...lists };
+
+        Object.entries(importedConfig).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            newLists[key] = value as any[];
+          } else {
+            newConfig[key] = value;
+          }
+        });
+
+        setConfig(newConfig);
+        setLists(newLists);
+        setImportResult({ fieldsFound });
+        
+        // Sauvegarder aussi dans localStorage comme le fait handleSave
+        const projectIdStr = projectId as string;
+        const storageKey = `coro_config_${projectIdStr}`;
+        const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        localStorage.setItem(storageKey, JSON.stringify({ ...stored, ...newConfig }));
+        
+        triggerAnalysis(newConfig, newLists);
+
+        if (importInputRef.current) importInputRef.current.value = '';
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de l\'import du document.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const isFieldVisible = (field: Field): boolean => {
     if (field.key === 'zoneConfinement' || field.key === 'zoneRafraichissement') return config['certBOMA'] === true;
     if (field.key === 'certBOMANiveau') return config['certBOMA'] === true;
@@ -584,6 +634,13 @@ export default function ConfiguratorPage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".docx"
+            onChange={handleImportWord}
+            className="hidden"
+          />
           {analysis && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
@@ -597,6 +654,16 @@ export default function ConfiguratorPage() {
             </div>
           )}
           <button
+            onClick={() => importInputRef.current?.click()}
+            disabled={importing}
+            className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+            style={{ border: '1px solid #AED6F1', color: '#2980B9', backgroundColor: 'transparent' }}
+            onMouseEnter={e => { if (!importing) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            {importing ? '⏳ Analyse en cours...' : '📄 Importer un PMU existant'}
+          </button>
+          <button
             onClick={() => router.push(`/projects/${projectId}`)}
             className="text-sm font-medium px-4 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
@@ -608,20 +675,28 @@ export default function ConfiguratorPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="text-white text-sm font-medium px-4 py-2 rounded
-              transition-colors disabled:opacity-50"
+            className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
             style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
-            onMouseEnter={e => {
-              if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B';
-            }}
+            onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
+            onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}
           >
             {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
           </button>
         </div>
       </div>
+
+      {importResult && (
+        <div className="px-6 py-3 flex items-center justify-between"
+          style={{ backgroundColor: '#EAFAF1', borderBottom: '1px solid #A9DFBF' }}>
+          <p className="text-sm font-medium" style={{ color: '#1E8449' }}>
+            ✓ Document analysé — {importResult.fieldsFound} champ{importResult.fieldsFound > 1 ? 's' : ''} pré-rempli{importResult.fieldsFound > 1 ? 's' : ''} automatiquement. Vérifiez et complétez les informations manquantes.
+          </p>
+          <button onClick={() => setImportResult(null)}
+            className="text-xs" style={{ color: '#6C757D' }}>
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="flex" style={{ height: 'calc(100vh - 65px)' }}>
 
