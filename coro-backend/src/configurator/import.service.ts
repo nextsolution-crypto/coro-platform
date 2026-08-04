@@ -314,7 +314,9 @@ ${this.extractRelevantSections(text)}`;
       const fullText = text;
       
       // Extraction directe basée sur le format exact du tableau Word
-      const centraleMatch = fullText.match(/Centrale\s+d\u2019alarme\s+incendie\s*\n+\s*([^\n]+)\n+\s*([\d\s\(\)\-\.]+)/);
+      const centraleMatch = fullText.match(/Centrale\s+d[''\u2018\u2019\u201A\u201B]alarme\s+incendie[\s\t]*[\n\t]+\s*([^\n\t]+)[\n\t]+\s*([\d\s\(\)\-\.]+)/i) ||
+        fullText.match(/Centrale\s+d[''\u2018\u2019\u201A\u201B]alarme\s+incendie[\s\t]*[\n\t]+\s*([^\n\t]+)[\n\t]+\s*(1?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/i) ||
+        fullText.match(/Centrale\s+d[''\u2018\u2019\u201A\u201B]alarme[\s\t]+([A-Za-zÀ-ÿ\s\(\)]+)\t([\d\s\(\)\-\.]+)/i);
       if (centraleMatch) {
         if (!config.centraleSurveillance && centraleMatch[1]?.trim()) {
           config.centraleSurveillance = centraleMatch[1].trim();
