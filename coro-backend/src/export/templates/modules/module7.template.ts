@@ -287,6 +287,7 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${infoRow(isFr ? 'Localisation du panneau' : 'Panel location', val(config.panneauLocalisation))}
           ${infoRow(isFr ? 'Marque / Modèle' : 'Brand / Model', `${val(config.panneauMarque, '')} ${val(config.panneauModele, '')}`.trim() || '—')}
           ${infoRow(isFr ? 'Type' : 'Type', val(config.panneauType))}
+          ${infoRow(isFr ? 'Technologie' : 'Technology', val(config.panneauTechno))}
           ${infoRow(isFr ? 'Panneau annonciateur' : 'Annunciator panel', bool(config.panneauAnnonciateurDistance, isFr))}
           ${infoRow(isFr ? 'Emplacement annonciateur' : 'Annunciator location', val(config.panneauAnnonciateurLieu))}
           ${infoRow(isFr ? 'Téléphone pompier' : 'Firefighter phone', bool(config.telephonePompier, isFr))}
