@@ -475,8 +475,36 @@ export default function ConfiguratorPage() {
     finally { setAnalyzing(false); }
   };
 
+  const formatPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    
+    if (digits.length === 11 && digits.startsWith('1')) {
+      const d = digits.substring(1);
+      return `1 (${d.substring(0, 3)}) ${d.substring(3, 6)}-${d.substring(6)}`;
+    }
+    
+    if (digits.length === 10) {
+      return `(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6)}`;
+    }
+    
+    const d = digits.substring(0, 11);
+    if (d.length === 0) return '';
+    if (d.startsWith('1')) {
+      if (d.length <= 1) return '1';
+      if (d.length <= 4) return `1 (${d.substring(1)}`;
+      if (d.length <= 7) return `1 (${d.substring(1, 4)}) ${d.substring(4)}`;
+      if (d.length <= 11) return `1 (${d.substring(1, 4)}) ${d.substring(4, 7)}-${d.substring(7)}`;
+    }
+    if (d.length <= 3) return `(${d}`;
+    if (d.length <= 6) return `(${d.substring(0, 3)}) ${d.substring(3)}`;
+    return `(${d.substring(0, 3)}) ${d.substring(3, 6)}-${d.substring(6, 10)}`;
+  };
+
+  const phoneKeys = ['centraleTelephone'];
+
   const updateConfig = (key: string, value: any) => {
-    const newConfig = { ...config, [key]: value };
+    const formatted = phoneKeys.includes(key) && typeof value === 'string' ? formatPhone(value) : value;
+    const newConfig = { ...config, [key]: formatted };
     setConfig(newConfig);
     triggerAnalysis(newConfig, lists);
   };
