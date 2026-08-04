@@ -28,6 +28,34 @@ export class ImportService {
       return -1;
     };
 
+    // Section 2 - Liste téléphonique
+    const section2Patterns = [
+      /2\.\s*LISTE\s*T[ÉE]L[ÉE]PHONIQUE/i,
+      /2\.1\s*NUM[ÉE]ROS\s*D[''']URGENCE/i,
+    ];
+
+    const section3Patterns = [
+      /3\.\s*R[ÔO]LES/i,
+      /3\.1\s*ORGANIGRAMME/i,
+    ];
+
+    let section2Start = -1;
+    let section3Start = -1;
+
+    for (const p of section2Patterns) {
+      const idx = findNthOccurrence(text, p, 2);
+      if (idx !== -1) { section2Start = idx; break; }
+      const idx1 = text.search(p);
+      if (idx1 !== -1) { section2Start = idx1; break; }
+    }
+
+    for (const p of section3Patterns) {
+      const idx = findNthOccurrence(text, p, 2);
+      if (idx !== -1) { section3Start = idx; break; }
+      const idx1 = text.search(p);
+      if (idx1 !== -1) { section3Start = idx1; break; }
+    }
+
     // Section 7 - cherche la 2ème occurrence (première = table des matières)
     const section7Patterns = [
       /DESCRIPTION DU SITE/i,
@@ -75,6 +103,16 @@ export class ImportService {
     if (section1Start !== -1) {
       const end = section7Start !== -1 ? Math.min(section1Start + 8000, section7Start) : section1Start + 8000;
       sections.push(text.substring(section1Start, end));
+    }
+
+    // Section 2
+    if (section2Start !== -1) {
+      // Si section3 est trop proche (< 500 chars), c'est la table des matières
+      // On prend 5000 chars à partir de section2Start
+      const endSection2 = (section3Start !== -1 && section3Start - section2Start > 500) 
+        ? section3Start 
+        : section2Start + 5000;
+      sections.push(text.substring(section2Start, endSection2));
     }
 
     // Section 7
@@ -270,6 +308,23 @@ ${this.extractRelevantSections(text)}`;
   async importDocument(base64: string): Promise<{ config: Record<string, any>; fieldsFound: number; text: string }> {
     const text = await this.extractTextFromDocx(base64);
     const config = await this.analyzeWithClaude(text);
+
+    // Extraction directe centrale de surveillance depuis le texte brut
+    if (!config.centraleSurveillance || !config.centraleTelephone) {
+      const fullText = text;
+      
+      // Extraction directe basée sur le format exact du tableau Word
+      const centraleMatch = fullText.match(/Centrale\s+d\u2019alarme\s+incendie\s*\n+\s*([^\n]+)\n+\s*([\d\s\(\)\-\.]+)/);
+      if (centraleMatch) {
+        if (!config.centraleSurveillance && centraleMatch[1]?.trim()) {
+          config.centraleSurveillance = centraleMatch[1].trim();
+        }
+        if (!config.centraleTelephone && centraleMatch[2]?.trim()) {
+          config.centraleTelephone = centraleMatch[2].trim();
+        }
+      }
+    }
+
     const fieldsFound = Object.keys(config).length;
     return { config, fieldsFound, text: text.substring(0, 500) };
   }
