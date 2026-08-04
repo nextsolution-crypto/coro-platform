@@ -109,7 +109,8 @@ Retourne UNIQUEMENT un objet JSON valide sans aucun texte avant ou après, avec 
   "responsableNom": "string",
   "responsableTitre": "string",
   "buildingType": "Tour a bureaux|Immeuble residentiel|Industriel|Commercial|Institutionnel|Hotel|Centre commercial|Autre",
-  "usagePrincipal": "string",
+  "usagePrincipal": "A1 - Etablissements de reunion - Spectacle|A2 - Etablissements de reunion - Education, culte, divertissement, restauration|A3 - Etablissements de reunion de type arena|A4 - Etablissements de reunion en plein air|B1 - Etablissements de soins ou de detention avec soins|B2 - Etablissements de soins ou de detention sans soins|B3 - Etablissements de detention|C - Habitations|D - Etablissements d affaires|E - Etablissements commerciaux|F1 - Etablissements industriels a risques eleves|F2 - Etablissements industriels a risques moyens|F3 - Etablissements industriels a risques faibles",
+  "usageSecondaire": "Aucun|A1 - Etablissements de reunion - Spectacle|A2 - Etablissements de reunion - Education, culte, divertissement, restauration|A3 - Etablissements de reunion de type arena|A4 - Etablissements de reunion en plein air|B1 - Etablissements de detention|B2 - Etablissements de traitement|B3 - Etablissements de soins|C - Etablissements d habitation|D - Etablissements d affaires|E - Etablissements commerciaux|F1 - Etablissement industriel a risques tres eleves|F2 - Etablissement industriel a risques moyens|F3 - Etablissement industriel a risques faibles",
   "floors": number,
   "basements": number,
   "superficie": number,
@@ -236,6 +237,9 @@ Retourne UNIQUEMENT un objet JSON valide sans aucun texte avant ou après, avec 
   ],
   "quartsOccupation": [
     { "nomQuart": "Jour|Soir|Nuit", "heureDebut": "string", "heureFin": "string", "occupantsSemaine": 0, "occupantsSamedi": 0, "occupantsDimanche": 0 }
+  ]
+  "historiqueList": [
+    { "date": "YYYY-MM-DD", "type": "Création initiale|Mise à jour mineure|Mise à jour majeure|Révision annuelle|Mise à jour complète", "responsable": "string" }
   ]
 }
 

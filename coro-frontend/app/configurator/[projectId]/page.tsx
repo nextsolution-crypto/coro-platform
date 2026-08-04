@@ -409,6 +409,10 @@ export default function ConfiguratorPage() {
         api.get(`/configurator/load/${projectId}`).catch(() => ({ data: {} })),
       ]);
       setSections(questionsRes.data.sections);
+      const usageField = questionsRes.data.sections
+        .flatMap((s: Section) => s.fields)
+        .find((f: Field) => f.key === 'usagePrincipal');
+      console.log('Options usagePrincipal:', usageField?.options);
       setProjectName(projectRes.data.name);
 
       const savedConfig = savedConfigRes.data || {};
@@ -502,43 +506,77 @@ export default function ConfiguratorPage() {
     setImporting(true);
     try {
       const reader = new FileReader();
-      console.log('Import word - envoi au backend...');
       reader.onload = async (ev) => {
-        const base64 = ev.target?.result as string;
-        const res = await api.post('/configurator/import-word', { base64 });
-        console.log('Import word - réponse:', res.data);
-        const { config: importedConfig, fieldsFound } = res.data;
+        try {
+          const base64 = ev.target?.result as string;
+          const res = await api.post('/configurator/import-word', { base64 });
+          const { config: importedConfig, fieldsFound } = res.data;
 
-        const newConfig = { ...config };
-        const newLists = { ...lists };
+          console.log('usagePrincipal:', importedConfig.usagePrincipal);
+          console.log('usageSecondaire:', importedConfig.usageSecondaire);
+          console.log('Import word - réponse complète:', importedConfig);
 
-        Object.entries(importedConfig).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            newLists[key] = value as any[];
-          } else {
-            newConfig[key] = value;
+          const newConfig = { ...config };
+          const newLists = { ...lists };
+
+          Object.entries(importedConfig).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              newLists[key] = value as any[];
+            } else {
+              newConfig[key] = value;
+            }
+          });
+
+          // Normaliser usagePrincipal
+          if (newConfig.usagePrincipal) {
+            const usageOptions = [
+              'A1 - Etablissements de reunion - Spectacle',
+              'A2 - Etablissements de reunion - Education, culte, divertissement, restauration',
+              'A3 - Etablissements de reunion de type arena',
+              'A4 - Etablissements de reunion en plein air',
+              'B1 - Etablissements de detention',
+              'B2 - Etablissements de traitement',
+              'B3 - Etablissements de soins',
+              'C - Etablissements d habitation',
+              'D - Etablissements d affaires',
+              'E - Etablissements commerciaux',
+              'F1 - Etablissement industriel a risques tres eleves',
+              'F2 - Etablissement industriel a risques moyens',
+              'F3 - Etablissement industriel a risques faibles',
+            ];
+            const normalize = (s: string) => s.toLowerCase()
+              .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+              .replace(/s\b/g, '')
+              .replace(/[^a-z0-9]/g, '');
+            const match = usageOptions.find(opt =>
+              normalize(opt) === normalize(newConfig.usagePrincipal)
+            );
+            if (match) newConfig.usagePrincipal = match;
           }
-        });
 
-        setConfig(newConfig);
-        setLists(newLists);
-        setImportResult({ fieldsFound });
-        
-        // Sauvegarder aussi dans localStorage comme le fait handleSave
-        const projectIdStr = projectId as string;
-        const storageKey = `coro_config_${projectIdStr}`;
-        const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
-        localStorage.setItem(storageKey, JSON.stringify({ ...stored, ...newConfig }));
-        
-        triggerAnalysis(newConfig, newLists);
+          setConfig(newConfig);
+          setLists(newLists);
+          setImportResult({ fieldsFound });
+          
+          // Sauvegarder aussi dans localStorage comme le fait handleSave
+          const projectIdStr = projectId as string;
+          const storageKey = `coro_config_${projectIdStr}`;
+          const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          localStorage.setItem(storageKey, JSON.stringify({ ...stored, ...newConfig }));
+          
+          triggerAnalysis(newConfig, newLists);
 
-        if (importInputRef.current) importInputRef.current.value = '';
+          if (importInputRef.current) importInputRef.current.value = '';
+        } catch (err) {
+          console.error(err);
+          alert('Erreur lors de l\'import du document.');
+        } finally {
+          setImporting(false);
+        }
       };
       reader.readAsDataURL(file);
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de l\'import du document.');
-    } finally {
       setImporting(false);
     }
   };
