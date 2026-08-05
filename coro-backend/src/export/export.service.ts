@@ -17,6 +17,7 @@ import {
 import { renderModule7 } from './templates/modules/module7.template';
 import { renderModule3 } from './templates/modules/module3.template';
 import { renderModule4, renderProcedure } from './templates/modules/module4.template';
+import { createDocumentBuilder } from './builders/document-builder.factory';
 
 export interface ExportOptions {
   selectedModules: number[];   // ex: [1, 2, 3, 4, 7, 8]
@@ -136,207 +137,30 @@ export class ExportService {
       </html>
     `;
 
-    // ── Construit les segments dans l'ordre choisi : séparateur + HTML (rendu via ──
-    // ── Puppeteer), ou séparateur + plans déjà en PDF (insérés tels quels)         ──
-    const orderedModules = options.moduleOrder.filter(n => options.selectedModules.includes(n));
+  // ── Instancie le builder selon le type de document ──
+    const builder = createDocumentBuilder(
+      project.documentType,
+      this.prisma,
+      doc,
+      content,
+      lang,
+      { selectedModules: options.selectedModules, moduleOrder: options.moduleOrder },
+    );
+
+    const orderedModules = builder.orderedModules;
     const pdfSegments: PdfSegment[] = [];
-    let currentHtmlChunk = '';
-    let currentHtmlSeqNumber = 0;
-    let sequentialNumber = 0;
-
-    // Collecte les sous-sections pour le sommaire, par numéro séquentiel
-    const subsectionsByModule: Record<number, { id: string; title: string }[]> = {};
-    const subsectionTitlesById: Record<string, string> = {}; // "seqNum:subsectionId" -> titre affiché
-
-    const buildSeparatorHtml = (moduleNum: number): string => {
-      sequentialNumber += 1;
-      const moduleTitle = MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
-      return generateSeparatorPage({
-        sequentialNumber,
-        moduleTitle,
-        documentTypeLabel: docTypeLabel,
-        buildingName: project.building.name,
-        year: project.year,
-      });
-    };
+    const currentHtmlChunk = { value: '' };
+    const currentHtmlSeqNumber = { value: 0 };
 
     for (const moduleNum of orderedModules) {
-      if (moduleNum === 6) {
-        if (currentHtmlChunk) {
-          pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
-          currentHtmlChunk = '';
-        }
-        const planEntries = await this.getBuildingPlansSorted(project.id);
-        if (planEntries.length > 0) {
-          const sepHtml = buildSeparatorHtml(6);
-          pdfSegments.push({ type: 'separator', html: sepHtml, sequentialNumber });
-          pdfSegments.push({ type: 'plans', plans: planEntries, sequentialNumber });
-
-          const sectionLabels: Record<string, { fr: string; en: string }> = {
-            IMPLANTATION: { fr: 'Plan d\'implantation', en: 'Site Plan' },
-            COUPE: { fr: 'Plan de coupe', en: 'Cross-Section Plan' },
-            OPERATION: { fr: 'Plan d\'opération', en: 'Operations Plan' },
-            SECTEURS: { fr: 'Plan des secteurs', en: 'Sector Plan' },
-            DIVERS: { fr: 'Divers', en: 'Miscellaneous' },
-          };
-          const presentSections = Array.from(new Set(planEntries.map(p => p.section)));
-          presentSections.forEach(section => {
-            const label = sectionLabels[section]?.[lang] || section;
-            subsectionTitlesById[`${sequentialNumber}:plan_${section}`] = label;
-          });
-        }
-        continue;
-      }
-
-      if (currentHtmlChunk) {
-        pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
-        currentHtmlChunk = '';
-      }
-      const sepHtml = buildSeparatorHtml(moduleNum);
-      pdfSegments.push({ type: 'separator', html: sepHtml, sequentialNumber });
-      currentHtmlSeqNumber = sequentialNumber;
-
-      // Note: la collecte des titres pour Module 1, 2, 3 se fait maintenant
-      // directement dans leur bloc respectif plus bas (pour respecter les vraies
-      // données fusionnées et les filtres comme isIndustrielForExport)
-      subsectionsByModule[sequentialNumber] = []; // rempli plus tard avec les vraies pages
-
-      if (moduleNum === 1) {
-        const mod = modules.find((m: any) => m.moduleNumber === 1);
-        const sections1 = mod?.sections || [];
-        sections1.forEach((s: any) => {
-          subsectionTitlesById[`${sequentialNumber}:${s.id}`] = `${s.id} — ${s.title}`;
-        });
-        for (let i = 0; i < sections1.length; i++) {
-          const sectionHtml = `<div>${renderModule1Section(sections1[i], false)}</div>`;
-          pdfSegments.push({
-            type: 'html',
-            content: sectionHtml,
-            sequentialNumber,
-            subsectionId: sections1[i].id,
-          });
-        }
-        continue;
-      }
-if (moduleNum === 2) {
-        const mod = modules.find((m: any) => m.moduleNumber === 2);
-        const savedModule2 = content.module2;
-        const mergedSections = this.mergeModule2SavedData(mod?.sections || [], savedModule2, lang);
-        mergedSections.forEach((s: any, i: number) => {
-          subsectionTitlesById[`${sequentialNumber}:${s.id}`] = `${sequentialNumber}.${i + 1} — ${s.title}`;
-        });
-        for (let i = 0; i < mergedSections.length; i++) {
-          const sectionHtml = `<div>${renderModule2Section(mergedSections[i], i, lang, sequentialNumber)}</div>`;
-          pdfSegments.push({
-            type: 'html',
-            content: sectionHtml,
-            sequentialNumber,
-            subsectionId: mergedSections[i].id,
-          });
-        }
-        continue;
-      }
-
-      if (moduleNum === 3) {
-        const mod = modules.find((m: any) => m.moduleNumber === 3);
-        const savedModule3 = content.module3;
-        const mergedSections3 = this.mergeModule3SavedData(mod?.sections || [], savedModule3);
-        const { html31, html32, has32 } = renderModule3(mergedSections3, lang, sequentialNumber);
-
-        const s31Title = mergedSections3.find((s: any) => s.id === '3.1')?.title
-          || (isFr ? 'ORGANIGRAMME' : 'ORGANIZATIONAL CHART');
-        subsectionTitlesById[`${sequentialNumber}:3.1`] = `${sequentialNumber}.1 — ${s31Title}`;
-
-        pdfSegments.push({
-          type: 'html',
-          content: `<div>${html31}</div>`,
-          sequentialNumber,
-          subsectionId: '3.1',
-        });
-
-        if (has32 && isIndustrielForExport) {
-          const s32Title = mergedSections3.find((s: any) => s.id === '3.2')?.title
-            || (isFr ? 'LISTE DES MEMBRES' : 'MEMBER LIST');
-          subsectionTitlesById[`${sequentialNumber}:3.2`] = `${sequentialNumber}.2 — ${s32Title}`;
-
-          pdfSegments.push({
-            type: 'html',
-            content: `<div>${html32}</div>`,
-            sequentialNumber,
-            subsectionId: '3.2',
-          });
-        }
-        continue;
-      }
-
-      if (moduleNum === 7) {
-        const module7Data = await this.prisma.module7Data.findUnique({ where: { projectId: project.id } });
-        const sections7 = renderModule7(module7Data, content.config, lang, sequentialNumber);
-
-        sections7.forEach((section, idx) => {
-          const displayNumber = `${sequentialNumber}.${idx + 1}`;
-          subsectionTitlesById[`${sequentialNumber}:${section.id}`] = `${displayNumber} — ${section.title}`;
-          pdfSegments.push({
-            type: 'html',
-            content: `<div>${section.html}</div>`,
-            sequentialNumber,
-            subsectionId: section.id,
-          });
-        });
-        continue;
-      }
-
-      currentHtmlChunk += `<div>`;
-
-      if (moduleNum === 4) {
-        const procedures = this.getModule4Procedures(content, project);
-        const buildingAddress = `${project.building.address}, ${project.building.city}, ${project.building.province}`;
-
-        procedures.forEach((proc: any) => {
-          const title = lang === 'fr' ? proc.titleFR : proc.titleEN;
-          subsectionTitlesById[`${sequentialNumber}:${proc.id}`] = `${proc.code} — ${title}`;
-
-          const procHtml = `<div>${renderProcedure(proc, lang, buildingAddress, content.config)}</div>`;
-          pdfSegments.push({
-            type: 'html',
-            content: procHtml,
-            sequentialNumber,
-            subsectionId: proc.id,
-            colorBar: proc.headerColor,
-          });
-        });
-        continue;
-      }
-
-      if (moduleNum === 8) {
-        // Recharger le contenu du document pour avoir les données module8 à jour
-        let module8Data = content.module8;
-        if (!module8Data) {
-          const freshDoc = await this.prisma.document.findFirst({
-            where: { projectId: project.id },
-            select: { content: true },
-          });
-          module8Data = (freshDoc?.content as any)?.module8 || null;
-        }
-        const sections8 = renderModule8(module8Data, lang, sequentialNumber);
-
-        sections8.forEach((section, idx) => {
-          const displayNumber = `${sequentialNumber}.${idx + 1}`;
-          subsectionTitlesById[`${sequentialNumber}:${section.id}`] = `${displayNumber} — ${section.title}`;
-          pdfSegments.push({
-            type: 'html',
-            content: `<div>${section.html}</div>`,
-            sequentialNumber,
-            subsectionId: section.id,
-          });
-        });
-        continue;
-      }
+      await builder.buildModuleSegments(moduleNum, pdfSegments, currentHtmlChunk, currentHtmlSeqNumber);
     }
 
-    if (currentHtmlChunk) {
-      pdfSegments.push({ type: 'html', content: currentHtmlChunk, sequentialNumber: currentHtmlSeqNumber });
+    if (currentHtmlChunk.value) {
+      pdfSegments.push({ type: 'html', content: currentHtmlChunk.value, sequentialNumber: currentHtmlSeqNumber.value });
     }
+
+    const subsectionTitlesById = builder.subsectionTitlesById;
 
     // ── UN SEUL NAVIGATEUR PARTAGÉ pour tous les segments HTML ──
     const browser = await puppeteer.launch({
