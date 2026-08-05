@@ -164,6 +164,11 @@ export default function MandatePage() {
               <Save size={14} />
               {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé' : 'Sauvegarder'}
             </button>
+            {selectedServices.length > 0 && (
+              <p className="text-xs mt-1" style={{ color: '#F39C12' }}>
+                ⚠ Cliquez sur "Générer les activités" pour sauvegarder les services cochés
+              </p>
+            )}
           </div>
         )}
       </div>

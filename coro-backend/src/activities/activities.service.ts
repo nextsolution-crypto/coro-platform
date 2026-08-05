@@ -217,7 +217,24 @@ export class ActivitiesService {
   async generateFromMandate(projectId: string, organizationId: string, services: { type: string; isRecurring: boolean }[]) {
     await this.assertOwnership(projectId, organizationId);
 
+    // Correspondance type d'activité → nom de liste de tâches
+    const TASK_LIST_MAP: Record<string, string> = {
+      'creation_document':                    'Production documentaire',
+      'exercice_table':                       'Exercice d\'évacuation',
+      'exercice_evacuation':                  'Exercice d\'évacuation',
+      'formation_equipe_urgence':             'Formation mesures d\'urgence',
+      'formation_equipe_urgence_exercice':    'Formation mesures d\'urgence',
+      'formation_travail_chaud':              'Formation mesures d\'urgence',
+      'formation_coordonnateur':              'Formation mesures d\'urgence',
+      'formation_epi':                        'Formation mesures d\'urgence',
+      'formation_communication':              'Formation mesures d\'urgence',
+      'formation_comportement':               'Formation mesures d\'urgence',
+      'formation_locataires':                 'Formation mesures d\'urgence',
+    };
+
     const results: any[] = [];
+    const importedListNames = new Set<string>();
+
     for (const service of services) {
       const catalog = ACTIVITY_CATALOG.find(a => a.type === service.type);
       if (!catalog) continue;
@@ -228,14 +245,12 @@ export class ActivitiesService {
       });
 
       if (existing) {
-        // Mettre à jour isRecurring si changé
         const updated = await this.prisma.projectActivity.update({
           where: { id: existing.id },
           data: { isRecurring: service.isRecurring },
         });
         results.push(updated);
       } else {
-        // Créer nouvelle activité
         const created = await this.prisma.projectActivity.create({
           data: {
             projectId,
@@ -250,6 +265,58 @@ export class ActivitiesService {
           },
         });
         results.push(created);
+      }
+
+      // Importer la liste de tâches correspondante si pas déjà importée
+      const listName = TASK_LIST_MAP[service.type];
+      if (listName && !importedListNames.has(listName)) {
+        // Chercher la liste globale correspondante
+        const taskList = await this.prisma.taskList.findFirst({
+          where: { name: listName, organizationId: null, isActive: true },
+          include: {
+            templates: {
+              where: { isActive: true },
+              orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
+            },
+          },
+        });
+
+        if (taskList) {
+          // Vérifier si cette liste est déjà importée dans le projet
+          const existingProjectList = await this.prisma.projectTaskList.findFirst({
+            where: { projectId, taskListId: taskList.id },
+          });
+
+          if (!existingProjectList) {
+            // Créer l'instance de la liste dans le projet
+            const projectTaskList = await this.prisma.projectTaskList.create({
+              data: {
+                projectId,
+                taskListId: taskList.id,
+                customName: catalog.label,
+                organizationId,
+              },
+            });
+
+            // Créer une copie de chaque tâche
+            await this.prisma.projectTask.createMany({
+              data: taskList.templates.map(t => ({
+                projectId,
+                projectTaskListId: projectTaskList.id,
+                templateId: t.id,
+                categoryName: t.categoryName,
+                taskTitle: t.taskTitle,
+                status: 'a_faire',
+                order: t.order,
+                organizationId,
+              })),
+            });
+
+            importedListNames.add(listName);
+          } else {
+            importedListNames.add(listName);
+          }
+        }
       }
     }
 
