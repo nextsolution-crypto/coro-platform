@@ -243,15 +243,15 @@ export default function TimelogPage() {
                 <div className="grid grid-cols-4 gap-4 mb-6">
                   <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Heures totales</p>
-                    <p className="text-2xl font-black" style={{ color: '#2C3E50' }}>{summary.heuresTotal.toFixed(1)}h</p>
+                    <p className="text-2xl font-black" style={{ color: '#2C3E50' }}>{Number(summary.heuresTotal).toFixed(2).replace(/\.?0+$/, '')}h</p>
                   </div>
                   <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Facturable</p>
-                    <p className="text-2xl font-black" style={{ color: '#27AE60' }}>{summary.heuresTaches.toFixed(1)}h</p>
+                    <p className="text-2xl font-black" style={{ color: '#27AE60' }}>{Number(summary.heuresTaches).toFixed(2).replace(/\.?0+$/, '')}h</p>
                   </div>
                   <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Non facturable</p>
-                    <p className="text-2xl font-black" style={{ color: '#F39C12' }}>{summary.heuresTimelog.toFixed(1)}h</p>
+                    <p className="text-2xl font-black" style={{ color: '#F39C12' }}>{Number(summary.heuresTimelog).toFixed(2).replace(/\.?0+$/, '')}h</p>
                   </div>
                   <div className="rounded-md p-4"
                     style={{
@@ -266,7 +266,7 @@ export default function TimelogPage() {
                     </p>
                     <p className="text-2xl font-black"
                       style={{ color: summary.tempsCumule >= 0 ? '#27AE60' : '#C0392B' }}>
-                      {summary.tempsCumule >= 0 ? '+' : ''}{summary.tempsCumule.toFixed(1)}h
+                      {summary.tempsCumule >= 0 ? '+' : ''}{Number(summary.tempsCumule).toFixed(2).replace(/\.?0+$/, '')}h
                     </p>
                   </div>
                 </div>
@@ -318,7 +318,7 @@ export default function TimelogPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 font-bold" style={{ color: '#2980B9' }}>
-                            {entry.heures}h
+                            {Number(entry.heures).toFixed(2).replace(/\.?0+$/, '')}h
                           </td>
                           <td className="px-3 py-3">
                             {entry.source === 'timelog' && (
@@ -350,7 +350,7 @@ export default function TimelogPage() {
                           TOTAL
                         </td>
                         <td className="px-4 py-3 font-black" style={{ color: '#C0392B', borderTop: '2px solid #E9ECEF' }}>
-                          {summary?.heuresTotal.toFixed(1)}h
+                          {Number(summary?.heuresTotal).toFixed(2).replace(/\.?0+$/, '')}h
                         </td>
                         <td style={{ borderTop: '2px solid #E9ECEF' }} />
                       </tr>

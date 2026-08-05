@@ -164,7 +164,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Heures saisies</p>
-          <p className="text-2xl font-black" style={{ color: '#2980B9' }}>{totalHeures.toFixed(1)}h</p>
+          <p className="text-2xl font-black" style={{ color: '#2980B9' }}>{totalHeures.toFixed(2).replace(/\.?0+$/, '')}h</p>
           <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>sur {budget}h budgétées</p>
         </div>
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
@@ -184,7 +184,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
           <p className="text-2xl font-black" style={{ color: '#2C3E50' }}>
             {taux > 0 ? `${coutReel.toFixed(0)} $` : '—'}
           </p>
-          <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>{totalHeures.toFixed(1)}h × {taux}$/h</p>
+          <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>{totalHeures.toFixed(2).replace(/\.?0+$/, '')}h × {taux}$/h</p>
         </div>
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Marge estimée</p>
@@ -205,7 +205,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
             {Object.values(byUser).map(u => (
               <div key={u.name} className="flex items-center justify-between">
                 <span className="text-sm" style={{ color: '#2C3E50' }}>{u.name}</span>
-                <span className="text-sm font-bold" style={{ color: '#2980B9' }}>{u.heures.toFixed(1)}h</span>
+                <span className="text-sm font-bold" style={{ color: '#2980B9' }}>{u.heures.toFixed(2).replace(/\.?0+$/, '')}h</span>
               </div>
             ))}
           </div>
@@ -252,7 +252,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
                     {entry.user?.firstName} {entry.user?.lastName}
                   </td>
                   <td className="px-4 py-3 text-xs font-bold text-center" style={{ border: '1px solid #E9ECEF', color: '#2980B9' }}>
-                    {entry.heures}h
+                    {Number(entry.heures).toFixed(2).replace(/\.?0+$/, '')}h
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ border: '1px solid #E9ECEF', color: '#6C757D' }}>
                     {entry.note || '—'}
@@ -264,7 +264,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
                   TOTAL
                 </td>
                 <td className="px-4 py-3 text-xs font-black text-center" style={{ border: '1px solid #E9ECEF', color: '#C0392B' }}>
-                  {totalHeures.toFixed(1)}h
+                  {totalHeures.toFixed(2).replace(/\.?0+$/, '')}h
                 </td>
                 <td style={{ border: '1px solid #E9ECEF' }} />
               </tr>

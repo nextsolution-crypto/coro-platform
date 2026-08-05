@@ -150,7 +150,7 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
         </div>
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Heures saisies</p>
-          <p className="text-2xl font-black" style={{ color: '#2980B9' }}>{totalHeures.toFixed(1)}h</p>
+          <p className="text-2xl font-black" style={{ color: '#2980B9' }}>{Number(totalHeures).toFixed(2).replace(/\.?0+$/, '')}h</p>
         </div>
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Progression</p>
@@ -225,7 +225,7 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
                           {taskHeures > 0 && (
                             <span className="text-xs px-2 py-0.5 rounded"
                               style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
-                              ⏱ {taskHeures.toFixed(1)}h
+                              ⏱ {Number(taskHeures).toFixed(2).replace(/\.?0+$/, '')}h
                             </span>
                           )}
 
@@ -286,7 +286,7 @@ export default function TasksTab({ projectId, documentType, teamMembers }: Props
                                   <span style={{ color: '#6C757D' }}>
                                     {new Date(entry.date).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })}
                                   </span>
-                                  <span className="font-bold" style={{ color: '#2980B9' }}>{entry.heures}h</span>
+                                  <span className="font-bold" style={{ color: '#2980B9' }}>{Number(entry.heures).toFixed(2).replace(/\.?0+$/, '')}h</span>
                                   <span style={{ color: '#ADB5BD' }}>
                                     {entry.user?.firstName} {entry.user?.lastName}
                                   </span>
