@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [upcomingActivities, setUpcomingActivities] = useState<any[]>([]);
   const [lateTasks, setLateTasks] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [recurringToRenew, setRecurringToRenew] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
@@ -45,10 +46,12 @@ export default function DashboardPage() {
 
   const fetchAll = async () => {
     try {
-      const [projetsRes, updatesRes, approvalsRes] = await Promise.all([
+      const [projetsRes, updatesRes, approvalsRes, recurringRes, upcomingRes] = await Promise.all([
         api.get('/projects?limit=200'),
         api.get('/projects/upcoming-updates').catch(() => ({ data: [] })),
         api.get('/projects/pending-approval').catch(() => ({ data: [] })),
+        api.get('/activities/recurring-to-renew').catch(() => ({ data: [] })),
+        api.get('/activities/upcoming').catch(() => ({ data: [] })),
       ]);
 
       const allProjets = projetsRes.data?.projects || projetsRes.data || [];
@@ -56,66 +59,17 @@ export default function DashboardPage() {
       setUpdates(updatesRes.data || []);
       setPendingApprovals(approvalsRes.data || []);
 
-      // Charger activités et tâches de tous les projets actifs
-      const activeProjets = allProjets.filter((p: any) =>
-        ['DRAFT', 'IN_PROGRESS', 'REVIEW'].includes(p.status)
-      );
+      setRecurringToRenew(recurringRes.data || []);
 
-      const activitiesData: any[] = [];
-      const lateTasksData: any[] = [];
-      const today = new Date();
-      const in30Days = new Date();
-      in30Days.setDate(today.getDate() + 30);
-
-      await Promise.all(activeProjets.slice(0, 5).map(async (projet: any) => {
-        try {
-          const [actRes, taskRes] = await Promise.all([
-            api.get(`/projects/${projet.id}/activities`).catch(() => ({ data: [] })),
-            api.get(`/projects/${projet.id}/tasks`).catch(() => ({ data: [] })),
-          ]);
-
-          // Activités des 30 prochains jours
-          (actRes.data || []).forEach((a: any) => {
-            if (a.scheduledDate && a.status !== 'termine' && a.status !== 'annule') {
-              const d = new Date(a.scheduledDate);
-              if (d >= today && d <= in30Days) {
-                activitiesData.push({
-                  ...a,
-                  projectName: projet.name,
-                  projectId: projet.id,
-                  clientName: projet.client?.name || '—',
-                });
-              }
-            }
-          });
-
-          // Tâches en retard OU assignées à moi
-          (taskRes.data || []).forEach((t: any) => {
-            if (t.status !== 'termine') {
-              const isAssignedToMe = t.assigneeId === user?.id;
-              const isLate = t.dueDate && new Date(t.dueDate) < today;
-              if (isLate || isAssignedToMe) {
-                lateTasksData.push({
-                  ...t,
-                  projectName: projet.name,
-                  projectId: projet.id,
-                  clientName: projet.client?.name || '—',
-                  isAssignedToMe,
-                  isLate,
-                });
-              }
-            }
-          });
-        } catch { }
+      // Utiliser le nouvel endpoint pour les activités à venir
+      const upcomingFromApi = (upcomingRes.data || []).map((a: any) => ({
+        ...a,
+        projectName: a.project?.name || '—',
+        clientName: a.project?.client?.name || '—',
+        projectId: a.projectId,
       }));
+      setUpcomingActivities(upcomingFromApi.slice(0, 10));
 
-      // Trier activités par date
-      activitiesData.sort((a, b) =>
-        new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
-      );
-
-      setUpcomingActivities(activitiesData.slice(0, 10));
-      setLateTasks(lateTasksData.slice(0, 8));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -179,6 +133,52 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Activités récurrentes à renouveler */}
+      {recurringToRenew.length > 0 && (
+        <div className="rounded-md p-5 mb-6"
+          style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <span style={{ fontSize: '16px' }}>🔄</span>
+            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+              Activités récurrentes à renouveler
+            </h3>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
+              {recurringToRenew.length} activité{recurringToRenew.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {recurringToRenew.map(a => (
+              <div key={a.id}
+                onClick={() => router.push(`/projects/${a.projectId}/activities`)}
+                className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FFFBF0'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                <div className="flex items-center gap-3">
+                  <span style={{ fontSize: '16px' }}>↺</span>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{a.label}</p>
+                    <p className="text-xs" style={{ color: '#6C757D' }}>
+                      {a.clientName} — {a.buildingName}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold" style={{ color: '#F39C12' }}>
+                    {a.monthsAgo} mois
+                  </p>
+                  <p className="text-xs" style={{ color: '#6C757D' }}>Dernière occurrence</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs mt-3" style={{ color: '#ADB5BD' }}>
+            💡 Allez dans la page Activités du projet et cliquez "Dupliquer pour l'an prochain"
+          </p>
+        </div>
+      )}
 
       {/* Approbations en attente */}
       {pendingApprovals.length > 0 && (

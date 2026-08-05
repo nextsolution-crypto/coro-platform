@@ -333,4 +333,64 @@ export class ActivitiesService {
 
     return results;
   }
+  // Activités récurrentes à renouveler (date passée depuis > 10 mois)
+  async getRecurringToRenew(organizationId: string) {
+    const tenMonthsAgo = new Date();
+    tenMonthsAgo.setMonth(tenMonthsAgo.getMonth() - 10);
+
+    const activities = await this.prisma.projectActivity.findMany({
+      where: {
+        organizationId,
+        isRecurring: true,
+        scheduledDate: { lte: tenMonthsAgo },
+        status: { not: 'annule' },
+      },
+      include: {
+        project: {
+          include: {
+            client: { select: { name: true } },
+            building: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { scheduledDate: 'asc' },
+    });
+
+    return activities.map(a => ({
+      id: a.id,
+      projectId: a.projectId,
+      projectName: a.project.name,
+      clientName: a.project.client.name,
+      buildingName: a.project.building.name,
+      label: a.customLabel || a.label,
+      scheduledDate: a.scheduledDate,
+      monthsAgo: Math.floor(
+        (new Date().getTime() - new Date(a.scheduledDate!).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+      ),
+    }));
+  }
+
+  // Activités des 30 prochains jours
+  async getUpcoming(organizationId: string) {
+    const now = new Date();
+    const in30Days = new Date();
+    in30Days.setDate(in30Days.getDate() + 30);
+
+    return this.prisma.projectActivity.findMany({
+      where: {
+        organizationId,
+        scheduledDate: { gte: now, lte: in30Days },
+        status: { notIn: ['annule', 'termine'] },
+      },
+      include: {
+        project: {
+          include: {
+            client: { select: { name: true } },
+            building: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { scheduledDate: 'asc' },
+    });
+  }
 }

@@ -61,4 +61,14 @@ export class ActivitiesController {
   getClientPortfolio(@Param('clientId') clientId: string, @Request() req: any) {
     return this.service.getClientPortfolio(clientId, req.user.organizationId);
   }
+
+  @Get('activities/recurring-to-renew')
+  getRecurringToRenew(@Request() req: any) {
+    return this.service.getRecurringToRenew(req.user.organizationId);
+  }
+
+  @Get('activities/upcoming')
+  getUpcoming(@Request() req: any) {
+    return this.service.getUpcoming(req.user.organizationId);
+  }
 }
