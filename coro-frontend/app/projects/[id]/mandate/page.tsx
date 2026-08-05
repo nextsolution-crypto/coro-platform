@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ExternalLink, Save } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
-import TasksTab from './TasksTab';
+import TaskListsTab from './TaskListsTab';
 import CommentsTab from './CommentsTab';
 import TimesheetTab from './TimesheetTab';
 
@@ -423,7 +423,7 @@ export default function MandatePage() {
       )}
 
       {activeTab === 'tasks' && (
-        <TasksTab projectId={projectId} documentType={project?.documentType} teamMembers={teamMembers} />
+        <TaskListsTab projectId={projectId} teamMembers={teamMembers} />
       )}
 
       {activeTab === 'comments' && (
