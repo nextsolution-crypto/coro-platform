@@ -28,6 +28,7 @@ import { AuditModule } from './audit/audit.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { MandateModule } from './mandate/mandate.module';
 import { TaskTemplatesModule } from './task-templates/task-templates.module';
+import { TaskListsModule } from './task-lists/task-lists.module';
 import { TimelogModule } from './timelog/timelog.module';
 import { GuideModule } from './guide/guide.module';
 
@@ -60,6 +61,7 @@ import { GuideModule } from './guide/guide.module';
   ActivitiesModule,
   MandateModule,
   TaskTemplatesModule,
+  TaskListsModule,
   TimelogModule,
   GuideModule,
 ],
