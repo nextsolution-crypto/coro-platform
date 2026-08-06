@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { generateModule1, DocumentContext } from './module1.templates';
+import { generateModule1, DocumentContext } from './module1/module1.index';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
 import { generateModule4, getActiveProcedures, getAllProcedures } from './module4.templates';

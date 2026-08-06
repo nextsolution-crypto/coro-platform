@@ -3,7 +3,7 @@
 // Source de vérité : /procedures/index.ts
 // ============================================================
 
-import { DocumentContext } from './module1.templates';
+import type { DocumentContext } from './module1/module1.index';
 import {
   getActiveProcedures,
   getAllProcedures,

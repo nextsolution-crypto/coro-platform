@@ -4,7 +4,7 @@
 // retourne { fr: {...}, en: {...} }
 // ============================================================
 
-import { DocumentContext } from './module1.templates';
+import type { DocumentContext } from './module1/module1.index';
 
 // ============================================================
 // TYPES SPÉCIFIQUES AU MODULE 2
