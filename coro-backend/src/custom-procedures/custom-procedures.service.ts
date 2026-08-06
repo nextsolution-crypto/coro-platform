@@ -98,6 +98,8 @@ RÈGLES STRICTES :
 - importantBoxes : max 2 encadrés (type IMPORTANT ou NOTE)
 - rolesDetected : liste des codes de rôles CORO trouvés dans le texte
 - crossReferences : codes de procédures liées mentionnées (ex: ["P001", "P005"])
+- actionsEN : traduction anglaise de chaque action (même ordre que actions)
+- roleNameEN : nom du rôle en anglais
 
 RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
 
@@ -112,9 +114,14 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     {
       "roleCode": "ROLE-CU",
       "roleName": "Coordonnateur d'urgence",
+      "roleNameEN": "Emergency Coordinator",
       "actions": [
-        "Action 1 impérative",
-        "Action 2 impérative"
+        "Action 1 impérative en français",
+        "Action 2 impérative en français"
+      ],
+      "actionsEN": [
+        "Action 1 in English",
+        "Action 2 in English"
       ]
     }
   ],

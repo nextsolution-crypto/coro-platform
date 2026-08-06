@@ -282,12 +282,44 @@ export default function ProcedureProjectEditPage() {
 
   const fetchData = async () => {
     try {
+      // Essayer d'abord ProcedureDefault
       const res = await api.get(`/procedures/${procedureId}`, {
         params: { projectId },
-      });
-      setContent(res.data.content as ProcedureContent);
-      setIsOverridden(res.data.isOverridden);
-    } catch (err) { console.error(err); }
+      }).catch(() => null);
+
+      if (res?.data?.content) {
+        setContent(res.data.content as ProcedureContent);
+        setIsOverridden(res.data.isOverridden);
+      } else {
+        // Sinon CustomProcedure IA
+        const cr = await api.get(`/custom-procedures/${procedureId}`);
+        const c = cr.data?.content;
+        if (c) {
+          // Adapter le format CustomProcedure → ProcedureContent
+          setContent({
+            id: cr.data.id,
+            code: c.code || cr.data.code,
+            titleFR: c.titleFR || cr.data.titleFR,
+            titleEN: c.titleEN || cr.data.titleEN,
+            headerColor: c.color || cr.data.color || '#2C3E50',
+            activationRule: c.activationRule || 'manual',
+            documentTypes: [],
+            roleSections: (c.roleSections || []).map((rs: any) => ({
+              roleCode: rs.roleCode,
+              roleLabelFR: rs.roleName || rs.roleCode,
+              roleLabelEN: rs.roleNameEN || rs.roleName || rs.roleCode,
+              headerColor: c.color || '#2C3E50',
+              steps: (rs.actions || []).map((action: string, idx: number) => ({
+                id: `step_${idx}`,
+                textFR: action,
+                textEN: (rs.actionsEN && rs.actionsEN[idx]) ? rs.actionsEN[idx] : action,
+              })),
+            })),
+          } as ProcedureContent);
+          setIsOverridden(false);
+        }
+      }
+    } catch (err) { console.error(err); setError('Procédure introuvable.'); }
     finally { setLoading(false); }
   };
 
@@ -296,7 +328,25 @@ export default function ProcedureProjectEditPage() {
     setSaving(true);
     setError('');
     try {
-      await api.put(`/procedures/${procedureId}/project/${projectId}`, { content });
+      // Essayer d'abord ProcedureDefault
+      const stdRes = await api.put(`/procedures/${procedureId}/project/${projectId}`, { content })
+        .catch(() => null);
+
+      if (!stdRes) {
+        // Sinon CustomProcedure IA — reconstruire le content au format CustomProcedure
+        const customContent = {
+          ...content,
+          roleSections: content.roleSections.map(rs => ({
+            roleCode: rs.roleCode,
+            roleName: rs.roleLabelFR,
+            roleNameEN: rs.roleLabelEN,
+            actions: rs.steps.map(s => s.textFR),
+            actionsEN: rs.steps.map(s => s.textEN),
+          })),
+        };
+        await api.put(`/custom-procedures/${procedureId}`, { content: customContent });
+      }
+
       setIsOverridden(true);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
