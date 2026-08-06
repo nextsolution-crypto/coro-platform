@@ -108,6 +108,7 @@ export default function EditorPage() {
   const [isEditing,      setIsEditing]      = useState(false);
   const [validations,    setValidations]    = useState<any[]>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [hasPlans, setHasPlans] = useState(false);
 
   // ── Init ────────────────────────────────────────────────
 
@@ -123,9 +124,12 @@ export default function EditorPage() {
 
   const fetchDocument = async () => {
     try {
-      const res = await api.get(`/generator/document/${projectId}`);
-      setDocument(res.data);
-      // Charger les validations en parallèle
+      const [docRes, plansRes] = await Promise.all([
+        api.get(`/generator/document/${projectId}`),
+        api.get(`/projects/${projectId}/building-plans`).catch(() => ({ data: [] })),
+      ]);
+      setDocument(docRes.data);
+      setHasPlans((plansRes.data || []).length > 0);
       try {
         const valRes = await api.get(`/generator/validate/${projectId}`);
         setValidations(valRes.data || []);
@@ -263,6 +267,46 @@ export default function EditorPage() {
   const isSpecialModule = SPECIAL_MODULES.includes(currentModule?.moduleNumber);
   const isBureau = document.project.building.buildingType?.toLowerCase() !== 'industriel';
   const isReadOnly = ['REVIEW', 'VALIDATED'].includes(document.project.status || '');
+
+  const getModuleCompletion = (mod: Module): 'complete' | 'partial' | 'empty' => {
+    const n = mod.moduleNumber;
+    if (n === 1) return 'complete';
+    if (n === 2) {
+      const entries = mod.sections.find(s => s.id === '2.1')?.entries || [];
+      const corps   = mod.sections.find(s => s.id === '2.2')?.entries || [];
+      if (entries.length >= 3 && corps.length >= 1) return 'complete';
+      if (entries.length > 0) return 'partial';
+      return 'empty';
+    }
+    if (n === 3) {
+      const orgRoles = mod.sections.find(s => s.id === '3.1')?.orgRoles || [];
+      const active   = orgRoles.filter((r: any) => r.isActive).length;
+      if (active >= 3) return 'complete';
+      if (active > 0)  return 'partial';
+      return 'empty';
+    }
+    if (n === 4) {
+      const procs = mod.procedures || [];
+      if (procs.length >= 5) return 'complete';
+      if (procs.length > 0)  return 'partial';
+      return 'empty';
+    }
+    if (n === 6) return hasPlans ? 'complete' : 'empty';
+    if (n === 7) return 'partial'; // géré par Module7Section
+    if (n === 8) return 'partial'; // registres manuels
+    return 'partial';
+  };
+
+  const completionIcon: Record<string, string> = {
+    complete: '✓',
+    partial:  '◐',
+    empty:    '○',
+  };
+  const completionColor: Record<string, string> = {
+    complete: '#27AE60',
+    partial:  '#F39C12',
+    empty:    '#ADB5BD',
+  };
 
   // ============================================================
   // RENDU DU CONTENU CENTRAL
@@ -538,15 +582,27 @@ export default function EditorPage() {
 
               return (
               <div key={mod.moduleNumber} className="mb-2">
-                <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between"
-                  style={{ color: activeModule === modIdx ? '#C0392B' : '#ADB5BD' }}>
-                  <span>M{mod.moduleNumber} — {mod.title}</span>
-                  {badgeLabel && (
-                    <span className="text-xs" style={{ color: badgeColor }} title={`${modValidations.length} validation(s)`}>
-                      {badgeLabel}
-                    </span>
-                  )}
-                </div>
+                {(() => {
+                  const completion = getModuleCompletion(mod);
+                  return (
+                    <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between"
+                      style={{ color: activeModule === modIdx ? '#C0392B' : '#ADB5BD' }}>
+                      <span>M{mod.moduleNumber} — {mod.title}</span>
+                      <div className="flex items-center gap-1.5">
+                        {badgeLabel && (
+                          <span className="text-xs" style={{ color: badgeColor }} title={`${modValidations.length} validation(s)`}>
+                            {badgeLabel}
+                          </span>
+                        )}
+                        <span className="text-xs font-bold"
+                          style={{ color: completionColor[completion] }}
+                          title={completion === 'complete' ? 'Complet' : completion === 'partial' ? 'Partiel' : 'Vide'}>
+                          {completionIcon[completion]}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Modules spéciaux — bouton unique */}
                 {(mod.sections || []).length === 0 && (
