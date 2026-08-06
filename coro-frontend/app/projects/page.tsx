@@ -406,9 +406,24 @@ export default function ProjectsPage() {
               </div>
             </div>
           ) : (
-            <div className="rounded-md p-12 text-center"
+            <div className="rounded-md p-10 text-center"
               style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucun projet dans cette vue</p>
+              <p className="text-4xl mb-4">📁</p>
+              <p className="text-sm font-semibold mb-2" style={{ color: '#2C3E50' }}>
+                Aucun projet pour le moment
+              </p>
+              <p className="text-xs mb-6" style={{ color: '#ADB5BD' }}>
+                Créez votre premier projet pour commencer à produire des documents de mesures d'urgence.
+              </p>
+              <button
+                onClick={() => setShowModal(true)}
+                className="text-white text-sm font-medium px-6 py-2.5 rounded"
+                style={{ backgroundColor: '#C0392B' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+              >
+                + Créer un projet maintenant
+              </button>
             </div>
           )}
         </div>
