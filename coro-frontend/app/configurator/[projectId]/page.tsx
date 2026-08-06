@@ -779,32 +779,55 @@ export default function ConfiguratorPage() {
             borderRight: '1px solid #DEE2E6',
           }}>
           <div className="p-3">
-            {sections.map((section, idx) => {
-  if (section.id === 'industriel' && config['buildingType'] !== 'Industriel') return null;
-  const isActive = activeSection === idx;
-  return (
-    <button
-      key={section.id}
-      onClick={() => setActiveSection(idx)}
-                  className="w-full text-left px-3 py-2.5 rounded text-xs mb-1
-                    transition-colors flex items-center gap-2 font-medium"
-                  style={{
-                    backgroundColor: isActive ? '#FDEDEC' : 'transparent',
-                    color: isActive ? '#C0392B' : '#495057',
-                    border: isActive ? '1px solid #F1948A' : '1px solid transparent',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) e.currentTarget.style.backgroundColor = '#F8F9FA';
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <span>{section.icon}</span>
-                  <span>{section.title}</span>
-                </button>
-              );
-            })}
+            {(() => {
+              const GROUPS: { label: string; ids: string[] }[] = [
+                { label: 'Général',           ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
+                { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'extincteurs', 'detecteurs'] },
+                { label: 'Équipements',       ids: ['mecanique', 'communication', 'premiers_soins'] },
+                { label: 'Risques',           ids: ['matieres'] },
+                { label: 'Industriel',        ids: ['industriel'] },
+              ];
+
+              return GROUPS.map((group, groupIdx) => {
+                const groupSections = sections
+                  .map((s, idx) => ({ ...s, idx }))
+                  .filter(s => group.ids.includes(s.id));
+
+                if (groupSections.length === 0) return null;
+
+                // Masquer le groupe Industriel si pas industriel
+                if (group.ids.includes('industriel') && config['buildingType'] !== 'Industriel') return null;
+
+                return (
+                  <div key={groupIdx} className="mb-3">
+                    <p className="px-3 text-xs font-bold uppercase tracking-wider mb-1"
+                      style={{ color: '#ADB5BD' }}>
+                      {group.label}
+                    </p>
+                    {groupSections.map(section => {
+                      const isActive = activeSection === section.idx;
+                      return (
+                        <button
+                          key={section.id}
+                          onClick={() => setActiveSection(section.idx)}
+                          className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors flex items-center gap-2 font-medium"
+                          style={{
+                            backgroundColor: isActive ? '#FDEDEC' : 'transparent',
+                            color: isActive ? '#C0392B' : '#495057',
+                            border: isActive ? '1px solid #F1948A' : '1px solid transparent',
+                          }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <span>{section.icon}</span>
+                          <span>{section.title}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
 
