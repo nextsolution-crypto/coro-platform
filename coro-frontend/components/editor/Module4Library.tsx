@@ -21,6 +21,7 @@ interface Module4LibraryProps {
   activeProcedureIds: string[];
   autoActivatedIds: string[];
   language?: 'fr' | 'en';
+  projectId?: string;
   onAdd: (id: string) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
@@ -28,12 +29,14 @@ interface Module4LibraryProps {
 
 export default function Module4Library({
   activeProcedureIds, autoActivatedIds, language = 'fr',
-  onAdd, onRemove, onClose,
+  projectId, onAdd, onRemove, onClose,
 }: Module4LibraryProps) {
 
   const [procedures, setProcedures] = useState<LibraryProcedure[]>([]);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
+  const [customProcedures, setCustomProcedures] = useState<any[]>([]);
+  const [activeLibTab, setActiveLibTab]         = useState<'standard' | 'ia'>('standard');
   const isFr = language === 'fr';
 
   const t = {
@@ -53,8 +56,21 @@ export default function Module4Library({
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get('/procedures');
-        setProcedures((res.data || []).map((p: any) => ({
+        const [stdRes, customRes] = await Promise.all([
+          api.get('/procedures'),
+          projectId ? Promise.all([
+            api.get(`/custom-procedures/project/${projectId}`),
+            api.get('/custom-procedures/library'),
+          ]).then(([projRes, libRes]) => ({
+            data: [
+              ...(projRes.data || []),
+              ...(libRes.data || []).filter((p: any) =>
+                !(projRes.data || []).find((pp: any) => pp.id === p.id)
+              ),
+            ],
+          })) : Promise.resolve({ data: [] }),
+        ]);
+        setProcedures((stdRes.data || []).map((p: any) => ({
           id: p.id,
           code: p.content?.code || p.code,
           titleFR: p.content?.titleFR || '',
@@ -66,6 +82,9 @@ export default function Module4Library({
           phase: p.content?.phase,
           roleCount: (p.content?.roleSections || []).length,
         })));
+        setCustomProcedures((customRes.data || []).filter((p: any) => 
+          p.status === 'ACTIVE' || p.isPublished === true
+        ));
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
@@ -149,12 +168,95 @@ export default function Module4Library({
           </div>
         </div>
 
+        {/* Onglets Standard / IA */}
+        <div className="flex gap-1 px-5 py-2" style={{ borderBottom: '1px solid #E9ECEF' }}>
+          <button onClick={() => setActiveLibTab('standard')}
+            className="px-3 py-1.5 text-xs font-medium rounded transition-colors"
+            style={{
+              backgroundColor: activeLibTab === 'standard' ? '#FDEDEC' : 'transparent',
+              color: activeLibTab === 'standard' ? '#C0392B' : '#6C757D',
+              border: activeLibTab === 'standard' ? '1px solid #F1948A' : '1px solid transparent',
+            }}>
+            📋 Standard ({procedures.length})
+          </button>
+          <button onClick={() => setActiveLibTab('ia')}
+            className="px-3 py-1.5 text-xs font-medium rounded transition-colors"
+            style={{
+              backgroundColor: activeLibTab === 'ia' ? '#F4ECF7' : 'transparent',
+              color: activeLibTab === 'ia' ? '#8E44AD' : '#6C757D',
+              border: activeLibTab === 'ia' ? '1px solid #D2B4DE' : '1px solid transparent',
+            }}>
+            ✨ Procédures IA ({customProcedures.length})
+          </button>
+        </div>
+
         {/* Liste */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loading ? (
             <div className="text-center py-8">
               <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>{t.loading}</p>
             </div>
+          ) : activeLibTab === 'ia' ? (
+            customProcedures.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm mb-2" style={{ color: '#ADB5BD' }}>
+                  Aucune procédure IA active
+                </p>
+                <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                  Activez une procédure depuis "Procédures IA" dans la fiche projet
+                </p>
+              </div>
+            ) : (
+              customProcedures.map(p => {
+                const active = activeProcedureIds.includes(p.id);
+                return (
+                  <div key={p.id}
+                    className="flex items-center gap-3 p-3 rounded-md transition-all"
+                    style={{
+                      border: `1px solid ${active ? '#D2B4DE' : '#E9ECEF'}`,
+                      backgroundColor: active ? '#F4ECF7' : '#F8F9FA',
+                    }}>
+                    <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0 text-base text-white font-bold text-xs"
+                      style={{ backgroundColor: p.color || '#8E44AD' }}>
+                      {p.code}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs px-1.5 py-0.5 rounded font-medium"
+                          style={{ backgroundColor: '#F4ECF7', color: '#8E44AD', border: '1px solid #D2B4DE' }}>
+                          ✨ IA
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold truncate mt-0.5" style={{ color: '#2C3E50' }}>
+                        {language === 'fr' ? p.titleFR : p.titleEN}
+                      </p>
+                      {p.objective && (
+                        <p className="text-xs truncate mt-0.5" style={{ color: '#ADB5BD' }}>{p.objective}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {active ? (
+                        <button onClick={() => onRemove(p.id)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded font-medium transition-colors"
+                          style={{ border: '1px solid #D2B4DE', color: '#8E44AD' }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F4ECF7'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                          <X size={12} /> Retirer
+                        </button>
+                      ) : (
+                        <button onClick={() => onAdd(p.id)}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded font-medium transition-colors"
+                          style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                          onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F4ECF7'; e.currentTarget.style.borderColor = '#D2B4DE'; e.currentTarget.style.color = '#8E44AD'; }}
+                          onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}>
+                          <Plus size={12} /> Ajouter
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )
           ) : filtered.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm" style={{ color: '#ADB5BD' }}>{t.empty}</p>

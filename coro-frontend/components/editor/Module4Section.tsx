@@ -87,9 +87,17 @@ export default function Module4Section({
                 .filter(id => !autoIds.includes(id))
                 .map(async id => {
                   try {
-                    const r = await api.get(`/procedures/${id}`);
-                    const content = r.data?.content;
-                    return content ? { ...content, id, sectionNumber: '' } : null;
+                    // Essayer d'abord dans ProcedureDefault
+                    const r = await api.get(`/procedures/${id}`).catch(() => null);
+                    if (r?.data?.content) {
+                      return { ...r.data.content, id, sectionNumber: '' };
+                    }
+                    // Sinon chercher dans CustomProcedure
+                    const cr = await api.get(`/custom-procedures/${id}`).catch(() => null);
+                    if (cr?.data?.content) {
+                      return { ...cr.data.content, id, sectionNumber: '', _isCustomIA: true };
+                    }
+                    return null;
                   } catch { return null; }
                 })
             );
@@ -167,13 +175,22 @@ export default function Module4Section({
 
   const handleAddProcedure = useCallback(async (id: string) => {
     try {
-      const res = await api.get(`/procedures/${id}`);
-      const proc = res.data?.content;
+      // Essayer ProcedureDefault d'abord
+      let proc = null;
+      const res = await api.get(`/procedures/${id}`).catch(() => null);
+      if (res?.data?.content) {
+        proc = res.data.content;
+      } else {
+        // Sinon CustomProcedure IA
+        const cr = await api.get(`/custom-procedures/${id}`).catch(() => null);
+        if (cr?.data?.content) {
+          proc = { ...cr.data.content, _isCustomIA: true };
+        }
+      }
       if (proc) {
         setProcedures(prev => [...prev, { ...proc, id, sectionNumber: '', _isActive: true }]);
         setCustomProcedureIds(prev => {
           const updated = [...prev, id];
-          // Sauvegarder immédiatement avec la nouvelle liste
           api.put(`/projects/${projectId}/module4`, {
             customProcedureIds: updated,
             procedureOverrides: { steps: {}, comments: {} },
@@ -372,6 +389,7 @@ const handleToggleActive = useCallback(async (id: string, active: boolean) => {
           activeProcedureIds={allActiveProcedureIds}
           autoActivatedIds={autoActivatedIds}
           language={language}
+          projectId={projectId}
           onAdd={handleAddProcedure}
           onRemove={handleRemoveProcedure}
           onClose={() => setShowLibrary(false)}

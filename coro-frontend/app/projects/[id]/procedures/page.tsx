@@ -412,11 +412,19 @@ export default function CustomProceduresPage() {
                   Procédure "{generated.titleFR}" générée avec succès !
                 </p>
                 {missingRoles.length > 0 && (
-                  <p className="text-xs mt-0.5" style={{ color: '#F39C12' }}>
-                    ⚠ {missingRoles.length} rôle{missingRoles.length > 1 ? 's' : ''} détecté{missingRoles.length > 1 ? 's' : ''} absent{missingRoles.length > 1 ? 's' : ''} de l'organigramme :
-                    {missingRoles.map((r: any) => ` ${r.labelFR}`).join(',')}
+                <div className="mt-1">
+                  <p className="text-xs" style={{ color: '#F39C12' }}>
+                    ⚠ {missingRoles.length} rôle{missingRoles.length > 1 ? 's' : ''} détecté{missingRoles.length > 1 ? 's' : ''} absent{missingRoles.length > 1 ? 's' : ''} de votre organigramme :
+                    <strong> {missingRoles.map((r: any) => r.labelFR).join(', ')}</strong>
                   </p>
-                )}
+                  <button
+                    onClick={() => router.push(`/editor/${projectId}`)}
+                    className="text-xs font-medium mt-1 underline"
+                    style={{ color: '#F39C12' }}>
+                    → Aller à l'organigramme (Module 3) pour les ajouter
+                  </button>
+                </div>
+              )}
               </div>
               <button onClick={() => setGenerated(null)} style={{ color: '#ADB5BD' }}>✕</button>
             </div>
