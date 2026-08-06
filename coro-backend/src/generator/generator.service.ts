@@ -129,6 +129,7 @@ private async loadProceduresFromDB(
   async generateAndSave(projectId: string, config: any, organizationId: string, userId?: string) {
     await this.assertProjectOwnership(projectId, organizationId);
     const ctx = await this.buildContext(projectId, config);
+    const isPsi = ctx.documentType === 'PSI';
     const module1Result = generateModule1(ctx);
     const module2Result = generateModule2(ctx);
 
@@ -141,7 +142,7 @@ private async loadProceduresFromDB(
     const section2_2 = existingContent?.module2?.section2_2 || [];
     const existingCustomRoles = existingContent?.module3?.customRoles || [];
 
-    const module3Result = generateModule3(ctx, config, section2_2, existingCustomRoles);
+    const module3Result = isPsi ? null : generateModule3(ctx, config, section2_2, existingCustomRoles);
 
     // Récupère les rôles actifs depuis Module 3
     const savedOrgRoles = existingContent?.module3?.orgRoles || [];
@@ -169,12 +170,19 @@ private async loadProceduresFromDB(
       customProcedureIds,
     );
 
+    // Pour PSI : seulement P001 (découverte fumée/flamme)
+    const psiProcedureIds = isPsi ? ['P001'] : customProcedureIds;
+    const psiActiveRoles = isPsi ? ['ROLE-AS'] : activeRoleCodes;
+    const psiProceduresFromDB = isPsi
+      ? proceduresFromDB.filter((p: any) => p.code === 'P001')
+      : proceduresFromDB;
+
     const module4Result = generateModule4(
       ctx,
       config,
-      activeRoleCodes,
-      customProcedureIds,
-      proceduresFromDB,
+      isPsi ? psiActiveRoles : activeRoleCodes,
+      isPsi ? psiProcedureIds : customProcedureIds,
+      psiProceduresFromDB,
     );
 
     // Module 6 — Plans techniques (structure vide, contenu géré via BuildingPlans)
@@ -219,8 +227,24 @@ private async loadProceduresFromDB(
     const documentData = {
       title: `${ctx.documentType} - ${ctx.buildingName} ${ctx.year}`,
       content: {
-        modules_fr: [module1Result.fr, module2Result.fr, module3Result.fr, module4Result, module6FR, module7FR, module8Result.fr],
-        modules_en: [module1Result.en, module2Result.en, module3Result.en, module4Result, module6EN, module7EN, module8Result.en],
+        modules_fr: [
+          module1Result.fr,
+          module2Result.fr,
+          ...(isPsi ? [] : [module3Result!.fr]),
+          module4Result,
+          module6FR,
+          module7FR,
+          module8Result.fr,
+        ],
+        modules_en: [
+          module1Result.en,
+          module2Result.en,
+          ...(isPsi ? [] : [module3Result!.en]),
+          module4Result,
+          module6EN,
+          module7EN,
+          module8Result.en,
+        ],
         config,
         generatedAt: new Date(),
         // Préserve les données éditées manuellement, non régénérées automatiquement

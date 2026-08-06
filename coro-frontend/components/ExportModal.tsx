@@ -7,6 +7,7 @@ import api from '@/lib/api';
 interface ExportModalProps {
   projectId: string;
   projectName: string;
+  documentType: string;
   hasPlans: boolean;
   onClose: () => void;
 }
@@ -26,9 +27,14 @@ const ALL_MODULES: ModuleOption[] = [
   { num: 8, label: 'M8 — Registres et annexes' },
 ];
 
-export default function ExportModal({ projectId, projectName, hasPlans, onClose }: ExportModalProps) {
-  // Liste filtrée — M6 retiré de la liste si aucun plan n'existe
-  const availableModules = ALL_MODULES.filter(m => m.num !== 6 || hasPlans);
+export default function ExportModal({ projectId, projectName, documentType, hasPlans, onClose }: ExportModalProps) {
+  // Liste filtrée selon le type de document
+  const PSI_EXCLUDED_MODULES = [3]; // Pas d'organigramme dans un PSI
+  const availableModules = ALL_MODULES.filter(m => {
+    if (m.num === 6 && !hasPlans) return false;
+    if (documentType === 'PSI' && PSI_EXCLUDED_MODULES.includes(m.num)) return false;
+    return true;
+  });
 
   const [orderedModules, setOrderedModules] = useState<ModuleOption[]>(availableModules);
   const [selected, setSelected] = useState<Set<number>>(new Set(availableModules.map(m => m.num)));

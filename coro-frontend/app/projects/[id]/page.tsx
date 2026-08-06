@@ -698,6 +698,7 @@ const handleChangeStatus = async (newStatus: string) => {
         <ExportModal
           projectId={project.id}
           projectName={project.name}
+          documentType={project.documentType}
           hasPlans={hasPlans}
           onClose={() => setShowExportModal(false)}
         />

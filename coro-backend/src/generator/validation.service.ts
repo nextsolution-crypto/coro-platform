@@ -31,9 +31,10 @@ export class ValidationService {
     const modules = content?.modules_fr || [];
 
     const results: ValidationResult[] = [];
+    const isPsi = project.documentType === 'PSI';
 
-    // ── RÈGLE V-001 : Double signal sans EPI ──────────────────
-    if (config.panneauType === 'DOUBLE') {
+    // ── RÈGLE V-001 : Double signal sans EPI (PMU seulement) ──
+    if (!isPsi && config.panneauType === 'DOUBLE') {
       const module3 = modules.find((m: any) => m.moduleNumber === 3);
       const orgRoles = module3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
       const hasEPI = orgRoles.some((r: any) => r.isActive && r.roleCode === 'ROLE-EPI');
@@ -49,45 +50,49 @@ export class ValidationService {
       }
     }
 
-    // ── RÈGLE V-002 : Code Rouge sans Responsable secteur ─────
-    const hasCodeRouge = (config.incident_codes || []).includes('CODE_ROUGE') ||
-      modules.find((m: any) => m.moduleNumber === 4)?.procedures?.some((p: any) =>
-        p.code === 'P002' || p.titleFR?.toLowerCase().includes('rouge')
-      );
-    if (hasCodeRouge) {
+    // ── RÈGLE V-002 : Code Rouge sans Responsable secteur (PMU seulement) ─────
+    if (!isPsi) {
+      const hasCodeRouge = (config.incident_codes || []).includes('CODE_ROUGE') ||
+        modules.find((m: any) => m.moduleNumber === 4)?.procedures?.some((p: any) =>
+          p.code === 'P002' || p.titleFR?.toLowerCase().includes('rouge')
+        );
+      if (hasCodeRouge) {
+        const module3 = modules.find((m: any) => m.moduleNumber === 3);
+        const orgRoles = module3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
+        const hasRS = orgRoles.some((r: any) => r.isActive && r.roleCode === 'ROLE-RS');
+        if (!hasRS) {
+          results.push({
+            id: 'V-002',
+            level: 'ERREUR',
+            message: 'Code Rouge présent mais aucun Responsable de secteur (RS) n\'est actif.',
+            moduleNumber: 3,
+            sectionId: '3.1',
+            action: 'Activer le rôle RS dans le Module 3',
+          });
+        }
+      }
+    }
+
+    // ── RÈGLE V-003 : Document sans Coordonnateur d'urgence (PMU seulement) ───
+    if (!isPsi) {
       const module3 = modules.find((m: any) => m.moduleNumber === 3);
       const orgRoles = module3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
-      const hasRS = orgRoles.some((r: any) => r.isActive && r.roleCode === 'ROLE-RS');
-      if (!hasRS) {
+      const hasCU = orgRoles.some((r: any) => r.isActive &&
+        (r.roleCode === 'ROLE-CU' || r.roleCode === 'ROLE-CHE'));
+      if (!hasCU && orgRoles.length > 0) {
         results.push({
-          id: 'V-002',
-          level: 'ERREUR',
-          message: 'Code Rouge présent mais aucun Responsable de secteur (RS) n\'est actif.',
+          id: 'V-003',
+          level: 'CRITIQUE',
+          message: 'Aucun Coordonnateur d\'urgence (CU) ou Chef d\'équipe n\'est actif dans l\'organigramme.',
           moduleNumber: 3,
           sectionId: '3.1',
-          action: 'Activer le rôle RS dans le Module 3',
+          action: 'Activer le rôle CU dans le Module 3',
         });
       }
     }
 
-    // ── RÈGLE V-003 : Document sans Coordonnateur d'urgence ───
-    const module3 = modules.find((m: any) => m.moduleNumber === 3);
-    const orgRoles = module3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
-    const hasCU = orgRoles.some((r: any) => r.isActive &&
-      (r.roleCode === 'ROLE-CU' || r.roleCode === 'ROLE-CHE'));
-    if (!hasCU && orgRoles.length > 0) {
-      results.push({
-        id: 'V-003',
-        level: 'CRITIQUE',
-        message: 'Aucun Coordonnateur d\'urgence (CU) ou Chef d\'équipe n\'est actif dans l\'organigramme.',
-        moduleNumber: 3,
-        sectionId: '3.1',
-        action: 'Activer le rôle CU dans le Module 3',
-      });
-    }
-
-    // ── RÈGLE V-004 : Mat. dangereuses sans procédure ─────────
-    if (config.matieresDangereuses === true) {
+    // ── RÈGLE V-004 : Mat. dangereuses sans procédure (PMU seulement) ─────────
+    if (!isPsi && config.matieresDangereuses === true) {
       const module4 = modules.find((m: any) => m.moduleNumber === 4);
       const procedures = module4?.procedures || [];
       const hasHazmat = procedures.some((p: any) =>
@@ -104,8 +109,8 @@ export class ValidationService {
       }
     }
 
-    // ── RÈGLE V-005 : Gicleurs sans procédure ─────────────────
-    if (config.gicleurs === true) {
+    // ── RÈGLE V-005 : Gicleurs sans procédure (PMU seulement) ─────────────────
+    if (!isPsi && config.gicleurs === true) {
       const module4 = modules.find((m: any) => m.moduleNumber === 4);
       const procedures = module4?.procedures || [];
       const hasSprinkler = procedures.some((p: any) => p.code === 'P017');
@@ -120,8 +125,8 @@ export class ValidationService {
       }
     }
 
-    // ── RÈGLE V-006 : Ascenseurs sans procédure ───────────────
-    if (config.ascenseurs === true) {
+    // ── RÈGLE V-006 : Ascenseurs sans procédure (PMU seulement) ───────────────
+    if (!isPsi && config.ascenseurs === true) {
       const module4 = modules.find((m: any) => m.moduleNumber === 4);
       const procedures = module4?.procedures || [];
       const hasElevator = procedures.some((p: any) => p.code === 'P012');
@@ -136,7 +141,7 @@ export class ValidationService {
       }
     }
 
-    // ── RÈGLE V-007 : Module 2 vide ───────────────────────────
+    // ── RÈGLE V-007 : Module 2 vide (tous types) ──────────────
     const module2 = modules.find((m: any) => m.moduleNumber === 2);
     const section2_1 = module2?.sections?.find((s: any) => s.id === '2.1')?.entries || [];
     if (section2_1.length === 0) {
@@ -150,8 +155,8 @@ export class ValidationService {
       });
     }
 
-    // ── RÈGLE V-008 : Gaz naturel sans procédure ──────────────
-    if (config.gazNaturel === true) {
+    // ── RÈGLE V-008 : Gaz naturel sans procédure (PMU seulement) ──────────────
+    if (!isPsi && config.gazNaturel === true) {
       const module4 = modules.find((m: any) => m.moduleNumber === 4);
       const procedures = module4?.procedures || [];
       const hasGas = procedures.some((p: any) => p.code === 'P005');
