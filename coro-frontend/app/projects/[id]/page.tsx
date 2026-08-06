@@ -423,6 +423,16 @@ const handleChangeStatus = async (newStatus: string) => {
             </button>
 
             <button
+              onClick={() => router.push(`/projects/${projectId}/procedures`)}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors flex items-center gap-2"
+              style={{ border: '1px solid #D2B4DE', color: '#8E44AD' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F4ECF7'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              ✨ Procédures IA
+            </button>
+
+            <button
               onClick={() => router.push(`/projects/${projectId}/mandate`)}
               className="text-sm font-medium px-4 py-2 rounded transition-colors flex items-center gap-2"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}

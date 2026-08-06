@@ -27,6 +27,7 @@ model Organization {
   feedbacks          Feedback[]
   projectTemplates   ProjectTemplate[]
   auditLogs          AuditLog[]
+  customProcedures CustomProcedure[]
 }
 
 model User {
@@ -64,6 +65,7 @@ model User {
   assignedTasks   ProjectTask[]    @relation("taskAssignee")
   horaireBase    Float    @default(40)
   timelogEntries  TimelogEntry[]
+  customProcedures CustomProcedure[]
 }
 
 enum UserRole {
@@ -157,6 +159,7 @@ model Project {
   comments           ProjectComment[]
 
   projectTaskLists ProjectTaskList[]
+  customProcedures CustomProcedure[]
 }
 
 model RevisionHistory {
@@ -590,4 +593,30 @@ model DangerousSubstance {
 
   @@index([unNumber])
   @@index([nameFR])
+}
+
+model CustomProcedure {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?  // null = disponible pour tous les projets de l'org
+  code           String   // Ex: "CP001"
+  titleFR        String
+  titleEN        String
+  objective      String?
+  color          String   @default("#2C3E50")
+  status         String   @default("DRAFT") // DRAFT | ACTIVE | ARCHIVED
+  content        Json     // Structure complète de la procédure
+  sourceText     String?  // Texte original saisi par l'utilisateur
+  isPublished    Boolean  @default(false) // Disponible pour autres projets
+  rolesDetected  String[] // Rôles détectés par l'IA
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  project        Project?     @relation(fields: [projectId], references: [id])
+  createdBy      User         @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([projectId])
 }
