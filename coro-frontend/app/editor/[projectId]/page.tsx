@@ -104,6 +104,7 @@ export default function EditorPage() {
   const [editingContent, setEditingContent] = useState('');
   const [saving,         setSaving]         = useState(false);
   const [saved,          setSaved]          = useState(false);
+  const [lastSavedAt,    setLastSavedAt]    = useState<Date | null>(null);
   const [isEditing,      setIsEditing]      = useState(false);
   const [validations,    setValidations]    = useState<any[]>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -181,8 +182,9 @@ export default function EditorPage() {
       updatedDoc.content[modulesKey][activeModule].sections[activeSection].content = editingContent;
       setDocument(updatedDoc);
       setSaved(true);
+      setLastSavedAt(new Date());
       setIsEditing(false);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 4000);
     } catch (err) { console.error(err); }
     finally { setSaving(false); }
   };
@@ -450,6 +452,26 @@ export default function EditorPage() {
               </button>
             ))}
           </div>
+
+          {/* Indicateur sauvegarde */}
+          {saving && (
+            <span className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded animate-pulse"
+              style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}>
+              ⏳ Sauvegarde...
+            </span>
+          )}
+          {!saving && saved && (
+            <span className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded"
+              style={{ backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }}>
+              ✓ Sauvegardé
+            </span>
+          )}
+          {!saving && !saved && lastSavedAt && (
+            <span className="text-xs flex items-center gap-1.5"
+              style={{ color: '#ADB5BD' }}>
+              ✓ Sauvegardé à {lastSavedAt.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
 
           <button
             onClick={() => setShowVersionHistory(true)}
