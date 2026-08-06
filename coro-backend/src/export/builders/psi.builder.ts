@@ -11,7 +11,7 @@ import { renderModule7 } from '../templates/modules/module7.template';
 
 // Codes de procédures autorisées dans un PSI
 // Seulement la procédure de base découverte de fumée ou flamme
-const PSI_ALLOWED_PROCEDURES = ['P001'];
+const PSI_ALLOWED_PROCEDURES = ['P001', 'P002'];
 
 // Sections du Module 1 désactivées dans un PSI
 const PSI_DISABLED_SECTIONS_M1 = ['1.3', '1.4'];

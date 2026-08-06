@@ -171,7 +171,7 @@ private async loadProceduresFromDB(
     );
 
     // Pour PSI : seulement P001 (découverte fumée/flamme)
-    const psiProcedureIds = isPsi ? ['P001'] : customProcedureIds;
+    const psiProcedureIds = isPsi ? ['P001', 'P002'] : customProcedureIds;
     const psiActiveRoles = isPsi ? ['ROLE-AS'] : activeRoleCodes;
     const psiProceduresFromDB = isPsi
       ? proceduresFromDB.filter((p: any) => p.code === 'P001')

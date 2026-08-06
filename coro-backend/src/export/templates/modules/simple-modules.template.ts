@@ -157,7 +157,7 @@ export function renderModule2Section(section: any, idx: number, lang: 'fr' | 'en
 // ============================================================
 
 export function renderModule8(module8Data: any, lang: 'fr' | 'en', moduleSeqNumber: number = 8): { id: string; title: string; html: string }[] {
-  if (!module8Data) return [];
+  if (!module8Data) module8Data = {};
   const isFr = lang === 'fr';
 
   const titles: Record<string, string> = isFr ? {
@@ -538,7 +538,7 @@ function renderLithiumAnnexe(data: any, isFr: boolean, sectionHeader: (id: strin
 
   return `
     <div>
-      ${sectionHeader(baseNum)}
+      ${sectionHeader('8.10')}
 
       ${subHeading(`${baseNum}.1 — ${t.s1}`)}
       ${checkItem(data.bornesFontaines, isFr ? 'Bornes-fontaines publiques' : 'Public fire hydrants')}
