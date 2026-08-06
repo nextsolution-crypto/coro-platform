@@ -31,6 +31,7 @@ import { TaskTemplatesModule } from './task-templates/task-templates.module';
 import { TaskListsModule } from './task-lists/task-lists.module';
 import { TimelogModule } from './timelog/timelog.module';
 import { GuideModule } from './guide/guide.module';
+import { DangerousSubstancesModule } from './dangerous-substances/dangerous-substances.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -66,6 +67,7 @@ import { APP_GUARD } from '@nestjs/core';
   TaskListsModule,
   TimelogModule,
   GuideModule,
+  DangerousSubstancesModule,
   ThrottlerModule.forRoot([{
       name: 'short',
       ttl: 60000,    // 1 minute

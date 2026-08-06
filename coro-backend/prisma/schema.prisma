@@ -571,3 +571,23 @@ model TimelogCategory {
 
   @@unique([key, organizationId])
 }
+
+model DangerousSubstance {
+  id            String   @id @default(cuid())
+  unNumber      String   // Ex: "1202"
+  nameFR        String   // Ex: "Diesel"
+  nameEN        String   // Ex: "Diesel fuel"
+  casNumber     String?  // Ex: "68334-30-5"
+  tmdClass      String   // Ex: "3"
+  tmdClassLabel String   // Ex: "Liquides inflammables"
+  packingGroup  String?  // Ex: "III"
+  simdutClass   String?  // Ex: "B3"
+  simdutLabel   String?  // Ex: "Liquide combustible"
+  placardCode   String   // Ex: "3" (pour le placard SVG)
+  keywords      String[] // Ex: ["diesel", "carburant", "mazout"]
+  isCommon      Boolean  @default(false) // substances fréquentes en industrie QC
+  createdAt     DateTime @default(now())
+
+  @@index([unNumber])
+  @@index([nameFR])
+}

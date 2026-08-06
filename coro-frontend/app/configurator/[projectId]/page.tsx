@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import MapPicker from '@/components/MapPicker';
+import DangerousSubstanceSearch from '@/components/configurator/DangerousSubstanceSearch';
 
 interface SchemaField {
   key: string;
@@ -103,10 +104,12 @@ function DynamicListEditor({ field, items, onChange }: {
     else if (expandedIdx !== null && expandedIdx > idx) setExpandedIdx(expandedIdx - 1);
   };
 
-  const getSummary = (item: any) =>
-    schema.filter(sf => item[sf.key] && item[sf.key] !== '' && item[sf.key] !== false && item[sf.key] !== 0)
+  const getSummary = (item: any) => {
+    const base = schema.filter(sf => item[sf.key] && item[sf.key] !== '' && item[sf.key] !== false && item[sf.key] !== 0)
       .map(sf => sf.type === 'boolean' ? (item[sf.key] ? sf.label : null) : item[sf.key])
       .filter(Boolean).join(' — ');
+    return base;
+  };
 
   const inputCls = "w-full rounded px-3 py-2 text-sm focus:outline-none";
   const inputSty = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
@@ -123,9 +126,24 @@ function DynamicListEditor({ field, items, onChange }: {
                 style={{ backgroundColor: '#C0392B' }}>
                 {idx + 1}
               </span>
-              <span className="text-sm truncate max-w-xs" style={{ color: '#495057' }}>
-                {getSummary(item) || 'Nouveau — cliquer pour modifier'}
-              </span>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {item._placardCode && (
+                  <div className="flex-shrink-0 w-7 h-7 rounded flex items-center justify-center font-black text-xs text-white"
+                    style={{
+                      backgroundColor: item._placardCode === '3' ? '#FF0000' : item._placardCode === '8' ? '#000000' : item._placardCode === '2_1' ? '#FF0000' : item._placardCode === '2_2' ? '#00AA00' : item._placardCode === '2_3' ? '#FFFFFF' : item._placardCode === '6_1' ? '#FFFFFF' : item._placardCode === '5_1' ? '#FFD700' : item._placardCode === '9' ? '#FFFFFF' : '#6C757D',
+                      color: ['2_2', '5_1'].includes(item._placardCode) ? '#000000' : '#FFFFFF',
+                      transform: 'rotate(45deg)',
+                      border: '1px solid rgba(0,0,0,0.2)',
+                    }}>
+                    <span style={{ transform: 'rotate(-45deg)', fontSize: '9px' }}>
+                      {item._tmdClass?.split('.')?.[0] || ''}
+                    </span>
+                  </div>
+                )}
+                <span className="text-sm truncate" style={{ color: '#495057' }}>
+                  {getSummary(item) || 'Nouveau — cliquer pour modifier'}
+                </span>
+              </div>
             </div>
             <div className="flex gap-3 flex-shrink-0">
               <button onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
@@ -970,11 +988,40 @@ export default function ConfiguratorPage() {
                     )}
 
                     {field.type === 'dynamic_list' && (
-                      <DynamicListEditor
-                        field={field}
-                        items={lists[field.key] || []}
-                        onChange={items => updateList(field.key, items)}
-                      />
+                      <div className="space-y-3">
+                        {/* Recherche REPTOX pour matières dangereuses */}
+                        {field.key === 'matieresList' && (
+                          <div>
+                            <p className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
+                              🔍 Recherche rapide — Base CORO + REPTOX (CNESST)
+                            </p>
+                            <DangerousSubstanceSearch
+                              onSelect={substance => {
+                                const newItem = {
+                                  nom: substance.nameFR,
+                                  numeroUN: `UN${substance.unNumber}`,
+                                  quantiteEmplacement: '',
+                                  tmd: true,
+                                  simdut: !!substance.simdutClass,
+                                  _tmdClass: substance.tmdClass,
+                                  _tmdClassLabel: substance.tmdClassLabel,
+                                  _simdutClass: substance.simdutClass || '',
+                                  _placardCode: substance.placardCode,
+                                };
+                                updateList(field.key, [...(lists[field.key] || []), newItem]);
+                              }}
+                            />
+                            <p className="text-xs mt-1.5" style={{ color: '#ADB5BD' }}>
+                              Tapez le nom (ex: Diesel) ou le numéro UN (ex: 1202) — ou ajoutez manuellement ci-dessous
+                            </p>
+                          </div>
+                        )}
+                        <DynamicListEditor
+                          field={field}
+                          items={lists[field.key] || []}
+                          onChange={items => updateList(field.key, items)}
+                        />
+                      </div>
                     )}
 
                     {field.type === 'schedule_grid' && (
