@@ -88,6 +88,16 @@ export default function BuildingsPage() {
     finally { setLoading(false); }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/buildings/${id}`);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la suppression.');
+    }
+  };
+
   const handleAddressPaste = (value: string) => {
     setAddressPaste(value);
     const parsed = parsePastedAddress(value);
@@ -169,18 +179,36 @@ export default function BuildingsPage() {
       ) : buildings.length === 0 ? (
         <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
+          <p className="text-5xl mb-4">🏗</p>
+          <p className="font-semibold mb-2" style={{ color: '#2C3E50' }}>
             Aucun bâtiment pour l'instant
           </p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="text-white text-sm font-medium px-4 py-2 rounded"
-            style={{ backgroundColor: '#C0392B' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
-          >
-            Créer le premier bâtiment
-          </button>
+          <p className="text-sm mb-6" style={{ color: '#ADB5BD' }}>
+            {clients.length === 0
+              ? 'Vous devez d\'abord créer un client avant d\'ajouter un bâtiment.'
+              : 'Ajoutez un bâtiment pour pouvoir créer des projets de documents d\'urgence.'}
+          </p>
+          {clients.length === 0 ? (
+            <button
+              onClick={() => router.push('/clients')}
+              className="text-white text-sm font-medium px-6 py-2.5 rounded"
+              style={{ backgroundColor: '#2980B9' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#2471A3')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#2980B9')}
+            >
+              → Créer un client d'abord
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowModal(true)}
+              className="text-white text-sm font-medium px-6 py-2.5 rounded"
+              style={{ backgroundColor: '#C0392B' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+            >
+              + Créer le premier bâtiment
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -242,11 +270,23 @@ export default function BuildingsPage() {
                   </span>
                 </div>
               </div>
-              <div className="text-center ml-4">
-                <p className="font-bold text-lg" style={{ color: '#2980B9' }}>
-                  {building._count?.projects || 0}
-                </p>
-                <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <p className="font-bold text-lg" style={{ color: '#2980B9' }}>
+                    {building._count?.projects || 0}
+                  </p>
+                  <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); if (confirm(`Supprimer le bâtiment "${building.name}" ?`)) handleDelete(building.id); }}
+                  className="p-2 rounded transition-colors"
+                  style={{ color: '#ADB5BD' }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#FDEDEC'; e.currentTarget.style.color = '#C0392B'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#ADB5BD'; }}
+                  title="Supprimer le bâtiment"
+                >
+                  🗑
+                </button>
               </div>
             </div>
           ))}

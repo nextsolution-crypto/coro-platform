@@ -40,6 +40,16 @@ export default function ClientsPage() {
     finally { setLoading(false); }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/clients/${id}`);
+      fetchClients();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la suppression.');
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -88,17 +98,21 @@ export default function ClientsPage() {
       ) : clients.length === 0 ? (
         <div className="rounded-md p-12 text-center"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <p className="text-sm mb-4" style={{ color: '#ADB5BD' }}>
+          <p className="text-5xl mb-4">👥</p>
+          <p className="font-semibold mb-2" style={{ color: '#2C3E50' }}>
             Aucun client pour l'instant
+          </p>
+          <p className="text-sm mb-6" style={{ color: '#ADB5BD' }}>
+            Commencez par ajouter votre premier client — il sera associé à vos bâtiments et projets.
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="text-white text-sm font-medium px-4 py-2 rounded"
+            className="text-white text-sm font-medium px-6 py-2.5 rounded"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
           >
-            Créer le premier client
+            + Créer le premier client
           </button>
         </div>
       ) : (
@@ -122,7 +136,7 @@ export default function ClientsPage() {
                 e.currentTarget.style.borderColor = '#E9ECEF';
               }}
             >
-              <div>
+              <div className="flex-1">
                 <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
                   {client.name}
                 </h3>
@@ -139,19 +153,29 @@ export default function ClientsPage() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-6 text-center">
-                <div>
+              <div className="flex items-center gap-6">
+                <div className="text-center">
                   <p className="font-bold" style={{ color: '#C0392B' }}>
                     {client._count?.buildings || 0}
                   </p>
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Bâtiments</p>
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="font-bold" style={{ color: '#2980B9' }}>
                     {client._count?.projects || 0}
                   </p>
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Projets</p>
                 </div>
+                <button
+                  onClick={e => { e.stopPropagation(); if (confirm(`Supprimer le client "${client.name}" ?`)) handleDelete(client.id); }}
+                  className="p-2 rounded transition-colors"
+                  style={{ color: '#ADB5BD' }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#FDEDEC'; e.currentTarget.style.color = '#C0392B'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#ADB5BD'; }}
+                  title="Supprimer le client"
+                >
+                  🗑
+                </button>
               </div>
             </div>
           ))}
