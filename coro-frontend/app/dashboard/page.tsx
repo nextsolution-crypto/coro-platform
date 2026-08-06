@@ -58,10 +58,8 @@ export default function DashboardPage() {
       setProjets(allProjets);
       setUpdates(updatesRes.data || []);
       setPendingApprovals(approvalsRes.data || []);
-
       setRecurringToRenew(recurringRes.data || []);
 
-      // Utiliser le nouvel endpoint pour les activités à venir
       const upcomingFromApi = (upcomingRes.data || []).map((a: any) => ({
         ...a,
         projectName: a.project?.name || '—',
@@ -69,7 +67,6 @@ export default function DashboardPage() {
         projectId: a.projectId,
       }));
       setUpcomingActivities(upcomingFromApi.slice(0, 10));
-
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -77,8 +74,8 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const projetsActifs = projets.filter(p => ['DRAFT', 'IN_PROGRESS'].includes(p.status)).length;
-  const enRevision = projets.filter(p => p.status === 'REVIEW').length;
-  const valides = projets.filter(p => p.status === 'VALIDATED').length;
+  const enRevision    = projets.filter(p => p.status === 'REVIEW').length;
+  const valides       = projets.filter(p => p.status === 'VALIDATED').length;
   const projetsRecents = [...projets]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
@@ -87,17 +84,23 @@ export default function DashboardPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
 
+  // ── Compteur d'actions requises ──
+  const actionsRequises = pendingApprovals.length
+    + updates.filter(u => u.level === 'URGENT').length
+    + recurringToRenew.length
+    + lateTasks.length;
+
   const kpis = [
-    { label: 'Projets actifs',     value: projetsActifs,               color: '#C0392B', bg: '#FDEDEC' },
-    { label: 'En révision',        value: enRevision,                  color: '#F39C12', bg: '#FEF9E7' },
-    { label: 'Validés',            value: valides,                     color: '#27AE60', bg: '#EAFAF1' },
-    { label: 'Mises à jour dues',  value: updates.filter(u => u.level === 'URGENT').length, color: '#8E44AD', bg: '#F4ECF7' },
+    { label: 'Projets actifs',    value: projetsActifs, color: '#C0392B', bg: '#FDEDEC', path: '/projects' },
+    { label: 'En révision',       value: enRevision,    color: '#F39C12', bg: '#FEF9E7', path: '/projects' },
+    { label: 'Validés',           value: valides,       color: '#27AE60', bg: '#EAFAF1', path: '/projects' },
+    { label: 'Mises à jour dues', value: updates.filter(u => u.level === 'URGENT').length, color: '#8E44AD', bg: '#F4ECF7', path: '/buildings/compliance' },
   ];
 
   return (
     <AppLayout>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      {/* ── En-tête ── */}
+      <div className="flex items-start justify-between mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
             {today}
@@ -109,7 +112,6 @@ export default function DashboardPage() {
             {upcomingActivities.length > 0
               ? `${upcomingActivities.length} activité${upcomingActivities.length > 1 ? 's' : ''} prévue${upcomingActivities.length > 1 ? 's' : ''} dans les 30 prochains jours`
               : 'Aucune activité prévue dans les 30 prochains jours'}
-            {lateTasks.length > 0 && ` · ${lateTasks.length} tâche${lateTasks.length > 1 ? 's' : ''} en retard`}
           </p>
         </div>
         <button onClick={() => router.push('/projects')}
@@ -121,11 +123,15 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      {/* ── KPIs ── */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
         {kpis.map(kpi => (
-          <div key={kpi.label} className="rounded-md p-5"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <div key={kpi.label}
+            onClick={() => router.push(kpi.path)}
+            className="rounded-md p-5 cursor-pointer transition-all"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = '#CED4DA'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#E9ECEF'; }}>
             <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>{kpi.label}</p>
             <p className="text-3xl font-black" style={{ color: kpi.color }}>
               {loading ? '…' : kpi.value}
@@ -134,82 +140,132 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Activités récurrentes à renouveler */}
-      {recurringToRenew.length > 0 && (
-        <div className="rounded-md p-5 mb-6"
-          style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <span style={{ fontSize: '16px' }}>🔄</span>
-            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-              Activités récurrentes à renouveler
-            </h3>
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
-              {recurringToRenew.length} activité{recurringToRenew.length > 1 ? 's' : ''}
+      {/* ════════════════════════════════════════════════════
+          ZONE 1 — ACTIONS REQUISES MAINTENANT
+      ════════════════════════════════════════════════════ */}
+      {actionsRequises > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#C0392B' }} />
+              <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: '#2C3E50' }}>
+                Actions requises
+              </h3>
+            </div>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+              style={{ backgroundColor: '#C0392B' }}>
+              {actionsRequises}
             </span>
           </div>
-          <div className="space-y-2">
-            {recurringToRenew.map(a => (
-              <div key={a.id}
-                onClick={() => router.push(`/projects/${a.projectId}/activities`)}
-                className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FFFBF0'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
-                <div className="flex items-center gap-3">
-                  <span style={{ fontSize: '16px' }}>↺</span>
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{a.label}</p>
-                    <p className="text-xs" style={{ color: '#6C757D' }}>
-                      {a.clientName} — {a.buildingName}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold" style={{ color: '#F39C12' }}>
-                    {a.monthsAgo} mois
-                  </p>
-                  <p className="text-xs" style={{ color: '#6C757D' }}>Dernière occurrence</p>
+
+          <div className="space-y-3">
+            {/* Approbations en attente */}
+            {pendingApprovals.length > 0 && (
+              <div className="rounded-md p-4"
+                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#C0392B' }}>
+                  ✓ {pendingApprovals.length} document{pendingApprovals.length > 1 ? 's' : ''} en attente d'approbation
+                </p>
+                <div className="space-y-2">
+                  {pendingApprovals.map(p => (
+                    <div key={p.id}
+                      onClick={() => router.push(`/projects/${p.id}`)}
+                      className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                      style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
+                          style={{ backgroundColor: '#C0392B' }}>{p.documentType}</span>
+                        <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>{p.name}</span>
+                        <span className="text-xs" style={{ color: '#6C757D' }}>— {p.client?.name}</span>
+                      </div>
+                      <span className="text-xs font-medium" style={{ color: '#C0392B' }}>Réviser →</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Documents à renouveler URGENT */}
+            {updates.filter(u => u.level === 'URGENT').length > 0 && (
+              <div className="rounded-md p-4"
+                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#C0392B' }}>
+                  🔔 {updates.filter(u => u.level === 'URGENT').length} document{updates.filter(u => u.level === 'URGENT').length > 1 ? 's' : ''} à renouveler de toute urgence
+                </p>
+                <div className="space-y-2">
+                  {updates.filter(u => u.level === 'URGENT').map(u => (
+                    <div key={u.id}
+                      onClick={() => router.push(`/projects/${u.id}`)}
+                      className="flex items-center justify-between p-3 rounded cursor-pointer"
+                      style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
+                          style={{ backgroundColor: '#C0392B' }}>{u.documentType}</span>
+                        <div>
+                          <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{u.name}</p>
+                          <p className="text-xs" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold flex-shrink-0" style={{ color: '#C0392B' }}>
+                        {u.monthsAgo} mois ⚠
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Activités récurrentes à renouveler */}
+            {recurringToRenew.length > 0 && (
+              <div className="rounded-md p-4"
+                style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#F39C12' }}>
+                  🔄 {recurringToRenew.length} activité{recurringToRenew.length > 1 ? 's' : ''} récurrente{recurringToRenew.length > 1 ? 's' : ''} à renouveler
+                </p>
+                <div className="space-y-2">
+                  {recurringToRenew.map(a => (
+                    <div key={a.id}
+                      onClick={() => router.push(`/projects/${a.projectId}/activities`)}
+                      className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                      style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FFFBF0'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{a.label}</p>
+                        <p className="text-xs" style={{ color: '#6C757D' }}>{a.clientName} — {a.buildingName}</p>
+                      </div>
+                      <p className="text-sm font-bold flex-shrink-0" style={{ color: '#F39C12' }}>
+                        {a.monthsAgo} mois
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs mt-3" style={{ color: '#ADB5BD' }}>
+                  💡 Allez dans Activités du projet → "Dupliquer pour l'an prochain"
+                </p>
+              </div>
+            )}
           </div>
-          <p className="text-xs mt-3" style={{ color: '#ADB5BD' }}>
-            💡 Allez dans la page Activités du projet et cliquez "Dupliquer pour l'an prochain"
-          </p>
         </div>
       )}
 
-      {/* Approbations en attente */}
-      {pendingApprovals.length > 0 && (
-        <div className="rounded-md p-5 mb-6"
-          style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
-          <p className="text-sm font-bold mb-3" style={{ color: '#C0392B' }}>
-            ✓ {pendingApprovals.length} document{pendingApprovals.length > 1 ? 's' : ''} en attente d'approbation
-          </p>
-          <div className="space-y-2">
-            {pendingApprovals.map(p => (
-              <div key={p.id}
-                onClick={() => router.push(`/projects/${p.id}`)}
-                className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                    style={{ backgroundColor: '#C0392B' }}>{p.documentType}</span>
-                  <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>{p.name}</span>
-                  <span className="text-xs" style={{ color: '#6C757D' }}>— {p.client?.name}</span>
-                </div>
-                <span className="text-xs font-medium" style={{ color: '#C0392B' }}>Réviser →</span>
-              </div>
-            ))}
-          </div>
+      {/* ════════════════════════════════════════════════════
+          ZONE 2 — VUE D'ENSEMBLE
+      ════════════════════════════════════════════════════ */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ADB5BD' }} />
+          <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: '#2C3E50' }}>
+            Vue d'ensemble
+          </h3>
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-3 gap-6 mb-6">
-
         {/* Activités à venir */}
         <div className="col-span-2 rounded-md"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
@@ -226,11 +282,11 @@ export default function DashboardPage() {
               Tout voir →
             </button>
           </div>
-
           {loading ? (
             <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
           ) : upcomingActivities.length === 0 ? (
             <div className="text-center py-10">
+              <p className="text-2xl mb-2">📅</p>
               <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune activité prévue dans les 30 prochains jours</p>
             </div>
           ) : (
@@ -269,13 +325,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Tâches en retard */}
+        {/* Tâches */}
         <div className="rounded-md"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <div className="px-5 py-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
-            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-              ⚠️ Mes tâches
-            </h3>
+            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>⚠️ Mes tâches</h3>
           </div>
           {loading ? (
             <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
@@ -286,78 +340,63 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div>
-              {lateTasks.map((task, idx) => {
-                const daysLate = Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-                return (
-                  <div key={task.id}
-                    onClick={() => router.push(`/projects/${task.projectId}/mandate`)}
-                    className="px-5 py-3 cursor-pointer transition-colors"
-                    style={{ borderBottom: idx < lateTasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{task.clientName}</p>
-                    <div className="flex gap-2 mt-1">
-                      {task.isAssignedToMe && (
-                        <span className="text-xs font-medium" style={{ color: '#2980B9' }}>
-                          👤 Assigné à moi
-                        </span>
-                      )}
-                      {task.isLate && (
-                        <span className="text-xs font-bold" style={{ color: '#C0392B' }}>
-                          {Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24))}j de retard
-                        </span>
-                      )}
-                    </div>
+              {lateTasks.map((task, idx) => (
+                <div key={task.id}
+                  onClick={() => router.push(`/projects/${task.projectId}/mandate`)}
+                  className="px-5 py-3 cursor-pointer transition-colors"
+                  style={{ borderBottom: idx < lateTasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{task.clientName}</p>
+                  <div className="flex gap-2 mt-1">
+                    {task.isAssignedToMe && (
+                      <span className="text-xs font-medium" style={{ color: '#2980B9' }}>👤 Assigné à moi</span>
+                    )}
+                    {task.isLate && (
+                      <span className="text-xs font-bold" style={{ color: '#C0392B' }}>
+                        {Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24))}j de retard
+                      </span>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Mises à jour à venir */}
-      {updates.length > 0 && (
+      {/* Documents à renouveler — AVERTISSEMENT seulement */}
+      {updates.filter(u => u.level === 'AVERTISSEMENT').length > 0 && (
         <div className="rounded-md p-5 mb-6"
-          style={{ backgroundColor: '#FFFFFF', border: `1px solid ${updates.some(u => u.level === 'URGENT') ? '#F1948A' : '#FAD7A0'}` }}>
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}>
           <div className="flex items-center gap-2 mb-4">
             <span style={{ fontSize: '16px' }}>🔔</span>
-            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Documents à renouveler</h3>
+            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Documents bientôt à renouveler</h3>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{
-                backgroundColor: updates.some(u => u.level === 'URGENT') ? '#FDEDEC' : '#FEF9E7',
-                color: updates.some(u => u.level === 'URGENT') ? '#C0392B' : '#F39C12',
-              }}>
-              {updates.length} document{updates.length > 1 ? 's' : ''}
+              style={{ backgroundColor: '#FEF9E7', color: '#F39C12' }}>
+              {updates.filter(u => u.level === 'AVERTISSEMENT').length} document{updates.filter(u => u.level === 'AVERTISSEMENT').length > 1 ? 's' : ''}
             </span>
           </div>
           <div className="space-y-2">
-            {updates.map(u => (
+            {updates.filter(u => u.level === 'AVERTISSEMENT').map(u => (
               <div key={u.id}
                 onClick={() => router.push(`/projects/${u.id}`)}
                 className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
-                style={{ backgroundColor: u.level === 'URGENT' ? '#FDEDEC' : '#FEF9E7', border: `1px solid ${u.level === 'URGENT' ? '#F1948A' : '#FAD7A0'}` }}
+                style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                    style={{ backgroundColor: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
-                    {u.documentType}
-                  </span>
+                    style={{ backgroundColor: '#F39C12' }}>{u.documentType}</span>
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{u.name}</p>
                     <p className="text-xs" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold" style={{ color: u.level === 'URGENT' ? '#C0392B' : '#F39C12' }}>
-                    {u.monthsAgo} mois
-                  </p>
-                  <p className="text-xs" style={{ color: '#6C757D' }}>
-                    {u.level === 'URGENT' ? '⚠ À renouveler' : '○ Bientôt dû'}
-                  </p>
-                </div>
+                <p className="text-sm font-bold flex-shrink-0" style={{ color: '#F39C12' }}>
+                  {u.monthsAgo} mois ○
+                </p>
               </div>
             ))}
           </div>
