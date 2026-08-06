@@ -31,6 +31,8 @@ import { TaskTemplatesModule } from './task-templates/task-templates.module';
 import { TaskListsModule } from './task-lists/task-lists.module';
 import { TimelogModule } from './timelog/timelog.module';
 import { GuideModule } from './guide/guide.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -64,8 +66,23 @@ import { GuideModule } from './guide/guide.module';
   TaskListsModule,
   TimelogModule,
   GuideModule,
+  ThrottlerModule.forRoot([{
+      name: 'short',
+      ttl: 60000,    // 1 minute
+      limit: 120,    // max 120 requêtes par minute par IP
+    }, {
+      name: 'long',
+      ttl: 3600000,  // 1 heure
+      limit: 2000,   // max 2000 requêtes par heure par IP
+    }]),
 ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
