@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProjectsService } from './projects.service';
 import { AuditService } from '../audit/audit.service';
@@ -14,6 +14,11 @@ export class ProjectsController {
   @Get()
   findAll(@Request() req: any) {
     return this.projectsService.findAll(req.user.organizationId);
+  }
+
+  @Get('search')
+  globalSearch(@Query('q') q: string, @Request() req: any) {
+    return this.projectsService.globalSearch(q || '', req.user.organizationId);
   }
 
   @Get('upcoming-updates')

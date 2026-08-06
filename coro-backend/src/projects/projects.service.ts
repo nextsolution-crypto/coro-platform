@@ -342,4 +342,58 @@ export class ProjectsService {
       data: { status: 'IN_PROGRESS', submittedById: null },
     });
   }
+  async globalSearch(query: string, organizationId: string) {
+    const q = query.trim().toLowerCase();
+    if (!q || q.length < 2) return { projects: [], clients: [], buildings: [] };
+
+    const [projects, clients, buildings] = await Promise.all([
+      this.prisma.project.findMany({
+        where: {
+          isActive: true,
+          organizationId,
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { client: { name: { contains: q, mode: 'insensitive' } } },
+            { building: { name: { contains: q, mode: 'insensitive' } } },
+            { building: { address: { contains: q, mode: 'insensitive' } } },
+          ],
+        },
+        include: {
+          client: { select: { id: true, name: true } },
+          building: { select: { id: true, name: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
+      this.prisma.client.findMany({
+        where: {
+          isActive: true,
+          organizationId,
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { city: { contains: q, mode: 'insensitive' } },
+            { email: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: 4,
+      }),
+      this.prisma.building.findMany({
+        where: {
+          isActive: true,
+          organizationId,
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { address: { contains: q, mode: 'insensitive' } },
+            { city: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        include: {
+          client: { select: { name: true } },
+        },
+        take: 4,
+      }),
+    ]);
+
+    return { projects, clients, buildings };
+  }
 }
