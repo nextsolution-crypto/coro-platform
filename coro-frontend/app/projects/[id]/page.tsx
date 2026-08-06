@@ -117,6 +117,9 @@ export default function ProjectDetailPage() {
   const [showApprovalModal, setShowApprovalModal] = useState<'approve' | 'reject' | 'request-revision' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
   const [processingApproval, setProcessingApproval] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -237,6 +240,19 @@ const handleChangeStatus = async (newStatus: string) => {
       console.error(err);
     } finally {
       setProcessingApproval(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/projects/${projectId}`);
+      router.push('/projects');
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la suppression.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -425,6 +441,14 @@ const handleChangeStatus = async (newStatus: string) => {
                 Archiver
               </button>
             )}
+
+            <button onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors"
+              style={{ border: '1px solid #F1948A', color: '#C0392B' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              🗑 Supprimer
+            </button>
           </div>
         )}
       </div>
@@ -493,6 +517,120 @@ const handleChangeStatus = async (newStatus: string) => {
           </p>
         </div>
       )}
+
+      {/* Bannière contextuelle guidante */}
+      {!justGenerated && !templateSaved &&
+        project.status !== 'REVIEW' &&
+        project.status !== 'VALIDATED' &&
+        project.status !== 'ARCHIVED' && (() => {
+          // Étape 1 — Pas encore configuré
+          if (project.progress === 0) return (
+            <div className="rounded-md p-4 mb-6 flex items-center justify-between gap-3"
+              style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: '20px' }}>👋</span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#2980B9' }}>
+                    Première étape — Configurer le bâtiment
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                    Renseignez les informations du bâtiment pour que CORO génère automatiquement votre document.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push(`/configurator/${project.id}`)}
+                className="text-sm font-medium px-4 py-2 rounded flex-shrink-0 text-white"
+                style={{ backgroundColor: '#2980B9' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2471A3'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2980B9'}
+              >
+                Configurer →
+              </button>
+            </div>
+          );
+          // Étape 2 — Configuré mais pas de document
+          if (project.progress >= 25 && !hasDocument) return (
+            <div className="rounded-md p-4 mb-6 flex items-center justify-between gap-3"
+              style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: '20px' }}>⚡</span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#2980B9' }}>
+                    Configuration complète — Générez votre document
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                    CORO va créer automatiquement la structure complète de votre {project.documentType} en quelques secondes.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="text-sm font-medium px-4 py-2 rounded flex-shrink-0 text-white disabled:opacity-50"
+                style={{ backgroundColor: '#2980B9' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2471A3'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2980B9'}
+              >
+                {generating ? '⏳ Génération...' : 'Générer →'}
+              </button>
+            </div>
+          );
+          // Étape 3 — Document généré, score < 60
+          if (hasDocument && qualityScore && qualityScore.score < 60) return (
+            <div className="rounded-md p-4 mb-6 flex items-center justify-between gap-3"
+              style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: '20px' }}>📝</span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#F39C12' }}>
+                    Document généré — Complétez l'éditeur
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                    Ajoutez les contacts téléphoniques, complétez l'organigramme et téléversez les plans pour atteindre un score de qualité optimal.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push(`/editor/${project.id}`)}
+                className="text-sm font-medium px-4 py-2 rounded flex-shrink-0 text-white"
+                style={{ backgroundColor: '#F39C12' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D68910'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F39C12'}
+              >
+                Ouvrir l'éditeur →
+              </button>
+            </div>
+          );
+          // Étape 4 — Score ≥ 60, prêt pour approbation
+          if (hasDocument && qualityScore && qualityScore.score >= 60 && project.status === 'IN_PROGRESS') return (
+            <div className="rounded-md p-4 mb-6 flex items-center justify-between gap-3"
+              style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}>
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: '20px' }}>🎯</span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#27AE60' }}>
+                    Document prêt — Soumettez pour approbation
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                    Score de qualité {qualityScore.score}/100. Faites réviser le document par un collègue avant l'export final.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleApproval('submit')}
+                className="text-sm font-medium px-4 py-2 rounded flex-shrink-0 text-white"
+                style={{ backgroundColor: '#27AE60' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}
+              >
+                Soumettre →
+              </button>
+            </div>
+          );
+          return null;
+        })()
+      }
 
       {/* Progression */}
       <div className="rounded-md p-6 mb-6"
@@ -973,6 +1111,56 @@ const handleChangeStatus = async (newStatus: string) => {
             >
               {exportingGuide ? 'Génération en cours...' : 'Annuler'}
             </button>
+          </div>
+        </div>
+      )}
+      {/* Modal suppression */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-md p-8"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <h3 className="font-semibold text-lg" style={{ color: '#C0392B' }}>
+                Supprimer le projet
+              </h3>
+            </div>
+            <p className="text-sm mb-2" style={{ color: '#2C3E50' }}>
+              Cette action est <strong>irréversible</strong>. Le projet, son document et toutes ses données associées seront supprimés définitivement.
+            </p>
+            <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
+              Pour confirmer, tapez le nom du projet :
+              <span className="font-bold" style={{ color: '#2C3E50' }}> {project.name}</span>
+            </p>
+            <div className="mb-6">
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder={project.name}
+                className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                style={{ border: '1px solid #F1948A', color: '#2C3E50' }}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
+                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirmText !== project.name}
+                className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
+                style={{ backgroundColor: '#C0392B' }}>
+                {deleting ? 'Suppression...' : '🗑 Supprimer définitivement'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -82,6 +82,9 @@ export default function ProjectsPage() {
 
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting]   = useState(false);
 
   const documentTypes = ['PSI', 'PMU', 'PCA', 'PGC', 'PRA', 'PUE'];
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -163,6 +166,38 @@ export default function ProjectsPage() {
     } catch (err) { console.error(err); }
   };
 
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => api.delete(`/projects/${id}`)));
+      setSelectedIds(new Set());
+      setShowBulkDelete(false);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la suppression.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === visibleProjects.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visibleProjects.map(p => p.id)));
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -185,16 +220,29 @@ export default function ProjectsPage() {
             {visibleProjects.length} / {maxProjects === null ? 'illimité' : maxProjects} projet{visibleProjects.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          disabled={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects}
-          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: '#C0392B' }}
-          onMouseEnter={e => { if (!(maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
-        >
-          + Nouveau projet
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setShowBulkDelete(true)}
+              className="text-sm font-medium px-4 py-2 rounded transition-colors flex items-center gap-2"
+              style={{ border: '1px solid #F1948A', color: '#C0392B', backgroundColor: '#FDEDEC' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F1948A22'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+            >
+              🗑 Supprimer ({selectedIds.size})
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects}
+            className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => { if (!(maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects)) e.currentTarget.style.backgroundColor = '#A93226'; }}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+          >
+            + Nouveau projet
+          </button>
+        </div>
       </div>
 
       {maxProjects !== null && projects.filter(p => p.status !== 'ARCHIVED').length >= maxProjects && (
@@ -263,6 +311,32 @@ export default function ProjectsPage() {
           </button>
         ))}
       </div>
+
+      {/* Barre de sélection */}
+      {visibleProjects.length > 0 && (
+        <div className="flex items-center gap-3 mb-3">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded transition-colors"
+            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <input
+              type="checkbox"
+              readOnly
+              checked={selectedIds.size === visibleProjects.length && visibleProjects.length > 0}
+              style={{ accentColor: '#C0392B', width: '14px', height: '14px' }}
+            />
+            {selectedIds.size === visibleProjects.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+          </button>
+          {selectedIds.size > 0 && (
+            <span className="text-xs" style={{ color: '#6C757D' }}>
+              {selectedIds.size} projet{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Liste projets */}
       {loading ? (
@@ -350,21 +424,32 @@ export default function ProjectsPage() {
 
             return (
               <div key={project.id}
-                onClick={() => router.push(`/projects/${project.id}`)}
-                className="rounded-md p-5 cursor-pointer transition-all"
+                onClick={() => selectedIds.size > 0 ? toggleSelect(project.id, { stopPropagation: () => {} } as any) : router.push(`/projects/${project.id}`)}
+                className="rounded-md p-5 cursor-pointer transition-all flex gap-3"
                 style={{
-                  backgroundColor: '#FFFFFF',
-                  border: `1px solid ${wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF'}`,
+                  backgroundColor: selectedIds.has(project.id) ? '#FDEDEC' : '#FFFFFF',
+                  border: `1px solid ${selectedIds.has(project.id) ? '#F1948A' : wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF'}`,
                   boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  e.currentTarget.style.borderColor = '#CED4DA';
+                  if (!selectedIds.has(project.id)) e.currentTarget.style.borderColor = '#CED4DA';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                  e.currentTarget.style.borderColor = wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF';
+                  e.currentTarget.style.borderColor = selectedIds.has(project.id) ? '#F1948A' : wasRecentlyEdited && !isMyProject ? '#AED6F1' : '#E9ECEF';
                 }}>
+                {/* Checkbox */}
+                <div className="flex-shrink-0 pt-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(project.id)}
+                    onChange={() => {}}
+                    onClick={e => toggleSelect(project.id, e)}
+                    style={{ accentColor: '#C0392B', width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
 
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -471,6 +556,7 @@ export default function ProjectsPage() {
                       Réactiver
                     </button>
                   )}
+                </div>
                 </div>
               </div>
             );
@@ -642,6 +728,49 @@ export default function ProjectsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal suppression multiple */}
+      {showBulkDelete && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="w-full max-w-md rounded-md p-8"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <h3 className="font-semibold text-lg" style={{ color: '#C0392B' }}>
+                Supprimer {selectedIds.size} projet{selectedIds.size > 1 ? 's' : ''}
+              </h3>
+            </div>
+            <p className="text-sm mb-2" style={{ color: '#2C3E50' }}>
+              Cette action est <strong>irréversible</strong>. Les projets suivants et toutes leurs données seront supprimés définitivement :
+            </p>
+            <div className="rounded-md p-3 mb-6 space-y-1"
+              style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+              {visibleProjects.filter(p => selectedIds.has(p.id)).map(p => (
+                <p key={p.id} className="text-xs font-medium" style={{ color: '#C0392B' }}>
+                  • {p.name} ({p.documentType} — {p.client.name})
+                </p>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkDelete(false)}
+                className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
+                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                Annuler
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 text-white font-medium py-2.5 rounded text-sm disabled:opacity-50"
+                style={{ backgroundColor: '#C0392B' }}>
+                {bulkDeleting ? 'Suppression...' : `🗑 Supprimer ${selectedIds.size} projet${selectedIds.size > 1 ? 's' : ''}`}
+              </button>
+            </div>
           </div>
         </div>
       )}
