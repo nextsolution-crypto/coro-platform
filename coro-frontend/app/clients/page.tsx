@@ -23,9 +23,65 @@ export default function ClientsPage() {
   const [clients, setClients]     = useState<Client[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [addressPaste, setAddressPaste] = useState('');
   const [form, setForm] = useState({
     name: '', email: '', phone: '', address: '', city: '', province: '',
   });
+
+  const formatPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) {
+      const d = digits.substring(1);
+      return `1 (${d.substring(0, 3)}) ${d.substring(3, 6)}-${d.substring(6)}`;
+    }
+    if (digits.length === 10) {
+      return `(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6)}`;
+    }
+    const d = digits.substring(0, 11);
+    if (d.length === 0) return '';
+    if (d.startsWith('1')) {
+      if (d.length <= 1) return '1';
+      if (d.length <= 4) return `1 (${d.substring(1)}`;
+      if (d.length <= 7) return `1 (${d.substring(1, 4)}) ${d.substring(4)}`;
+      if (d.length <= 11) return `1 (${d.substring(1, 4)}) ${d.substring(4, 7)}-${d.substring(7)}`;
+    }
+    if (d.length <= 3) return `(${d}`;
+    if (d.length <= 6) return `(${d.substring(0, 3)}) ${d.substring(3)}`;
+    return `(${d.substring(0, 3)}) ${d.substring(3, 6)}-${d.substring(6, 10)}`;
+  };
+
+  const parsePastedAddress = (raw: string): { address: string; city: string; province: string } | null => {
+    const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length < 2) return null;
+    const address = parts[0] || '';
+    const city = parts[1] || '';
+    let province = '';
+    if (parts[2]) {
+      const match = parts[2].match(/^([A-Za-zÀ-ÿ]+)\s*([A-Za-z]\d[A-Za-z]\s*\d[A-Za-z]\d)?$/);
+      if (match) province = match[1] || '';
+      else province = parts[2];
+    }
+    const provinceMap: Record<string, string> = {
+      'qc': 'QC', 'québec': 'QC', 'quebec': 'QC',
+      'on': 'ON', 'ontario': 'ON',
+      'ab': 'AB', 'alberta': 'AB',
+    };
+    const normalizedProvince = provinceMap[province.toLowerCase()] || province;
+    return { address, city, province: normalizedProvince };
+  };
+
+  const handleAddressPaste = (value: string) => {
+    setAddressPaste(value);
+    const parsed = parsePastedAddress(value);
+    if (parsed) {
+      setForm(prev => ({
+        ...prev,
+        address: parsed.address || prev.address,
+        city: parsed.city || prev.city,
+        province: parsed.province || prev.province,
+      }));
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
@@ -56,18 +112,10 @@ export default function ClientsPage() {
       await api.post('/clients', form);
       setShowModal(false);
       setForm({ name: '', email: '', phone: '', address: '', city: '', province: '' });
+      setAddressPaste('');
       fetchClients();
     } catch (err) { console.error(err); }
   };
-
-  const fields = [
-    { label: 'Nom *',      key: 'name',     required: true },
-    { label: 'Courriel',   key: 'email' },
-    { label: 'Téléphone',  key: 'phone' },
-    { label: 'Adresse',    key: 'address' },
-    { label: 'Ville',      key: 'city' },
-    { label: 'Province',   key: 'province' },
-  ];
 
   return (
     <AppLayout>
@@ -195,29 +243,94 @@ export default function ClientsPage() {
               Nouveau client
             </h3>
             <form onSubmit={handleCreate} className="space-y-4">
-              {fields.map(field => (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium mb-1.5"
-                    style={{ color: '#495057' }}>
-                    {field.label}
-                  </label>
-                  <input
-                    type="text"
-                    value={(form as any)[field.key]}
-                    onChange={e => setForm({ ...form, [field.key]: e.target.value })}
-                    required={field.required}
+
+              {/* Nom */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Nom *</label>
+                <input type="text" required value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+
+              {/* Courriel */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Courriel</label>
+                <input type="text" value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+
+              {/* Téléphone */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Téléphone</label>
+                <input type="text" value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  placeholder="(450) 567-1256"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => {
+                    e.target.style.borderColor = '#CED4DA';
+                    setForm(prev => ({ ...prev, phone: formatPhone(prev.phone) }));
+                  }} />
+              </div>
+
+              {/* Adresse — coller depuis Google Maps */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                  Coller une adresse complète (optionnel)
+                </label>
+                <p className="text-xs mb-1.5" style={{ color: '#ADB5BD' }}>
+                  Copiez l'adresse depuis Google Maps — les champs s'auto-complètent.
+                </p>
+                <input type="text" value={addressPaste}
+                  onChange={e => handleAddressPaste(e.target.value)}
+                  placeholder="Ex: 630 Boul. René-Lévesque O, Montréal, QC H3B 1S6, Canada"
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+
+              {/* Adresse */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Adresse</label>
+                <input type="text" value={form.address}
+                  onChange={e => setForm({ ...form, address: e.target.value })}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                  onFocus={e => e.target.style.borderColor = '#C0392B'}
+                  onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+              </div>
+
+              {/* Ville / Province */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Ville</label>
+                  <input type="text" value={form.city}
+                    onChange={e => setForm({ ...form, city: e.target.value })}
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
-                    onBlur={e => {
-                      e.target.style.borderColor = '#CED4DA';
-                      if (field.key === 'phone') {
-                        setForm({ ...form, phone: formatPhone(e.target.value) });
-                      }
-                    }}
-                  />
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                 </div>
-              ))}
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Province</label>
+                  <input type="text" value={form.province}
+                    onChange={e => setForm({ ...form, province: e.target.value })}
+                    placeholder="QC"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                </div>
+              </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
