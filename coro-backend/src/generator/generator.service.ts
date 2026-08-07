@@ -17,6 +17,7 @@ private async loadProceduresFromDB(
     documentType: string,
     activeRoleCodes: string[],
     customProcedureIds: string[],
+    projectId?: string,
   ): Promise<any[]> {
     try {
       // Charger toutes les procédures par défaut actives
@@ -50,7 +51,9 @@ private async loadProceduresFromDB(
         .map(p => ({
           ...p,
           roleSections: (p.roleSections || []).filter((rs: any) =>
-            rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+            rs.roleCode === 'TOUS' ||
+            rs.roleCode === 'ROLE-OCC' ||
+            activeRoleCodes.includes(rs.roleCode)
           ),
         }));
 
@@ -76,11 +79,57 @@ private async loadProceduresFromDB(
         .map(p => ({
           ...p,
           roleSections: (p.roleSections || []).filter((rs: any) =>
-            rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+            rs.roleCode === 'TOUS' ||
+            rs.roleCode === 'ROLE-OCC' ||
+            activeRoleCodes.includes(rs.roleCode)
           ),
         }));
 
-      return [...autoProcedures, ...newDefaultProcedures, ...manualProcedures];
+      const idsNotInAllProcs = customProcedureIds.filter((id: string) =>
+        !allProcs.find(p => p.id === id)
+      );
+
+      // Procédures IA (CustomProcedure) ajoutées au projet
+      const customIAProcedures = await this.prisma.customProcedure.findMany({
+        where: {
+          OR: [
+            { projectId, organizationId },
+            { isPublished: true, organizationId },
+          ],
+          id: { in: customProcedureIds.filter((id: string) =>
+            !allProcs.find(p => p.id === id)
+          )},
+        },
+      });
+
+      const iaProcedures = customIAProcedures.map(p => {
+        const content = p.content as any;
+        return {
+          id: p.id,
+          code: p.code,
+          titleFR: p.titleFR,
+          titleEN: p.titleEN,
+          headerColor: p.color,
+          color: p.color,
+          activationRule: 'manual',
+          roleSections: (content.roleSections || []).map((rs: any) => ({
+            roleCode: rs.roleCode,
+            roleLabelFR: rs.roleName || rs.roleCode,
+            roleLabelEN: rs.roleNameEN || rs.roleName || rs.roleCode,
+            headerColor: p.color,
+            steps: (rs.actions || []).map((action: string, idx: number) => ({
+              id: `${p.code}_${idx}`,
+              textFR: action,
+              textEN: (rs.actionsEN && rs.actionsEN[idx]) ? rs.actionsEN[idx] : action,
+            })),
+          })),
+          importantBoxes: content.importantBoxes || [],
+          objective: p.objective,
+          _isCustomIA: true,
+        };
+      });
+
+      return [...autoProcedures, ...newDefaultProcedures, ...manualProcedures, ...iaProcedures];
     } catch (err) {
       console.warn('Fallback aux procédures TypeScript:', err);
       return []; // Retourne vide → generateModule4 utilisera le fallback TS
@@ -168,6 +217,7 @@ private async loadProceduresFromDB(
       ctx.documentType,
       activeRoleCodes,
       customProcedureIds,
+      projectId,
     );
 
     // Pour PSI : seulement P001 (découverte fumée/flamme)
@@ -250,6 +300,7 @@ private async loadProceduresFromDB(
         // Préserve les données éditées manuellement, non régénérées automatiquement
         module2: previousContent.module2 || undefined,
         module3: previousContent.module3 || undefined,
+        module4: previousContent.module4 || undefined,
         module8: previousContent.module8 || undefined,
       },
       status: 'IN_PROGRESS' as any,

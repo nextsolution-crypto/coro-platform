@@ -143,8 +143,10 @@ export function getActiveProcedures(
     .map(p => ({
       ...p,
       // 3. Filtre les sections de rôles selon les rôles actifs dans Module 3
+      // ROLE-OCC est toujours inclus car c'est un rôle occupant (pas dans l'organigramme)
       roleSections: p.roleSections.filter(rs =>
         rs.roleCode === 'TOUS' ||
+        rs.roleCode === 'ROLE-OCC' ||
         activeRoleCodes.includes(rs.roleCode)
       ),
     }));

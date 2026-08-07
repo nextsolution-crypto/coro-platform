@@ -111,7 +111,25 @@ export abstract class BaseDocumentBuilder {
     const activeRoleCodes = savedOrgRoles.length > 0
       ? savedOrgRoles.filter((r: any) => r.isActive).map((r: any) => r.roleCode).filter(Boolean)
       : ['ROLE-AS', 'ROLE-CU', 'ROLE-EPI', 'ROLE-RM', 'ROLE-RPR', 'ROLE-SS', 'ROLE-BRI', 'ROLE-RS', 'ROLE-CHE', 'ROLE-ACC'];
-    return getActiveProcedures(this.content.config || {}, this.project.documentType, activeRoleCodes);
+
+    // Procédures standard (fichiers TS)
+    const standardProcs = getActiveProcedures(
+      this.content.config || {},
+      this.project.documentType,
+      activeRoleCodes,
+    );
+
+    // Procédures IA (CustomProcedure) depuis le module4 sauvegardé
+    const module4Saved = this.content.module4 || {};
+    const customProcedureIds: string[] = module4Saved.customProcedureIds || [];
+
+    // Récupérer les procédures IA depuis modules_fr (elles y sont déjà injectées par le générateur)
+    const module4Generated = this.content.modules_fr?.find((m: any) => m.moduleNumber === 4);
+    const iaProcedures = (module4Generated?.procedures || []).filter((p: any) =>
+      p._isCustomIA === true || customProcedureIds.includes(p.id)
+    );
+
+    return [...standardProcs, ...iaProcedures];
   }
 
   buildSeparatorHtml(moduleNum: number, generateSeparatorPage: Function): string {
