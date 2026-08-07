@@ -117,6 +117,12 @@ export default function ProjectDetailPage() {
   const [showApprovalModal, setShowApprovalModal] = useState<'approve' | 'reject' | 'request-revision' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
   const [processingApproval, setProcessingApproval] = useState(false);
+  const [observations, setObservations] = useState<any[]>([]);
+  const [showObservations, setShowObservations] = useState(false);
+  const [newObservation, setNewObservation] = useState('');
+  const [newObsModule, setNewObsModule] = useState('');
+  const [addingObs, setAddingObs] = useState(false);
+  const [canApprove, setCanApprove] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -153,6 +159,16 @@ export default function ProjectDetailPage() {
           setQualityScore(scoreRes.data || null);
         } catch { setValidations([]); }
       }
+
+      // Observations et permission d'approuver
+      try {
+        const [obsRes, canRes] = await Promise.all([
+          api.get(`/approval/${projectId}/observations`),
+          api.get(`/approval/${projectId}/can-approve`),
+        ]);
+        setObservations(obsRes.data || []);
+        setCanApprove(canRes.data?.canApprove || false);
+      } catch { }
     } catch (err) {
       console.error(err);
     } finally {
@@ -225,13 +241,13 @@ const handleChangeStatus = async (newStatus: string) => {
     setProcessingApproval(true);
     try {
       if (action === 'submit') {
-        await api.post(`/projects/${projectId}/submit`);
+        await api.post(`/approval/${projectId}/submit`);
       } else if (action === 'approve') {
-        await api.post(`/projects/${projectId}/approve`, { comment: approvalComment });
+        await api.post(`/approval/${projectId}/approve`);
       } else if (action === 'reject') {
-        await api.post(`/projects/${projectId}/reject`, { comment: approvalComment });
+        await api.post(`/approval/${projectId}/request-revision`, { commentaire: approvalComment });
       } else {
-        await api.post(`/projects/${projectId}/request-revision`, { comment: approvalComment });
+        await api.post(`/approval/${projectId}/request-revision`, { commentaire: approvalComment });
       }
       setShowApprovalModal(null);
       setApprovalComment('');
@@ -241,6 +257,38 @@ const handleChangeStatus = async (newStatus: string) => {
     } finally {
       setProcessingApproval(false);
     }
+  };
+
+  const handleAddObservation = async () => {
+    if (!newObservation.trim()) return;
+    setAddingObs(true);
+    try {
+      const res = await api.post(`/approval/${projectId}/observations`, {
+        texte: newObservation,
+        module: newObsModule || undefined,
+      });
+      setObservations(prev => [res.data, ...prev]);
+      setNewObservation('');
+      setNewObsModule('');
+    } catch (err) { console.error(err); }
+    finally { setAddingObs(false); }
+  };
+
+  const handleToggleObservation = async (id: string, currentStatut: string) => {
+    try {
+      const newStatut = currentStatut === 'OUVERTE' ? 'TRAITEE' : 'OUVERTE';
+      await api.put(`/approval/observations/${id}`, { statut: newStatut });
+      setObservations(prev => prev.map(o =>
+        o.id === id ? { ...o, statut: newStatut } : o
+      ));
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteObservation = async (id: string) => {
+    try {
+      await api.delete(`/approval/observations/${id}`);
+      setObservations(prev => prev.filter(o => o.id !== id));
+    } catch (err) { console.error(err); }
   };
 
   const handleDelete = async () => {
@@ -465,17 +513,154 @@ const handleChangeStatus = async (newStatus: string) => {
 
 {/* Bannière statut approbation */}
       {project.status === 'REVIEW' && (
-        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
-          style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
-          <span style={{ fontSize: '20px' }}>⏳</span>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: '#F39C12' }}>
-              Document en attente d'approbation
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
-              L'éditeur est en lecture seule jusqu'à l'approbation ou le rejet.
-            </p>
+        <div className="rounded-md mb-6 overflow-hidden"
+          style={{ border: '1px solid #FAD7A0' }}>
+          {/* En-tête */}
+          <div className="p-4 flex items-center justify-between"
+            style={{ backgroundColor: '#FEF9E7' }}>
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: '20px' }}>⏳</span>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: '#F39C12' }}>
+                  Document en attente d'approbation
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                  L'éditeur est en lecture seule. {observations.length > 0 && `${observations.filter(o => o.statut === 'OUVERTE').length} observation(s) ouverte(s).`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowObservations(!showObservations)}
+              className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+              style={{ border: '1px solid #FAD7A0', color: '#F39C12' }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEBD0'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              {showObservations ? '▲ Masquer' : `📝 Observations (${observations.length})`}
+            </button>
           </div>
+
+          {/* Panneau observations */}
+          {showObservations && (
+            <div className="p-4" style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #FAD7A0' }}>
+
+              {/* Ajouter observation — visible pour le réviseur */}
+              {canApprove && (
+                <div className="mb-4 p-3 rounded"
+                  style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                  <p className="text-xs font-medium mb-2" style={{ color: '#495057' }}>
+                    ➕ Ajouter une observation
+                  </p>
+                  <div className="flex gap-2 mb-2">
+                    <select
+                      value={newObsModule}
+                      onChange={e => setNewObsModule(e.target.value)}
+                      className="rounded px-2 py-1.5 text-xs focus:outline-none"
+                      style={{ border: '1px solid #CED4DA', color: '#6C757D', minWidth: '120px' }}>
+                      <option value="">Module (optionnel)</option>
+                      {['Module 1', 'Module 2', 'Module 3', 'Module 4', 'Module 5', 'Module 6', 'Module 7', 'Module 8'].map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newObservation}
+                      onChange={e => setNewObservation(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddObservation(); }}
+                      placeholder="Décrivez l'observation ou la correction requise..."
+                      className="flex-1 rounded px-3 py-1.5 text-sm focus:outline-none"
+                      style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
+                    <button
+                      onClick={handleAddObservation}
+                      disabled={addingObs || !newObservation.trim()}
+                      className="text-white text-xs font-medium px-3 py-1.5 rounded disabled:opacity-50"
+                      style={{ backgroundColor: '#F39C12' }}>
+                      {addingObs ? '...' : 'Ajouter'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Liste observations */}
+              {observations.length === 0 ? (
+                <p className="text-sm text-center py-4" style={{ color: '#ADB5BD' }}>
+                  Aucune observation pour l'instant
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {observations.map(obs => (
+                    <div key={obs.id}
+                      className="flex items-start gap-3 p-3 rounded"
+                      style={{
+                        backgroundColor: obs.statut === 'TRAITEE' ? '#EAFAF1' : '#FDEDEC',
+                        border: `1px solid ${obs.statut === 'TRAITEE' ? '#A9DFBF' : '#F1948A'}`,
+                      }}>
+                      <button
+                        onClick={() => handleToggleObservation(obs.id, obs.statut)}
+                        className="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors"
+                        style={{
+                          backgroundColor: obs.statut === 'TRAITEE' ? '#27AE60' : '#FFFFFF',
+                          borderColor: obs.statut === 'TRAITEE' ? '#27AE60' : '#F1948A',
+                        }}>
+                        {obs.statut === 'TRAITEE' && <span className="text-white text-xs">✓</span>}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        {obs.module && (
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded mr-2"
+                            style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
+                            {obs.module}
+                          </span>
+                        )}
+                        <span className="text-sm" style={{
+                          color: obs.statut === 'TRAITEE' ? '#27AE60' : '#2C3E50',
+                          textDecoration: obs.statut === 'TRAITEE' ? 'line-through' : 'none',
+                        }}>
+                          {obs.texte}
+                        </span>
+                        <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                          {obs.createdBy?.firstName} {obs.createdBy?.lastName}
+                          {obs.statut === 'TRAITEE' && obs.treatedBy && ` — Traité par ${obs.treatedBy.firstName} ${obs.treatedBy.lastName}`}
+                        </p>
+                      </div>
+                      {canApprove && (
+                        <button
+                          onClick={() => handleDeleteObservation(obs.id)}
+                          className="text-xs flex-shrink-0"
+                          style={{ color: '#ADB5BD' }}
+                          onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Boutons décision finale — réservés au réviseur */}
+              {canApprove && (
+                <div className="flex gap-3 mt-4 pt-4" style={{ borderTop: '1px solid #E9ECEF' }}>
+                  <button
+                    onClick={() => setShowApprovalModal('approve')}
+                    className="flex-1 text-white font-medium py-2.5 rounded text-sm"
+                    style={{ backgroundColor: '#27AE60' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}>
+                    ✅ Approuver le document
+                  </button>
+                  <button
+                    onClick={() => setShowApprovalModal('reject')}
+                    className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
+                    style={{ border: '1px solid #F1948A', color: '#C0392B' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    🔄 Retourner pour révision
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -813,7 +998,7 @@ const handleChangeStatus = async (newStatus: string) => {
         )}
         <button
           onClick={() => setShowExportModal(true)}
-          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE')}
+          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE') || project.status === 'REVIEW'}
           title={validations.some(v => v.level === 'CRITIQUE') ? 'Corrigez les erreurs critiques avant d\'exporter' : ''}
           className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
@@ -828,7 +1013,7 @@ const handleChangeStatus = async (newStatus: string) => {
 
         <button
           onClick={() => setShowGuideModal(true)}
-          disabled={!hasDocument}
+          disabled={!hasDocument || project.status === 'REVIEW'}
           className="ml-3 text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             border: '1px solid #2980B9',
@@ -840,6 +1025,11 @@ const handleChangeStatus = async (newStatus: string) => {
         >
           📋 Exporter Guide locataire
         </button>
+        {project.status === 'REVIEW' && (
+          <p className="text-xs mt-3" style={{ color: '#F39C12' }}>
+            ⏳ Export désactivé — le document est en attente d'approbation par un collègue.
+          </p>
+        )}
       </div>
 
       {showExportModal && project && (

@@ -100,21 +100,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const profileRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
+
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const [updatesRes, approvalsRes] = await Promise.all([
+        const [updatesRes, approvalsRes, unreadRes] = await Promise.all([
           api.get('/projects/upcoming-updates'),
           api.get('/projects/pending-approval'),
+          api.get('/notifications/unread-count').catch(() => ({ data: { count: 0 } })),
         ]);
         setUpdates(updatesRes.data || []);
         setPendingApprovals(approvalsRes.data || []);
+        setNotifUnreadCount(unreadRes.data?.count || 0);
       } catch {
         setUpdates([]);
         setPendingApprovals([]);
       }
     };
     fetchNotifications();
+    // Rafraîchir toutes les 30 secondes
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // ── Fermer panneaux si clic extérieur ──
@@ -180,7 +187,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => { logout(); router.push('/login'); };
 
   const urgentCount = updates.filter(u => u.level === 'URGENT').length;
-  const totalCount  = updates.length + pendingApprovals.length;
+  const totalCount  = updates.length + pendingApprovals.length + notifUnreadCount;
 
   const typeIcon: Record<string, string> = {
     project:  '📁',
@@ -318,14 +325,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
                   ))}
                 </div>
-                {(updates.length > 0 || pendingApprovals.length > 0) && (
-                  <div className="px-4 py-2.5" style={{ borderTop: '1px solid #E9ECEF' }}>
-                    <button onClick={() => { router.push('/dashboard'); setShowNotif(false); }}
-                      className="text-xs font-medium w-full text-center" style={{ color: '#C0392B' }}>
-                      Voir tout sur le tableau de bord →
-                    </button>
-                  </div>
-                )}
+                <div className="px-4 py-2.5 flex items-center justify-between" style={{ borderTop: '1px solid #E9ECEF' }}>
+                  <button onClick={() => { router.push('/notifications'); setShowNotif(false); }}
+                    className="text-xs font-medium" style={{ color: '#C0392B' }}>
+                    Toutes les notifications →
+                  </button>
+                  <button onClick={() => { router.push('/dashboard'); setShowNotif(false); }}
+                    className="text-xs" style={{ color: '#6C757D' }}>
+                    Tableau de bord
+                  </button>
+                </div>
               </div>
             )}
           </div>
