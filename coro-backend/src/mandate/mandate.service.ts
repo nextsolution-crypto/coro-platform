@@ -36,6 +36,30 @@ export class MandateService {
 
   async saveMandate(projectId: string, organizationId: string, dto: any) {
     await this.assertOwnership(projectId, organizationId);
+
+    // Calcul automatique du délai si type = FORFAITAIRE et dateDebutDelai fournie
+    let dateLimite: Date | null = null;
+    let delaiJours: number | null = null;
+
+    if (dto.typeMandat === 'FORFAITAIRE' && dto.dateDebutDelai) {
+      const debut = new Date(dto.dateDebutDelai);
+      const heures = dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : 0;
+      const documentType = dto.typeDelai || 'STANDARD';
+
+      if (documentType === 'EVACUATION') {
+        delaiJours = 15;
+      } else if (heures > 0 && heures <= 30) {
+        delaiJours = 21;
+      } else if (heures > 30) {
+        delaiJours = 90;
+      } else {
+        delaiJours = 21; // défaut
+      }
+
+      dateLimite = new Date(debut);
+      dateLimite.setDate(dateLimite.getDate() + delaiJours);
+    }
+
     return this.prisma.projectMandate.upsert({
       where: { projectId },
       update: {
@@ -45,6 +69,11 @@ export class MandateService {
         heuresBudgetees: dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : null,
         lienDrive: dto.lienDrive,
         ownerId: dto.ownerId || null,
+        typeMandat: dto.typeMandat || null,
+        typeDelai: dto.typeDelai || null,
+        alerteActive: dto.alerteActive !== undefined ? dto.alerteActive : true,
+        ...(dto.dateDebutDelai ? { dateDebutDelai: new Date(dto.dateDebutDelai) } : {}),
+        ...(dateLimite ? { dateLimite, delaiJours } : {}),
       },
       create: {
         projectId,
@@ -55,7 +84,47 @@ export class MandateService {
         heuresBudgetees: dto.heuresBudgetees ? parseFloat(dto.heuresBudgetees) : null,
         lienDrive: dto.lienDrive,
         ownerId: dto.ownerId || null,
+        typeMandat: dto.typeMandat || null,
+        typeDelai: dto.typeDelai || null,
+        alerteActive: dto.alerteActive !== undefined ? dto.alerteActive : true,
+        ...(dto.dateDebutDelai ? { dateDebutDelai: new Date(dto.dateDebutDelai) } : {}),
+        ...(dateLimite ? { dateLimite, delaiJours } : {}),
       },
+    });
+  }
+
+  // ── Déclencher le délai quand tâche relevé = fait ────────
+  async triggerDelaiFromTask(taskId: string, organizationId: string) {
+    const task = await this.prisma.projectTask.findFirst({
+      where: { id: taskId, organizationId },
+      include: { project: { include: { mandate: true } } },
+    });
+    if (!task) return;
+
+    const mandate = task.project.mandate;
+    if (!mandate || mandate.typeMandat !== 'FORFAITAIRE') return;
+    if (mandate.dateDebutDelai) return; // déjà déclenché
+
+    // Vérifier si c'est une tâche de type "relevé technique" ou "visite"
+    const isReleve = task.taskTitle.toLowerCase().includes('relev') ||
+                     task.taskTitle.toLowerCase().includes('visite');
+    if (!isReleve) return;
+
+    const heures = mandate.heuresBudgetees || 0;
+    const typeDelai = mandate.typeDelai || 'STANDARD';
+    let delaiJours: number;
+
+    if (typeDelai === 'EVACUATION') delaiJours = 15;
+    else if (heures <= 30) delaiJours = 21;
+    else delaiJours = 90;
+
+    const dateDebutDelai = new Date();
+    const dateLimite = new Date();
+    dateLimite.setDate(dateLimite.getDate() + delaiJours);
+
+    await this.prisma.projectMandate.update({
+      where: { projectId: task.projectId },
+      data: { dateDebutDelai, dateLimite, delaiJours },
     });
   }
 
@@ -174,7 +243,8 @@ export class MandateService {
       where: { id: taskId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    return this.prisma.projectTask.update({
+
+    const updated = await this.prisma.projectTask.update({
       where: { id: taskId },
       data: {
         status: dto.status,
@@ -182,6 +252,13 @@ export class MandateService {
         assigneeId: dto.assigneeId !== undefined ? (dto.assigneeId || null) : undefined,
       },
     });
+
+    // Déclencher le délai si tâche relevé technique = fait
+    if (dto.status === 'fait') {
+      await this.triggerDelaiFromTask(taskId, organizationId).catch(() => {});
+    }
+
+    return updated;
   }
 
   // ── ENTRÉES DE TEMPS ─────────────────────────────────────

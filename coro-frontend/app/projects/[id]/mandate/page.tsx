@@ -52,8 +52,13 @@ export default function MandatePage() {
     heuresBudgetees: '',
     lienDrive: '',
     ownerId: '',
+    typeMandat: '',
+    typeDelai: 'STANDARD',
+    dateDebutDelai: '',
+    alerteActive: true,
   });
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [showTypeMandatPopup, setShowTypeMandatPopup] = useState(false);
 
   useEffect(() => { fetchData(); }, [projectId]);
 
@@ -77,7 +82,13 @@ export default function MandatePage() {
           heuresBudgetees: m.heuresBudgetees?.toString() || '',
           lienDrive: m.lienDrive || '',
           ownerId: m.ownerId || '',
+          typeMandat: m.typeMandat || '',
+          typeDelai: m.typeDelai || 'STANDARD',
+          dateDebutDelai: m.dateDebutDelai ? new Date(m.dateDebutDelai).toISOString().split('T')[0] : '',
+          alerteActive: m.alerteActive !== false,
         });
+        // Popup migration si typeMandat pas encore défini
+        if (!m.typeMandat || m.typeMandat === '') setShowTypeMandatPopup(true);
       }
       const mandateActivities = (activitiesRes.data || []).filter((a: any) => a.sourceMandate);
       setSelectedServices(mandateActivities.map((a: any) => ({ type: a.type, isRecurring: a.isRecurring })));
@@ -122,8 +133,84 @@ export default function MandatePage() {
   const inputCls = "w-full px-3 py-2.5 text-sm rounded focus:outline-none";
   const inputSty = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
 
+  // Calcul délai livraison
+  const today = new Date();
+  const dateLimite = mandate?.dateLimite ? new Date(mandate.dateLimite) : null;
+  const diffDays = dateLimite ? Math.ceil((dateLimite.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const delaiLevel = diffDays === null ? null
+    : diffDays < 0 ? 'DEPASSE'
+    : diffDays <= 3 ? 'CRITIQUE'
+    : diffDays <= 7 ? 'URGENT'
+    : diffDays <= 14 ? 'ATTENTION'
+    : 'OK';
+  const delaiColors: Record<string, { bg: string; text: string; border: string }> = {
+    DEPASSE:  { bg: '#FDEDEC', text: '#C0392B', border: '#F1948A' },
+    CRITIQUE: { bg: '#FDEDEC', text: '#C0392B', border: '#F1948A' },
+    URGENT:   { bg: '#FEF9E7', text: '#E67E22', border: '#FAD7A0' },
+    ATTENTION:{ bg: '#FEF9E7', text: '#F39C12', border: '#FAD7A0' },
+    OK:       { bg: '#EAFAF1', text: '#27AE60', border: '#A9DFBF' },
+  };
+
   if (loading) return (
     <AppLayout>
+      {/* Popup migration type de mandat */}
+      {showTypeMandatPopup && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="w-full max-w-md rounded-md p-8"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div className="text-center mb-6">
+              <span style={{ fontSize: '36px' }}>⚙️</span>
+              <h3 className="font-bold text-lg mt-3 mb-2" style={{ color: '#2C3E50' }}>
+                Configuration requise
+              </h3>
+              <p className="text-sm" style={{ color: '#6C757D' }}>
+                Ce mandat n'a pas encore été configuré. Choisissez le type pour activer le suivi des délais de livraison.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setForm(f => ({ ...f, typeMandat: 'FORFAITAIRE' }));
+                  setShowTypeMandatPopup(false);
+                }}
+                className="flex-1 py-4 rounded-md font-semibold text-sm transition-colors"
+                style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '2px solid #F1948A' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F1948A'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}>
+                <div className="text-2xl mb-2">📅</div>
+                Forfaitaire
+                <p className="text-xs font-normal mt-1" style={{ color: '#6C757D' }}>
+                  Délai calculé automatiquement
+                </p>
+              </button>
+              <button
+                onClick={() => {
+                  setForm(f => ({ ...f, typeMandat: 'ANNUEL' }));
+                  setShowTypeMandatPopup(false);
+                }}
+                className="flex-1 py-4 rounded-md font-semibold text-sm transition-colors"
+                style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '2px solid #AED6F1' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#AED6F1'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}>
+                <div className="text-2xl mb-2">🔄</div>
+                Annuel récurrent
+                <p className="text-xs font-normal mt-1" style={{ color: '#6C757D' }}>
+                  Pas de délai de livraison
+                </p>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowTypeMandatPopup(false)}
+              className="w-full mt-4 text-xs py-2 rounded transition-colors"
+              style={{ color: '#ADB5BD' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#6C757D'}
+              onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
+              Ignorer pour l'instant
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-center py-24">
         <p className="text-sm animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
       </div>
@@ -405,6 +492,124 @@ export default function MandatePage() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Bloc délai de livraison */}
+            <div className="rounded-md p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>
+                ⏱ Délai de livraison
+              </p>
+
+              {/* Type de mandat */}
+              <div className="mb-3">
+                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
+                  Type de mandat
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'FORFAITAIRE', label: '📅 Forfaitaire' },
+                    { value: 'ANNUEL', label: '🔄 Annuel' },
+                  ].map(opt => (
+                    <button key={opt.value}
+                      onClick={() => setForm(f => ({ ...f, typeMandat: opt.value }))}
+                      className="flex-1 py-2 rounded text-xs font-medium transition-colors"
+                      style={{
+                        backgroundColor: form.typeMandat === opt.value ? '#2C3E50' : '#F8F9FA',
+                        color: form.typeMandat === opt.value ? '#FFFFFF' : '#6C757D',
+                        border: `1px solid ${form.typeMandat === opt.value ? '#2C3E50' : '#DEE2E6'}`,
+                      }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {form.typeMandat === 'FORFAITAIRE' && (
+                <>
+                  {/* Type délai */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
+                      Type de document
+                    </label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'STANDARD', label: 'PMU/PSI/PCA' },
+                        { value: 'EVACUATION', label: 'Plan évacuation' },
+                      ].map(opt => (
+                        <button key={opt.value}
+                          onClick={() => setForm(f => ({ ...f, typeDelai: opt.value }))}
+                          className="flex-1 py-1.5 rounded text-xs font-medium transition-colors"
+                          style={{
+                            backgroundColor: form.typeDelai === opt.value ? '#C0392B' : '#F8F9FA',
+                            color: form.typeDelai === opt.value ? '#FFFFFF' : '#6C757D',
+                            border: `1px solid ${form.typeDelai === opt.value ? '#C0392B' : '#DEE2E6'}`,
+                          }}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                      {form.typeDelai === 'EVACUATION' ? '15 jours max' : parseFloat(form.heuresBudgetees) > 30 ? '90 jours max' : '21 jours max'}
+                    </p>
+                  </div>
+
+                  {/* Date de début */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
+                      Date visite/relevé technique
+                    </label>
+                    <input type="date"
+                      value={form.dateDebutDelai}
+                      onChange={e => setForm(f => ({ ...f, dateDebutDelai: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm rounded focus:outline-none"
+                      style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                      onFocus={e => e.target.style.borderColor = '#C0392B'}
+                      onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                    <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                      Le délai démarre automatiquement à cette date
+                    </p>
+                  </div>
+
+                  {/* Alerte active */}
+                  <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                    <input type="checkbox"
+                      checked={form.alerteActive}
+                      onChange={e => setForm(f => ({ ...f, alerteActive: e.target.checked }))}
+                      style={{ accentColor: '#C0392B', width: '14px', height: '14px' }} />
+                    <span className="text-xs" style={{ color: '#6C757D' }}>Alertes actives</span>
+                  </label>
+
+                  {/* Affichage du délai calculé */}
+                  {mandate?.dateLimite && delaiLevel && (
+                    <div className="rounded p-3 mt-2"
+                      style={{
+                        backgroundColor: delaiColors[delaiLevel]?.bg,
+                        border: `1px solid ${delaiColors[delaiLevel]?.border}`,
+                      }}>
+                      <p className="text-xs font-bold mb-1" style={{ color: delaiColors[delaiLevel]?.text }}>
+                        {delaiLevel === 'DEPASSE' ? `🔴 Dépassé depuis ${Math.abs(diffDays!)} jour(s)` :
+                         delaiLevel === 'CRITIQUE' ? `🔴 Expire dans ${diffDays} jour(s)` :
+                         delaiLevel === 'URGENT' ? `🟠 Expire dans ${diffDays} jour(s)` :
+                         delaiLevel === 'ATTENTION' ? `🟡 Expire dans ${diffDays} jour(s)` :
+                         `✅ ${diffDays} jour(s) restants`}
+                      </p>
+                      <p className="text-xs" style={{ color: '#6C757D' }}>
+                        Date limite : {new Date(mandate.dateLimite).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {mandate.delaiJours && ` (${mandate.delaiJours} jours)`}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {form.typeMandat === 'ANNUEL' && (
+                <div className="rounded p-3 mt-1"
+                  style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+                  <p className="text-xs" style={{ color: '#2980B9' }}>
+                    🔄 Mandat annuel récurrent — aucun délai de livraison applicable.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="rounded-md p-5" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
