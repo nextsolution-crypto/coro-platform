@@ -28,6 +28,8 @@ export class ProjectsService {
         building: true,
         user: true,
         lastEditedBy: { select: { id: true, firstName: true, lastName: true } },
+        submittedBy: { select: { id: true, firstName: true, lastName: true } },
+        approvedBy: { select: { id: true, firstName: true, lastName: true } },
         documents: true,
       },
     });

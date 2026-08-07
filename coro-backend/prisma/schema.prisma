@@ -53,6 +53,7 @@ model User {
   updatedAt      DateTime @updatedAt
   observationsCreated  ReviewObservation[] @relation("observationCreator")
   observationsTreated  ReviewObservation[] @relation("observationTreater")
+  approvedProjects   Project[] @relation("approvedProjects")
   notifications        Notification[]
 
   projects            Project[]
@@ -141,6 +142,9 @@ model Project {
   submittedById  String?
   submittedAt    DateTime?
   submittedBy    User?  @relation("submittedProjects", fields: [submittedById], references: [id])
+  approvedById   String?
+  approvedAt     DateTime?
+  approvedBy     User?  @relation("approvedProjects", fields: [approvedById], references: [id])
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])

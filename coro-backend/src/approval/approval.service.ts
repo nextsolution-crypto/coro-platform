@@ -65,7 +65,11 @@ export class ApprovalService {
 
     await this.prisma.project.update({
       where: { id: projectId },
-      data: { status: 'VALIDATED' },
+      data: {
+        status: 'VALIDATED',
+        approvedById: userId,
+        approvedAt: new Date(),
+      },
     });
 
     // Notifier le soumetteur

@@ -18,6 +18,9 @@ interface Project {
   building: { id: string; name: string; address: string };
   user: { id: string; firstName: string; lastName: string };
   submittedById?: string | null;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  approvedBy?: { firstName: string; lastName: string } | null;
 }
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -716,7 +719,9 @@ const handleChangeStatus = async (newStatus: string) => {
                 Document approuvé et verrouillé
               </p>
               <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
-                Ce document a été validé officiellement. Il est en lecture seule.
+                {project.approvedBy
+                  ? `Approuvé par ${project.approvedBy.firstName} ${project.approvedBy.lastName}${project.approvedAt ? ` le ${new Date(project.approvedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}`
+                  : 'Ce document a été validé officiellement. Il est en lecture seule.'}
               </p>
             </div>
           </div>
