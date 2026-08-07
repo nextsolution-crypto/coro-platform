@@ -123,6 +123,7 @@ export default function ProjectDetailPage() {
   const [newObsModule, setNewObsModule] = useState('');
   const [addingObs, setAddingObs] = useState(false);
   const [canApprove, setCanApprove] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -256,6 +257,36 @@ const handleChangeStatus = async (newStatus: string) => {
       console.error(err);
     } finally {
       setProcessingApproval(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    setPreviewing(true);
+    try {
+      const token = localStorage.getItem('coro_token');
+      const res = await fetch(`http://localhost:3002/api/projects/${projectId}/export`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
+          moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
+          language: 'fr',
+          isPreview: true,
+        }),
+      });
+      if (!res.ok) throw new Error('Erreur prévisualisation');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de la prévisualisation.');
+    } finally {
+      setPreviewing(false);
     }
   };
 
@@ -529,14 +560,25 @@ const handleChangeStatus = async (newStatus: string) => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowObservations(!showObservations)}
-              className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
-              style={{ border: '1px solid #FAD7A0', color: '#F39C12' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEBD0'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              {showObservations ? '▲ Masquer' : `📝 Observations (${observations.length})`}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePreview}
+                disabled={previewing || !hasDocument}
+                className="text-xs font-medium px-3 py-1.5 rounded transition-colors disabled:opacity-50"
+                style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+                onMouseEnter={e => { if (!previewing) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                {previewing ? '⏳ Génération...' : '👁 Prévisualiser'}
+              </button>
+              <button
+                onClick={() => setShowObservations(!showObservations)}
+                className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                style={{ border: '1px solid #FAD7A0', color: '#F39C12' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEBD0'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                {showObservations ? '▲ Masquer' : `📝 Observations (${observations.length})`}
+              </button>
+            </div>
           </div>
 
           {/* Panneau observations */}
