@@ -433,6 +433,7 @@ model ProjectActivity {
   updatedAt      DateTime  @updatedAt
   isRecurring    Boolean  @default(false)
   sourceMandate  Boolean  @default(false)
+  dureeHeures    Float?   // Durée réelle ou estimée en heures
 }
 
 model TaskList {
