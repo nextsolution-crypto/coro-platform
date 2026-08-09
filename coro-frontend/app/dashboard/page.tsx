@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [lateTasks, setLateTasks] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [recurringToRenew, setRecurringToRenew] = useState<any[]>([]);
+  const [mandateDelays, setMandateDelays] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
@@ -46,12 +47,13 @@ export default function DashboardPage() {
 
   const fetchAll = async () => {
     try {
-      const [projetsRes, updatesRes, approvalsRes, recurringRes, upcomingRes] = await Promise.all([
+      const [projetsRes, updatesRes, approvalsRes, recurringRes, upcomingRes, delaysRes] = await Promise.all([
         api.get('/projects?limit=200'),
         api.get('/projects/upcoming-updates').catch(() => ({ data: [] })),
         api.get('/projects/pending-approval').catch(() => ({ data: [] })),
         api.get('/activities/recurring-to-renew').catch(() => ({ data: [] })),
         api.get('/activities/upcoming').catch(() => ({ data: [] })),
+        api.get('/notifications/mandate-delays').catch(() => ({ data: [] })),
       ]);
 
       const allProjets = projetsRes.data?.projects || projetsRes.data || [];
@@ -59,6 +61,7 @@ export default function DashboardPage() {
       setUpdates(updatesRes.data || []);
       setPendingApprovals(approvalsRes.data || []);
       setRecurringToRenew(recurringRes.data || []);
+      setMandateDelays(delaysRes.data || []);
 
       const upcomingFromApi = (upcomingRes.data || []).map((a: any) => ({
         ...a,
@@ -88,7 +91,8 @@ export default function DashboardPage() {
   const actionsRequises = pendingApprovals.length
     + updates.filter(u => u.level === 'URGENT').length
     + recurringToRenew.length
-    + lateTasks.length;
+    + lateTasks.length
+    + mandateDelays.filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level)).length;
 
   const kpis = [
     { label: 'Projets actifs',    value: projetsActifs, color: '#C0392B', bg: '#FDEDEC', path: '/projects' },
@@ -183,6 +187,58 @@ export default function DashboardPage() {
                       <span className="text-xs font-medium" style={{ color: '#C0392B' }}>Réviser →</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Délais de livraison mandats */}
+            {mandateDelays.filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level)).length > 0 && (
+              <div className="rounded-md p-4"
+                style={{
+                  backgroundColor: mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? '#FDEDEC' : '#FEF9E7',
+                  border: `1px solid ${mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? '#F1948A' : '#FAD7A0'}`,
+                }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2"
+                  style={{ color: mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? '#C0392B' : '#F39C12' }}>
+                  ⚡ {mandateDelays.filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level)).length} délai{mandateDelays.length > 1 ? 's' : ''} de livraison
+                </p>
+                <div className="space-y-2">
+                  {mandateDelays
+                    .filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level))
+                    .sort((a, b) => a.diffDays - b.diffDays)
+                    .map(d => {
+                      const isUrgent = ['DEPASSE', 'CRITIQUE'].includes(d.level);
+                      return (
+                        <div key={d.mandateId}
+                          onClick={() => router.push(`/projects/${d.projectId}/mandate`)}
+                          className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                          style={{ backgroundColor: '#FFFFFF', border: `1px solid ${isUrgent ? '#F1948A' : '#FAD7A0'}` }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = isUrgent ? '#FDEDEC' : '#FEF9E7'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">
+                              {d.level === 'DEPASSE' ? '🔴' : d.level === 'CRITIQUE' ? '🔴' : d.level === 'URGENT' ? '🟠' : '🟡'}
+                            </span>
+                            <div>
+                              <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{d.projectName}</p>
+                              <p className="text-xs" style={{ color: '#6C757D' }}>{d.clientName}</p>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-bold"
+                              style={{ color: isUrgent ? '#C0392B' : '#F39C12' }}>
+                              {d.diffDays < 0
+                                ? `Dépassé de ${Math.abs(d.diffDays)}j`
+                                : d.diffDays === 0 ? "Aujourd'hui !"
+                                : `${d.diffDays}j restants`}
+                            </p>
+                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                              {new Date(d.dateLimite).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
