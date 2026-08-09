@@ -13,7 +13,9 @@ export class ProjectsController {
 
   @Get()
   findAll(@Request() req: any) {
-    return this.projectsService.findAll(req.user.organizationId);
+    // OPERATOR voit seulement ses projets, ADMIN/SUPER_ADMIN voient tout
+    const userId = req.user.role === 'OPERATOR' ? req.user.userId : undefined;
+    return this.projectsService.findAll(req.user.organizationId, userId);
   }
 
   @Get('search')

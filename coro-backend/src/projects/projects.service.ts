@@ -6,9 +6,19 @@ import { getLimitsForLicense } from '../organizations/license-limits';
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(organizationId: string) {
+  async findAll(organizationId: string, userId?: string) {
+    const where: any = { isActive: true, organizationId };
+
+    // Si userId fourni → projets dont l'utilisateur est responsable OU a modifié
+    if (userId) {
+      where.OR = [
+        { userId },
+        { lastEditedById: userId },
+      ];
+    }
+
     return this.prisma.project.findMany({
-      where: { isActive: true, organizationId },
+      where,
       orderBy: { updatedAt: 'desc' },
       include: {
         client: { select: { id: true, name: true } },

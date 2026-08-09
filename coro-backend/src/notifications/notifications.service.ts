@@ -87,7 +87,7 @@ export class NotificationsService {
   }
 
   // ── Vérifier les délais de livraison ────────────────────
-  async checkMandateDelays(organizationId: string): Promise<any[]> {
+  async checkMandateDelays(organizationId: string, userId: string, userRole: string): Promise<any[]> {
     const today = new Date();
 
     const mandates = await this.prisma.projectMandate.findMany({
@@ -99,6 +99,13 @@ export class NotificationsService {
         project: {
           isActive: true,
           status: { notIn: ['VALIDATED', 'EXPORTED', 'ARCHIVED'] },
+          // Conseiller voit seulement ses mandats, Admin voit tout
+          ...(userRole === 'OPERATOR' ? {
+            OR: [
+              { userId },
+              { mandate: { ownerId: userId } },
+            ]
+          } : {}),
         },
       },
       include: {
