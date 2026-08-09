@@ -42,6 +42,7 @@ const ADMIN_GROUP = {
   label: 'Administration',
   items: [
     { label: 'Équipe',               path: '/settings/users',               icon: '👤' },
+    { label: 'Portefeuille mandats', path: '/admin/mandates',               icon: '📁' },
     { label: 'Rendement équipe',      path: '/dashboard/rendement',          icon: '📊' },
     { label: 'Modèles de tâches',    path: '/settings/task-templates',      icon: '✅' },
     { label: 'Catégories timelog',   path: '/settings/timelog-categories',  icon: '🏷' },

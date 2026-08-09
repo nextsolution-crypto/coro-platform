@@ -552,4 +552,76 @@ export class MandateService {
 
     return { conseillers, teamStats };
   }
+
+  // ── PORTEFEUILLE ADMIN ───────────────────────────────────
+  async getPortfolio(organizationId: string) {
+    const today = new Date();
+
+    const mandates = await this.prisma.projectMandate.findMany({
+      where: { organizationId },
+      include: {
+        project: {
+          include: {
+            client: { select: { name: true } },
+            building: { select: { name: true } },
+            user: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+        owner: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    // Heures réelles par mandat
+    const tasks = await this.prisma.projectTask.findMany({
+      where: { organizationId },
+      include: { timeEntries: true },
+    });
+
+    const heuresParProjet: Record<string, number> = {};
+    tasks.forEach(t => {
+      const total = t.timeEntries.reduce((s, e) => s + e.heures, 0);
+      heuresParProjet[t.projectId] = (heuresParProjet[t.projectId] || 0) + total;
+    });
+
+    return mandates.map(m => {
+      const heuresReelles = heuresParProjet[m.projectId] || 0;
+      const heuresBudgetees = m.heuresBudgetees || 0;
+      const budgetPct = heuresBudgetees > 0 ? Math.round((heuresReelles / heuresBudgetees) * 100) : 0;
+
+      // Calcul délai
+      let diffDays: number | null = null;
+      let delaiLevel: string | null = null;
+      if (m.dateLimite && m.typeMandat === 'FORFAITAIRE') {
+        diffDays = Math.ceil((new Date(m.dateLimite).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        delaiLevel = diffDays < 0 ? 'DEPASSE'
+          : diffDays <= 3 ? 'CRITIQUE'
+          : diffDays <= 7 ? 'URGENT'
+          : diffDays <= 14 ? 'ATTENTION'
+          : 'OK';
+      }
+
+      return {
+        mandateId: m.id,
+        projectId: m.projectId,
+        projectName: m.project.name,
+        documentType: m.project.documentType,
+        projectStatus: m.project.status,
+        clientName: m.project.client.name,
+        buildingName: m.project.building.name,
+        conseiller: m.owner || m.project.user,
+        typeMandat: m.typeMandat,
+        montantVendu: m.montantVendu,
+        tauxHoraire: m.tauxHoraire,
+        heuresBudgetees,
+        heuresReelles,
+        budgetPct,
+        dateLimite: m.dateLimite,
+        delaiJours: m.delaiJours,
+        diffDays,
+        delaiLevel,
+        alerteActive: m.alerteActive,
+      };
+    });
+  }
 }
