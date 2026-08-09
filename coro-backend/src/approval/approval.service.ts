@@ -103,10 +103,11 @@ export class ApprovalService {
       include: { client: true, building: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
-    if (project.status !== 'REVIEW') {
-      throw new ForbiddenException('Ce projet n\'est pas en révision');
+    if (!['REVIEW', 'VALIDATED'].includes(project.status)) {
+      throw new ForbiddenException('Ce projet ne peut pas être retourné en révision');
     }
-    if (project.submittedById === userId) {
+    // Bloquer seulement si REVIEW et que c'est le soumetteur
+    if (project.status === 'REVIEW' && project.submittedById === userId) {
       throw new ForbiddenException('Vous ne pouvez pas retourner votre propre soumission');
     }
 

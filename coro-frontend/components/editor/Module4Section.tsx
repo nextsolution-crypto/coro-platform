@@ -205,12 +205,21 @@ export default function Module4Section({
 
 const handleToggleActive = useCallback(async (id: string, active: boolean) => {
     try {
-      await api.put(`/procedures/${id}/project/${projectId}/toggle`, { isActive: active });
+      // Vérifier si c'est une procédure IA (CustomProcedure)
+      const proc = procedures.find(p => p.id === id);
+      if ((proc as any)?._isCustomIA) {
+        // Pour les procédures IA, on met à jour le statut via custom-procedures
+        await api.put(`/custom-procedures/${id}`, {
+          status: active ? 'ACTIVE' : 'DRAFT',
+        });
+      } else {
+        await api.put(`/procedures/${id}/project/${projectId}/toggle`, { isActive: active });
+      }
       setProcedures(prev => prev.map(p => p.id === id ? { ...p, _isActive: active } : p));
     } catch (err) {
       console.error('Erreur toggle procédure:', err);
     }
-  }, [projectId]);
+  }, [projectId, procedures]);
 
   const handleRemoveProcedure = useCallback((id: string) => {
     setCustomProcedureIds(prev => prev.filter(p => p !== id));
