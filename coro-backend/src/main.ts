@@ -20,8 +20,9 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
-      // Ajouter le domaine de production ici lors du déploiement
-    ],
+      'https://app.getcoro.io',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
