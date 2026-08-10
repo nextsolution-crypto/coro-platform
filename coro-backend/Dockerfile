@@ -23,7 +23,11 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm ci --only=production && npx prisma@6.19.3 generate
+RUN npm ci --only=production
+
+# Copier le client Prisma généré depuis le build stage
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 COPY --from=builder /app/dist ./dist
 
