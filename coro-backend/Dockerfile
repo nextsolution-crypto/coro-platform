@@ -10,7 +10,7 @@ RUN npm ci
 
 COPY . .
 
-RUN npx prisma generate
+RUN npx prisma@6.19.3 generate
 RUN npm run build
 
 # ── Production stage ─────────────────────────────────
@@ -25,7 +25,7 @@ COPY prisma ./prisma/
 
 RUN npm ci --only=production
 
-RUN npx prisma generate
+RUN npx prisma@6.19.3 generate
 
 COPY --from=builder /app/dist ./dist
 
