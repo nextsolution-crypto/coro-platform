@@ -44,8 +44,6 @@ services:
     build:
       context: ./coro-frontend
       dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: coro_frontend
     restart: unless-stopped
     environment:
@@ -57,6 +55,19 @@ services:
       - coro_network
     ports:
       - "3000:3000"
+
+  website:
+    build:
+      context: ./coro-website
+      dockerfile: Dockerfile
+    container_name: coro_website
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - coro_network
+    ports:
+      - "3001:3001"
 
 volumes:
   postgres_data:
