@@ -115,7 +115,7 @@ export default function ProfilePage() {
     }
     setSavingPassword(true);
     try {
-      await api.put('/users/me', { password: passwordForm.newPassword });
+      await api.put('/users/me/password', { newPassword: passwordForm.newPassword });
       setPasswordSaved(true);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setPasswordSaved(false), 3000);

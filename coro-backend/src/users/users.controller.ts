@@ -48,6 +48,15 @@ export class UsersController {
     return this.usersService.updateUser(req.user.userId, body);
   }
 
+  @Put('me/password')
+  @UseGuards(AuthGuard('jwt'))
+  async changePassword(@Request() req: any, @Body() body: { newPassword: string }) {
+    if (!body.newPassword || body.newPassword.length < 8) {
+      throw new ForbiddenException('Le mot de passe doit contenir au moins 8 caractères.');
+    }
+    return this.usersService.changePassword(req.user.userId, body.newPassword);
+  }
+
   @Put('me/logo')
   @UseGuards(AuthGuard('jwt'))
   async updateLogo(@Request() req: any, @Body() body: { companyLogoB64: string }) {
