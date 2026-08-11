@@ -61,7 +61,10 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/users/me', form);
+      const updated = await api.put('/users/me', form);
+      const currentUser = JSON.parse(localStorage.getItem('coro_user') || '{}');
+      const updatedUser = { ...currentUser, ...updated.data };
+      localStorage.setItem('coro_user', JSON.stringify(updatedUser));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       initAuth();
