@@ -41,7 +41,7 @@ export default function ClientPortfolioPage() {
 
   const handleDownloadIcs = (activityId: string, label: string) => {
     const token = localStorage.getItem('coro_token');
-    fetch(`http://localhost:3002/api/activities/${activityId}/ics`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/activities/${activityId}/ics`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then(r => r.blob()).then(blob => {
       const url = URL.createObjectURL(blob);

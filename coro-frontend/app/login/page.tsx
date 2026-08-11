@@ -63,7 +63,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@coro.app"
+                placeholder="votre@courriel.com"
                 required
                 className="w-full rounded px-4 py-3 text-sm transition-colors
                   focus:outline-none"

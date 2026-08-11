@@ -69,7 +69,7 @@ export default function ProjectDetailPage() {
       if (language === 'both') {
         // Exporter FR et EN séparément
         for (const lang of ['fr', 'en'] as const) {
-          const res = await fetch(`http://localhost:3002/api/projects/${projectId}/guide/export`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/guide/export`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ language: lang }),
@@ -84,7 +84,7 @@ export default function ProjectDetailPage() {
           URL.revokeObjectURL(url);
         }
       } else {
-        const res = await fetch(`http://localhost:3002/api/projects/${projectId}/guide/export`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/guide/export`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ language }),
@@ -267,7 +267,7 @@ const handleChangeStatus = async (newStatus: string) => {
     setPreviewing(true);
     try {
       const token = localStorage.getItem('coro_token');
-      const res = await fetch(`http://localhost:3002/api/projects/${projectId}/export`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/export`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
