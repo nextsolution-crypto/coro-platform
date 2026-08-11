@@ -100,8 +100,8 @@ const TRANSLATIONS = {
     },
     pricing: {
       tag: 'Tarifs',
-      title: 'Des tarifs adaptés à votre croissance',
-      subtitle: 'Commencez gratuitement. Passez au niveau supérieur quand vous en avez besoin.',
+      title: 'Une solution pour chaque organisation',
+      subtitle: 'Commencez gratuitement. Contactez-nous pour une soumission adaptée à vos besoins.',
       plans: [
         {
           name: 'Essai gratuit',
@@ -121,8 +121,8 @@ const TRANSLATIONS = {
         },
         {
           name: 'Standard',
-          price: '149$',
-          period: 'CAD / mois',
+          price: 'Sur soumission',
+          period: '',
           desc: 'Pour les firmes conseil en croissance.',
           color: '#C0392B',
           features: [
@@ -135,7 +135,7 @@ const TRANSLATIONS = {
             'Gestion des mandats complète',
             'Support prioritaire',
           ],
-          cta: 'Démarrer l\'essai',
+          cta: 'Demander une soumission',
           highlight: true,
         },
         {
@@ -292,8 +292,8 @@ const TRANSLATIONS = {
     },
     pricing: {
       tag: 'Pricing',
-      title: 'Pricing that grows with you',
-      subtitle: 'Start for free. Move up when you need to.',
+      title: 'A solution for every organization',
+      subtitle: 'Start for free. Contact us for a quote tailored to your needs.',
       plans: [
         {
           name: 'Free trial',
@@ -313,8 +313,8 @@ const TRANSLATIONS = {
         },
         {
           name: 'Standard',
-          price: '$149',
-          period: 'CAD / month',
+          price: 'Custom pricing',
+          period: '',
           desc: 'For growing consulting firms.',
           color: '#C0392B',
           features: [
@@ -327,7 +327,7 @@ const TRANSLATIONS = {
             'Full mandate management',
             'Priority support',
           ],
-          cta: 'Start trial',
+          cta: 'Request a quote',
           highlight: true,
         },
         {
