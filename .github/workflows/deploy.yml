@@ -15,8 +15,10 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30m
           script: |
             cd /opt/coro-platform
             git pull
-            docker compose up -d --build
+            docker compose build backend frontend website
+            docker compose up -d
             docker compose exec -T backend npx prisma@6.19.3 migrate deploy --schema=/app/prisma/schema.prisma
