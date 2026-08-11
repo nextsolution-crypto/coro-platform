@@ -1045,7 +1045,7 @@ const handleChangeStatus = async (newStatus: string) => {
         )}
         <button
           onClick={() => setShowExportModal(true)}
-          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE') || project.status === 'REVIEW'}
+          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE') || project.status === 'REVIEW' || project.status !== 'VALIDATED'}
           title={validations.some(v => v.level === 'CRITIQUE') ? 'Corrigez les erreurs critiques avant d\'exporter' : ''}
           className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
@@ -1060,7 +1060,7 @@ const handleChangeStatus = async (newStatus: string) => {
 
         <button
           onClick={() => setShowGuideModal(true)}
-          disabled={!hasDocument || project.status === 'REVIEW'}
+          disabled={!hasDocument || project.status === 'REVIEW' || project.status !== 'VALIDATED'}
           className="ml-3 text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             border: '1px solid #2980B9',
@@ -1075,6 +1075,11 @@ const handleChangeStatus = async (newStatus: string) => {
         {project.status === 'REVIEW' && (
           <p className="text-xs mt-3" style={{ color: '#F39C12' }}>
             ⏳ Export désactivé — le document est en attente d'approbation par un collègue.
+          </p>
+        )}
+        {project.status !== 'VALIDATED' && project.status !== 'REVIEW' && hasDocument && (
+          <p className="text-xs mt-3" style={{ color: '#6C757D' }}>
+            🔒 L'export est disponible uniquement après approbation du document par un collègue.
           </p>
         )}
       </div>
