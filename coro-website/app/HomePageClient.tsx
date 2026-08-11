@@ -413,6 +413,17 @@ export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'project' | 'editor'>('dashboard');
+  const tabs_keys: Array<'dashboard' | 'project' | 'editor'> = ['dashboard', 'project', 'editor'];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTab(prev => {
+        const idx = tabs_keys.indexOf(prev);
+        return tabs_keys[(idx + 1) % tabs_keys.length];
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
   const t = TRANSLATIONS[lang];
 
   useEffect(() => {
@@ -768,34 +779,41 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
             {t.documents.items.map((doc, i) => (
               <div key={i} style={{
-                borderRadius: 12, overflow: 'hidden',
+                borderRadius: 12,
                 border: '1px solid #E9ECEF',
+                borderLeft: `4px solid ${doc.color}`,
+                backgroundColor: '#FFFFFF',
+                padding: '28px 28px 28px 24px',
                 transition: 'box-shadow 0.2s, transform 0.2s',
+                display: 'flex', flexDirection: 'column', gap: 12,
               }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.boxShadow = 'none';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}>
-                <div style={{ backgroundColor: doc.color, padding: '20px 24px' }}>
-                  <span style={{ fontSize: 28, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: 900, color: '#FFFFFF',
+                    backgroundColor: doc.color,
+                    padding: '4px 10px', borderRadius: 6,
+                    letterSpacing: '0.05em',
+                  }}>
                     {doc.code}
                   </span>
                 </div>
-                <div style={{ padding: '24px' }}>
-                  <h3 style={{ fontSize: 17, fontWeight: 700, color: '#2C3E50', marginBottom: 10 }}>
-                    {doc.name}
-                  </h3>
-                  <p style={{ fontSize: 14, color: '#6C757D', lineHeight: 1.6 }}>
-                    {doc.desc}
-                  </p>
-                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', margin: 0 }}>
+                  {doc.name}
+                </h3>
+                <p style={{ fontSize: 14, color: '#6C757D', lineHeight: 1.6, margin: 0 }}>
+                  {doc.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -815,17 +833,40 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 32 }}>
             {t.sectors.items.map((sector, i) => (
               <div key={i} style={{
-                backgroundColor: '#FFFFFF', borderRadius: 16, padding: 48,
+                borderRadius: 16, overflow: 'hidden',
                 border: '1px solid #E9ECEF',
-                display: 'flex', flexDirection: 'column', gap: 20,
+                display: 'flex', flexDirection: 'column',
               }}>
+                {/* Photo */}
                 <div style={{
-                  width: 64, height: 64, borderRadius: 16,
-                  backgroundColor: '#FDEDEC', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  height: 240, overflow: 'hidden', position: 'relative',
                 }}>
-                  {getIcon(sector.icon, 28)}
+                  <img
+                    src={i === 0 ? '/sector-commercial.jpg' : '/sector-industrial.jpg'}
+                    alt={sector.title}
+                    style={{
+                      width: '100%', height: '100%', objectFit: 'cover',
+                      transition: 'transform 0.4s ease',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
+                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  />
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(to top, rgba(44,62,80,0.6) 0%, transparent 60%)',
+                  }} />
+                  <div style={{
+                    position: 'absolute', bottom: 16, left: 16,
+                    width: 48, height: 48, borderRadius: 12,
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {getIcon(sector.icon, 24, '#FFFFFF')}
+                  </div>
                 </div>
-                <div>
+                {/* Contenu */}
+                <div style={{ padding: 32, backgroundColor: '#FFFFFF', flex: 1 }}>
                   <h3 style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50', marginBottom: 12 }}>
                     {sector.title}
                   </h3>
@@ -840,8 +881,20 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" style={{ backgroundColor: '#2C3E50', padding: '100px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <section id="how-it-works" style={{ padding: '100px 24px', position: 'relative', overflow: 'hidden' }}>
+        {/* Photo de fond */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'url(/how-it-works-bg.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }} />
+        {/* Overlay foncé */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundColor: 'rgba(26, 37, 47, 0.88)',
+        }} />
+        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
             <span style={{
               display: 'inline-block', backgroundColor: 'rgba(192,57,43,0.2)',
@@ -1095,8 +1148,20 @@ export default function HomePage() {
       </section>
 
       {/* ── FORMULAIRE DÉMO ── */}
-      <section id="demo" style={{ backgroundColor: '#F8F9FA', padding: '100px 24px' }}>
-        <div style={{ maxWidth: 700, margin: '0 auto' }}>
+      <section id="demo" style={{ padding: '100px 24px', position: 'relative', overflow: 'hidden' }}>
+        {/* Photo de fond */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'url(/demo-bg.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }} />
+        {/* Overlay clair */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundColor: 'rgba(248, 249, 250, 0.93)',
+        }} />
+        <div style={{ maxWidth: 700, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <span className="section-tag">
               {lang === 'fr' ? 'Demander une démo' : 'Request a demo'}
