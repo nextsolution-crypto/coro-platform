@@ -498,32 +498,41 @@ export default function HomePage() {
           </div>
 
           {/* Right actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {/* Lang switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            
+            {/* Lang switcher — icône globe sur mobile, texte sur desktop */}
             <button
               onClick={toggleLanguage}
+              title={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
               style={{
-                padding: '6px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                padding: '8px', borderRadius: 6, fontSize: 13, fontWeight: 600,
                 border: `1px solid ${scrolled ? '#DEE2E6' : 'rgba(255,255,255,0.4)'}`,
                 backgroundColor: 'transparent',
                 color: scrolled ? '#2C3E50' : '#FFFFFF', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 4,
               }}>
-              {lang === 'fr' ? 'EN' : 'FR'}
+              <Globe size={16} />
+              <span className="hidden md:inline">{lang === 'fr' ? 'EN' : 'FR'}</span>
             </button>
 
+            {/* Connexion — icône sur mobile, texte sur desktop */}
             <a href="https://app.getcoro.io/login"
+              title={t.nav.login}
               style={{
-                padding: '8px 18px', borderRadius: 6, fontSize: 14, fontWeight: 500,
+                padding: '8px', borderRadius: 6, fontSize: 14, fontWeight: 500,
                 border: `1px solid ${scrolled ? '#DEE2E6' : 'rgba(255,255,255,0.4)'}`,
                 color: scrolled ? '#2C3E50' : '#FFFFFF', textDecoration: 'none',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6,
               }}
               onMouseEnter={e => { e.currentTarget.style.backgroundColor = scrolled ? '#F8F9FA' : 'rgba(255,255,255,0.1)'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}>
-              {t.nav.login}
+              <Users size={16} />
+              <span className="hidden md:inline">{t.nav.login}</span>
             </a>
 
+            {/* Demander une démo — caché sur mobile */}
             <a href="#demo"
+              className="hidden md:inline-block"
               style={{
                 padding: '8px 18px', borderRadius: 6, fontSize: 14, fontWeight: 600,
                 backgroundColor: '#C0392B', color: '#FFFFFF', textDecoration: 'none',
@@ -534,10 +543,10 @@ export default function HomePage() {
               {t.nav.demo}
             </a>
 
-            {/* Mobile menu */}
+            {/* Hamburger — visible sur mobile seulement */}
             <button onClick={() => setMenuOpen(!menuOpen)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-              className="md:hidden block">
+              className="md:hidden"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
               {menuOpen
                 ? <X size={24} color={scrolled ? '#2C3E50' : '#FFFFFF'} />
                 : <Menu size={24} color={scrolled ? '#2C3E50' : '#FFFFFF'} />}
@@ -830,7 +839,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 32 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 32 }}>
             {t.sectors.items.map((sector, i) => (
               <div key={i} style={{
                 borderRadius: 16, overflow: 'hidden',
@@ -840,6 +849,7 @@ export default function HomePage() {
                 {/* Photo */}
                 <div style={{
                   height: 240, overflow: 'hidden', position: 'relative',
+                  maxWidth: '100%',
                 }}>
                   <img
                     src={i === 0 ? '/sector-commercial.jpg' : '/sector-industrial.jpg'}
