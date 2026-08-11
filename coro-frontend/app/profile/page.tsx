@@ -133,7 +133,7 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl">
+      <div className="max-w-3xl">
         {/* En-tête */}
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
@@ -144,17 +144,17 @@ export default function ProfilePage() {
         </div>
 
         {/* Avatar */}
-        <div className="flex items-center gap-4 mb-6 p-5 rounded-md"
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 p-4 sm:p-5 rounded-md"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-black"
             style={{ backgroundColor: '#C0392B' }}>
             {user.firstName?.[0]}{user.lastName?.[0]}
           </div>
-          <div>
-            <p className="font-bold text-lg" style={{ color: '#2C3E50' }}>
+          <div className="min-w-0 text-center sm:text-left">
+            <p className="font-bold text-lg break-words" style={{ color: '#2C3E50' }}>
               {user.firstName} {user.lastName}
             </p>
-            <p className="text-sm" style={{ color: '#6C757D' }}>{user.email}</p>
+            <p className="text-sm break-all" style={{ color: '#6C757D' }}>{user.email}</p>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block"
               style={{
                 backgroundColor: user.role === 'SUPER_ADMIN' ? '#FDEDEC' : user.role === 'ADMIN' ? '#EBF5FB' : '#EAFAF1',
@@ -166,9 +166,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Informations personnelles */}
-        <div className="rounded-md p-6 mb-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className="rounded-md p-4 sm:p-6 mb-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <h2 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Informations personnelles</h2>
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Prénom</label>
               <input type="text" value={form.firstName}
@@ -198,14 +198,14 @@ export default function ProfilePage() {
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>
               Horaire de base
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               {[
                 { value: 37.5, label: '37.5h / semaine', desc: 'Clause 37h30 (anciens employés)' },
                 { value: 40, label: '40h / semaine', desc: 'Standard Garda' },
               ].map(opt => (
                 <button key={opt.value}
                   onClick={() => setForm({ ...form, horaireBase: opt.value })}
-                  className="flex-1 p-3 rounded text-left transition-colors"
+                  className="flex-1 p-3 rounded text-left transition-colors min-w-0"
                   style={{
                     backgroundColor: form.horaireBase === opt.value ? '#EBF5FB' : '#F8F9FA',
                     border: `1px solid ${form.horaireBase === opt.value ? '#2980B9' : '#DEE2E6'}`,
@@ -219,7 +219,7 @@ export default function ProfilePage() {
             </div>
           </div>
           <button onClick={handleSave} disabled={saving}
-            className="text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
+            className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
             style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
             onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}>
@@ -228,7 +228,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Section Organisation émettrice */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid #E9ECEF', padding: '24px', marginBottom: '24px' }}>
+        <div className="rounded-md p-4 sm:p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#2C3E50', marginBottom: '4px' }}>
             Organisation émettrice
           </h2>
@@ -241,7 +241,7 @@ export default function ProfilePage() {
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '8px' }}>
               Logo de l'organisation
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               {companyForm.companyLogoFullB64 ? (
                 <img src={companyForm.companyLogoFullB64} alt="Logo" style={{ height: '48px', maxWidth: '160px', objectFit: 'contain', border: '1px solid #E9ECEF', borderRadius: '4px', padding: '4px' }} />
               ) : (
@@ -249,14 +249,15 @@ export default function ProfilePage() {
                   <span style={{ fontSize: '11px', color: '#ADB5BD' }}>Aucun logo</span>
                 </div>
               )}
-              <div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <input type="file" accept="image/*" id="logo-upload" style={{ display: 'none' }} onChange={handleLogoUpload} />
-                <label htmlFor="logo-upload" style={{ cursor: 'pointer', padding: '8px 16px', backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50' }}>
+                <label htmlFor="logo-upload" className="w-full sm:w-auto text-center" style={{ cursor: 'pointer', padding: '8px 16px', backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50' }}>
                   {companyForm.companyLogoFullB64 ? 'Changer le logo' : 'Téléverser un logo'}
                 </label>
                 {companyForm.companyLogoFullB64 && (
                   <button onClick={() => setCompanyForm({ ...companyForm, companyLogoFullB64: '' })}
-                    style={{ marginLeft: '8px', padding: '8px 12px', backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: '4px', fontSize: '13px', color: '#C0392B', cursor: 'pointer' }}>
+                    className="w-full sm:w-auto"
+                    style={{ padding: '8px 12px', backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: '4px', fontSize: '13px', color: '#C0392B', cursor: 'pointer' }}>
                     Retirer
                   </button>
                 )}
@@ -265,7 +266,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Champs */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Nom de l'organisation</label>
               <input
@@ -330,10 +331,11 @@ export default function ProfilePage() {
           </div>
 
           {/* Bouton sauvegarder */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <button
               onClick={handleSaveCompany}
               disabled={savingCompany}
+              className="w-full sm:w-auto"
               style={{ padding: '10px 24px', backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '600', cursor: savingCompany ? 'not-allowed' : 'pointer', opacity: savingCompany ? 0.7 : 1 }}
             >
               {savingCompany ? 'Sauvegarde...' : 'Sauvegarder l\'organisation'}
@@ -345,7 +347,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Changer le mot de passe */}
-        <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className="rounded-md p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <h2 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Changer le mot de passe</h2>
           <div className="space-y-3 mb-4">
             <div>
@@ -371,7 +373,7 @@ export default function ProfilePage() {
             <p className="text-xs mb-3" style={{ color: '#C0392B' }}>{passwordError}</p>
           )}
           <button onClick={handleChangePassword} disabled={savingPassword || !passwordForm.newPassword}
-            className="text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
+            className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded disabled:opacity-50"
             style={{ backgroundColor: passwordSaved ? '#27AE60' : '#2980B9' }}
             onMouseEnter={e => { if (!savingPassword) e.currentTarget.style.backgroundColor = passwordSaved ? '#1E8449' : '#1A5276'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = passwordSaved ? '#27AE60' : '#2980B9'; }}>

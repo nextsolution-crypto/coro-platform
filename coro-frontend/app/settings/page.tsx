@@ -136,7 +136,7 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Paramètres
@@ -148,8 +148,7 @@ export default function SettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="text-white font-medium px-6 py-2.5 rounded transition-colors
-            disabled:opacity-50"
+          className="w-full sm:w-auto text-white font-medium px-6 py-2.5 rounded transition-colors disabled:opacity-50"
           style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
           onMouseEnter={e => {
             if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226';
@@ -162,11 +161,11 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Logo */}
-        <div className="col-span-1">
-          <div className="rounded-md p-6"
+        <div className="lg:col-span-1">
+          <div className="rounded-md p-4 sm:p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -314,10 +313,10 @@ export default function SettingsPage() {
         </div>
 
         {/* Infos */}
-        <div className="col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
 
           {/* Entreprise */}
-          <div className="rounded-md p-6"
+          <div className="rounded-md p-4 sm:p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -342,7 +341,7 @@ export default function SettingsPage() {
                 onBlur={e => e.target.style.borderColor = '#CED4DA'}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5"
                   style={{ color: '#495057' }}>
@@ -382,7 +381,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Profil */}
-          <div className="rounded-md p-6"
+          <div className="rounded-md p-4 sm:p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -391,7 +390,7 @@ export default function SettingsPage() {
             <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>
               Profil utilisateur
             </h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5"
                   style={{ color: '#495057' }}>Prénom</label>
@@ -436,7 +435,7 @@ export default function SettingsPage() {
 
           {/* Organisation — visible seulement pour ADMIN/SUPER_ADMIN */}
           {orgInfo && (
-            <div className="rounded-md p-6"
+            <div className="rounded-md p-4 sm:p-6"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E9ECEF',
@@ -448,7 +447,7 @@ export default function SettingsPage() {
               <p className="text-xs mb-4" style={{ color: '#ADB5BD' }}>
                 Informations sur votre licence CORO
               </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs" style={{ color: '#ADB5BD' }}>Nom</p>
                   <p className="text-sm mt-1 font-medium" style={{ color: '#2C3E50' }}>
@@ -496,7 +495,7 @@ export default function SettingsPage() {
                 { label: 'Environnement',    value: 'Local',       color: '#27AE60' },
                 { label: 'Base de données',  value: 'PostgreSQL ✓', color: '#27AE60' },
               ].map(item => (
-                <div key={item.label} className="flex justify-between items-center py-1"
+                <div key={item.label} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 py-1"
                   style={{ borderBottom: '1px solid #F8F9FA' }}>
                   <span className="text-sm" style={{ color: '#6C757D' }}>{item.label}</span>
                   <span className="text-sm font-mono font-medium" style={{ color: item.color }}>

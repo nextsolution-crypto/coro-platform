@@ -10,7 +10,7 @@ import { MessageSquare, CheckCircle } from 'lucide-react';
 const CATEGORIES = [
   { value: 'BUG', label: '🐛 Signaler un bug', desc: 'Quelque chose ne fonctionne pas comme prévu' },
   { value: 'SUGGESTION', label: '💡 Suggestion', desc: 'Une idée pour améliorer CORO' },
-  { value: 'QUESTION', label: '❓ Question', desc: 'Besoin d\'aide ou d\'une clarification' },
+  { value: 'QUESTION', label: '❓ Question', desc: "Besoin d'aide ou d'une clarification" },
   { value: 'AUTRE', label: '💬 Autre', desc: 'Tout autre commentaire' },
 ];
 
@@ -35,18 +35,27 @@ export default function FeedbackPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!category) { setError('Veuillez choisir une catégorie.'); return; }
-    if (!message.trim()) { setError('Veuillez écrire un message.'); return; }
+
+    if (!category) {
+      setError('Veuillez choisir une catégorie.');
+      return;
+    }
+
+    if (!message.trim()) {
+      setError('Veuillez écrire un message.');
+      return;
+    }
 
     setSending(true);
     setError('');
+
     try {
       await api.post('/feedback', { category, message });
       setSent(true);
       setCategory('');
       setMessage('');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de l\'envoi.');
+      setError(err.response?.data?.message || "Erreur lors de l'envoi.");
     } finally {
       setSending(false);
     }
@@ -55,9 +64,9 @@ export default function FeedbackPage() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <MessageSquare size={22} style={{ color: '#C0392B' }} />
-          <div>
+        <div className="flex items-start gap-3 mb-6">
+          <MessageSquare size={22} className="flex-shrink-0 mt-1" style={{ color: '#C0392B' }} />
+          <div className="min-w-0">
             <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
               Nous écrire
             </h2>
@@ -68,8 +77,10 @@ export default function FeedbackPage() {
         </div>
 
         {sent ? (
-          <div className="rounded-md p-10 text-center"
-            style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}>
+          <div
+            className="rounded-md p-6 sm:p-10 text-center"
+            style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}
+          >
             <CheckCircle size={40} className="mx-auto mb-4" style={{ color: '#27AE60' }} />
             <p className="font-semibold text-lg mb-2" style={{ color: '#27AE60' }}>
               Message envoyé — merci !
@@ -79,7 +90,7 @@ export default function FeedbackPage() {
             </p>
             <button
               onClick={() => setSent(false)}
-              className="text-sm font-medium px-4 py-2 rounded transition-colors"
+              className="w-full sm:w-auto text-sm font-medium px-4 py-2 rounded transition-colors"
               style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
             >
               Envoyer un autre message
@@ -87,28 +98,30 @@ export default function FeedbackPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-
-            {/* Catégorie */}
             <div>
               <label className="block text-sm font-semibold mb-3" style={{ color: '#2C3E50' }}>
                 Type de message *
               </label>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {CATEGORIES.map(cat => (
                   <button
                     key={cat.value}
                     type="button"
-                    onClick={() => setCategory(cat.value)}
-                    className="text-left rounded-md p-4 transition-all"
+                    onClick={() => {
+                      setCategory(cat.value);
+                      setError('');
+                    }}
+                    className="text-left rounded-md p-4 transition-all min-w-0"
                     style={{
                       border: `2px solid ${category === cat.value ? '#C0392B' : '#E9ECEF'}`,
                       backgroundColor: category === cat.value ? '#FDEDEC' : '#FFFFFF',
                     }}
                   >
-                    <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
+                    <p className="text-sm font-semibold break-words" style={{ color: '#2C3E50' }}>
                       {cat.label}
                     </p>
-                    <p className="text-xs mt-1" style={{ color: '#6C757D' }}>
+                    <p className="text-xs mt-1 break-words" style={{ color: '#6C757D' }}>
                       {cat.desc}
                     </p>
                   </button>
@@ -116,27 +129,33 @@ export default function FeedbackPage() {
               </div>
             </div>
 
-            {/* Message */}
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#2C3E50' }}>
                 Votre message *
               </label>
+
               <textarea
                 value={message}
-                onChange={e => setMessage(e.target.value)}
+                onChange={e => {
+                  setMessage(e.target.value);
+                  setError('');
+                }}
                 rows={6}
                 placeholder="Décrivez votre bug, suggestion ou question en détail..."
-                className="w-full rounded-md px-4 py-3 text-sm focus:outline-none resize-vertical"
-                style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }}
+                className="w-full min-w-0 rounded-md px-4 py-3 text-sm focus:outline-none resize-vertical"
+                style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
               />
+
               <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
                 {message.length} caractère{message.length !== 1 ? 's' : ''}
               </p>
             </div>
 
             {error && (
-              <div className="rounded p-3 text-sm"
-                style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}>
+              <div
+                className="rounded p-3 text-sm break-words"
+                style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}
+              >
                 {error}
               </div>
             )}

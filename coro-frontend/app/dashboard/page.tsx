@@ -460,81 +460,329 @@ export default function DashboardPage() {
       )}
 
       {/* Projets récents */}
-      <div className="rounded-md"
-        style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-        <div className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: '1px solid #E9ECEF' }}>
-          <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Projets récents</h3>
-          <button onClick={() => router.push('/projects')}
-            className="text-xs px-3 py-1.5 rounded transition-colors"
-            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-            Voir tous →
-          </button>
-        </div>
-        {loading ? (
-          <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
-        ) : projetsRecents.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucun projet pour l'instant</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F8F9FA' }}>
-                {['Projet', 'Client', 'Bâtiment', 'Type', 'Statut', 'Progression', 'Modifié'].map(col => (
-                  <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}>
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {projetsRecents.map((projet, idx) => {
-                const s = statusConfig[projet.status] || statusConfig['DRAFT'];
-                return (
-                  <tr key={projet.id}
-                    onClick={() => router.push(`/projects/${projet.id}`)}
-                    className="cursor-pointer transition-colors"
-                    style={{ borderBottom: idx < projetsRecents.length - 1 ? '1px solid #F8F9FA' : 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td className="px-4 py-3 font-medium" style={{ color: '#2C3E50' }}>{projet.name}</td>
-                    <td className="px-4 py-3 text-xs" style={{ color: '#495057' }}>{projet.client?.name || '—'}</td>
-                    <td className="px-4 py-3 text-xs" style={{ color: '#495057' }}>{projet.building?.name || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded text-xs font-bold text-white"
-                        style={{ backgroundColor: '#C0392B' }}>
-                        {projet.documentType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                        {s.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: '#E9ECEF' }}>
-                          <div className="h-1.5 rounded-full"
-                            style={{ width: `${projet.progress || 0}%`, backgroundColor: projet.progress === 100 ? '#27AE60' : '#C0392B' }} />
-                        </div>
-                        <span className="text-xs" style={{ color: '#ADB5BD' }}>{projet.progress || 0}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: '#ADB5BD' }}>
-                      {new Date(projet.updatedAt).toLocaleDateString('fr-CA')}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+<div
+  className="rounded-md"
+  style={{
+    backgroundColor: '#FFFFFF',
+    border: '1px solid #E9ECEF',
+  }}
+>
+  <div
+    className="flex items-center justify-between px-4 sm:px-5 py-4"
+    style={{ borderBottom: '1px solid #E9ECEF' }}
+  >
+    <h3
+      className="font-semibold text-sm"
+      style={{ color: '#2C3E50' }}
+    >
+      Projets récents
+    </h3>
+
+    <button
+      onClick={() => router.push('/projects')}
+      className="text-xs px-3 py-1.5 rounded transition-colors"
+      style={{
+        border: '1px solid #DEE2E6',
+        color: '#6C757D',
+      }}
+      onMouseEnter={e =>
+        (e.currentTarget.style.backgroundColor = '#F8F9FA')
+      }
+      onMouseLeave={e =>
+        (e.currentTarget.style.backgroundColor = 'transparent')
+      }
+    >
+      Voir tous →
+    </button>
+  </div>
+
+  {loading ? (
+    <p
+      className="text-sm text-center py-8 animate-pulse"
+      style={{ color: '#ADB5BD' }}
+    >
+      Chargement...
+    </p>
+  ) : projetsRecents.length === 0 ? (
+    <div className="text-center py-12">
+      <p
+        className="text-sm"
+        style={{ color: '#ADB5BD' }}
+      >
+        Aucun projet pour l'instant
+      </p>
+    </div>
+  ) : (
+    <>
+      {/* MOBILE */}
+      <div className="md:hidden">
+        {projetsRecents.map((projet, idx) => {
+          const s =
+            statusConfig[projet.status] ||
+            statusConfig['DRAFT'];
+
+          return (
+            <div
+              key={projet.id}
+              onClick={() =>
+                router.push(`/projects/${projet.id}`)
+              }
+              className="p-4 cursor-pointer transition-colors"
+              style={{
+                borderBottom:
+                  idx < projetsRecents.length - 1
+                    ? '1px solid #F8F9FA'
+                    : 'none',
+              }}
+              onMouseEnter={e =>
+                (e.currentTarget.style.backgroundColor =
+                  '#F8F9FA')
+              }
+              onMouseLeave={e =>
+                (e.currentTarget.style.backgroundColor =
+                  'transparent')
+              }
+            >
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <p
+                    className="text-sm font-semibold break-words"
+                    style={{ color: '#2C3E50' }}
+                  >
+                    {projet.name}
+                  </p>
+
+                  <p
+                    className="text-xs mt-1 break-words"
+                    style={{ color: '#6C757D' }}
+                  >
+                    {projet.client?.name || '—'}
+                  </p>
+                </div>
+
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0"
+                  style={{ backgroundColor: '#C0392B' }}
+                >
+                  {projet.documentType}
+                </span>
+              </div>
+
+              <p
+                className="text-xs mb-3 break-words"
+                style={{ color: '#6C757D' }}
+              >
+                🏢 {projet.building?.name || '—'}
+              </p>
+
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{
+                    backgroundColor: s.bg,
+                    color: s.color,
+                    border: `1px solid ${s.border}`,
+                  }}
+                >
+                  {s.label}
+                </span>
+
+                <span
+                  className="text-xs flex-shrink-0"
+                  style={{ color: '#ADB5BD' }}
+                >
+                  {new Date(
+                    projet.updatedAt
+                  ).toLocaleDateString('fr-CA')}
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span
+                    className="text-xs"
+                    style={{ color: '#ADB5BD' }}
+                  >
+                    Progression
+                  </span>
+
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: '#6C757D' }}
+                  >
+                    {projet.progress || 0}%
+                  </span>
+                </div>
+
+                <div
+                  className="w-full h-1.5 rounded-full"
+                  style={{ backgroundColor: '#E9ECEF' }}
+                >
+                  <div
+                    className="h-1.5 rounded-full"
+                    style={{
+                      width: `${projet.progress || 0}%`,
+                      backgroundColor:
+                        projet.progress === 100
+                          ? '#27AE60'
+                          : '#C0392B',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* TABLETTE + DESKTOP */}
+      <div className="hidden md:block">
+        <table
+          className="w-full text-sm"
+          style={{ borderCollapse: 'collapse' }}
+        >
+          <thead>
+            <tr style={{ backgroundColor: '#F8F9FA' }}>
+              {[
+                'Projet',
+                'Client',
+                'Bâtiment',
+                'Type',
+                'Statut',
+                'Progression',
+                'Modifié',
+              ].map(col => (
+                <th
+                  key={col}
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                  style={{
+                    color: '#ADB5BD',
+                    borderBottom: '1px solid #E9ECEF',
+                  }}
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {projetsRecents.map((projet, idx) => {
+              const s =
+                statusConfig[projet.status] ||
+                statusConfig['DRAFT'];
+
+              return (
+                <tr
+                  key={projet.id}
+                  onClick={() =>
+                    router.push(`/projects/${projet.id}`)
+                  }
+                  className="cursor-pointer transition-colors"
+                  style={{
+                    borderBottom:
+                      idx < projetsRecents.length - 1
+                        ? '1px solid #F8F9FA'
+                        : 'none',
+                  }}
+                  onMouseEnter={e =>
+                    (e.currentTarget.style.backgroundColor =
+                      '#F8F9FA')
+                  }
+                  onMouseLeave={e =>
+                    (e.currentTarget.style.backgroundColor =
+                      'transparent')
+                  }
+                >
+                  <td
+                    className="px-4 py-3 font-medium"
+                    style={{ color: '#2C3E50' }}
+                  >
+                    {projet.name}
+                  </td>
+
+                  <td
+                    className="px-4 py-3 text-xs"
+                    style={{ color: '#495057' }}
+                  >
+                    {projet.client?.name || '—'}
+                  </td>
+
+                  <td
+                    className="px-4 py-3 text-xs"
+                    style={{ color: '#495057' }}
+                  >
+                    {projet.building?.name || '—'}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-bold text-white"
+                      style={{ backgroundColor: '#C0392B' }}
+                    >
+                      {projet.documentType}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        backgroundColor: s.bg,
+                        color: s.color,
+                        border: `1px solid ${s.border}`,
+                      }}
+                    >
+                      {s.label}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-16 h-1.5 rounded-full"
+                        style={{
+                          backgroundColor: '#E9ECEF',
+                        }}
+                      >
+                        <div
+                          className="h-1.5 rounded-full"
+                          style={{
+                            width: `${projet.progress || 0}%`,
+                            backgroundColor:
+                              projet.progress === 100
+                                ? '#27AE60'
+                                : '#C0392B',
+                          }}
+                        />
+                      </div>
+
+                      <span
+                        className="text-xs"
+                        style={{ color: '#ADB5BD' }}
+                      >
+                        {projet.progress || 0}%
+                      </span>
+                    </div>
+                  </td>
+
+                  <td
+                    className="px-4 py-3 text-xs"
+                    style={{ color: '#ADB5BD' }}
+                  >
+                    {new Date(
+                      projet.updatedAt
+                    ).toLocaleDateString('fr-CA')}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )}
+</div>
     </AppLayout>
   );
 }

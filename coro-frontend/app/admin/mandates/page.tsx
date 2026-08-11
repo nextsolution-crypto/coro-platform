@@ -88,7 +88,7 @@ export default function AdminMandatesPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Mandats actifs',       value: totalActifs,                        color: '#2980B9', bg: '#EBF5FB' },
           { label: 'Délais dépassés',      value: enRetard,                           color: '#C0392B', bg: '#FDEDEC' },
@@ -106,15 +106,15 @@ export default function AdminMandatesPage() {
       </div>
 
       {/* Filtres */}
-      <div className="flex flex-wrap gap-3 mb-4 p-4 rounded-md"
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4 p-4 rounded-md"
         style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
         
         {/* Conseiller */}
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold mb-1" style={{ color: '#6C757D' }}>Conseiller</label>
           <select value={filterConseiller}
             onChange={e => setFilterConseiller(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded focus:outline-none"
+            className="w-full px-3 py-2 text-sm rounded focus:outline-none"
             style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}>
             <option value="tous">Tous</option>
             {conseillers.map((c: any) => (
@@ -124,11 +124,11 @@ export default function AdminMandatesPage() {
         </div>
 
         {/* Statut */}
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold mb-1" style={{ color: '#6C757D' }}>Statut projet</label>
           <select value={filterStatut}
             onChange={e => setFilterStatut(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded focus:outline-none"
+            className="w-full px-3 py-2 text-sm rounded focus:outline-none"
             style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}>
             <option value="tous">Tous</option>
             <option value="DRAFT">Brouillon</option>
@@ -139,11 +139,11 @@ export default function AdminMandatesPage() {
         </div>
 
         {/* Type mandat */}
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold mb-1" style={{ color: '#6C757D' }}>Type mandat</label>
           <select value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded focus:outline-none"
+            className="w-full px-3 py-2 text-sm rounded focus:outline-none"
             style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}>
             <option value="tous">Tous</option>
             <option value="FORFAITAIRE">Forfaitaire</option>
@@ -152,11 +152,11 @@ export default function AdminMandatesPage() {
         </div>
 
         {/* Délai */}
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold mb-1" style={{ color: '#6C757D' }}>Alerte délai</label>
           <select value={filterDelai}
             onChange={e => setFilterDelai(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded focus:outline-none"
+            className="w-full px-3 py-2 text-sm rounded focus:outline-none"
             style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}>
             <option value="tous">Tous</option>
             <option value="DEPASSE">🔴 Dépassé</option>
@@ -167,7 +167,7 @@ export default function AdminMandatesPage() {
           </select>
         </div>
 
-        <div className="flex items-end ml-auto">
+        <div className="flex items-end sm:col-span-2 xl:col-span-4">
           <p className="text-xs" style={{ color: '#ADB5BD' }}>
             {filtered.length} mandat{filtered.length !== 1 ? 's' : ''} affichés
           </p>
@@ -183,121 +183,135 @@ export default function AdminMandatesPage() {
           <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucun mandat trouvé</p>
         </div>
       ) : (
-        <div className="rounded-md overflow-hidden"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F8F9FA' }}>
-                {['Projet', 'Client', 'Conseiller', 'Type', 'Statut', 'Heures', 'Délai livraison', ''].map(col => (
-                  <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                    style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}>
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((m, idx) => {
-                const s = statusConfig[m.projectStatus] || statusConfig['DRAFT'];
-                const d = m.delaiLevel ? delaiConfig[m.delaiLevel] : null;
-                return (
-                  <tr key={m.mandateId}
-                    className="cursor-pointer transition-colors"
-                    style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #F8F9FA' : 'none' }}
-                    onClick={() => router.push(`/projects/${m.projectId}/mandate`)}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+        <>
+          {/* MOBILE — cartes */}
+          <div className="md:hidden space-y-3">
+            {filtered.map(m => {
+              const s = statusConfig[m.projectStatus] || statusConfig['DRAFT'];
+              const d = m.delaiLevel ? delaiConfig[m.delaiLevel] : null;
 
-                    {/* Projet */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                          style={{ backgroundColor: '#C0392B', flexShrink: 0 }}>
+              return (
+                <div
+                  key={m.mandateId}
+                  onClick={() => router.push(`/projects/${m.projectId}/mandate`)}
+                  className="rounded-md p-4 cursor-pointer transition-colors"
+                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded text-white whitespace-nowrap"
+                          style={{ backgroundColor: '#C0392B' }}
+                        >
                           {m.documentType}
                         </span>
-                        <span className="font-medium" style={{ color: '#2C3E50' }}>{m.projectName}</span>
-                      </div>
-                    </td>
-
-                    {/* Client */}
-                    <td className="px-4 py-3">
-                      <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{m.clientName}</p>
-                      <p className="text-xs" style={{ color: '#ADB5BD' }}>{m.buildingName}</p>
-                    </td>
-
-                    {/* Conseiller */}
-                    <td className="px-4 py-3">
-                      {m.conseiller ? (
-                        <span className="text-xs font-medium" style={{ color: '#495057' }}>
-                          {m.conseiller.firstName} {m.conseiller.lastName}
+                        <span className="font-semibold text-sm break-words" style={{ color: '#2C3E50' }}>
+                          {m.projectName}
                         </span>
-                      ) : (
-                        <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
-                      )}
-                    </td>
+                      </div>
+                      <p className="text-xs break-words" style={{ color: '#6C757D' }}>
+                        {m.clientName}
+                      </p>
+                      <p className="text-xs break-words" style={{ color: '#ADB5BD' }}>
+                        {m.buildingName}
+                      </p>
+                    </div>
 
-                    {/* Type mandat */}
-                    <td className="px-4 py-3">
+                    <span
+                      className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap flex-shrink-0"
+                      style={{ backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                        Conseiller
+                      </p>
+                      <p className="text-xs font-medium break-words" style={{ color: '#495057' }}>
+                        {m.conseiller
+                          ? `${m.conseiller.firstName} ${m.conseiller.lastName}`
+                          : '—'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                        Type
+                      </p>
                       {m.typeMandat ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex"
                           style={{
                             backgroundColor: m.typeMandat === 'FORFAITAIRE' ? '#FDEDEC' : '#EBF5FB',
                             color: m.typeMandat === 'FORFAITAIRE' ? '#C0392B' : '#2980B9',
-                          }}>
+                          }}
+                        >
                           {m.typeMandat === 'FORFAITAIRE' ? '📅 Forfaitaire' : '🔄 Annuel'}
                         </span>
                       ) : (
                         <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    {/* Statut */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
-                        {s.label}
-                      </span>
-                    </td>
-
-                    {/* Heures */}
-                    <td className="px-4 py-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                        Heures
+                      </p>
                       {m.heuresBudgetees > 0 ? (
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold"
-                              style={{ color: m.budgetPct > 90 ? '#C0392B' : m.budgetPct > 70 ? '#F39C12' : '#27AE60' }}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: m.budgetPct > 90 ? '#C0392B' : m.budgetPct > 70 ? '#F39C12' : '#27AE60' }}
+                            >
                               {m.heuresReelles.toFixed(0)}h
                             </span>
-                            <span className="text-xs" style={{ color: '#ADB5BD' }}>/ {m.heuresBudgetees}h</span>
+                            <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                              / {m.heuresBudgetees}h
+                            </span>
                           </div>
-                          <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: '#E9ECEF' }}>
-                            <div className="h-1.5 rounded-full"
+                          <div className="w-full max-w-24 h-1.5 rounded-full" style={{ backgroundColor: '#E9ECEF' }}>
+                            <div
+                              className="h-1.5 rounded-full"
                               style={{
                                 width: `${Math.min(m.budgetPct, 100)}%`,
                                 backgroundColor: m.budgetPct > 90 ? '#C0392B' : m.budgetPct > 70 ? '#F39C12' : '#27AE60',
-                              }} />
+                              }}
+                            />
                           </div>
                         </div>
                       ) : (
                         <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
                       )}
-                    </td>
+                    </div>
 
-                    {/* Délai */}
-                    <td className="px-4 py-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                        Délai
+                      </p>
                       {d && m.dateLimite ? (
-                        <div className="flex items-center gap-2">
-                          <span>{d.icon}</span>
+                        <div className="flex items-start gap-2">
+                          <span className="flex-shrink-0">{d.icon}</span>
                           <div>
-                            <p className="text-xs font-bold" style={{ color: d.color }}>
+                            <p className="text-xs font-bold whitespace-nowrap" style={{ color: d.color }}>
                               {m.diffDays < 0
                                 ? `Dépassé de ${Math.abs(m.diffDays)}j`
-                                : m.diffDays === 0 ? "Aujourd'hui"
+                                : m.diffDays === 0
+                                ? "Aujourd'hui"
                                 : `${m.diffDays}j restants`}
                             </p>
-                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                            <p className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
                               {new Date(m.dateLimite).toLocaleDateString('fr-CA', {
-                                day: 'numeric', month: 'short'
+                                day: 'numeric',
+                                month: 'short',
                               })}
                             </p>
                           </div>
@@ -305,20 +319,173 @@ export default function AdminMandatesPage() {
                       ) : (
                         <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    {/* Lien */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-medium" style={{ color: '#C0392B' }}>
-                        Voir →
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: '1px solid #F1F3F5' }}>
+                    <span className="text-xs font-medium" style={{ color: '#C0392B' }}>
+                      Voir le mandat →
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* TABLETTE + DESKTOP — tableau */}
+          <div
+            className="hidden md:block rounded-md overflow-x-auto"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
+          >
+            <table className="w-full min-w-[1100px] text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#F8F9FA' }}>
+                  {['Projet', 'Client', 'Conseiller', 'Type', 'Statut', 'Heures', 'Délai livraison', ''].map(col => (
+                    <th
+                      key={col}
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                      style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {filtered.map((m, idx) => {
+                  const s = statusConfig[m.projectStatus] || statusConfig['DRAFT'];
+                  const d = m.delaiLevel ? delaiConfig[m.delaiLevel] : null;
+
+                  return (
+                    <tr
+                      key={m.mandateId}
+                      className="cursor-pointer transition-colors"
+                      style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                      onClick={() => router.push(`/projects/${m.projectId}/mandate`)}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F8F9FA')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-xs font-bold px-2 py-0.5 rounded text-white whitespace-nowrap"
+                            style={{ backgroundColor: '#C0392B', flexShrink: 0 }}
+                          >
+                            {m.documentType}
+                          </span>
+                          <span className="font-medium" style={{ color: '#2C3E50' }}>
+                            {m.projectName}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{m.clientName}</p>
+                        <p className="text-xs" style={{ color: '#ADB5BD' }}>{m.buildingName}</p>
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {m.conseiller ? (
+                          <span className="text-xs font-medium" style={{ color: '#495057' }}>
+                            {m.conseiller.firstName} {m.conseiller.lastName}
+                          </span>
+                        ) : (
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {m.typeMandat ? (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex"
+                            style={{
+                              backgroundColor: m.typeMandat === 'FORFAITAIRE' ? '#FDEDEC' : '#EBF5FB',
+                              color: m.typeMandat === 'FORFAITAIRE' ? '#C0392B' : '#2980B9',
+                            }}
+                          >
+                            {m.typeMandat === 'FORFAITAIRE' ? '📅 Forfaitaire' : '🔄 Annuel'}
+                          </span>
+                        ) : (
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex"
+                          style={{ backgroundColor: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+                        >
+                          {s.label}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {m.heuresBudgetees > 0 ? (
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span
+                                className="text-xs font-bold"
+                                style={{ color: m.budgetPct > 90 ? '#C0392B' : m.budgetPct > 70 ? '#F39C12' : '#27AE60' }}
+                              >
+                                {m.heuresReelles.toFixed(0)}h
+                              </span>
+                              <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                                / {m.heuresBudgetees}h
+                              </span>
+                            </div>
+                            <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: '#E9ECEF' }}>
+                              <div
+                                className="h-1.5 rounded-full"
+                                style={{
+                                  width: `${Math.min(m.budgetPct, 100)}%`,
+                                  backgroundColor: m.budgetPct > 90 ? '#C0392B' : m.budgetPct > 70 ? '#F39C12' : '#27AE60',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {d && m.dateLimite ? (
+                          <div className="flex items-center gap-2">
+                            <span>{d.icon}</span>
+                            <div>
+                              <p className="text-xs font-bold whitespace-nowrap" style={{ color: d.color }}>
+                                {m.diffDays < 0
+                                  ? `Dépassé de ${Math.abs(m.diffDays)}j`
+                                  : m.diffDays === 0
+                                  ? "Aujourd'hui"
+                                  : `${m.diffDays}j restants`}
+                              </p>
+                              <p className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
+                                {new Date(m.dateLimite).toLocaleDateString('fr-CA', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="text-xs font-medium" style={{ color: '#C0392B' }}>
+                          Voir →
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </AppLayout>
   );

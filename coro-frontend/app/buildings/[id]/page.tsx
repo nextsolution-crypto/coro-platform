@@ -182,27 +182,27 @@ export default function BuildingDetailPage() {
       </button>
 
       {/* Carte bâtiment */}
-      <div className="rounded-md p-6 mb-6"
+      <div className="rounded-md p-4 sm:p-6 mb-6"
         style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #E9ECEF',
           boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
             {/* Icône */}
             <div className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: '#FDEDEC' }}>
               <Building2 size={22} style={{ color: '#C0392B' }} />
             </div>
             {/* Infos */}
-            <div>
-              <h2 className="text-xl font-bold" style={{ color: '#2C3E50' }}>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold break-words" style={{ color: '#2C3E50' }}>
                 {building.name}
               </h2>
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-start gap-1.5 mt-1 min-w-0">
                 <MapPin size={13} style={{ color: '#ADB5BD' }} />
-                <p className="text-sm" style={{ color: '#6C757D' }}>
+                <p className="text-sm break-words" style={{ color: '#6C757D' }}>
                   {building.address}, {building.city}, {building.province}
                   {building.postalCode && ` ${building.postalCode}`}
                 </p>
@@ -232,7 +232,7 @@ export default function BuildingDetailPage() {
           {/* Bouton modifier */}
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
+            className="w-full lg:w-auto justify-center flex items-center gap-2 text-sm font-medium px-3 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => {
               e.currentTarget.style.backgroundColor = '#F8F9FA';
@@ -250,7 +250,7 @@ export default function BuildingDetailPage() {
       </div>
 
       {/* Section projets */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Projets</h3>
           <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
@@ -259,7 +259,7 @@ export default function BuildingDetailPage() {
         </div>
         <button
           onClick={() => setShowProjectModal(true)}
-          className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+          className="w-full sm:w-auto justify-center flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}
@@ -299,7 +299,7 @@ export default function BuildingDetailPage() {
               <div
                 key={project.id}
                 onClick={() => router.push(`/projects/${project.id}`)}
-                className="rounded-md p-5 flex items-center justify-between cursor-pointer transition-all"
+                className="rounded-md p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all"
                 style={{
                   backgroundColor: '#FFFFFF',
                   border: '1px solid #E9ECEF',
@@ -314,17 +314,17 @@ export default function BuildingDetailPage() {
                   e.currentTarget.style.borderColor = '#E9ECEF';
                 }}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   {/* Badge type document */}
                   <div className="w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 font-bold text-sm"
                     style={{ backgroundColor: '#FDEDEC', color: '#C0392B' }}>
                     {project.documentType}
                   </div>
-                  <div>
-                    <h4 className="font-semibold" style={{ color: '#2C3E50' }}>
+                  <div className="min-w-0">
+                    <h4 className="font-semibold break-words" style={{ color: '#2C3E50' }}>
                       {project.name}
                     </h4>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <Calendar size={12} style={{ color: '#ADB5BD' }} />
                       <span className="text-xs" style={{ color: '#ADB5BD' }}>
                         {project.year}
@@ -336,7 +336,7 @@ export default function BuildingDetailPage() {
                     </div>
                   </div>
                 </div>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap self-start sm:self-auto"
                   style={{ backgroundColor: status.bg, color: status.color }}>
                   {status.label}
                 </span>
@@ -350,7 +350,7 @@ export default function BuildingDetailPage() {
       {showEditModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-md p-8 overflow-y-auto max-h-[90vh]"
+          <div className="w-full max-w-lg rounded-md p-5 sm:p-8 overflow-y-auto max-h-[calc(100vh-2rem)]"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Modifier le bâtiment
@@ -383,7 +383,7 @@ export default function BuildingDetailPage() {
                   {buildingTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                     Nom du responsable
@@ -450,7 +450,7 @@ export default function BuildingDetailPage() {
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                     Ville *
@@ -476,7 +476,7 @@ export default function BuildingDetailPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                     Code postal
@@ -502,7 +502,7 @@ export default function BuildingDetailPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="button" onClick={() => setShowEditModal(false)}
                   className="flex-1 font-medium py-2.5 rounded text-sm"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
@@ -529,7 +529,7 @@ export default function BuildingDetailPage() {
       {showProjectModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-md rounded-md p-8"
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Nouveau projet
@@ -574,7 +574,7 @@ export default function BuildingDetailPage() {
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
                 />
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="button" onClick={() => setShowProjectModal(false)}
                   className="flex-1 font-medium py-2.5 rounded text-sm"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}

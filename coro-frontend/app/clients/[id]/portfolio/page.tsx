@@ -96,7 +96,7 @@ export default function ClientPortfolioPage() {
       </button>
 
       {/* En-tête */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
             Portefeuille client
@@ -105,13 +105,17 @@ export default function ClientPortfolioPage() {
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         {client?.logoBase64 && (
-          <img src={client.logoBase64} alt={client.name}
-            style={{ height: '48px', objectFit: 'contain' }} />
+          <img
+            src={client.logoBase64}
+            alt={client.name}
+            className="self-start sm:self-auto max-w-[180px]"
+            style={{ height: '48px', objectFit: 'contain' }}
+          />
         )}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Bâtiments', value: portfolio?.projects?.length || 0, color: '#2C3E50' },
           { label: 'Total activités', value: total, color: '#2C3E50' },
@@ -143,7 +147,7 @@ export default function ClientPortfolioPage() {
       )}
 
       {/* Filtres */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         <select value={filterBuilding} onChange={e => setFilterBuilding(e.target.value)}
           className="px-3 py-2 text-sm rounded"
           style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
@@ -160,7 +164,6 @@ export default function ClientPortfolioPage() {
             <option key={key} value={key}>{val.label}</option>
           ))}
         </select>
-        <div />
       </div>
 
       {/* Vue par bâtiment */}
@@ -182,17 +185,17 @@ export default function ClientPortfolioPage() {
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
 
             {/* Header bâtiment */}
-            <div className="px-5 py-3 flex items-center justify-between"
+            <div className="px-4 sm:px-5 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3"
               style={{ backgroundColor: '#F8F9FA', borderBottom: '1px solid #E9ECEF' }}>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                <span className="text-xs font-bold px-2 py-0.5 rounded text-white flex-shrink-0"
                   style={{ backgroundColor: '#C0392B' }}>
                   {project.documentType}
                 </span>
-                <span className="text-sm font-bold" style={{ color: '#2C3E50' }}>{project.buildingName}</span>
-                <span className="text-xs" style={{ color: '#ADB5BD' }}>{project.projectName}</span>
+                <span className="text-sm font-bold break-words" style={{ color: '#2C3E50' }}>{project.buildingName}</span>
+                <span className="text-xs break-words" style={{ color: '#ADB5BD' }}>{project.projectName}</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs font-medium" style={{ color: projPct === 100 ? '#27AE60' : '#6C757D' }}>
                   {projDone}/{projectActivities.length} · {projPct}%
                 </span>
@@ -206,63 +209,181 @@ export default function ClientPortfolioPage() {
               </div>
             </div>
 
-            {/* Activités */}
-            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#FAFAFA' }}>
-                  {['Activité', 'Mode', 'Date prévue', 'Statut', ''].map(col => (
-                    <th key={col} className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide"
-                      style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}>
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {projectActivities.map((activity: any, idx: number) => {
-                  const status = STATUS_CONFIG[activity.status] || STATUS_CONFIG['a_faire'];
-                  const label = activity.customLabel || activity.label;
-                  return (
-                    <tr key={activity.id}
-                      style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                      <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA', color: '#2C3E50' }}>
-                        <p className="text-sm">{label}</p>
-                        {activity.duration && <p className="text-xs" style={{ color: '#ADB5BD' }}>⏱ {activity.duration}</p>}
-                      </td>
-                      <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
-                        <span className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: activity.mode === 'teams' ? '#EBF5FB' : '#EAFAF1', color: activity.mode === 'teams' ? '#2980B9' : '#27AE60' }}>
-                          {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs" style={{ borderBottom: '1px solid #F8F9FA', color: '#495057' }}>
-                        {activity.scheduledDate
-                          ? new Date(activity.scheduledDate).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : <span style={{ color: '#ADB5BD' }}>—</span>}
-                      </td>
-                      <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
-                        <span className="text-xs px-2 py-1 rounded-full font-medium"
-                          style={{ backgroundColor: status.bg, color: status.color, border: `1px solid ${status.border}` }}>
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
-                        {activity.scheduledDate && (
-                          <button onClick={() => handleDownloadIcs(activity.id, label)}
-                            className="p-1.5 rounded transition-colors"
-                            title="Télécharger .ics"
-                            style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
-                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                            <Download size={13} />
-                          </button>
+            {/* Activités — mobile */}
+            <div className="md:hidden">
+              {projectActivities.map((activity: any, idx: number) => {
+                const status = STATUS_CONFIG[activity.status] || STATUS_CONFIG['a_faire'];
+                const label = activity.customLabel || activity.label;
+
+                return (
+                  <div
+                    key={activity.id}
+                    className="p-4"
+                    style={{ borderBottom: idx < projectActivities.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>
+                          {label}
+                        </p>
+                        {activity.duration && (
+                          <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                            ⏱ {activity.duration}
+                          </p>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+
+                      <span
+                        className="text-xs px-2 py-1 rounded-full font-medium flex-shrink-0"
+                        style={{
+                          backgroundColor: status.bg,
+                          color: status.color,
+                          border: `1px solid ${status.border}`,
+                        }}
+                      >
+                        {status.label}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap inline-flex items-center"
+                        style={{
+                          backgroundColor: activity.mode === 'teams' ? '#EBF5FB' : '#EAFAF1',
+                          color: activity.mode === 'teams' ? '#2980B9' : '#27AE60',
+                        }}
+                      >
+                        {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
+                      </span>
+
+                      <span className="text-xs" style={{ color: '#495057' }}>
+                        {activity.scheduledDate
+                          ? `📅 ${new Date(activity.scheduledDate).toLocaleDateString('fr-CA', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}`
+                          : '📅 Date à définir'}
+                      </span>
+                    </div>
+
+                    {activity.scheduledDate && (
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleDownloadIcs(activity.id, label)}
+                          className="px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-2"
+                          title="Télécharger .ics"
+                          style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Download size={13} />
+                          Calendrier
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Activités — tablette + desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[700px] text-sm" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#FAFAFA' }}>
+                    {['Activité', 'Mode', 'Date prévue', 'Statut', ''].map(col => (
+                      <th
+                        key={col}
+                        className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide"
+                        style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}
+                      >
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {projectActivities.map((activity: any, idx: number) => {
+                    const status = STATUS_CONFIG[activity.status] || STATUS_CONFIG['a_faire'];
+                    const label = activity.customLabel || activity.label;
+
+                    return (
+                      <tr
+                        key={activity.id}
+                        style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}
+                      >
+                        <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA', color: '#2C3E50' }}>
+                          <p className="text-sm">{label}</p>
+                          {activity.duration && (
+                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                              ⏱ {activity.duration}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap inline-flex items-center"
+                            style={{
+                              backgroundColor: activity.mode === 'teams' ? '#EBF5FB' : '#EAFAF1',
+                              color: activity.mode === 'teams' ? '#2980B9' : '#27AE60',
+                            }}
+                          >
+                            {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
+                          </span>
+                        </td>
+
+                        <td
+  className="px-4 py-3 text-xs whitespace-nowrap"
+  style={{
+    borderBottom: '1px solid #F8F9FA',
+    color: '#495057',
+  }}
+>
+                          {activity.scheduledDate
+                            ? new Date(activity.scheduledDate).toLocaleDateString('fr-CA', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                            : <span style={{ color: '#ADB5BD' }}>—</span>}
+                        </td>
+
+                        <td className="px-4 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
+                          <span
+                            className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap inline-flex items-center"
+                            style={{
+                              backgroundColor: status.bg,
+                              color: status.color,
+                              border: `1px solid ${status.border}`,
+                            }}
+                          >
+                            {status.label}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-3" style={{ borderBottom: '1px solid #F8F9FA' }}>
+                          {activity.scheduledDate && (
+                            <button
+                              onClick={() => handleDownloadIcs(activity.id, label)}
+                              className="p-1.5 rounded transition-colors"
+                              title="Télécharger .ics"
+                              style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Download size={13} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       })}

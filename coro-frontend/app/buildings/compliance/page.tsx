@@ -93,7 +93,7 @@ export default function BuildingsCompliancePage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Tableau de conformité
@@ -104,7 +104,7 @@ export default function BuildingsCompliancePage() {
         </div>
         <button
           onClick={() => router.push('/buildings')}
-          className="text-sm px-3 py-2 rounded transition-colors"
+          className="w-full sm:w-auto text-sm px-3 py-2 rounded transition-colors"
           style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -114,7 +114,7 @@ export default function BuildingsCompliancePage() {
       </div>
 
       {/* Résumé visuel */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { key: 'CONFORME', label: 'Conformes', count: counts.CONFORME },
           { key: 'AVERTISSEMENT', label: 'Bientôt dus', count: counts.AVERTISSEMENT },
@@ -145,12 +145,12 @@ export default function BuildingsCompliancePage() {
       </div>
 
       {/* Filtres */}
-      <div className="flex gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,240px)_1fr] gap-3 mb-4">
         <select
           value={clientFilter}
           onChange={e => setClientFilter(e.target.value)}
           className="text-sm px-3 py-2.5 rounded focus:outline-none"
-          style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF', minWidth: '200px' }}
+          style={{ border: '1px solid #DEE2E6', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
         >
           <option value="TOUS">Tous les clients ({buildings.length})</option>
           {clients.map(c => (
@@ -172,125 +172,275 @@ export default function BuildingsCompliancePage() {
         </div>
       </div>
 
-      {/* Tableau */}
-      <div className="rounded-md overflow-hidden" style={{ border: '1px solid #E9ECEF' }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ backgroundColor: '#F8F9FA' }}>
-              {['État', 'Bâtiment', 'Client', 'Ville', 'Type', 'Dernier document', 'Dernière mise à jour', 'Action'].map(col => (
-                <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm" style={{ color: '#ADB5BD' }}>
-                  Aucun bâtiment trouvé
-                </td>
-              </tr>
-            ) : (
-              filtered.map((b, idx) => {
-                const cfg = STATUS_CONFIG[b.complianceStatus];
-                return (
-                  <tr key={b.id}
-                    style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8F9FA', borderBottom: '1px solid #E9ECEF' }}>
+      {/* Résultats */}
+      {filtered.length === 0 ? (
+        <div
+          className="rounded-md px-4 py-12 text-center text-sm"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', color: '#ADB5BD' }}
+        >
+          Aucun bâtiment trouvé
+        </div>
+      ) : (
+        <>
+          {/* MOBILE — cartes */}
+          <div className="md:hidden space-y-3">
+            {filtered.map(b => {
+              const cfg = STATUS_CONFIG[b.complianceStatus];
 
-                    {/* État */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full"
-                        style={{ backgroundColor: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}>
-                        {cfg.label}
+              return (
+                <div
+                  key={b.id}
+                  className="rounded-md p-4"
+                  style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm break-words" style={{ color: '#2C3E50' }}>
+                        {b.name}
+                      </p>
+                      <p className="text-xs mt-1 break-words" style={{ color: '#ADB5BD' }}>
+                        {b.address}
+                      </p>
+                    </div>
+
+                    <span
+                      className="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0"
+                      style={{ backgroundColor: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}
+                    >
+                      {cfg.label}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <p style={{ color: '#495057' }}>
+                      <strong>Client :</strong> {b.clientName}
+                    </p>
+
+                    <p style={{ color: '#495057' }}>
+                      <strong>Ville :</strong> {b.city}, {b.province}
+                    </p>
+
+                    <p style={{ color: '#495057' }}>
+                      <strong>Type :</strong> {b.buildingType || '—'}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span style={{ color: '#495057' }}>
+                        <strong>Document :</strong>
                       </span>
-                    </td>
 
-                    {/* Bâtiment */}
-                    <td className="px-4 py-3">
-                      <p className="font-medium" style={{ color: '#2C3E50' }}>{b.name}</p>
-                      <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{b.address}</p>
-                    </td>
-
-                    {/* Client */}
-                    <td className="px-4 py-3" style={{ color: '#495057' }}>{b.clientName}</td>
-
-                    {/* Ville */}
-                    <td className="px-4 py-3" style={{ color: '#495057' }}>
-                      {b.city}, {b.province}
-                    </td>
-
-                    {/* Type */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs" style={{ color: '#6C757D' }}>
-                        {b.buildingType || '—'}
-                      </span>
-                    </td>
-
-                    {/* Dernier document */}
-                    <td className="px-4 py-3">
                       {b.documentType ? (
-                        <div>
-                          <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                            style={{ backgroundColor: '#C0392B' }}>
-                            {b.documentType}
-                          </span>
-                          {b.projectName && (
-                            <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>{b.projectName}</p>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-4 py-3">
-                      {b.lastUpdated ? (
-                        <div>
-                          <p className="text-sm" style={{ color: '#495057' }}>{formatDate(b.lastUpdated)}</p>
-                          <p className="text-xs mt-0.5 font-medium"
-                            style={{ color: b.complianceStatus === 'EXPIRE' ? '#C0392B' : b.complianceStatus === 'AVERTISSEMENT' ? '#F39C12' : '#ADB5BD' }}>
-                            {b.monthsAgo !== null ? `${b.monthsAgo} mois` : ''}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
-                      )}
-                    </td>
-
-                    {/* Action */}
-                    <td className="px-4 py-3">
-                      {b.projectId ? (
-                        <button
-                          onClick={() => router.push(`/projects/${b.projectId}`)}
-                          className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
-                          style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded text-white"
+                          style={{ backgroundColor: '#C0392B' }}
                         >
-                          Voir le projet →
-                        </button>
+                          {b.documentType}
+                        </span>
                       ) : (
-                        <button
-                          onClick={() => router.push('/projects')}
-                          className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
-                          style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          + Créer un projet
-                        </button>
+                        <span style={{ color: '#ADB5BD' }}>—</span>
                       )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+
+                      {b.projectName && (
+                        <span className="break-words" style={{ color: '#ADB5BD' }}>
+                          {b.projectName}
+                        </span>
+                      )}
+                    </div>
+
+                    <p style={{ color: '#495057' }}>
+                      <strong>Dernière mise à jour :</strong>{' '}
+                      {b.lastUpdated ? formatDate(b.lastUpdated) : '—'}
+                      {b.monthsAgo !== null && b.lastUpdated ? (
+                        <span
+                          className="ml-1 font-medium"
+                          style={{
+                            color:
+                              b.complianceStatus === 'EXPIRE'
+                                ? '#C0392B'
+                                : b.complianceStatus === 'AVERTISSEMENT'
+                                ? '#F39C12'
+                                : '#ADB5BD',
+                          }}
+                        >
+                          ({b.monthsAgo} mois)
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-3" style={{ borderTop: '1px solid #F1F3F5' }}>
+                    {b.projectId ? (
+                      <button
+                        onClick={() => router.push(`/projects/${b.projectId}`)}
+                        className="w-full text-xs font-medium px-3 py-2 rounded transition-colors"
+                        style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = '#C0392B';
+                          e.currentTarget.style.color = '#C0392B';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = '#DEE2E6';
+                          e.currentTarget.style.color = '#6C757D';
+                        }}
+                      >
+                        Voir le projet →
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => router.push('/projects')}
+                        className="w-full text-xs font-medium px-3 py-2 rounded transition-colors"
+                        style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        + Créer un projet
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* TABLETTE + DESKTOP — tableau */}
+          <div className="hidden md:block rounded-md overflow-x-auto" style={{ border: '1px solid #E9ECEF' }}>
+            <table className="w-full min-w-[1150px] text-sm">
+              <thead>
+                <tr style={{ backgroundColor: '#F8F9FA' }}>
+                  {['État', 'Bâtiment', 'Client', 'Ville', 'Type', 'Dernier document', 'Dernière mise à jour', 'Action'].map(col => (
+                    <th
+                      key={col}
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                      style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {filtered.map((b, idx) => {
+                  const cfg = STATUS_CONFIG[b.complianceStatus];
+
+                  return (
+                    <tr
+                      key={b.id}
+                      style={{
+                        backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8F9FA',
+                        borderBottom: '1px solid #E9ECEF',
+                      }}
+                    >
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span
+                          className="text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap inline-flex items-center"
+                          style={{ backgroundColor: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}
+                        >
+                          {cfg.label}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <p className="font-medium" style={{ color: '#2C3E50' }}>{b.name}</p>
+                        <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{b.address}</p>
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#495057' }}>
+                        {b.clientName}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#495057' }}>
+                        {b.city}, {b.province}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span className="text-xs whitespace-nowrap" style={{ color: '#6C757D' }}>
+                          {b.buildingType || '—'}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {b.documentType ? (
+                          <div>
+                            <span
+                              className="text-xs font-bold px-2 py-0.5 rounded text-white whitespace-nowrap inline-flex"
+                              style={{ backgroundColor: '#C0392B' }}
+                            >
+                              {b.documentType}
+                            </span>
+                            {b.projectName && (
+                              <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                                {b.projectName}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {b.lastUpdated ? (
+                          <div>
+                            <p className="text-sm" style={{ color: '#495057' }}>
+                              {formatDate(b.lastUpdated)}
+                            </p>
+                            <p
+                              className="text-xs mt-0.5 font-medium"
+                              style={{
+                                color:
+                                  b.complianceStatus === 'EXPIRE'
+                                    ? '#C0392B'
+                                    : b.complianceStatus === 'AVERTISSEMENT'
+                                    ? '#F39C12'
+                                    : '#ADB5BD',
+                              }}
+                            >
+                              {b.monthsAgo !== null ? `${b.monthsAgo} mois` : ''}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs" style={{ color: '#ADB5BD' }}>—</span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {b.projectId ? (
+                          <button
+                            onClick={() => router.push(`/projects/${b.projectId}`)}
+                            className="text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.borderColor = '#C0392B';
+                              e.currentTarget.style.color = '#C0392B';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.borderColor = '#DEE2E6';
+                              e.currentTarget.style.color = '#6C757D';
+                            }}
+                          >
+                            Voir le projet →
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => router.push('/projects')}
+                            className="text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                            style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            + Créer un projet
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </AppLayout>
   );
 }

@@ -43,7 +43,7 @@ export default function CapacityPage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
             Administration
@@ -57,7 +57,7 @@ export default function CapacityPage() {
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         <button onClick={fetchData}
-          className="text-sm font-medium px-4 py-2 rounded transition-colors"
+          className="w-full sm:w-auto text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -66,7 +66,7 @@ export default function CapacityPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Conseillers surchargés', value: surcharges,                          color: '#C0392B', bg: '#FDEDEC' },
           { label: 'Disponibles bientôt',    value: disponibles,                         color: '#27AE60', bg: '#EAFAF1' },
@@ -110,29 +110,34 @@ export default function CapacityPage() {
                 style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
 
                 {/* Ligne principale */}
-                <div className="p-5 flex items-center gap-4 cursor-pointer"
+                <div
+                  className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center gap-4 cursor-pointer"
                   onClick={() => setExpanded(isExpanded ? null : conseiller.userId)}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
 
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                    style={{ backgroundColor: '#C0392B' }}>
-                    {conseiller.firstName[0]}{conseiller.lastName[0]}
-                  </div>
+                  {/* Identité */}
+                  <div className="flex items-center gap-3 w-full lg:w-auto min-w-0">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ backgroundColor: '#C0392B' }}
+                    >
+                      {conseiller.firstName[0]}{conseiller.lastName[0]}
+                    </div>
 
-                  {/* Nom + rôle */}
-                  <div className="min-w-0 w-40">
-                    <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-                      {conseiller.firstName} {conseiller.lastName}
-                    </p>
-                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                      {conseiller.horaireBase}h/sem
-                    </p>
+                    <div className="min-w-0 lg:w-40">
+                      <p className="font-semibold text-sm break-words" style={{ color: '#2C3E50' }}>
+                        {conseiller.firstName} {conseiller.lastName}
+                      </p>
+                      <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                        {conseiller.horaireBase}h/sem
+                      </p>
+                    </div>
                   </div>
 
                   {/* Jauge occupation */}
-                  <div className="flex-1">
+                  <div className="w-full lg:flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-medium" style={{ color: '#6C757D' }}>
                         Taux d'occupation (12 sem.)
@@ -150,36 +155,48 @@ export default function CapacityPage() {
                     </div>
                   </div>
 
-                  {/* Niveau */}
-                  <div className="flex-shrink-0 text-center w-28">
-                    <span className="text-xs font-bold px-3 py-1.5 rounded-full"
-                      style={{ backgroundColor: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
-                      {cfg.icon} {cfg.label}
-                    </span>
-                  </div>
+                  {/* Niveau + disponibilité */}
+                  <div className="grid grid-cols-2 gap-3 w-full lg:w-auto lg:flex lg:items-center lg:gap-6">
+                    <div className="min-w-0 lg:w-28 lg:text-center">
+                      <p className="text-xs font-medium mb-1 lg:hidden" style={{ color: '#6C757D' }}>
+                        Niveau
+                      </p>
+                      <span
+                        className="text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap inline-flex items-center"
+                        style={{ backgroundColor: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+                      >
+                        {cfg.icon} {cfg.label}
+                      </span>
+                    </div>
 
-                  {/* Disponibilité */}
-                  <div className="flex-shrink-0 text-right w-36">
-                    <p className="text-xs font-medium" style={{ color: '#6C757D' }}>Disponible</p>
-                    <p className="text-sm font-bold" style={{ color: conseiller.niveau === 'DISPONIBLE' ? '#27AE60' : '#2C3E50' }}>
-                      {conseiller.niveau === 'DISPONIBLE' ? 'Maintenant' :
-                        dateDisp.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                      {conseiller.semainesChargees} sem. chargées
-                    </p>
+                    <div className="min-w-0 lg:w-36 lg:text-right">
+                      <p className="text-xs font-medium" style={{ color: '#6C757D' }}>Disponible</p>
+                      <p
+                        className="text-sm font-bold break-words"
+                        style={{ color: conseiller.niveau === 'DISPONIBLE' ? '#27AE60' : '#2C3E50' }}
+                      >
+                        {conseiller.niveau === 'DISPONIBLE'
+                          ? 'Maintenant'
+                          : dateDisp.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                        {conseiller.semainesChargees} sem. chargées
+                      </p>
+                    </div>
                   </div>
 
                   {/* Expand */}
-                  <span className="text-xs flex-shrink-0" style={{ color: '#ADB5BD' }}>
-                    {isExpanded ? '▲' : '▼'}
-                  </span>
+                  <div className="w-full lg:w-auto flex justify-end">
+                    <span className="text-xs flex-shrink-0" style={{ color: '#ADB5BD' }}>
+                      {isExpanded ? '▲' : '▼'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Détail expandé */}
                 {isExpanded && (
-                  <div className="px-5 pb-5" style={{ borderTop: '1px solid #E9ECEF' }}>
-                    <div className="grid grid-cols-3 gap-4 mt-4 mb-4">
+                  <div className="px-4 sm:px-5 pb-5" style={{ borderTop: '1px solid #E9ECEF' }}>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-4 mb-4">
                       {[
                         { label: 'Heures saisies (tâches)',   value: `${conseiller.heuresTaskTotal.toFixed(1)}h`,    color: '#8E44AD' },
                         { label: 'Heures saisies (timelog)',  value: `${conseiller.heuresTimelogTotal.toFixed(1)}h`, color: '#8E44AD' },
@@ -206,21 +223,21 @@ export default function CapacityPage() {
                           {conseiller.mandatsDetail.map((m: any) => (
                             <div key={m.projectId}
                               onClick={() => router.push(`/projects/${m.projectId}/mandate`)}
-                              className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded cursor-pointer transition-colors"
                               style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
                               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                               onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-start gap-2 min-w-0">
                                 <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
                                   style={{ backgroundColor: '#C0392B' }}>
                                   {m.documentType}
                                 </span>
-                                <div>
-                                  <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{m.projectName}</p>
-                                  <p className="text-xs" style={{ color: '#ADB5BD' }}>{m.clientName}</p>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium break-words" style={{ color: '#2C3E50' }}>{m.projectName}</p>
+                                  <p className="text-xs break-words" style={{ color: '#ADB5BD' }}>{m.clientName}</p>
                                 </div>
                               </div>
-                              <div className="text-right">
+                              <div className="text-left sm:text-right w-full sm:w-auto">
                                 <p className="text-xs font-bold" style={{ color: '#2980B9' }}>
                                   {m.heuresRestantes.toFixed(0)}h restantes
                                 </p>

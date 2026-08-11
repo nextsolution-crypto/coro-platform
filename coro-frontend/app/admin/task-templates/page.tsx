@@ -98,14 +98,14 @@ export default function TaskTemplatesPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>Administration</p>
           <h1 className="text-2xl font-black" style={{ color: '#2C3E50' }}>Templates de tâches</h1>
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         <button onClick={() => setShowAddForm(!showAddForm)}
-          className="text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2"
+          className="w-full sm:w-auto justify-center text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
@@ -116,14 +116,14 @@ export default function TaskTemplatesPage() {
 
       {/* Formulaire ajout */}
       {showAddForm && (
-        <div className="rounded-md p-5 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #AED6F1' }}>
+        <div className="rounded-md p-4 sm:p-5 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #AED6F1' }}>
           <h2 className="font-semibold mb-4 text-sm" style={{ color: '#2C3E50' }}>Nouvelle tâche</h2>
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Catégorie</label>
               <select value={newTask.categoryName}
                 onChange={e => setNewTask({ ...newTask, categoryName: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded"
+                className="w-full min-w-0 px-3 py-2 text-sm rounded"
                 style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
                 {CATEGORY_ORDER.map(c => <option key={c} value={c}>{c}</option>)}
                 <option value="AUTRE">AUTRE</option>
@@ -161,7 +161,7 @@ export default function TaskTemplatesPage() {
               ))}
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => setShowAddForm(false)}
               className="px-4 py-2 rounded text-sm"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>
@@ -187,12 +187,12 @@ export default function TaskTemplatesPage() {
               style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
 
               <button onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
-                className="w-full flex items-center justify-between px-5 py-3 transition-colors"
+                className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-3 transition-colors"
                 style={{ backgroundColor: '#F8F9FA', borderBottom: isExpanded ? '1px solid #E9ECEF' : 'none' }}
                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F0F2F5'}
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold uppercase tracking-wide" style={{ color: '#2C3E50' }}>{category}</span>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                  <span className="text-sm font-bold uppercase tracking-wide break-words" style={{ color: '#2C3E50' }}>{category}</span>
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                     style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
                     {categoryTasks.length} tâche{categoryTasks.length > 1 ? 's' : ''}
@@ -204,7 +204,7 @@ export default function TaskTemplatesPage() {
               {isExpanded && (
                 <div>
                   {categoryTasks.map((task, idx) => (
-                    <div key={task.id} className="px-5 py-3"
+                    <div key={task.id} className="px-4 sm:px-5 py-3"
                       style={{ borderBottom: idx < categoryTasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}>
 
                       {editingId === task.id ? (
@@ -227,7 +227,7 @@ export default function TaskTemplatesPage() {
                               </button>
                             ))}
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <button onClick={() => handleEdit(task.id)}
                               className="text-xs px-3 py-1.5 rounded flex items-center gap-1 text-white"
                               style={{ backgroundColor: '#27AE60' }}>
@@ -241,9 +241,9 @@ export default function TaskTemplatesPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1">
-                            <p className="text-sm" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm break-words" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
                             <div className="flex gap-1.5 mt-1.5 flex-wrap">
                               {task.documentTypes?.length > 0
                                 ? task.documentTypes.map((type: string) => (
@@ -256,7 +256,7 @@ export default function TaskTemplatesPage() {
                               }
                             </div>
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
+                          <div className="flex gap-2 flex-shrink-0 self-end sm:self-auto">
                             <button onClick={() => { setEditingId(task.id); setEditingData({ taskTitle: task.taskTitle, documentTypes: task.documentTypes || [] }); }}
                               className="p-1.5 rounded transition-colors"
                               style={{ color: '#2980B9', border: '1px solid #AED6F1' }}

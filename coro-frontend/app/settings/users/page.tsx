@@ -106,7 +106,7 @@ export default function TeamUsersPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Membres de l'équipe
@@ -119,7 +119,7 @@ export default function TeamUsersPage() {
           onClick={() => setShowModal(true)}
           disabled={maxUsers !== null && users.length >= maxUsers}
           title={maxUsers !== null && users.length >= maxUsers ? `Limite de ${maxUsers} membre(s) atteinte pour votre licence` : ''}
-          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => { if (!(maxUsers !== null && users.length >= maxUsers)) e.currentTarget.style.backgroundColor = '#A93226'; }}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -129,7 +129,7 @@ export default function TeamUsersPage() {
       </div>
 
       {maxUsers !== null && users.length >= maxUsers && (
-        <div className="rounded-md p-4 mb-6 flex items-center gap-3"
+        <div className="rounded-md p-4 mb-6 flex items-start gap-3"
           style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
           <span style={{ color: '#F39C12', fontSize: '18px' }}>⚠</span>
           <p className="text-sm" style={{ color: '#7D6608' }}>
@@ -138,13 +138,79 @@ export default function TeamUsersPage() {
         </div>
       )}
 
-      <div className="rounded-md overflow-hidden" style={{ border: '1px solid #E9ECEF' }}>
-        <table className="w-full text-sm">
+      {/* MOBILE — cartes */}
+      <div className="md:hidden space-y-3">
+        {users.map(u => (
+          <div
+            key={u.id}
+            className="rounded-md p-4"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-sm break-words" style={{ color: '#2C3E50' }}>
+                  {u.firstName} {u.lastName}
+                  {u.id === user?.id && (
+                    <span className="ml-2 text-xs font-normal" style={{ color: '#ADB5BD' }}>
+                      (vous)
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs mt-1 break-all" style={{ color: '#6C757D' }}>
+                  {u.email}
+                </p>
+              </div>
+
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex-shrink-0"
+                style={
+                  u.isActive
+                    ? { backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }
+                    : { backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }
+                }
+              >
+                {u.isActive ? 'Actif' : 'Désactivé'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide" style={{ color: '#ADB5BD' }}>
+                  Rôle
+                </p>
+                <p className="text-xs font-medium mt-0.5" style={{ color: '#495057' }}>
+                  {roleLabels[u.role] || u.role}
+                </p>
+              </div>
+
+              {u.id !== user?.id && (
+                <button
+                  onClick={() => handleToggleActive(u.id, !u.isActive)}
+                  className="text-xs font-medium px-3 py-2 rounded transition-colors whitespace-nowrap"
+                  style={{
+                    border: `1px solid ${u.isActive ? '#DEE2E6' : '#A9DFBF'}`,
+                    color: u.isActive ? '#6C757D' : '#27AE60',
+                  }}
+                >
+                  {u.isActive ? 'Désactiver' : 'Réactiver'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* TABLETTE + DESKTOP — tableau */}
+      <div className="hidden md:block rounded-md overflow-x-auto" style={{ border: '1px solid #E9ECEF' }}>
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr style={{ backgroundColor: '#F8F9FA' }}>
               {['Nom', 'Courriel', 'Rôle', 'Statut', ''].map(col => (
-                <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
+                <th
+                  key={col}
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
+                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}
+                >
                   {col}
                 </th>
               ))}
@@ -153,27 +219,39 @@ export default function TeamUsersPage() {
           <tbody>
             {users.map((u, idx) => (
               <tr key={u.id} style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8F9FA' }}>
-                <td className="px-4 py-3" style={{ color: '#2C3E50', fontWeight: 600 }}>
+                <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#2C3E50', fontWeight: 600 }}>
                   {u.firstName} {u.lastName}
                   {u.id === user?.id && (
                     <span className="ml-2 text-xs" style={{ color: '#ADB5BD' }}>(vous)</span>
                   )}
                 </td>
-                <td className="px-4 py-3" style={{ color: '#495057' }}>{u.email}</td>
-                <td className="px-4 py-3" style={{ color: '#6C757D' }}>{roleLabels[u.role] || u.role}</td>
-                <td className="px-4 py-3">
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={u.isActive
-                      ? { backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }
-                      : { backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}>
+
+                <td className="px-4 py-3" style={{ color: '#495057' }}>
+                  {u.email}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap" style={{ color: '#6C757D' }}>
+                  {roleLabels[u.role] || u.role}
+                </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-flex"
+                    style={
+                      u.isActive
+                        ? { backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }
+                        : { backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }
+                    }
+                  >
                     {u.isActive ? 'Actif' : 'Désactivé'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+
+                <td className="px-4 py-3 text-right whitespace-nowrap">
                   {u.id !== user?.id && (
                     <button
                       onClick={() => handleToggleActive(u.id, !u.isActive)}
-                      className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                      className="text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
                       style={{
                         border: `1px solid ${u.isActive ? '#DEE2E6' : '#A9DFBF'}`,
                         color: u.isActive ? '#6C757D' : '#27AE60',
@@ -192,7 +270,7 @@ export default function TeamUsersPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-md rounded-md p-8"
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Ajouter un membre
@@ -205,7 +283,7 @@ export default function TeamUsersPage() {
             )}
 
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Prénom *</label>
                   <input type="text" required value={form.firstName}
@@ -250,7 +328,7 @@ export default function TeamUsersPage() {
                 </select>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)}
                   className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>

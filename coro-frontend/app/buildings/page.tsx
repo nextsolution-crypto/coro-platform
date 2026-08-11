@@ -149,7 +149,7 @@ export default function BuildingsPage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Bâtiments
@@ -160,7 +160,7 @@ export default function BuildingsPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded"
+          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -216,8 +216,7 @@ export default function BuildingsPage() {
             <div
               key={building.id}
               onClick={() => router.push(`/buildings/${building.id}`)}
-              className="rounded-md p-5 flex items-center justify-between
-                cursor-pointer transition-all"
+              className="rounded-md p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E9ECEF',
@@ -232,11 +231,11 @@ export default function BuildingsPage() {
                 e.currentTarget.style.borderColor = '#E9ECEF';
               }}
             >
-              <div>
-                <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+              <div className="min-w-0 w-full">
+                <h3 className="font-semibold break-words" style={{ color: '#2C3E50' }}>
                   {building.name}
                 </h3>
-                <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
+                <p className="text-sm mt-1 break-words" style={{ color: '#6C757D' }}>
                   {building.address}, {building.city}, {building.province}
                 </p>
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -270,7 +269,7 @@ export default function BuildingsPage() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-[#F1F3F5]">
                 <div className="text-center">
                   <p className="font-bold text-lg" style={{ color: '#2980B9' }}>
                     {building._count?.projects || 0}
@@ -297,7 +296,7 @@ export default function BuildingsPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-md p-8 overflow-y-auto max-h-[90vh]"
+          <div className="w-full max-w-lg rounded-md p-5 sm:p-8 overflow-y-auto max-h-[calc(100vh-2rem)]"
             style={{
               backgroundColor: '#FFFFFF',
               boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
@@ -401,7 +400,7 @@ export default function BuildingsPage() {
               </div>
 
               {/* Ville / Province */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5"
                     style={{ color: '#495057' }}>Ville *</label>
@@ -434,7 +433,7 @@ export default function BuildingsPage() {
               </div>
 
               {/* Code postal / Étages */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5"
                     style={{ color: '#495057' }}>Code postal</label>
@@ -464,7 +463,7 @@ export default function BuildingsPage() {
               </div>
 
               {/* Responsable */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                     Nom du responsable
@@ -526,7 +525,7 @@ export default function BuildingsPage() {
                 </p>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}

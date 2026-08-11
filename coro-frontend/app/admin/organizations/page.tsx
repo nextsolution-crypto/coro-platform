@@ -118,7 +118,7 @@ export default function OrganizationsAdminPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Organisations clientes
@@ -129,7 +129,7 @@ export default function OrganizationsAdminPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -149,9 +149,9 @@ export default function OrganizationsAdminPage() {
                 boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                 opacity: org.isActive ? 1 : 0.6,
               }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                  <h3 className="font-semibold break-words" style={{ color: '#2C3E50' }}>
                     {org.name}
                   </h3>
                   {org.isInternal && (
@@ -171,7 +171,7 @@ export default function OrganizationsAdminPage() {
                   <select
                     value={org.licenseType}
                     onChange={e => handleChangeLicense(org.id, e.target.value)}
-                    className="text-xs px-2.5 py-1.5 rounded-full font-medium focus:outline-none"
+                    className="w-full sm:w-auto text-xs px-2.5 py-2 sm:py-1.5 rounded-full font-medium focus:outline-none whitespace-nowrap"
                     style={{ backgroundColor: lc.bg, color: lc.text, border: `1px solid ${lc.border}` }}
                   >
                     <option value="ESSAI_GRATUIT">Essai gratuit</option>
@@ -181,20 +181,17 @@ export default function OrganizationsAdminPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-4 text-sm mb-4" style={{ color: '#6C757D' }}>
-                <span>{org._count.users} utilisateur{org._count.users !== 1 ? 's' : ''}</span>
-                <span style={{ color: '#DEE2E6' }}>•</span>
-                <span>{org._count.projects} projet{org._count.projects !== 1 ? 's' : ''}</span>
-                <span style={{ color: '#DEE2E6' }}>•</span>
-                <span>{org._count.clients} client{org._count.clients !== 1 ? 's' : ''}</span>
-                <span style={{ color: '#DEE2E6' }}>•</span>
-                <span>{org._count.buildings} bâtiment{org._count.buildings !== 1 ? 's' : ''}</span>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm mb-4" style={{ color: '#6C757D' }}>
+                <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.users}</span> utilisateur{org._count.users !== 1 ? 's' : ''}</div>
+                <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.projects}</span> projet{org._count.projects !== 1 ? 's' : ''}</div>
+                <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.clients}</span> client{org._count.clients !== 1 ? 's' : ''}</div>
+                <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.buildings}</span> bâtiment{org._count.buildings !== 1 ? 's' : ''}</div>
               </div>
 
               {!org.isInternal && (
                 <button
                   onClick={() => handleToggleActive(org.id, !org.isActive)}
-                  className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                  className="w-full sm:w-auto text-xs font-medium px-3 py-2 sm:py-1.5 rounded transition-colors"
                   style={{
                     border: `1px solid ${org.isActive ? '#DEE2E6' : '#A9DFBF'}`,
                     color: org.isActive ? '#6C757D' : '#27AE60',
@@ -211,7 +208,7 @@ export default function OrganizationsAdminPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-lg rounded-md p-8"
+          <div className="w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Nouvelle organisation cliente
@@ -259,7 +256,7 @@ export default function OrganizationsAdminPage() {
                 Premier utilisateur (administrateur)
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
                     Prénom *
@@ -313,7 +310,7 @@ export default function OrganizationsAdminPage() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}

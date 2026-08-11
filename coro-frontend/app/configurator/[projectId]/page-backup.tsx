@@ -119,8 +119,8 @@ function DynamicListEditor({ field, items, onChange }: {
       {items.map((item, idx) => (
         <div key={idx} className="rounded overflow-hidden"
           style={{ border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-3 sm:px-4 py-3">
-            <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
               <span className="text-white text-xs font-bold w-6 h-6 rounded flex items-center
                 justify-center flex-shrink-0"
                 style={{ backgroundColor: '#C0392B' }}>
@@ -145,7 +145,7 @@ function DynamicListEditor({ field, items, onChange }: {
                 </span>
               </div>
             </div>
-            <div className="flex gap-3 flex-shrink-0 self-end sm:self-auto">
+            <div className="flex gap-3 flex-shrink-0">
               <button onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
                 className="text-xs font-medium transition-colors"
                 style={{ color: '#2980B9' }}>
@@ -261,7 +261,7 @@ function CheckboxGroupField({ field, value, onChange }: {
     onChange(value.includes(opt) ? value.filter(v => v !== opt) : [...value, opt]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       {field.checkboxOptions?.map(opt => {
         const checked = value.includes(opt);
         return (
@@ -349,7 +349,7 @@ function ScheduleGrid({ value, onChange }: {
 
   return (
     <div className="overflow-x-auto rounded" style={{ border: '1px solid #DEE2E6' }}>
-      <table className="w-full min-w-[720px] text-sm" style={{ borderCollapse: 'collapse' }}>
+      <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ backgroundColor: '#F8F9FA' }}>
             <th className="px-3 py-2 text-left font-semibold" style={{ border: '1px solid #E9ECEF', color: '#495057' }}>
@@ -410,8 +410,6 @@ export default function ConfiguratorPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ fieldsFound: number } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
-  const [navPanelOpen, setNavPanelOpen] = useState(false);
-  const [analysisPanelOpen, setAnalysisPanelOpen] = useState(false);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -707,27 +705,25 @@ export default function ConfiguratorPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
 
       {/* Topbar */}
-      <div
-        className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 sticky top-0 z-40"
+      <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-40"
         style={{
           backgroundColor: '#FFFFFF',
           borderBottom: '1px solid #DEE2E6',
           boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full xl:w-auto">
-          <h1 className="text-xl font-bold cursor-pointer flex-shrink-0" style={{ color: '#2C3E50' }}
+        }}>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold cursor-pointer" style={{ color: '#2C3E50' }}
             onClick={() => router.push('/dashboard')}>
             CO<span style={{ color: '#C0392B' }}>RO</span>
           </h1>
-          <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
-          <span className="hidden sm:inline text-sm flex-shrink-0" style={{ color: '#6C757D' }}>Configurateur</span>
-          <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
-          <span className="text-sm font-medium truncate min-w-0" style={{ color: '#C0392B' }}>
+          <span style={{ color: '#DEE2E6' }}>|</span>
+          <span className="text-sm" style={{ color: '#6C757D' }}>Configurateur</span>
+          <span style={{ color: '#DEE2E6' }}>|</span>
+          <span className="text-sm font-medium" style={{ color: '#C0392B' }}>
             {projectName}
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full xl:w-auto">
+        <div className="flex items-center gap-3">
           <input
             ref={importInputRef}
             type="file"
@@ -736,9 +732,9 @@ export default function ConfiguratorPage() {
             className="hidden"
           />
           {analysis && (
-            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded order-first xl:order-none"
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-              <span className="hidden sm:inline text-xs" title="Mesure la conformité réglementaire de votre configuration — pas le pourcentage de champs remplis" style={{ color: '#6C757D', cursor: 'help' }}>Conformité ⓘ</span>
+              <span className="text-xs" title="Mesure la conformité réglementaire de votre configuration — pas le pourcentage de champs remplis" style={{ color: '#6C757D', cursor: 'help' }}>Conformité ⓘ</span>
               <span className="font-bold text-base" style={{
                 color: analysis.score >= 80 ? '#27AE60' :
                        analysis.score >= 60 ? '#F39C12' : '#C0392B',
@@ -750,16 +746,16 @@ export default function ConfiguratorPage() {
           <button
             onClick={() => importInputRef.current?.click()}
             disabled={importing}
-            className="flex-1 sm:flex-none justify-center text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2"
             style={{ border: '1px solid #AED6F1', color: '#2980B9', backgroundColor: 'transparent' }}
             onMouseEnter={e => { if (!importing) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            {importing ? '⏳ Analyse...' : '📄 Importer PMU'}
+            {importing ? '⏳ Analyse en cours...' : '📄 Importer un PMU existant'}
           </button>
           <button
             onClick={() => router.push(`/projects/${projectId}`)}
-            className="flex-1 sm:flex-none text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded transition-colors"
+            className="text-sm font-medium px-4 py-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -769,7 +765,7 @@ export default function ConfiguratorPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 sm:flex-none text-white text-xs sm:text-sm font-medium px-3 sm:px-4 py-2 rounded transition-colors disabled:opacity-50"
+            className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
             style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
             onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}
@@ -780,9 +776,9 @@ export default function ConfiguratorPage() {
       </div>
 
       {importResult && (
-        <div className="px-3 sm:px-4 lg:px-6 py-3 flex items-start justify-between gap-3"
+        <div className="px-6 py-3 flex items-center justify-between"
           style={{ backgroundColor: '#EAFAF1', borderBottom: '1px solid #A9DFBF' }}>
-          <p className="text-xs sm:text-sm font-medium min-w-0" style={{ color: '#1E8449' }}>
+          <p className="text-sm font-medium" style={{ color: '#1E8449' }}>
             ✓ Document analysé — {importResult.fieldsFound} champ{importResult.fieldsFound > 1 ? 's' : ''} pré-rempli{importResult.fieldsFound > 1 ? 's' : ''} automatiquement. Vérifiez et complétez les informations manquantes.
           </p>
           <button onClick={() => setImportResult(null)}
@@ -792,10 +788,10 @@ export default function ConfiguratorPage() {
         </div>
       )}
 
-      <div className="flex min-w-0 xl:h-[calc(100vh-65px)]">
+      <div className="flex" style={{ height: 'calc(100vh - 65px)' }}>
 
         {/* Sidebar nav */}
-        <div className="hidden lg:block w-56 overflow-y-auto flex-shrink-0"
+        <div className="w-56 overflow-y-auto flex-shrink-0"
           style={{
             backgroundColor: '#FFFFFF',
             borderRight: '1px solid #DEE2E6',
@@ -854,11 +850,11 @@ export default function ConfiguratorPage() {
         </div>
 
         {/* Formulaire */}
-        <div className="flex-1 min-w-0 xl:overflow-y-auto p-3 sm:p-4 lg:p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           {currentSection && (
             <div>
-              <div className="flex items-start gap-3 mb-5 sm:mb-6">
-                <span className="text-2xl sm:text-3xl flex-shrink-0">{currentSection.icon}</span>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-3xl">{currentSection.icon}</span>
                 <div>
                   <h2 className="text-xl font-semibold" style={{ color: '#2C3E50' }}>
                     {currentSection.title}
@@ -874,9 +870,9 @@ export default function ConfiguratorPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 w-full max-w-3xl">
+              <div className="grid gap-3 max-w-2xl">
                 {visibleFields.map(field => (
-                  <div key={field.key} className="rounded-md p-3 sm:p-4 transition-all min-w-0"
+                  <div key={field.key} className="rounded-md p-4 transition-all"
                     style={{
                       backgroundColor: '#FFFFFF',
                       border: '1px solid #E9ECEF',
@@ -885,7 +881,7 @@ export default function ConfiguratorPage() {
                     onMouseEnter={e => e.currentTarget.style.borderColor = '#CED4DA'}
                     onMouseLeave={e => e.currentTarget.style.borderColor = '#E9ECEF'}
                   >
-                    <label className="text-sm font-medium mb-2.5 flex items-start gap-2 min-w-0"
+                    <label className="block text-sm font-medium mb-2.5 flex items-center gap-2"
                       style={{ color: '#2C3E50' }}>
                       {field.label}
                       {field.tooltip && (
@@ -900,7 +896,7 @@ export default function ConfiguratorPage() {
                     </label>
 
                     {field.type === 'boolean' && (
-                      <div className="flex gap-2 sm:gap-3">
+                      <div className="flex gap-3">
                         {[true, false].map(val => (
                           <button key={String(val)}
                             onClick={() => updateConfig(field.key, val)}
@@ -1039,7 +1035,7 @@ export default function ConfiguratorPage() {
               </div>
 
               {/* Navigation */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full max-w-3xl">
+              <div className="flex gap-3 mt-6 max-w-2xl">
                 {activeSection > 0 && (
                   <button onClick={() => {
                     let prev = activeSection - 1;
@@ -1088,14 +1084,13 @@ export default function ConfiguratorPage() {
         </div>
 
         {/* Panneau analyse */}
-        <div className="hidden xl:block w-80 overflow-y-auto flex-shrink-0"
+        <div className="w-80 overflow-y-auto flex-shrink-0"
           style={{
             backgroundColor: '#FFFFFF',
             borderLeft: '1px solid #DEE2E6',
           }}>
           <div className="p-4">
-            <div className="flex flex-col items-start gap-1 mb-4">
-              <div className="flex items-center justify-between gap-3 w-full">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
                 Analyse en temps réel
               </h3>
@@ -1103,11 +1098,10 @@ export default function ConfiguratorPage() {
                 Le score de conformité évalue le respect des normes réglementaires, pas l'avancement de votre saisie.
               </p>
               {analyzing && (
-                <span className="text-xs animate-pulse flex-shrink-0" style={{ color: '#C0392B' }}>
+                <span className="text-xs animate-pulse" style={{ color: '#C0392B' }}>
                   Analyse...
                 </span>
               )}
-              </div>
             </div>
 
             {!analysis ? (
@@ -1273,316 +1267,6 @@ export default function ConfiguratorPage() {
             )}
           </div>
         </div>
-
-        {/* Navigation mobile/tablette */}
-        {navPanelOpen && (
-          <div className="fixed inset-0 z-[60] lg:hidden">
-            <button
-              type="button"
-              aria-label="Fermer la navigation"
-              onClick={() => setNavPanelOpen(false)}
-              className="absolute inset-0 bg-black/30"
-            />
-            <div
-              className="absolute left-0 top-0 bottom-0 w-[min(88vw,320px)] overflow-y-auto"
-              style={{ backgroundColor: '#FFFFFF', boxShadow: '4px 0 18px rgba(0,0,0,0.15)' }}
-            >
-              <div
-                className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
-                style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF' }}
-              >
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ADB5BD' }}>
-                    Configurateur
-                  </p>
-                  <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
-                    Sections
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setNavPanelOpen(false)}
-                  className="w-9 h-9 rounded flex items-center justify-center"
-                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-3">
-                {(() => {
-                  const GROUPS: { label: string; ids: string[] }[] = [
-                    { label: 'Général', ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
-                    { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'extincteurs', 'detecteurs'] },
-                    { label: 'Équipements', ids: ['mecanique', 'communication', 'premiers_soins'] },
-                    { label: 'Risques', ids: ['matieres'] },
-                    { label: 'Industriel', ids: ['industriel'] },
-                  ];
-
-                  return GROUPS.map((group, groupIdx) => {
-                    const groupSections = sections
-                      .map((s, idx) => ({ ...s, idx }))
-                      .filter(s => group.ids.includes(s.id));
-
-                    if (groupSections.length === 0) return null;
-                    if (group.ids.includes('industriel') && config['buildingType'] !== 'Industriel') return null;
-
-                    return (
-                      <div key={groupIdx} className="mb-3">
-                        <p
-                          className="px-3 text-xs font-bold uppercase tracking-wider mb-1"
-                          style={{ color: '#ADB5BD' }}
-                        >
-                          {group.label}
-                        </p>
-
-                        {groupSections.map(section => {
-                          const isActive = activeSection === section.idx;
-                          return (
-                            <button
-                              key={section.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveSection(section.idx);
-                                setNavPanelOpen(false);
-                              }}
-                              className="w-full text-left px-3 py-2.5 rounded text-xs mb-1 transition-colors flex items-center gap-2 font-medium"
-                              style={{
-                                backgroundColor: isActive ? '#FDEDEC' : 'transparent',
-                                color: isActive ? '#C0392B' : '#495057',
-                                border: isActive ? '1px solid #F1948A' : '1px solid transparent',
-                              }}
-                            >
-                              <span className="flex-shrink-0">{section.icon}</span>
-                              <span className="break-words">{section.title}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Analyse mobile/tablette */}
-        {analysisPanelOpen && (
-          <div className="fixed inset-0 z-[60] xl:hidden">
-            <button
-              type="button"
-              aria-label="Fermer l'analyse"
-              onClick={() => setAnalysisPanelOpen(false)}
-              className="absolute inset-0 bg-black/30"
-            />
-            <div
-              className="absolute right-0 top-0 bottom-0 w-[min(92vw,380px)] overflow-y-auto"
-              style={{ backgroundColor: '#FFFFFF', boxShadow: '-4px 0 18px rgba(0,0,0,0.15)' }}
-            >
-              <div
-                className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3"
-                style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF' }}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
-                    Analyse en temps réel
-                  </p>
-                  {analyzing && (
-                    <p className="text-xs animate-pulse" style={{ color: '#C0392B' }}>
-                      Analyse...
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAnalysisPanelOpen(false)}
-                  className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0"
-                  style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-4">
-                <p className="text-xs mb-4" style={{ color: '#ADB5BD' }}>
-                  Le score de conformité évalue le respect des normes réglementaires, pas l'avancement de votre saisie.
-                </p>
-
-                {!analysis ? (
-                  <div className="text-center py-8">
-                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                      Répondez aux questions pour voir l'analyse
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div
-                      className="rounded-md p-4"
-                      style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}
-                    >
-                      <p className="text-xs mb-2" style={{ color: '#6C757D' }}>
-                        Score de conformité
-                      </p>
-                      <div className="flex items-end gap-2">
-                        <span
-                          className="text-3xl font-bold"
-                          style={{
-                            color:
-                              analysis.score >= 80
-                                ? '#27AE60'
-                                : analysis.score >= 60
-                                ? '#F39C12'
-                                : '#C0392B',
-                          }}
-                        >
-                          {analysis.score}
-                        </span>
-                        <span className="text-sm mb-1" style={{ color: '#ADB5BD' }}>
-                          /100
-                        </span>
-                      </div>
-                      <div className="w-full rounded-full h-2 mt-2" style={{ backgroundColor: '#E9ECEF' }}>
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{
-                            width: `${analysis.score}%`,
-                            backgroundColor:
-                              analysis.score >= 80
-                                ? '#27AE60'
-                                : analysis.score >= 60
-                                ? '#F39C12'
-                                : '#C0392B',
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {analysis.rolesActives.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
-                          Rôles actifs ({analysis.rolesActives.length})
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {analysis.rolesActives.map(role => (
-                            <span
-                              key={role}
-                              className="text-xs px-2 py-1 rounded font-mono"
-                              style={{ backgroundColor: '#FDEDEC', color: '#C0392B', border: '1px solid #F1948A' }}
-                            >
-                              {role}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {analysis.rolesRecommandes.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
-                          Rôles recommandés ({analysis.rolesRecommandes.length})
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {analysis.rolesRecommandes.map(role => (
-                            <span
-                              key={role}
-                              className="text-xs px-2 py-1 rounded font-mono"
-                              style={{ backgroundColor: '#F8F9FA', color: '#495057', border: '1px solid #DEE2E6' }}
-                            >
-                              {role}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {analysis.proceduresActives.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
-                          Procédures ({analysis.proceduresActives.length})
-                        </p>
-                        <div className="space-y-1">
-                          {analysis.proceduresActives.slice(0, 8).map(proc => (
-                            <div
-                              key={proc}
-                              className="rounded px-2 py-1"
-                              style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}
-                            >
-                              <span className="text-xs font-mono break-all" style={{ color: '#495057' }}>
-                                {proc}
-                              </span>
-                            </div>
-                          ))}
-                          {analysis.proceduresActives.length > 8 && (
-                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                              +{analysis.proceduresActives.length - 8} autres...
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {analysis.validations.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
-                          Validations ({analysis.validations.length})
-                        </p>
-                        <div className="space-y-2">
-                          {analysis.validations.map((v, idx) => {
-                            const vs = validationStyles[v.type] || validationStyles.INFO;
-                            return (
-                              <div
-                                key={idx}
-                                className="rounded p-2.5"
-                                style={{ backgroundColor: vs.bg, border: `1px solid ${vs.border}` }}
-                              >
-                                <div className="flex items-start gap-2">
-                                  <span className="text-sm flex-shrink-0">{vs.icon}</span>
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-medium" style={{ color: vs.text }}>
-                                      {v.type}
-                                    </p>
-                                    <p className="text-xs mt-0.5 break-words" style={{ color: vs.text, opacity: 0.85 }}>
-                                      {v.message}
-                                    </p>
-                                    {v.reference && (
-                                      <p className="text-xs mt-1 font-mono break-all" style={{ color: vs.text, opacity: 0.6 }}>
-                                        {v.reference}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {analysis.sectionsDocument.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
-                          Sections document ({analysis.sectionsDocument.length})
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {analysis.sectionsDocument.map(s => (
-                            <span
-                              key={s}
-                              className="text-xs px-1.5 py-0.5 rounded font-mono break-all"
-                              style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}
-                            >
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

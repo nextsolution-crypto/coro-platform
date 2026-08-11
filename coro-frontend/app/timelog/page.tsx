@@ -154,7 +154,7 @@ export default function TimelogPage() {
   return (
     <AppLayout>
       {/* En-tête */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
             Gestion du temps
@@ -163,7 +163,7 @@ export default function TimelogPage() {
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         <button onClick={() => setShowAddModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2"
+          className="w-full sm:w-auto justify-center text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
@@ -173,7 +173,7 @@ export default function TimelogPage() {
       </div>
 
       {/* Onglets */}
-      <div className="flex gap-2 mb-6 pb-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
+      <div className="flex flex-wrap gap-2 mb-6 pb-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
         <button onClick={() => setActiveTab('mes_heures')}
           className="px-4 py-2 rounded text-sm font-medium transition-colors"
           style={{
@@ -213,17 +213,17 @@ export default function TimelogPage() {
 
       {/* Dates personnalisées */}
       {viewMode === 'custom' && (
-        <div className="flex gap-4 mb-6 p-4 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <div>
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Du</label>
             <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-              className="px-3 py-2 text-sm rounded"
+              className="w-full px-3 py-2 text-sm rounded"
               style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
           </div>
           <div>
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Au</label>
             <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-              className="px-3 py-2 text-sm rounded"
+              className="w-full px-3 py-2 text-sm rounded"
               style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
           </div>
         </div>
@@ -240,7 +240,7 @@ export default function TimelogPage() {
             <>
               {/* Stats */}
               {summary && (
-                <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
                   <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Heures totales</p>
                     <p className="text-2xl font-black" style={{ color: '#2C3E50' }}>{Number(summary.heuresTotal).toFixed(2).replace(/\.?0+$/, '')}h</p>
@@ -284,79 +284,208 @@ export default function TimelogPage() {
                   </button>
                 </div>
               ) : (
-                <div className="rounded-md overflow-hidden" style={{ border: '1px solid #E9ECEF' }}>
-                  <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#F8F9FA' }}>
-                        {['Date', 'Description', 'Type', 'Heures', ''].map(col => (
-                          <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-                            style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}>
-                            {col}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allEntries.map((entry: any, idx: number) => (
-                        <tr key={entry.id}
-                          style={{ borderBottom: idx < allEntries.length - 1 ? '1px solid #F8F9FA' : 'none' }}>
-                          <td className="px-4 py-3 text-xs" style={{ color: '#6C757D', whiteSpace: 'nowrap' }}>
-                            {new Date(entry.date).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' })}
-                          </td>
-                          <td className="px-4 py-3" style={{ color: '#2C3E50' }}>
-                            <p className="text-sm">{entry.label}</p>
-                            {entry.clientName && <p className="text-xs" style={{ color: '#ADB5BD' }}>{entry.clientName}</p>}
-                            {entry.note && <p className="text-xs" style={{ color: '#ADB5BD' }}>{entry.note}</p>}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                              style={{
-                                backgroundColor: entry.isBillable ? '#EAFAF1' : '#FEF9E7',
-                                color: entry.isBillable ? '#27AE60' : '#F39C12',
-                              }}>
-                              {entry.isBillable ? '✓ Facturable' : '○ Non facturable'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold" style={{ color: '#2980B9' }}>
-                            {Number(entry.heures).toFixed(2).replace(/\.?0+$/, '')}h
-                          </td>
-                          <td className="px-3 py-3">
-                            {entry.source === 'timelog' && (
-                              <div className="flex gap-1.5">
-                                <button
-                                  onClick={() => { setEditingEntry(entry); setEditForm({ heures: entry.heures.toString(), note: entry.note || '' }); }}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                  ✏️
-                                </button>
-                                <button onClick={() => handleDelete(entry.id)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: '#C0392B', border: '1px solid #F1948A' }}
-                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
-                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
+                <>
+                  {/* MOBILE — cartes */}
+                  <div className="md:hidden space-y-3">
+                    {allEntries.map((entry: any) => (
+                      <div
+                        key={entry.id}
+                        className="rounded-md p-4"
+                        style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold break-words" style={{ color: '#2C3E50' }}>
+                              {entry.label}
+                            </p>
+                            {entry.clientName && (
+                              <p className="text-xs mt-1 break-words" style={{ color: '#ADB5BD' }}>
+                                {entry.clientName}
+                              </p>
                             )}
-                          </td>
+                          </div>
+
+                          <span className="text-base font-black flex-shrink-0" style={{ color: '#2980B9' }}>
+                            {Number(entry.heures).toFixed(2).replace(/\.?0+$/, '')}h
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          <span className="text-xs" style={{ color: '#6C757D' }}>
+                            📅 {new Date(entry.date).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </span>
+
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full font-medium"
+                            style={{
+                              backgroundColor: entry.isBillable ? '#EAFAF1' : '#FEF9E7',
+                              color: entry.isBillable ? '#27AE60' : '#F39C12',
+                            }}
+                          >
+                            {entry.isBillable ? '✓ Facturable' : '○ Non facturable'}
+                          </span>
+                        </div>
+
+                        {entry.note && (
+                          <p className="text-xs mb-3 break-words" style={{ color: '#6C757D' }}>
+                            {entry.note}
+                          </p>
+                        )}
+
+                        {entry.source === 'timelog' && (
+                          <div className="flex justify-end gap-2 pt-2" style={{ borderTop: '1px solid #F8F9FA' }}>
+                            <button
+                              onClick={() => {
+                                setEditingEntry(entry);
+                                setEditForm({ heures: entry.heures.toString(), note: entry.note || '' });
+                              }}
+                              className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                              style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              ✏️ Modifier
+                            </button>
+
+                            <button
+                              onClick={() => handleDelete(entry.id)}
+                              className="px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1.5"
+                              style={{ color: '#C0392B', border: '1px solid #F1948A' }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Trash2 size={13} />
+                              Supprimer
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <div
+                      className="rounded-md p-4 flex items-center justify-between"
+                      style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}
+                    >
+                      <span className="text-xs font-bold" style={{ color: '#2C3E50' }}>
+                        TOTAL
+                      </span>
+                      <span className="text-lg font-black" style={{ color: '#C0392B' }}>
+                        {Number(summary?.heuresTotal).toFixed(2).replace(/\.?0+$/, '')}h
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* TABLETTE + DESKTOP — tableau */}
+                  <div
+                    className="hidden md:block rounded-md overflow-x-auto"
+                    style={{ border: '1px solid #E9ECEF' }}
+                  >
+                    <table className="w-full min-w-[720px] text-sm" style={{ borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#F8F9FA' }}>
+                          {['Date', 'Description', 'Type', 'Heures', ''].map(col => (
+                            <th
+                              key={col}
+                              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                              style={{ color: '#ADB5BD', borderBottom: '1px solid #E9ECEF' }}
+                            >
+                              {col}
+                            </th>
+                          ))}
                         </tr>
-                      ))}
-                      {/* Total */}
-                      <tr style={{ backgroundColor: '#F8F9FA' }}>
-                        <td colSpan={3} className="px-4 py-3 text-xs font-bold text-right"
-                          style={{ color: '#2C3E50', borderTop: '2px solid #E9ECEF' }}>
-                          TOTAL
-                        </td>
-                        <td className="px-4 py-3 font-black" style={{ color: '#C0392B', borderTop: '2px solid #E9ECEF' }}>
-                          {Number(summary?.heuresTotal).toFixed(2).replace(/\.?0+$/, '')}h
-                        </td>
-                        <td style={{ borderTop: '2px solid #E9ECEF' }} />
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {allEntries.map((entry: any, idx: number) => (
+                          <tr
+                            key={entry.id}
+                            style={{ borderBottom: idx < allEntries.length - 1 ? '1px solid #F8F9FA' : 'none' }}
+                          >
+                            <td className="px-4 py-3 text-xs" style={{ color: '#6C757D', whiteSpace: 'nowrap' }}>
+                              {new Date(entry.date).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            </td>
+
+                            <td className="px-4 py-3" style={{ color: '#2C3E50' }}>
+                              <p className="text-sm">{entry.label}</p>
+                              {entry.clientName && (
+                                <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                                  {entry.clientName}
+                                </p>
+                              )}
+                              {entry.note && (
+                                <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                                  {entry.note}
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                                style={{
+                                  backgroundColor: entry.isBillable ? '#EAFAF1' : '#FEF9E7',
+                                  color: entry.isBillable ? '#27AE60' : '#F39C12',
+                                }}
+                              >
+                                {entry.isBillable ? '✓ Facturable' : '○ Non facturable'}
+                              </span>
+                            </td>
+
+                            <td className="px-4 py-3 font-bold" style={{ color: '#2980B9' }}>
+                              {Number(entry.heures).toFixed(2).replace(/\.?0+$/, '')}h
+                            </td>
+
+                            <td className="px-3 py-3">
+                              {entry.source === 'timelog' && (
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingEntry(entry);
+                                      setEditForm({ heures: entry.heures.toString(), note: entry.note || '' });
+                                    }}
+                                    className="p-1.5 rounded transition-colors"
+                                    style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
+                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    ✏️
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleDelete(entry.id)}
+                                    className="p-1.5 rounded transition-colors"
+                                    style={{ color: '#C0392B', border: '1px solid #F1948A' }}
+                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+
+                        {/* Total */}
+                        <tr style={{ backgroundColor: '#F8F9FA' }}>
+                          <td
+                            colSpan={3}
+                            className="px-4 py-3 text-xs font-bold text-right"
+                            style={{ color: '#2C3E50', borderTop: '2px solid #E9ECEF' }}
+                          >
+                            TOTAL
+                          </td>
+                          <td
+                            className="px-4 py-3 font-black"
+                            style={{ color: '#C0392B', borderTop: '2px solid #E9ECEF' }}
+                          >
+                            {Number(summary?.heuresTotal).toFixed(2).replace(/\.?0+$/, '')}h
+                          </td>
+                          <td style={{ borderTop: '2px solid #E9ECEF' }} />
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </>
           )}
@@ -378,7 +507,7 @@ export default function TimelogPage() {
                     backgroundColor: '#FFFFFF',
                     border: `1px solid ${!member.aRempliSesHeures ? '#F1948A' : '#E9ECEF'}`,
                   }}>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
                         style={{ backgroundColor: member.aRempliSesHeures ? '#27AE60' : '#C0392B' }}>
@@ -391,7 +520,7 @@ export default function TimelogPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center gap-4 lg:gap-6">
                       <div className="text-right">
                         <p className="text-xs" style={{ color: '#ADB5BD' }}>Heures saisies</p>
                         <p className="font-black" style={{ color: '#2C3E50' }}>{member.heuresTotal.toFixed(1)}h</p>
@@ -430,9 +559,9 @@ export default function TimelogPage() {
 
       {/* Modal ajout heures */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="rounded-lg p-6 w-full max-w-md mx-4"
+          <div className="rounded-lg p-5 sm:p-6 w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto"
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #DEE2E6' }}>
             <h2 className="text-lg font-bold mb-4" style={{ color: '#2C3E50' }}>
               Ajouter des heures non facturables
@@ -474,7 +603,7 @@ export default function TimelogPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <button onClick={() => { setShowAddModal(false); setForm({ date: new Date().toISOString().split('T')[0], heures: '', category: '', note: '' }); }}
                 className="flex-1 py-2.5 rounded text-sm"
                 style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>
@@ -491,9 +620,9 @@ export default function TimelogPage() {
       )}
       {/* Modal édition */}
       {editingEntry && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="rounded-lg p-6 w-full max-w-sm mx-4"
+          <div className="rounded-lg p-5 sm:p-6 w-full max-w-sm max-h-[calc(100vh-2rem)] overflow-y-auto"
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #DEE2E6' }}>
             <h2 className="text-base font-bold mb-1" style={{ color: '#2C3E50' }}>Modifier l'entrée</h2>
             <p className="text-xs mb-4" style={{ color: '#6C757D' }}>
@@ -517,7 +646,7 @@ export default function TimelogPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
               </div>
             </div>
-            <div className="flex gap-3 mt-5">
+            <div className="flex flex-col sm:flex-row gap-3 mt-5">
               <button onClick={() => setEditingEntry(null)}
                 className="flex-1 py-2.5 rounded text-sm"
                 style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>

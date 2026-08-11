@@ -91,6 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showNotif, setShowNotif]           = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ── Recherche globale ──
   const [searchQuery, setSearchQuery]       = useState('');
@@ -136,6 +137,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  // ── Responsive : fermer le menu mobile à chaque navigation ──
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // ── Responsive : bloquer le scroll de fond lorsque le menu mobile est ouvert ──
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarOpen]);
 
   // ── Recherche globale avec debounce ──
   useEffect(() => {
@@ -211,7 +230,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const active = isActive(item.path);
     return (
       <button
-        onClick={() => router.push(item.path)}
+        onClick={() => { router.push(item.path); setSidebarOpen(false); }}
         className="w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5"
         style={{
           backgroundColor: active ? '#FDEDEC' : 'transparent',
@@ -232,17 +251,42 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
 
       {/* ── Topbar ── */}
-      <div className="flex items-center justify-between px-6 py-3 sticky top-0 z-40"
-        style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #DEE2E6', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <h1
-          className="text-2xl font-bold tracking-tight cursor-pointer flex-shrink-0"
-          style={{ color: '#2C3E50' }}
-          onClick={() => router.push('/dashboard')}
-        >
-          CO<span style={{ color: '#C0392B' }}>RO</span>
-        </h1>
+      <div
+        className="flex items-center justify-between px-3 sm:px-4 lg:px-6 py-3 sticky top-0 z-40"
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #DEE2E6',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        }}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(prev => !prev)}
+            className="lg:hidden w-9 h-9 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{
+              color: '#2C3E50',
+              border: '1px solid #DEE2E6',
+              backgroundColor: '#FFFFFF',
+            }}
+            aria-label={sidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={sidebarOpen}
+          >
+            <span style={{ fontSize: '20px', lineHeight: 1 }}>
+              {sidebarOpen ? '×' : '☰'}
+            </span>
+          </button>
 
-        <div className="flex items-center gap-3">
+          <h1
+            className="text-xl sm:text-2xl font-bold tracking-tight cursor-pointer flex-shrink-0"
+            style={{ color: '#2C3E50' }}
+            onClick={() => router.push('/dashboard')}
+          >
+            CO<span style={{ color: '#C0392B' }}>RO</span>
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* ── Cloche notifications ── */}
           <div ref={notifRef} className="relative">
             <button
@@ -263,7 +307,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
 
             {showNotif && (
-              <div className="absolute right-0 top-full mt-2 w-96 rounded-md shadow-lg z-50"
+              <div className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-96 max-w-[24rem] rounded-md shadow-lg z-50"
                 style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
                 <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9ECEF' }}>
                   <p className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Notifications</p>
@@ -346,7 +390,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div ref={profileRef} className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded transition-colors"
+                className="flex items-center gap-2 px-1.5 sm:px-3 py-1.5 rounded transition-colors"
                 style={{ border: '1px solid transparent' }}
                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; e.currentTarget.style.borderColor = '#DEE2E6'; }}
                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}>
@@ -354,12 +398,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   style={{ backgroundColor: '#C0392B' }}>
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </div>
-                <span className="text-sm font-medium" style={{ color: '#495057' }}>{user.firstName} {user.lastName}</span>
-                <span style={{ color: '#ADB5BD', fontSize: '10px' }}>▼</span>
+                <span className="hidden md:inline text-sm font-medium" style={{ color: '#495057' }}>{user.firstName} {user.lastName}</span>
+                <span className="hidden sm:inline" style={{ color: '#ADB5BD', fontSize: '10px' }}>▼</span>
               </button>
 
               {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-md shadow-lg z-50"
+                <div className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] rounded-md shadow-lg z-50"
                   style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
                   <div className="px-4 py-3" style={{ borderBottom: '1px solid #E9ECEF' }}>
                     <p className="text-xs font-semibold" style={{ color: '#2C3E50' }}>{user.firstName} {user.lastName}</p>
@@ -396,10 +440,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex min-w-0">
+        {/* ── Overlay mobile ── */}
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Fermer le menu"
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-x-0 bottom-0 top-[57px] z-40 bg-black/30 lg:hidden"
+          />
+        )}
+
         {/* ── Sidebar ── */}
-        <div className="w-56 min-h-screen p-3 sticky top-[57px] self-start overflow-y-auto"
-          style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #DEE2E6', maxHeight: 'calc(100vh - 57px)' }}>
+        <aside
+          className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 w-72 sm:w-80 lg:w-56 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRight: '1px solid #DEE2E6',
+            height: 'calc(100vh - 57px)',
+            maxHeight: 'calc(100vh - 57px)',
+          }}
+        >
 
           {/* Recherche globale */}
           <div ref={searchRef} className="relative mb-3">
@@ -496,12 +559,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </nav>
-        </div>
+        </aside>
 
         {/* ── Contenu ── */}
-        <div className="flex-1 p-8 min-w-0">
+        <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

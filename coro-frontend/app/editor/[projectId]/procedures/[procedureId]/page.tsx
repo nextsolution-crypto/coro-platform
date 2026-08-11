@@ -81,7 +81,7 @@ function StepEditor({
   return (
     <div className="rounded mb-2" style={{
       border: '1px solid #E9ECEF',
-      marginLeft: depth > 0 ? '24px' : '0',
+      marginLeft: depth > 0 ? 'clamp(8px, 2vw, 24px)' : '0',
       backgroundColor: depth > 0 ? '#F8F9FA' : '#FFFFFF',
     }}>
       <div className="p-3">
@@ -91,7 +91,7 @@ function StepEditor({
               ? <ChevronUp size={14} style={{ color: '#ADB5BD' }} />
               : <ChevronDown size={14} style={{ color: '#ADB5BD' }} />}
           </button>
-          <div className="flex-1 grid grid-cols-2 gap-2">
+          <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Texte FR</label>
               <textarea value={step.textFR}
@@ -118,7 +118,7 @@ function StepEditor({
         </div>
 
         {expanded && (
-          <div className="flex flex-wrap gap-3 ml-6">
+          <div className="flex flex-wrap gap-3 ml-0 sm:ml-6">
             {[
               { key: 'isBold', label: 'Gras' },
               { key: 'isRed', label: 'Rouge' },
@@ -138,7 +138,7 @@ function StepEditor({
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 ml-6">
+        <div className="px-3 pb-3 ml-0 sm:ml-6">
           {(step.subSteps || []).map((sub, idx) => (
             <StepEditor key={sub.id} step={sub}
               onUpdate={u => updateSubStep(idx, u)}
@@ -187,16 +187,16 @@ function RoleSectionEditor({
 
   return (
     <div className="rounded-md mb-4" style={{ border: '1px solid #DEE2E6' }}>
-      <div className="flex items-center justify-between px-4 py-3 rounded-t-md"
+      <div className="flex items-start justify-between gap-3 px-3 sm:px-4 py-3 rounded-t-md"
         style={{ backgroundColor: '#F8F9FA', borderLeft: `4px solid ${section.headerColor}` }}>
-        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 flex-1 text-left">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-start gap-2 flex-1 min-w-0 text-left">
           {expanded
             ? <ChevronUp size={14} style={{ color: '#ADB5BD' }} />
             : <ChevronDown size={14} style={{ color: '#ADB5BD' }} />}
-          <span className="text-sm font-bold" style={{ color: '#2C3E50' }}>
+          <span className="text-sm font-bold break-words" style={{ color: '#2C3E50' }}>
             {section.roleCode} — {section.roleLabelFR}
           </span>
-          <span className="text-xs" style={{ color: '#ADB5BD' }}>({section.steps.length} étapes)</span>
+          <span className="hidden sm:inline text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>({section.steps.length} étapes)</span>
         </button>
         <button onClick={onDelete} className="p-1 rounded transition-colors"
           style={{ color: '#ADB5BD' }}
@@ -208,7 +208,7 @@ function RoleSectionEditor({
 
       {expanded && (
         <div className="p-4">
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
             <div>
               <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Code rôle</label>
               <input type="text" value={section.roleCode}
@@ -431,9 +431,9 @@ export default function ProcedureProjectEditPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
 
       {/* Topbar */}
-      <div className="flex items-center justify-between px-6 py-4 sticky top-0 z-40"
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 sticky top-0 z-40"
         style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #DEE2E6', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3 min-w-0 w-full xl:w-auto">
           <button onClick={() => router.push(`/editor/${projectId}`)}
             className="p-2 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
@@ -441,8 +441,8 @@ export default function ProcedureProjectEditPage() {
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
             <ArrowLeft size={16} />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold font-mono px-2 py-0.5 rounded"
                 style={{ backgroundColor: '#F8F9FA', color: '#6C757D', border: '1px solid #DEE2E6' }}>
                 {content.code}
@@ -455,16 +455,16 @@ export default function ProcedureProjectEditPage() {
                 </span>
               )}
             </div>
-            <h2 className="text-lg font-semibold mt-0.5" style={{ color: '#2C3E50' }}>{content.titleFR}</h2>
+            <h2 className="text-lg font-semibold mt-0.5 break-words" style={{ color: '#2C3E50' }}>{content.titleFR}</h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full xl:w-auto">
           {error && <p className="text-sm" style={{ color: '#C0392B' }}>{error}</p>}
           {saved && <p className="text-sm" style={{ color: '#27AE60' }}>✓ Sauvegardé</p>}
           {isOverridden && (
             <button onClick={handleRestore} disabled={restoring}
-              className="flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto justify-center flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors disabled:opacity-50"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#F39C12'; e.currentTarget.style.color = '#F39C12'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}>
@@ -473,7 +473,7 @@ export default function ProcedureProjectEditPage() {
             </button>
           )}
           <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 rounded text-white text-sm font-medium disabled:opacity-50"
+            className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2 rounded text-white text-sm font-medium disabled:opacity-50"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = '#A93226'; }}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
@@ -483,12 +483,12 @@ export default function ProcedureProjectEditPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-6 py-5 sm:py-8">
 
         {/* Infos générales */}
-        <div className="rounded-md p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className="rounded-md p-4 sm:p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Informations générales</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Titre FR</label>
               <input type="text" value={content.titleFR}
@@ -504,7 +504,7 @@ export default function ProcedureProjectEditPage() {
                 style={{ border: '1px solid #DEE2E6', color: '#2C3E50' }} />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Couleur</label>
               <div className="flex items-center gap-2">
@@ -535,11 +535,11 @@ export default function ProcedureProjectEditPage() {
         </div>
 
         {/* Directives générales */}
-        <div className="rounded-md p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-md p-4 sm:p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 className="font-semibold" style={{ color: '#2C3E50' }}>Directives générales</h3>
             <button onClick={addDirective}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-colors"
+              className="w-full sm:w-auto justify-center flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
               onMouseLeave={e => e.currentTarget.style.borderColor = '#DEE2E6'}>
@@ -557,13 +557,13 @@ export default function ProcedureProjectEditPage() {
         </div>
 
         {/* Sections de rôles */}
-        <div className="rounded-md p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-md p-4 sm:p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 className="font-semibold" style={{ color: '#2C3E50' }}>
               Sections de rôles ({content.roleSections.length})
             </h3>
             <button onClick={addRoleSection}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-colors"
+              className="w-full sm:w-auto justify-center flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
               onMouseLeave={e => e.currentTarget.style.borderColor = '#DEE2E6'}>

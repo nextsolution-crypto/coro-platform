@@ -109,6 +109,8 @@ export default function EditorPage() {
   const [validations,    setValidations]    = useState<any[]>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [hasPlans, setHasPlans] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // ── Init ────────────────────────────────────────────────
 
@@ -387,7 +389,7 @@ export default function EditorPage() {
     // Module 1 — texte éditable
     return (
       <>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <p className="text-xs mb-1" style={{ color: '#ADB5BD' }}>
               Module {currentModule.moduleNumber} — {currentModule.title}
@@ -399,7 +401,7 @@ export default function EditorPage() {
           {!isEditing && !isReadOnly && (
             <button
               onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(true); }}
-              className="text-sm px-4 py-2 rounded transition-colors flex items-center gap-2 font-medium"
+              className="w-full sm:w-auto justify-center text-sm px-4 py-2 rounded transition-colors flex items-center gap-2 font-medium"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -424,10 +426,10 @@ export default function EditorPage() {
               value={editingContent}
               onChange={val => setEditingContent(val)}
               language={language}
-              className="w-full rounded-md p-6 text-sm leading-relaxed focus:outline-none font-mono resize-none"
-              style={{ height: 'calc(100vh - 280px)', backgroundColor: '#FFFFFF', border: '1px solid #C0392B', color: '#2C3E50' }}
+              className="w-full rounded-md p-3 sm:p-4 lg:p-6 text-sm leading-relaxed focus:outline-none font-mono resize-none"
+              style={{ minHeight: '420px', height: 'clamp(420px, 62vh, 760px)', backgroundColor: '#FFFFFF', border: '1px solid #C0392B', color: '#2C3E50' }}
             />
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => { setEditingContent(currentSection?.content || ''); setIsEditing(false); }}
                 className="px-4 py-2 rounded text-sm font-medium"
@@ -450,7 +452,7 @@ export default function EditorPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-md p-8"
+          <div className="rounded-md p-4 sm:p-6 lg:p-8 overflow-x-auto"
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <div dangerouslySetInnerHTML={{ __html: formatContent(currentSection?.content || '') }} />
           </div>
@@ -467,21 +469,21 @@ export default function EditorPage() {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8F9FA' }}>
 
       {/* ── Topbar ── */}
-      <div className="flex items-center justify-between px-6 py-3 flex-shrink-0 sticky top-0 z-40"
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 px-3 sm:px-4 lg:px-6 py-3 flex-shrink-0 sticky top-0 z-40"
         style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #DEE2E6', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold cursor-pointer" style={{ color: '#2C3E50' }}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full xl:w-auto">
+          <h1 className="text-xl font-bold cursor-pointer flex-shrink-0" style={{ color: '#2C3E50' }}
             onClick={() => router.push('/dashboard')}>
             CO<span style={{ color: '#C0392B' }}>RO</span>
           </h1>
-          <span style={{ color: '#DEE2E6' }}>|</span>
-          <span className="text-sm" style={{ color: '#6C757D' }}>Éditeur</span>
-          <span style={{ color: '#DEE2E6' }}>|</span>
-          <span className="text-sm font-medium" style={{ color: '#C0392B' }}>{document.title}</span>
+          <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
+          <span className="hidden sm:inline text-sm flex-shrink-0" style={{ color: '#6C757D' }}>Éditeur</span>
+          <span className="hidden sm:inline" style={{ color: '#DEE2E6' }}>|</span>
+          <span className="text-sm font-medium truncate min-w-0" style={{ color: '#C0392B' }}>{document.title}</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full xl:w-auto">
           {/* Toggle FR / EN */}
           <div className="flex items-center rounded p-1 gap-1"
             style={{ backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6' }}>
@@ -511,15 +513,33 @@ export default function EditorPage() {
             </span>
           )}
           {!saving && !saved && lastSavedAt && (
-            <span className="text-xs flex items-center gap-1.5"
+            <span className="hidden lg:flex text-xs items-center gap-1.5"
               style={{ color: '#ADB5BD' }}>
               ✓ Sauvegardé à {lastSavedAt.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
 
           <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            className="lg:hidden flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 rounded transition-colors"
+            style={{ border: '1px solid #DEE2E6', color: '#495057' }}
+          >
+            ☰ Navigation
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInfoOpen(true)}
+            className="xl:hidden flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 rounded transition-colors"
+            style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+          >
+            ⓘ Infos
+          </button>
+
+          <button
             onClick={() => setShowVersionHistory(true)}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded transition-colors"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 text-xs sm:text-sm px-3 py-1.5 rounded transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
             onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
@@ -528,7 +548,7 @@ export default function EditorPage() {
           </button>
 
           <button onClick={() => router.push(`/projects/${projectId}`)}
-            className="text-sm transition-colors" style={{ color: '#6C757D' }}
+            className="flex-1 sm:flex-none text-xs sm:text-sm transition-colors whitespace-nowrap" style={{ color: '#6C757D' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#2C3E50')}
             onMouseLeave={e => (e.currentTarget.style.color = '#6C757D')}>
             ← Retour au projet
@@ -556,10 +576,10 @@ export default function EditorPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-w-0 xl:overflow-hidden">
 
         {/* ── Navigation gauche ── */}
-        <div className="w-60 overflow-y-auto flex-shrink-0"
+        <div className="hidden lg:block w-60 overflow-y-auto flex-shrink-0"
           style={{ backgroundColor: '#FFFFFF', borderRight: '1px solid #DEE2E6' }}>
           <div className="p-3">
             <div className="mb-3 px-2">
@@ -650,13 +670,13 @@ export default function EditorPage() {
         </div>
 
         {/* ── Contenu central ── */}
-        <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#F8F9FA' }}>
+        <div className="flex-1 min-w-0 xl:overflow-y-auto" style={{ backgroundColor: '#F8F9FA' }}>
           {(currentSection || isSpecialModule) && (
-            <div className="max-w-4xl mx-auto p-8">
+            <div className="max-w-5xl mx-auto p-3 sm:p-5 lg:p-8">
 
 {/* Bannière lecture seule */}
               {isReadOnly && (
-                <div className="rounded-md p-3 mb-4 flex items-center gap-2"
+                <div className="rounded-md p-3 mb-4 flex items-start gap-2"
                   style={{
                     backgroundColor: document.project.status === 'VALIDATED' ? '#EAFAF1' : '#FEF9E7',
                     border: `1px solid ${document.project.status === 'VALIDATED' ? '#A9DFBF' : '#FAD7A0'}`,
@@ -707,7 +727,7 @@ export default function EditorPage() {
         </div>
 
         {/* ── Panneau droite — Infos ── */}
-        <div className="w-64 overflow-y-auto flex-shrink-0"
+        <div className="hidden xl:block w-64 overflow-y-auto flex-shrink-0"
           style={{ backgroundColor: '#FFFFFF', borderLeft: '1px solid #DEE2E6' }}>
           <div className="p-4">
             <h3 className="font-semibold text-sm mb-4" style={{ color: '#2C3E50' }}>
@@ -763,6 +783,220 @@ export default function EditorPage() {
         </div>
 
       </div>
+
+      {/* Navigation modules — mobile/tablette */}
+      {navOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <button
+            type="button"
+            aria-label="Fermer la navigation"
+            onClick={() => setNavOpen(false)}
+            className="absolute inset-0 bg-black/30"
+          />
+          <div
+            className="absolute left-0 top-0 bottom-0 w-[min(88vw,340px)] overflow-y-auto"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '4px 0 18px rgba(0,0,0,0.15)' }}
+          >
+            <div
+              className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+              style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF' }}
+            >
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#ADB5BD' }}>
+                  Éditeur
+                </p>
+                <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
+                  Navigation du document
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNavOpen(false)}
+                className="w-9 h-9 rounded flex items-center justify-center"
+                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3">
+              <div className="mb-3 px-2">
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded"
+                  style={{
+                    backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
+                    color: language === 'fr' ? '#C0392B' : '#2980B9',
+                  }}
+                >
+                  {language === 'fr' ? 'Version française' : 'English version'}
+                </span>
+              </div>
+
+              {modules.map((mod, modIdx) => {
+                const modValidations = validations.filter(v => v.moduleNumber === mod.moduleNumber);
+                const hasCritique = modValidations.some(v => v.level === 'CRITIQUE');
+                const hasErreur = modValidations.some(v => v.level === 'ERREUR');
+                const hasAvert = modValidations.some(v => v.level === 'AVERTISSEMENT');
+                const badgeColor = hasCritique ? '#C0392B' : hasErreur ? '#E74C3C' : hasAvert ? '#F39C12' : undefined;
+                const completion = getModuleCompletion(mod);
+
+                return (
+                  <div key={mod.moduleNumber} className="mb-2">
+                    <div
+                      className="px-3 py-2 text-xs font-bold uppercase tracking-wider mb-1 flex items-center justify-between gap-2"
+                      style={{ color: activeModule === modIdx ? '#C0392B' : '#ADB5BD' }}
+                    >
+                      <span className="break-words">M{mod.moduleNumber} — {mod.title}</span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {badgeColor && <span style={{ color: badgeColor }}>●</span>}
+                        <span style={{ color: completionColor[completion] }}>
+                          {completionIcon[completion]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(mod.sections || []).length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSectionClick(modIdx, 0);
+                          setNavOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded text-xs mb-1 font-medium"
+                        style={{
+                          backgroundColor: activeModule === modIdx ? '#FDEDEC' : 'transparent',
+                          color: activeModule === modIdx ? '#C0392B' : '#495057',
+                          border: activeModule === modIdx ? '1px solid #F1948A' : '1px solid transparent',
+                        }}
+                      >
+                        {getSpecialModuleLabel(mod.moduleNumber, language)}
+                      </button>
+                    )}
+
+                    {(mod.sections || []).map((section, secIdx) => {
+                      if (mod.moduleNumber === 3 && section.id === '3.2' && isBureau) return null;
+                      const isActive = activeModule === modIdx && activeSection === secIdx;
+
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => {
+                            handleSectionClick(modIdx, secIdx);
+                            setNavOpen(false);
+                          }}
+                          className="w-full text-left px-3 py-2.5 rounded text-xs mb-1"
+                          style={{
+                            backgroundColor: isActive ? '#FDEDEC' : 'transparent',
+                            color: isActive ? '#C0392B' : '#495057',
+                            border: isActive ? '1px solid #F1948A' : '1px solid transparent',
+                            fontWeight: isActive ? '600' : '400',
+                          }}
+                        >
+                          {section.id} — {section.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Informations — mobile/tablette */}
+      {infoOpen && (
+        <div className="fixed inset-0 z-[60] xl:hidden">
+          <button
+            type="button"
+            aria-label="Fermer les informations"
+            onClick={() => setInfoOpen(false)}
+            className="absolute inset-0 bg-black/30"
+          />
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[min(92vw,380px)] overflow-y-auto"
+            style={{ backgroundColor: '#FFFFFF', boxShadow: '-4px 0 18px rgba(0,0,0,0.15)' }}
+          >
+            <div
+              className="sticky top-0 z-10 flex items-center justify-between px-4 py-3"
+              style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF' }}
+            >
+              <p className="text-sm font-semibold" style={{ color: '#2C3E50' }}>
+                {language === 'fr' ? 'Informations' : 'Information'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setInfoOpen(false)}
+                className="w-9 h-9 rounded flex items-center justify-center"
+                style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="rounded-md p-4 mb-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>Document</p>
+                <div className="space-y-2">
+                  {[
+                    { label: language === 'fr' ? 'Type' : 'Type', value: document.project?.documentType },
+                    { label: language === 'fr' ? 'Client' : 'Client', value: document.project?.client?.name },
+                    { label: language === 'fr' ? 'Bâtiment' : 'Building', value: document.project?.building?.name },
+                    { label: language === 'fr' ? 'Année' : 'Year', value: document.project?.year?.toString() },
+                  ].map(info => (
+                    <div key={info.label}>
+                      <p className="text-xs" style={{ color: '#ADB5BD' }}>{info.label}</p>
+                      <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{info.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                className="rounded-md p-4 mb-4"
+                style={{
+                  backgroundColor: language === 'fr' ? '#FDEDEC' : '#EBF5FB',
+                  border: `1px solid ${language === 'fr' ? '#F1948A' : '#AED6F1'}`,
+                }}
+              >
+                <p
+                  className="text-xs font-medium mb-1"
+                  style={{ color: language === 'fr' ? '#C0392B' : '#2980B9' }}
+                >
+                  {language === 'fr' ? '🇫🇷 Version française active' : '🇺🇸 English version active'}
+                </p>
+                <p className="text-xs" style={{ color: '#6C757D' }}>
+                  {language === 'fr'
+                    ? 'Modifications en français uniquement.'
+                    : 'Edits apply to English version only.'}
+                </p>
+              </div>
+
+              <div className="rounded-md p-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                <p className="text-xs font-medium mb-3" style={{ color: '#ADB5BD' }}>
+                  {language === 'fr' ? 'Navigation rapide' : 'Quick navigation'}
+                </p>
+                <div className="space-y-1">
+                  {modules.map(mod => (
+                    <div
+                      key={mod.moduleNumber}
+                      className="text-xs py-1 break-words"
+                      style={{ borderBottom: '1px solid #E9ECEF', color: '#495057' }}
+                    >
+                      <span className="font-mono font-bold" style={{ color: '#C0392B' }}>
+                        M{mod.moduleNumber}
+                      </span>{' '}
+                      {mod.title}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     {showVersionHistory && (
         <VersionHistory
           projectId={projectId}

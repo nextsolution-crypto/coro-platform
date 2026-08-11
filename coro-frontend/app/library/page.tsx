@@ -85,12 +85,12 @@ export default function LibraryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 mb-6" style={{ borderBottom: '1px solid #DEE2E6' }}>
+      <div className="flex flex-wrap gap-0 mb-6" style={{ borderBottom: '1px solid #DEE2E6' }}>
         {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className="px-5 py-2.5 text-sm font-medium transition-colors"
+            className="flex-1 sm:flex-none min-w-[120px] px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium transition-colors"
             style={{
               color: activeTab === tab.key ? '#C0392B' : '#6C757D',
               borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent',
@@ -118,10 +118,10 @@ export default function LibraryPage() {
         <>
           {/* ── CODES INCIDENTS ── */}
           {activeTab === 'codes' && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {incidentCodes.map(code => (
                 <div key={code.id}
-                  className="flex items-center gap-3 p-3 transition-colors"
+                  className="flex items-start gap-3 p-3 transition-colors min-w-0"
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #E9ECEF',
@@ -134,10 +134,10 @@ export default function LibraryPage() {
                   <div className="w-7 h-7 rounded flex-shrink-0"
                     style={{ backgroundColor: code.color }} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: '#2C3E50' }}>
+                    <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>
                       {code.name}
                     </p>
-                    <p className="text-xs truncate" style={{ color: '#6C757D' }}>
+                    <p className="text-xs break-words" style={{ color: '#6C757D' }}>
                       {code.description}
                     </p>
                     <p className="text-xs font-mono mt-0.5" style={{ color: '#ADB5BD' }}>
@@ -154,7 +154,7 @@ export default function LibraryPage() {
             <div className="grid gap-1.5">
               {roles.map(role => (
                 <div key={role.id}
-                  className="flex items-center justify-between p-3 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 transition-colors"
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #E9ECEF',
@@ -163,17 +163,17 @@ export default function LibraryPage() {
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                 >
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+                  <div className="min-w-0 w-full sm:w-auto">
+                    <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>
                       {role.name}
                     </p>
                     {role.description && (
-                      <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                      <p className="text-xs mt-0.5 break-words" style={{ color: '#6C757D' }}>
                         {role.description}
                       </p>
                     )}
                   </div>
-                  <span className="text-xs font-mono px-2 py-1 ml-4 flex-shrink-0"
+                  <span className="text-xs font-mono px-2 py-1 sm:ml-4 flex-shrink-0 self-start sm:self-auto whitespace-nowrap"
                     style={{
                       backgroundColor: '#F8F9FA',
                       color: '#495057',
@@ -202,20 +202,21 @@ export default function LibraryPage() {
 
                   {/* Ligne principale cliquable */}
                   <div
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
+                    className="flex flex-col lg:flex-row lg:items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
                     style={{ backgroundColor: '#FFFFFF' }}
                     onClick={() => setExpandedProc(expandedProc === proc.id ? null : proc.id)}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                   >
-                    {/* Icône + couleur */}
-                    <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 text-sm"
-                      style={{ backgroundColor: proc.headerColor }}>
-                      {proc.icon || '📋'}
-                    </div>
+                    <div className="flex items-start gap-3 w-full lg:flex-1 min-w-0">
+                      {/* Icône + couleur */}
+                      <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 text-sm"
+                        style={{ backgroundColor: proc.headerColor }}>
+                        {proc.icon || '📋'}
+                      </div>
 
-                    {/* Code + titre */}
-                    <div className="flex-1 min-w-0">
+                      {/* Code + titre */}
+                      <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-bold"
                           style={{ color: '#ADB5BD' }}>
@@ -232,21 +233,22 @@ export default function LibraryPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm font-semibold truncate"
+                      <p className="text-sm font-semibold break-words"
                         style={{ color: '#2C3E50' }}>
                         {proc.titleFR}
                       </p>
+                      </div>
                     </div>
 
                     {/* Méta */}
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 flex-shrink-0 w-full lg:w-auto lg:justify-end">
+                      <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
                         {proc.roleSections?.length || 0} rôle(s)
                       </span>
-                      <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                      <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
                         {proc.totalSteps} étape(s)
                       </span>
-                      <span className="text-xs px-2 py-0.5 font-medium"
+                      <span className="text-xs px-2 py-0.5 font-medium whitespace-nowrap"
                         style={{
                           backgroundColor: '#F8F9FA',
                           color: '#495057',
@@ -255,7 +257,7 @@ export default function LibraryPage() {
                         }}>
                         {getActivationLabel(proc.activationRule)}
                       </span>
-                      <span className="text-sm font-medium w-4 text-center"
+                      <span className="text-sm font-medium w-4 text-center ml-auto lg:ml-0"
                         style={{ color: '#ADB5BD' }}>
                         {expandedProc === proc.id ? '−' : '+'}
                       </span>
@@ -268,21 +270,21 @@ export default function LibraryPage() {
                       <div style={{ borderTop: '1px solid #F0F0F0' }}>
                         {(proc.roleSections || []).map((rs: any, idx: number) => (
                           <div key={idx}
-                            className="flex items-center justify-between px-4 py-2.5"
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-2.5"
                             style={{
                               borderBottom: idx < proc.roleSections.length - 1
                                 ? '1px solid #F8F9FA' : 'none',
                               backgroundColor: '#FAFAFA',
                             }}>
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-start gap-2.5 min-w-0">
                               <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: rs.headerColor }} />
-                              <p className="text-xs font-medium" style={{ color: '#495057' }}>
+                              <p className="text-xs font-medium break-words" style={{ color: '#495057' }}>
                                 {rs.roleLabelFR}
                               </p>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-mono px-1.5 py-0.5"
+                            <div className="flex items-center gap-3 self-end sm:self-auto">
+                              <span className="text-xs font-mono px-1.5 py-0.5 whitespace-nowrap"
                                 style={{
                                   backgroundColor: '#F0F0F0',
                                   color: '#6C757D',
@@ -290,17 +292,17 @@ export default function LibraryPage() {
                                 }}>
                                 {rs.roleCode}
                               </span>
-                              <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                              <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
                                 {rs.stepCount} étape{rs.stepCount > 1 ? 's' : ''}
                               </span>
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div className="px-4 py-2 flex gap-2"
+                      <div className="px-4 py-2 flex flex-wrap gap-2"
                         style={{ backgroundColor: '#F8F9FA', borderTop: '1px solid #EFEFEF' }}>
                         {proc.documentTypes.map((dt: string) => (
-                          <span key={dt} className="text-xs px-2 py-0.5 font-medium"
+                          <span key={dt} className="text-xs px-2 py-0.5 font-medium whitespace-nowrap"
                             style={{
                               backgroundColor: '#FDEDEC',
                               color: '#C0392B',

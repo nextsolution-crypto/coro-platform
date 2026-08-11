@@ -101,7 +101,7 @@ export default function ProceduresAdminPage() {
 
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
             Bibliothèque de procédures
@@ -112,7 +112,7 @@ export default function ProceduresAdminPage() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
@@ -140,7 +140,7 @@ export default function ProceduresAdminPage() {
           <div
             key={proc.id}
             onClick={() => router.push(`/admin/procedures/${proc.id}`)}
-            className="flex items-center justify-between px-4 py-3 cursor-pointer transition-colors"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 cursor-pointer transition-colors"
             style={{
               backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8F9FA',
               borderBottom: '1px solid #E9ECEF',
@@ -149,21 +149,21 @@ export default function ProceduresAdminPage() {
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EBF5FB')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#FFFFFF' : '#F8F9FA')}
           >
-            <div className="flex items-center gap-4">
-              <span className="text-xs font-bold font-mono w-12" style={{ color: '#6C757D' }}>
+            <div className="flex items-start gap-3 sm:gap-4 min-w-0 w-full sm:w-auto">
+              <span className="text-xs font-bold font-mono w-12 flex-shrink-0" style={{ color: '#6C757D' }}>
                 {proc.code}
               </span>
-              <div>
-                <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+              <div className="min-w-0">
+                <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>
                   {proc.content?.titleFR}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                <p className="text-xs mt-0.5 break-words" style={{ color: '#ADB5BD' }}>
                   {proc.content?.titleEN}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs" style={{ color: '#ADB5BD' }}>
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              <span className="text-xs whitespace-nowrap" style={{ color: '#ADB5BD' }}>
                 {proc.content?.documentTypes?.join(', ')}
               </span>
               <ChevronRight size={14} style={{ color: '#ADB5BD' }} />
@@ -174,7 +174,7 @@ export default function ProceduresAdminPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <div className="w-full max-w-md rounded-md p-8"
+          <div className="w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-md p-5 sm:p-8"
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-semibold text-lg mb-6" style={{ color: '#2C3E50' }}>
               Nouvelle procédure
@@ -186,7 +186,7 @@ export default function ProceduresAdminPage() {
               </div>
             )}
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold mb-1 uppercase" style={{ color: '#6C757D' }}>Code *</label>
                   <input type="text" required value={newProc.code}
@@ -247,7 +247,7 @@ export default function ProceduresAdminPage() {
                   <option value="industriel">Bâtiment industriel</option>
                 </select>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="button" onClick={() => { setShowModal(false); setCreateError(''); }}
                   className="flex-1 font-medium py-2.5 rounded text-sm transition-colors"
                   style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}>

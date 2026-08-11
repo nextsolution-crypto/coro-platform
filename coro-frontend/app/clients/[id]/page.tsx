@@ -123,8 +123,8 @@ export default function ClientDetailPage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+        <div className="min-w-0">
           <button
             onClick={() => router.push('/clients')}
             className="text-sm mb-3 flex items-center gap-1 transition-colors"
@@ -134,43 +134,46 @@ export default function ClientDetailPage() {
           >
             ← Retour aux clients
           </button>
-          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
+          <h2 className="text-2xl font-semibold break-words" style={{ color: '#2C3E50' }}>
             {client.name}
           </h2>
         </div>
-        <button
-          onClick={() => router.push(`/clients/${clientId}/portfolio`)}
-          className="text-sm font-medium px-4 py-2.5 rounded transition-colors flex items-center gap-2"
-          style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          📅 Portefeuille
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="text-white font-medium px-6 py-2.5 rounded transition-colors
-            disabled:opacity-50"
-          style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
-          onMouseEnter={e => {
-            if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B';
-          }}
-        >
-          {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
-        </button>
+
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          <button
+            onClick={() => router.push(`/clients/${clientId}/portfolio`)}
+            className="w-full sm:w-auto justify-center text-sm font-medium px-4 py-2.5 rounded transition-colors flex items-center gap-2"
+            style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            📅 Portefeuille
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full sm:w-auto text-white font-medium px-6 py-2.5 rounded transition-colors disabled:opacity-50"
+            style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
+            onMouseEnter={e => {
+              if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B';
+            }}
+          >
+            {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Colonne gauche */}
-        <div className="col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-4">
 
           {/* Logo */}
-          <div className="rounded-md p-6"
+          <div className="rounded-md p-4 sm:p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -232,7 +235,7 @@ export default function ClientDetailPage() {
           </div>
 
           {/* Stats */}
-          <div className="rounded-md p-6"
+          <div className="rounded-md p-4 sm:p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -259,10 +262,10 @@ export default function ClientDetailPage() {
         </div>
 
         {/* Colonne droite */}
-        <div className="col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
 
           {/* Formulaire */}
-          <div className="rounded-md p-6"
+          <div className="rounded-md p-4 sm:p-6"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E9ECEF',
@@ -300,7 +303,7 @@ export default function ClientDetailPage() {
 
           {/* Bâtiments associés */}
           {client.buildings?.length > 0 && (
-            <div className="rounded-md p-6"
+            <div className="rounded-md p-4 sm:p-6"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E9ECEF',
@@ -314,8 +317,7 @@ export default function ClientDetailPage() {
                   <div
                     key={building.id}
                     onClick={() => router.push('/buildings')}
-                    className="flex items-center justify-between rounded px-4 py-3
-                      cursor-pointer transition-all"
+                    className="flex items-start justify-between gap-3 rounded px-3 sm:px-4 py-3 cursor-pointer transition-all"
                     style={{
                       backgroundColor: '#F8F9FA',
                       border: '1px solid #E9ECEF',
@@ -329,15 +331,15 @@ export default function ClientDetailPage() {
                       e.currentTarget.style.borderColor = '#E9ECEF';
                     }}
                   >
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>
                         {building.name}
                       </p>
-                      <p className="text-xs" style={{ color: '#6C757D' }}>
+                      <p className="text-xs break-words" style={{ color: '#6C757D' }}>
                         {building.address}, {building.city}
                       </p>
                     </div>
-                    <span style={{ color: '#C0392B' }}>→</span>
+                    <span className="flex-shrink-0" style={{ color: '#C0392B' }}>→</span>
                   </div>
                 ))}
               </div>
