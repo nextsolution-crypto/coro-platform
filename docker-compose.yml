@@ -44,6 +44,8 @@ services:
     build:
       context: ./coro-frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: coro_frontend
     restart: unless-stopped
     environment:
