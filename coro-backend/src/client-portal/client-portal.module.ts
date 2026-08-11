@@ -3,6 +3,7 @@ import { ClientPortalController } from './client-portal.controller';
 import { ClientPortalService } from './client-portal.service';
 import { ClientAuthController } from './client-auth.controller';
 import { ClientAuthService } from './client-auth.service';
+import { EmailService } from './email.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 
@@ -15,7 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
     }),
   ],
   controllers: [ClientPortalController, ClientAuthController],
-  providers: [ClientPortalService, ClientAuthService],
-  exports: [ClientPortalService],
+  providers: [ClientPortalService, ClientAuthService, EmailService],
+  exports: [ClientPortalService, EmailService],
 })
 export class ClientPortalModule {}
