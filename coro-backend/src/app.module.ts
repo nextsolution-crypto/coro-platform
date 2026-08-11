@@ -35,6 +35,7 @@ import { DangerousSubstancesModule } from './dangerous-substances/dangerous-subs
 import { CustomProceduresModule } from './custom-procedures/custom-procedures.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ApprovalModule } from './approval/approval.module';
+import { ClientPortalModule } from './client-portal/client-portal.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -74,6 +75,7 @@ import { APP_GUARD } from '@nestjs/core';
   CustomProceduresModule,
   NotificationsModule,
   ApprovalModule,
+  ClientPortalModule,
   ThrottlerModule.forRoot([{
       name: 'short',
       ttl: 60000,    // 1 minute

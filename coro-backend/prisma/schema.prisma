@@ -28,6 +28,7 @@ model Organization {
   projectTemplates   ProjectTemplate[]
   auditLogs          AuditLog[]
   customProcedures CustomProcedure[]
+  clientUsers    ClientUser[]
 }
 
 model User {
@@ -97,6 +98,7 @@ model Client {
 
   buildings Building[]
   projects  Project[]
+  clientUsers    ClientUser[]
 }
 
 model Building {
@@ -169,6 +171,7 @@ model Project {
 
   projectTaskLists ProjectTaskList[]
   customProcedures CustomProcedure[]
+  signatures     DocumentSignature[]
 }
 
 model RevisionHistory {
@@ -664,4 +667,39 @@ model Notification {
   projectId      String?
   isRead         Boolean  @default(false)
   createdAt      DateTime @default(now())
+}
+
+model ClientUser {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           ClientUserRole @default(CLIENT_MANAGER)
+  isActive       Boolean  @default(true)
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  signatures     DocumentSignature[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model DocumentSignature {
+  id            String   @id @default(uuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientUserId  String
+  clientUser    ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  fullName      String
+  email         String
+  signedAt      DateTime @default(now())
+  ipAddress     String?
+  comment       String?
+}
+
+enum ClientUserRole {
+  CLIENT_MANAGER
+  CLIENT_CORPORATE
 }
