@@ -23,9 +23,6 @@ services:
       dockerfile: Dockerfile
     container_name: coro_backend
     restart: unless-stopped
-    volumes:
-      - /usr/bin/chromium-browser:/usr/bin/chromium-browser
-      - /snap:/snap
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
