@@ -917,12 +917,16 @@ export default function HomePage() {
                   </div>
                 )}
                 <div style={{ padding: 40 }}>
-                  <h3 style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50', marginBottom: 8 }}>
+                  <h3 style={{ fontSize: 40, fontWeight: 800, color: '#2C3E50', marginBottom: 8 }}>
                     {plan.name}
                   </h3>
                   <p style={{ fontSize: 14, color: '#6C757D', marginBottom: 24 }}>{plan.desc}</p>
                   <div style={{ marginBottom: 32 }}>
-                    <span style={{ fontSize: 42, fontWeight: 900, color: plan.color }}>{plan.price}</span>
+                    <span style={{ 
+                      fontSize: plan.price === 'Sur soumission' || plan.price === 'Custom pricing' ? 34 : 42, 
+                      fontWeight: 900, 
+                      color: plan.color 
+                    }}>{plan.price}</span>
                     {plan.period && <span style={{ fontSize: 16, color: '#6C757D', marginLeft: 4 }}>{plan.period}</span>}
                   </div>
                   <ul style={{ listStyle: 'none', marginBottom: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
