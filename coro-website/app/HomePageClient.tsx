@@ -11,13 +11,14 @@ const TRANSLATIONS = {
       documents: 'Documents',
       howItWorks: 'Comment ça fonctionne',
       pricing: 'Tarifs',
-      login: 'Connexion',
+      login: 'Espace professionnel',
+      clientPortal: 'Portail client',
       demo: 'Demander une démo',
     },
     hero: {
-      tag: 'Plateforme SaaS — Québec & Canada',
+      tag: 'Plateforme SaaS de conformité — Québec & Canada',
       title: 'La conformité,\npensée par des\nexperts du terrain.',
-      subtitle: 'CORO génère, structure et gère vos plans de mesures d\'urgence, plans de sécurité incendie et plans de continuité — avec la rigueur réglementaire qu\'exige le terrain.',
+      subtitle: 'CORO est une plateforme SaaS canadienne de conformité opérationnelle qui génère, structure et gère vos plans de mesures d\'urgence (PMU), plans de sécurité incendie (PSI) et plans de continuité des activités (PCA) — avec la rigueur qu\'exige le terrain.',
       cta: 'Demander une démo',
       ctaSecondary: 'Voir la plateforme',
       trusted: 'Conçue pour les professionnels de la sécurité au Québec et au Canada',
@@ -30,8 +31,8 @@ const TRANSLATIONS = {
     ],
     features: {
       tag: 'Fonctionnalités',
-      title: 'Tout ce dont vous avez besoin pour la conformité documentaire',
-      subtitle: 'CORO est conçu comme un outil professionnel — pas un service. Vous gardez le contrôle total de vos documents.',
+      title: 'Une plateforme complète pour la conformité opérationnelle et documentaire',
+      subtitle: 'CORO centralise la création, la gestion, la révision et le suivi de vos documents de mesures d’urgence, de sécurité incendie et de continuité des activités.',
       items: [
         {
           icon: 'zap',
@@ -190,6 +191,7 @@ const TRANSLATIONS = {
         features: 'Fonctionnalités',
         pricing: 'Tarifs',
         login: 'Connexion',
+        clientPortal: 'Portail client',
         privacy: 'Politique de confidentialité',
         terms: 'Conditions d\'utilisation',
       },
@@ -203,13 +205,14 @@ const TRANSLATIONS = {
       documents: 'Documents',
       howItWorks: 'How it works',
       pricing: 'Pricing',
-      login: 'Login',
+      login: 'Professional login',
+      clientPortal: 'Client portal',
       demo: 'Request a demo',
     },
     hero: {
-      tag: 'SaaS Platform — Quebec & Canada',
+      tag: 'Compliance SaaS Platform — Quebec & Canada',
       title: 'Compliance,\ndesigned by\nfield experts.',
-      subtitle: 'CORO generates, structures and manages your emergency response plans, fire safety plans and continuity plans — with the regulatory rigor that fieldwork demands.',
+      subtitle: 'CORO is a Canadian SaaS platform for operational compliance that generates, structures and manages Emergency Response Plans, Fire Safety Plans and Business Continuity Plans — with the rigor field professionals expect.',
       cta: 'Request a demo',
       ctaSecondary: 'View the platform',
       trusted: 'Built for safety professionals across Quebec and Canada',
@@ -222,8 +225,8 @@ const TRANSLATIONS = {
     ],
     features: {
       tag: 'Features',
-      title: 'Everything you need for document compliance',
-      subtitle: 'CORO is designed as a professional tool — not a service. You keep full control of your documents.',
+      title: 'A complete platform for operational and document compliance',
+      subtitle: 'CORO centralizes the creation, management, review and tracking of emergency, fire safety and business continuity documentation.',
       items: [
         {
           icon: 'zap',
@@ -382,6 +385,7 @@ const TRANSLATIONS = {
         features: 'Features',
         pricing: 'Pricing',
         login: 'Login',
+        clientPortal: 'Client portal',
         privacy: 'Privacy Policy',
         terms: 'Terms of Use',
       },
@@ -514,6 +518,36 @@ export default function HomePage() {
               <Globe size={16} />
               <span className="hidden md:inline">{lang === 'fr' ? 'EN' : 'FR'}</span>
             </button>
+
+            {/* Portail client */}
+<a
+  href="https://client.getcoro.io/login"
+  title={t.nav.clientPortal}
+  style={{
+    padding: '8px',
+    borderRadius: 6,
+    fontSize: 14,
+    fontWeight: 500,
+    border: `1px solid ${scrolled ? '#DEE2E6' : 'rgba(255,255,255,0.4)'}`,
+    color: scrolled ? '#2C3E50' : '#FFFFFF',
+    textDecoration: 'none',
+    transition: 'all 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  }}
+  onMouseEnter={e => {
+    e.currentTarget.style.backgroundColor = scrolled
+      ? '#F8F9FA'
+      : 'rgba(255,255,255,0.1)';
+  }}
+  onMouseLeave={e => {
+    e.currentTarget.style.backgroundColor = 'transparent';
+  }}
+>
+  <Building2 size={16} />
+  <span className="hidden md:inline">{t.nav.clientPortal}</span>
+</a>
 
             {/* Connexion — icône sur mobile, texte sur desktop */}
             <a href="https://app.getcoro.io/login"
@@ -1393,6 +1427,10 @@ export default function HomePage() {
             {
               label: t.footer.links.login,
               href: 'https://app.getcoro.io/login',
+            },
+            {
+              label: t.footer.links.clientPortal,
+              href: 'https://client.getcoro.io/login',
             },
           ].map(link => (
             <a

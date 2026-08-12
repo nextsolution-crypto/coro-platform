@@ -8,30 +8,36 @@ export const metadata: Metadata = {
 
   title: {
     default:
-      'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
+      'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
     template: '%s | CORO',
   },
 
   description:
-    'Plateforme SaaS canadienne de création, gestion et structuration de documents de conformité opérationnelle pour les mesures d’urgence, la sécurité incendie et la continuité des activités.',
+    'CORO est une plateforme SaaS canadienne pour créer, structurer et gérer les plans de mesures d’urgence, plans de sécurité incendie, plans de continuité et documents de conformité opérationnelle.',
 
   keywords: [
     'CORO',
     'plateforme SaaS',
-    'conformité documentaire',
-    'conformité opérationnelle',
-    'mesures d’urgence',
-    'plan de mesures d’urgence',
+    'plateforme SaaS conformité',
+    'plateforme mesures urgence',
+    'plan de mesures urgence',
     'PMU',
+    'sécurité incendie',
     'plan de sécurité incendie',
     'PSI',
-    'plan de continuité des activités',
+    'conformité opérationnelle',
+    'conformité documentaire',
+    'plan continuité activités',
     'PCA',
-    'résilience organisationnelle',
     'gestion de crise',
+    'résilience organisationnelle',
     'Québec',
     'Canada',
   ],
+
+  alternates: {
+    canonical: '/',
+  },
 
   icons: {
     icon: '/favicon.svg',
@@ -40,23 +46,52 @@ export const metadata: Metadata = {
 
   openGraph: {
     title:
-      'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
+      'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
 
     description:
-      'La conformité, pensée par des experts du terrain.',
+      'Créez et gérez vos PMU, PSI, PCA et autres documents de conformité avec une plateforme conçue pour les professionnels du terrain.',
 
-    url: 'https://getcoro.io',
+    url: '/',
 
     siteName: 'CORO',
 
     locale: 'fr_CA',
 
     type: 'website',
+
+    images: [
+      {
+        url: '/og-coro.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'CORO — Plateforme SaaS de conformité opérationnelle',
+      },
+    ],
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+
+    title:
+      'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
+
+    description:
+      'Plateforme SaaS canadienne pour la création et la gestion des PMU, PSI, PCA et documents de conformité opérationnelle.',
+
+    images: ['/og-coro.jpg'],
   },
 
   robots: {
     index: true,
     follow: true,
+
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
@@ -69,7 +104,6 @@ export default function RootLayout({
     <html lang="fr">
       <body>
         {children}
-
         <ScrollToTop />
       </body>
     </html>

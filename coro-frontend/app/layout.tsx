@@ -8,10 +8,26 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'CORO — Conformité opérationnelle',
-  description: 'Plateforme de conformité opérationnelle et résilience organisationnelle',
+  description:
+    'Plateforme de conformité opérationnelle et résilience organisationnelle',
+
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="fr">
       <body className={inter.className}>
