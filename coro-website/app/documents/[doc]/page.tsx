@@ -1,18 +1,6 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return [
-    { doc: 'plan-mesures-urgence-pmu' },
-    { doc: 'plan-securite-incendie-psi' },
-    { doc: 'plan-continuite-activites-pca' },
-    { doc: 'plan-gestion-crise-pgc' },
-    { doc: 'plan-reprise-activites-pra' },
-    { doc: 'plan-urgence-environnementale-pue' },
-  ];
-}
+export const dynamic = 'force-dynamic';
 
 const DOCUMENTS: Record<string, {
   code: string;
@@ -461,7 +449,11 @@ export async function generateMetadata({ params, searchParams }: { params: { doc
 
 export default function DocumentPage({ params, searchParams }: { params: { doc: string }; searchParams: { lang?: string } }) {
   const doc = DOCUMENTS[params.doc];
-  if (!doc) notFound();
+  if (!doc) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F9FA' }}>
+      <p style={{ color: '#ADB5BD' }}>Document introuvable.</p>
+    </div>
+  );
 
   const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
   const data = doc[lang];
