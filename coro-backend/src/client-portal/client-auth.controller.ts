@@ -17,6 +17,6 @@ export class ClientAuthController {
     @Request() req: any,
     @Body() body: { newPassword: string },
   ) {
-    return this.clientAuthService.changePassword(req.clientUser.id, body.newPassword);
+    return this.clientAuthService.changePassword(req.clientUser.sub, body.newPassword);
   }
 }
