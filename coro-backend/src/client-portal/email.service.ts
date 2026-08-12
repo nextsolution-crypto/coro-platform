@@ -5,6 +5,8 @@ export class EmailService {
 
   private async sendEmail(to: { email: string; name: string }, subject: string, htmlContent: string) {
     try {
+      const apiKey = process.env.BREVO_API_KEY || '';
+      console.log('Brevo API key length:', apiKey.length, 'starts with:', apiKey.substring(0, 10));
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
