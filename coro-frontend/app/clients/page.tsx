@@ -25,6 +25,7 @@ export default function ClientsPage() {
   const [addressPaste, setAddressPaste] = useState('');
   const [form, setForm] = useState({
     name: '', email: '', phone: '', address: '', city: '', province: '',
+    contactFirstName: '', contactLastName: '', contactEmail: '', contactPhone: '',
   });
 
   const formatPhone = (value: string): string => {
@@ -110,7 +111,7 @@ export default function ClientsPage() {
     try {
       await api.post('/clients', form);
       setShowModal(false);
-      setForm({ name: '', email: '', phone: '', address: '', city: '', province: '' });
+      setForm({ name: '', email: '', phone: '', address: '', city: '', province: '', contactFirstName: '', contactLastName: '', contactEmail: '', contactPhone: '' });
       setAddressPaste('');
       fetchClients();
     } catch (err) { console.error(err); }
@@ -254,9 +255,71 @@ export default function ClientsPage() {
                   onBlur={e => e.target.style.borderColor = '#CED4DA'} />
               </div>
 
+              {/* Séparateur contact principal */}
+              <div style={{ borderTop: '1px solid #E9ECEF', paddingTop: 16, marginTop: 8 }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: '#2C3E50' }}>
+                  👤 Contact principal (représentant du client)
+                </p>
+                <p className="text-xs mb-3" style={{ color: '#6C757D' }}>
+                  Cette personne recevra automatiquement un accès au portail client CORO (vue corporative — tous les bâtiments).
+                </p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Prénom *</label>
+                    <input type="text" required value={form.contactFirstName}
+                      onChange={e => setForm({ ...form, contactFirstName: e.target.value })}
+                      placeholder="Ex: Marie"
+                      className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                      style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                      onFocus={e => e.target.style.borderColor = '#C0392B'}
+                      onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Nom *</label>
+                    <input type="text" required value={form.contactLastName}
+                      onChange={e => setForm({ ...form, contactLastName: e.target.value })}
+                      placeholder="Ex: Tremblay"
+                      className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                      style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                      onFocus={e => e.target.style.borderColor = '#C0392B'}
+                      onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Courriel professionnel *</label>
+                  <input type="email" required value={form.contactEmail}
+                    onChange={e => setForm({ ...form, contactEmail: e.target.value })}
+                    placeholder="Ex: marie.tremblay@client.com"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Téléphone</label>
+                  <input type="text" value={form.contactPhone}
+                    onChange={e => setForm({ ...form, contactPhone: e.target.value })}
+                    placeholder="(514) 555-0100"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => {
+                      e.target.style.borderColor = '#CED4DA';
+                      setForm(prev => ({ ...prev, contactPhone: formatPhone(prev.contactPhone) }));
+                    }} />
+                </div>
+              </div>
+
+              {/* Séparateur coordonnées organisation */}
+              <div style={{ borderTop: '1px solid #E9ECEF', paddingTop: 16, marginTop: 8 }}>
+                <p className="text-sm font-semibold mb-3" style={{ color: '#2C3E50' }}>
+                  🏢 Coordonnées de l'organisation (optionnel)
+                </p>
+              </div>
+
               {/* Courriel */}
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Courriel</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Courriel général</label>
                 <input type="text" value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"

@@ -67,7 +67,9 @@ export default function BuildingsPage() {
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
     postalCode: '', floors: '', buildingType: '', clientId: '',
-    responsableNom: '', responsableTitre: '', photoBase64: '',
+    responsableFirstName: '', responsableLastName: '',
+    responsableTitre: '', responsableEmail: '', responsablePhone: '',
+    photoBase64: '',
   });
   const [addressPaste, setAddressPaste] = useState('');
 
@@ -134,7 +136,7 @@ export default function BuildingsPage() {
         floors: form.floors ? parseInt(form.floors) : undefined,
       });
       setShowModal(false);
-      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '', responsableNom: '', responsableTitre: '', photoBase64: '' });
+      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '', responsableFirstName: '', responsableLastName: '', responsableTitre: '', responsableEmail: '', responsablePhone: '', photoBase64: '' });
       setAddressPaste('');
       fetchData();
     } catch (err) { console.error(err); }
@@ -462,17 +464,73 @@ export default function BuildingsPage() {
                 </div>
               </div>
 
-              {/* Responsable */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+              {/* Responsable bâtiment */}
+              <div style={{ borderTop: '1px solid #E9ECEF', paddingTop: 16, marginTop: 8 }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: '#2C3E50' }}>
+                  🏗 Responsable du bâtiment
+                </p>
+                <p className="text-xs mb-3" style={{ color: '#6C757D' }}>
+                  Cette personne recevra automatiquement un accès au portail client CORO (vue gestionnaire — ses bâtiments seulement). Si elle gère déjà d'autres bâtiments, son accès existant sera mis à jour.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                      Prénom *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={form.responsableFirstName}
+                      onChange={e => setForm({ ...form, responsableFirstName: e.target.value })}
+                      placeholder="Ex: Jean"
+                      className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                      style={inputStyle}
+                      onFocus={e => e.target.style.borderColor = '#C0392B'}
+                      onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={form.responsableLastName}
+                      onChange={e => setForm({ ...form, responsableLastName: e.target.value })}
+                      placeholder="Ex: Tremblay"
+                      className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                      style={inputStyle}
+                      onFocus={e => e.target.style.borderColor = '#C0392B'}
+                      onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                    />
+                  </div>
+                </div>
+                <div className="mb-3">
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
-                    Nom du responsable
+                    Titre
                   </label>
                   <input
                     type="text"
-                    value={form.responsableNom}
-                    onChange={e => setForm({ ...form, responsableNom: e.target.value })}
-                    placeholder="Ex: Jean Tremblay"
+                    value={form.responsableTitre}
+                    onChange={e => setForm({ ...form, responsableTitre: e.target.value })}
+                    placeholder="Ex: Directeur de la sécurité"
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Courriel professionnel *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={form.responsableEmail}
+                    onChange={e => setForm({ ...form, responsableEmail: e.target.value })}
+                    placeholder="Ex: jean.tremblay@client.com"
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -481,13 +539,13 @@ export default function BuildingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
-                    Titre du responsable
+                    Téléphone
                   </label>
                   <input
                     type="text"
-                    value={form.responsableTitre}
-                    onChange={e => setForm({ ...form, responsableTitre: e.target.value })}
-                    placeholder="Ex: Directeur de la sécurité"
+                    value={form.responsablePhone}
+                    onChange={e => setForm({ ...form, responsablePhone: e.target.value })}
+                    placeholder="(514) 555-0100"
                     className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
