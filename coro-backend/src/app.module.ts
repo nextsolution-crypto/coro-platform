@@ -33,6 +33,7 @@ import { TimelogModule } from './timelog/timelog.module';
 import { GuideModule } from './guide/guide.module';
 import { DangerousSubstancesModule } from './dangerous-substances/dangerous-substances.module';
 import { CustomProceduresModule } from './custom-procedures/custom-procedures.module';
+import { BlogModule } from './blog/blog.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ApprovalModule } from './approval/approval.module';
 import { ClientPortalModule } from './client-portal/client-portal.module';
@@ -73,6 +74,7 @@ import { APP_GUARD } from '@nestjs/core';
   GuideModule,
   DangerousSubstancesModule,
   CustomProceduresModule,
+    BlogModule,
   NotificationsModule,
   ApprovalModule,
   ClientPortalModule,
