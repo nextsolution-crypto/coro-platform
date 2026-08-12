@@ -5,10 +5,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ClientPortalService {
   constructor(private prisma: PrismaService) {}
 
-  async getProjects(clientId: string, organizationId: string, role: string) {
+  async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
     const where: any = { organizationId };
 
-    if (role === 'CLIENT_MANAGER') {
+    if (role === 'CLIENT_MANAGER' && buildingIds && buildingIds.length > 0) {
+      where.buildingId = { in: buildingIds };
+    } else if (role === 'CLIENT_MANAGER') {
       where.clientId = clientId;
     }
 
@@ -56,11 +58,11 @@ export class ClientPortalService {
     return project;
   }
 
-  async getActivities(clientId: string, organizationId: string, role: string) {
+  async getActivities(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
     const projects = await this.prisma.project.findMany({
       where: {
         organizationId,
-        ...(role === 'CLIENT_MANAGER' ? { clientId } : {}),
+        ...(role === 'CLIENT_MANAGER' && buildingIds?.length ? { buildingId: { in: buildingIds } } : role === 'CLIENT_MANAGER' ? { clientId } : {}),
       },
       select: { id: true },
     });
@@ -133,9 +135,9 @@ export class ClientPortalService {
     });
   }
 
-  async getDashboard(clientId: string, organizationId: string, role: string) {
-    const projects = await this.getProjects(clientId, organizationId, role);
-    const activities = await this.getActivities(clientId, organizationId, role);
+  async getDashboard(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+    const projects = await this.getProjects(clientId, organizationId, role, buildingIds);
+    const activities = await this.getActivities(clientId, organizationId, role, buildingIds);
 
     const now = new Date();
     const upcoming = activities.filter(a => {

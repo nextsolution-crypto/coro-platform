@@ -31,6 +31,7 @@ export class ClientAuthService {
       role: clientUser.role,
       clientId: clientUser.clientId,
       organizationId: clientUser.organizationId,
+      buildingIds: clientUser.buildingIds,
       type: 'CLIENT',
     });
 
