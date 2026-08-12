@@ -29,7 +29,15 @@ export async function generateMetadata({ params, searchParams }: { params: { slu
       locale: lang === 'fr' ? 'fr_CA' : 'en_CA',
       type: 'article',
       publishedTime: post.publishedAt,
-      ...(post.coverImage && { images: [{ url: post.coverImage }] }),
+      modifiedTime: post.updatedAt,
+      authors: ['https://getcoro.io'],
+      ...(post.coverImage && { images: [{ url: post.coverImage, width: 1200, height: 630, alt: title }] }),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: desc || '',
+      ...(post.coverImage && { images: [post.coverImage] }),
     },
   };
 }
@@ -51,8 +59,9 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
   const content = lang === 'fr' ? post.contentFr : (post.contentEn || post.contentFr);
   const categoryColor = CATEGORY_COLORS[post.category] || '#6C757D';
   const date = post.publishedAt ? new Date(post.publishedAt).toLocaleDateString(lang === 'fr' ? 'fr-CA' : 'en-CA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const updatedDate = post.updatedAt ? new Date(post.updatedAt).toLocaleDateString(lang === 'fr' ? 'fr-CA' : 'en-CA', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 
-  // JSON-LD Schema
+  // JSON-LD Article
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -60,10 +69,29 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
     description: lang === 'fr' ? post.seoDescFr : post.seoDescEn,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
-    author: { '@type': 'Organization', name: post.authorName || 'Équipe CORO' },
-    publisher: { '@type': 'Organization', name: 'CORO', logo: { '@type': 'ImageObject', url: 'https://getcoro.io/logo.png' } },
-    ...(post.coverImage && { image: post.coverImage }),
+    author: { '@type': 'Organization', name: 'Équipe CORO', url: 'https://getcoro.io' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: 'https://getcoro.io',
+      logo: { '@type': 'ImageObject', url: 'https://getcoro.io/logo.png' },
+    },
+    ...(post.coverImage && { image: { '@type': 'ImageObject', url: post.coverImage, width: 1200, height: 630 } }),
     url: `https://getcoro.io/blog/${params.slug}`,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://getcoro.io/blog/${params.slug}` },
+    inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
+    keywords: post.tags?.join(', ') || '',
+  };
+
+  // JSON-LD BreadcrumbList
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' },
+      { '@type': 'ListItem', position: 2, name: lang === 'fr' ? 'Blogue' : 'Blog', item: 'https://getcoro.io/blog' },
+      { '@type': 'ListItem', position: 3, name: title, item: `https://getcoro.io/blog/${params.slug}` },
+    ],
   };
 
   return (
@@ -71,6 +99,7 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
 
       {/* JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
       {/* Nav */}
       <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>
@@ -92,6 +121,21 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
         </div>
       </nav>
 
+      {/* Breadcrumb visible */}
+      <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF', padding: '12px 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <p style={{ fontSize: 13, color: '#ADB5BD' }}>
+            <a href="/" style={{ color: '#ADB5BD', textDecoration: 'none' }}>getcoro.io</a>
+            {' '}/{'  '}
+            <a href={`/blog${lang === 'en' ? '?lang=en' : ''}`} style={{ color: '#ADB5BD', textDecoration: 'none' }}>
+              {lang === 'fr' ? 'Blogue' : 'Blog'}
+            </a>
+            {' '}/{'  '}
+            <span style={{ color: '#6C757D' }}>{title}</span>
+          </p>
+        </div>
+      </div>
+
       {/* Hero article */}
       <div style={{ backgroundColor: '#2C3E50', padding: '60px 24px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
@@ -106,9 +150,16 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
           <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.15, marginBottom: 20 }}>
             {title}
           </h1>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
-            {post.authorName} · {post.authorTitle}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
+              {post.authorName} · {post.authorTitle}
+            </p>
+            {post.updatedAt !== post.publishedAt && (
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+                {lang === 'fr' ? `Mis à jour le ${updatedDate}` : `Updated ${updatedDate}`}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -138,6 +189,13 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
             ))}
           </div>
         )}
+
+        {/* Date mise à jour */}
+        <p style={{ marginTop: 24, fontSize: 12, color: '#ADB5BD' }}>
+          {lang === 'fr'
+            ? `Publié le ${date}${post.updatedAt !== post.publishedAt ? ` · Mis à jour le ${updatedDate}` : ''}`
+            : `Published ${date}${post.updatedAt !== post.publishedAt ? ` · Updated ${updatedDate}` : ''}`}
+        </p>
 
         {/* CTA */}
         <div style={{ marginTop: 64, backgroundColor: '#2C3E50', borderRadius: 12, padding: 40, textAlign: 'center' }}>
