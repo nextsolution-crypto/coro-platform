@@ -71,6 +71,21 @@ services:
     ports:
       - "3001:3001"
 
+  client-portal:
+    build:
+      context: ./coro-client-portal
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: coro_client_portal
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - coro_network
+    ports:
+      - "3003:3003"
+
 volumes:
   postgres_data:
 
