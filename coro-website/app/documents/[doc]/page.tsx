@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+export const dynamic = 'force-static';
+
 const DOCUMENTS: Record<string, {
   code: string;
   color: string;
