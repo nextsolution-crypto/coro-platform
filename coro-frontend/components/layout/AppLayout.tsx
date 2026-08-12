@@ -60,6 +60,7 @@ const SUPER_ADMIN_GROUP = {
     { label: 'Tâches globales', path: '/admin/task-templates', icon: '✅' },
     { label: 'Feedbacks',       path: '/admin/feedback',       icon: '💬' },
     { label: 'Changelog',       path: '/admin/changelog',      icon: '📝' },
+    { label: 'Blogue',          path: '/blog',                 icon: '✍️' },
   ],
 };
 
