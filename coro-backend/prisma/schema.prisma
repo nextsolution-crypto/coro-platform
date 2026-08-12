@@ -82,6 +82,10 @@ enum UserRole {
 model Client {
   id             String   @id @default(uuid())
   name           String
+  contactFirstName  String?
+  contactLastName   String?
+  contactEmail      String?
+  contactPhone      String?
   email          String?
   phone          String?
   address        String?
@@ -112,8 +116,11 @@ model Building {
   units          Int?
   buildingType   String?
   photoBase64    String?
-  responsableNom   String?
-  responsableTitre String?
+  responsableFirstName String?
+  responsableLastName  String?
+  responsableTitre     String?
+  responsableEmail     String?
+  responsablePhone     String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -676,6 +683,7 @@ model ClientUser {
   firstName      String
   lastName       String
   role           ClientUserRole @default(CLIENT_MANAGER)
+  buildingIds    String[]
   isActive       Boolean  @default(true)
   clientId       String
   client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
