@@ -16,6 +16,10 @@ interface Client {
   city?: string;
   province?: string;
   logoBase64?: string;
+  contactFirstName?: string;
+  contactLastName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   buildings: any[];
   projects: any[];
 }
@@ -49,12 +53,16 @@ export default function ClientDetailPage() {
       const res = await api.get(`/clients/${clientId}`);
       setClient(res.data);
       setForm({
-        name:     res.data.name     || '',
-        email:    res.data.email    || '',
-        phone:    res.data.phone    || '',
-        address:  res.data.address  || '',
-        city:     res.data.city     || '',
-        province: res.data.province || '',
+        name:               res.data.name               || '',
+        email:              res.data.email              || '',
+        phone:              res.data.phone              || '',
+        address:            res.data.address            || '',
+        city:               res.data.city               || '',
+        province:           res.data.province           || '',
+        contactFirstName:   res.data.contactFirstName   || '',
+        contactLastName:    res.data.contactLastName    || '',
+        contactEmail:       res.data.contactEmail       || '',
+        contactPhone:       res.data.contactPhone       || '',
       });
       if (res.data.logoBase64) setLogoPreview(res.data.logoBase64);
     } catch (err) { console.error(err); }
@@ -98,12 +106,19 @@ export default function ClientDetailPage() {
   };
 
   const fields = [
-    { label: 'Nom du client *', key: 'name',     required: true },
-    { label: 'Courriel',        key: 'email' },
-    { label: 'Téléphone',       key: 'phone' },
-    { label: 'Adresse',         key: 'address' },
-    { label: 'Ville',           key: 'city' },
-    { label: 'Province',        key: 'province' },
+    { label: 'Nom du client *', key: 'name', required: true },
+    { label: 'Courriel général', key: 'email' },
+    { label: 'Téléphone général', key: 'phone' },
+    { label: 'Adresse', key: 'address' },
+    { label: 'Ville', key: 'city' },
+    { label: 'Province', key: 'province' },
+  ];
+
+  const contactFields = [
+    { label: 'Prénom du contact *', key: 'contactFirstName', required: true },
+    { label: 'Nom du contact *', key: 'contactLastName', required: true },
+    { label: 'Courriel du contact *', key: 'contactEmail', required: true },
+    { label: 'Téléphone du contact', key: 'contactPhone' },
   ];
 
   if (loading) return (
@@ -293,6 +308,45 @@ export default function ClientDetailPage() {
                       e.target.style.borderColor = '#CED4DA';
                       if (field.key === 'phone') {
                         setForm({ ...form, phone: formatPhone(e.target.value) });
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Contact principal */}
+          <div className="rounded-md p-4 sm:p-6"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E9ECEF',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            }}>
+            <h3 className="font-semibold mb-2" style={{ color: '#2C3E50' }}>
+              👤 Contact principal
+            </h3>
+            <p className="text-xs mb-4" style={{ color: '#6C757D' }}>
+              Cette personne a accès au portail client CORO (vue corporative — tous les bâtiments).
+            </p>
+            <div className="space-y-4">
+              {contactFields.map(field => (
+                <div key={field.key}>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.key === 'contactEmail' ? 'email' : 'text'}
+                    value={form[field.key] || ''}
+                    onChange={e => setForm({ ...form, [field.key]: e.target.value })}
+                    required={field.required}
+                    className="w-full rounded px-4 py-2.5 text-sm focus:outline-none"
+                    style={inputStyle}
+                    onFocus={e => e.target.style.borderColor = '#C0392B'}
+                    onBlur={e => {
+                      e.target.style.borderColor = '#CED4DA';
+                      if (field.key === 'contactPhone') {
+                        setForm((prev: any) => ({ ...prev, contactPhone: formatPhone(e.target.value) }));
                       }
                     }}
                   />
