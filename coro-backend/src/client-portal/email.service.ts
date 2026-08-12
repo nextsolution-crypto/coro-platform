@@ -56,7 +56,7 @@ export class EmailService {
   .credentials { background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 8px; padding: 24px; margin: 24px 0; }
   .cred-label { font-size: 12px; font-weight: 600; color: #ADB5BD; text-transform: uppercase; margin-bottom: 4px; }
   .cred-value { font-size: 16px; font-weight: 700; color: #2C3E50; margin-bottom: 16px; font-family: monospace; }
-  .btn { display: inline-block; background: #C0392B; color: #FFFFFF; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 700; }
+  .btn { display: inline-block; background: #C0392B; color: #FFFFFF !important; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 700; }
   .footer { background: #F8F9FA; padding: 24px; text-align: center; font-size: 13px; color: #ADB5BD; border-top: 1px solid #E9ECEF; }
   .warning { background: #FEF9E7; border: 1px solid #FAD7A0; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #F39C12; margin-top: 16px; }
 </style>
