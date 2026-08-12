@@ -1,7 +1,16 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-export const dynamic = 'force-static';
+export function generateStaticParams() {
+  return [
+    { doc: 'plan-mesures-urgence-pmu' },
+    { doc: 'plan-securite-incendie-psi' },
+    { doc: 'plan-continuite-activites-pca' },
+    { doc: 'plan-gestion-crise-pgc' },
+    { doc: 'plan-reprise-activites-pra' },
+    { doc: 'plan-urgence-environnementale-pue' },
+  ];
+}
 
 const DOCUMENTS: Record<string, {
   code: string;
