@@ -28,6 +28,7 @@ services:
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL}
+      BREVO_API_KEY: ${BREVO_API_KEY}
       NODE_ENV: production
       PORT: 3002
     depends_on:
