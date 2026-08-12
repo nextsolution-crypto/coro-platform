@@ -18,9 +18,7 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: ./coro-backend
-      dockerfile: Dockerfile
+    image: ghcr.io/nextsolution-crypto/coro-backend:latest
     container_name: coro_backend
     restart: unless-stopped
     environment:
@@ -41,11 +39,7 @@ services:
       - "3002:3002"
 
   frontend:
-    build:
-      context: ./coro-frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    image: ghcr.io/nextsolution-crypto/coro-frontend:latest
     container_name: coro_frontend
     restart: unless-stopped
     environment:
@@ -59,9 +53,7 @@ services:
       - "3000:3000"
 
   website:
-    build:
-      context: ./coro-website
-      dockerfile: Dockerfile
+    image: ghcr.io/nextsolution-crypto/coro-website:latest
     container_name: coro_website
     restart: unless-stopped
     environment:
@@ -72,11 +64,7 @@ services:
       - "3001:3001"
 
   client-portal:
-    build:
-      context: ./coro-client-portal
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    image: ghcr.io/nextsolution-crypto/coro-client-portal:latest
     container_name: coro_client_portal
     restart: unless-stopped
     environment:
