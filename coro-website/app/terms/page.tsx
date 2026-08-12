@@ -12,9 +12,9 @@ const LAST_UPDATED_EN = 'August 11, 2026';
 
 const CONTENT = {
   fr: {
-    metaTitle: 'Conditions d’utilisation | CORO',
-    metaDescription:
-      'Consultez les conditions d’utilisation de la plateforme SaaS CORO, incluant les règles d’accès, les responsabilités, la propriété intellectuelle et les modalités du service.',
+    metaTitle: 'Conditions d’utilisation CORO | Plateforme SaaS',
+metaDescription:
+  'Consultez les conditions d’utilisation de la plateforme SaaS CORO, incluant les règles d’accès, les responsabilités, la propriété intellectuelle, les abonnements et les modalités du service.',
     title: 'Conditions d’utilisation',
     updated: `Dernière mise à jour : ${LAST_UPDATED_FR}`,
     intro:
@@ -168,9 +168,9 @@ const CONTENT = {
     ],
   },
   en: {
-    metaTitle: 'Terms of Use | CORO',
-    metaDescription:
-      'Read the CORO SaaS platform Terms of Use, including access rules, responsibilities, intellectual property and service terms.',
+    metaTitle: 'CORO Terms of Use | SaaS Platform',
+metaDescription:
+  'Read the CORO SaaS platform Terms of Use, including access rules, responsibilities, intellectual property, subscriptions and service terms.',
     title: 'Terms of Use',
     updated: `Last updated: ${LAST_UPDATED_EN}`,
     intro:
@@ -348,7 +348,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         'x-default': `${SITE_URL}/terms`,
       },
     },
-    robots: { index: true, follow: true },
+    robots: {
+  index: true,
+  follow: true,
+
+  googleBot: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+    'max-video-preview': -1,
+  },
+},
   };
 }
 

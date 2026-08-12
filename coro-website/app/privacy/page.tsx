@@ -12,9 +12,9 @@ const LAST_UPDATED_EN = 'August 11, 2026';
 
 const CONTENT = {
   fr: {
-    metaTitle: 'Politique de confidentialité | CORO',
-    metaDescription:
-      'Consultez la politique de confidentialité de CORO et découvrez comment la plateforme protège, utilise et conserve les renseignements personnels.',
+    metaTitle: 'Politique de confidentialité CORO | Protection des données',
+metaDescription:
+  'Consultez la politique de confidentialité de CORO et découvrez comment la plateforme protège, utilise, conserve et gère les renseignements personnels.',
     title: 'Politique de confidentialité',
     updated: `Dernière mise à jour : ${LAST_UPDATED_FR}`,
     intro:
@@ -140,9 +140,9 @@ const CONTENT = {
     ],
   },
   en: {
-    metaTitle: 'Privacy Policy | CORO',
-    metaDescription:
-      'Read CORO’s privacy policy and learn how the platform protects, uses and retains personal information.',
+    metaTitle: 'CORO Privacy Policy | Data Protection',
+metaDescription:
+  'Read CORO’s privacy policy and learn how the platform protects, uses, retains and manages personal information.',
     title: 'Privacy Policy',
     updated: `Last updated: ${LAST_UPDATED_EN}`,
     intro:
@@ -288,7 +288,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
         'x-default': `${SITE_URL}/privacy`,
       },
     },
-    robots: { index: true, follow: true },
+    robots: {
+  index: true,
+  follow: true,
+
+  googleBot: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+    'max-video-preview': -1,
+  },
+},
   };
 }
 

@@ -9,18 +9,32 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } else {
-      router.push('/login');
+      router.replace('/login');
     }
-  }, []);
+  }, [router]);
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: '#F8F9FA',
-    }}>
-      <p style={{ color: '#ADB5BD', fontSize: 14 }}>Chargement...</p>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F8F9FA',
+        padding: 24,
+      }}
+    >
+      <p
+        style={{
+          color: '#ADB5BD',
+          fontSize: 14,
+          margin: 0,
+        }}
+      >
+        Chargement...
+      </p>
     </div>
   );
 }

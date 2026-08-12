@@ -27,10 +27,10 @@ const SITE_URL = 'https://getcoro.io';
 const CONTENT = {
   fr: {
     metadata: {
-      title: 'Sécurité et protection des données | CORO',
-      description:
-        'Découvrez l’approche de CORO en matière de sécurité, d’hébergement canadien, de protection des données, de contrôle des accès, de sauvegardes et de continuité.',
-    },
+  title: 'Sécurité CORO | Protection des données et hébergement au Canada',
+  description:
+    'Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.',
+},
     nav: {
       features: 'Fonctionnalités',
       documents: 'Documents',
@@ -244,10 +244,10 @@ const CONTENT = {
   },
   en: {
     metadata: {
-      title: 'Security and data protection | CORO',
-      description:
-        'Learn about CORO’s approach to security, Canadian hosting, data protection, access control, backups and continuity.',
-    },
+  title: 'CORO Security | Data Protection and Canadian Hosting',
+  description:
+    'Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and continuous monitoring.',
+},
     nav: {
       features: 'Features',
       documents: 'Documents',
@@ -555,22 +555,44 @@ export async function generateMetadata({
       },
     },
     openGraph: {
-      type: 'website',
-      url: canonical,
-      siteName: 'CORO',
-      locale: lang === 'fr' ? 'fr_CA' : 'en_CA',
-      title: t.metadata.title,
-      description: t.metadata.description,
+  type: 'website',
+  url: canonical,
+  siteName: 'CORO',
+  locale: lang === 'fr' ? 'fr_CA' : 'en_CA',
+  title: t.metadata.title,
+  description: t.metadata.description,
+
+  images: [
+    {
+      url: `${SITE_URL}/og-coro.jpg`,
+      width: 1200,
+      height: 630,
+      alt:
+        lang === 'fr'
+          ? 'CORO — Sécurité et protection des données'
+          : 'CORO — Security and data protection',
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: t.metadata.title,
-      description: t.metadata.description,
-    },
+  ],
+},
+
+twitter: {
+  card: 'summary_large_image',
+  title: t.metadata.title,
+  description: t.metadata.description,
+  images: [`${SITE_URL}/og-coro.jpg`],
+},
     robots: {
-      index: true,
-      follow: true,
-    },
+  index: true,
+  follow: true,
+
+  googleBot: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+    'max-video-preview': -1,
+  },
+},
   };
 }
 

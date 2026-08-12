@@ -1,43 +1,101 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { apiGet, apiPost, getUser } from '../../store/auth';
 import PortalLayout from '../../components/PortalLayout';
-import { Download, CheckCircle, MessageSquare, ArrowLeft, Clock, Eye } from 'lucide-react';
+import {
+  Download,
+  CheckCircle,
+  MessageSquare,
+  ArrowLeft,
+  Clock,
+} from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
-  DRAFT:       { bg: '#F8F9FA', text: '#6C757D', border: '#DEE2E6', label: 'Brouillon' },
-  IN_PROGRESS: { bg: '#EBF5FB', text: '#2980B9', border: '#AED6F1', label: 'En cours' },
-  REVIEW:      { bg: '#FEF9E7', text: '#F39C12', border: '#FAD7A0', label: 'En révision' },
-  VALIDATED:   { bg: '#EAFAF1', text: '#27AE60', border: '#A9DFBF', label: 'Validé' },
-  ARCHIVED:    { bg: '#FDEDEC', text: '#C0392B', border: '#F1948A', label: 'Archivé' },
+const STATUS_COLORS: Record<
+  string,
+  {
+    bg: string;
+    text: string;
+    border: string;
+    label: string;
+  }
+> = {
+  DRAFT: {
+    bg: '#F8F9FA',
+    text: '#6C757D',
+    border: '#DEE2E6',
+    label: 'Brouillon',
+  },
+
+  IN_PROGRESS: {
+    bg: '#EBF5FB',
+    text: '#2980B9',
+    border: '#AED6F1',
+    label: 'En cours',
+  },
+
+  REVIEW: {
+    bg: '#FEF9E7',
+    text: '#F39C12',
+    border: '#FAD7A0',
+    label: 'En révision',
+  },
+
+  VALIDATED: {
+    bg: '#EAFAF1',
+    text: '#27AE60',
+    border: '#A9DFBF',
+    label: 'Validé',
+  },
+
+  ARCHIVED: {
+    bg: '#FDEDEC',
+    text: '#C0392B',
+    border: '#F1948A',
+    label: 'Archivé',
+  },
 };
 
 export default function DocumentDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params?.id as string;
-  const user = getUser();
 
+  const projectId = params?.id as string;
+
+  const [user, setUser] = useState<any>(null);
   const [project, setProject] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
+
   const [signing, setSigning] = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
   const [signName, setSignName] = useState('');
   const [signComment, setSignComment] = useState('');
+
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
-    if (!user) { router.push('/login'); return; }
-    setSignName(`${user.firstName} ${user.lastName}`);
+    const currentUser = getUser();
+
+    if (!currentUser) {
+      router.replace('/login');
+      return;
+    }
+
+    setUser(currentUser);
+    setSignName(
+      `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim()
+    );
+
     fetchData();
-  }, []);
+  }, [router, projectId]);
 
   const fetchData = async () => {
     try {
@@ -45,6 +103,7 @@ export default function DocumentDetailPage() {
         apiGet(`/client-portal/projects/${projectId}`),
         apiGet(`/client-portal/projects/${projectId}/comments`),
       ]);
+
       setProject(projectRes);
       setComments(commentsRes || []);
     } catch (err) {
@@ -55,14 +114,23 @@ export default function DocumentDetailPage() {
   };
 
   const handleSign = async () => {
-    if (!signName.trim()) return;
+    if (!signName.trim()) {
+      return;
+    }
+
     setSigning(true);
+
     try {
-      await apiPost(`/client-portal/projects/${projectId}/sign`, {
-        fullName: signName,
-        comment: signComment,
-      });
+      await apiPost(
+        `/client-portal/projects/${projectId}/sign`,
+        {
+          fullName: signName,
+          comment: signComment,
+        }
+      );
+
       await fetchData();
+
       setShowSignModal(false);
       setSignComment('');
     } catch (err) {
@@ -73,11 +141,22 @@ export default function DocumentDetailPage() {
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim()) {
+      return;
+    }
+
     setAddingComment(true);
+
     try {
-      await apiPost(`/client-portal/projects/${projectId}/comments`, { contenu: newComment });
+      await apiPost(
+        `/client-portal/projects/${projectId}/comments`,
+        {
+          contenu: newComment,
+        }
+      );
+
       setNewComment('');
+
       await fetchData();
     } catch (err) {
       console.error(err);
@@ -88,28 +167,45 @@ export default function DocumentDetailPage() {
 
   const handleDownload = async () => {
     setDownloading(true);
+
     try {
       const token = localStorage.getItem('coro_client_token');
-      const res = await fetch(`${API_URL}/projects/${projectId}/export`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
-          moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
-          language: 'fr',
-          isPreview: false,
-        }),
-      });
-      if (!res.ok) throw new Error('Erreur téléchargement');
+
+      const res = await fetch(
+        `${API_URL}/projects/${projectId}/export`,
+        {
+          method: 'POST',
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+
+          body: JSON.stringify({
+            selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
+            moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
+            language: 'fr',
+            isPreview: false,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error('Erreur téléchargement');
+      }
+
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${project?.name || 'document'}.pdf`;
-      a.click();
+
+      const anchor = document.createElement('a');
+
+      anchor.href = url;
+      anchor.download = `${project?.name || 'document'}.pdf`;
+
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
@@ -119,333 +215,1076 @@ export default function DocumentDetailPage() {
     }
   };
 
-  if (loading) return (
-    <PortalLayout>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-        <p style={{ color: '#ADB5BD', fontSize: 14 }} className="animate-pulse">Chargement...</p>
-      </div>
-    </PortalLayout>
+  if (loading || !user) {
+    return (
+      <PortalLayout>
+        <div
+          style={{
+            minHeight: 300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <p
+            className="animate-pulse"
+            style={{
+              margin: 0,
+              color: '#ADB5BD',
+              fontSize: 14,
+            }}
+          >
+            Chargement...
+          </p>
+        </div>
+      </PortalLayout>
+    );
+  }
+
+  if (!project) {
+    return (
+      <PortalLayout>
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E9ECEF',
+            borderRadius: 12,
+            padding: 32,
+            textAlign: 'center',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: '#ADB5BD',
+              fontSize: 14,
+            }}
+          >
+            Document introuvable.
+          </p>
+        </div>
+      </PortalLayout>
+    );
+  }
+
+  const sc =
+    STATUS_COLORS[project.status] ||
+    STATUS_COLORS.DRAFT;
+
+  const mySignature = project.signatures?.find(
+    (signature: any) =>
+      signature.clientUser?.email === user.email
   );
 
-  if (!project) return (
-    <PortalLayout>
-      <p style={{ color: '#ADB5BD' }}>Document introuvable.</p>
-    </PortalLayout>
-  );
-
-  const sc = STATUS_COLORS[project.status] || STATUS_COLORS.DRAFT;
-  const mySignature = project.signatures?.find((s: any) => s.clientUser?.email === user?.email);
-  const isValidated = project.status === 'VALIDATED';
+  const isValidated =
+    project.status === 'VALIDATED';
 
   return (
     <PortalLayout>
       {/* Retour */}
       <button
+        type="button"
         onClick={() => router.push('/documents')}
         style={{
-          display: 'flex', alignItems: 'center', gap: 6, marginBottom: 24,
-          background: 'none', border: 'none', cursor: 'pointer', color: '#6C757D', fontSize: 14,
+          minHeight: 40,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 7,
+          marginBottom: 20,
+          padding: '6px 4px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: '#6C757D',
+          fontSize: 14,
         }}
-        onMouseEnter={e => e.currentTarget.style.color = '#2C3E50'}
-        onMouseLeave={e => e.currentTarget.style.color = '#6C757D'}>
-        <ArrowLeft size={16} /> Retour aux documents
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = '#2C3E50';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = '#6C757D';
+        }}
+      >
+        <ArrowLeft size={17} />
+        Retour aux documents
       </button>
 
-      {/* En-tête */}
-      <div style={{
-        backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF',
-        padding: '24px 28px', marginBottom: 24,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span style={{
-                fontSize: 12, fontWeight: 800, color: '#FFFFFF',
-                backgroundColor: '#2980B9', padding: '3px 10px', borderRadius: 4,
-              }}>
+      {/* En-tête document */}
+      <section
+        style={{
+          minWidth: 0,
+          backgroundColor: '#FFFFFF',
+          borderRadius: 12,
+          border: '1px solid #E9ECEF',
+          padding: 'clamp(18px, 4vw, 28px)',
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 20,
+          }}
+        >
+          {/* Informations */}
+          <div
+            style={{
+              flex: '1 1 320px',
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: '#FFFFFF',
+                  backgroundColor: '#2980B9',
+                  padding: '4px 10px',
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {project.documentType}
               </span>
-              <span style={{
-                fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
-                backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}`,
-              }}>
+
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: '4px 10px',
+                  borderRadius: 10,
+                  backgroundColor: sc.bg,
+                  color: sc.text,
+                  border: `1px solid ${sc.border}`,
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {sc.label}
               </span>
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#2C3E50', marginBottom: 6 }}>
+
+            <h1
+              style={{
+                margin: '0 0 8px',
+                fontSize: 'clamp(20px, 5vw, 24px)',
+                lineHeight: 1.3,
+                fontWeight: 800,
+                color: '#2C3E50',
+                overflowWrap: 'anywhere',
+              }}
+            >
               {project.name}
             </h1>
-            <p style={{ fontSize: 14, color: '#6C757D' }}>
-              {project.building?.name} · {project.building?.address} · {project.year}
-            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px 8px',
+                fontSize: 14,
+                color: '#6C757D',
+                lineHeight: 1.5,
+              }}
+            >
+              {project.building?.name && (
+                <span>
+                  {project.building.name}
+                </span>
+              )}
+
+              {project.building?.address && (
+                <>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      color: '#CED4DA',
+                    }}
+                  >
+                    ·
+                  </span>
+
+                  <span>
+                    {project.building.address}
+                  </span>
+                </>
+              )}
+
+              {project.year && (
+                <>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      color: '#CED4DA',
+                    }}
+                  >
+                    ·
+                  </span>
+
+                  <span>
+                    {project.year}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {isValidated && (
+          {isValidated && (
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                flexWrap: 'wrap',
+                flex: '0 1 auto',
+              }}
+            >
               <button
+                type="button"
                 onClick={handleDownload}
                 disabled={downloading}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '10px 18px', borderRadius: 6, fontSize: 14, fontWeight: 600,
-                  backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none',
-                  cursor: downloading ? 'not-allowed' : 'pointer', opacity: downloading ? 0.7 : 1,
-                }}>
+                  minHeight: 46,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 7,
+                  padding: '10px 16px',
+                  borderRadius: 7,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  backgroundColor: '#C0392B',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  cursor: downloading
+                    ? 'not-allowed'
+                    : 'pointer',
+                  opacity: downloading ? 0.7 : 1,
+                  flex: '1 1 160px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 <Download size={16} />
-                {downloading ? 'Téléchargement...' : 'Télécharger PDF'}
+
+                {downloading
+                  ? 'Téléchargement...'
+                  : 'Télécharger PDF'}
               </button>
-            )}
-            {isValidated && !mySignature && (
-              <button
-                onClick={() => setShowSignModal(true)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '10px 18px', borderRadius: 6, fontSize: 14, fontWeight: 600,
-                  backgroundColor: '#FFFFFF', color: '#8E44AD',
-                  border: '2px solid #8E44AD', cursor: 'pointer',
-                }}>
-                <CheckCircle size={16} />
-                Signer le document
-              </button>
-            )}
-          </div>
+
+              {!mySignature && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowSignModal(true)
+                  }
+                  style={{
+                    minHeight: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    padding: '10px 16px',
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    backgroundColor: '#FFFFFF',
+                    color: '#8E44AD',
+                    border: '2px solid #8E44AD',
+                    cursor: 'pointer',
+                    flex: '1 1 160px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <CheckCircle size={16} />
+                  Signer le document
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Infos approbation */}
+        {/* Approbation */}
         {isValidated && project.approvedBy && (
-          <div style={{
-            marginTop: 16, padding: '12px 16px', borderRadius: 8,
-            backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <CheckCircle size={16} color="#27AE60" />
-            <p style={{ fontSize: 13, color: '#27AE60' }}>
-              Approuvé par <strong>{project.approvedBy.firstName} {project.approvedBy.lastName}</strong>
-              {project.approvedAt && ` le ${new Date(project.approvedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+          <div
+            style={{
+              marginTop: 18,
+              padding: '12px 14px',
+              borderRadius: 8,
+              backgroundColor: '#EAFAF1',
+              border: '1px solid #A9DFBF',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+            }}
+          >
+            <CheckCircle
+              size={17}
+              color="#27AE60"
+              style={{
+                marginTop: 1,
+                flexShrink: 0,
+              }}
+            />
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                lineHeight: 1.5,
+                color: '#27AE60',
+              }}
+            >
+              Approuvé par{' '}
+              <strong>
+                {project.approvedBy.firstName}{' '}
+                {project.approvedBy.lastName}
+              </strong>
+
+              {project.approvedAt &&
+                ` le ${new Date(
+                  project.approvedAt
+                ).toLocaleDateString('fr-CA', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}`}
             </p>
           </div>
         )}
 
+        {/* Révision */}
         {project.status === 'REVIEW' && (
-          <div style={{
-            marginTop: 16, padding: '12px 16px', borderRadius: 8,
-            backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <Clock size={16} color="#F39C12" />
-            <p style={{ fontSize: 13, color: '#F39C12' }}>
-              Ce document est en cours de révision par votre conseiller.
+          <div
+            style={{
+              marginTop: 18,
+              padding: '12px 14px',
+              borderRadius: 8,
+              backgroundColor: '#FEF9E7',
+              border: '1px solid #FAD7A0',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+            }}
+          >
+            <Clock
+              size={17}
+              color="#F39C12"
+              style={{
+                marginTop: 1,
+                flexShrink: 0,
+              }}
+            />
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                lineHeight: 1.5,
+                color: '#F39C12',
+              }}
+            >
+              Ce document est en cours de
+              révision par votre conseiller.
             </p>
           </div>
         )}
-      </div>
+      </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))', gap: 24 }}>
-
+      {/* Deux colonnes */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fit, minmax(min(360px, 100%), 1fr))',
+          gap: 20,
+          alignItems: 'start',
+        }}
+      >
         {/* Signatures */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #E9ECEF' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>
-              Signatures ({project.signatures?.length || 0})
+        <section
+          style={{
+            minWidth: 0,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 12,
+            border: '1px solid #E9ECEF',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '16px clamp(16px, 4vw, 24px)',
+              borderBottom: '1px solid #E9ECEF',
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: '#2C3E50',
+              }}
+            >
+              Signatures (
+              {project.signatures?.length || 0})
             </h2>
           </div>
-          <div style={{ padding: 24 }}>
+
+          <div
+            style={{
+              padding: 'clamp(16px, 4vw, 24px)',
+            }}
+          >
             {mySignature && (
-              <div style={{
-                backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE',
-                borderRadius: 8, padding: '12px 16px', marginBottom: 16,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <CheckCircle size={16} color="#8E44AD" />
-                <p style={{ fontSize: 13, color: '#8E44AD', fontWeight: 600 }}>
+              <div
+                style={{
+                  backgroundColor: '#F4ECF7',
+                  border: '1px solid #D2B4DE',
+                  borderRadius: 8,
+                  padding: '12px 14px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                }}
+              >
+                <CheckCircle
+                  size={16}
+                  color="#8E44AD"
+                  style={{
+                    flexShrink: 0,
+                    marginTop: 1,
+                  }}
+                />
+
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    color: '#8E44AD',
+                    fontWeight: 600,
+                  }}
+                >
                   Vous avez signé ce document
                 </p>
               </div>
             )}
-            {!project.signatures || project.signatures.length === 0 ? (
-              <p style={{ fontSize: 14, color: '#ADB5BD', textAlign: 'center', padding: '16px 0' }}>
-                Aucune signature pour l'instant.
+
+            {!project.signatures ||
+            project.signatures.length === 0 ? (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#ADB5BD',
+                  textAlign: 'center',
+                  padding: '16px 0',
+                }}
+              >
+                Aucune signature pour
+                l&apos;instant.
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {project.signatures.map((sig: any) => (
-                  <div key={sig.id} style={{
-                    padding: '12px 16px', borderRadius: 8,
-                    backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <CheckCircle size={14} color="#8E44AD" />
-                      <p style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>{sig.fullName}</p>
-                    </div>
-                    <p style={{ fontSize: 12, color: '#6C757D' }}>{sig.email}</p>
-                    <p style={{ fontSize: 12, color: '#ADB5BD', marginTop: 4 }}>
-                      {new Date(sig.signedAt).toLocaleDateString('fr-CA', {
-                        day: 'numeric', month: 'long', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit',
-                      })}
-                    </p>
-                    {sig.comment && (
-                      <p style={{ fontSize: 13, color: '#6C757D', marginTop: 8, fontStyle: 'italic' }}>
-                        "{sig.comment}"
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                }}
+              >
+                {project.signatures.map(
+                  (sig: any) => (
+                    <article
+                      key={sig.id}
+                      style={{
+                        minWidth: 0,
+                        padding: '12px 14px',
+                        borderRadius: 8,
+                        backgroundColor: '#F8F9FA',
+                        border:
+                          '1px solid #E9ECEF',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems:
+                            'flex-start',
+                          gap: 8,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <CheckCircle
+                          size={14}
+                          color="#8E44AD"
+                          style={{
+                            flexShrink: 0,
+                            marginTop: 2,
+                          }}
+                        />
+
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 14,
+                            lineHeight: 1.4,
+                            fontWeight: 700,
+                            color: '#2C3E50',
+                            overflowWrap:
+                              'anywhere',
+                          }}
+                        >
+                          {sig.fullName}
+                        </p>
+                      </div>
+
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 12,
+                          color: '#6C757D',
+                          overflowWrap:
+                            'anywhere',
+                        }}
+                      >
+                        {sig.email}
                       </p>
-                    )}
-                  </div>
-                ))}
+
+                      <p
+                        style={{
+                          margin: '4px 0 0',
+                          fontSize: 12,
+                          color: '#ADB5BD',
+                        }}
+                      >
+                        {new Date(
+                          sig.signedAt
+                        ).toLocaleDateString(
+                          'fr-CA',
+                          {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          }
+                        )}
+                      </p>
+
+                      {sig.comment && (
+                        <p
+                          style={{
+                            margin: '8px 0 0',
+                            fontSize: 13,
+                            lineHeight: 1.5,
+                            color: '#6C757D',
+                            fontStyle: 'italic',
+                            overflowWrap:
+                              'anywhere',
+                          }}
+                        >
+                          « {sig.comment} »
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Commentaires */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #E9ECEF' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>
+        <section
+          style={{
+            minWidth: 0,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 12,
+            border: '1px solid #E9ECEF',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '16px clamp(16px, 4vw, 24px)',
+              borderBottom: '1px solid #E9ECEF',
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: '#2C3E50',
+              }}
+            >
               Commentaires ({comments.length})
             </h2>
           </div>
-          <div style={{ padding: 24 }}>
-            {/* Ajouter commentaire */}
-            <div style={{ marginBottom: 20 }}>
+
+          <div
+            style={{
+              padding: 'clamp(16px, 4vw, 24px)',
+            }}
+          >
+            {/* Nouveau commentaire */}
+            <div
+              style={{
+                marginBottom: 20,
+              }}
+            >
               <textarea
                 value={newComment}
-                onChange={e => setNewComment(e.target.value)}
+                onChange={(e) =>
+                  setNewComment(e.target.value)
+                }
                 placeholder="Ajouter un commentaire..."
                 rows={3}
                 style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 6,
-                  border: '1px solid #DEE2E6', fontSize: 14, color: '#2C3E50',
-                  resize: 'none', outline: 'none', boxSizing: 'border-box',
+                  width: '100%',
+                  minHeight: 96,
+                  padding: '12px 14px',
+                  borderRadius: 7,
+                  border: '1px solid #DEE2E6',
+                  fontSize: 16,
+                  lineHeight: 1.5,
+                  color: '#2C3E50',
+                  resize: 'vertical',
+                  outline: 'none',
                 }}
-                onFocus={e => e.target.style.borderColor = '#C0392B'}
-                onBlur={e => e.target.style.borderColor = '#DEE2E6'}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor =
+                    '#C0392B';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor =
+                    '#DEE2E6';
+                }}
               />
+
               <button
+                type="button"
                 onClick={handleAddComment}
-                disabled={addingComment || !newComment.trim()}
+                disabled={
+                  addingComment ||
+                  !newComment.trim()
+                }
                 style={{
-                  marginTop: 8, padding: '8px 16px', borderRadius: 6,
-                  backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none',
-                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  opacity: addingComment || !newComment.trim() ? 0.5 : 1,
-                }}>
-                <MessageSquare size={14} style={{ display: 'inline', marginRight: 6 }} />
-                Envoyer
+                  minHeight: 44,
+                  marginTop: 8,
+                  padding: '9px 16px',
+                  borderRadius: 7,
+                  backgroundColor: '#C0392B',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor:
+                    addingComment ||
+                    !newComment.trim()
+                      ? 'not-allowed'
+                      : 'pointer',
+                  opacity:
+                    addingComment ||
+                    !newComment.trim()
+                      ? 0.5
+                      : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                <MessageSquare size={14} />
+
+                {addingComment
+                  ? 'Envoi...'
+                  : 'Envoyer'}
               </button>
             </div>
 
-            {/* Liste commentaires */}
+            {/* Liste */}
             {comments.length === 0 ? (
-              <p style={{ fontSize: 14, color: '#ADB5BD', textAlign: 'center', padding: '16px 0' }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#ADB5BD',
+                  textAlign: 'center',
+                  padding: '16px 0',
+                }}
+              >
                 Aucun commentaire.
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                }}
+              >
                 {comments.map((c: any) => (
-                  <div key={c.id} style={{
-                    padding: '12px 16px', borderRadius: 8,
-                    backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
-                        {c.user?.firstName} {c.user?.lastName}
-                        {c.user?.role && c.user.role !== 'CLIENT_MANAGER' && c.user.role !== 'CLIENT_CORPORATE' && (
-                          <span style={{ fontSize: 11, color: '#ADB5BD', marginLeft: 6 }}>· Conseiller</span>
+                  <article
+                    key={c.id}
+                    style={{
+                      minWidth: 0,
+                      padding: '12px 14px',
+                      borderRadius: 8,
+                      backgroundColor: '#F8F9FA',
+                      border:
+                        '1px solid #E9ECEF',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent:
+                          'space-between',
+                        alignItems:
+                          'flex-start',
+                        gap: 12,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <p
+                        style={{
+                          margin: 0,
+                          minWidth: 0,
+                          fontSize: 13,
+                          lineHeight: 1.4,
+                          fontWeight: 600,
+                          color: '#2C3E50',
+                          overflowWrap:
+                            'anywhere',
+                        }}
+                      >
+                        {c.user?.firstName}{' '}
+                        {c.user?.lastName}
+
+                        {c.user?.role &&
+                          c.user.role !==
+                            'CLIENT_MANAGER' &&
+                          c.user.role !==
+                            'CLIENT_CORPORATE' && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color:
+                                  '#ADB5BD',
+                                marginLeft: 6,
+                                whiteSpace:
+                                  'nowrap',
+                              }}
+                            >
+                              · Conseiller
+                            </span>
+                          )}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 11,
+                          color: '#ADB5BD',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {new Date(
+                          c.createdAt
+                        ).toLocaleDateString(
+                          'fr-CA',
+                          {
+                            day: 'numeric',
+                            month: 'short',
+                          }
                         )}
                       </p>
-                      <p style={{ fontSize: 11, color: '#ADB5BD' }}>
-                        {new Date(c.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })}
-                      </p>
                     </div>
-                    <p style={{ fontSize: 14, color: '#495057', lineHeight: 1.6 }}>{c.contenu}</p>
-                  </div>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        lineHeight: 1.6,
+                        color: '#495057',
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      {c.contenu}
+                    </p>
+                  </article>
                 ))}
               </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Modal signature */}
       {showSignModal && (
-        <div style={{
-          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 24,
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF', borderRadius: 12, padding: 40,
-            width: '100%', maxWidth: 480, boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
-          }}>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50', marginBottom: 8 }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sign-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            backgroundColor:
+              'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            overflowY: 'auto',
+          }}
+          onClick={() =>
+            !signing &&
+            setShowSignModal(false)
+          }
+        >
+          <div
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+            style={{
+              width: '100%',
+              maxWidth: 480,
+              maxHeight:
+                'calc(100dvh - 32px)',
+              overflowY: 'auto',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              padding:
+                'clamp(22px, 6vw, 40px)',
+              boxShadow:
+                '0 16px 48px rgba(0,0,0,0.15)',
+            }}
+          >
+            <h3
+              id="sign-modal-title"
+              style={{
+                margin: '0 0 8px',
+                fontSize: 20,
+                lineHeight: 1.3,
+                fontWeight: 700,
+                color: '#2C3E50',
+              }}
+            >
               ✍️ Signer le document
             </h3>
-            <p style={{ fontSize: 14, color: '#6C757D', marginBottom: 24 }}>
-              En signant, vous confirmez avoir pris connaissance de ce document de conformité.
+
+            <p
+              style={{
+                margin: '0 0 24px',
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: '#6C757D',
+              }}
+            >
+              En signant, vous confirmez
+              avoir pris connaissance de ce
+              document de conformité.
             </p>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+            {/* Nom */}
+            <div
+              style={{
+                marginBottom: 16,
+              }}
+            >
+              <label
+                htmlFor="sign-name"
+                style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#495057',
+                  marginBottom: 6,
+                }}
+              >
                 Nom complet *
               </label>
+
               <input
-                type="text" value={signName}
-                onChange={e => setSignName(e.target.value)}
+                id="sign-name"
+                type="text"
+                autoComplete="name"
+                value={signName}
+                onChange={(e) =>
+                  setSignName(e.target.value)
+                }
                 style={{
-                  width: '100%', padding: '12px 16px', borderRadius: 6,
-                  border: '1px solid #DEE2E6', fontSize: 15, color: '#2C3E50',
-                  outline: 'none', boxSizing: 'border-box',
+                  width: '100%',
+                  minHeight: 48,
+                  padding: '12px 14px',
+                  borderRadius: 7,
+                  border:
+                    '1px solid #DEE2E6',
+                  fontSize: 16,
+                  color: '#2C3E50',
+                  outline: 'none',
                 }}
-                onFocus={e => e.target.style.borderColor = '#8E44AD'}
-                onBlur={e => e.target.style.borderColor = '#DEE2E6'}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor =
+                    '#8E44AD';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor =
+                    '#DEE2E6';
+                }}
               />
             </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+            {/* Commentaire */}
+            <div
+              style={{
+                marginBottom: 24,
+              }}
+            >
+              <label
+                htmlFor="sign-comment"
+                style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#495057',
+                  marginBottom: 6,
+                }}
+              >
                 Commentaire (optionnel)
               </label>
+
               <textarea
+                id="sign-comment"
                 value={signComment}
-                onChange={e => setSignComment(e.target.value)}
+                onChange={(e) =>
+                  setSignComment(
+                    e.target.value
+                  )
+                }
                 placeholder="Ex: Document conforme à nos installations."
                 rows={3}
                 style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 6,
-                  border: '1px solid #DEE2E6', fontSize: 14, color: '#2C3E50',
-                  resize: 'none', outline: 'none', boxSizing: 'border-box',
+                  width: '100%',
+                  minHeight: 96,
+                  padding: '12px 14px',
+                  borderRadius: 7,
+                  border:
+                    '1px solid #DEE2E6',
+                  fontSize: 16,
+                  lineHeight: 1.5,
+                  color: '#2C3E50',
+                  resize: 'vertical',
+                  outline: 'none',
                 }}
               />
             </div>
 
-            <div style={{
-              backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE',
-              borderRadius: 8, padding: '12px 16px', marginBottom: 24,
-            }}>
-              <p style={{ fontSize: 13, color: '#8E44AD' }}>
-                🔒 Cette signature sera enregistrée avec votre nom, courriel ({user?.email}) et la date/heure actuelle.
+            {/* Information signature */}
+            <div
+              style={{
+                backgroundColor: '#F4ECF7',
+                border: '1px solid #D2B4DE',
+                borderRadius: 8,
+                padding: '12px 14px',
+                marginBottom: 24,
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  color: '#8E44AD',
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                🔒 Cette signature sera
+                enregistrée avec votre nom,
+                courriel ({user.email}) et la
+                date/heure actuelle.
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: 12 }}>
+            {/* Actions modal */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
+                gap: 10,
+              }}
+            >
               <button
-                onClick={() => setShowSignModal(false)}
+                type="button"
+                onClick={() =>
+                  setShowSignModal(false)
+                }
+                disabled={signing}
                 style={{
-                  flex: 1, padding: '12px', borderRadius: 6,
-                  border: '1px solid #DEE2E6', backgroundColor: 'transparent',
-                  color: '#6C757D', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}>
+                  minHeight: 48,
+                  padding: '12px',
+                  borderRadius: 7,
+                  border:
+                    '1px solid #DEE2E6',
+                  backgroundColor:
+                    '#FFFFFF',
+                  color: '#6C757D',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: signing
+                    ? 'not-allowed'
+                    : 'pointer',
+                }}
+              >
                 Annuler
               </button>
+
               <button
+                type="button"
                 onClick={handleSign}
-                disabled={signing || !signName.trim()}
+                disabled={
+                  signing ||
+                  !signName.trim()
+                }
                 style={{
-                  flex: 1, padding: '12px', borderRadius: 6,
-                  backgroundColor: signing || !signName.trim() ? '#ADB5BD' : '#8E44AD',
-                  color: '#FFFFFF', border: 'none', fontSize: 14, fontWeight: 700,
-                  cursor: signing || !signName.trim() ? 'not-allowed' : 'pointer',
-                }}>
-                {signing ? 'Signature...' : '✓ Signer'}
+                  minHeight: 48,
+                  padding: '12px',
+                  borderRadius: 7,
+                  backgroundColor:
+                    signing ||
+                    !signName.trim()
+                      ? '#ADB5BD'
+                      : '#8E44AD',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor:
+                    signing ||
+                    !signName.trim()
+                      ? 'not-allowed'
+                      : 'pointer',
+                }}
+              >
+                {signing
+                  ? 'Signature...'
+                  : '✓ Signer'}
               </button>
             </div>
           </div>

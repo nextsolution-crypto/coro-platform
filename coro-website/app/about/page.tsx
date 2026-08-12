@@ -27,10 +27,10 @@ const SITE_URL = 'https://getcoro.io';
 const CONTENT = {
   fr: {
     metadata: {
-      title: 'À propos de CORO | Plateforme SaaS de conformité',
-      description:
-        'Découvrez CORO, une plateforme SaaS canadienne conçue pour les professionnels des mesures d’urgence, de la sécurité incendie et de la continuité des activités.',
-    },
+  title: 'À propos de CORO | Plateforme SaaS de conformité opérationnelle',
+  description:
+    'Découvrez CORO, une plateforme SaaS canadienne de conformité opérationnelle conçue pour les professionnels des mesures d’urgence, de la sécurité incendie et de la continuité des activités.',
+},
     nav: {
       features: 'Fonctionnalités',
       documents: 'Documents',
@@ -220,10 +220,10 @@ const CONTENT = {
   },
   en: {
     metadata: {
-      title: 'About CORO | Compliance SaaS Platform',
-      description:
-        'Discover CORO, a Canadian SaaS platform built for emergency management, fire safety, business continuity and compliance professionals.',
-    },
+  title: 'About CORO | Operational Compliance SaaS Platform',
+  description:
+    'Discover CORO, a Canadian operational compliance SaaS platform built for emergency management, fire safety and business continuity professionals.',
+},
     nav: {
       features: 'Features',
       documents: 'Documents',
@@ -533,22 +533,37 @@ export default async function AboutPage({ searchParams }: PageProps) {
   const homeLink = (anchor = '') => `/${langSuffix}${anchor}`;
 
   const organizationJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'CORO',
-    url: SITE_URL,
-    email: 'info@getcoro.io',
-    telephone: '+1-514-791-7871',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: '2879 Boul. Pierre-Bernard',
-      addressLocality: 'Montréal',
-      addressRegion: 'QC',
-      postalCode: 'H1L 4R2',
-      addressCountry: 'CA',
-    },
-    description: t.metadata.description,
-  };
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+
+  name: 'CORO',
+
+  alternateName:
+    'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
+
+  url: SITE_URL,
+
+  logo: {
+    '@type': 'ImageObject',
+    url: `${SITE_URL}/coro-logo.png`,
+    contentUrl: `${SITE_URL}/coro-logo.png`,
+  },
+
+  email: 'info@getcoro.io',
+
+  telephone: '+1-514-791-7871',
+
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: '2879 Boul. Pierre-Bernard',
+    addressLocality: 'Montréal',
+    addressRegion: 'QC',
+    postalCode: 'H1L 4R2',
+    addressCountry: 'CA',
+  },
+
+  description: t.metadata.description,
+};
 
   return (
     <div
@@ -559,9 +574,11 @@ export default async function AboutPage({ searchParams }: PageProps) {
       }}
     >
       <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-      />
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify(organizationJsonLd).replace(/</g, '\\u003c'),
+  }}
+/>
 
       {/* ───────────────────────────── */}
       {/* NAVIGATION */}
