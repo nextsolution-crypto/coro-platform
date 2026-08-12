@@ -448,6 +448,7 @@ export async function generateMetadata({ params, searchParams }: { params: { doc
 }
 
 export default function DocumentPage({ params, searchParams }: { params: { doc: string }; searchParams: { lang?: string } }) {
+  console.log('DOC PARAM:', params.doc, 'KEYS:', Object.keys(DOCUMENTS));
   const doc = DOCUMENTS[params.doc];
   if (!doc) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F9FA' }}>
