@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return [
     { doc: 'plan-mesures-urgence-pmu' },
