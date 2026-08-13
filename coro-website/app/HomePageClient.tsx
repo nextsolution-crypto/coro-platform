@@ -43,7 +43,7 @@ const TRANSLATIONS = {
       desc:
         'PMU, PSI, PCA, PGC, PRA et PUE, procédures intégrées, génération automatisée, édition structurée, contrôle qualité, approbation et export PDF professionnel.',
       cta: 'Découvrir la gestion documentaire',
-      image: '/images/solutions/document-management.webp',
+      image: '/images/solutions/coro-gestion-documentaire.webp',
       href: '/gestion-documentaire',
     },
     {
@@ -53,7 +53,7 @@ const TRANSLATIONS = {
       desc:
         'Centralisez les projets, bâtiments, activités, échéances, responsabilités, heures prévues et réalisées et suivez l’avancement de chaque mandat depuis un environnement unique.',
       cta: 'Découvrir la gestion de projets',
-      image: '/images/solutions/project-management.webp',
+      image: '/images/solutions/coro-gestion-projets.webp',
       href: '/gestion-de-projets',
     },
     {
@@ -63,7 +63,7 @@ const TRANSLATIONS = {
       desc:
         'Suivez les heures, les budgets, le rendement des mandats, la capacité de production et les objectifs afin d’identifier rapidement les écarts et de mieux planifier vos ressources.',
       cta: 'Découvrir le pilotage de la performance',
-      image: '/images/solutions/performance-objectives.webp',
+      image: '/images/solutions/coro-performance-objectifs.webp',
       href: '/performance-objectifs',
     },
     {
@@ -73,7 +73,7 @@ const TRANSLATIONS = {
       desc:
         'Offrez à vos clients un espace sécurisé leur permettant de consulter leurs documents, suivre leur statut, visualiser leurs activités à venir et retrouver l’information liée à leurs mandats.',
       cta: 'Découvrir le portail client',
-      image: '/images/solutions/client-portal.webp',
+      image: '/images/solutions/coro-portail-client.webp',
       href: '/portail-client',
     },
   ],
@@ -191,7 +191,7 @@ const TRANSLATIONS = {
         },
         {
           name: 'Entreprise',
-          price: 'Parler à notre équipe',
+          price: 'Parlez à notre équipe',
           period: '',
           desc: 'Pour les grandes organisations.',
           color: '#2C3E50',
@@ -287,7 +287,7 @@ const TRANSLATIONS = {
       desc:
         'ERP, FSP, BCP, CMP, DRP and EEP, built-in procedures, automated generation, structured editing, quality control, approval workflows and professional PDF export.',
       cta: 'Discover document management',
-      image: '/images/solutions/en/document-management.webp',
+      image: '/images/solutions/en/coro-document-management.webp',
       href: '/gestion-documentaire',
     },
     {
@@ -297,7 +297,7 @@ const TRANSLATIONS = {
       desc:
         'Centralize projects, buildings, activities, deadlines, responsibilities, planned and actual hours, and track the progress of each mandate from a single environment.',
       cta: 'Discover project management',
-      image: '/images/solutions/en/project-management.webp',
+      image: '/images/solutions/en/coro-project-management.webp',
       href: '/gestion-de-projets',
     },
     {
@@ -307,7 +307,7 @@ const TRANSLATIONS = {
       desc:
         'Track hours, budgets, mandate performance, production capacity and objectives to quickly identify gaps and better plan your resources.',
       cta: 'Discover performance management',
-      image: '/images/solutions/en/performance-objectives.webp',
+      image: '/images/solutions/en/coro-performance-objectives.webp',
       href: '/performance-objectifs',
     },
     {
@@ -317,7 +317,7 @@ const TRANSLATIONS = {
       desc:
         'Provide your clients with a secure space to access their documents, track their status, view upcoming activities and retrieve information related to their mandates.',
       cta: 'Discover the client portal',
-      image: '/images/solutions/en/client-portal.webp',
+      image: '/images/solutions/en/coro-client-portal.webp',
       href: '/portail-client',
     },
   ],
@@ -1182,7 +1182,19 @@ export default function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
             {t.documents.items.map((doc, i) => (
-              <div key={i} style={{
+              <a href={`/documents/${
+                doc.code === 'PMU' ? 'plan-mesures-urgence-pmu' :
+                doc.code === 'PSI' ? 'plan-securite-incendie-psi' :
+                doc.code === 'PCA' ? 'plan-continuite-activites-pca' :
+                doc.code === 'PGC' ? 'plan-gestion-crise-pgc' :
+                doc.code === 'PRA' ? 'plan-reprise-activites-pra' :
+                doc.code === 'ERP' ? 'plan-mesures-urgence-pmu' :
+                doc.code === 'FSP' ? 'plan-securite-incendie-psi' :
+                doc.code === 'BCP' ? 'plan-continuite-activites-pca' :
+                doc.code === 'CMP' ? 'plan-gestion-crise-pgc' :
+                doc.code === 'DRP' ? 'plan-reprise-activites-pra' :
+                'plan-urgence-environnementale-pue'
+              }`} key={i} style={{
                 borderRadius: 12,
                 border: '1px solid #E9ECEF',
                 borderLeft: `4px solid ${doc.color}`,
@@ -1190,6 +1202,7 @@ export default function HomePage() {
                 padding: '28px 28px 28px 24px',
                 transition: 'box-shadow 0.2s, transform 0.2s',
                 display: 'flex', flexDirection: 'column', gap: 12,
+                textDecoration: 'none', cursor: 'pointer',
               }}
                 onMouseEnter={e => {
                   e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
@@ -1215,7 +1228,10 @@ export default function HomePage() {
                 <p style={{ fontSize: 14, color: '#6C757D', lineHeight: 1.6, margin: 0 }}>
                   {doc.desc}
                 </p>
-              </div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: doc.color, margin: 0 }}>
+                  {lang === 'fr' ? 'En savoir plus →' : 'Learn more →'}
+                </p>
+              </a>
             ))}
           </div>
         </div>
