@@ -2,13 +2,11 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 export const revalidate = 0;
-const API_URL = typeof window === 'undefined'
-  ? (process.env.INTERNAL_API_URL || 'http://coro_backend:3002/api')
-  : (process.env.NEXT_PUBLIC_API_URL || 'https://api.getcoro.io/api');
+const API_URL = 'http://coro_backend:3002/api';
 
 async function getPost(slug: string) {
   try {
-    const res = await fetch(`${API_URL}/blog/public/${slug}`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API_URL}/blog/public/${slug}`, { cache: 'no-store' });
     if (!res.ok) return null;
     return res.json();
   } catch { return null; }

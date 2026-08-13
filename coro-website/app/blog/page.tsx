@@ -1,9 +1,7 @@
 import { Metadata } from 'next';
 
 export const revalidate = 0;
-const API_URL = typeof window === 'undefined'
-  ? (process.env.INTERNAL_API_URL || 'http://coro_backend:3002/api')
-  : (process.env.NEXT_PUBLIC_API_URL || 'https://api.getcoro.io/api');
+const API_URL = 'http://coro_backend:3002/api';
 
 export const metadata: Metadata = {
   title: 'Blogue CORO — Conformité, sécurité et mesures d\'urgence',
@@ -21,7 +19,7 @@ export const metadata: Metadata = {
 
 async function getPosts() {
   try {
-    const res = await fetch(`${API_URL}/blog/public`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API_URL}/blog/public`, { cache: 'no-store' });
     if (!res.ok) return [];
     return res.json();
   } catch { return []; }
