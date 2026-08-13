@@ -93,6 +93,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const isResizing = useRef(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  const startResize = (e: React.MouseEvent) => {
+    isResizing.current = true;
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('mouseup', stopResize);
+    e.preventDefault();
+  };
+
+  const handleResize = (e: MouseEvent) => {
+    if (!isResizing.current) return;
+    const newWidth = Math.min(Math.max(e.clientX, 180), 400);
+    setSidebarWidth(newWidth);
+  };
+
+  const stopResize = () => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', stopResize);
+  };
 
   // ── Recherche globale ──
   const [searchQuery, setSearchQuery]       = useState('');
@@ -454,7 +476,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* ── Sidebar ── */}
         <aside
-          className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 w-72 sm:w-80 lg:w-56 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start ${
+          ref={sidebarRef}
+          className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           style={{
@@ -462,6 +485,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             borderRight: '1px solid #DEE2E6',
             height: 'calc(100vh - 57px)',
             maxHeight: 'calc(100vh - 57px)',
+            width: `${sidebarWidth}px`,
+            minWidth: '180px',
+            maxWidth: '400px',
+            position: 'relative',
           }}
         >
 
@@ -560,6 +587,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </nav>
+        {/* ── Poignée redimensionnement ── */}
+          <div
+            onMouseDown={startResize}
+            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#C0392B'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          />
         </aside>
 
         {/* ── Contenu ── */}
