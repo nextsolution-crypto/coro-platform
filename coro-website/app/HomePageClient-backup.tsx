@@ -27,57 +27,8 @@ const TRANSLATIONS = {
       { value: '6', label: 'Types de documents' },
       { value: '43+', label: 'Procédures intégrées' },
       { value: '2', label: 'Langues (FR/EN)' },
-      { value: '3', label: 'Cadres provinciaux couverts' },
+      { value: 'QC', label: 'Cadre réglementaire intégré' },
     ],
-    solutions: {
-  tag: 'La plateforme CORO',
-  title: 'Une plateforme. Quatre dimensions complémentaires.',
-  subtitle:
-    'Découvrez les quatre grands univers qui composent CORO.',
-
-  items: [
-    {
-      number: '01',
-      title: 'Production & conformité documentaire',
-      headline: 'Créez et gérez vos documents de conformité',
-      desc:
-        'PMU, PSI, PCA, PGC, PRA et PUE, procédures intégrées, génération automatisée, édition structurée, contrôle qualité, approbation et export PDF professionnel.',
-      cta: 'Découvrir la gestion documentaire',
-      image: '/images/solutions/document-management.webp',
-      href: '/gestion-documentaire',
-    },
-    {
-      number: '02',
-      title: 'Gestion de projets & mandats',
-      headline: 'Pilotez vos mandats du démarrage à la livraison',
-      desc:
-        'Centralisez les projets, bâtiments, activités, échéances, responsabilités, heures prévues et réalisées et suivez l’avancement de chaque mandat depuis un environnement unique.',
-      cta: 'Découvrir la gestion de projets',
-      image: '/images/solutions/project-management.webp',
-      href: '/gestion-de-projets',
-    },
-    {
-      number: '03',
-      title: 'Performance & objectifs',
-      headline: 'Transformez vos opérations en données exploitables',
-      desc:
-        'Suivez les heures, les budgets, le rendement des mandats, la capacité de production et les objectifs afin d’identifier rapidement les écarts et de mieux planifier vos ressources.',
-      cta: 'Découvrir le pilotage de la performance',
-      image: '/images/solutions/performance-objectives.webp',
-      href: '/performance-objectifs',
-    },
-    {
-      number: '04',
-      title: 'Portail client',
-      headline: 'Prolongez l’expérience CORO jusqu’à vos clients',
-      desc:
-        'Offrez à vos clients un espace sécurisé leur permettant de consulter leurs documents, suivre leur statut, visualiser leurs activités à venir et retrouver l’information liée à leurs mandats.',
-      cta: 'Découvrir le portail client',
-      image: '/images/solutions/client-portal.webp',
-      href: '/portail-client',
-    },
-  ],
-},
     features: {
       tag: 'Fonctionnalités',
       title: 'Une plateforme complète pour la conformité opérationnelle et documentaire',
@@ -127,7 +78,7 @@ const TRANSLATIONS = {
     },
     documents: {
       tag: 'Documents supportés',
-      title: 'Six types de documents de conformité',
+      title: 'Six types de documents réglementaires',
       subtitle: 'CORO prend en charge plusieurs des principaux documents de conformité utilisés au Québec, en Ontario et en Alberta.',
       items: [
         { code: 'PMU', name: 'Plan de Mesures d\'Urgence', desc: 'Document maître pour la gestion des situations d\'urgence dans les bâtiments commerciaux et industriels.', color: '#2980B9' },
@@ -154,25 +105,24 @@ const TRANSLATIONS = {
       subtitle: 'Commencez gratuitement. Contactez-nous pour une soumission adaptée à vos besoins.',
       plans: [
         {
-  name: 'Essai gratuit',
-  price: '0$',
-  period: '30 jours',
-  desc: 'Découvrez CORO avec notre équipe, puis testez la plateforme dans votre propre environnement.',
-  color: '#27AE60',
-  features: [
-    '1 utilisateur',
-    '3 projets maximum',
-    'Tous les types de documents',
-    'Export PDF avec filigrane',
-    'Support par email',
-    'Accès activé à la suite d’une démonstration',
-  ],
-  cta: 'Demander une démo',
-  highlight: false,
-},
+          name: 'Essai gratuit',
+          price: '0$',
+          period: '30 jours',
+          desc: 'Pour découvrir CORO sans engagement.',
+          color: '#27AE60',
+          features: [
+            '1 utilisateur',
+            '3 projets maximum',
+            'Tous les types de documents',
+            'Export PDF avec filigrane',
+            'Support par email',
+          ],
+          cta: 'Commencer gratuitement',
+          highlight: false,
+        },
         {
           name: 'Standard',
-          price: 'Obtenir une estimation',
+          price: 'Sur soumission',
           period: '',
           desc: 'Pour les firmes conseil en croissance.',
           color: '#C0392B',
@@ -191,7 +141,7 @@ const TRANSLATIONS = {
         },
         {
           name: 'Entreprise',
-          price: 'Parler à notre équipe',
+          price: 'Sur devis',
           period: '',
           desc: 'Pour les grandes organisations.',
           color: '#2C3E50',
@@ -228,7 +178,7 @@ const TRANSLATIONS = {
     },
     cta: {
       title: 'Prêt à moderniser votre pratique ?',
-      subtitle: 'Découvrez comment CORO peut transformer votre façon de produire et gérer vos documents de conformité.',
+      subtitle: 'Rejoignez les professionnels de la sécurité qui font confiance à CORO pour leurs documents de conformité.',
       primary: 'Demander une démo',
       secondary: 'Accéder à la plateforme',
     },
@@ -271,57 +221,8 @@ const TRANSLATIONS = {
       { value: '6', label: 'Document types' },
       { value: '43+', label: 'Built-in procedures' },
       { value: '2', label: 'Languages (FR/EN)' },
-      { value: '3', label: 'Provincial frameworks covered' },
+      { value: 'QC', label: 'Integrated regulatory framework' },
     ],
-    solutions: {
-  tag: 'The CORO platform',
-  title: 'One platform. Four complementary dimensions.',
-  subtitle:
-    'Discover the four core areas that make up the CORO platform.',
-
-  items: [
-    {
-      number: '01',
-      title: 'Document Production & Compliance',
-      headline: 'Create and manage your compliance documents',
-      desc:
-        'ERP, FSP, BCP, CMP, DRP and EEP, built-in procedures, automated generation, structured editing, quality control, approval workflows and professional PDF export.',
-      cta: 'Discover document management',
-      image: '/images/solutions/en/document-management.webp',
-      href: '/gestion-documentaire',
-    },
-    {
-      number: '02',
-      title: 'Project & Mandate Management',
-      headline: 'Manage your mandates from kickoff to delivery',
-      desc:
-        'Centralize projects, buildings, activities, deadlines, responsibilities, planned and actual hours, and track the progress of each mandate from a single environment.',
-      cta: 'Discover project management',
-      image: '/images/solutions/en/project-management.webp',
-      href: '/gestion-de-projets',
-    },
-    {
-      number: '03',
-      title: 'Performance & Objectives',
-      headline: 'Turn your operations into actionable data',
-      desc:
-        'Track hours, budgets, mandate performance, production capacity and objectives to quickly identify gaps and better plan your resources.',
-      cta: 'Discover performance management',
-      image: '/images/solutions/en/performance-objectives.webp',
-      href: '/performance-objectifs',
-    },
-    {
-      number: '04',
-      title: 'Client Portal',
-      headline: 'Extend the CORO experience to your clients',
-      desc:
-        'Provide your clients with a secure space to access their documents, track their status, view upcoming activities and retrieve information related to their mandates.',
-      cta: 'Discover the client portal',
-      image: '/images/solutions/en/client-portal.webp',
-      href: '/portail-client',
-    },
-  ],
-},
     features: {
       tag: 'Features',
       title: 'A complete platform for operational and document compliance',
@@ -371,7 +272,7 @@ const TRANSLATIONS = {
     },
     documents: {
       tag: 'Supported documents',
-      title: 'Six types of compliance documents',
+      title: 'Six types of regulatory documents',
       subtitle: 'CORO supports several of the main compliance documents used in Quebec, Ontario and Alberta.',
       items: [
         { code: 'ERP', name: 'Emergency Response Plan', desc: 'Master document for emergency management in commercial and industrial buildings.', color: '#2980B9' },
@@ -398,25 +299,24 @@ const TRANSLATIONS = {
       subtitle: 'Start for free. Contact us for a quote tailored to your needs.',
       plans: [
         {
-  name: 'Free trial',
-  price: '$0',
-  period: '30 days',
-  desc: 'Discover CORO with our team, then try the platform in your own environment.',
-  color: '#27AE60',
-  features: [
-    '1 user',
-    '3 projects maximum',
-    'All document types',
-    'Watermarked PDF export',
-    'Email support',
-    'Access activated following a demo',
-  ],
-  cta: 'Request a demo',
-  highlight: false,
-},
+          name: 'Free trial',
+          price: '$0',
+          period: '30 days',
+          desc: 'Discover CORO with no commitment.',
+          color: '#27AE60',
+          features: [
+            '1 user',
+            'Up to 3 projects',
+            'All document types',
+            'PDF export with watermark',
+            'Email support',
+          ],
+          cta: 'Start for free',
+          highlight: false,
+        },
         {
           name: 'Standard',
-          price: 'Get an estimate',
+          price: 'Custom pricing',
           period: '',
           desc: 'For growing consulting firms.',
           color: '#C0392B',
@@ -435,7 +335,7 @@ const TRANSLATIONS = {
         },
         {
           name: 'Enterprise',
-          price: 'Talk to our team',
+          price: 'Custom',
           period: '',
           desc: 'For large organizations.',
           color: '#2C3E50',
@@ -472,7 +372,7 @@ const TRANSLATIONS = {
     },
     cta: {
       title: 'Ready to modernize your practice?',
-      subtitle: 'Discover how CORO can transform the way you create and manage your compliance documents.',
+      subtitle: 'Join safety professionals who trust CORO for their compliance documents.',
       primary: 'Request a demo',
       secondary: 'Access the platform',
     },
@@ -773,264 +673,6 @@ export default function HomePage() {
             }}>
               {t.hero.trusted}
             </p>
-          </div>
-        </div>
-      </section>
-
-            {/* ── SOLUTIONS / 4 PILIERS CORO ── */}
-      <section
-        id="solutions"
-        style={{
-          backgroundColor: '#F8F9FA',
-          padding: '100px 24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: '0 auto',
-          }}
-        >
-          {/* En-tête */}
-          <div
-            style={{
-              textAlign: 'center',
-              marginBottom: 64,
-            }}
-          >
-            <span className="section-tag">
-              {t.solutions.tag}
-            </span>
-
-            <h2
-              style={{
-                fontSize: 'clamp(28px, 4vw, 42px)',
-                fontWeight: 800,
-                color: '#2C3E50',
-                lineHeight: 1.2,
-                marginBottom: 16,
-              }}
-            >
-              {t.solutions.title}
-            </h2>
-
-            <p
-              style={{
-                fontSize: 18,
-                color: '#6C757D',
-                maxWidth: 680,
-                margin: '0 auto',
-                lineHeight: 1.7,
-              }}
-            >
-              {t.solutions.subtitle}
-            </p>
-          </div>
-
-          {/* Grille des 4 grandes cartes */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                'repeat(auto-fit, minmax(min(480px, 100%), 1fr))',
-              gap: 28,
-            }}
-          >
-            {t.solutions.items.map((solution, i) => {
-              const href =
-                lang === 'en'
-                  ? `${solution.href}?lang=en`
-                  : solution.href;
-
-              return (
-                <a
-                  key={solution.number}
-                  href={href}
-                  style={{
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 18,
-                    border: '1px solid #E9ECEF',
-                    textDecoration: 'none',
-                    boxShadow: '0 4px 18px rgba(0,0,0,0.04)',
-                    transition:
-                      'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform =
-                      'translateY(-5px)';
-                    e.currentTarget.style.boxShadow =
-                      '0 18px 40px rgba(0,0,0,0.10)';
-                    e.currentTarget.style.borderColor =
-                      '#D5D8DC';
-
-                    const image =
-                      e.currentTarget.querySelector(
-                        'img'
-                      );
-
-                    if (image) {
-                      image.style.transform =
-                        'scale(1.025)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform =
-                      'translateY(0)';
-                    e.currentTarget.style.boxShadow =
-                      '0 4px 18px rgba(0,0,0,0.04)';
-                    e.currentTarget.style.borderColor =
-                      '#E9ECEF';
-
-                    const image =
-                      e.currentTarget.querySelector(
-                        'img'
-                      );
-
-                    if (image) {
-                      image.style.transform =
-                        'scale(1)';
-                    }
-                  }}
-                >
-                  {/* Visuel */}
-                  <div
-                    style={{
-                      position: 'relative',
-                      width: '100%',
-                      aspectRatio: '16 / 10',
-                      overflow: 'hidden',
-                      backgroundColor: '#F5F7F8',
-                      borderBottom:
-                        '1px solid #E9ECEF',
-                    }}
-                  >
-                    <img
-                      src={solution.image}
-                      alt={solution.title}
-                      loading="lazy"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                        transition:
-                          'transform 0.35s ease',
-                      }}
-                    />
-
-                    {/* Numéro */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 18,
-                        left: 18,
-                        width: 46,
-                        height: 46,
-                        borderRadius: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor:
-                          'rgba(44,62,80,0.94)',
-                        color: '#FFFFFF',
-                        fontSize: 14,
-                        fontWeight: 900,
-                        letterSpacing: '0.05em',
-                        boxShadow:
-                          '0 4px 12px rgba(0,0,0,0.15)',
-                      }}
-                    >
-                      {solution.number}
-                    </div>
-                  </div>
-
-                  {/* Contenu */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      flex: 1,
-                      padding:
-                        'clamp(22px, 4vw, 32px)',
-                    }}
-                  >
-                    <p
-                      style={{
-                        margin: '0 0 8px',
-                        fontSize: 12,
-                        fontWeight: 800,
-                        color: '#C0392B',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
-                      }}
-                    >
-                      {solution.title}
-                    </p>
-
-                    <h3
-                      style={{
-                        margin: '0 0 12px',
-                        fontSize:
-                          'clamp(20px, 2.5vw, 24px)',
-                        lineHeight: 1.3,
-                        fontWeight: 800,
-                        color: '#2C3E50',
-                      }}
-                    >
-                      {solution.headline}
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: '0 0 24px',
-                        fontSize: 15,
-                        lineHeight: 1.7,
-                        color: '#6C757D',
-                        flex: 1,
-                      }}
-                    >
-                      {solution.desc}
-                    </p>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent:
-                          'space-between',
-                        gap: 12,
-                        paddingTop: 18,
-                        borderTop:
-                          '1px solid #F1F3F5',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: '#C0392B',
-                        }}
-                      >
-                        {solution.cta}
-                      </span>
-
-                      <ArrowRight
-                        size={18}
-                        color="#C0392B"
-                        style={{
-                          flexShrink: 0,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </a>
-              );
-            })}
           </div>
         </div>
       </section>
