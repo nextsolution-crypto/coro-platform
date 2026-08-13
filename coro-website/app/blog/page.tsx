@@ -94,9 +94,7 @@ export default async function BlogPage({ searchParams }: { searchParams: { lang?
 
               return (
                 <a key={post.id} href={`/blog/${post.slug}${lang === 'en' ? '?lang=en' : ''}`}
-                  style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', transition: 'transform 0.2s, box-shadow 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+                  style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', transition: 'transform 0.2s, box-shadow 0.2s' }}>
 
                   {/* Image */}
                   {post.coverImage ? (
