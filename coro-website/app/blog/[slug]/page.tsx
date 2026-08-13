@@ -8,8 +8,13 @@ async function getPost(slug: string) {
   try {
     const res = await fetch(`${API_URL}/blog/public/${slug}`, { cache: 'no-store' });
     if (!res.ok) return null;
-    return res.json();
-  } catch { return null; }
+    const text = await res.text();
+    console.log('BLOG FETCH SIZE:', text.length, 'slug:', slug);
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('BLOG FETCH ERROR:', e);
+    return null;
+  }
 }
 
 export async function generateMetadata({ params, searchParams }: { params: { slug: string }; searchParams: { lang?: string } }): Promise<Metadata> {
