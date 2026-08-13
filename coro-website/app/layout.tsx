@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 import ScrollToTop from './components/ScrollToTop';
@@ -39,9 +39,37 @@ export const metadata: Metadata = {
     canonical: '/',
   },
 
+  manifest: '/manifest.webmanifest',
+
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      {
+        url: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        url: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+
     shortcut: '/favicon.svg',
+
+    apple: [
+      {
+        url: '/icons/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'CORO',
   },
 
   openGraph: {
@@ -93,6 +121,13 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#FFFFFF',
 };
 
 export default function RootLayout({

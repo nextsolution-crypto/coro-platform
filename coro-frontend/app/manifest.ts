@@ -2,12 +2,12 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CORO Client — Portail client',
+    name: 'CORO Pro — Espace professionnel',
 
-    short_name: 'CORO Client',
+    short_name: 'CORO Pro',
 
     description:
-      'Portail client CORO pour consulter vos documents de conformité opérationnelle et suivre vos activités.',
+      'Espace professionnel CORO pour la gestion de la conformité opérationnelle, des projets, des documents et de la performance.',
 
     start_url: '/dashboard',
 
@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
 
     background_color: '#F8F9FA',
 
-    theme_color: '#2C3E50',
+    theme_color: '#C0392B',
 
     orientation: 'portrait-primary',
 

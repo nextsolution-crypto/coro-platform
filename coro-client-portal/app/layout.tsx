@@ -2,20 +2,31 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CORO — Portail Client',
+  title: 'CORO Client — Portail client',
 
   description:
-    'Consultez vos documents de conformité opérationnelle.',
+    'Portail client CORO pour consulter vos documents de conformité opérationnelle et suivre vos activités.',
 
   manifest: '/manifest.webmanifest',
 
   icons: {
-    icon: '/favicon.svg',
-
-    apple: [
+    icon: [
       {
         url: '/icons/icon-192.png',
         sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        url: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+
+    apple: [
+      {
+        url: '/icons/apple-touch-icon.png',
+        sizes: '180x180',
         type: 'image/png',
       },
     ],
