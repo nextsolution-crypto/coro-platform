@@ -178,9 +178,7 @@ export default function GestionDocumentairePage({ searchParams }: { searchParams
                 backgroundColor: '#FFFFFF', borderRadius: 10, padding: '20px 24px',
                 border: '1px solid #E9ECEF', borderLeft: `4px solid ${doc.color}`,
                 textDecoration: 'none', transition: 'box-shadow 0.2s, transform 0.2s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+              }}>
                 <span style={{ fontSize: 13, fontWeight: 900, color: '#FFFFFF', backgroundColor: doc.color, padding: '4px 10px', borderRadius: 6, flexShrink: 0 }}>{doc.code}</span>
                 <span style={{ fontSize: 15, fontWeight: 600, color: '#2C3E50' }}>{doc.name}</span>
               </a>

@@ -44,7 +44,7 @@ const TRANSLATIONS = {
         'PMU, PSI, PCA, PGC, PRA et PUE, procédures intégrées, génération automatisée, édition structurée, contrôle qualité, approbation et export PDF professionnel.',
       cta: 'Découvrir la gestion documentaire',
       image: '/images/solutions/coro-gestion-documentaire.webp',
-      href: '/#demo',
+      href: '/gestion-documentaire',
     },
     {
       number: '02',
@@ -54,7 +54,7 @@ const TRANSLATIONS = {
         'Centralisez les projets, bâtiments, activités, échéances, responsabilités, heures prévues et réalisées et suivez l’avancement de chaque mandat depuis un environnement unique.',
       cta: 'Découvrir la gestion de projets',
       image: '/images/solutions/coro-gestion-projets.webp',
-      href: '/#demo',
+      href: '/gestion-de-projets',
     },
     {
       number: '03',
@@ -64,7 +64,7 @@ const TRANSLATIONS = {
         'Suivez les heures, les budgets, le rendement des mandats, la capacité de production et les objectifs afin d’identifier rapidement les écarts et de mieux planifier vos ressources.',
       cta: 'Découvrir le pilotage de la performance',
       image: '/images/solutions/coro-performance-objectifs.webp',
-      href: '/#demo',
+      href: '/performance-objectifs',
     },
     {
       number: '04',
@@ -74,7 +74,7 @@ const TRANSLATIONS = {
         'Offrez à vos clients un espace sécurisé leur permettant de consulter leurs documents, suivre leur statut, visualiser leurs activités à venir et retrouver l’information liée à leurs mandats.',
       cta: 'Découvrir le portail client',
       image: '/images/solutions/coro-portail-client.webp',
-      href: '/#demo',
+      href: '/portail-client',
     },
   ],
 },
@@ -288,7 +288,7 @@ const TRANSLATIONS = {
         'ERP, FSP, BCP, CMP, DRP and EEP, built-in procedures, automated generation, structured editing, quality control, approval workflows and professional PDF export.',
       cta: 'Discover document management',
       image: '/images/solutions/en/coro-document-management.webp',
-      href: '/#demo',
+      href: '/gestion-documentaire?lang=en',
     },
     {
       number: '02',
@@ -298,7 +298,7 @@ const TRANSLATIONS = {
         'Centralize projects, buildings, activities, deadlines, responsibilities, planned and actual hours, and track the progress of each mandate from a single environment.',
       cta: 'Discover project management',
       image: '/images/solutions/en/coro-project-management.webp',
-      href: '/#demo',
+      href: '/gestion-de-projets?lang=en',
     },
     {
       number: '03',
@@ -308,7 +308,7 @@ const TRANSLATIONS = {
         'Track hours, budgets, mandate performance, production capacity and objectives to quickly identify gaps and better plan your resources.',
       cta: 'Discover performance management',
       image: '/images/solutions/en/coro-performance-objectives.webp',
-      href: '/#demo',
+      href: '/performance-objectifs?lang=en',
     },
     {
       number: '04',
@@ -318,7 +318,7 @@ const TRANSLATIONS = {
         'Provide your clients with a secure space to access their documents, track their status, view upcoming activities and retrieve information related to their mandates.',
       cta: 'Discover the client portal',
       image: '/images/solutions/en/coro-client-portal.webp',
-      href: '/#demo',
+      href: '/portail-client?lang=en',
     },
   ],
 },
