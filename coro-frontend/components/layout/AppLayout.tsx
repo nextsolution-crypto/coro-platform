@@ -265,7 +265,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onMouseLeave={e => { if (!active) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#495057'; } }}
       >
         <span style={{ fontSize: '14px', flexShrink: 0 }}>{item.icon}</span>
-        <span className="truncate">{item.label}</span>
+        <span style={{ whiteSpace: 'nowrap' }}>{item.label}</span>
       </button>
     );
   };

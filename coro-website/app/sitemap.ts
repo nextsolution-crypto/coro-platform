@@ -2,8 +2,7 @@ import type { MetadataRoute } from 'next';
 
 const SITE_URL = 'https://getcoro.io';
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://coro_backend:3002/api';
+const API_URL = 'http://coro_backend:3002/api';
 
 type BlogPost = {
   slug: string;

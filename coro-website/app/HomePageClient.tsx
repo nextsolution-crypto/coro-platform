@@ -1773,6 +1773,30 @@ export default function HomePage() {
               href: '#pricing',
             },
             {
+              label: lang === 'fr' ? 'PMU' : 'ERP',
+              href: '/documents/plan-mesures-urgence-pmu',
+            },
+            {
+              label: lang === 'fr' ? 'PSI' : 'FSP',
+              href: '/documents/plan-securite-incendie-psi',
+            },
+            {
+              label: lang === 'fr' ? 'PCA' : 'BCP',
+              href: '/documents/plan-continuite-activites-pca',
+            },
+            {
+              label: lang === 'fr' ? 'PGC' : 'CMP',
+              href: '/documents/plan-gestion-crise-pgc',
+            },
+            {
+              label: lang === 'fr' ? 'PRA' : 'DRP',
+              href: '/documents/plan-reprise-activites-pra',
+            },
+            {
+              label: lang === 'fr' ? 'PUE' : 'EEP',
+              href: '/documents/plan-urgence-environnementale-pue',
+            },
+            {
               label: t.footer.links.login,
               href: 'https://app.getcoro.io/login',
             },
@@ -1842,7 +1866,6 @@ export default function HomePage() {
     id: 'blog',
     label: lang === 'fr' ? 'Blogue' : 'Blog',
     href: '/blog',
-    soon: true,
   },
   {
     id: 'partners',
