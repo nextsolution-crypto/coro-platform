@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const revalidate = 0;
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.getcoro.io/api';
+const API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.getcoro.io/api';
 
 export const metadata: Metadata = {
   title: 'Blogue CORO — Conformité, sécurité et mesures d\'urgence',
