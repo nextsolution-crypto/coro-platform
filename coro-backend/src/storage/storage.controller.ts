@@ -3,7 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { StorageService } from './storage.service';
 
-@Controller('api/storage')
+@Controller('storage')
 @UseGuards(AuthGuard('jwt'))
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
