@@ -39,6 +39,7 @@ export class BlogService {
         titleEn: true,
         excerptFr: true,
         excerptEn: true,
+        coverImage: true,
         category: true,
         tags: true,
         authorName: true,
