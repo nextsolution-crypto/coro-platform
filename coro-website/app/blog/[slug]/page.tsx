@@ -17,8 +17,9 @@ async function getPost(slug: string) {
   }
 }
 
-export async function generateMetadata({ params, searchParams }: { params: { slug: string }; searchParams: { lang?: string } }): Promise<Metadata> {
-  const post = await getPost(params.slug);
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: { lang?: string } }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPost(slug);
   if (!post) return { title: 'Article introuvable' };
   const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
   const title = lang === 'fr' ? (post.seoTitleFr || post.titleFr) : (post.seoTitleEn || post.titleEn || post.titleFr);
@@ -26,11 +27,11 @@ export async function generateMetadata({ params, searchParams }: { params: { slu
   return {
     title: `${title} | Blogue CORO`,
     description: desc || '',
-    alternates: { canonical: `https://getcoro.io/blog/${params.slug}` },
+    alternates: { canonical: `https://getcoro.io/blog/${slug}` },
     openGraph: {
       title,
       description: desc || '',
-      url: `https://getcoro.io/blog/${params.slug}`,
+      url: `https://getcoro.io/blog/${slug}`,
       siteName: 'CORO',
       locale: lang === 'fr' ? 'fr_CA' : 'en_CA',
       type: 'article',
@@ -56,8 +57,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Études de cas': '#E67E22',
 };
 
-export default async function BlogPostPage({ params, searchParams }: { params: { slug: string }; searchParams: { lang?: string } }) {
-  const post = await getPost(params.slug);
+export default async function BlogPostPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: { lang?: string } }) {
+  const { slug } = await params;
+  const post = await getPost(slug);
   if (!post || !post.isPublished) notFound();
 
   const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
@@ -83,8 +85,8 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
       logo: { '@type': 'ImageObject', url: 'https://getcoro.io/logo.png' },
     },
     ...(post.coverImage && { image: { '@type': 'ImageObject', url: post.coverImage, width: 1200, height: 630 } }),
-    url: `https://getcoro.io/blog/${params.slug}`,
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://getcoro.io/blog/${params.slug}` },
+    url: `https://getcoro.io/blog/${slug}`,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://getcoro.io/blog/${slug}` },
     inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
     keywords: post.tags?.join(', ') || '',
   };
@@ -96,7 +98,7 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' },
       { '@type': 'ListItem', position: 2, name: lang === 'fr' ? 'Blogue' : 'Blog', item: 'https://getcoro.io/blog' },
-      { '@type': 'ListItem', position: 3, name: title, item: `https://getcoro.io/blog/${params.slug}` },
+      { '@type': 'ListItem', position: 3, name: title, item: `https://getcoro.io/blog/${slug}` },
     ],
   };
 
@@ -119,7 +121,7 @@ export default async function BlogPostPage({ params, searchParams }: { params: {
             <a href={`/blog${lang === 'en' ? '?lang=en' : ''}`} style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textDecoration: 'none' }}>
               {lang === 'fr' ? '← Blogue' : '← Blog'}
             </a>
-            <a href={lang === 'fr' ? `/blog/${params.slug}?lang=en` : `/blog/${params.slug}`}
+            <a href={lang === 'fr' ? `/blog/${slug}?lang=en` : `/blog/${slug}`}
               style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 4 }}>
               {lang === 'fr' ? 'EN' : 'FR'}
             </a>
