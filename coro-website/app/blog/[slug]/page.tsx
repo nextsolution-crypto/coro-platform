@@ -9,10 +9,8 @@ async function getPost(slug: string) {
     const res = await fetch(`${API_URL}/blog/public/${slug}`, { cache: 'no-store' });
     if (!res.ok) return null;
     const text = await res.text();
-    console.log('BLOG FETCH SIZE:', text.length, 'slug:', slug);
     return JSON.parse(text);
-  } catch (e) {
-    console.error('BLOG FETCH ERROR:', e);
+  } catch {
     return null;
   }
 }
