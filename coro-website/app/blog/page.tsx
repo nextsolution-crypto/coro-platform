@@ -33,9 +33,10 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Études de cas': '#E67E22',
 };
 
-export default async function BlogPage({ searchParams }: { searchParams: { lang?: string } }) {
+export default async function BlogPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
   const posts = await getPosts();
-  const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
+  const { lang: langParam } = await searchParams;
+  const lang = langParam === 'en' ? 'en' : 'fr';
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>

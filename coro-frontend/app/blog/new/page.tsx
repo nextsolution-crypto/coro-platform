@@ -56,13 +56,20 @@ export default function NewBlogPostPage() {
     }));
   };
 
-  const handleCoverImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Image max 2MB'); return; }
-    const reader = new FileReader();
-    reader.onload = () => setForm(prev => ({ ...prev, coverImage: reader.result as string }));
-    reader.readAsDataURL(file);
+    if (file.size > 10 * 1024 * 1024) { alert('Image max 10MB'); return; }
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/storage/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setForm(prev => ({ ...prev, coverImage: res.data.url }));
+    } catch {
+      alert('Erreur lors du téléversement de l\'image');
+    }
   };
 
   const handleSave = async (publish = false) => {

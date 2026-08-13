@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { StorageModule } from './storage/storage.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -78,6 +79,7 @@ import { APP_GUARD } from '@nestjs/core';
   NotificationsModule,
   ApprovalModule,
   ClientPortalModule,
+  StorageModule,
   ThrottlerModule.forRoot([{
       name: 'short',
       ttl: 60000,    // 1 minute

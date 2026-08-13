@@ -15,11 +15,12 @@ async function getPost(slug: string) {
   }
 }
 
-export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: { lang?: string } }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ lang?: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const { lang: langParam } = await searchParams;
   const post = await getPost(slug);
   if (!post) return { title: 'Article introuvable' };
-  const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
+  const lang = langParam === 'en' ? 'en' : 'fr';
   const title = lang === 'fr' ? (post.seoTitleFr || post.titleFr) : (post.seoTitleEn || post.titleEn || post.titleFr);
   const desc = lang === 'fr' ? post.seoDescFr : (post.seoDescEn || post.seoDescFr);
   return {
@@ -55,12 +56,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Études de cas': '#E67E22',
 };
 
-export default async function BlogPostPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: { lang?: string } }) {
+export default async function BlogPostPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ lang?: string }> }) {
   const { slug } = await params;
+  const { lang: langParam } = await searchParams;
   const post = await getPost(slug);
   if (!post || !post.isPublished) notFound();
-
-  const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
+  const lang = langParam === 'en' ? 'en' : 'fr';
   const title = lang === 'fr' ? post.titleFr : (post.titleEn || post.titleFr);
   const content = lang === 'fr' ? post.contentFr : (post.contentEn || post.contentFr);
   const categoryColor = CATEGORY_COLORS[post.category] || '#6C757D';
