@@ -44,7 +44,7 @@ const TRANSLATIONS = {
         'PMU, PSI, PCA, PGC, PRA et PUE, procédures intégrées, génération automatisée, édition structurée, contrôle qualité, approbation et export PDF professionnel.',
       cta: 'Découvrir la gestion documentaire',
       image: '/images/solutions/coro-gestion-documentaire.webp',
-      href: '/gestion-documentaire',
+      href: '/#demo',
     },
     {
       number: '02',
@@ -54,7 +54,7 @@ const TRANSLATIONS = {
         'Centralisez les projets, bâtiments, activités, échéances, responsabilités, heures prévues et réalisées et suivez l’avancement de chaque mandat depuis un environnement unique.',
       cta: 'Découvrir la gestion de projets',
       image: '/images/solutions/coro-gestion-projets.webp',
-      href: '/gestion-de-projets',
+      href: '/#demo',
     },
     {
       number: '03',
@@ -64,7 +64,7 @@ const TRANSLATIONS = {
         'Suivez les heures, les budgets, le rendement des mandats, la capacité de production et les objectifs afin d’identifier rapidement les écarts et de mieux planifier vos ressources.',
       cta: 'Découvrir le pilotage de la performance',
       image: '/images/solutions/coro-performance-objectifs.webp',
-      href: '/performance-objectifs',
+      href: '/#demo',
     },
     {
       number: '04',
@@ -74,7 +74,7 @@ const TRANSLATIONS = {
         'Offrez à vos clients un espace sécurisé leur permettant de consulter leurs documents, suivre leur statut, visualiser leurs activités à venir et retrouver l’information liée à leurs mandats.',
       cta: 'Découvrir le portail client',
       image: '/images/solutions/coro-portail-client.webp',
-      href: '/portail-client',
+      href: '/#demo',
     },
   ],
 },
@@ -288,7 +288,7 @@ const TRANSLATIONS = {
         'ERP, FSP, BCP, CMP, DRP and EEP, built-in procedures, automated generation, structured editing, quality control, approval workflows and professional PDF export.',
       cta: 'Discover document management',
       image: '/images/solutions/en/coro-document-management.webp',
-      href: '/gestion-documentaire',
+      href: '/#demo',
     },
     {
       number: '02',
@@ -298,7 +298,7 @@ const TRANSLATIONS = {
         'Centralize projects, buildings, activities, deadlines, responsibilities, planned and actual hours, and track the progress of each mandate from a single environment.',
       cta: 'Discover project management',
       image: '/images/solutions/en/coro-project-management.webp',
-      href: '/gestion-de-projets',
+      href: '/#demo',
     },
     {
       number: '03',
@@ -308,7 +308,7 @@ const TRANSLATIONS = {
         'Track hours, budgets, mandate performance, production capacity and objectives to quickly identify gaps and better plan your resources.',
       cta: 'Discover performance management',
       image: '/images/solutions/en/coro-performance-objectives.webp',
-      href: '/performance-objectifs',
+      href: '/#demo',
     },
     {
       number: '04',
@@ -318,7 +318,7 @@ const TRANSLATIONS = {
         'Provide your clients with a secure space to access their documents, track their status, view upcoming activities and retrieve information related to their mandates.',
       cta: 'Discover the client portal',
       image: '/images/solutions/en/coro-client-portal.webp',
-      href: '/portail-client',
+      href: '/#demo',
     },
   ],
 },
@@ -902,11 +902,10 @@ export default function HomePage() {
                     style={{
                       position: 'relative',
                       width: '100%',
-                      aspectRatio: '16 / 10',
+                      aspectRatio: '16 / 9',
                       overflow: 'hidden',
-                      backgroundColor: '#F5F7F8',
-                      borderBottom:
-                        '1px solid #E9ECEF',
+                      backgroundColor: '#2C3E50',
+                      borderBottom: '1px solid #E9ECEF',
                     }}
                   >
                     <img
@@ -914,39 +913,14 @@ export default function HomePage() {
                       alt={solution.title}
                       loading="lazy"
                       style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                        transition:
-                          'transform 0.35s ease',
-                      }}
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: 'center',
+                      display: 'block',
+                      transition: 'transform 0.35s ease',
+                    }}
                     />
-
-                    {/* Numéro */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 18,
-                        left: 18,
-                        width: 46,
-                        height: 46,
-                        borderRadius: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor:
-                          'rgba(44,62,80,0.94)',
-                        color: '#FFFFFF',
-                        fontSize: 14,
-                        fontWeight: 900,
-                        letterSpacing: '0.05em',
-                        boxShadow:
-                          '0 4px 12px rgba(0,0,0,0.15)',
-                      }}
-                    >
-                      {solution.number}
-                    </div>
                   </div>
 
                   {/* Contenu */}
