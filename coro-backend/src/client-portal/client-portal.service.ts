@@ -206,13 +206,13 @@ export class ClientPortalService {
       data: { status: 'REVIEW' },
     });
 
-    // Sauvegarder le commentaire
+    // Sauvegarder le commentaire — utiliser l'userId du conseiller responsable du projet
     await this.prisma.projectComment.create({
       data: {
         projectId,
-        userId: clientUser.sub,
+        userId: project.userId,
         organizationId: project.organizationId,
-        contenu: `[Refus client] ${comment}`,
+        contenu: `[Refus client - ${clientUser.email}] ${comment}`,
       },
     });
 
