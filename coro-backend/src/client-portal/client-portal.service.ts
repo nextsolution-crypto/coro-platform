@@ -167,6 +167,37 @@ export class ClientPortalService {
     return signature;
   }
 
+  async refuseDocument(
+    projectId: string,
+    clientUser: any,
+    comment: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: { client: true, building: true },
+    });
+
+    if (!project) throw new Error('Projet introuvable');
+
+    // Remettre en REVIEW
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { status: 'REVIEW' },
+    });
+
+    // Sauvegarder le commentaire
+    await this.prisma.projectComment.create({
+      data: {
+        projectId,
+        userId: clientUser.sub,
+        organizationId: project.organizationId,
+        contenu: `[Refus client] ${comment}`,
+      },
+    });
+
+    return { success: true };
+  }
+
   async addComment(
     projectId: string,
     clientUser: any,

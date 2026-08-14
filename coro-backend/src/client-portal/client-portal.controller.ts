@@ -74,6 +74,15 @@ export class ClientPortalController {
     );
   }
 
+  @Post('projects/:id/refuse')
+  async refuseDocument(
+    @Param('id') id: string,
+    @Body() body: { comment: string },
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.refuseDocument(id, req.clientUser, body.comment);
+  }
+
   @Get('projects/:id/comments')
   async getComments(@Param('id') id: string) {
     return this.clientPortalService.getComments(id);

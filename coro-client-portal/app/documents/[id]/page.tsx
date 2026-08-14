@@ -80,6 +80,9 @@ export default function DocumentDetailPage() {
   const [signComment, setSignComment] = useState('');
 
   const [downloading, setDownloading] = useState(false);
+  const [showRefuseModal, setShowRefuseModal] = useState(false);
+  const [refuseComment, setRefuseComment] = useState('');
+  const [refusing, setRefusing] = useState(false);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -162,6 +165,24 @@ export default function DocumentDetailPage() {
       console.error(err);
     } finally {
       setAddingComment(false);
+    }
+  };
+
+const handleRefuse = async () => {
+    if (!refuseComment.trim()) return;
+    setRefusing(true);
+    try {
+      await apiPost(`/client-portal/projects/${projectId}/refuse`, {
+        comment: refuseComment,
+      });
+      setShowRefuseModal(false);
+      setRefuseComment('');
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors du refus.');
+    } finally {
+      setRefusing(false);
     }
   };
 
@@ -511,6 +532,32 @@ export default function DocumentDetailPage() {
                 >
                   <Download size={16} />
                   {downloading ? 'Téléchargement...' : 'Télécharger PDF'}
+                </button>
+              )}
+
+              {!mySignature && (
+                <button
+                  type="button"
+                  onClick={() => setShowRefuseModal(true)}
+                  style={{
+                    minHeight: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    padding: '10px 16px',
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    backgroundColor: '#FFFFFF',
+                    color: '#C0392B',
+                    border: '2px solid #C0392B',
+                    cursor: 'pointer',
+                    flex: '1 1 160px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  ✕ Refuser et commenter
                 </button>
               )}
 
@@ -1064,6 +1111,105 @@ export default function DocumentDetailPage() {
           </div>
         </section>
       </div>
+
+{showRefuseModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => !refusing && setShowRefuseModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 480,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              padding: 'clamp(22px, 6vw, 40px)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#C0392B' }}>
+              ✕ Refuser le document
+            </h3>
+            <p style={{ margin: '0 0 24px', fontSize: 14, lineHeight: 1.6, color: '#6C757D' }}>
+              Décrivez les modifications requises. Votre conseiller recevra une notification et pourra apporter les corrections nécessaires.
+            </p>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+                Commentaire *
+              </label>
+              <textarea
+                value={refuseComment}
+                onChange={(e) => setRefuseComment(e.target.value)}
+                placeholder="Ex: La section 3.2 ne correspond pas à notre configuration actuelle. Le responsable incendie indiqué a changé."
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: 7,
+                  border: '1px solid #DEE2E6',
+                  fontSize: 16,
+                  lineHeight: 1.5,
+                  color: '#2C3E50',
+                  resize: 'vertical',
+                  outline: 'none',
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#C0392B'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#DEE2E6'}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowRefuseModal(false)}
+                disabled={refusing}
+                style={{
+                  minHeight: 48,
+                  padding: '12px',
+                  borderRadius: 7,
+                  border: '1px solid #DEE2E6',
+                  backgroundColor: '#FFFFFF',
+                  color: '#6C757D',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: refusing ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleRefuse}
+                disabled={refusing || !refuseComment.trim()}
+                style={{
+                  minHeight: 48,
+                  padding: '12px',
+                  borderRadius: 7,
+                  backgroundColor: refusing || !refuseComment.trim() ? '#ADB5BD' : '#C0392B',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: refusing || !refuseComment.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {refusing ? 'Envoi...' : '✕ Refuser'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal signature */}
       {showSignModal && (
