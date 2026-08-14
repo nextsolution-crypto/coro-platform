@@ -463,7 +463,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="flex min-w-0">
+      <div className="flex min-w-0 overflow-hidden">
         {/* ── Overlay mobile ── */}
         {sidebarOpen && (
           <button
@@ -480,13 +480,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
+          // Sur mobile : fixed ne prend pas de place dans le flux
           style={{
             backgroundColor: '#FFFFFF',
             borderRight: '1px solid #DEE2E6',
             height: 'calc(100vh - 57px)',
             maxHeight: 'calc(100vh - 57px)',
-            width: `${sidebarWidth}px`,
-            minWidth: '180px',
+            width: typeof window !== 'undefined' && window.innerWidth < 1024 ? '0px' : `${sidebarWidth}px`,
+            minWidth: typeof window !== 'undefined' && window.innerWidth < 1024 ? '0px' : '180px',
             maxWidth: '400px',
             position: 'sticky',
             flexShrink: 0,
