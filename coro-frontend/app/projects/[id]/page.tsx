@@ -1044,6 +1044,21 @@ const handleChangeStatus = async (newStatus: string) => {
           </div>
         )}
         <button
+          onClick={handlePreview}
+          disabled={!hasDocument || previewing}
+          className="mr-3 text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            border: '1px solid #AED6F1',
+            color: '#2980B9',
+            backgroundColor: 'transparent',
+          }}
+          onMouseEnter={e => { if (hasDocument) e.currentTarget.style.backgroundColor = '#EBF5FB'; }}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          {previewing ? '⏳ Génération...' : '👁 Aperçu PDF'}
+        </button>
+
+        <button
           onClick={() => setShowExportModal(true)}
           disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE') || project.status === 'REVIEW' || project.status !== 'VALIDATED'}
           title={validations.some(v => v.level === 'CRITIQUE') ? 'Corrigez les erreurs critiques avant d\'exporter' : ''}
