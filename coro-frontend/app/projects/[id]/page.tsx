@@ -131,6 +131,8 @@ export default function ProjectDetailPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  const [projectComments, setProjectComments] = useState<any[]>([]);
+
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
@@ -166,12 +168,14 @@ export default function ProjectDetailPage() {
 
       // Observations et permission d'approuver
       try {
-        const [obsRes, canRes] = await Promise.all([
+        const [obsRes, canRes, commentsRes] = await Promise.all([
           api.get(`/approval/${projectId}/observations`),
           api.get(`/approval/${projectId}/can-approve`),
+          api.get(`/projects/${projectId}/comments`).catch(() => ({ data: [] })),
         ]);
         setObservations(obsRes.data || []);
         setCanApprove(canRes.data?.canApprove || false);
+        setProjectComments(commentsRes.data || []);
       } catch { }
     } catch (err) {
       console.error(err);
@@ -678,6 +682,23 @@ const handleChangeStatus = async (newStatus: string) => {
                           ✕
                         </button>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Commentaires clients */}
+              {projectComments.filter(c => c.contenu?.startsWith('[Refus client')).length > 0 && (
+                <div className="mt-4 p-3 rounded" style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: '#C0392B' }}>
+                    💬 Commentaires du client
+                  </p>
+                  {projectComments.filter(c => c.contenu?.startsWith('[Refus client')).map((c: any) => (
+                    <div key={c.id} className="mb-2 p-2 rounded" style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}>
+                      <p className="text-xs" style={{ color: '#2C3E50' }}>{c.contenu.replace(/^\[Refus client[^\]]*\]\s*/, '')}</p>
+                      <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                        {new Date(c.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
                   ))}
                 </div>

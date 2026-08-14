@@ -155,4 +155,10 @@ export class ProjectsController {
     });
     return result;
   }
+
+  @Get(':id/comments')
+  @UseGuards(AuthGuard('jwt'))
+  async getComments(@Param('id') id: string, @Request() req: any) {
+    return this.projectsService.getComments(id, req.user.organizationId);
+  }
 }

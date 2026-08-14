@@ -408,4 +408,14 @@ export class ProjectsService {
 
     return { projects, clients, buildings };
   }
+
+  async getComments(projectId: string, organizationId: string) {
+    return this.prisma.projectComment.findMany({
+      where: { projectId, organizationId },
+      include: {
+        user: { select: { firstName: true, lastName: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }
