@@ -9,5 +9,6 @@ import { AuditModule } from '../audit/audit.module';
   imports: [PrismaModule, StorageModule, AuditModule],
   controllers: [ExportController],
   providers: [ExportService],
+  exports: [ExportService],
 })
 export class ExportModule {}

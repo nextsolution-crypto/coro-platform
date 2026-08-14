@@ -6,10 +6,12 @@ import { ClientAuthService } from './client-auth.service';
 import { EmailService } from './email.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ExportModule } from '../export/export.module';
 
 @Module({
   imports: [
     PrismaModule,
+    ExportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'coro-secret',
       signOptions: { expiresIn: '7d' },

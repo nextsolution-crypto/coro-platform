@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExportService } from '../export/export.service';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class ClientPortalService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private exportService: ExportService,
+    private storageService: StorageService,
+  ) {}
 
   async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
     const where: any = { organizationId };
@@ -97,7 +103,7 @@ export class ClientPortalService {
       return existing;
     }
 
-    return this.prisma.documentSignature.create({
+    const signature = await this.prisma.documentSignature.create({
       data: {
         projectId,
         clientUserId: clientUser.sub,
@@ -107,6 +113,58 @@ export class ClientPortalService {
         ipAddress: data.ipAddress,
       },
     });
+
+    // Régénérer le PDF sans filigrane et sauvegarder sur Spaces
+    try {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+      });
+
+      if (project) {
+        const result = await this.exportService.generatePdf(
+          projectId,
+          {
+            selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
+            moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
+            language: 'both',
+            isPreview: false,
+          },
+          project.organizationId,
+        );
+
+        const timestamp = Date.now();
+        const updateData: any = { exportedAt: new Date() };
+
+        if (result.fr) {
+          const urlFr = await this.storageService.uploadFile(
+            result.fr,
+            `${projectId}-${timestamp}-FR-OFFICIEL.pdf`,
+            'documents',
+            'application/pdf',
+          );
+          updateData.exportedPdfFr = urlFr;
+        }
+
+        if (result.en) {
+          const urlEn = await this.storageService.uploadFile(
+            result.en,
+            `${projectId}-${timestamp}-EN-OFFICIEL.pdf`,
+            'documents',
+            'application/pdf',
+          );
+          updateData.exportedPdfEn = urlEn;
+        }
+
+        await this.prisma.project.update({
+          where: { id: projectId },
+          data: updateData,
+        });
+      }
+    } catch (e) {
+      console.error('Erreur régénération PDF officiel:', e);
+    }
+
+    return signature;
   }
 
   async addComment(
