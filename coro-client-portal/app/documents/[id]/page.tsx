@@ -453,7 +453,7 @@ const handleRefuse = async () => {
               {project?.exportedPdfFr && !mySignature && (
                 <button
                   type="button"
-                  onClick={() => window.open(project.exportedPdfFr, '_blank')}
+                  onClick={() => window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(project.exportedPdfFr)}&embedded=false`, '_blank')}
                   style={{
                     minHeight: 46,
                     display: 'flex',
