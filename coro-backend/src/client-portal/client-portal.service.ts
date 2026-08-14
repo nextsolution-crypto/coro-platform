@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
+import { EmailService } from './email.service';
 
 @Injectable()
 export class ClientPortalService {
@@ -9,6 +10,7 @@ export class ClientPortalService {
     private prisma: PrismaService,
     private exportService: ExportService,
     private storageService: StorageService,
+    private emailService: EmailService,
   ) {}
 
   async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
@@ -94,7 +96,6 @@ export class ClientPortalService {
     clientUser: any,
     data: { fullName: string; comment?: string; ipAddress?: string },
   ) {
-    // Vérifier si déjà signé
     const existing = await this.prisma.documentSignature.findFirst({
       where: { projectId, clientUserId: clientUser.sub },
     });
@@ -164,6 +165,26 @@ export class ClientPortalService {
       console.error('Erreur régénération PDF officiel:', e);
     }
 
+    // Notifier le conseiller que le client a signé
+    try {
+      const fullProject = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        include: { client: true, user: true },
+      });
+      if (fullProject?.user?.email) {
+        await this.emailService.sendDocumentSigned({
+          toEmail: fullProject.user.email,
+          toName: `${fullProject.user.firstName} ${fullProject.user.lastName}`,
+          projectName: fullProject.name,
+          clientName: fullProject.client.name,
+          signerName: data.fullName,
+          portalUrl: 'https://app.getcoro.io',
+        });
+      }
+    } catch (e) {
+      console.error('Erreur email signature:', e);
+    }
+
     return signature;
   }
 
@@ -174,7 +195,7 @@ export class ClientPortalService {
   ) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { client: true, building: true },
+      include: { client: true, building: true, user: true },
     });
 
     if (!project) throw new Error('Projet introuvable');
@@ -194,6 +215,22 @@ export class ClientPortalService {
         contenu: `[Refus client] ${comment}`,
       },
     });
+
+    // Notifier le conseiller par email
+    try {
+      if (project.user?.email) {
+        await this.emailService.sendDocumentRefused({
+          toEmail: project.user.email,
+          toName: `${project.user.firstName} ${project.user.lastName}`,
+          projectName: project.name,
+          clientName: project.client.name,
+          comment,
+          portalUrl: 'https://app.getcoro.io',
+        });
+      }
+    } catch (e) {
+      console.error('Erreur email refus:', e);
+    }
 
     return { success: true };
   }
