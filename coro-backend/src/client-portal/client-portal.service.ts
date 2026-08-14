@@ -142,7 +142,7 @@ export class ClientPortalService {
             'documents',
             'application/pdf',
           );
-          updateData.exportedPdfFr = urlFr;
+          updateData.officialPdfFr = urlFr;
         }
 
         if (result.en) {
@@ -152,7 +152,7 @@ export class ClientPortalService {
             'documents',
             'application/pdf',
           );
-          updateData.exportedPdfEn = urlEn;
+          updateData.officialPdfEn = urlEn;
         }
 
         await this.prisma.project.update({

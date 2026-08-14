@@ -37,24 +37,30 @@ export class ExportController {
       organizationId: req.user.organizationId,
     });
 
-    // Upload sur Spaces et sauvegarde des URLs
+    // Upload sur Spaces — PDF avec filigrane APERÇU pour le portail client
     const timestamp = Date.now();
     const updateData: any = { exportedAt: new Date() };
 
     try {
-      if (result.fr) {
+      // Générer aussi la version avec filigrane pour le portail client
+      const previewResult = await this.exportService.generatePdf(projectId, {
+        ...options,
+        isPreview: true,
+      }, req.user.organizationId);
+
+      if (previewResult.fr) {
         const urlFr = await this.storageService.uploadFile(
-          result.fr,
-          `${projectId}-${timestamp}-FR.pdf`,
+          previewResult.fr,
+          `${projectId}-${timestamp}-FR-APERCU.pdf`,
           'documents',
           'application/pdf',
         );
         updateData.exportedPdfFr = urlFr;
       }
-      if (result.en) {
+      if (previewResult.en) {
         const urlEn = await this.storageService.uploadFile(
-          result.en,
-          `${projectId}-${timestamp}-EN.pdf`,
+          previewResult.en,
+          `${projectId}-${timestamp}-EN-APERCU.pdf`,
           'documents',
           'application/pdf',
         );

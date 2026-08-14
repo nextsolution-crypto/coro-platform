@@ -156,6 +156,8 @@ model Project {
   approvedBy     User?  @relation("approvedProjects", fields: [approvedById], references: [id])
   exportedPdfFr  String?
   exportedPdfEn  String?
+  officialPdfFr  String?
+  officialPdfEn  String?
   exportedAt     DateTime?
 
   organizationId String

@@ -190,8 +190,10 @@ const handleRefuse = async () => {
     setDownloading(true);
 
     try {
-      // Utiliser l'URL Spaces si disponible
-      const pdfUrl = lang === 'fr' ? project?.exportedPdfFr : project?.exportedPdfEn;
+      // Utiliser le PDF officiel (sans filigrane) si disponible après signature
+      const pdfUrl = lang === 'fr'
+        ? (project?.officialPdfFr || project?.exportedPdfFr)
+        : (project?.officialPdfEn || project?.exportedPdfEn);
 
       if (pdfUrl) {
         const anchor = document.createElement('a');
@@ -448,7 +450,33 @@ const handleRefuse = async () => {
                 flex: '0 1 auto',
               }}
             >
-              {project?.exportedPdfFr && (
+              {project?.exportedPdfFr && !mySignature && (
+                <button
+                  type="button"
+                  onClick={() => window.open(project.exportedPdfFr, '_blank')}
+                  style={{
+                    minHeight: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    padding: '10px 16px',
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    backgroundColor: '#FFFFFF',
+                    color: '#2980B9',
+                    border: '2px solid #2980B9',
+                    cursor: 'pointer',
+                    flex: '1 1 160px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  👁 Visualiser (FR)
+                </button>
+              )}
+
+              {(project?.officialPdfFr || (project?.exportedPdfFr && mySignature)) && (
                 <button
                   type="button"
                   onClick={() => handleDownload('fr')}
