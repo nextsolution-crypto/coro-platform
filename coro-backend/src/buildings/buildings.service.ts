@@ -134,7 +134,40 @@ export class BuildingsService {
 
   async update(id: string, data: any, organizationId: string) {
     await this.assertOwnership(id, organizationId);
-    return this.prisma.building.update({ where: { id }, data });
+
+    // Récupérer l'ancien responsable avant la mise à jour
+    const oldBuilding = await this.prisma.building.findUnique({ where: { id } });
+    const oldEmail = oldBuilding?.responsableEmail;
+    const newEmail = data.responsableEmail;
+
+    const updated = await this.prisma.building.update({ where: { id }, data });
+
+    // Si le responsable a changé
+    if (newEmail && newEmail !== oldEmail) {
+      // Retirer ce bâtiment de l'ancien responsable
+      if (oldEmail) {
+        const oldUser = await this.prisma.clientUser.findUnique({ where: { email: oldEmail } });
+        if (oldUser) {
+          const newBuildingIds = oldUser.buildingIds.filter((bid: string) => bid !== id);
+          await this.prisma.clientUser.update({
+            where: { email: oldEmail },
+            data: { buildingIds: newBuildingIds },
+          });
+        }
+      }
+
+      // Créer ou mettre à jour le nouveau responsable
+      await this.createManagerAccess(
+        id,
+        updated.clientId,
+        organizationId,
+        newEmail,
+        data.responsableFirstName || '',
+        data.responsableLastName || '',
+      );
+    }
+
+    return updated;
   }
 
   async remove(id: string, organizationId: string) {

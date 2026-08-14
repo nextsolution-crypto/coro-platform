@@ -101,7 +101,42 @@ export class ClientsService {
 
   async update(id: string, data: any, organizationId: string) {
     await this.assertOwnership(id, organizationId);
-    return this.prisma.client.update({ where: { id }, data });
+
+    // Récupérer l'ancien contact avant la mise à jour
+    const oldClient = await this.prisma.client.findUnique({ where: { id } });
+    const oldEmail = oldClient?.contactEmail;
+    const newEmail = data.contactEmail;
+
+    const updated = await this.prisma.client.update({ where: { id }, data });
+
+    // Si le contact corporatif a changé
+    if (newEmail && newEmail !== oldEmail) {
+      // Désactiver l'ancien compte CLIENT_CORPORATE
+      if (oldEmail) {
+        const oldUser = await this.prisma.clientUser.findUnique({ where: { email: oldEmail } });
+        if (oldUser && oldUser.clientId === id) {
+          await this.prisma.clientUser.update({
+            where: { email: oldEmail },
+            data: { isActive: false },
+          });
+        }
+      }
+
+      // Créer le nouveau compte CLIENT_CORPORATE
+      const existing = await this.prisma.clientUser.findUnique({ where: { email: newEmail } });
+      if (!existing) {
+        await this.createCorpoAccess(
+          id,
+          organizationId,
+          newEmail,
+          data.contactFirstName || '',
+          data.contactLastName || '',
+          updated.name,
+        );
+      }
+    }
+
+    return updated;
   }
 
   async uploadLogo(id: string, logoBase64: string, organizationId: string) {
