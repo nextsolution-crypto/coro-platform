@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EmailService } from '../client-portal/email.service';
 
 @Injectable()
 export class ApprovalService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private emailService: EmailService,
   ) {}
 
   // ── Soumettre pour approbation ───────────────────────────
@@ -88,8 +90,26 @@ export class ApprovalService {
       });
     }
 
-    return { success: true, status: 'VALIDATED' };
-  }
+    // Envoyer email aux ClientUsers du client
+      try {
+        const clientUsers = await this.prisma.clientUser.findMany({
+          where: { clientId: project.clientId, isActive: true },
+        });
+        for (const clientUser of clientUsers) {
+          await this.emailService.sendDocumentAvailable({
+            toEmail: clientUser.email,
+            toName: `${clientUser.firstName} ${clientUser.lastName}`,
+            projectName: project.name,
+            documentType: project.documentType,
+            clientName: project.client.name,
+          });
+        }
+      } catch (e) {
+        console.error('Erreur envoi email client:', e);
+      }
+
+      return { success: true, status: 'VALIDATED' };
+    }
 
   // ── Retourner pour révision ──────────────────────────────
   async requestRevision(
