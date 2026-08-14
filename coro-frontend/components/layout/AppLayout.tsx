@@ -488,7 +488,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             width: `${sidebarWidth}px`,
             minWidth: '180px',
             maxWidth: '400px',
-            position: 'relative',
+            position: 'sticky',
+            flexShrink: 0,
           }}
         >
 

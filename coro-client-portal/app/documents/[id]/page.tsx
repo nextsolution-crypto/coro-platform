@@ -165,48 +165,24 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (lang: 'fr' | 'en' = 'fr') => {
     setDownloading(true);
 
     try {
-      const token = localStorage.getItem('coro_client_token');
+      // Utiliser l'URL Spaces si disponible
+      const pdfUrl = lang === 'fr' ? project?.exportedPdfFr : project?.exportedPdfEn;
 
-      const res = await fetch(
-        `${API_URL}/projects/${projectId}/export`,
-        {
-          method: 'POST',
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-
-          body: JSON.stringify({
-            selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
-            moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
-            language: 'fr',
-            isPreview: false,
-          }),
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error('Erreur téléchargement');
+      if (pdfUrl) {
+        const anchor = document.createElement('a');
+        anchor.href = pdfUrl;
+        anchor.download = `${project?.name || 'document'}-${lang.toUpperCase()}.pdf`;
+        anchor.target = '_blank';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } else {
+        alert('Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.');
       }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      const anchor = document.createElement('a');
-
-      anchor.href = url;
-      anchor.download = `${project?.name || 'document'}.pdf`;
-
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-
-      URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
       alert('Erreur lors du téléchargement.');
@@ -451,37 +427,92 @@ export default function DocumentDetailPage() {
                 flex: '0 1 auto',
               }}
             >
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={downloading}
-                style={{
-                  minHeight: 46,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 7,
-                  padding: '10px 16px',
-                  borderRadius: 7,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  backgroundColor: '#C0392B',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  cursor: downloading
-                    ? 'not-allowed'
-                    : 'pointer',
-                  opacity: downloading ? 0.7 : 1,
-                  flex: '1 1 160px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Download size={16} />
+              {project?.exportedPdfFr && (
+                <button
+                  type="button"
+                  onClick={() => handleDownload('fr')}
+                  disabled={downloading}
+                  style={{
+                    minHeight: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    padding: '10px 16px',
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    backgroundColor: '#C0392B',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: downloading ? 'not-allowed' : 'pointer',
+                    opacity: downloading ? 0.7 : 1,
+                    flex: '1 1 160px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Download size={16} />
+                  {downloading ? 'Téléchargement...' : 'Télécharger PDF (FR)'}
+                </button>
+              )}
 
-                {downloading
-                  ? 'Téléchargement...'
-                  : 'Télécharger PDF'}
-              </button>
+              {project?.exportedPdfEn && (
+                <button
+                  type="button"
+                  onClick={() => handleDownload('en')}
+                  disabled={downloading}
+                  style={{
+                    minHeight: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    padding: '10px 16px',
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    backgroundColor: '#2980B9',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: downloading ? 'not-allowed' : 'pointer',
+                    opacity: downloading ? 0.7 : 1,
+                    flex: '1 1 160px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Download size={16} />
+                  {downloading ? 'Downloading...' : 'Download PDF (EN)'}
+                </button>
+              )}
+
+              {!project?.exportedPdfFr && !project?.exportedPdfEn && (
+                <button
+                  type="button"
+                  onClick={() => handleDownload('fr')}
+                  disabled={downloading}
+                  style={{
+                    minHeight: 46,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    padding: '10px 16px',
+                    borderRadius: 7,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    backgroundColor: '#C0392B',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    cursor: downloading ? 'not-allowed' : 'pointer',
+                    opacity: downloading ? 0.7 : 1,
+                    flex: '1 1 160px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Download size={16} />
+                  {downloading ? 'Téléchargement...' : 'Télécharger PDF'}
+                </button>
+              )}
 
               {!mySignature && (
                 <button
