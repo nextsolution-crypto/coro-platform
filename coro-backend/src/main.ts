@@ -23,6 +23,8 @@ async function bootstrap() {
       'http://localhost:3003',
       'https://app.getcoro.io',
       'https://client.getcoro.io',
+      'https://getcoro.io',
+      'https://www.getcoro.io',
       process.env.FRONTEND_URL,
     ].filter(Boolean),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
