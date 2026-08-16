@@ -140,6 +140,11 @@ export default function RootLayout({
       <body>
         {children}
         <ScrollToTop />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.$crisp=[];window.CRISP_WEBSITE_ID="c1f3364b-f809-4e71-b48e-4ec6ca13904f";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();`
+          }}
+        />
       </body>
     </html>
   );
