@@ -42,6 +42,12 @@ export default function ChatWidget() {
 
       if (data.transferToAgent) {
         setTransferred(true);
+        // Ouvre Crisp pour handoff vers agent humain
+        if (typeof window !== 'undefined' && (window as any).$crisp) {
+          (window as any).$crisp.push(['do', 'chat:show']);
+          (window as any).$crisp.push(['do', 'chat:open']);
+          (window as any).$crisp.push(['do', 'message:send', ['text', `Bonjour, je viens du chat IA CORO. Question posée : "${userMessage}"`]]);
+        }
       }
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Une erreur est survenue. Contactez-nous à info@getcoro.io.' }]);
