@@ -72,6 +72,9 @@ model User {
   horaireBase    Float    @default(40)
   timelogEntries  TimelogEntry[]
   customProcedures CustomProcedure[]
+
+  resetToken        String?
+  resetTokenExpiry  DateTime?
 }
 
 enum UserRole {
