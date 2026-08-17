@@ -701,6 +701,7 @@ model ClientUser {
   signatures     DocumentSignature[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  magicLinks MagicLink[]
 }
 
 model DocumentSignature {
@@ -752,4 +753,14 @@ model OrganizationModule1Template {
   sections       Json     // Array de { id, title, content, order }
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model MagicLink {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      ClientUser @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
 }

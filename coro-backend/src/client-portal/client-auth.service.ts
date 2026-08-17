@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class ClientAuthService {
@@ -91,5 +92,63 @@ export class ClientAuthService {
       where: { id: clientUserId },
       data: { password: hashedPassword },
     });
+  }
+
+    async generateMagicLink(clientUserId: string): Promise<string> {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72h
+
+    await this.prisma.magicLink.create({
+      data: { token, userId: clientUserId, expiresAt },
+    });
+
+    return `https://client.getcoro.io/magic?token=${token}`;
+  }
+
+  async validateMagicLink(token: string) {
+    const magicLink = await this.prisma.magicLink.findUnique({
+      where: { token },
+      include: {
+        user: {
+          include: { client: true },
+        },
+      },
+    });
+
+    if (!magicLink) throw new UnauthorizedException('Lien invalide.');
+    if (magicLink.usedAt) throw new UnauthorizedException('Lien déjà utilisé.');
+    if (magicLink.expiresAt < new Date()) throw new UnauthorizedException('Lien expiré.');
+
+    // Marquer comme utilisé
+    await this.prisma.magicLink.update({
+      where: { token },
+      data: { usedAt: new Date() },
+    });
+
+    const clientUser = magicLink.user;
+
+    const jwtToken = this.jwt.sign({
+      sub: clientUser.id,
+      email: clientUser.email,
+      role: clientUser.role,
+      clientId: clientUser.clientId,
+      organizationId: clientUser.organizationId,
+      buildingIds: clientUser.buildingIds,
+      type: 'CLIENT',
+    });
+
+    return {
+      token: jwtToken,
+      user: {
+        id: clientUser.id,
+        email: clientUser.email,
+        firstName: clientUser.firstName,
+        lastName: clientUser.lastName,
+        role: clientUser.role,
+        clientId: clientUser.clientId,
+        clientName: clientUser.client?.name,
+        organizationId: clientUser.organizationId,
+      },
+    };
   }
 }

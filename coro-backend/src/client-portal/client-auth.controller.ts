@@ -19,4 +19,9 @@ export class ClientAuthController {
   ) {
     return this.clientAuthService.changePassword(req.clientUser.sub, body.newPassword);
   }
+
+  @Post('magic-link/validate')
+  async validateMagicLink(@Body() body: { token: string }) {
+    return this.clientAuthService.validateMagicLink(body.token);
+  }
 }

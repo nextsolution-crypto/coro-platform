@@ -89,8 +89,16 @@ export class EmailService {
     projectName: string;
     documentType: string;
     clientName: string;
+    magicLink?: string;
   }) {
     const subject = `Nouveau document disponible — ${data.projectName}`;
+    const magicLinkBtn = data.magicLink
+      ? `<a href="${data.magicLink}" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">
+           Accéder au document →
+         </a>
+         <p style="font-size:12px;color:#ADB5BD;margin:12px 0 0;">Ce lien est valide 72 heures et à usage unique. Après expiration, connectez-vous sur <a href="https://client.getcoro.io" style="color:#ADB5BD;">client.getcoro.io</a></p>`
+      : `<a href="https://client.getcoro.io" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:700;">Consulter →</a>`;
+
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -103,7 +111,6 @@ export class EmailService {
   .logo span { color: #C0392B; }
   .body { padding: 40px; }
   .doc-card { background: #EAFAF1; border: 1px solid #A9DFBF; border-radius: 8px; padding: 20px; margin: 24px 0; }
-  .btn { display: inline-block; background: #C0392B; color: #FFFFFF; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: 700; }
   .footer { background: #F8F9FA; padding: 24px; text-align: center; font-size: 13px; color: #ADB5BD; border-top: 1px solid #E9ECEF; }
 </style>
 </head>
@@ -113,13 +120,13 @@ export class EmailService {
     <div class="body">
       <p style="font-size:22px;font-weight:700;color:#2C3E50;">Nouveau document disponible ✅</p>
       <p style="font-size:15px;color:#6C757D;">Bonjour ${data.toName},</p>
-      <p style="font-size:15px;color:#6C757D;">Un document a été approuvé et est disponible dans votre portail.</p>
+      <p style="font-size:15px;color:#6C757D;">Un document a été approuvé et est disponible pour votre consultation et signature.</p>
       <div class="doc-card">
         <p style="font-size:13px;font-weight:700;color:#27AE60;margin:0 0 8px 0;">✓ Document approuvé</p>
         <p style="font-size:16px;font-weight:700;color:#2C3E50;margin:0 0 4px 0;">${data.projectName}</p>
         <p style="font-size:14px;color:#6C757D;margin:0;">${data.documentType} — ${data.clientName}</p>
       </div>
-      <a href="https://client.getcoro.io" class="btn">Consulter →</a>
+      ${magicLinkBtn}
     </div>
     <div class="footer">© 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a></div>
   </div>
