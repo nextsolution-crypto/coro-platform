@@ -179,7 +179,39 @@ private async loadProceduresFromDB(
     await this.assertProjectOwnership(projectId, organizationId);
     const ctx = await this.buildContext(projectId, config);
     const isPsi = ctx.documentType === 'PSI';
-    const module1Result = generateModule1(ctx);
+
+    // Vérifier si l'organisation a un template Module 1 personnalisé
+    const orgTemplate = await this.prisma.organizationModule1Template.findUnique({
+      where: { organizationId },
+    });
+
+    let module1Result = generateModule1(ctx);
+
+    if (orgTemplate && (orgTemplate.sections as any[]).length > 0) {
+      const customSections = (orgTemplate.sections as any[]).map(s => ({
+        id: s.id,
+        title: s.title,
+        content: s.content
+          .replace(/\{\{clientName\}\}/g, ctx.clientName)
+          .replace(/\{\{buildingAddress\}\}/g, ctx.buildingAddress)
+          .replace(/\{\{documentType\}\}/g, ctx.documentType),
+      }));
+
+      module1Result = {
+        fr: {
+          moduleNumber: 1,
+          title: 'INTRODUCTION',
+          language: 'fr',
+          sections: customSections,
+        },
+        en: {
+          moduleNumber: 1,
+          title: 'INTRODUCTION',
+          language: 'en',
+          sections: customSections,
+        },
+      };
+    }
     const module2Result = generateModule2(ctx);
 
     // Récupère section2_2 sauvegardée si elle existe
