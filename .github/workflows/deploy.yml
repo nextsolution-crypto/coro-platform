@@ -78,4 +78,4 @@ jobs:
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d
-            docker compose exec -T backend node -e "const{execSync}=require('child_process');execSync('npx prisma migrate deploy --schema=/app/prisma/schema.prisma',{stdio:'inherit'})"
+            docker compose exec -T backend node -e "const{execSync}=require('child_process');execSync('npx prisma@6.19.3 migrate deploy --schema=/app/prisma/schema.prisma',{stdio:'inherit',env:{...process.env,npm_config_yes:'true'}})"
