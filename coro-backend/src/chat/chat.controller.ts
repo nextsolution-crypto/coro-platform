@@ -9,4 +9,9 @@ export class ChatController {
   async chat(@Body() body: { message: string; history?: { role: string; content: string }[] }) {
     return this.chatService.handleMessage(body.message, body.history || []);
   }
+
+  @Post('notify')
+  async notify(@Body() body: { email: string; history: string }) {
+    return this.chatService.notifyAgent(body.email, body.history);
+  }
 }

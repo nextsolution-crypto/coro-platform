@@ -64,10 +64,92 @@ export class ChatService {
       const data = await response.json();
       const reply = data.content?.[0]?.text || 'Désolé, je n\'ai pas pu traiter votre message. Veuillez réessayer.';
 
+      if (shouldTransfer) {
+        // Notifier le conseiller par courriel
+        try {
+          await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'api-key': process.env.BREVO_API_KEY || '',
+            },
+            body: JSON.stringify({
+              sender: { name: 'CORO Chat IA', email: 'info@getcoro.io' },
+              to: [{ email: 'info@getcoro.io', name: 'Équipe CORO' }],
+              subject: '💬 Nouveau prospect — Demande de contact via le chat IA',
+              htmlContent: `
+                <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <div style="background: #2C3E50; padding: 24px; border-radius: 8px 8px 0 0;">
+                    <span style="color: #FFFFFF; font-size: 24px; font-weight: 900;">CO<span style="color: #C0392B;">RO</span></span>
+                  </div>
+                  <div style="background: #FFFFFF; padding: 24px; border: 1px solid #E9ECEF; border-radius: 0 0 8px 8px;">
+                    <h2 style="color: #2C3E50; margin: 0 0 16px;">Nouveau prospect sur getcoro.io</h2>
+                    <p style="color: #6C757D;">Un visiteur a demandé à parler à un conseiller via le chat IA.</p>
+                    <div style="background: #F8F9FA; border-left: 4px solid #C0392B; padding: 16px; border-radius: 4px; margin: 16px 0;">
+                      <p style="margin: 0; font-weight: 600; color: #2C3E50;">Message déclencheur :</p>
+                      <p style="margin: 8px 0 0; color: #495057;">${message}</p>
+                    </div>
+                    <p style="color: #6C757D; font-size: 13px;">Réponse de l'IA : ${reply}</p>
+                    <a href="mailto:${''}" style="display: inline-block; background: #C0392B; color: #FFFFFF; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 700; margin-top: 16px;">
+                      Contacter le prospect →
+                    </a>
+                  </div>
+                </div>
+              `,
+            }),
+          });
+        } catch (e) {
+          console.error('Erreur envoi email transfert:', e);
+        }
+      }
+
       return { reply, transferToAgent: shouldTransfer };
     } catch (e) {
       console.error('Erreur Claude API:', e);
       return { reply: 'Une erreur est survenue. Veuillez réessayer ou nous contacter directement à info@getcoro.io.', transferToAgent: false };
+    }
+  }
+
+  async notifyAgent(email: string, history: string): Promise<{ success: boolean }> {
+    try {
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': process.env.BREVO_API_KEY || '',
+        },
+        body: JSON.stringify({
+          sender: { name: 'CORO Chat IA', email: 'info@getcoro.io' },
+          to: [{ email: 'info@getcoro.io', name: 'Équipe CORO' }],
+          subject: '💬 Nouveau prospect — Demande de contact via getcoro.io',
+          htmlContent: `
+            <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
+              <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;">
+                <span style="color:#FFFFFF;font-size:24px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
+              </div>
+              <div style="background:#FFFFFF;padding:24px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
+                <h2 style="color:#2C3E50;margin:0 0 8px;">Nouveau prospect sur getcoro.io</h2>
+                <p style="color:#6C757D;margin:0 0 20px;">Un visiteur souhaite être contacté par un conseiller.</p>
+                <div style="background:#EAFAF1;border-left:4px solid #27AE60;padding:16px;border-radius:4px;margin:0 0 20px;">
+                  <p style="margin:0;font-weight:700;color:#2C3E50;">📧 Courriel du prospect :</p>
+                  <a href="mailto:${email}" style="color:#C0392B;font-size:16px;font-weight:700;">${email}</a>
+                </div>
+                <div style="background:#F8F9FA;border-left:4px solid #2C3E50;padding:16px;border-radius:4px;">
+                  <p style="margin:0 0 12px;font-weight:700;color:#2C3E50;">💬 Historique de la conversation :</p>
+                  <pre style="margin:0;font-size:13px;color:#495057;white-space:pre-wrap;line-height:1.6;">${history}</pre>
+                </div>
+                <a href="mailto:${email}" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;margin-top:20px;">
+                  Répondre au prospect →
+                </a>
+              </div>
+            </div>
+          `,
+        }),
+      });
+      return { success: true };
+    } catch (e) {
+      console.error('Erreur envoi courriel prospect:', e);
+      return { success: false };
     }
   }
 }
