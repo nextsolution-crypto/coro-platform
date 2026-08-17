@@ -29,6 +29,7 @@ model Organization {
   auditLogs          AuditLog[]
   customProcedures CustomProcedure[]
   clientUsers    ClientUser[]
+  module1Template OrganizationModule1Template?
 }
 
 model User {
@@ -739,4 +740,13 @@ model BlogPost {
   publishedAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model OrganizationModule1Template {
+  id             String   @id @default(uuid())
+  organizationId String   @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  sections       Json     // Array de { id, title, content, order }
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

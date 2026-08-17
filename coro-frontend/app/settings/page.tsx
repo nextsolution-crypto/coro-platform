@@ -479,6 +479,24 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Personnalisation Module 1 */}
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <div className="rounded-md p-6"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+              <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Personnalisation documentaire</h3>
+              <p className="text-xs mb-4" style={{ color: '#ADB5BD' }}>Adaptez les sections du Module 1 à votre organisation</p>
+              <button
+                onClick={() => router.push('/settings/module1-template')}
+                className="flex items-center justify-between w-full px-4 py-3 rounded transition-colors text-sm font-medium"
+                style={{ border: '1px solid #E9ECEF', color: '#2C3E50', backgroundColor: '#F8F9FA' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#E9ECEF'; e.currentTarget.style.color = '#2C3E50'; }}>
+                <span>📄 Modèle Module 1 — Introduction</span>
+                <span>→</span>
+              </button>
+            </div>
+          )}
+
           {/* À propos */}
           <div className="rounded-md p-6"
             style={{
