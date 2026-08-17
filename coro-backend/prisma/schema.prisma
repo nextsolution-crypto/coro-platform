@@ -50,6 +50,11 @@ model User {
   companyAddress     String?
   companyWebsite     String?
   companyTagline     String?
+  title              String?
+  phoneDirect        String?
+  phoneMobile        String?
+  certification      String?
+  province           String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
