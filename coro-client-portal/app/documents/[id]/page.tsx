@@ -621,6 +621,46 @@ const handleRefuse = async () => {
           )}
         </div>
 
+        {/* ── Checklist de complétion ── */}
+        {isValidated && (
+          <div style={{ marginTop: 20, padding: '16px 20px', borderRadius: 10, backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Progression
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Document reçu', done: true, color: '#27AE60' },
+                { label: 'Document consulté', done: true, color: '#27AE60' },
+                { label: 'Document signé', done: !!mySignature, color: mySignature ? '#8E44AD' : '#ADB5BD' },
+              ].map((step, i, arr) => (
+                <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: '1 1 auto' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: step.done ? step.color : '#E9ECEF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, transition: 'all 0.3s' }}>
+                      {step.done ? '✓' : '○'}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: step.done ? step.color : '#ADB5BD', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      {step.label}
+                    </span>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div style={{ flex: 1, height: 2, backgroundColor: step.done ? step.color : '#E9ECEF', margin: '0 8px', marginBottom: 20, transition: 'all 0.3s' }} />
+                  )}
+                </div>
+              ))}
+            </div>
+            {!mySignature && (
+              <p style={{ margin: '12px 0 0', fontSize: 12, color: '#ADB5BD', textAlign: 'center' }}>
+                Veuillez lire le document et cliquer sur "Signer le document" pour compléter le processus.
+              </p>
+            )}
+            {mySignature && (
+              <p style={{ margin: '12px 0 0', fontSize: 12, color: '#8E44AD', textAlign: 'center', fontWeight: 600 }}>
+                ✓ Processus complété — Signé le {new Date(mySignature.signedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Approbation */}
         {isValidated && project.approvedBy && (
           <div
