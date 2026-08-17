@@ -94,6 +94,18 @@ export default function DashboardPage() {
     + lateTasks.length
     + mandateDelays.filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level)).length;
 
+  // ── Checklist onboarding ──
+  const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+  const onboardingItems = [
+        { label: 'Logo de l\'organisation téléversé', done: !!(user as any).companyLogoB64, path: '/settings' },
+    { label: 'Informations entreprise complètes', done: !!((user as any).companyName && (user as any).companyPhone && (user as any).companyEmail), path: '/settings' },
+    { label: 'Au moins un conseiller dans l\'équipe', done: projets.length >= 0 && isAdmin, path: '/settings/team' },
+    { label: 'Premier client créé', done: projets.some(p => p.client), path: '/clients' },
+    { label: 'Premier projet lancé', done: projets.length > 0, path: '/projects' },
+  ];
+  const onboardingDone = onboardingItems.filter(i => i.done).length;
+  const onboardingComplete = onboardingDone === onboardingItems.length;
+
   const kpis = [
     { label: 'Projets actifs',    value: projetsActifs, color: '#C0392B', bg: '#FDEDEC', path: '/projects' },
     { label: 'En révision',       value: enRevision,    color: '#F39C12', bg: '#FEF9E7', path: '/projects' },
@@ -126,6 +138,40 @@ export default function DashboardPage() {
           + Nouveau projet
         </button>
       </div>
+
+      {/* ── Checklist onboarding ── */}
+      {isAdmin && !onboardingComplete && (
+        <div className="mb-6 rounded-md overflow-hidden" style={{ border: '1px solid #AED6F1', backgroundColor: '#EBF5FB' }}>
+          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #AED6F1' }}>
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: 20 }}>🚀</span>
+              <div>
+                <p className="text-sm font-bold" style={{ color: '#1A5276' }}>Configuration de votre organisation</p>
+                <p className="text-xs" style={{ color: '#2980B9' }}>{onboardingDone} sur {onboardingItems.length} étapes complétées</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-32 h-2 rounded-full" style={{ backgroundColor: '#AED6F1' }}>
+                <div className="h-2 rounded-full transition-all" style={{ width: `${(onboardingDone / onboardingItems.length) * 100}%`, backgroundColor: '#2980B9' }} />
+              </div>
+              <span className="text-sm font-bold" style={{ color: '#1A5276' }}>{Math.round((onboardingDone / onboardingItems.length) * 100)}%</span>
+            </div>
+          </div>
+          <div className="px-5 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {onboardingItems.map((item, i) => (
+              <div key={i} onClick={() => !item.done && router.push(item.path)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors"
+                style={{ backgroundColor: item.done ? '#EAFAF1' : '#FFFFFF', border: `1px solid ${item.done ? '#A9DFBF' : '#DEE2E6'}`, cursor: item.done ? 'default' : 'pointer' }}
+                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = '#2980B9'; }}
+                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = '#DEE2E6'; }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{item.done ? '✅' : '○'}</span>
+                <span className="text-xs font-medium" style={{ color: item.done ? '#27AE60' : '#2C3E50' }}>{item.label}</span>
+                {!item.done && <span className="text-xs ml-auto flex-shrink-0" style={{ color: '#2980B9' }}>→</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── KPIs ── */}
       <div className="grid grid-cols-4 gap-4 mb-8">
