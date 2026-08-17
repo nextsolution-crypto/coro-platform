@@ -39,6 +39,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ApprovalModule } from './approval/approval.module';
 import { ClientPortalModule } from './client-portal/client-portal.module';
 import { ChatModule } from './chat/chat.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RemindersModule } from './reminders/reminders.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -91,6 +93,8 @@ import { APP_GUARD } from '@nestjs/core';
       limit: 2000,   // max 2000 requêtes par heure par IP
     }]),
     ChatModule,
+    ScheduleModule.forRoot(),
+    RemindersModule,
 ],
   controllers: [AppController],
   providers: [
