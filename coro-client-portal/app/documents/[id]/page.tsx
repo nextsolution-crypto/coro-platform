@@ -294,6 +294,16 @@ const handleRefuse = async () => {
       {/* Retour */}
       <button
         type="button"
+        onClick={() => router.push(`/files/${projectId}`)}
+        style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 8, padding: '6px 14px', background: '#F8F9FA', border: '1px solid #E9ECEF', cursor: 'pointer', color: '#2C3E50', fontSize: 14, borderRadius: 7, fontWeight: 600 }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
+        onMouseLeave={e => e.currentTarget.style.borderColor = '#E9ECEF'}
+      >
+        📁 Espace de fichiers
+      </button>
+
+      <button
+        type="button"
         onClick={() => router.push('/documents')}
         style={{
           minHeight: 40,
