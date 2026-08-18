@@ -423,36 +423,62 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const lang = getLang(params.lang);
   const t = CONTENT[lang];
 
-  const canonical = lang === 'en' ? `${SITE_URL}/about?lang=en` : `${SITE_URL}/about`;
+  const frUrl = `${SITE_URL}/about`;
+  const enUrl = `${SITE_URL}/about?lang=en`;
+  const currentUrl = lang === 'en' ? enUrl : frUrl;
 
   return {
+    metadataBase: new URL(SITE_URL),
     title: t.metadata.title,
     description: t.metadata.description,
-    metadataBase: new URL(SITE_URL),
+
     alternates: {
-      canonical,
+      canonical: currentUrl,
       languages: {
-        'fr-CA': `${SITE_URL}/about`,
-        'en-CA': `${SITE_URL}/about?lang=en`,
-        'x-default': `${SITE_URL}/about`,
+        'fr-CA': frUrl,
+        'en-CA': enUrl,
+        'x-default': frUrl,
       },
     },
+
     openGraph: {
       type: 'website',
       locale: lang === 'fr' ? 'fr_CA' : 'en_CA',
-      url: canonical,
+      alternateLocale: [lang === 'fr' ? 'en_CA' : 'fr_CA'],
+      url: currentUrl,
       siteName: 'CORO',
       title: t.metadata.title,
       description: t.metadata.description,
+      images: [
+        {
+          url: '/og-coro.jpg',
+          width: 1200,
+          height: 630,
+          alt:
+            lang === 'fr'
+              ? 'CORO — Plateforme SaaS de conformité opérationnelle'
+              : 'CORO — Operational compliance SaaS platform',
+        },
+      ],
     },
+
     twitter: {
       card: 'summary_large_image',
       title: t.metadata.title,
       description: t.metadata.description,
+      images: ['/og-coro.jpg'],
     },
+
     robots: {
       index: true,
       follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
   };
 }
@@ -532,38 +558,54 @@ export default async function AboutPage({ searchParams }: PageProps) {
 
   const homeLink = (anchor = '') => `/${langSuffix}${anchor}`;
 
+  const currentUrl =
+    lang === 'en'
+      ? `${SITE_URL}/about?lang=en`
+      : `${SITE_URL}/about`;
+
   const organizationJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'CORO',
+    alternateName:
+      'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
+    url: SITE_URL,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${SITE_URL}/coro-logo.png`,
+      contentUrl: `${SITE_URL}/coro-logo.png`,
+    },
+    email: 'info@getcoro.io',
+    telephone: '+1-514-791-7871',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '2879 Boul. Pierre-Bernard',
+      addressLocality: 'Montréal',
+      addressRegion: 'QC',
+      postalCode: 'H1L 4R2',
+      addressCountry: 'CA',
+    },
+    description: t.metadata.description,
+  };
 
-  name: 'CORO',
-
-  alternateName:
-    'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
-
-  url: SITE_URL,
-
-  logo: {
-    '@type': 'ImageObject',
-    url: `${SITE_URL}/coro-logo.png`,
-    contentUrl: `${SITE_URL}/coro-logo.png`,
-  },
-
-  email: 'info@getcoro.io',
-
-  telephone: '+1-514-791-7871',
-
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: '2879 Boul. Pierre-Bernard',
-    addressLocality: 'Montréal',
-    addressRegion: 'QC',
-    postalCode: 'H1L 4R2',
-    addressCountry: 'CA',
-  },
-
-  description: t.metadata.description,
-};
+  const aboutPageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: t.metadata.title,
+    description: t.metadata.description,
+    url: currentUrl,
+    inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
+    mainEntity: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+    },
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'CORO',
+      url: SITE_URL,
+    },
+  };
 
   return (
     <div
@@ -579,6 +621,13 @@ export default async function AboutPage({ searchParams }: PageProps) {
     __html: JSON.stringify(organizationJsonLd).replace(/</g, '\\u003c'),
   }}
 />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(aboutPageJsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
 
       {/* ───────────────────────────── */}
       {/* NAVIGATION */}

@@ -539,60 +539,90 @@ export async function generateMetadata({
   const lang = getLang(params.lang);
   const t = CONTENT[lang];
 
-  const canonical =
-    lang === 'en' ? `${SITE_URL}/security?lang=en` : `${SITE_URL}/security`;
+  const frUrl = `${SITE_URL}/security`;
+  const enUrl = `${SITE_URL}/security?lang=en`;
+
+  const currentUrl =
+    lang === 'en'
+      ? enUrl
+      : frUrl;
 
   return {
     metadataBase: new URL(SITE_URL),
+
     title: t.metadata.title,
+
     description: t.metadata.description,
+
     alternates: {
-      canonical,
+      canonical: currentUrl,
+
       languages: {
-        'fr-CA': `${SITE_URL}/security`,
-        'en-CA': `${SITE_URL}/security?lang=en`,
-        'x-default': `${SITE_URL}/security`,
+        'fr-CA': frUrl,
+        'en-CA': enUrl,
+        'x-default': frUrl,
       },
     },
+
     openGraph: {
-  type: 'website',
-  url: canonical,
-  siteName: 'CORO',
-  locale: lang === 'fr' ? 'fr_CA' : 'en_CA',
-  title: t.metadata.title,
-  description: t.metadata.description,
+      type: 'website',
 
-  images: [
-    {
-      url: `${SITE_URL}/og-coro.jpg`,
-      width: 1200,
-      height: 630,
-      alt:
+      url: currentUrl,
+
+      siteName: 'CORO',
+
+      locale:
         lang === 'fr'
-          ? 'CORO — Sécurité et protection des données'
-          : 'CORO — Security and data protection',
+          ? 'fr_CA'
+          : 'en_CA',
+
+      alternateLocale: [
+        lang === 'fr'
+          ? 'en_CA'
+          : 'fr_CA',
+      ],
+
+      title: t.metadata.title,
+
+      description: t.metadata.description,
+
+      images: [
+        {
+          url: '/og-coro.jpg',
+          width: 1200,
+          height: 630,
+          alt:
+            lang === 'fr'
+              ? 'CORO — Sécurité et protection des données'
+              : 'CORO — Security and data protection',
+        },
+      ],
     },
-  ],
-},
 
-twitter: {
-  card: 'summary_large_image',
-  title: t.metadata.title,
-  description: t.metadata.description,
-  images: [`${SITE_URL}/og-coro.jpg`],
-},
+    twitter: {
+      card: 'summary_large_image',
+
+      title: t.metadata.title,
+
+      description: t.metadata.description,
+
+      images: [
+        '/og-coro.jpg',
+      ],
+    },
+
     robots: {
-  index: true,
-  follow: true,
+      index: true,
+      follow: true,
 
-  googleBot: {
-    index: true,
-    follow: true,
-    'max-image-preview': 'large',
-    'max-snippet': -1,
-    'max-video-preview': -1,
-  },
-},
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
+      },
+    },
   };
 }
 
@@ -605,6 +635,49 @@ export default async function SecurityPage({ searchParams }: PageProps) {
   const otherLangHref = lang === 'fr' ? '/security?lang=en' : '/security';
   const homeLink = (anchor = '') => `/${langSuffix}${anchor}`;
 
+  const currentUrl =
+    lang === 'en'
+      ? `${SITE_URL}/security?lang=en`
+      : `${SITE_URL}/security`;
+
+  const securityPageJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+
+    name: t.metadata.title,
+
+    description: t.metadata.description,
+
+    url: currentUrl,
+
+    inLanguage:
+      lang === 'fr'
+        ? 'fr-CA'
+        : 'en-CA',
+
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'CORO',
+      url: SITE_URL,
+    },
+
+    about: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+    },
+
+    publisher: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/coro-logo.png`,
+      },
+    },
+  };
+
   return (
     <div
       style={{
@@ -614,6 +687,13 @@ export default async function SecurityPage({ searchParams }: PageProps) {
         backgroundColor: '#FFFFFF',
       }}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(securityPageJsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
+
       {/* NAV */}
       <header
         style={{

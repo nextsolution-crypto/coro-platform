@@ -36,10 +36,6 @@ export const metadata: Metadata = {
     'Canada',
   ],
 
-  alternates: {
-    canonical: '/',
-  },
-
   manifest: '/manifest.webmanifest',
 
   icons: {
@@ -79,8 +75,6 @@ export const metadata: Metadata = {
 
     description:
       'Créez et gérez vos PMU, PSI, PCA et autres documents de conformité avec une plateforme conçue pour les professionnels du terrain.',
-
-    url: '/',
 
     siteName: 'CORO',
 

@@ -1,22 +1,89 @@
 import { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Gestion de Projets & Mandats — CORO',
-  description: 'Pilotez vos mandats du démarrage à la livraison. Centralisez projets, bâtiments, activités, échéances et heures depuis une seule plateforme.',
-  alternates: { canonical: 'https://getcoro.io/gestion-de-projets' },
-  openGraph: {
-    title: 'Gestion de Projets & Mandats — CORO',
-    description: 'Pilotez vos mandats du démarrage à la livraison depuis une seule plateforme.',
-    url: 'https://getcoro.io/gestion-de-projets',
-    siteName: 'CORO',
-    locale: 'fr_CA',
-    type: 'website',
-  },
-  twitter: { card: 'summary_large_image', title: 'Gestion de Projets & Mandats — CORO', description: 'Pilotez vos mandats du démarrage à la livraison depuis une seule plateforme.' },
-};
+const SITE_URL = 'https://getcoro.io';
 
-export default function GestionProjetsPage({ searchParams }: { searchParams: { lang?: string } }) {
-  const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}): Promise<Metadata> {
+  const { lang: langParam } = await searchParams;
+  const isEnglish = langParam === 'en';
+
+  const frUrl = `${SITE_URL}/gestion-de-projets`;
+  const enUrl = `${SITE_URL}/gestion-de-projets?lang=en`;
+  const currentUrl = isEnglish ? enUrl : frUrl;
+
+  const title = isEnglish
+    ? 'Project & Mandate Management — CORO'
+    : 'Gestion de Projets & Mandats — CORO';
+
+  const description = isEnglish
+    ? 'Manage compliance projects from kickoff to delivery. Centralize clients, buildings, tasks, deadlines, responsibilities and hours with CORO.'
+    : 'Pilotez vos mandats de conformité du démarrage à la livraison. Centralisez clients, bâtiments, tâches, échéances, responsabilités et heures avec CORO.';
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+
+    alternates: {
+      canonical: currentUrl,
+      languages: {
+        'fr-CA': frUrl,
+        'en-CA': enUrl,
+        'x-default': frUrl,
+      },
+    },
+
+    openGraph: {
+      type: 'website',
+      url: currentUrl,
+      siteName: 'CORO',
+      locale: isEnglish ? 'en_CA' : 'fr_CA',
+      alternateLocale: [isEnglish ? 'fr_CA' : 'en_CA'],
+      title,
+      description,
+      images: [
+        {
+          url: '/og-coro.jpg',
+          width: 1200,
+          height: 630,
+          alt: isEnglish
+            ? 'CORO — Project and mandate management'
+            : 'CORO — Gestion de projets et mandats',
+        },
+      ],
+    },
+
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/og-coro.jpg'],
+    },
+
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
+      },
+    },
+  };
+}
+
+export default async function GestionProjetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  const params = await searchParams;
+  const lang = params?.lang === 'en' ? 'en' : 'fr';
 
   const content = {
     fr: {
@@ -65,28 +132,93 @@ export default function GestionProjetsPage({ searchParams }: { searchParams: { l
 
   const d = content[lang];
 
+  const currentUrl =
+    lang === 'en'
+      ? `${SITE_URL}/gestion-de-projets?lang=en`
+      : `${SITE_URL}/gestion-de-projets`;
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: d.title,
-    url: `https://getcoro.io/gestion-de-projets${lang === 'en' ? '?lang=en' : ''}`,
-    publisher: { '@type': 'Organization', name: 'CORO', url: 'https://getcoro.io' },
+    description: d.intro,
+    url: currentUrl,
     inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'CORO',
+      url: SITE_URL,
+    },
+    about: {
+      '@type': 'SoftwareApplication',
+      name: 'CORO',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/coro-logo.png`,
+      },
+    },
   };
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: lang === 'fr' ? 'Accueil' : 'Home', item: 'https://getcoro.io' },
-      { '@type': 'ListItem', position: 2, name: d.tag, item: 'https://getcoro.io/gestion-de-projets' },
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: lang === 'fr' ? 'Accueil' : 'Home',
+        item: lang === 'en' ? `${SITE_URL}/?lang=en` : SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: d.tag,
+        item: currentUrl,
+      },
     ],
+  };
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: d.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
   };
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c'),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
 
       {/* Nav */}
       <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>

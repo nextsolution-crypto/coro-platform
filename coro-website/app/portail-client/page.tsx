@@ -1,22 +1,89 @@
 import { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Portail Client — CORO',
-  description: 'Offrez à vos clients un espace sécurisé pour consulter leurs documents, suivre leur statut et visualiser leurs activités. Signature électronique et accès bilingue FR/EN.',
-  alternates: { canonical: 'https://getcoro.io/portail-client' },
-  openGraph: {
-    title: 'Portail Client — CORO',
-    description: 'Offrez à vos clients un espace sécurisé pour consulter leurs documents de conformité.',
-    url: 'https://getcoro.io/portail-client',
-    siteName: 'CORO',
-    locale: 'fr_CA',
-    type: 'website',
-  },
-  twitter: { card: 'summary_large_image', title: 'Portail Client — CORO', description: 'Offrez à vos clients un espace sécurisé pour consulter leurs documents de conformité.' },
-};
+const SITE_URL = 'https://getcoro.io';
 
-export default function PortailClientPage({ searchParams }: { searchParams: { lang?: string } }) {
-  const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}): Promise<Metadata> {
+  const { lang: langParam } = await searchParams;
+  const isEnglish = langParam === 'en';
+
+  const frUrl = `${SITE_URL}/portail-client`;
+  const enUrl = `${SITE_URL}/portail-client?lang=en`;
+  const currentUrl = isEnglish ? enUrl : frUrl;
+
+  const title = isEnglish
+    ? 'Client Portal — CORO'
+    : 'Portail Client — CORO';
+
+  const description = isEnglish
+    ? 'Give your clients secure access to compliance documents, status tracking, upcoming activities and electronic signatures with the CORO client portal.'
+    : 'Offrez à vos clients un espace sécurisé pour consulter leurs documents de conformité, suivre leur statut, visualiser leurs activités et signer électroniquement avec CORO.';
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+
+    alternates: {
+      canonical: currentUrl,
+      languages: {
+        'fr-CA': frUrl,
+        'en-CA': enUrl,
+        'x-default': frUrl,
+      },
+    },
+
+    openGraph: {
+      type: 'website',
+      url: currentUrl,
+      siteName: 'CORO',
+      locale: isEnglish ? 'en_CA' : 'fr_CA',
+      alternateLocale: [isEnglish ? 'fr_CA' : 'en_CA'],
+      title,
+      description,
+      images: [
+        {
+          url: '/og-coro.jpg',
+          width: 1200,
+          height: 630,
+          alt: isEnglish
+            ? 'CORO — Secure client portal'
+            : 'CORO — Portail client sécurisé',
+        },
+      ],
+    },
+
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/og-coro.jpg'],
+    },
+
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
+      },
+    },
+  };
+}
+
+export default async function PortailClientPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  const params = await searchParams;
+  const lang = params?.lang === 'en' ? 'en' : 'fr';
 
   const content = {
     fr: {
@@ -65,28 +132,93 @@ export default function PortailClientPage({ searchParams }: { searchParams: { la
 
   const d = content[lang];
 
+  const currentUrl =
+    lang === 'en'
+      ? `${SITE_URL}/portail-client?lang=en`
+      : `${SITE_URL}/portail-client`;
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: d.title,
-    url: `https://getcoro.io/portail-client${lang === 'en' ? '?lang=en' : ''}`,
-    publisher: { '@type': 'Organization', name: 'CORO', url: 'https://getcoro.io' },
+    description: d.intro,
+    url: currentUrl,
     inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'CORO',
+      url: SITE_URL,
+    },
+    about: {
+      '@type': 'SoftwareApplication',
+      name: 'CORO',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/coro-logo.png`,
+      },
+    },
   };
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: lang === 'fr' ? 'Accueil' : 'Home', item: 'https://getcoro.io' },
-      { '@type': 'ListItem', position: 2, name: d.tag, item: 'https://getcoro.io/portail-client' },
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: lang === 'fr' ? 'Accueil' : 'Home',
+        item: lang === 'en' ? `${SITE_URL}/?lang=en` : SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: d.tag,
+        item: currentUrl,
+      },
     ],
+  };
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: d.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
   };
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c'),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
 
       {/* Nav */}
       <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>

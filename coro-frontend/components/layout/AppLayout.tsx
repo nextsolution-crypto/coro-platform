@@ -41,6 +41,7 @@ const NAV_GROUPS = [
 const ADMIN_GROUP = {
   label: 'Administration',
   items: [
+    { label: 'Réservations',         path: '/bookings',                     icon: '📅' },
     { label: 'Équipe',               path: '/settings/users',               icon: '👤' },
     { label: 'Portefeuille mandats', path: '/admin/mandates',               icon: '📁' },
     { label: 'Capacity Planning',    path: '/admin/capacity',               icon: '⚡' },
