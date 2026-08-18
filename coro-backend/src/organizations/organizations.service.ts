@@ -179,4 +179,70 @@ export class OrganizationsService {
       },
     });
   }
+
+    async getHealthScores() {
+    const organizations = await this.prisma.organization.findMany({
+      where: { isActive: true, isInternal: false },
+      include: {
+        users: { select: { id: true, firstName: true, lastName: true, email: true, role: true, createdAt: true } },
+        projects: {
+          where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+          select: { id: true, status: true, updatedAt: true },
+        },
+        _count: { select: { users: true, projects: true, clients: true, buildings: true } },
+      },
+    });
+
+    const allProjects = await this.prisma.project.findMany({
+      where: { organization: { isInternal: false } },
+      select: { organizationId: true, status: true, updatedAt: true, officialPdfFr: true },
+    });
+
+    return organizations.map(org => {
+      const orgProjects = allProjects.filter(p => p.organizationId === org.id);
+      const recentProjects = org.projects;
+      const signedProjects = orgProjects.filter(p => p.officialPdfFr !== null);
+      const totalProjects = orgProjects.length;
+
+      // Calcul du score sur 100
+      let score = 0;
+
+      // Critère 1 — Projets créés dans les 30 derniers jours (max 30 pts)
+      const recentCount = recentProjects.length;
+      score += Math.min(recentCount * 10, 30);
+
+      // Critère 2 — Documents signés (max 30 pts)
+      const signedRatio = totalProjects > 0 ? signedProjects.length / totalProjects : 0;
+      score += Math.round(signedRatio * 30);
+
+      // Critère 3 — Membres actifs (max 20 pts)
+      const memberCount = org._count.users;
+      score += Math.min(memberCount * 5, 20);
+
+      // Critère 4 — Clients et bâtiments configurés (max 20 pts)
+      score += Math.min(org._count.clients * 5, 10);
+      score += Math.min(org._count.buildings * 5, 10);
+
+      score = Math.min(score, 100);
+
+      const level = score >= 80 ? 'ACTIF' : score >= 50 ? 'MODERE' : 'A_RISQUE';
+
+      return {
+        id: org.id,
+        name: org.name,
+        licenseType: org.licenseType,
+        score,
+        level,
+        metrics: {
+          recentProjects: recentCount,
+          totalProjects,
+          signedProjects: signedProjects.length,
+          members: memberCount,
+          clients: org._count.clients,
+          buildings: org._count.buildings,
+        },
+        users: org.users,
+      };
+    }).sort((a, b) => a.score - b.score); // Les plus à risque en premier
+  }
 }

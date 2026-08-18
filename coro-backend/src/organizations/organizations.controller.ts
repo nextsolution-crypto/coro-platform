@@ -54,4 +54,10 @@ export class OrganizationsController {
     this.assertSuperAdmin(req);
     return this.organizationsService.findAllProjectsGlobal();
   }
+
+  @Get('admin/health-scores')
+  getHealthScores(@Request() req: any) {
+    this.assertSuperAdmin(req);
+    return this.organizationsService.getHealthScores();
+  }
 }
