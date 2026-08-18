@@ -282,4 +282,65 @@ export class ClientPortalService {
 
     return { stats, projects: projects.slice(0, 5), upcomingActivities: upcoming };
   }
+
+    async trackEngagement(data: {
+    projectId: string;
+    clientUserId: string;
+    event: string;
+    device?: string;
+    duration?: number;
+  }) {
+    return this.prisma.documentEngagement.create({
+      data: {
+        projectId: data.projectId,
+        clientUserId: data.clientUserId,
+        event: data.event,
+        device: data.device,
+        duration: data.duration,
+      },
+    });
+  }
+
+  async getEngagement(projectId: string) {
+    const engagements = await this.prisma.documentEngagement.findMany({
+      where: { projectId },
+      include: {
+        clientUser: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const opened = engagements.filter(e => e.event === 'opened');
+    const viewed = engagements.filter(e => e.event === 'viewed');
+    const downloaded = engagements.filter(e => e.event === 'downloaded');
+
+    const firstOpen = opened.length > 0 ? opened[opened.length - 1].createdAt : null;
+    const lastOpen = opened.length > 0 ? opened[0].createdAt : null;
+    const totalDuration = viewed.reduce((acc, e) => acc + (e.duration || 0), 0);
+    const devices = engagements.map(e => e.device).filter(Boolean);
+    const dominantDevice = devices.length > 0
+      ? Object.entries(devices.reduce((acc: any, d) => { acc[d!] = (acc[d!] || 0) + 1; return acc; }, {}))
+          .sort((a: any, b: any) => b[1] - a[1])[0][0]
+      : null;
+
+    const daysSinceExport = firstOpen
+      ? Math.floor((new Date().getTime() - new Date(firstOpen).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    return {
+      totalOpens: opened.length,
+      totalViews: viewed.length,
+      totalDownloads: downloaded.length,
+      firstOpenedAt: firstOpen,
+      lastOpenedAt: lastOpen,
+      totalDurationSeconds: totalDuration,
+      dominantDevice,
+      daysSinceFirstOpen: daysSinceExport,
+      engagements: engagements.slice(0, 10),
+      status: opened.length === 0 ? 'not_opened'
+        : downloaded.length > 0 ? 'downloaded'
+        : viewed.length > 0 ? 'viewed'
+        : 'opened',
+    };
+  }
 }

@@ -87,4 +87,24 @@ export class ClientPortalController {
   async getComments(@Param('id') id: string) {
     return this.clientPortalService.getComments(id);
   }
+
+  @Post('projects/:id/engagement')
+  async trackEngagement(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { event: string; device?: string; duration?: number },
+  ) {
+    return this.clientPortalService.trackEngagement({
+      projectId: id,
+      clientUserId: req.clientUser.sub,
+      event: body.event,
+      device: body.device,
+      duration: body.duration,
+    });
+  }
+
+  @Get('projects/:id/engagement')
+  async getEngagement(@Param('id') id: string) {
+    return this.clientPortalService.getEngagement(id);
+  }
 }

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import ExportModal from '@/components/ExportModal';
+import EngagementPanel from '@/components/EngagementPanel';
 
 interface Project {
   id: string;
@@ -1128,6 +1129,11 @@ const handleChangeStatus = async (newStatus: string) => {
           hasPlans={hasPlans}
           onClose={() => setShowExportModal(false)}
         />
+      )}
+
+      {/* ── Engagement client ── */}
+      {(project.status === 'VALIDATED' || project.status === 'EXPORTED') && (
+        <EngagementPanel projectId={project.id} />
       )}
 
       {/* Infos projet */}

@@ -98,7 +98,17 @@ export default function DocumentDetailPage() {
     );
 
     fetchData();
+    trackOpen();
   }, [router, projectId]);
+
+  const trackOpen = async () => {
+    try {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isTablet = /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent);
+      const device = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
+      await apiPost(`/client-portal/projects/${projectId}/engagement`, { event: 'opened', device });
+    } catch (err) { /* silencieux */ }
+  };
 
   const fetchData = async () => {
     try {

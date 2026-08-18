@@ -193,6 +193,7 @@ model Project {
   projectTaskLists ProjectTaskList[]
   customProcedures CustomProcedure[]
   signatures     DocumentSignature[]
+  engagements DocumentEngagement[]
 }
 
 model RevisionHistory {
@@ -707,6 +708,7 @@ model ClientUser {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   magicLinks MagicLink[]
+  engagements DocumentEngagement[]
 }
 
 model DocumentSignature {
@@ -768,4 +770,16 @@ model MagicLink {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
+}
+
+model DocumentEngagement {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  clientUserId String
+  clientUser  ClientUser @relation(fields: [clientUserId], references: [id])
+  event       String   // 'opened', 'viewed', 'downloaded'
+  device      String?  // 'mobile', 'desktop', 'tablet'
+  duration    Int?     // secondes passées sur le document
+  createdAt   DateTime @default(now())
 }
