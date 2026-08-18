@@ -107,4 +107,26 @@ export class ClientPortalController {
   async getEngagement(@Param('id') id: string) {
     return this.clientPortalService.getEngagement(id);
   }
+
+  @Post('projects/:id/bookings')
+  async createBooking(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { activityType: string; requestedDate: string; duration: number; participants?: number; comment?: string },
+  ) {
+    return this.clientPortalService.createBookingFromClient({
+      projectId: id,
+      clientUserId: req.clientUser.sub,
+      activityType: body.activityType,
+      requestedDate: new Date(body.requestedDate),
+      duration: body.duration,
+      participants: body.participants,
+      comment: body.comment,
+    });
+  }
+
+  @Get('bookings')
+  async getMyBookings(@Request() req: any) {
+    return this.clientPortalService.getBookingsForClient(req.clientUser.sub);
+  }
 }

@@ -41,6 +41,7 @@ import { ClientPortalModule } from './client-portal/client-portal.module';
 import { ChatModule } from './chat/chat.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RemindersModule } from './reminders/reminders.module';
+import { BookingsModule } from './bookings/bookings.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -95,6 +96,7 @@ import { APP_GUARD } from '@nestjs/core';
     ChatModule,
     ScheduleModule.forRoot(),
     RemindersModule,
+    BookingsModule,
 ],
   controllers: [AppController],
   providers: [

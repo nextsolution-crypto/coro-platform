@@ -30,6 +30,7 @@ model Organization {
   customProcedures CustomProcedure[]
   clientUsers    ClientUser[]
   module1Template OrganizationModule1Template?
+  bookings Booking[]
 }
 
 model User {
@@ -80,6 +81,8 @@ model User {
 
   resetToken        String?
   resetTokenExpiry  DateTime?
+
+  bookings Booking[]
 }
 
 enum UserRole {
@@ -194,6 +197,7 @@ model Project {
   customProcedures CustomProcedure[]
   signatures     DocumentSignature[]
   engagements DocumentEngagement[]
+  bookings Booking[]
 }
 
 model RevisionHistory {
@@ -709,6 +713,7 @@ model ClientUser {
   updatedAt      DateTime @updatedAt
   magicLinks MagicLink[]
   engagements DocumentEngagement[]
+  bookings Booking[]
 }
 
 model DocumentSignature {
@@ -782,4 +787,36 @@ model DocumentEngagement {
   device      String?  // 'mobile', 'desktop', 'tablet'
   duration    Int?     // secondes passées sur le document
   createdAt   DateTime @default(now())
+}
+
+model Booking {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id])
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  clientUserId    String
+  clientUser      ClientUser @relation(fields: [clientUserId], references: [id])
+  assignedUserId  String
+  assignedUser    User     @relation(fields: [assignedUserId], references: [id])
+  activityType    String   // 'exercice', 'formation', 'visite', 'revision', 'autre'
+  requestedDate   DateTime
+  duration        Int      // en minutes
+  participants    Int?
+  comment         String?
+  status          String   @default("DEMANDEE") // DEMANDEE, CONFIRMEE, REPORTEE, REASSIGNEE, REFUSEE, COMPLETEE, ANNULEE
+  refuseReason    String?
+  reportedDate    DateTime?
+  outlookEventId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  notifications   BookingNotification[]
+}
+
+model BookingNotification {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  type      String   // 'confirmation', 'rappel', 'annulation', 'reassignation'
+  sentAt    DateTime @default(now())
 }

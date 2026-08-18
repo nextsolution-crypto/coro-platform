@@ -61,6 +61,11 @@ export default function PortalLayout({
       icon: Calendar,
     },
     {
+      label: 'Réservations',
+      path: '/bookings',
+      icon: Calendar,
+    },
+    {
       label: 'Mon profil',
       path: '/profile',
       icon: User,

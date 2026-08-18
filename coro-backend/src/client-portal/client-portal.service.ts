@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
 import { EmailService } from './email.service';
+import { BookingsService } from '../bookings/bookings.service';
 
 @Injectable()
 export class ClientPortalService {
@@ -11,6 +12,7 @@ export class ClientPortalService {
     private exportService: ExportService,
     private storageService: StorageService,
     private emailService: EmailService,
+    private bookingsService: BookingsService,
   ) {}
 
   async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
@@ -342,5 +344,21 @@ export class ClientPortalService {
         : viewed.length > 0 ? 'viewed'
         : 'opened',
     };
+  }
+
+    async createBookingFromClient(data: {
+    projectId: string;
+    clientUserId: string;
+    activityType: string;
+    requestedDate: Date;
+    duration: number;
+    participants?: number;
+    comment?: string;
+  }) {
+    return this.bookingsService.createBooking(data);
+  }
+
+  async getBookingsForClient(clientUserId: string) {
+    return this.bookingsService.getBookingsForClient(clientUserId);
   }
 }
