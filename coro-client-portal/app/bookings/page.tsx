@@ -317,12 +317,13 @@ export default function BookingsPage() {
 
   return (
     <PortalLayout>
+      <div className="w-full max-w-5xl mx-auto">
 
       {/* ═══════════════════════════════════
           EN-TÊTE
       ═══════════════════════════════════ */}
 
-      <header className="mb-6 sm:mb-7">
+      <header className="mb-8 sm:mb-10">
         <p
           className="
             mb-1
@@ -343,15 +344,15 @@ export default function BookingsPage() {
             sm:flex-row
             sm:items-center
             sm:justify-between
-            gap-3
+            gap-4
           "
         >
           <h1
             className="
               m-0
-              text-[22px]
-              sm:text-[26px]
-              lg:text-[28px]
+              text-[24px]
+              sm:text-[30px]
+              lg:text-[32px]
               font-extrabold
               leading-tight
               break-words
@@ -409,7 +410,7 @@ export default function BookingsPage() {
             rounded-lg
             p-4
             sm:px-5
-            mb-5
+            mb-7
           "
           style={{
             backgroundColor: '#EAFAF1',
@@ -441,25 +442,27 @@ export default function BookingsPage() {
       {showForm && (
         <section
           className="
-            rounded-xl
-            p-4
-            sm:p-6
+            rounded-2xl
+            p-5
+            sm:p-7
             lg:p-8
-            mb-6
+            mb-8
             min-w-0
+            max-w-4xl
+            mx-auto
           "
           style={{
             backgroundColor: '#FFFFFF',
             border: '1px solid #E9ECEF',
             boxShadow:
-              '0 4px 16px rgba(0,0,0,0.08)',
+              '0 10px 30px rgba(0,0,0,0.08)',
           }}
         >
           <h2
             className="
               m-0
-              mb-5
-              sm:mb-6
+              mb-6
+              sm:mb-7
               text-lg
               font-bold
             "
@@ -468,7 +471,7 @@ export default function BookingsPage() {
             Nouvelle demande de réservation
           </h2>
 
-          <div className="grid gap-4">
+          <div className="grid gap-6 sm:gap-7">
 
             {/* PROJET */}
 
@@ -479,7 +482,7 @@ export default function BookingsPage() {
                   block
                   text-[13px]
                   font-semibold
-                  mb-1.5
+                  mb-2.5
                 "
                 style={{ color: '#495057' }}
               >
@@ -551,7 +554,7 @@ export default function BookingsPage() {
                   grid-cols-1
                   min-[420px]:grid-cols-2
                   lg:grid-cols-3
-                  gap-2
+                  gap-3
                 "
               >
                 {ACTIVITY_TYPES.map(a => {
@@ -569,9 +572,9 @@ export default function BookingsPage() {
                       }
                       aria-pressed={selected}
                       className="
-                        min-h-[52px]
-                        px-3
-                        py-2.5
+                        min-h-[60px]
+                        px-4
+                        py-3
                         rounded-lg
                         text-left
                         transition-colors
@@ -629,7 +632,7 @@ export default function BookingsPage() {
                 grid
                 grid-cols-1
                 sm:grid-cols-2
-                gap-3
+                gap-4
               "
             >
               <div className="min-w-0">
@@ -734,7 +737,7 @@ export default function BookingsPage() {
                 grid
                 grid-cols-1
                 sm:grid-cols-2
-                gap-3
+                gap-4
               "
             >
               <div className="min-w-0">
@@ -902,8 +905,8 @@ export default function BookingsPage() {
                 grid
                 grid-cols-1
                 sm:grid-cols-2
-                gap-2.5
-                pt-1
+                gap-3
+                pt-2
               "
             >
               <button
@@ -977,10 +980,10 @@ export default function BookingsPage() {
       {bookings.length === 0 && !showForm ? (
         <section
           className="
-            rounded-xl
+            rounded-2xl
             px-4
-            py-10
-            sm:py-14
+            py-12
+            sm:py-16
             lg:py-16
             text-center
           "
@@ -1062,7 +1065,7 @@ export default function BookingsPage() {
            LISTE DES RÉSERVATIONS
         ═══════════════════════════════════ */
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-5 sm:gap-6">
 
           {bookings.map((booking: any) => {
             const sc =
@@ -1085,15 +1088,16 @@ export default function BookingsPage() {
               <article
                 key={booking.id}
                 className="
-                  rounded-xl
-                  p-4
-                  sm:p-5
-                  lg:p-6
+                  rounded-2xl
+                  p-5
+                  sm:p-6
+                  lg:p-7
                   min-w-0
                 "
                 style={{
                   backgroundColor: '#FFFFFF',
                   border: `1px solid ${sc.border}`,
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.05)',
                 }}
               >
 
@@ -1106,8 +1110,8 @@ export default function BookingsPage() {
                     sm:flex-row
                     sm:items-start
                     sm:justify-between
-                    gap-3
-                    mb-3
+                    gap-4
+                    mb-5
                   "
                 >
                   <div className="min-w-0 flex-1">
@@ -1226,7 +1230,7 @@ export default function BookingsPage() {
                     grid-cols-1
                     min-[420px]:grid-cols-2
                     lg:grid-cols-4
-                    gap-2
+                    gap-3
                   "
                 >
 
@@ -1235,13 +1239,14 @@ export default function BookingsPage() {
                   <div
                     className="
                       rounded-md
-                      px-3
-                      py-2.5
+                      px-4
+                      py-3.5
                       min-w-0
                     "
                     style={{
                       backgroundColor:
                         '#F8F9FA',
+                      border: '1px solid #E9ECEF',
                     }}
                   >
                     <p
@@ -1297,6 +1302,7 @@ export default function BookingsPage() {
                       style={{
                         backgroundColor:
                           '#FEF9E7',
+                        border: '1px solid #FAD7A0',
                       }}
                     >
                       <p
@@ -1346,13 +1352,14 @@ export default function BookingsPage() {
                   <div
                     className="
                       rounded-md
-                      px-3
-                      py-2.5
+                      px-4
+                      py-3.5
                       min-w-0
                     "
                     style={{
                       backgroundColor:
                         '#F8F9FA',
+                      border: '1px solid #E9ECEF',
                     }}
                   >
                     <p
@@ -1387,13 +1394,14 @@ export default function BookingsPage() {
                   <div
                     className="
                       rounded-md
-                      px-3
-                      py-2.5
+                      px-4
+                      py-3.5
                       min-w-0
                     "
                     style={{
                       backgroundColor:
                         '#F8F9FA',
+                      border: '1px solid #E9ECEF',
                     }}
                   >
                     <p
@@ -1435,9 +1443,9 @@ export default function BookingsPage() {
                 {booking.refuseReason && (
                   <div
                     className="
-                      mt-3
-                      px-3.5
-                      py-2.5
+                      mt-5
+                      px-4
+                      py-3.5
                       rounded-md
                     "
                     style={{
@@ -1471,6 +1479,7 @@ export default function BookingsPage() {
         </div>
       )}
 
+      </div>
     </PortalLayout>
   );
 }

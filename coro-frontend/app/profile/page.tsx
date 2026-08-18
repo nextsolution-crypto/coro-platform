@@ -306,7 +306,7 @@ export default function ProfilePage() {
               <input
                 value={companyForm.companyEmail}
                 onChange={e => setCompanyForm({ ...companyForm, companyEmail: e.target.value })}
-                placeholder="Ex: info@coroinc.com"
+                placeholder="Ex: info@votreentreprise.com"
                 style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
               />
             </div>
@@ -315,7 +315,7 @@ export default function ProfilePage() {
               <input
                 value={companyForm.companyWebsite}
                 onChange={e => setCompanyForm({ ...companyForm, companyWebsite: e.target.value })}
-                placeholder="Ex: www.coroinc.com"
+                placeholder="Ex: www.votreentreprise.com"
                 style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
               />
             </div>

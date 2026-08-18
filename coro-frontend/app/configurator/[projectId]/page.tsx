@@ -464,6 +464,11 @@ export default function ConfiguratorPage() {
         }
       }
 
+      // Pré-remplir le type de document depuis le projet
+      if (!savedConfig.typeDocument && projectRes.data.documentType) {
+        savedConfig.typeDocument = projectRes.data.documentType;
+      }
+
       const defaults: Record<string, any> = {};
       const defaultLists: Record<string, any[]> = {};
       questionsRes.data.sections.forEach((s: Section) => {

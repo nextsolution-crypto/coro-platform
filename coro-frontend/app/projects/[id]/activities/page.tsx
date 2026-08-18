@@ -360,7 +360,7 @@ export default function ActivitiesPage() {
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Courriel conseiller</label>
                 <input type="email" value={form.assigneeEmail}
                   onChange={e => setForm({ ...form, assigneeEmail: e.target.value })}
-                  placeholder="conseiller@coro.app"
+                  placeholder="conseiller@votreorganisation.com"
                   className="w-full px-3 py-2.5 text-sm rounded"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50' }} />
               </div>
