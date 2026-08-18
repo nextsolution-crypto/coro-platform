@@ -1,5 +1,8 @@
 import { Metadata } from 'next';
 
+const SITE_URL = 'https://getcoro.io';
+const PAGE_URL = `${SITE_URL}/documents/plan-mesures-urgence-pmu`;
+
 const DOC = {
   code: 'PMU',
   color: '#2980B9',
@@ -35,48 +38,89 @@ const DOC = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: DOC.fr.seoTitle,
   description: DOC.fr.seoDesc,
-  alternates: { canonical: 'https://getcoro.io/documents/plan-mesures-urgence-pmu' },
+  alternates: {
+    canonical: PAGE_URL,
+    languages: {
+      'fr-CA': PAGE_URL,
+      'x-default': PAGE_URL,
+    },
+  },
   openGraph: {
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    url: 'https://getcoro.io/documents/plan-mesures-urgence-pmu',
+    type: 'article',
+    url: PAGE_URL,
     siteName: 'CORO',
     locale: 'fr_CA',
-    type: 'website',
+    title: DOC.fr.seoTitle,
+    description: DOC.fr.seoDesc,
+    images: [{
+      url: '/og-coro.jpg',
+      width: 1200,
+      height: 630,
+      alt: "CORO — Plan de Mesures d'Urgence (PMU)",
+    }],
   },
-  twitter: { card: 'summary_large_image', title: DOC.fr.seoTitle, description: DOC.fr.seoDesc },
+  twitter: {
+    card: 'summary_large_image',
+    title: DOC.fr.seoTitle,
+    description: DOC.fr.seoDesc,
+    images: ['/og-coro.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
 };
 
-export default function PMUPage({ searchParams }: { searchParams: { lang?: string } }) {
-  const lang = searchParams?.lang === 'en' ? 'en' : 'fr';
+export default function PMUPage() {
   const data = DOC.fr;
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: data.title,
+    headline: data.seoTitle,
     description: data.seoDesc,
-    url: 'https://getcoro.io/documents/plan-mesures-urgence-pmu',
-    publisher: { '@type': 'Organization', name: 'CORO', url: 'https://getcoro.io' },
+    url: PAGE_URL,
     inLanguage: 'fr-CA',
+    isPartOf: { '@type': 'WebSite', name: 'CORO', url: SITE_URL },
+    about: [
+      { '@type': 'Thing', name: "Plan de Mesures d'Urgence", alternateName: 'PMU' },
+      { '@type': 'Thing', name: "Mesures d'urgence" },
+      { '@type': 'Thing', name: "Planification d'urgence" },
+      { '@type': 'Thing', name: 'Résilience organisationnelle' },
+    ],
+    publisher: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/coro-logo.png` },
+    },
   };
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' },
-      { '@type': 'ListItem', position: 2, name: 'Documents', item: 'https://getcoro.io/documents' },
-      { '@type': 'ListItem', position: 3, name: data.title, item: 'https://getcoro.io/documents/plan-mesures-urgence-pmu' },
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Documents', item: `${SITE_URL}/gestion-documentaire` },
+      { '@type': 'ListItem', position: 3, name: data.title, item: PAGE_URL },
     ],
   };
 
   const faqLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: data.faq.map(f => ({
+    mainEntity: data.faq.map((f) => ({
       '@type': 'Question',
       name: f.q,
       acceptedAnswer: { '@type': 'Answer', text: f.a },
@@ -85,9 +129,9 @@ export default function PMUPage({ searchParams }: { searchParams: { lang?: strin
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, '\\u003c') }} />
 
       {/* Nav */}
       <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>

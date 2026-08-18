@@ -136,6 +136,19 @@ export class BookingsService {
     });
 
     if (data.status === 'CONFIRMEE') {
+      const icsContent = this.generateIcs({
+        title: `${actLabel} — ${booking.project.name}`,
+        description: `Réservation CORO\nActivité : ${actLabel}\nProjet : ${booking.project.name}\nBâtiment : ${booking.project.building?.name || ''}\nConseiller : ${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
+        startDate: new Date(booking.requestedDate),
+        durationMinutes: booking.duration,
+        location: booking.project.building?.address || '',
+        organizerEmail: updated.assignedUser.email,
+        organizerName: `${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
+        attendeeEmail: booking.clientUser.email,
+        attendeeName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
+      });
+
+      // Envoyer au client
       await this.sendBookingEmail({
         to: booking.clientUser.email,
         toName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
@@ -150,6 +163,25 @@ export class BookingsService {
           </div>
           <p style="color:#6C757D;font-size:13px;">Vous recevrez un rappel 7 jours et 24 heures avant la date.</p>
         `,
+        ics: { content: icsContent, filename: `reservation-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
+      });
+
+      // Envoyer au conseiller aussi
+      await this.sendBookingEmail({
+        to: updated.assignedUser.email,
+        toName: `${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
+        subject: `📅 Réservation confirmée — ${actLabel} — ${booking.project.name}`,
+        content: `
+          <p>Vous avez confirmé une réservation. L'événement est joint à ce courriel.</p>
+          <div style="background:#EAFAF1;border:1px solid #A9DFBF;padding:16px;border-radius:8px;margin:16px 0;">
+            <p style="margin:0 0 8px;color:#27AE60;font-weight:700;">✓ Réservation confirmée</p>
+            <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
+            <p style="margin:0 0 8px;"><strong>Date :</strong> ${dateLabel}</p>
+            <p style="margin:0 0 8px;"><strong>Client :</strong> ${booking.clientUser.firstName} ${booking.clientUser.lastName}</p>
+            <p style="margin:0;"><strong>Projet :</strong> ${booking.project.name}</p>
+          </div>
+        `,
+        ics: { content: icsContent, filename: `reservation-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
       });
     } else if (data.status === 'REFUSEE') {
       await this.sendBookingEmail({
@@ -170,6 +202,19 @@ export class BookingsService {
       const newDateLabel = new Date(data.reportedDate).toLocaleDateString('fr-CA', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
       });
+
+      const icsReport = this.generateIcs({
+        title: `${actLabel} — ${booking.project.name}`,
+        description: `Réservation CORO (reportée)\nActivité : ${actLabel}\nProjet : ${booking.project.name}\nBâtiment : ${booking.project.building?.name || ''}\nConseiller : ${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
+        startDate: new Date(data.reportedDate),
+        durationMinutes: booking.duration,
+        location: booking.project.building?.address || '',
+        organizerEmail: updated.assignedUser.email,
+        organizerName: `${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
+        attendeeEmail: booking.clientUser.email,
+        attendeeName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
+      });
+
       await this.sendBookingEmail({
         to: booking.clientUser.email,
         toName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
@@ -182,6 +227,23 @@ export class BookingsService {
             <p style="margin:0;color:#F39C12;font-weight:700;"><strong>Nouvelle date :</strong> ${newDateLabel}</p>
           </div>
         `,
+        ics: { content: icsReport, filename: `reservation-reportee-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
+      });
+
+      await this.sendBookingEmail({
+        to: updated.assignedUser.email,
+        toName: `${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
+        subject: `📅 Réservation reportée — ${actLabel} — ${booking.project.name}`,
+        content: `
+          <p>Vous avez reporté une réservation. L'événement mis à jour est joint à ce courriel.</p>
+          <div style="background:#FEF9E7;border:1px solid #FAD7A0;padding:16px;border-radius:8px;margin:16px 0;">
+            <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
+            <p style="margin:0 0 8px;text-decoration:line-through;color:#ADB5BD;"><strong>Date initiale :</strong> ${dateLabel}</p>
+            <p style="margin:0;color:#F39C12;font-weight:700;"><strong>Nouvelle date :</strong> ${newDateLabel}</p>
+            <p style="margin:8px 0 0;"><strong>Client :</strong> ${booking.clientUser.firstName} ${booking.clientUser.lastName}</p>
+          </div>
+        `,
+        ics: { content: icsReport, filename: `reservation-reportee-${actLabel.replace(/[^a-z0-9]/gi, '-')}.ics` },
       });
     } else if (data.status === 'REASSIGNEE' && data.newUserId) {
       const newUser = await this.prisma.user.findUnique({ where: { id: data.newUserId } });
@@ -255,29 +317,93 @@ export class BookingsService {
     return labels[type] || type;
   }
 
-  private async sendBookingEmail(data: { to: string; toName: string; subject: string; content: string }) {
+  private generateIcs(data: {
+    title: string;
+    description: string;
+    startDate: Date;
+    durationMinutes: number;
+    location?: string;
+    organizerEmail: string;
+    organizerName: string;
+    attendeeEmail: string;
+    attendeeName: string;
+  }): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const formatDate = (d: Date) => {
+      return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+    };
+    const endDate = new Date(data.startDate.getTime() + data.durationMinutes * 60000);
+    const uid = `${Date.now()}-${Math.random().toString(36).substr(2,9)}@getcoro.io`;
+    const now = formatDate(new Date());
+
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//CORO//Réservation//FR',
+      'CALSCALE:GREGORIAN',
+      'METHOD:REQUEST',
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${now}`,
+      `DTSTART:${formatDate(data.startDate)}`,
+      `DTEND:${formatDate(endDate)}`,
+      `SUMMARY:${data.title}`,
+      `DESCRIPTION:${data.description.replace(/\n/g, '\\n')}`,
+      data.location ? `LOCATION:${data.location}` : '',
+      `ORGANIZER;CN=${data.organizerName}:mailto:${data.organizerEmail}`,
+      `ATTENDEE;CN=${data.attendeeName};RSVP=TRUE:mailto:${data.attendeeEmail}`,
+      'STATUS:CONFIRMED',
+      'SEQUENCE:0',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+  }
+
+  private async sendBookingEmail(data: {
+    to: string;
+    toName: string;
+    subject: string;
+    content: string;
+    ics?: { content: string; filename: string };
+  }) {
     try {
+      const body: any = {
+        sender: { name: 'CORO', email: 'info@getcoro.io' },
+        to: [{ email: data.to, name: data.toName }],
+        subject: data.subject,
+        htmlContent: `
+          <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;">
+              <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
+            </div>
+            <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
+              ${data.content}
+              ${data.ics ? `
+              <div style="margin-top:24px;padding:16px;background:#F8F9FA;border-radius:8px;border:1px solid #E9ECEF;">
+                <p style="margin:0;font-size:13px;color:#6C757D;">
+                  📅 <strong>Ajouter à votre calendrier</strong> — Un fichier calendrier (.ics) est joint à ce courriel. 
+                  Ouvrez-le pour ajouter automatiquement cet événement à Outlook, Google Calendar ou Apple Calendar.
+                </p>
+              </div>` : ''}
+            </div>
+            <div style="text-align:center;padding:16px;font-size:12px;color:#ADB5BD;">
+              © 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a>
+            </div>
+          </div>
+        `,
+      };
+
+      if (data.ics) {
+        body.attachment = [{
+          name: data.ics.filename,
+          content: Buffer.from(data.ics.content).toString('base64'),
+        }];
+      }
+
       await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
-        body: JSON.stringify({
-          sender: { name: 'CORO', email: 'info@getcoro.io' },
-          to: [{ email: data.to, name: data.toName }],
-          subject: data.subject,
-          htmlContent: `
-            <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
-              <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;">
-                <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
-              </div>
-              <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
-                ${data.content}
-              </div>
-              <div style="text-align:center;padding:16px;font-size:12px;color:#ADB5BD;">
-                © 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a>
-              </div>
-            </div>
-          `,
-        }),
+        body: JSON.stringify(body),
       });
     } catch (e) { console.error('Erreur email réservation:', e); }
   }

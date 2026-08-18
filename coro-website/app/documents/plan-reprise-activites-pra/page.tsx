@@ -1,5 +1,8 @@
 import { Metadata } from 'next';
 
+const SITE_URL = 'https://getcoro.io';
+const PAGE_URL = `${SITE_URL}/documents/plan-reprise-activites-pra`;
+
 const DOC = {
   code: 'PRA',
   color: '#E67E22',
@@ -33,24 +36,100 @@ const DOC = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: DOC.fr.seoTitle,
   description: DOC.fr.seoDesc,
-  alternates: { canonical: 'https://getcoro.io/documents/plan-reprise-activites-pra' },
-  openGraph: { title: DOC.fr.seoTitle, description: DOC.fr.seoDesc, url: 'https://getcoro.io/documents/plan-reprise-activites-pra', siteName: 'CORO', locale: 'fr_CA', type: 'website' },
-  twitter: { card: 'summary_large_image', title: DOC.fr.seoTitle, description: DOC.fr.seoDesc },
+  alternates: {
+    canonical: PAGE_URL,
+    languages: {
+      'fr-CA': PAGE_URL,
+      'x-default': PAGE_URL,
+    },
+  },
+  openGraph: {
+    type: 'article',
+    url: PAGE_URL,
+    siteName: 'CORO',
+    locale: 'fr_CA',
+    title: DOC.fr.seoTitle,
+    description: DOC.fr.seoDesc,
+    images: [{
+      url: '/og-coro.jpg',
+      width: 1200,
+      height: 630,
+      alt: 'CORO — Plan de Reprise des Activités (PRA)',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: DOC.fr.seoTitle,
+    description: DOC.fr.seoDesc,
+    images: ['/og-coro.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
 };
 
 export default function PRAPage() {
   const data = DOC.fr;
-  const jsonLd = { '@context': 'https://schema.org', '@type': 'WebPage', name: data.title, description: data.seoDesc, url: 'https://getcoro.io/documents/plan-reprise-activites-pra', publisher: { '@type': 'Organization', name: 'CORO', url: 'https://getcoro.io' }, inLanguage: 'fr-CA' };
-  const breadcrumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' }, { '@type': 'ListItem', position: 2, name: 'Documents', item: 'https://getcoro.io/documents' }, { '@type': 'ListItem', position: 3, name: data.title, item: 'https://getcoro.io/documents/plan-reprise-activites-pra' }] };
-  const faqLd = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: data.faq.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: data.title,
+    headline: data.seoTitle,
+    description: data.seoDesc,
+    url: PAGE_URL,
+    inLanguage: 'fr-CA',
+    isPartOf: { '@type': 'WebSite', name: 'CORO', url: SITE_URL },
+    about: [
+      { '@type': 'Thing', name: 'Plan de Reprise des Activités', alternateName: 'PRA' },
+      { '@type': 'Thing', name: 'Disaster Recovery Plan', alternateName: 'DRP' },
+      { '@type': 'Thing', name: 'RTO', alternateName: 'Recovery Time Objective' },
+      { '@type': 'Thing', name: 'RPO', alternateName: 'Recovery Point Objective' },
+      { '@type': 'Thing', name: 'Continuité des activités' },
+    ],
+    publisher: {
+      '@type': 'Organization',
+      name: 'CORO',
+      url: SITE_URL,
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/coro-logo.png` },
+    },
+  };
+
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Documents', item: `${SITE_URL}/gestion-documentaire` },
+      { '@type': 'ListItem', position: 3, name: data.title, item: PAGE_URL },
+    ],
+  };
+
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: data.faq.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
 
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, '\\u003c') }} />
       <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
           <a href="/" style={{ textDecoration: 'none' }}><span style={{ fontSize: 24, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px' }}>CO<span style={{ color: '#C0392B' }}>RO</span></span></a>
