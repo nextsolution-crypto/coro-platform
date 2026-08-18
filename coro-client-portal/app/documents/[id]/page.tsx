@@ -259,7 +259,7 @@ const handleRefuse = async () => {
             backgroundColor: '#FFFFFF',
             border: '1px solid #E9ECEF',
             borderRadius: 12,
-            padding: 32,
+            padding: 'clamp(20px, 6vw, 32px)',
             textAlign: 'center',
           }}
         >
@@ -454,10 +454,14 @@ const handleRefuse = async () => {
           {isValidated && (
             <div
               style={{
-                display: 'flex',
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
                 gap: 10,
-                flexWrap: 'wrap',
-                flex: '0 1 auto',
+                width: '100%',
+                maxWidth: 620,
+                flex: '1 1 360px',
+                minWidth: 0,
               }}
             >
               {project?.exportedPdfFr && !mySignature && (
@@ -478,8 +482,8 @@ const handleRefuse = async () => {
                     color: '#2980B9',
                     border: '2px solid #2980B9',
                     cursor: 'pointer',
-                    flex: '1 1 160px',
-                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    minWidth: 0,
                   }}
                 >
                   👁 Visualiser (FR)
@@ -506,8 +510,8 @@ const handleRefuse = async () => {
                     border: 'none',
                     cursor: downloading ? 'not-allowed' : 'pointer',
                     opacity: downloading ? 0.7 : 1,
-                    flex: '1 1 160px',
-                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    minWidth: 0,
                   }}
                 >
                   <Download size={16} />
@@ -535,8 +539,8 @@ const handleRefuse = async () => {
                     border: 'none',
                     cursor: downloading ? 'not-allowed' : 'pointer',
                     opacity: downloading ? 0.7 : 1,
-                    flex: '1 1 160px',
-                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    minWidth: 0,
                   }}
                 >
                   <Download size={16} />
@@ -564,8 +568,8 @@ const handleRefuse = async () => {
                     border: 'none',
                     cursor: downloading ? 'not-allowed' : 'pointer',
                     opacity: downloading ? 0.7 : 1,
-                    flex: '1 1 160px',
-                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    minWidth: 0,
                   }}
                 >
                   <Download size={16} />
@@ -591,8 +595,8 @@ const handleRefuse = async () => {
                     color: '#C0392B',
                     border: '2px solid #C0392B',
                     cursor: 'pointer',
-                    flex: '1 1 160px',
-                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    minWidth: 0,
                   }}
                 >
                   ✕ Refuser et commenter
@@ -619,8 +623,8 @@ const handleRefuse = async () => {
                     color: '#8E44AD',
                     border: '2px solid #8E44AD',
                     cursor: 'pointer',
-                    flex: '1 1 160px',
-                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    minWidth: 0,
                   }}
                 >
                   <CheckCircle size={16} />
@@ -633,39 +637,126 @@ const handleRefuse = async () => {
 
         {/* ── Checklist de complétion ── */}
         {isValidated && (
-          <div style={{ marginTop: 20, padding: '16px 20px', borderRadius: 10, backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div
+            style={{
+              marginTop: 20,
+              padding: 'clamp(14px, 4vw, 20px)',
+              borderRadius: 10,
+              backgroundColor: '#F8F9FA',
+              border: '1px solid #E9ECEF',
+            }}
+          >
+            <p
+              style={{
+                margin: '0 0 12px',
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#ADB5BD',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
               Progression
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(auto-fit, minmax(min(145px, 100%), 1fr))',
+                gap: 10,
+              }}
+            >
               {[
                 { label: 'Document reçu', done: true, color: '#27AE60' },
                 { label: 'Document consulté', done: true, color: '#27AE60' },
-                { label: 'Document signé', done: !!mySignature, color: mySignature ? '#8E44AD' : '#ADB5BD' },
-              ].map((step, i, arr) => (
-                <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: '1 1 auto' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: step.done ? step.color : '#E9ECEF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, transition: 'all 0.3s' }}>
-                      {step.done ? '✓' : '○'}
-                    </div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: step.done ? step.color : '#ADB5BD', whiteSpace: 'nowrap', textAlign: 'center' }}>
-                      {step.label}
-                    </span>
+                {
+                  label: 'Document signé',
+                  done: !!mySignature,
+                  color: mySignature ? '#8E44AD' : '#ADB5BD',
+                },
+              ].map((step) => (
+                <div
+                  key={step.label}
+                  style={{
+                    minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    backgroundColor: '#FFFFFF',
+                    border: `1px solid ${
+                      step.done ? `${step.color}55` : '#E9ECEF'
+                    }`,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      backgroundColor: step.done ? step.color : '#E9ECEF',
+                      color: step.done ? '#FFFFFF' : '#ADB5BD',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      transition: 'all 0.3s',
+                    }}
+                  >
+                    {step.done ? '✓' : '○'}
                   </div>
-                  {i < arr.length - 1 && (
-                    <div style={{ flex: 1, height: 2, backgroundColor: step.done ? step.color : '#E9ECEF', margin: '0 8px', marginBottom: 20, transition: 'all 0.3s' }} />
-                  )}
+
+                  <span
+                    style={{
+                      minWidth: 0,
+                      fontSize: 12,
+                      lineHeight: 1.35,
+                      fontWeight: 600,
+                      color: step.done ? step.color : '#ADB5BD',
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {step.label}
+                  </span>
                 </div>
               ))}
             </div>
+
             {!mySignature && (
-              <p style={{ margin: '12px 0 0', fontSize: 12, color: '#ADB5BD', textAlign: 'center' }}>
-                Veuillez lire le document et cliquer sur "Signer le document" pour compléter le processus.
+              <p
+                style={{
+                  margin: '12px 0 0',
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  color: '#ADB5BD',
+                  textAlign: 'center',
+                }}
+              >
+                Veuillez lire le document et cliquer sur &quot;Signer le document&quot; pour compléter le processus.
               </p>
             )}
+
             {mySignature && (
-              <p style={{ margin: '12px 0 0', fontSize: 12, color: '#8E44AD', textAlign: 'center', fontWeight: 600 }}>
-                ✓ Processus complété — Signé le {new Date(mySignature.signedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+              <p
+                style={{
+                  margin: '12px 0 0',
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  color: '#8E44AD',
+                  textAlign: 'center',
+                  fontWeight: 600,
+                }}
+              >
+                ✓ Processus complété — Signé le{' '}
+                {new Date(mySignature.signedAt).toLocaleDateString('fr-CA', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
               </p>
             )}
           </div>
@@ -1057,10 +1148,11 @@ const handleRefuse = async () => {
                     !newComment.trim()
                       ? 0.5
                       : 1,
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
+                  width: 'min(100%, 180px)',
                 }}
               >
                 <MessageSquare size={14} />
@@ -1200,9 +1292,10 @@ const handleRefuse = async () => {
             zIndex: 1000,
             backgroundColor: 'rgba(0,0,0,0.45)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
             padding: 16,
+            overflowY: 'auto',
           }}
           onClick={() => !refusing && setShowRefuseModal(false)}
         >
@@ -1211,10 +1304,13 @@ const handleRefuse = async () => {
             style={{
               width: '100%',
               maxWidth: 480,
+              maxHeight: 'calc(100dvh - 32px)',
+              overflowY: 'auto',
               backgroundColor: '#FFFFFF',
               borderRadius: 12,
-              padding: 'clamp(22px, 6vw, 40px)',
+              padding: 'clamp(20px, 6vw, 40px)',
               boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+              margin: 'auto 0',
             }}
           >
             <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#C0392B' }}>
@@ -1247,7 +1343,14 @@ const handleRefuse = async () => {
                 onBlur={(e) => e.currentTarget.style.borderColor = '#DEE2E6'}
               />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
+                gap: 10,
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setShowRefuseModal(false)}
@@ -1302,7 +1405,7 @@ const handleRefuse = async () => {
             backgroundColor:
               'rgba(0,0,0,0.45)',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'center',
             padding: 16,
             overflowY: 'auto',

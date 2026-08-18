@@ -116,7 +116,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       {/* ── En-tête ── */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
             {today}
@@ -131,7 +131,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <button onClick={() => router.push('/projects')}
-          className="text-white text-sm font-medium px-4 py-2.5 rounded flex items-center gap-2"
+          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2.5 rounded flex items-center justify-center gap-2 flex-shrink-0"
           style={{ backgroundColor: '#C0392B' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
@@ -142,22 +142,22 @@ export default function DashboardPage() {
       {/* ── Checklist onboarding ── */}
       {isAdmin && !onboardingComplete && (
         <div className="mb-6 rounded-md overflow-hidden" style={{ border: '1px solid #AED6F1', backgroundColor: '#EBF5FB' }}>
-          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #AED6F1' }}>
-            <div className="flex items-center gap-3">
+          <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style={{ borderBottom: '1px solid #AED6F1' }}>
+            <div className="flex items-center gap-3 min-w-0">
               <span style={{ fontSize: 20 }}>🚀</span>
               <div>
                 <p className="text-sm font-bold" style={{ color: '#1A5276' }}>Configuration de votre organisation</p>
                 <p className="text-xs" style={{ color: '#2980B9' }}>{onboardingDone} sur {onboardingItems.length} étapes complétées</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-32 h-2 rounded-full" style={{ backgroundColor: '#AED6F1' }}>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex-1 sm:flex-none sm:w-32 h-2 rounded-full" style={{ backgroundColor: '#AED6F1' }}>
                 <div className="h-2 rounded-full transition-all" style={{ width: `${(onboardingDone / onboardingItems.length) * 100}%`, backgroundColor: '#2980B9' }} />
               </div>
               <span className="text-sm font-bold" style={{ color: '#1A5276' }}>{Math.round((onboardingDone / onboardingItems.length) * 100)}%</span>
             </div>
           </div>
-          <div className="px-5 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="px-4 sm:px-5 py-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
             {onboardingItems.map((item, i) => (
               <div key={i} onClick={() => !item.done && router.push(item.path)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors"
@@ -174,11 +174,11 @@ export default function DashboardPage() {
       )}
 
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {kpis.map(kpi => (
           <div key={kpi.label}
             onClick={() => router.push(kpi.path)}
-            className="rounded-md p-5 cursor-pointer transition-all"
+            className="rounded-md p-4 sm:p-5 cursor-pointer transition-all min-w-0"
             style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
             onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = '#CED4DA'; }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#E9ECEF'; }}>
@@ -195,7 +195,7 @@ export default function DashboardPage() {
       ════════════════════════════════════════════════════ */}
       {actionsRequises > 0 && (
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#C0392B' }} />
               <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: '#2C3E50' }}>
@@ -220,15 +220,15 @@ export default function DashboardPage() {
                   {pendingApprovals.map(p => (
                     <div key={p.id}
                       onClick={() => router.push(`/projects/${p.id}`)}
-                      className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
                       style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded text-white flex-shrink-0"
                           style={{ backgroundColor: '#C0392B' }}>{p.documentType}</span>
-                        <span className="text-sm font-medium" style={{ color: '#2C3E50' }}>{p.name}</span>
-                        <span className="text-xs" style={{ color: '#6C757D' }}>— {p.client?.name}</span>
+                        <span className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{p.name}</span>
+                        <span className="text-xs break-words" style={{ color: '#6C757D' }}>— {p.client?.name}</span>
                       </div>
                       <span className="text-xs font-medium" style={{ color: '#C0392B' }}>Réviser →</span>
                     </div>
@@ -257,11 +257,11 @@ export default function DashboardPage() {
                       return (
                         <div key={d.mandateId}
                           onClick={() => router.push(`/projects/${d.projectId}/mandate`)}
-                          className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
                           style={{ backgroundColor: '#FFFFFF', border: `1px solid ${isUrgent ? '#F1948A' : '#FAD7A0'}` }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = isUrgent ? '#FDEDEC' : '#FEF9E7'}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <span className="text-lg">
                               {d.level === 'DEPASSE' ? '🔴' : d.level === 'CRITIQUE' ? '🔴' : d.level === 'URGENT' ? '🟠' : '🟡'}
                             </span>
@@ -270,7 +270,7 @@ export default function DashboardPage() {
                               <p className="text-xs" style={{ color: '#6C757D' }}>{d.clientName}</p>
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
+                          <div className="text-left sm:text-right w-full sm:w-auto sm:flex-shrink-0">
                             <p className="text-sm font-bold"
                               style={{ color: isUrgent ? '#C0392B' : '#F39C12' }}>
                               {d.diffDays < 0
@@ -300,19 +300,19 @@ export default function DashboardPage() {
                   {updates.filter(u => u.level === 'URGENT').map(u => (
                     <div key={u.id}
                       onClick={() => router.push(`/projects/${u.id}`)}
-                      className="flex items-center justify-between p-3 rounded cursor-pointer"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer"
                       style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
                           style={{ backgroundColor: '#C0392B' }}>{u.documentType}</span>
                         <div>
-                          <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{u.name}</p>
-                          <p className="text-xs" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
+                          <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{u.name}</p>
+                          <p className="text-xs break-words" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
                         </div>
                       </div>
-                      <p className="text-sm font-bold flex-shrink-0" style={{ color: '#C0392B' }}>
+                      <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: '#C0392B' }}>
                         {u.monthsAgo} mois ⚠
                       </p>
                     </div>
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                   {recurringToRenew.map(a => (
                     <div key={a.id}
                       onClick={() => router.push(`/projects/${a.projectId}/activities`)}
-                      className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
                       style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}
                       onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FFFBF0'}
                       onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
@@ -340,7 +340,7 @@ export default function DashboardPage() {
                         <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{a.label}</p>
                         <p className="text-xs" style={{ color: '#6C757D' }}>{a.clientName} — {a.buildingName}</p>
                       </div>
-                      <p className="text-sm font-bold flex-shrink-0" style={{ color: '#F39C12' }}>
+                      <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: '#F39C12' }}>
                         {a.monthsAgo} mois
                       </p>
                     </div>
@@ -367,11 +367,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mb-6">
         {/* Activités à venir */}
-        <div className="col-span-2 rounded-md"
+        <div className="xl:col-span-2 rounded-md min-w-0"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <div className="flex items-center justify-between px-5 py-4"
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-4"
             style={{ borderBottom: '1px solid #E9ECEF' }}>
             <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
               📅 Activités des 30 prochains jours
@@ -400,7 +400,7 @@ export default function DashboardPage() {
                 return (
                   <div key={activity.id}
                     onClick={() => router.push(`/projects/${activity.projectId}/activities`)}
-                    className="flex items-center justify-between px-5 py-3 cursor-pointer transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 cursor-pointer transition-colors"
                     style={{ borderBottom: idx < upcomingActivities.length - 1 ? '1px solid #F8F9FA' : 'none' }}
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -410,7 +410,7 @@ export default function DashboardPage() {
                         {activity.clientName} · {activity.projectName}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto sm:flex-shrink-0 sm:ml-4">
                       <span className="text-xs font-bold"
                         style={{ color: daysLeft <= 7 ? '#C0392B' : daysLeft <= 14 ? '#F39C12' : '#27AE60' }}>
                         {daysLeft === 0 ? "Aujourd'hui" : daysLeft === 1 ? 'Demain' : `Dans ${daysLeft}j`}
@@ -445,7 +445,7 @@ export default function DashboardPage() {
               {lateTasks.map((task, idx) => (
                 <div key={task.id}
                   onClick={() => router.push(`/projects/${task.projectId}/mandate`)}
-                  className="px-5 py-3 cursor-pointer transition-colors"
+                  className="px-4 sm:px-5 py-3 cursor-pointer transition-colors"
                   style={{ borderBottom: idx < lateTasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
@@ -470,9 +470,9 @@ export default function DashboardPage() {
 
       {/* Documents à renouveler — AVERTISSEMENT seulement */}
       {updates.filter(u => u.level === 'AVERTISSEMENT').length > 0 && (
-        <div className="rounded-md p-5 mb-6"
+        <div className="rounded-md p-4 sm:p-5 mb-6"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             <span style={{ fontSize: '16px' }}>🔔</span>
             <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Documents bientôt à renouveler</h3>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -484,19 +484,19 @@ export default function DashboardPage() {
             {updates.filter(u => u.level === 'AVERTISSEMENT').map(u => (
               <div key={u.id}
                 onClick={() => router.push(`/projects/${u.id}`)}
-                className="flex items-center justify-between p-3 rounded cursor-pointer transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
                 style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
                     style={{ backgroundColor: '#F39C12' }}>{u.documentType}</span>
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{u.name}</p>
-                    <p className="text-xs" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
+                    <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{u.name}</p>
+                    <p className="text-xs break-words" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
                   </div>
                 </div>
-                <p className="text-sm font-bold flex-shrink-0" style={{ color: '#F39C12' }}>
+                <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: '#F39C12' }}>
                   {u.monthsAgo} mois ○
                 </p>
               </div>

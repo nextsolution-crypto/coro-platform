@@ -2,35 +2,110 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUser, apiGet, apiPost } from '../store/auth';
+import { getUser, apiGet } from '../store/auth';
 import PortalLayout from '../components/PortalLayout';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3002/api';
 
 const ACTIVITY_TYPES = [
-  { value: 'exercice', label: '🚨 Exercice d\'évacuation', duration: 180 },
-  { value: 'formation', label: '📚 Formation', duration: 120 },
-  { value: 'visite', label: '🏢 Visite de suivi', duration: 60 },
-  { value: 'revision', label: '📄 Révision documentaire', duration: 90 },
-  { value: 'autre', label: '📅 Autre activité', duration: 60 },
+  {
+    value: 'exercice',
+    label: "🚨 Exercice d'évacuation",
+    duration: 180,
+  },
+  {
+    value: 'formation',
+    label: '📚 Formation',
+    duration: 120,
+  },
+  {
+    value: 'visite',
+    label: '🏢 Visite de suivi',
+    duration: 60,
+  },
+  {
+    value: 'revision',
+    label: '📄 Révision documentaire',
+    duration: 90,
+  },
+  {
+    value: 'autre',
+    label: '📅 Autre activité',
+    duration: 60,
+  },
 ];
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
-  DEMANDEE:   { label: 'Demandée',   color: '#2980B9', bg: '#EBF5FB', border: '#AED6F1', icon: '⏳' },
-  CONFIRMEE:  { label: 'Confirmée',  color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF', icon: '✅' },
-  REPORTEE:   { label: 'Reportée',   color: '#F39C12', bg: '#FEF9E7', border: '#FAD7A0', icon: '📅' },
-  REASSIGNEE: { label: 'Réassignée', color: '#8E44AD', bg: '#F4ECF7', border: '#D2B4DE', icon: '👤' },
-  REFUSEE:    { label: 'Refusée',    color: '#C0392B', bg: '#FDEDEC', border: '#F1948A', icon: '❌' },
-  COMPLETEE:  { label: 'Complétée',  color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF', icon: '✓' },
-  ANNULEE:    { label: 'Annulée',    color: '#6C757D', bg: '#F8F9FA', border: '#DEE2E6', icon: '✕' },
+const STATUS_CONFIG: Record<
+  string,
+  {
+    label: string;
+    color: string;
+    bg: string;
+    border: string;
+    icon: string;
+  }
+> = {
+  DEMANDEE: {
+    label: 'Demandée',
+    color: '#2980B9',
+    bg: '#EBF5FB',
+    border: '#AED6F1',
+    icon: '⏳',
+  },
+  CONFIRMEE: {
+    label: 'Confirmée',
+    color: '#27AE60',
+    bg: '#EAFAF1',
+    border: '#A9DFBF',
+    icon: '✅',
+  },
+  REPORTEE: {
+    label: 'Reportée',
+    color: '#F39C12',
+    bg: '#FEF9E7',
+    border: '#FAD7A0',
+    icon: '📅',
+  },
+  REASSIGNEE: {
+    label: 'Réassignée',
+    color: '#8E44AD',
+    bg: '#F4ECF7',
+    border: '#D2B4DE',
+    icon: '👤',
+  },
+  REFUSEE: {
+    label: 'Refusée',
+    color: '#C0392B',
+    bg: '#FDEDEC',
+    border: '#F1948A',
+    icon: '❌',
+  },
+  COMPLETEE: {
+    label: 'Complétée',
+    color: '#27AE60',
+    bg: '#EAFAF1',
+    border: '#A9DFBF',
+    icon: '✓',
+  },
+  ANNULEE: {
+    label: 'Annulée',
+    color: '#6C757D',
+    bg: '#F8F9FA',
+    border: '#DEE2E6',
+    icon: '✕',
+  },
 };
 
 export default function BookingsPage() {
   const router = useRouter();
+
   const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -47,270 +122,1355 @@ export default function BookingsPage() {
 
   useEffect(() => {
     const currentUser = getUser();
-    if (!currentUser) { router.replace('/login'); return; }
+
+    if (!currentUser) {
+      router.replace('/login');
+      return;
+    }
+
     setUser(currentUser);
     fetchData();
   }, [router]);
 
   const fetchData = async () => {
     try {
-      const [projectsRes, bookingsRes] = await Promise.all([
-        apiGet('/client-portal/projects'),
-        apiGet('/client-portal/bookings'),
-      ]);
-      setProjects((projectsRes || []).filter((p: any) => p.status === 'VALIDATED' || p.status === 'EXPORTED'));
+      const [projectsRes, bookingsRes] =
+        await Promise.all([
+          apiGet('/client-portal/projects'),
+          apiGet('/client-portal/bookings'),
+        ]);
+
+      setProjects(
+        (projectsRes || []).filter(
+          (p: any) =>
+            p.status === 'VALIDATED' ||
+            p.status === 'EXPORTED'
+        )
+      );
+
       setBookings(bookingsRes || []);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleActivityChange = (type: string) => {
-    const activity = ACTIVITY_TYPES.find(a => a.value === type);
-    setForm(f => ({ ...f, activityType: type, duration: activity?.duration || 60 }));
+    const activity = ACTIVITY_TYPES.find(
+      a => a.value === type
+    );
+
+    setForm(f => ({
+      ...f,
+      activityType: type,
+      duration: activity?.duration || 60,
+    }));
   };
 
   const handleSubmit = async () => {
-    if (!form.projectId || !form.requestedDate || !form.requestedTime) return;
+    if (
+      !form.projectId ||
+      !form.requestedDate ||
+      !form.requestedTime ||
+      submitting
+    ) {
+      return;
+    }
+
     setSubmitting(true);
+
     try {
-      const requestedDate = new Date(`${form.requestedDate}T${form.requestedTime}:00`);
-      const token = localStorage.getItem('coro_client_token');
-      const res = await fetch(`${API_URL}/client-portal/projects/${form.projectId}/bookings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          activityType: form.activityType,
-          requestedDate: requestedDate.toISOString(),
-          duration: form.duration,
-          participants: form.participants ? parseInt(form.participants) : undefined,
-          comment: form.comment || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error('Erreur');
+      const requestedDate = new Date(
+        `${form.requestedDate}T${form.requestedTime}:00`
+      );
+
+      const token = localStorage.getItem(
+        'coro_client_token'
+      );
+
+      const res = await fetch(
+        `${API_URL}/client-portal/projects/${form.projectId}/bookings`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            activityType: form.activityType,
+            requestedDate:
+              requestedDate.toISOString(),
+            duration: form.duration,
+            participants: form.participants
+              ? parseInt(form.participants, 10)
+              : undefined,
+            comment:
+              form.comment.trim() || undefined,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(
+          'Erreur lors de la réservation'
+        );
+      }
+
       setSuccess(true);
       setShowForm(false);
-      setForm({ projectId: '', activityType: 'exercice', requestedDate: '', requestedTime: '09:00', duration: 180, participants: '', comment: '' });
+
+      setForm({
+        projectId: '',
+        activityType: 'exercice',
+        requestedDate: '',
+        requestedTime: '09:00',
+        duration: 180,
+        participants: '',
+        comment: '',
+      });
+
       await fetchData();
-      setTimeout(() => setSuccess(false), 5000);
-    } catch (err) { console.error(err); }
-    finally { setSubmitting(false); }
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 5000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleCancel = async (bookingId: string) => {
-    if (!confirm('Annuler cette réservation ?')) return;
+  const handleCancel = async (
+    bookingId: string
+  ) => {
+    if (!confirm('Annuler cette réservation ?')) {
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('coro_client_token');
-      await fetch(`${API_URL}/bookings/${bookingId}/cancel`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ cancelledBy: 'client' }),
-      });
+      const token = localStorage.getItem(
+        'coro_client_token'
+      );
+
+      const res = await fetch(
+        `${API_URL}/bookings/${bookingId}/cancel`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            cancelledBy: 'client',
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(
+          "Erreur lors de l'annulation"
+        );
+      }
+
       await fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
-  const minDateStr = minDate.toISOString().split('T')[0];
 
-  if (loading || !user) return (
-    <PortalLayout>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-        <p className="animate-pulse" style={{ color: '#ADB5BD', fontSize: 14 }}>Chargement...</p>
-      </div>
-    </PortalLayout>
-  );
+  const minDateStr =
+    minDate.toISOString().split('T')[0];
+
+  const canSubmit =
+    !!form.projectId &&
+    !!form.requestedDate &&
+    !!form.requestedTime &&
+    !submitting;
+
+  if (loading || !user) {
+    return (
+      <PortalLayout>
+        <div
+          className="
+            flex
+            items-center
+            justify-center
+            min-h-[300px]
+            px-4
+          "
+        >
+          <p
+            className="animate-pulse text-sm"
+            style={{ color: '#ADB5BD' }}
+          >
+            Chargement...
+          </p>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   return (
     <PortalLayout>
-      <header style={{ marginBottom: 28 }}>
-        <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+
+      {/* ═══════════════════════════════════
+          EN-TÊTE
+      ═══════════════════════════════════ */}
+
+      <header className="mb-6 sm:mb-7">
+        <p
+          className="
+            mb-1
+            text-xs
+            font-bold
+            uppercase
+            tracking-[0.08em]
+          "
+          style={{ color: '#ADB5BD' }}
+        >
           Réservations
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <h1 style={{ margin: 0, fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 800, color: '#2C3E50' }}>
+
+        <div
+          className="
+            flex
+            flex-col
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+            gap-3
+          "
+        >
+          <h1
+            className="
+              m-0
+              text-[22px]
+              sm:text-[26px]
+              lg:text-[28px]
+              font-extrabold
+              leading-tight
+              break-words
+            "
+            style={{ color: '#2C3E50' }}
+          >
             Planifier une activité
           </h1>
+
           {projects.length > 0 && (
-            <button onClick={() => setShowForm(true)}
-              style={{ minHeight: 44, padding: '10px 20px', borderRadius: 8, backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="
+                w-full
+                sm:w-auto
+                min-h-[46px]
+                px-5
+                py-2.5
+                rounded-lg
+                text-sm
+                font-bold
+                transition-colors
+                flex-shrink-0
+              "
+              style={{
+                backgroundColor: '#C0392B',
+                color: '#FFFFFF',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor =
+                  '#A93226';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor =
+                  '#C0392B';
+              }}
+            >
               + Nouvelle réservation
             </button>
           )}
         </div>
       </header>
 
+
+      {/* ═══════════════════════════════════
+          SUCCÈS
+      ═══════════════════════════════════ */}
+
       {success && (
-        <div style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF', borderRadius: 10, padding: '16px 20px', marginBottom: 20 }}>
-          <p style={{ margin: 0, color: '#27AE60', fontWeight: 700 }}>✅ Demande envoyée ! Votre conseiller vous contactera pour confirmer.</p>
+        <div
+          className="
+            rounded-lg
+            p-4
+            sm:px-5
+            mb-5
+          "
+          style={{
+            backgroundColor: '#EAFAF1',
+            border: '1px solid #A9DFBF',
+          }}
+          aria-live="polite"
+        >
+          <p
+            className="
+              m-0
+              text-sm
+              leading-relaxed
+              font-bold
+            "
+            style={{ color: '#27AE60' }}
+          >
+            ✅ Demande envoyée ! Votre
+            conseiller vous contactera pour
+            confirmer.
+          </p>
         </div>
       )}
 
-      {/* Formulaire de réservation */}
-      {showForm && (
-        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: 12, padding: 'clamp(20px, 5vw, 32px)', marginBottom: 24, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
-          <h2 style={{ margin: '0 0 24px', fontSize: 18, fontWeight: 700, color: '#2C3E50' }}>Nouvelle demande de réservation</h2>
 
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Projet concerné *</label>
-              <select value={form.projectId} onChange={e => setForm(f => ({ ...f, projectId: e.target.value }))}
-                style={{ width: '100%', minHeight: 46, padding: '10px 12px', borderRadius: 7, border: '1px solid #DEE2E6', fontSize: 16, color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
-                <option value="">Sélectionner un projet...</option>
+      {/* ═══════════════════════════════════
+          FORMULAIRE
+      ═══════════════════════════════════ */}
+
+      {showForm && (
+        <section
+          className="
+            rounded-xl
+            p-4
+            sm:p-6
+            lg:p-8
+            mb-6
+            min-w-0
+          "
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E9ECEF',
+            boxShadow:
+              '0 4px 16px rgba(0,0,0,0.08)',
+          }}
+        >
+          <h2
+            className="
+              m-0
+              mb-5
+              sm:mb-6
+              text-lg
+              font-bold
+            "
+            style={{ color: '#2C3E50' }}
+          >
+            Nouvelle demande de réservation
+          </h2>
+
+          <div className="grid gap-4">
+
+            {/* PROJET */}
+
+            <div className="min-w-0">
+              <label
+                htmlFor="booking-project"
+                className="
+                  block
+                  text-[13px]
+                  font-semibold
+                  mb-1.5
+                "
+                style={{ color: '#495057' }}
+              >
+                Projet concerné *
+              </label>
+
+              <select
+                id="booking-project"
+                value={form.projectId}
+                onChange={e =>
+                  setForm(f => ({
+                    ...f,
+                    projectId: e.target.value,
+                  }))
+                }
+                className="
+                  w-full
+                  min-w-0
+                  min-h-[46px]
+                  px-3
+                  py-2.5
+                  rounded-lg
+                  text-base
+                  bg-white
+                  outline-none
+                "
+                style={{
+                  border: '1px solid #DEE2E6',
+                  color: '#2C3E50',
+                }}
+              >
+                <option value="">
+                  Sélectionner un projet...
+                </option>
+
                 {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} — {p.building?.name}</option>
+                  <option
+                    key={p.id}
+                    value={p.id}
+                  >
+                    {p.name}
+                    {p.building?.name
+                      ? ` — ${p.building.name}`
+                      : ''}
+                  </option>
                 ))}
               </select>
             </div>
 
+
+            {/* TYPE ACTIVITÉ */}
+
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Type d'activité *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
-                {ACTIVITY_TYPES.map(a => (
-                  <button key={a.value} type="button" onClick={() => handleActivityChange(a.value)}
-                    style={{ minHeight: 46, padding: '10px 12px', borderRadius: 8, border: `2px solid ${form.activityType === a.value ? '#C0392B' : '#DEE2E6'}`, backgroundColor: form.activityType === a.value ? '#FDEDEC' : '#FFFFFF', color: form.activityType === a.value ? '#C0392B' : '#495057', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
-                    {a.label}
-                    <span style={{ display: 'block', fontSize: 11, color: '#ADB5BD', marginTop: 2 }}>{a.duration / 60}h</span>
-                  </button>
-                ))}
+              <label
+                className="
+                  block
+                  text-[13px]
+                  font-semibold
+                  mb-1.5
+                "
+                style={{ color: '#495057' }}
+              >
+                Type d'activité *
+              </label>
+
+              <div
+                className="
+                  grid
+                  grid-cols-1
+                  min-[420px]:grid-cols-2
+                  lg:grid-cols-3
+                  gap-2
+                "
+              >
+                {ACTIVITY_TYPES.map(a => {
+                  const selected =
+                    form.activityType === a.value;
+
+                  return (
+                    <button
+                      key={a.value}
+                      type="button"
+                      onClick={() =>
+                        handleActivityChange(
+                          a.value
+                        )
+                      }
+                      aria-pressed={selected}
+                      className="
+                        min-h-[52px]
+                        px-3
+                        py-2.5
+                        rounded-lg
+                        text-left
+                        transition-colors
+                      "
+                      style={{
+                        border: `2px solid ${
+                          selected
+                            ? '#C0392B'
+                            : '#DEE2E6'
+                        }`,
+                        backgroundColor: selected
+                          ? '#FDEDEC'
+                          : '#FFFFFF',
+                        color: selected
+                          ? '#C0392B'
+                          : '#495057',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span
+                        className="
+                          block
+                          leading-snug
+                          break-words
+                        "
+                      >
+                        {a.label}
+                      </span>
+
+                      <span
+                        className="
+                          block
+                          text-[11px]
+                          mt-1
+                        "
+                        style={{
+                          color: '#ADB5BD',
+                        }}
+                      >
+                        {a.duration / 60}h
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Date souhaitée *</label>
-                <input type="date" value={form.requestedDate} min={minDateStr}
-                  onChange={e => setForm(f => ({ ...f, requestedDate: e.target.value }))}
-                  style={{ width: '100%', minHeight: 46, padding: '10px 12px', borderRadius: 7, border: '1px solid #DEE2E6', fontSize: 16, color: '#2C3E50' }} />
+
+            {/* DATE + HEURE */}
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                sm:grid-cols-2
+                gap-3
+              "
+            >
+              <div className="min-w-0">
+                <label
+                  htmlFor="booking-date"
+                  className="
+                    block
+                    text-[13px]
+                    font-semibold
+                    mb-1.5
+                  "
+                  style={{
+                    color: '#495057',
+                  }}
+                >
+                  Date souhaitée *
+                </label>
+
+                <input
+                  id="booking-date"
+                  type="date"
+                  value={form.requestedDate}
+                  min={minDateStr}
+                  onChange={e =>
+                    setForm(f => ({
+                      ...f,
+                      requestedDate:
+                        e.target.value,
+                    }))
+                  }
+                  className="
+                    w-full
+                    min-w-0
+                    min-h-[46px]
+                    px-3
+                    py-2.5
+                    rounded-lg
+                    text-base
+                    outline-none
+                  "
+                  style={{
+                    border:
+                      '1px solid #DEE2E6',
+                    color: '#2C3E50',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Heure souhaitée *</label>
-                <input type="time" value={form.requestedTime}
-                  onChange={e => setForm(f => ({ ...f, requestedTime: e.target.value }))}
-                  style={{ width: '100%', minHeight: 46, padding: '10px 12px', borderRadius: 7, border: '1px solid #DEE2E6', fontSize: 16, color: '#2C3E50' }} />
+
+              <div className="min-w-0">
+                <label
+                  htmlFor="booking-time"
+                  className="
+                    block
+                    text-[13px]
+                    font-semibold
+                    mb-1.5
+                  "
+                  style={{
+                    color: '#495057',
+                  }}
+                >
+                  Heure souhaitée *
+                </label>
+
+                <input
+                  id="booking-time"
+                  type="time"
+                  value={form.requestedTime}
+                  onChange={e =>
+                    setForm(f => ({
+                      ...f,
+                      requestedTime:
+                        e.target.value,
+                    }))
+                  }
+                  className="
+                    w-full
+                    min-w-0
+                    min-h-[46px]
+                    px-3
+                    py-2.5
+                    rounded-lg
+                    text-base
+                    outline-none
+                  "
+                  style={{
+                    border:
+                      '1px solid #DEE2E6',
+                    color: '#2C3E50',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Durée (minutes)</label>
-                <input type="number" value={form.duration} min={30} step={30}
-                  onChange={e => setForm(f => ({ ...f, duration: parseInt(e.target.value) }))}
-                  style={{ width: '100%', minHeight: 46, padding: '10px 12px', borderRadius: 7, border: '1px solid #DEE2E6', fontSize: 16, color: '#2C3E50' }} />
+
+            {/* DURÉE + PARTICIPANTS */}
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                sm:grid-cols-2
+                gap-3
+              "
+            >
+              <div className="min-w-0">
+                <label
+                  htmlFor="booking-duration"
+                  className="
+                    block
+                    text-[13px]
+                    font-semibold
+                    mb-1.5
+                  "
+                  style={{
+                    color: '#495057',
+                  }}
+                >
+                  Durée (minutes)
+                </label>
+
+                <input
+                  id="booking-duration"
+                  type="number"
+                  value={form.duration}
+                  min={30}
+                  step={30}
+                  inputMode="numeric"
+                  onChange={e => {
+                    const value =
+                      parseInt(
+                        e.target.value,
+                        10
+                      );
+
+                    setForm(f => ({
+                      ...f,
+                      duration:
+                        Number.isNaN(value)
+                          ? 30
+                          : value,
+                    }));
+                  }}
+                  className="
+                    w-full
+                    min-w-0
+                    min-h-[46px]
+                    px-3
+                    py-2.5
+                    rounded-lg
+                    text-base
+                    outline-none
+                  "
+                  style={{
+                    border:
+                      '1px solid #DEE2E6',
+                    color: '#2C3E50',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Nb. participants (optionnel)</label>
-                <input type="number" value={form.participants} min={1}
-                  onChange={e => setForm(f => ({ ...f, participants: e.target.value }))}
+
+              <div className="min-w-0">
+                <label
+                  htmlFor="booking-participants"
+                  className="
+                    block
+                    text-[13px]
+                    font-semibold
+                    mb-1.5
+                    leading-snug
+                  "
+                  style={{
+                    color: '#495057',
+                  }}
+                >
+                  Nb. participants (optionnel)
+                </label>
+
+                <input
+                  id="booking-participants"
+                  type="number"
+                  value={form.participants}
+                  min={1}
+                  inputMode="numeric"
+                  onChange={e =>
+                    setForm(f => ({
+                      ...f,
+                      participants:
+                        e.target.value,
+                    }))
+                  }
                   placeholder="Ex: 45"
-                  style={{ width: '100%', minHeight: 46, padding: '10px 12px', borderRadius: 7, border: '1px solid #DEE2E6', fontSize: 16, color: '#2C3E50' }} />
+                  className="
+                    w-full
+                    min-w-0
+                    min-h-[46px]
+                    px-3
+                    py-2.5
+                    rounded-lg
+                    text-base
+                    outline-none
+                  "
+                  style={{
+                    border:
+                      '1px solid #DEE2E6',
+                    color: '#2C3E50',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                />
               </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>Commentaire (optionnel)</label>
-              <textarea value={form.comment} onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
+
+            {/* COMMENTAIRE */}
+
+            <div className="min-w-0">
+              <label
+                htmlFor="booking-comment"
+                className="
+                  block
+                  text-[13px]
+                  font-semibold
+                  mb-1.5
+                "
+                style={{ color: '#495057' }}
+              >
+                Commentaire (optionnel)
+              </label>
+
+              <textarea
+                id="booking-comment"
+                value={form.comment}
+                onChange={e =>
+                  setForm(f => ({
+                    ...f,
+                    comment: e.target.value,
+                  }))
+                }
                 placeholder="Ex: Exercice surprise, 3e étage seulement..."
                 rows={3}
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 7, border: '1px solid #DEE2E6', fontSize: 16, color: '#2C3E50', resize: 'vertical' }} />
+                className="
+                  w-full
+                  min-w-0
+                  min-h-[96px]
+                  px-3.5
+                  py-3
+                  rounded-lg
+                  text-base
+                  leading-relaxed
+                  resize-y
+                  outline-none
+                "
+                style={{
+                  border:
+                    '1px solid #DEE2E6',
+                  color: '#2C3E50',
+                  backgroundColor: '#FFFFFF',
+                }}
+              />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <button type="button" onClick={() => setShowForm(false)}
-                style={{ minHeight: 48, padding: 12, borderRadius: 8, border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+
+            {/* ACTIONS */}
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                sm:grid-cols-2
+                gap-2.5
+                pt-1
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setShowForm(false)
+                }
+                disabled={submitting}
+                className="
+                  min-h-[48px]
+                  px-4
+                  py-3
+                  rounded-lg
+                  text-sm
+                  font-semibold
+                  transition-colors
+                  disabled:opacity-50
+                "
+                style={{
+                  border:
+                    '1px solid #DEE2E6',
+                  backgroundColor: '#FFFFFF',
+                  color: '#6C757D',
+                  cursor: submitting
+                    ? 'not-allowed'
+                    : 'pointer',
+                }}
+              >
                 Annuler
               </button>
-              <button type="button" onClick={handleSubmit}
-                disabled={submitting || !form.projectId || !form.requestedDate || !form.requestedTime}
-                style={{ minHeight: 48, padding: 12, borderRadius: 8, backgroundColor: submitting || !form.projectId || !form.requestedDate ? '#ADB5BD' : '#C0392B', color: '#FFFFFF', border: 'none', fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-                {submitting ? 'Envoi...' : '📅 Envoyer la demande'}
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className="
+                  min-h-[48px]
+                  px-4
+                  py-3
+                  rounded-lg
+                  text-sm
+                  font-bold
+                  transition-colors
+                "
+                style={{
+                  backgroundColor: canSubmit
+                    ? '#C0392B'
+                    : '#ADB5BD',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  cursor: canSubmit
+                    ? 'pointer'
+                    : 'not-allowed',
+                }}
+              >
+                {submitting
+                  ? 'Envoi...'
+                  : '📅 Envoyer la demande'}
               </button>
             </div>
+
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Liste des réservations */}
+
+      {/* ═══════════════════════════════════
+          AUCUNE RÉSERVATION
+      ═══════════════════════════════════ */}
+
       {bookings.length === 0 && !showForm ? (
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', padding: 'clamp(40px, 10vw, 64px) 20px', textAlign: 'center' }}>
-          <p style={{ fontSize: 48, margin: '0 0 16px' }}>📅</p>
-          <p style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>Aucune réservation</p>
-          <p style={{ margin: '0 0 24px', fontSize: 14, color: '#ADB5BD' }}>Planifiez votre prochain exercice ou formation.</p>
+        <section
+          className="
+            rounded-xl
+            px-4
+            py-10
+            sm:py-14
+            lg:py-16
+            text-center
+          "
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E9ECEF',
+          }}
+        >
+          <p className="text-5xl mb-4">
+            📅
+          </p>
+
+          <p
+            className="
+              mb-2
+              text-base
+              font-bold
+            "
+            style={{ color: '#2C3E50' }}
+          >
+            Aucune réservation
+          </p>
+
+          <p
+            className="
+              mb-6
+              text-sm
+              leading-relaxed
+            "
+            style={{ color: '#ADB5BD' }}
+          >
+            Planifiez votre prochain exercice
+            ou formation.
+          </p>
+
           {projects.length > 0 && (
-            <button onClick={() => setShowForm(true)}
-              style={{ minHeight: 46, padding: '12px 24px', borderRadius: 8, backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="
+                w-full
+                sm:w-auto
+                min-h-[46px]
+                px-6
+                py-3
+                rounded-lg
+                text-sm
+                font-bold
+                transition-colors
+              "
+              style={{
+                backgroundColor: '#C0392B',
+                color: '#FFFFFF',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
               + Nouvelle réservation
             </button>
           )}
+
           {projects.length === 0 && (
-            <p style={{ margin: 0, fontSize: 13, color: '#ADB5BD' }}>Aucun document validé disponible pour la réservation.</p>
+            <p
+              className="
+                m-0
+                text-[13px]
+                leading-relaxed
+              "
+              style={{ color: '#ADB5BD' }}
+            >
+              Aucun document validé
+              disponible pour la réservation.
+            </p>
           )}
-        </div>
+        </section>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        /* ═══════════════════════════════════
+           LISTE DES RÉSERVATIONS
+        ═══════════════════════════════════ */
+
+        <div className="flex flex-col gap-3">
+
           {bookings.map((booking: any) => {
-            const sc = STATUS_CONFIG[booking.status] || STATUS_CONFIG.DEMANDEE;
-            const activity = ACTIVITY_TYPES.find(a => a.value === booking.activityType);
-            const canCancel = ['DEMANDEE', 'CONFIRMEE'].includes(booking.status);
+            const sc =
+              STATUS_CONFIG[booking.status] ||
+              STATUS_CONFIG.DEMANDEE;
+
+            const activity =
+              ACTIVITY_TYPES.find(
+                a =>
+                  a.value ===
+                  booking.activityType
+              );
+
+            const canCancel = [
+              'DEMANDEE',
+              'CONFIRMEE',
+            ].includes(booking.status);
+
             return (
-              <div key={booking.id} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: `1px solid ${sc.border}`, padding: 'clamp(16px, 4vw, 24px)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 10, backgroundColor: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+              <article
+                key={booking.id}
+                className="
+                  rounded-xl
+                  p-4
+                  sm:p-5
+                  lg:p-6
+                  min-w-0
+                "
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: `1px solid ${sc.border}`,
+                }}
+              >
+
+                {/* EN-TÊTE CARTE */}
+
+                <div
+                  className="
+                    flex
+                    flex-col
+                    sm:flex-row
+                    sm:items-start
+                    sm:justify-between
+                    gap-3
+                    mb-3
+                  "
+                >
+                  <div className="min-w-0 flex-1">
+
+                    <div
+                      className="
+                        flex
+                        flex-wrap
+                        items-center
+                        gap-2
+                        mb-1.5
+                      "
+                    >
+                      <span
+                        className="
+                          text-xs
+                          font-bold
+                          px-2.5
+                          py-1
+                          rounded-full
+                          whitespace-nowrap
+                        "
+                        style={{
+                          backgroundColor: sc.bg,
+                          color: sc.color,
+                          border: `1px solid ${sc.border}`,
+                        }}
+                      >
                         {sc.icon} {sc.label}
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{activity?.label || booking.activityType}</span>
+
+                      <span
+                        className="
+                          text-[13px]
+                          font-bold
+                          leading-snug
+                          break-words
+                          min-w-0
+                        "
+                        style={{
+                          color: '#2C3E50',
+                        }}
+                      >
+                        {activity?.label ||
+                          booking.activityType}
+                      </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 13, color: '#6C757D' }}>
-                      {booking.project?.name} — {booking.project?.building?.name}
+
+                    <p
+                      className="
+                        m-0
+                        text-[13px]
+                        leading-relaxed
+                        break-words
+                      "
+                      style={{
+                        color: '#6C757D',
+                      }}
+                    >
+                      {booking.project?.name || 'Projet'}
+
+                      {booking.project?.building
+                        ?.name && (
+                        <>
+                          {' '}
+                          —{' '}
+                          {
+                            booking.project
+                              .building.name
+                          }
+                        </>
+                      )}
                     </p>
                   </div>
+
                   {canCancel && (
-                    <button onClick={() => handleCancel(booking.id)}
-                      style={{ minHeight: 36, padding: '6px 12px', borderRadius: 6, border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF', color: '#C0392B', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCancel(
+                          booking.id
+                        )
+                      }
+                      className="
+                        w-full
+                        sm:w-auto
+                        min-h-[40px]
+                        px-3
+                        py-2
+                        rounded-md
+                        text-xs
+                        font-semibold
+                        flex-shrink-0
+                        transition-colors
+                      "
+                      style={{
+                        border:
+                          '1px solid #DEE2E6',
+                        backgroundColor:
+                          '#FFFFFF',
+                        color: '#C0392B',
+                        cursor: 'pointer',
+                      }}
+                    >
                       Annuler
                     </button>
                   )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-                  <div style={{ backgroundColor: '#F8F9FA', borderRadius: 6, padding: '8px 12px' }}>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#ADB5BD' }}>Date demandée</p>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
-                      {new Date(booking.requestedDate).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+
+                {/* DÉTAILS */}
+
+                <div
+                  className="
+                    grid
+                    grid-cols-1
+                    min-[420px]:grid-cols-2
+                    lg:grid-cols-4
+                    gap-2
+                  "
+                >
+
+                  {/* DATE DEMANDÉE */}
+
+                  <div
+                    className="
+                      rounded-md
+                      px-3
+                      py-2.5
+                      min-w-0
+                    "
+                    style={{
+                      backgroundColor:
+                        '#F8F9FA',
+                    }}
+                  >
+                    <p
+                      className="
+                        mb-0.5
+                        text-[11px]
+                      "
+                      style={{
+                        color: '#ADB5BD',
+                      }}
+                    >
+                      Date demandée
+                    </p>
+
+                    <p
+                      className="
+                        m-0
+                        text-[13px]
+                        font-semibold
+                        leading-snug
+                        break-words
+                      "
+                      style={{
+                        color: '#2C3E50',
+                      }}
+                    >
+                      {new Date(
+                        booking.requestedDate
+                      ).toLocaleDateString(
+                        'fr-CA',
+                        {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }
+                      )}
                     </p>
                   </div>
+
+
+                  {/* DATE REPORTÉE */}
+
                   {booking.reportedDate && (
-                    <div style={{ backgroundColor: '#FEF9E7', borderRadius: 6, padding: '8px 12px' }}>
-                      <p style={{ margin: '0 0 2px', fontSize: 11, color: '#F39C12' }}>Nouvelle date</p>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#F39C12' }}>
-                        {new Date(booking.reportedDate).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    <div
+                      className="
+                        rounded-md
+                        px-3
+                        py-2.5
+                        min-w-0
+                      "
+                      style={{
+                        backgroundColor:
+                          '#FEF9E7',
+                      }}
+                    >
+                      <p
+                        className="
+                          mb-0.5
+                          text-[11px]
+                        "
+                        style={{
+                          color: '#F39C12',
+                        }}
+                      >
+                        Nouvelle date
+                      </p>
+
+                      <p
+                        className="
+                          m-0
+                          text-[13px]
+                          font-semibold
+                          leading-snug
+                          break-words
+                        "
+                        style={{
+                          color: '#F39C12',
+                        }}
+                      >
+                        {new Date(
+                          booking.reportedDate
+                        ).toLocaleDateString(
+                          'fr-CA',
+                          {
+                            weekday:
+                              'short',
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          }
+                        )}
                       </p>
                     </div>
                   )}
-                  <div style={{ backgroundColor: '#F8F9FA', borderRadius: 6, padding: '8px 12px' }}>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#ADB5BD' }}>Durée</p>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>{booking.duration} min</p>
-                  </div>
-                  <div style={{ backgroundColor: '#F8F9FA', borderRadius: 6, padding: '8px 12px' }}>
-                    <p style={{ margin: '0 0 2px', fontSize: 11, color: '#ADB5BD' }}>Conseiller</p>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
-                      {booking.assignedUser?.firstName} {booking.assignedUser?.lastName}
+
+
+                  {/* DURÉE */}
+
+                  <div
+                    className="
+                      rounded-md
+                      px-3
+                      py-2.5
+                      min-w-0
+                    "
+                    style={{
+                      backgroundColor:
+                        '#F8F9FA',
+                    }}
+                  >
+                    <p
+                      className="
+                        mb-0.5
+                        text-[11px]
+                      "
+                      style={{
+                        color: '#ADB5BD',
+                      }}
+                    >
+                      Durée
+                    </p>
+
+                    <p
+                      className="
+                        m-0
+                        text-[13px]
+                        font-semibold
+                      "
+                      style={{
+                        color: '#2C3E50',
+                      }}
+                    >
+                      {booking.duration} min
                     </p>
                   </div>
+
+
+                  {/* CONSEILLER */}
+
+                  <div
+                    className="
+                      rounded-md
+                      px-3
+                      py-2.5
+                      min-w-0
+                    "
+                    style={{
+                      backgroundColor:
+                        '#F8F9FA',
+                    }}
+                  >
+                    <p
+                      className="
+                        mb-0.5
+                        text-[11px]
+                      "
+                      style={{
+                        color: '#ADB5BD',
+                      }}
+                    >
+                      Conseiller
+                    </p>
+
+                    <p
+                      className="
+                        m-0
+                        text-[13px]
+                        font-semibold
+                        leading-snug
+                        break-words
+                      "
+                      style={{
+                        color: '#2C3E50',
+                      }}
+                    >
+                      {booking.assignedUser
+                        ? `${booking.assignedUser.firstName || ''} ${booking.assignedUser.lastName || ''}`.trim() ||
+                          'À confirmer'
+                        : 'À confirmer'}
+                    </p>
+                  </div>
+
                 </div>
 
+
+                {/* REFUS */}
+
                 {booking.refuseReason && (
-                  <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 6, backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
-                    <p style={{ margin: 0, fontSize: 13, color: '#C0392B' }}>Motif : {booking.refuseReason}</p>
+                  <div
+                    className="
+                      mt-3
+                      px-3.5
+                      py-2.5
+                      rounded-md
+                    "
+                    style={{
+                      backgroundColor:
+                        '#FDEDEC',
+                      border:
+                        '1px solid #F1948A',
+                    }}
+                  >
+                    <p
+                      className="
+                        m-0
+                        text-[13px]
+                        leading-relaxed
+                        break-words
+                      "
+                      style={{
+                        color: '#C0392B',
+                      }}
+                    >
+                      <strong>Motif :</strong>{' '}
+                      {booking.refuseReason}
+                    </p>
                   </div>
                 )}
-              </div>
+
+              </article>
             );
           })}
+
         </div>
       )}
+
     </PortalLayout>
   );
 }
