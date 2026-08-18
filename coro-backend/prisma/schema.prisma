@@ -31,6 +31,7 @@ model Organization {
   clientUsers    ClientUser[]
   module1Template OrganizationModule1Template?
   bookings Booking[]
+  files ProjectFile[]
 }
 
 model User {
@@ -83,6 +84,7 @@ model User {
   resetTokenExpiry  DateTime?
 
   bookings Booking[]
+  uploadedFiles ProjectFile[] @relation("FileUploader")
 }
 
 enum UserRole {
@@ -198,6 +200,7 @@ model Project {
   signatures     DocumentSignature[]
   engagements DocumentEngagement[]
   bookings Booking[]
+  files ProjectFile[]
 }
 
 model RevisionHistory {
@@ -714,6 +717,7 @@ model ClientUser {
   magicLinks MagicLink[]
   engagements DocumentEngagement[]
   bookings Booking[]
+  uploadedFiles ProjectFile[] @relation("ClientFileUploader")
 }
 
 model DocumentSignature {
@@ -819,4 +823,29 @@ model BookingNotification {
   booking   Booking  @relation(fields: [bookingId], references: [id])
   type      String   // 'confirmation', 'rappel', 'annulation', 'reassignation'
   sentAt    DateTime @default(now())
+}
+
+model ProjectFile {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id])
+  name         String
+  category     String   // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
+  size         Int
+  mimeType     String
+  storageKey   String
+  url          String
+  version      Int      @default(1)
+  parentId     String?
+  parent       ProjectFile? @relation("FileVersions", fields: [parentId], references: [id])
+  versions     ProjectFile[] @relation("FileVersions")
+  uploadedById String?
+  uploadedBy   User?    @relation("FileUploader", fields: [uploadedById], references: [id])
+  uploadedByClientId String?
+  uploadedByClient ClientUser? @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
+  visibility   String   @default("shared") // 'shared', 'internal'
+  status       String   @default("en_revision") // 'en_revision', 'valide'
+  createdAt    DateTime @default(now())
 }

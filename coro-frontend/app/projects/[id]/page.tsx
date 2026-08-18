@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import ExportModal from '@/components/ExportModal';
 import EngagementPanel from '@/components/EngagementPanel';
+import ProjectFiles from '@/components/ProjectFiles';
 
 interface Project {
   id: string;
@@ -1135,6 +1136,12 @@ const handleChangeStatus = async (newStatus: string) => {
       {(project.status === 'VALIDATED' || project.status === 'EXPORTED') && (
         <EngagementPanel projectId={project.id} />
       )}
+
+      {/* ── Espace de fichiers ── */}
+      <div className="rounded-md p-6 mb-6"
+        style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <ProjectFiles projectId={project.id} />
+      </div>
 
       {/* Infos projet */}
       <div className="rounded-md p-6"
