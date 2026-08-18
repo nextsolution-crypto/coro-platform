@@ -96,6 +96,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [isDesktop, setIsDesktop] = useState(false);
   const isResizing = useRef(false);
   const sidebarRef = useRef<HTMLElement>(null);
 
@@ -161,6 +162,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // ── Responsive : détecter le breakpoint desktop ──
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+
+    const updateViewport = () => {
+      setIsDesktop(mediaQuery.matches);
+    };
+
+    updateViewport();
+    mediaQuery.addEventListener('change', updateViewport);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateViewport);
+    };
   }, []);
 
   // ── Responsive : fermer le menu mobile à chaque navigation ──
@@ -288,7 +305,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setSidebarOpen(prev => !prev)}
-            className="lg:hidden w-9 h-9 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+            className="lg:hidden w-11 h-11 rounded flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
               color: '#2C3E50',
               border: '1px solid #DEE2E6',
@@ -482,17 +499,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           className={`fixed lg:sticky left-0 top-[57px] z-50 lg:z-20 p-3 overflow-y-auto transition-transform duration-200 ease-out lg:translate-x-0 lg:self-start ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
-          // Sur mobile : fixed ne prend pas de place dans le flux
           style={{
             backgroundColor: '#FFFFFF',
             borderRight: '1px solid #DEE2E6',
-            height: 'calc(100vh - 57px)',
-            maxHeight: 'calc(100vh - 57px)',
-            width: typeof window !== 'undefined' && window.innerWidth < 1024 ? '0px' : `${sidebarWidth}px`,
-            minWidth: typeof window !== 'undefined' && window.innerWidth < 1024 ? '0px' : '180px',
-            maxWidth: '400px',
-            position: 'sticky',
+            height: 'calc(100dvh - 57px)',
+            maxHeight: 'calc(100dvh - 57px)',
+            width: isDesktop ? `${sidebarWidth}px` : 'min(86vw, 320px)',
+            minWidth: isDesktop ? '180px' : 'min(86vw, 320px)',
+            maxWidth: isDesktop ? '400px' : '320px',
             flexShrink: 0,
+            boxShadow:
+              !isDesktop && sidebarOpen
+                ? '8px 0 24px rgba(0,0,0,0.14)'
+                : 'none',
           }}
         >
 
@@ -507,7 +526,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onChange={e => setSearchQuery(e.target.value)}
                 onFocus={() => { if (searchResults.length > 0) setShowSearch(true); }}
                 placeholder="Rechercher..."
-                className="w-full pl-7 pr-3 py-2 text-xs rounded focus:outline-none"
+                className="w-full pl-7 pr-3 py-2.5 text-base lg:text-xs rounded focus:outline-none"
                 style={{
                   border: '1px solid #DEE2E6',
                   backgroundColor: '#F8F9FA',
