@@ -123,7 +123,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { stats, projects, upcomingActivities } = data || {};
+  const { stats, projects, upcomingActivities, buildings } = data || {};
 
   const statItems = [
     {
@@ -706,6 +706,119 @@ export default function DashboardPage() {
           </div>
         </section>
       </div>
+
+      {/* ── Mes bâtiments ── */}
+      {buildings && buildings.length > 0 && (
+        <section style={{ marginTop: 28 }}>
+          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>
+              Mes bâtiments
+            </h2>
+            <span style={{ fontSize: 13, color: '#ADB5BD' }}>
+              {buildings.length} bâtiment{buildings.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
+            gap: 14,
+          }}>
+            {buildings.map((b: any) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => router.push(`/documents?building=${b.id}`)}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 12,
+                  border: '1px solid #E9ECEF',
+                  padding: '20px 20px 16px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = '#AED6F1';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(41,128,185,0.1)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = '#E9ECEF';
+                  e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
+                }}
+              >
+                {/* Icône + Nom */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 10,
+                    backgroundColor: '#EBF5FB',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, fontSize: 20,
+                  }}>
+                    🏢
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {b.name}
+                    </p>
+                    <p style={{
+                      margin: '3px 0 0', fontSize: 12, color: '#ADB5BD',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {b.city}{b.province ? `, ${b.province}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Séparateur */}
+                <div style={{ height: 1, backgroundColor: '#F1F3F5', marginBottom: 14 }} />
+
+                {/* Métriques */}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#2C3E50', lineHeight: 1 }}>
+                      {b.projectCount}
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#ADB5BD' }}>
+                      document{b.projectCount !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div style={{ width: 1, backgroundColor: '#F1F3F5' }} />
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#27AE60', lineHeight: 1 }}>
+                      {b.validatedCount}
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#ADB5BD' }}>
+                      validé{b.validatedCount !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div style={{ width: 1, backgroundColor: '#F1F3F5' }} />
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 22, fontWeight: 900, color: '#2980B9', lineHeight: 1 }}>
+                      {b.activeCount}
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#ADB5BD' }}>
+                      en cours
+                    </p>
+                  </div>
+                </div>
+
+                {/* Lien */}
+                <div style={{ marginTop: 14, textAlign: 'right' }}>
+                  <span style={{ fontSize: 12, color: '#C0392B', fontWeight: 600 }}>
+                    Voir les documents →
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </PortalLayout>
   );
 }

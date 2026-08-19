@@ -263,9 +263,39 @@ export class ClientPortalService {
     });
   }
 
-  async getDashboard(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+    async getDashboard(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
     const projects = await this.getProjects(clientId, organizationId, role, buildingIds);
     const activities = await this.getActivities(clientId, organizationId, role, buildingIds);
+
+    // Récupérer les bâtiments accessibles
+    const buildingWhere: any = { clientId };
+    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
+      buildingWhere.id = { in: buildingIds };
+    }
+    const buildings = await this.prisma.building.findMany({
+      where: buildingWhere,
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        city: true,
+        province: true,
+        buildingType: true,
+        floors: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Enrichir chaque bâtiment avec ses projets
+    const buildingsWithProjects = buildings.map(building => {
+      const buildingProjects = projects.filter(p => p.buildingId === building.id);
+      return {
+        ...building,
+        projectCount: buildingProjects.length,
+        validatedCount: buildingProjects.filter(p => p.status === 'VALIDATED' || p.status === 'EXPORTED').length,
+        activeCount: buildingProjects.filter(p => p.status === 'IN_PROGRESS' || p.status === 'REVIEW').length,
+      };
+    });
 
     const now = new Date();
     const upcoming = activities.filter(a => {
@@ -273,7 +303,6 @@ export class ClientPortalService {
       const date = new Date(a.scheduledDate);
       return date >= now && a.status !== 'fait';
     }).slice(0, 5);
-
     const stats = {
       total: projects.length,
       validated: projects.filter(p => p.status === 'VALIDATED').length,
@@ -281,8 +310,7 @@ export class ClientPortalService {
       review: projects.filter(p => p.status === 'REVIEW').length,
       signed: projects.filter(p => p.signatures.length > 0).length,
     };
-
-    return { stats, projects: projects.slice(0, 5), upcomingActivities: upcoming };
+    return { stats, projects: projects.slice(0, 5), upcomingActivities: upcoming, buildings: buildingsWithProjects };
   }
 
     async trackEngagement(data: {
