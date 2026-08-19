@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
+import DragDropUpload from '@/components/ui/DragDropUpload';
 
 const CATEGORIES = [
   'Réglementation & Normes',
@@ -28,6 +29,9 @@ function generateSlug(title: string): string {
 export default function NewBlogPostPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
   const [form, setForm] = useState({
     titleFr: '', titleEn: '', slug: '',
     excerptFr: '', excerptEn: '',
@@ -36,6 +40,7 @@ export default function NewBlogPostPage() {
     coverImage: '',
     seoTitleFr: '', seoTitleEn: '',
     seoDescFr: '', seoDescEn: '',
+    publishedAt: '',
   });
 
   const handleTitleFrChange = (value: string) => {
@@ -47,16 +52,13 @@ export default function NewBlogPostPage() {
     }));
   };
 
-  const handleCoverImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert('Image max 10MB'); return; }
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await api.post('/storage/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setForm(prev => ({ ...prev, coverImage: res.data.url }));
-    } catch { alert('Erreur lors du téléversement de l\'image'); }
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await api.post('/storage/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data.url;
   };
 
   const handleSave = async (publish = false) => {
@@ -65,14 +67,30 @@ export default function NewBlogPostPage() {
     try {
       const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
       const res = await api.post('/blog', payload);
-      if (publish) await api.post(`/blog/${res.data.id}/publish`);
+      if (publish) {
+        const publishedAt = form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined;
+        await api.post(`/blog/${res.data.id}/publish`, { publishedAt });
+      }
       router.push('/blog');
     } catch (err) { console.error(err); }
     finally { setSaving(false); }
   };
 
-  const inputStyle = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF', width: '100%' };
+  const handleSchedule = async () => {
+    if (!scheduledDate) return;
+    if (!form.titleFr || !form.contentFr) { alert('Le titre et le contenu FR sont obligatoires.'); return; }
+    setScheduling(true);
+    try {
+      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
+      const res = await api.post('/blog', payload);
+      const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+      await api.post(`/blog/${res.data.id}/schedule`, { scheduledAt });
+      router.push('/blog');
+    } catch (err) { console.error(err); }
+    finally { setScheduling(false); }
+  };
 
+  const inputStyle = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF', width: '100%' };
   const charColor = (len: number, max: number) =>
     len > max ? '#C0392B' : len > max * 0.85 ? '#F39C12' : '#ADB5BD';
 
@@ -209,7 +227,6 @@ export default function NewBlogPostPage() {
           <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
             <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>🔍 Référencement (SEO)</h3>
             <p className="text-xs mb-5" style={{ color: '#ADB5BD' }}>Titre : 50-60 caractères · Description : 150-160 caractères</p>
-
             <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #F1F3F5' }}>
               <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#C0392B' }}>Français</p>
               <div className="space-y-3">
@@ -220,9 +237,7 @@ export default function NewBlogPostPage() {
                     className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                  <p className="text-xs mt-1" style={{ color: charColor(form.seoTitleFr.length, 60) }}>
-                    {form.seoTitleFr.length}/60
-                  </p>
+                  <p className="text-xs mt-1" style={{ color: charColor(form.seoTitleFr.length, 60) }}>{form.seoTitleFr.length}/60</p>
                 </div>
                 <div>
                   <Label>Meta description (FR)</Label>
@@ -231,14 +246,11 @@ export default function NewBlogPostPage() {
                     className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                  <p className="text-xs mt-1" style={{ color: charColor(form.seoDescFr.length, 160) }}>
-                    {form.seoDescFr.length}/160
-                  </p>
+                  <p className="text-xs mt-1" style={{ color: charColor(form.seoDescFr.length, 160) }}>{form.seoDescFr.length}/160</p>
                 </div>
                 <GooglePreview title={form.seoTitleFr} desc={form.seoDescFr} slug={form.slug} />
               </div>
             </div>
-
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#2980B9' }}>English</p>
               <div className="space-y-3">
@@ -249,9 +261,7 @@ export default function NewBlogPostPage() {
                     className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                  <p className="text-xs mt-1" style={{ color: charColor(form.seoTitleEn.length, 60) }}>
-                    {form.seoTitleEn.length}/60
-                  </p>
+                  <p className="text-xs mt-1" style={{ color: charColor(form.seoTitleEn.length, 60) }}>{form.seoTitleEn.length}/60</p>
                 </div>
                 <div>
                   <Label>Meta description (EN)</Label>
@@ -260,9 +270,7 @@ export default function NewBlogPostPage() {
                     className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                  <p className="text-xs mt-1" style={{ color: charColor(form.seoDescEn.length, 160) }}>
-                    {form.seoDescEn.length}/160
-                  </p>
+                  <p className="text-xs mt-1" style={{ color: charColor(form.seoDescEn.length, 160) }}>{form.seoDescEn.length}/160</p>
                 </div>
                 <GooglePreview title={form.seoTitleEn} desc={form.seoDescEn} slug={form.slug} />
               </div>
@@ -309,33 +317,15 @@ export default function NewBlogPostPage() {
           {/* Image couverture */}
           <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
             <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Image de couverture</h3>
-            {form.coverImage ? (
-              <div className="mb-3 rounded overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
-                <img src={form.coverImage} alt="Couverture" className="w-full h-40 object-cover" />
-              </div>
-            ) : (
-              <div className="mb-3 rounded h-40 flex items-center justify-center"
-                style={{ border: '2px dashed #DEE2E6', backgroundColor: '#F8F9FA' }}>
-                <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune image</p>
-              </div>
-            )}
-            <label className="flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded cursor-pointer"
-              style={{ border: '1px dashed #CED4DA', color: '#6C757D' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              {form.coverImage ? 'Changer l\'image' : 'Téléverser une image'}
-              <input type="file" accept="image/*" onChange={handleCoverImage} className="hidden" />
-            </label>
-            <p className="text-xs mt-2 text-center" style={{ color: '#ADB5BD' }}>JPG, PNG — Max 10MB</p>
-            {form.coverImage && (
-              <button onClick={() => setForm({ ...form, coverImage: '' })}
-                className="w-full mt-2 text-xs py-1.5 rounded"
-                style={{ color: '#C0392B', border: '1px solid #F1948A' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                Supprimer l'image
-              </button>
-            )}
+            <DragDropUpload
+              value={form.coverImage}
+              onChange={url => setForm({ ...form, coverImage: url })}
+              onUpload={uploadImage}
+              label="Téléverser une image de couverture"
+              hint="JPG, PNG, WebP · Max 10 MB"
+              aspectRatio="wide"
+              previewHeight={180}
+            />
           </div>
 
           {/* Classification */}
@@ -363,6 +353,62 @@ export default function NewBlogPostPage() {
                   onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                 <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>Séparés par des virgules</p>
               </div>
+            </div>
+          </div>
+
+          {/* Publication */}
+          <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+            <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Publication</h3>
+
+            {/* Anti-datation */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#495057' }}>
+                Date de publication personnalisée
+              </label>
+              <input
+                type="date"
+                value={form.publishedAt}
+                onChange={e => setForm({ ...form, publishedAt: e.target.value })}
+                className="rounded px-3 py-2 text-sm focus:outline-none w-full"
+                style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+              />
+              <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                Laisser vide pour utiliser la date actuelle
+              </p>
+            </div>
+
+            {/* Publication programmée */}
+            <div className="pt-4" style={{ borderTop: '1px solid #F1F3F5' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#495057' }}>
+                Programmer la publication
+              </label>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <input
+                  type="date"
+                  value={scheduledDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => setScheduledDate(e.target.value)}
+                  className="rounded px-3 py-2 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+                />
+                <input
+                  type="time"
+                  value={scheduledTime}
+                  onChange={e => setScheduledTime(e.target.value)}
+                  className="rounded px-3 py-2 text-sm focus:outline-none"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+                />
+              </div>
+              <button
+                onClick={handleSchedule}
+                disabled={scheduling || !scheduledDate}
+                className="w-full py-2 rounded text-sm font-medium disabled:opacity-50"
+                style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}
+                onMouseEnter={e => { if (scheduledDate) e.currentTarget.style.backgroundColor = '#D6EAF8'; }}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+              >
+                {scheduling ? 'Programmation...' : '📅 Programmer'}
+              </button>
             </div>
           </div>
 
