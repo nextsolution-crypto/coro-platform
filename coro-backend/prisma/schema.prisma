@@ -82,6 +82,8 @@ model User {
 
   resetToken        String?
   resetTokenExpiry  DateTime?
+  mfaCode        String?
+  mfaCodeExpiry  DateTime?
 
   bookings Booking[]
   uploadedFiles ProjectFile[] @relation("FileUploader")

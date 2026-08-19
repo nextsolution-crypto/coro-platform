@@ -14,33 +14,54 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [view, setView] = useState<'login' | 'forgot' | 'forgot-sent'>('login');
+  const [view, setView] = useState<'login' | 'forgot' | 'forgot-sent' | 'mfa'>('login');
 
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (loading) return;
-
     setLoading(true);
     setError('');
-
     try {
       const response = await api.post('/auth/login', {
         email: email.trim(),
         password,
       });
-
+      if (response.data.mfaRequired) {
+        setView('mfa');
+        return;
+      }
       const { access_token, user } = response.data;
-
       setAuth(user, access_token);
       router.push('/dashboard');
     } catch (err: any) {
       setError('Email ou mot de passe invalide');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMfa = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (mfaLoading) return;
+    setMfaLoading(true);
+    setError('');
+    try {
+      const response = await api.post('/auth/verify-mfa', {
+        email: email.trim(),
+        code: mfaCode.trim(),
+      });
+      const { access_token, user } = response.data;
+      setAuth(user, access_token);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError('Code invalide ou expiré. Veuillez réessayer.');
+    } finally {
+      setMfaLoading(false);
     }
   };
 
@@ -355,6 +376,78 @@ export default function LoginPage() {
             </>
           )}
 
+
+          {/* ═══════════════════════════════════
+              MFA
+          ═══════════════════════════════════ */}
+          {view === 'mfa' && (
+            <>
+              <div className="text-center mb-6">
+                <div className="text-4xl mb-3">🔐</div>
+                <h2 className="text-xl font-semibold mb-2" style={{ color: '#2C3E50' }}>
+                  Vérification en deux étapes
+                </h2>
+                <p className="text-sm leading-relaxed" style={{ color: '#6C757D' }}>
+                  Un code à 6 chiffres a été envoyé à<br />
+                  <strong style={{ color: '#2C3E50' }}>{email}</strong>
+                </p>
+              </div>
+
+              <form onSubmit={handleMfa} className="space-y-5">
+                <div>
+                  <label htmlFor="mfa-code" className="block text-sm mb-1.5 font-medium" style={{ color: '#495057' }}>
+                    Code de vérification
+                  </label>
+                  <input
+                    id="mfa-code"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    autoComplete="one-time-code"
+                    required
+                    disabled={mfaLoading}
+                    className="w-full min-w-0 rounded px-4 py-3 text-center text-2xl font-bold tracking-widest focus:outline-none disabled:opacity-60"
+                    style={{ ...inputStyle, letterSpacing: '0.3em' }}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#C0392B'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#CED4DA'; }}
+                  />
+                  <p className="text-xs mt-2 text-center" style={{ color: '#ADB5BD' }}>
+                    Code valide pendant 10 minutes
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="rounded px-4 py-3" style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                    <p className="text-sm" style={{ color: '#C0392B' }}>{error}</p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={mfaLoading || mfaCode.length !== 6}
+                  className="w-full min-h-[48px] text-white font-semibold rounded px-4 py-3 text-sm transition-colors disabled:cursor-not-allowed"
+                  style={{ backgroundColor: mfaLoading || mfaCode.length !== 6 ? '#E8A89C' : '#C0392B' }}
+                  onMouseEnter={e => { if (!mfaLoading && mfaCode.length === 6) e.currentTarget.style.backgroundColor = '#A93226'; }}
+                  onMouseLeave={e => { if (!mfaLoading && mfaCode.length === 6) e.currentTarget.style.backgroundColor = '#C0392B'; }}
+                >
+                  {mfaLoading ? 'Vérification...' : 'Vérifier le code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setView('login'); setMfaCode(''); setError(''); }}
+                  className="w-full text-sm min-h-[40px] transition-colors"
+                  style={{ color: '#6C757D', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  ← Retour à la connexion
+                </button>
+              </form>
+            </>
+          )}
 
           {/* ═══════════════════════════════════
               MOT DE PASSE OUBLIÉ

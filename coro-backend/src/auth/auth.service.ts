@@ -27,7 +27,68 @@ export class AuthService {
       this.logger.warn(`[AUTH] Tentative de connexion échouée — mot de passe incorrect : ${email}`);
       throw new UnauthorizedException('Identifiants invalides');
     }
-    this.logger.log(`[AUTH] Connexion réussie : ${email} (${user.role})`);
+    this.logger.log(`[AUTH] Identifiants valides — envoi code MFA : ${email}`);
+
+    // Générer code MFA 6 chiffres
+    const mfaCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const mfaExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { mfaCode, mfaCodeExpiry: mfaExpiry },
+    });
+
+    // Envoyer le code par courriel
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
+      body: JSON.stringify({
+        sender: { name: 'CORO', email: 'info@getcoro.io' },
+        to: [{ email: user.email, name: `${user.firstName} ${user.lastName}` }],
+        subject: `${mfaCode} — Votre code de connexion CORO`,
+        htmlContent: `
+          <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;">
+            <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
+              <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
+            </div>
+            <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:16px;color:#2C3E50;">Votre code de connexion</p>
+              <div style="margin:24px 0;padding:20px;background:#F8F9FA;border-radius:8px;border:2px dashed #C0392B;">
+                <span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#C0392B;">${mfaCode}</span>
+              </div>
+              <p style="margin:0;font-size:13px;color:#6C757D;">Ce code est valide pendant <strong>10 minutes</strong>.</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#ADB5BD;">Si vous n'avez pas demandé ce code, ignorez ce courriel.</p>
+            </div>
+          </div>
+        `,
+      }),
+    });
+
+    return { mfaRequired: true, email };
+  }
+
+  async verifyMfa(email: string, code: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new UnauthorizedException('Identifiants invalides');
+
+    if (!user.mfaCode || !user.mfaCodeExpiry) {
+      throw new UnauthorizedException('Aucun code MFA en attente.');
+    }
+    if (new Date() > user.mfaCodeExpiry) {
+      throw new UnauthorizedException('Code MFA expiré. Veuillez vous reconnecter.');
+    }
+    if (user.mfaCode !== code) {
+      this.logger.warn(`[MFA] Code incorrect pour : ${email}`);
+      throw new UnauthorizedException('Code MFA invalide.');
+    }
+
+    // Invalider le code
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { mfaCode: null, mfaCodeExpiry: null },
+    });
+
+    this.logger.log(`[AUTH] MFA validé — connexion complète : ${email}`);
 
     const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
     return {

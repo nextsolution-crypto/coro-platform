@@ -23,4 +23,10 @@ export class AuthController {
   async resetPassword(@Body() body: { token: string; password: string }) {
     return this.authService.resetPassword(body.token, body.password);
   }
+
+  @Post('verify-mfa')
+  @Throttle({ short: { ttl: 60000, limit: 5 } })
+  async verifyMfa(@Body() body: { email: string; code: string }) {
+    return this.authService.verifyMfa(body.email, body.code);
+  }
 }
