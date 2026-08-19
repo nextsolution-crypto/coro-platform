@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
-import { ArrowLeft, Save, Building2 } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
+import DragDropUpload from '@/components/ui/DragDropUpload';
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
@@ -345,309 +346,61 @@ export default function OrganizationSettingsPage() {
 
         <div className="space-y-4 sm:space-y-6 min-w-0">
 
-          {/* LOGO ICÔNE */}
-
-          <section
-            className="rounded-lg p-4 sm:p-6"
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E9ECEF',
-            }}
-          >
-            <h3
-              className="font-semibold mb-1"
-              style={{ color: '#2C3E50' }}
-            >
-              Logo icône
-            </h3>
-
-            <p
-              className="text-xs leading-relaxed mb-4"
-              style={{ color: '#ADB5BD' }}
-            >
+                    {/* LOGO ICÔNE */}
+          <section className="rounded-lg p-4 sm:p-6"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+            <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Logo icône</h3>
+            <p className="text-xs leading-relaxed mb-4" style={{ color: '#ADB5BD' }}>
               Apparaît sur les documents générés
             </p>
-
-            <div className="flex flex-col items-center gap-4">
-
-              {logoPreview ? (
-
-                <div className="relative">
-                  <div
-                    className="
-                      w-28
-                      h-28
-                      sm:w-32
-                      sm:h-32
-                      rounded-md
-                      overflow-hidden
-                      flex
-                      items-center
-                      justify-center
-                      bg-white
-                    "
-                    style={{
-                      border: '1px solid #E9ECEF',
-                    }}
-                  >
-                    <img
-                      src={logoPreview}
-                      alt="Logo de l’organisation"
-                      className="w-full h-full object-contain p-2"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleRemoveLogo}
-                    aria-label="Supprimer le logo"
-                    className="
-                      absolute
-                      -top-2
-                      -right-2
-                      text-white
-                      rounded-full
-                      w-8
-                      h-8
-                      flex
-                      items-center
-                      justify-center
-                      text-xs
-                      shadow-sm
-                    "
-                    style={{
-                      backgroundColor: '#C0392B',
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-              ) : (
-
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="
-                    w-28
-                    h-28
-                    sm:w-32
-                    sm:h-32
-                    rounded-md
-                    flex
-                    flex-col
-                    items-center
-                    justify-center
-                    cursor-pointer
-                    transition-colors
-                  "
-                  style={{
-                    border: '2px dashed #CED4DA',
-                    backgroundColor: '#F8F9FA',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = '#C0392B';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = '#CED4DA';
-                  }}
-                >
-                  <Building2
-                    size={30}
-                    className="mb-2"
-                    style={{ color: '#ADB5BD' }}
-                  />
-
-                  <span
-                    className="text-xs text-center px-2"
-                    style={{ color: '#ADB5BD' }}
-                  >
-                    Cliquer pour ajouter
-                  </span>
-                </button>
-
-              )}
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="
-                  w-full
-                  min-h-[44px]
-                  text-sm
-                  py-2
-                  px-4
-                  rounded
-                  font-medium
-                  transition-colors
-                "
-                style={{
-                  border: '1px solid #DEE2E6',
-                  color: '#6C757D',
-                  backgroundColor: '#F8F9FA',
-                }}
-              >
-                {logoPreview ? 'Changer' : 'Ajouter'}
-              </button>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="hidden"
-              />
-
-            </div>
+            <DragDropUpload
+              value={logoPreview || ''}
+              onChange={async (base64) => {
+                setLogoPreview(base64 || null);
+                if (!base64) {
+                  await api.put('/users/me/logo', { companyLogoB64: null });
+                }
+              }}
+              mode="base64"
+              onBase64={async (base64) => {
+                setLogoPreview(base64);
+                await api.put('/users/me/logo', { companyLogoB64: base64 });
+              }}
+              label="Téléverser le logo icône"
+              hint="PNG ou SVG recommandé · Max 2 MB"
+              maxSizeMB={2}
+              aspectRatio="square"
+              previewHeight={140}
+            />
           </section>
 
 
-          {/* LOGO COMPLET */}
-
-          <section
-            className="rounded-lg p-4 sm:p-6"
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E9ECEF',
-            }}
-          >
-            <h3
-              className="font-semibold mb-1"
-              style={{ color: '#2C3E50' }}
-            >
-              Logo complet
-            </h3>
-
-            <p
-              className="text-xs leading-relaxed mb-4"
-              style={{ color: '#ADB5BD' }}
-            >
+                    {/* LOGO COMPLET */}
+          <section className="rounded-lg p-4 sm:p-6"
+            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+            <h3 className="font-semibold mb-1" style={{ color: '#2C3E50' }}>Logo complet</h3>
+            <p className="text-xs leading-relaxed mb-4" style={{ color: '#ADB5BD' }}>
               Icône + nom — page de couverture des documents
             </p>
-
-            <div className="flex flex-col items-center gap-4">
-
-              {logoFullPreview ? (
-
-                <div className="relative w-full">
-                  <div
-                    className="
-                      w-full
-                      h-20
-                      sm:h-24
-                      rounded-md
-                      overflow-hidden
-                      flex
-                      items-center
-                      justify-center
-                      bg-white
-                    "
-                    style={{
-                      border: '1px solid #E9ECEF',
-                    }}
-                  >
-                    <img
-                      src={logoFullPreview}
-                      alt="Logo complet de l’organisation"
-                      className="max-w-full max-h-full object-contain p-2"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleRemoveFullLogo}
-                    aria-label="Supprimer le logo complet"
-                    className="
-                      absolute
-                      -top-2
-                      -right-2
-                      text-white
-                      rounded-full
-                      w-8
-                      h-8
-                      flex
-                      items-center
-                      justify-center
-                      text-xs
-                      shadow-sm
-                    "
-                    style={{
-                      backgroundColor: '#C0392B',
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-              ) : (
-
-                <button
-                  type="button"
-                  onClick={() => fileInputFullRef.current?.click()}
-                  className="
-                    w-full
-                    min-h-[80px]
-                    rounded-md
-                    flex
-                    flex-col
-                    items-center
-                    justify-center
-                    cursor-pointer
-                    transition-colors
-                    px-4
-                  "
-                  style={{
-                    border: '2px dashed #CED4DA',
-                    backgroundColor: '#F8F9FA',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = '#C0392B';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = '#CED4DA';
-                  }}
-                >
-                  <span
-                    className="text-xs text-center"
-                    style={{ color: '#ADB5BD' }}
-                  >
-                    Cliquer pour ajouter
-                  </span>
-                </button>
-
-              )}
-
-              <button
-                type="button"
-                onClick={() => fileInputFullRef.current?.click()}
-                className="
-                  w-full
-                  min-h-[44px]
-                  text-sm
-                  py-2
-                  px-4
-                  rounded
-                  font-medium
-                  transition-colors
-                "
-                style={{
-                  border: '1px solid #DEE2E6',
-                  color: '#6C757D',
-                  backgroundColor: '#F8F9FA',
-                }}
-              >
-                {logoFullPreview ? 'Changer' : 'Ajouter'}
-              </button>
-
-              <input
-                ref={fileInputFullRef}
-                type="file"
-                accept="image/*"
-                onChange={handleLogoFullUpload}
-                className="hidden"
-              />
-
-            </div>
+            <DragDropUpload
+              value={logoFullPreview || ''}
+              onChange={async (base64) => {
+                setLogoFullPreview(base64 || null);
+                if (!base64) {
+                  await api.put('/users/me/logo-full', { companyLogoFullB64: null });
+                }
+              }}
+              mode="base64"
+              onBase64={async (base64) => {
+                setLogoFullPreview(base64);
+                await api.put('/users/me/logo-full', { companyLogoFullB64: base64 });
+              }}
+              label="Téléverser le logo complet"
+              hint="PNG ou SVG recommandé · Max 2 MB"
+              maxSizeMB={2}
+              aspectRatio="wide"
+              previewHeight={100}
+            />
           </section>
 
         </div>

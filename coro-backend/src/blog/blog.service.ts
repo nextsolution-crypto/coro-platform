@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class BlogService {
         authorTitle: true,
         isPublished: true,
         publishedAt: true,
+        scheduledAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -85,12 +87,24 @@ export class BlogService {
     return this.prisma.blogPost.update({ where: { id }, data });
   }
 
-  async publish(id: string) {
+    async publish(id: string, publishedAt?: Date) {
     return this.prisma.blogPost.update({
       where: { id },
       data: {
         isPublished: true,
-        publishedAt: new Date(),
+        publishedAt: publishedAt || new Date(),
+        scheduledAt: null,
+      },
+    });
+  }
+
+  async schedule(id: string, scheduledAt: Date) {
+    return this.prisma.blogPost.update({
+      where: { id },
+      data: {
+        isPublished: false,
+        scheduledAt,
+        publishedAt: null,
       },
     });
   }
@@ -101,12 +115,45 @@ export class BlogService {
       data: {
         isPublished: false,
         publishedAt: null,
+        scheduledAt: null,
       },
     });
   }
 
+  async publishScheduled() {
+    const now = new Date();
+    const toPublish = await this.prisma.blogPost.findMany({
+      where: {
+        isPublished: false,
+        scheduledAt: {
+          lte: now,
+          not: null,
+        },
+      },
+    });
+    for (const post of toPublish) {
+      await this.prisma.blogPost.update({
+        where: { id: post.id },
+        data: {
+          isPublished: true,
+          publishedAt: post.scheduledAt,
+          scheduledAt: null,
+        },
+      });
+    }
+    return toPublish.length;
+  }
+
   async remove(id: string) {
     return this.prisma.blogPost.delete({ where: { id } });
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleScheduledPosts() {
+    const count = await this.publishScheduled();
+    if (count > 0) {
+      new Logger('BlogService').log(`[BLOG] ${count} article(s) programmé(s) publié(s) automatiquement.`);
+    }
   }
 
   generateSlug(title: string): string {

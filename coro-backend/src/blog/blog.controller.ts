@@ -55,6 +55,19 @@ export class BlogController {
     return this.blogService.publish(id);
   }
 
+  @Post(':id/publish')
+  @UseGuards(AuthGuard('jwt'))
+  async publishWithDate(@Param('id') id: string, @Body() body: { publishedAt?: string }) {
+    const date = body.publishedAt ? new Date(body.publishedAt) : undefined;
+    return this.blogService.publish(id, date);
+  }
+
+  @Post(':id/schedule')
+  @UseGuards(AuthGuard('jwt'))
+  async schedule(@Param('id') id: string, @Body() body: { scheduledAt: string }) {
+    return this.blogService.schedule(id, new Date(body.scheduledAt));
+  }
+
   @Post(':id/unpublish')
   @UseGuards(AuthGuard('jwt'))
   async unpublish(@Param('id') id: string) {

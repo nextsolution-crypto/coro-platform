@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { ArrowLeft, Save, Eye } from 'lucide-react';
+import DragDropUpload from '@/components/ui/DragDropUpload';
 
 const CATEGORIES = [
   'Réglementation & Normes',
@@ -20,6 +21,9 @@ export default function EditBlogPostPage() {
   const postId = params.id as string;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
   const [form, setForm] = useState<any>({
     titleFr: '', titleEn: '', slug: '',
     excerptFr: '', excerptEn: '',
@@ -29,6 +33,8 @@ export default function EditBlogPostPage() {
     seoTitleFr: '', seoTitleEn: '',
     seoDescFr: '', seoDescEn: '',
     isPublished: false,
+    publishedAt: null,
+    scheduledAt: null,
   });
 
   useEffect(() => { fetchPost(); }, [postId]);
@@ -42,18 +48,13 @@ export default function EditBlogPostPage() {
     finally { setLoading(false); }
   };
 
-  const handleCoverImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert('Image max 10MB'); return; }
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await api.post('/storage/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setForm((prev: any) => ({ ...prev, coverImage: res.data.url }));
-    } catch { alert('Erreur lors du téléversement de l\'image'); }
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await api.post('/storage/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data.url;
   };
 
   const handleSave = async (publish?: boolean) => {
@@ -64,11 +65,30 @@ export default function EditBlogPostPage() {
         tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
       };
       await api.put(`/blog/${postId}`, payload);
-      if (publish === true) await api.post(`/blog/${postId}/publish`);
+      if (publish === true) {
+        const publishedAt = form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined;
+        await api.post(`/blog/${postId}/publish`, { publishedAt });
+      }
       if (publish === false) await api.post(`/blog/${postId}/unpublish`);
       router.push('/blog');
     } catch (err) { console.error(err); }
     finally { setSaving(false); }
+  };
+
+  const handleSchedule = async () => {
+    if (!scheduledDate) return;
+    setScheduling(true);
+    try {
+      const payload = {
+        ...form,
+        tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+      };
+      await api.put(`/blog/${postId}`, payload);
+      const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+      await api.post(`/blog/${postId}/schedule`, { scheduledAt });
+      router.push('/blog');
+    } catch (err) { console.error(err); }
+    finally { setScheduling(false); }
   };
 
   const inputStyle = {
@@ -323,32 +343,15 @@ export default function EditBlogPostPage() {
           {/* Image de couverture */}
           <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
             <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Image de couverture</h3>
-            {form.coverImage ? (
-              <div className="mb-3 rounded overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
-                <img src={form.coverImage} alt="Couverture" className="w-full h-40 object-cover" />
-              </div>
-            ) : (
-              <div className="mb-3 rounded h-40 flex items-center justify-center"
-                style={{ border: '2px dashed #DEE2E6', backgroundColor: '#F8F9FA' }}>
-                <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune image</p>
-              </div>
-            )}
-            <label className="flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded cursor-pointer"
-              style={{ border: '1px dashed #CED4DA', color: '#6C757D' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              {form.coverImage ? 'Changer l\'image' : 'Téléverser une image'}
-              <input type="file" accept="image/*" onChange={handleCoverImage} className="hidden" />
-            </label>
-            {form.coverImage && (
-              <button onClick={() => setForm({ ...form, coverImage: '' })}
-                className="w-full mt-2 text-xs py-1.5 rounded"
-                style={{ color: '#C0392B', border: '1px solid #F1948A' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                Supprimer l'image
-              </button>
-            )}
+            <DragDropUpload
+              value={form.coverImage}
+              onChange={url => setForm({ ...form, coverImage: url })}
+              onUpload={uploadImage}
+              label="Téléverser une image de couverture"
+              hint="JPG, PNG, WebP · Max 10 MB"
+              aspectRatio="wide"
+              previewHeight={180}
+            />
           </div>
 
           {/* Classification */}
@@ -377,6 +380,96 @@ export default function EditBlogPostPage() {
                 <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>Séparés par des virgules</p>
               </div>
             </div>
+          </div>
+
+                    {/* Publication */}
+          <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+            <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Publication</h3>
+
+            {/* Statut actuel */}
+            <div className="mb-4 p-3 rounded" style={{
+              backgroundColor: form.isPublished ? '#EAFAF1' : form.scheduledAt ? '#EBF5FB' : '#F8F9FA',
+              border: `1px solid ${form.isPublished ? '#A9DFBF' : form.scheduledAt ? '#AED6F1' : '#DEE2E6'}`,
+            }}>
+              <p className="text-xs font-semibold" style={{
+                color: form.isPublished ? '#27AE60' : form.scheduledAt ? '#2980B9' : '#6C757D',
+              }}>
+                {form.isPublished
+                  ? '✅ Publié'
+                  : form.scheduledAt
+                  ? `📅 Programmé — ${new Date(form.scheduledAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+                  : '📝 Brouillon'}
+              </p>
+              {form.publishedAt && (
+                <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                  Publié le {new Date(form.publishedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              )}
+            </div>
+
+            {/* Anti-datation */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#495057' }}>
+                Date de publication personnalisée
+              </label>
+              <input
+                type="date"
+                value={form.publishedAt ? new Date(form.publishedAt).toISOString().split('T')[0] : ''}
+                onChange={e => setForm({ ...form, publishedAt: e.target.value || null })}
+                className="rounded px-3 py-2 text-sm focus:outline-none w-full"
+                style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+              />
+              <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
+                Laisser vide pour utiliser la date actuelle
+              </p>
+            </div>
+
+            {/* Publication programmée */}
+            {!form.isPublished && (
+              <div className="pt-4" style={{ borderTop: '1px solid #F1F3F5' }}>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#495057' }}>
+                  Programmer la publication
+                </label>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <input
+                    type="date"
+                    value={scheduledDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={e => setScheduledDate(e.target.value)}
+                    className="rounded px-3 py-2 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+                  />
+                  <input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={e => setScheduledTime(e.target.value)}
+                    className="rounded px-3 py-2 text-sm focus:outline-none"
+                    style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}
+                  />
+                </div>
+                <button
+                  onClick={handleSchedule}
+                  disabled={scheduling || !scheduledDate}
+                  className="w-full py-2 rounded text-sm font-medium disabled:opacity-50"
+                  style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}
+                  onMouseEnter={e => { if (scheduledDate) e.currentTarget.style.backgroundColor = '#D6EAF8'; }}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                >
+                  {scheduling ? 'Programmation...' : '📅 Programmer'}
+                </button>
+                {form.scheduledAt && (
+                  <button
+                    onClick={() => api.post(`/blog/${postId}/unpublish`).then(() => setForm({ ...form, scheduledAt: null }))}
+                    className="w-full mt-2 py-1.5 rounded text-xs"
+                    style={{ color: '#C0392B', border: '1px solid #F1948A' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    Annuler la programmation
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Score SEO rapide */}
