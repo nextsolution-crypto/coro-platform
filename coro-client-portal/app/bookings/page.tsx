@@ -323,7 +323,7 @@ export default function BookingsPage() {
           EN-TÊTE
       ═══════════════════════════════════ */}
 
-      <header className="mb-8 sm:mb-10">
+      <header className="mb-8 sm:mb-10" style={{ marginBottom: 36 }}>
         <p
           className="
             mb-1
@@ -1065,7 +1065,7 @@ export default function BookingsPage() {
            LISTE DES RÉSERVATIONS
         ═══════════════════════════════════ */
 
-        <div className="flex flex-col gap-5 sm:gap-6">
+        <div className="flex flex-col gap-5 sm:gap-6" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
           {bookings.map((booking: any) => {
             const sc =
@@ -1087,43 +1087,39 @@ export default function BookingsPage() {
             return (
               <article
                 key={booking.id}
-                className="
-                  rounded-2xl
-                  p-5
-                  sm:p-6
-                  lg:p-7
-                  min-w-0
-                "
+                className="min-w-0"
                 style={{
                   backgroundColor: '#FFFFFF',
                   border: `1px solid ${sc.border}`,
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.05)',
+                  borderRadius: 14,
+                  padding: '24px',
+                  boxShadow: '0 8px 24px rgba(44,62,80,0.07)',
+                  overflow: 'hidden',
                 }}
               >
 
                 {/* EN-TÊTE CARTE */}
 
                 <div
-                  className="
-                    flex
-                    flex-col
-                    sm:flex-row
-                    sm:items-start
-                    sm:justify-between
-                    gap-4
-                    mb-5
-                  "
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: 20,
+                    flexWrap: 'wrap',
+                    marginBottom: 22,
+                  }}
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1" style={{ flex: '1 1 420px', minWidth: 0 }}>
 
                     <div
-                      className="
-                        flex
-                        flex-wrap
-                        items-center
-                        gap-2
-                        mb-1.5
-                      "
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                        marginBottom: 8,
+                      }}
                     >
                       <span
                         className="
@@ -1153,6 +1149,8 @@ export default function BookingsPage() {
                         "
                         style={{
                           color: '#2C3E50',
+                          fontSize: 16,
+                          fontWeight: 750,
                         }}
                       >
                         {activity?.label ||
@@ -1169,6 +1167,8 @@ export default function BookingsPage() {
                       "
                       style={{
                         color: '#6C757D',
+                        fontSize: 14,
+                        lineHeight: 1.55,
                       }}
                     >
                       {booking.project?.name || 'Projet'}
@@ -1195,25 +1195,18 @@ export default function BookingsPage() {
                           booking.id
                         )
                       }
-                      className="
-                        w-full
-                        sm:w-auto
-                        min-h-[40px]
-                        px-3
-                        py-2
-                        rounded-md
-                        text-xs
-                        font-semibold
-                        flex-shrink-0
-                        transition-colors
-                      "
+                      className="transition-colors"
                       style={{
-                        border:
-                          '1px solid #DEE2E6',
-                        backgroundColor:
-                          '#FFFFFF',
+                        border: '1px solid #E6B0AA',
+                        backgroundColor: '#FFFFFF',
                         color: '#C0392B',
                         cursor: 'pointer',
+                        minHeight: 42,
+                        padding: '10px 16px',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        fontWeight: 650,
+                        flex: '0 0 auto',
                       }}
                     >
                       Annuler
@@ -1225,13 +1218,13 @@ export default function BookingsPage() {
                 {/* DÉTAILS */}
 
                 <div
-                  className="
-                    grid
-                    grid-cols-1
-                    min-[420px]:grid-cols-2
-                    lg:grid-cols-4
-                    gap-3
-                  "
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 14,
+                    paddingTop: 18,
+                    borderTop: '1px solid #EEF1F3',
+                  }}
                 >
 
                   {/* DATE DEMANDÉE */}
@@ -1244,9 +1237,11 @@ export default function BookingsPage() {
                       min-w-0
                     "
                     style={{
-                      backgroundColor:
-                        '#F8F9FA',
+                      backgroundColor: '#F8F9FA',
                       border: '1px solid #E9ECEF',
+                      borderRadius: 9,
+                      padding: '14px 16px',
+                      minHeight: 72,
                     }}
                   >
                     <p
@@ -1255,7 +1250,9 @@ export default function BookingsPage() {
                         text-[11px]
                       "
                       style={{
-                        color: '#ADB5BD',
+                        color: '#8A949E',
+                        fontSize: 11,
+                        lineHeight: 1.3,
                       }}
                     >
                       Date demandée
@@ -1300,9 +1297,11 @@ export default function BookingsPage() {
                         min-w-0
                       "
                       style={{
-                        backgroundColor:
-                          '#FEF9E7',
+                        backgroundColor: '#FEF9E7',
                         border: '1px solid #FAD7A0',
+                        borderRadius: 9,
+                        padding: '14px 16px',
+                        minHeight: 72,
                       }}
                     >
                       <p
@@ -1357,9 +1356,11 @@ export default function BookingsPage() {
                       min-w-0
                     "
                     style={{
-                      backgroundColor:
-                        '#F8F9FA',
+                      backgroundColor: '#F8F9FA',
                       border: '1px solid #E9ECEF',
+                      borderRadius: 9,
+                      padding: '14px 16px',
+                      minHeight: 72,
                     }}
                   >
                     <p
@@ -1368,7 +1369,9 @@ export default function BookingsPage() {
                         text-[11px]
                       "
                       style={{
-                        color: '#ADB5BD',
+                        color: '#8A949E',
+                        fontSize: 11,
+                        lineHeight: 1.3,
                       }}
                     >
                       Durée
@@ -1399,9 +1402,11 @@ export default function BookingsPage() {
                       min-w-0
                     "
                     style={{
-                      backgroundColor:
-                        '#F8F9FA',
+                      backgroundColor: '#F8F9FA',
                       border: '1px solid #E9ECEF',
+                      borderRadius: 9,
+                      padding: '14px 16px',
+                      minHeight: 72,
                     }}
                   >
                     <p
@@ -1410,7 +1415,9 @@ export default function BookingsPage() {
                         text-[11px]
                       "
                       style={{
-                        color: '#ADB5BD',
+                        color: '#8A949E',
+                        fontSize: 11,
+                        lineHeight: 1.3,
                       }}
                     >
                       Conseiller
@@ -1449,10 +1456,11 @@ export default function BookingsPage() {
                       rounded-md
                     "
                     style={{
-                      backgroundColor:
-                        '#FDEDEC',
-                      border:
-                        '1px solid #F1948A',
+                      backgroundColor: '#FDEDEC',
+                      border: '1px solid #F1948A',
+                      marginTop: 18,
+                      padding: '14px 16px',
+                      borderRadius: 9,
                     }}
                   >
                     <p
