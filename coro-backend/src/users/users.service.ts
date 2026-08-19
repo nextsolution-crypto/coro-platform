@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { getLimitsForLicense } from '../organizations/license-limits';
@@ -72,7 +72,16 @@ export class UsersService {
     });
   }
 
+  private validatePasswordStrength(password: string): void {
+    if (password.length < 8) throw new BadRequestException('Le mot de passe doit contenir au moins 8 caractères.');
+    if (!/[A-Z]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins une majuscule.');
+    if (!/[a-z]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins une minuscule.');
+    if (!/[0-9]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins un chiffre.');
+    if (!/[^A-Za-z0-9]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins un caractère spécial.');
+  }
+
   async changePassword(id: string, newPassword: string) {
+    this.validatePasswordStrength(newPassword);
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     return this.prisma.user.update({
       where: { id },

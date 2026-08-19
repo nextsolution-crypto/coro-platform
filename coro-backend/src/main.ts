@@ -9,10 +9,32 @@ async function bootstrap() {
     bodyParser: false,
   });
 
-  // ── Helmet — headers HTTP sécurisés ──
+    // ── Helmet – headers HTTP sécurisés ──
   app.use(helmet({
-    contentSecurityPolicy: false, // Désactivé pour Puppeteer PDF generation
-    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https://*.digitaloceanspaces.com", "https://*.getcoro.io"],
+        connectSrc: ["'self'", "https://api.getcoro.io", "https://app.getcoro.io", "https://client.getcoro.io"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Requis pour Puppeteer PDF
+    hsts: {
+      maxAge: 31536000, // 1 an
+      includeSubDomains: true,
+      preload: true,
+    },
+    frameguard: { action: 'deny' },
+    noSniff: true,
+    xssFilter: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' },
   }));
 
   // ── CORS strict ──

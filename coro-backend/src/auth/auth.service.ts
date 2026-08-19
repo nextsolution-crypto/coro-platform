@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -13,12 +14,20 @@ export class AuthService {
     private prisma: PrismaService,
   ) {}
 
+  private readonly logger = new Logger('AuthService');
+
   async login(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
-    if (!user) throw new UnauthorizedException('Identifiants invalides');
-
+    if (!user) {
+      this.logger.warn(`[AUTH] Tentative de connexion échouée — courriel inconnu : ${email}`);
+      throw new UnauthorizedException('Identifiants invalides');
+    }
     const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) throw new UnauthorizedException('Identifiants invalides');
+    if (!isValid) {
+      this.logger.warn(`[AUTH] Tentative de connexion échouée — mot de passe incorrect : ${email}`);
+      throw new UnauthorizedException('Identifiants invalides');
+    }
+    this.logger.log(`[AUTH] Connexion réussie : ${email} (${user.role})`);
 
     const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
     return {
@@ -84,7 +93,26 @@ export class AuthService {
     return { success: true };
   }
 
+  private validatePasswordStrength(password: string): void {
+    if (password.length < 8) {
+      throw new BadRequestException('Le mot de passe doit contenir au moins 8 caractères.');
+    }
+    if (!/[A-Z]/.test(password)) {
+      throw new BadRequestException('Le mot de passe doit contenir au moins une majuscule.');
+    }
+    if (!/[a-z]/.test(password)) {
+      throw new BadRequestException('Le mot de passe doit contenir au moins une minuscule.');
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new BadRequestException('Le mot de passe doit contenir au moins un chiffre.');
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      throw new BadRequestException('Le mot de passe doit contenir au moins un caractère spécial (!@#$%^&*...).');
+    }
+  }
+
   async resetPassword(token: string, newPassword: string) {
+    this.validatePasswordStrength(newPassword);
     const user = await this.prisma.user.findFirst({
       where: {
         resetToken: token,
