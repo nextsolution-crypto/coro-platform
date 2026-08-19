@@ -35,8 +35,8 @@ export default function LoginPage() {
         setView('mfa');
         return;
       }
-      const { access_token, user } = response.data;
-      setAuth(user, access_token);
+      const { access_token, refresh_token, user } = response.data;
+      setAuth(user, access_token, refresh_token);
       router.push('/dashboard');
     } catch (err: any) {
       setError('Email ou mot de passe invalide');
@@ -55,8 +55,8 @@ export default function LoginPage() {
         email: email.trim(),
         code: mfaCode.trim(),
       });
-      const { access_token, user } = response.data;
-      setAuth(user, access_token);
+      const { access_token, refresh_token, user } = response.data;
+      setAuth(user, access_token, refresh_token);
       router.push('/dashboard');
     } catch (err: any) {
       setError('Code invalide ou expiré. Veuillez réessayer.');

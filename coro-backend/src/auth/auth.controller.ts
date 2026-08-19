@@ -29,4 +29,15 @@ export class AuthController {
   async verifyMfa(@Body() body: { email: string; code: string }) {
     return this.authService.verifyMfa(body.email, body.code);
   }
+
+  @Post('refresh')
+  @Throttle({ short: { ttl: 60000, limit: 10 } })
+  async refresh(@Body() body: { refresh_token: string }) {
+    return this.authService.refreshAccessToken(body.refresh_token);
+  }
+
+  @Post('logout')
+  async logout(@Body() body: { refresh_token: string }) {
+    return this.authService.revokeRefreshToken(body.refresh_token);
+  }
 }

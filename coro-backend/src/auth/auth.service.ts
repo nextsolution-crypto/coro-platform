@@ -91,8 +91,10 @@ export class AuthService {
     this.logger.log(`[AUTH] MFA validé — connexion complète : ${email}`);
 
     const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
+    const refreshToken = await this.generateRefreshToken(user.id);
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
+      refresh_token: refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -104,7 +106,50 @@ export class AuthService {
     };
   }
 
-    async forgotPassword(email: string) {
+    private async generateRefreshToken(userId: string): Promise<string> {
+    const token = crypto.randomBytes(40).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+    await this.prisma.refreshToken.create({
+      data: { token, userId, expiresAt },
+    });
+    return token;
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+    if (!record || record.isRevoked || new Date() > record.expiresAt) {
+      throw new UnauthorizedException('Refresh token invalide ou expiré.');
+    }
+    // Rotation — invalider l'ancien token et en créer un nouveau
+    await this.prisma.refreshToken.update({
+      where: { id: record.id },
+      data: { isRevoked: true },
+    });
+    const newRefreshToken = await this.generateRefreshToken(record.userId);
+    const payload = {
+      sub: record.user.id,
+      email: record.user.email,
+      role: record.user.role,
+      organizationId: record.user.organizationId,
+    };
+    return {
+      access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
+      refresh_token: newRefreshToken,
+    };
+  }
+
+  async revokeRefreshToken(refreshToken: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: { token: refreshToken },
+      data: { isRevoked: true },
+    });
+    return { success: true };
+  }
+
+  async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
     // On retourne toujours succès pour ne pas révéler si l'email existe
     if (!user) return { success: true };
