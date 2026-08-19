@@ -59,6 +59,7 @@ interface Module8SectionProps {
   projectId: string;
   language?: 'fr' | 'en';
   certBOMA?: boolean;
+  activeSectionFromParent?: string | null;
   initialData: {
     sections: any[];
   };
@@ -228,6 +229,7 @@ export default function Module8Section({
   projectId,
   language = 'fr',
   certBOMA = false,
+  activeSectionFromParent,
   initialData,
 }: Module8SectionProps) {
 
@@ -251,7 +253,13 @@ export default function Module8Section({
   const [section8_10, setSection8_10] = useState<LithiumAnnexeData>(DEFAULT_LITHIUM_ANNEXE_DATA);
   const [section8_11, setSection8_11] = useState<any>(null);
 
-  const [activeSection, setActiveSection] = useState('8.1');
+  const [activeSection, setActiveSection] = useState(activeSectionFromParent || '8.1');
+
+  useEffect(() => {
+    if (activeSectionFromParent && activeSectionFromParent !== activeSection) {
+      setActiveSection(activeSectionFromParent);
+    }
+  }, [activeSectionFromParent]);
   const [saving,        setSaving]        = useState(false);
   const [lastSaved,     setLastSaved]     = useState<Date | null>(null);
   const [isDirty,       setIsDirty]       = useState(false);
@@ -981,24 +989,6 @@ export default function Module8Section({
             </span>
           )}
         </div>
-      </div>
-
-      {/* Navigation sous-sections */}
-      <div className="flex flex-wrap gap-2 mb-8 pb-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
-        {t.sections.map(s => (
-          <button
-            key={s.id}
-            onClick={() => setActiveSection(s.id)}
-            className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-            style={{
-              backgroundColor: activeSection === s.id ? '#C0392B' : '#F8F9FA',
-              color:           activeSection === s.id ? '#FFFFFF'  : '#6C757D',
-              border:          activeSection === s.id ? '1px solid #C0392B' : '1px solid #DEE2E6',
-            }}
-          >
-            {s.id}
-          </button>
-        ))}
       </div>
 
       {/* Contenu actif */}
