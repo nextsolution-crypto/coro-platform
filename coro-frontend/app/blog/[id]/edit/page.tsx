@@ -377,12 +377,12 @@ export default function EditBlogPostPage() {
                   className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>Séparés par des virgules</p>
+                                <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>Séparés par des virgules</p>
               </div>
             </div>
           </div>
 
-                    {/* Publication */}
+          {/* Publication */}
           <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
             <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>Publication</h3>
 
