@@ -332,13 +332,6 @@ export default async function PortailClientPage({
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <div style={{ backgroundColor: '#2C3E50', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-          © 2026 CORO — <a href="https://getcoro.io" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>getcoro.io</a>
-        </p>
-      </div>
     </div>
   );
 }

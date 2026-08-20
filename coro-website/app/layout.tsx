@@ -3,6 +3,7 @@ import './globals.css';
 
 import ScrollToTop from './components/ScrollToTop';
 import ChatWidget from './components/ChatWidget';
+import Footer from './components/Footer';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://getcoro.io'),
@@ -134,6 +135,7 @@ export default function RootLayout({
     <html lang="fr">
       <body>
         {children}
+        <Footer />
         <ScrollToTop />
         <ChatWidget />
       </body>

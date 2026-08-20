@@ -931,58 +931,6 @@ export default async function BlogPage({
         )}
 
       </main>
-
-
-      {/* ═══════════════════════════════════
-          FOOTER
-      ═══════════════════════════════════ */}
-
-      <footer
-        style={{
-          backgroundColor:
-            '#2C3E50',
-
-          padding:
-            '32px 24px',
-
-          textAlign:
-            'center',
-        }}
-      >
-
-        <p
-          style={{
-            color:
-              'rgba(255,255,255,0.4)',
-
-            fontSize:
-              13,
-          }}
-        >
-          © 2026 CORO —{' '}
-
-          <a
-            href={
-              lang === 'en'
-                ? '/?lang=en'
-                : '/'
-            }
-
-            style={{
-              color:
-                'rgba(255,255,255,0.4)',
-
-              textDecoration:
-                'none',
-            }}
-          >
-            getcoro.io
-          </a>
-
-        </p>
-
-      </footer>
-
     </div>
   );
 }

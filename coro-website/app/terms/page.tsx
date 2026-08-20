@@ -538,44 +538,6 @@ export default async function TermsPage({ searchParams }: PageProps) {
         </section>
       </main>
 
-      <footer style={{ backgroundColor: '#1A252F', padding: '34px 24px' }}>
-  <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: 0 }}>
-      © 2026 CORO. {lang === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'}
-    </p>
-
-    <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-      <a
-        href={lang === 'fr' ? '/about' : '/about?lang=en'}
-        style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, textDecoration: 'none' }}
-      >
-        {lang === 'fr' ? 'À propos' : 'About'}
-      </a>
-
-      <a
-        href={lang === 'fr' ? '/security' : '/security?lang=en'}
-        style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, textDecoration: 'none' }}
-      >
-        {lang === 'fr' ? 'Sécurité' : 'Security'}
-      </a>
-
-      <a
-        href={lang === 'fr' ? '/privacy' : '/privacy?lang=en'}
-        style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, textDecoration: 'none' }}
-      >
-        {lang === 'fr' ? 'Politique de confidentialité' : 'Privacy Policy'}
-      </a>
-
-      <a
-        href={lang === 'fr' ? '/terms' : '/terms?lang=en'}
-        style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, textDecoration: 'none' }}
-      >
-        {lang === 'fr' ? 'Conditions d’utilisation' : 'Terms of Use'}
-      </a>
-    </div>
-  </div>
-</footer>
-
       <style>{`
         .legal-desktop-nav {
           display: flex;
