@@ -49,14 +49,13 @@ export default function Footer() {
 
   const toggleLanguage = () => {
     const newLang = lang === 'fr' ? 'en' : 'fr';
-    setLang(newLang);
     const url = new URL(window.location.href);
     if (newLang === 'en') {
       url.searchParams.set('lang', 'en');
     } else {
       url.searchParams.delete('lang');
     }
-    window.history.pushState({}, '', url.toString());
+    window.location.href = url.toString();
   };
 
   const t = translations[lang];
