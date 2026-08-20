@@ -65,7 +65,7 @@ export default function NewBlogPostPage() {
     if (!form.titleFr || !form.contentFr) { alert('Le titre et le contenu FR sont obligatoires.'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
+      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [], publishedAt: form.publishedAt || null };
       const res = await api.post('/blog', payload);
       if (publish) {
         const publishedAt = form.publishedAt ? new Date(form.publishedAt).toISOString() : undefined;
@@ -81,7 +81,7 @@ export default function NewBlogPostPage() {
     if (!form.titleFr || !form.contentFr) { alert('Le titre et le contenu FR sont obligatoires.'); return; }
     setScheduling(true);
     try {
-      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [] };
+      const payload = { ...form, tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [], publishedAt: form.publishedAt || null, scheduledAt: null };
       const res = await api.post('/blog', payload);
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
       await api.post(`/blog/${res.data.id}/schedule`, { scheduledAt });

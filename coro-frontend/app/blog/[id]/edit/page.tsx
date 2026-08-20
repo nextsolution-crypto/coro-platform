@@ -63,6 +63,7 @@ export default function EditBlogPostPage() {
       const payload = {
         ...form,
         tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        publishedAt: form.publishedAt || null,
       };
       await api.put(`/blog/${postId}`, payload);
       if (publish === true) {
@@ -82,6 +83,8 @@ export default function EditBlogPostPage() {
       const payload = {
         ...form,
         tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        publishedAt: form.publishedAt || null,
+        scheduledAt: null,
       };
       await api.put(`/blog/${postId}`, payload);
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
