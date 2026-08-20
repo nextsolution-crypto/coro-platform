@@ -55,7 +55,7 @@ export default function BlogAdminPage() {
         <div>
           <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>Blogue</h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            {posts.filter(p => p.isPublished).length} publié(s) · {posts.filter(p => !p.isPublished).length} brouillon(s)
+            {posts.filter((p: any) => p.isPublished).length} publié(s) · {posts.filter((p: any) => p.scheduledAt && !p.isPublished).length} programmé(s) · {posts.filter((p: any) => !p.isPublished && !p.scheduledAt).length} brouillon(s)
           </p>
         </div>
         <button
@@ -113,13 +113,13 @@ export default function BlogAdminPage() {
                       {post.category}
                     </span>
                   )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium`}
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                     style={{
-                      backgroundColor: post.isPublished ? '#EAFAF1' : '#F8F9FA',
-                      color: post.isPublished ? '#27AE60' : '#6C757D',
-                      border: `1px solid ${post.isPublished ? '#A9DFBF' : '#DEE2E6'}`,
+                      backgroundColor: post.isPublished ? '#EAFAF1' : post.scheduledAt ? '#EBF5FB' : '#F8F9FA',
+                      color: post.isPublished ? '#27AE60' : post.scheduledAt ? '#2980B9' : '#6C757D',
+                      border: `1px solid ${post.isPublished ? '#A9DFBF' : post.scheduledAt ? '#AED6F1' : '#DEE2E6'}`,
                     }}>
-                    {post.isPublished ? '✓ Publié' : 'Brouillon'}
+                    {post.isPublished ? '✓ Publié' : post.scheduledAt ? `📅 ${new Date(post.scheduledAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Brouillon'}
                   </span>
                 </div>
                 <p className="font-semibold truncate" style={{ color: '#2C3E50' }}>{post.titleFr}</p>
@@ -127,6 +127,8 @@ export default function BlogAdminPage() {
                 <p className="text-xs mt-1" style={{ color: '#ADB5BD' }}>
                   {post.isPublished && post.publishedAt
                     ? `Publié le ${new Date(post.publishedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                    : post.scheduledAt
+                    ? `Programmé pour le ${new Date(post.scheduledAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
                     : `Créé le ${new Date(post.createdAt).toLocaleDateString('fr-CA')}`}
                 </p>
               </div>
