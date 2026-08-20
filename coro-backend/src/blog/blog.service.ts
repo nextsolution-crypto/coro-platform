@@ -84,7 +84,10 @@ export class BlogService {
   }
 
   async update(id: string, data: any) {
-    return this.prisma.blogPost.update({ where: { id }, data });
+    const clean = { ...data };
+    if (clean.publishedAt === '' || clean.publishedAt === undefined) clean.publishedAt = null;
+    if (clean.scheduledAt === '' || clean.scheduledAt === undefined) clean.scheduledAt = null;
+    return this.prisma.blogPost.update({ where: { id }, data: clean });
   }
 
     async publish(id: string, publishedAt?: Date) {
