@@ -4,6 +4,7 @@ import './globals.css';
 import ScrollToTop from './components/ScrollToTop';
 import ChatWidget from './components/ChatWidget';
 import Footer from './components/Footer';
+import CookieBanner from './components/CookieBanner';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://getcoro.io'),
@@ -136,6 +137,7 @@ export default function RootLayout({
       <body>
         {children}
         <Footer />
+        <CookieBanner />
         <ScrollToTop />
         <ChatWidget />
       </body>
