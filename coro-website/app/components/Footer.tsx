@@ -68,7 +68,8 @@ export default function Footer() {
         {/* LOGO */}
         <div style={{ marginBottom: 52 }}>
           <div style={{ marginBottom: 8 }}>
-            <span style={{ fontSize: 28, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px', cursor: 'pointer' }}
+            <span
+              style={{ fontSize: 28, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px', cursor: 'pointer' }}
               onClick={() => { window.location.href = lang === 'fr' ? '/' : '/?lang=en'; }}>
               CO<span style={{ color: '#C0392B' }}>RO</span>
             </span>
@@ -113,25 +114,36 @@ export default function Footer() {
               {t.footer.product}
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                { label: t.footer.links.features, href: '/#features' },
-                { label: t.footer.links.pricing, href: '/#pricing' },
-                { label: lang === 'fr' ? 'PMU' : 'ERP', href: '/documents/plan-mesures-urgence-pmu' },
-                { label: lang === 'fr' ? 'PSI' : 'FSP', href: '/documents/plan-securite-incendie-psi' },
-                { label: lang === 'fr' ? 'PCA' : 'BCP', href: '/documents/plan-continuite-activites-pca' },
-                { label: lang === 'fr' ? 'PGC' : 'CMP', href: '/documents/plan-gestion-crise-pgc' },
-                { label: lang === 'fr' ? 'PRA' : 'DRP', href: '/documents/plan-reprise-activites-pra' },
-                { label: lang === 'fr' ? 'PUE' : 'EEP', href: '/documents/plan-urgence-environnementale-pue' },
-                { label: t.footer.links.login, href: 'https://app.getcoro.io/login' },
-                { label: t.footer.links.clientPortal, href: 'https://client.getcoro.io/login' },
-              ].map(link => (
-                <a key={link.href} href={link.href}
-                  style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
-                  {link.label}
-                </a>
-              ))}
+              <a href="/#features"
+                style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                {t.footer.links.features}
+              </a>
+              <a href="/#pricing"
+                style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                {t.footer.links.pricing}
+              </a>
+              <a href="https://getcoro.io/#documents"
+                style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                {lang === 'fr' ? 'Documents' : 'Documents'}
+              </a>
+              <a href="https://app.getcoro.io/login"
+                style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                {t.footer.links.login}
+              </a>
+              <a href="https://client.getcoro.io/login"
+                style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                {t.footer.links.clientPortal}
+              </a>
             </div>
           </div>
 
@@ -221,8 +233,9 @@ export default function Footer() {
             </div>
 
           </div>
+        </div>
+
       </div>
-    </div>
     </footer>
   );
 }
