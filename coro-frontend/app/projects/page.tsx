@@ -86,7 +86,14 @@ export default function ProjectsPage() {
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [bulkDeleting, setBulkDeleting]   = useState(false);
 
-  const documentTypes = ['PSI', 'PMU', 'PCA', 'PGC', 'PRA', 'PUE'];
+  const documentTypes = [
+    { value: 'PMU', label: "PMU — Plan de mesures d'urgence", available: true },
+    { value: 'PSI', label: 'PSI — Plan de sécurité incendie', available: true },
+    { value: 'PCA', label: 'PCA — Plan de continuité des activités', available: false },
+    { value: 'PGC', label: 'PGC — Plan de gestion de crise', available: false },
+    { value: 'PRA', label: 'PRA — Plan de reprise des activités', available: false },
+    { value: 'PUE', label: "PUE — Plan d'urgence environnementale", available: false },
+  ];
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { initAuth(); }, []);
@@ -695,7 +702,12 @@ export default function ProjectsPage() {
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}>
                   <option value="">Sélectionner un type</option>
-                  {documentTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  {documentTypes.map(t => (
+                    <option key={t.value} value={t.value} disabled={!t.available}
+                      style={{ color: t.available ? '#2C3E50' : '#ADB5BD' }}>
+                      {t.label}{!t.available ? ' (bientôt disponible)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
