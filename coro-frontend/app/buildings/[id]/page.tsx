@@ -66,7 +66,14 @@ export default function BuildingDetailPage() {
     'Commercial', 'Institutionnel', 'Hôtel', 'Centre commercial', 'Autre',
   ];
 
-  const documentTypes = ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'];
+  const documentTypes = [
+    { value: 'PMU', label: 'PMU — Plan de mesures d\'urgence', available: true },
+    { value: 'PSI', label: 'PSI — Plan de sécurité incendie', available: true },
+    { value: 'PCA', label: 'PCA — Plan de continuité des activités', available: false },
+    { value: 'PGC', label: 'PGC — Plan de gestion de crise', available: false },
+    { value: 'PRA', label: 'PRA — Plan de reprise des activités', available: false },
+    { value: 'PUE', label: 'PUE — Plan d\'urgence environnementale', available: false },
+  ];
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return; }
@@ -596,7 +603,12 @@ export default function BuildingDetailPage() {
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
                 >
-                  {documentTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  {documentTypes.map(t => (
+                    <option key={t.value} value={t.value} disabled={!t.available}
+                      style={{ color: t.available ? '#2C3E50' : '#ADB5BD' }}>
+                      {t.label}{!t.available ? ' (bientôt disponible)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
