@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import Module2Section from '@/components/editor/Module2Section';
 import Module3Section from '@/components/editor/Module3Section';
 import Module4Section from '@/components/editor/Module4Section';
+import Module4PcaSection from '@/components/editor/Module4PcaSection';
 import Module6Section from '@/components/editor/Module6Section';
 import Module7Section from '@/components/editor/Module7Section';
 import Module8Section from '@/components/editor/Module8Section';
@@ -398,28 +399,16 @@ export default function EditorPage() {
       }
       return <Module6Section projectId={projectId} language={language} />;
     }
-    if (n === 4) {
+        if (n === 4) {
       if (document.project.documentType === 'PCA') {
         return (
-          <div className="space-y-6">
-            {currentModule.sections.map((section: any) => (
-              <div key={section.id} className="rounded-md p-6"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
-                <textarea
-                  defaultValue={section.content}
-                  rows={8}
-                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
-                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
-                  onChange={(e) => { section.content = e.target.value; }}
-                  onBlur={handleSaveSection}
-                />
-              </div>
-            ))}
-          </div>
+          <Module4PcaSection
+            projectId={projectId}
+            language={language}
+          />
         );
       }
-            return (
+      return (
         <Module4Section
           projectId={projectId}
           language={language}
