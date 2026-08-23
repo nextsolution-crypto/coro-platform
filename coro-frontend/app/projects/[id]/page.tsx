@@ -371,7 +371,13 @@ const handleChangeStatus = async (newStatus: string) => {
       done: project.progress >= 25,
       enabled: true,
       label: project.progress >= 25 ? 'Modifier la config' : 'Configurer',
-      action: () => router.push(`/configurator/${project.id}`),
+      action: () => {
+        if (project.documentType === 'PCA') {
+          router.push(`/configurator/pca/${project.id}`);
+        } else {
+          router.push(`/configurator/${project.id}`);
+        }
+      },
     },
     {
       num: 2,
