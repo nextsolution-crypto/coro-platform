@@ -89,7 +89,7 @@ export default function ProjectsPage() {
   const documentTypes = [
     { value: 'PMU', label: "PMU — Plan de mesures d'urgence", available: true },
     { value: 'PSI', label: 'PSI — Plan de sécurité incendie', available: true },
-    { value: 'PCA', label: 'PCA — Plan de continuité des activités', available: false },
+    { value: 'PCA', label: 'PCA — Plan de continuité des activités', available: true },
     { value: 'PGC', label: 'PGC — Plan de gestion de crise', available: false },
     { value: 'PRA', label: 'PRA — Plan de reprise des activités', available: false },
     { value: 'PUE', label: "PUE — Plan d'urgence environnementale", available: false },
