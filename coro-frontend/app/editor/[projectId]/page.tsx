@@ -10,6 +10,7 @@ import Module2Section from '@/components/editor/Module2Section';
 import Module3Section from '@/components/editor/Module3Section';
 import Module4Section from '@/components/editor/Module4Section';
 import Module4PcaSection from '@/components/editor/Module4PcaSection';
+import Module6PcaContacts from '@/components/editor/Module6PcaContacts';
 import Module6Section from '@/components/editor/Module6Section';
 import Module7Section from '@/components/editor/Module7Section';
 import Module8Section from '@/components/editor/Module8Section';
@@ -380,7 +381,8 @@ export default function EditorPage() {
       if (document.project.documentType === 'PCA') {
         return (
           <div className="space-y-6">
-            {currentModule.sections.map((section: any) => (
+            <Module6PcaContacts projectId={projectId} language={language} />
+            {currentModule.sections.filter((s: any) => s.id !== 'm6_s5').map((section: any) => (
               <div key={section.id} className="rounded-md p-6"
                 style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
                 <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
