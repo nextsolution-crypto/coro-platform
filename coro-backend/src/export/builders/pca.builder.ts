@@ -1,8 +1,8 @@
 import { PrismaService } from '../../prisma/prisma.service';
-import { BaseDocumentBuilder, PdfSegment, MODULE_TITLES } from './base.builder';
+import { BaseDocumentBuilder, PdfSegment } from './base.builder';
 import { generateSeparatorPage } from '../templates/separator.template';
-import { renderModule1Section } from '../templates/modules/simple-modules.template';
 import { renderProcedure } from '../templates/modules/module4.template';
+import { BASE_STYLES } from '../templates/base.styles';
 
 // Titres des modules PCA
 const PCA_MODULE_TITLES: Record<number, { fr: string; en: string }> = {
@@ -25,13 +25,15 @@ export class PcaBuilder extends BaseDocumentBuilder {
   private renderPcaSection(section: any): string {
     const content = (section.content || '').replace(/\n/g, '<br/>');
     return `
-      <div style="margin-bottom: 32px; page-break-inside: avoid;">
-        <h3 style="font-size: 13px; font-weight: 700; color: #2C3E50; margin: 0 0 12px 0;
-          padding-bottom: 8px; border-bottom: 2px solid #C0392B; text-transform: uppercase;
-          letter-spacing: 0.05em;">
-          ${section.title || ''}
-        </h3>
-        <div style="font-size: 11px; line-height: 1.8; color: #2C3E50; white-space: pre-wrap;">
+      <div class="no-break" style="margin-bottom: 28px;">
+        <div class="section-header">
+          <span class="section-title-line2" style="font-size: 12pt; font-weight: 700; color: #2C3E50;
+            display: block; padding-bottom: 6px; border-bottom: 2px solid #C0392B;
+            margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em;">
+            ${section.title || ''}
+          </span>
+        </div>
+        <div style="font-size: 10.5pt; line-height: 1.8; color: #2C3E50; white-space: pre-wrap;">
           ${content}
         </div>
       </div>
@@ -46,21 +48,15 @@ export class PcaBuilder extends BaseDocumentBuilder {
     const sectionsHtml = sections.map(s => this.renderPcaSection(s)).join('');
 
     return `
-      <div style="font-family: 'Arial', sans-serif; padding: 40px 50px; max-width: 900px; margin: 0 auto;">
-        <div style="margin-bottom: 32px;">
-          <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
-            <div style="width: 4px; height: 40px; background: #C0392B; border-radius: 2px; flex-shrink: 0;"></div>
-            <div>
-              <p style="font-size: 10px; font-weight: 700; color: #C0392B; margin: 0;
-                text-transform: uppercase; letter-spacing: 0.15em;">
-                ${this.isFr ? `MODULE ${moduleNum}` : `MODULE ${moduleNum}`}
-              </p>
-              <h2 style="font-size: 18px; font-weight: 800; color: #2C3E50; margin: 4px 0 0 0;">
-                ${title || ''}
-              </h2>
-            </div>
-          </div>
-          <div style="height: 1px; background: linear-gradient(to right, #C0392B, transparent); margin-top: 8px;"></div>
+      <div>
+        <div style="margin-bottom: 36px; padding-bottom: 16px; border-bottom: 3px solid #C0392B;">
+          <p style="font-size: 9pt; font-weight: 700; color: #C0392B; margin: 0 0 4px 0;
+            text-transform: uppercase; letter-spacing: 0.15em;">
+            ${this.isFr ? `MODULE ${moduleNum}` : `MODULE ${moduleNum}`}
+          </p>
+          <h2 style="font-size: 20pt; font-weight: 800; color: #2C3E50; margin: 0; line-height: 1.2;">
+            ${title || ''}
+          </h2>
         </div>
         ${sectionsHtml}
       </div>
@@ -290,11 +286,7 @@ export class PcaBuilder extends BaseDocumentBuilder {
       <html>
       <head>
         <meta charset="UTF-8" />
-        <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: Arial, sans-serif; font-size: 11px; color: #2C3E50; }
-          @page { size: letter portrait; margin: 15mm 15mm 20mm 15mm; }
-        </style>
+        <style>${BASE_STYLES}</style>
       </head>
       <body>${body}</body>
       </html>

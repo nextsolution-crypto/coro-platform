@@ -301,7 +301,7 @@ export class ExportService {
 
             return {
               sequentialNumber: seqNum,
-              moduleTitle: this.findModuleTitleBySeq(orderedModules, seqNum, lang),
+              moduleTitle: this.findModuleTitleBySeq(orderedModules, seqNum, lang, doc.project.documentType),
               pageNumber: moduleStarts[seqNum],
               subsections: subsectionsForModule,
             };
@@ -433,8 +433,24 @@ export class ExportService {
   // RETROUVE LE TITRE DU MODULE POUR UN NUMÉRO SÉQUENTIEL DONNÉ
   // ============================================================
 
-  private findModuleTitleBySeq(orderedModules: number[], seqNum: number, lang: 'fr' | 'en'): string {
+  private findModuleTitleBySeq(orderedModules: number[], seqNum: number, lang: 'fr' | 'en', documentType?: string): string {
     const moduleNum = orderedModules[seqNum - 1];
+
+    const PCA_MODULE_TITLES: Record<number, { fr: string; en: string }> = {
+      1: { fr: 'Introduction et politique de continuité',     en: 'Introduction and Continuity Policy' },
+      2: { fr: 'Contexte organisationnel et gouvernance',     en: 'Organizational Context and Governance' },
+      3: { fr: 'Appréciation du risque (ARA)',                en: 'Risk Assessment' },
+      4: { fr: 'Bilan d\'impact sur les activités (BIA)',     en: 'Business Impact Analysis (BIA)' },
+      5: { fr: 'Stratégies de continuité',                    en: 'Continuity Strategies' },
+      6: { fr: 'Communication de crise',                      en: 'Crisis Communication' },
+      7: { fr: 'Activation et procédures de reprise',         en: 'Activation and Recovery Procedures' },
+      8: { fr: 'Exercices, registres et maintien du plan',    en: 'Exercises, Records and Plan Maintenance' },
+    };
+
+    if (documentType === 'PCA') {
+      return PCA_MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
+    }
+
     return MODULE_TITLES[moduleNum]?.[lang] || `Module ${moduleNum}`;
   }
 
