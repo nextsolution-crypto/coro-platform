@@ -154,6 +154,66 @@ export class ProjectsService {
 
     return results.sort((a, b) => b.monthsAgo - a.monthsAgo);
   }
+  private async calculatePcaQualityScore(projectId: string, organizationId: string): Promise<{
+    score: number;
+    level: 'EXCELLENT' | 'BON' | 'A_AMELIORER' | 'INCOMPLET';
+    details: { label: string; points: number; earned: number; ok: boolean }[];
+  }> {
+    const doc = await this.prisma.document.findFirst({ where: { projectId } });
+    const pcaConfig = await this.prisma.pcaConfig.findUnique({ where: { projectId } });
+    const cfg = pcaConfig as any || {};
+    const details: { label: string; points: number; earned: number; ok: boolean }[] = [];
+    let totalScore = 0;
+
+    // 1. Configuration complète (20 pts)
+    const hasCoordinator = !!(cfg.coordinatorFirstName && cfg.coordinatorEmail);
+    const pts1 = hasCoordinator ? 20 : cfg.coordinatorFirstName ? 10 : 0;
+    details.push({ label: 'Coordonnateur PCA défini', points: 20, earned: pts1, ok: hasCoordinator });
+    totalScore += pts1;
+
+    // 2. Document généré (15 pts)
+    const hasDoc = !!doc;
+    details.push({ label: 'Document généré', points: 15, earned: hasDoc ? 15 : 0, ok: hasDoc });
+    totalScore += hasDoc ? 15 : 0;
+
+    // 3. Scénarios de risque identifiés (15 pts)
+    const riskCount = (cfg.riskScenarios || []).length;
+    const hasRisks = riskCount >= 3;
+    const pts3 = hasRisks ? 15 : riskCount > 0 ? 8 : 0;
+    details.push({ label: 'Scénarios de risque (min. 3)', points: 15, earned: pts3, ok: hasRisks });
+    totalScore += pts3;
+
+    // 4. BIA complété (15 pts)
+    const serviceCount = (cfg.criticalServices || []).length;
+    const hasBia = serviceCount >= 1;
+    const pts4 = hasBia ? 15 : 0;
+    details.push({ label: 'Services critiques avec RTO/RPO (min. 1)', points: 15, earned: pts4, ok: hasBia });
+    totalScore += pts4;
+
+    // 5. Stratégies de continuité (10 pts)
+    const hasStrategies = !!(cfg.teleworkPossible || cfg.alternativeSite || cfg.itRedundancy || cfg.crossTraining);
+    details.push({ label: 'Stratégies de continuité définies', points: 10, earned: hasStrategies ? 10 : 0, ok: hasStrategies });
+    totalScore += hasStrategies ? 10 : 0;
+
+    // 6. Communication de crise (10 pts)
+    const hasComm = !!(cfg.internalChannel && cfg.spokesperson);
+    details.push({ label: 'Communication de crise (canal + porte-parole)', points: 10, earned: hasComm ? 10 : cfg.internalChannel ? 5 : 0, ok: hasComm });
+    totalScore += hasComm ? 10 : cfg.internalChannel ? 5 : 0;
+
+    // 7. Critères d'activation définis (10 pts)
+    const hasActivation = !!(cfg.activationCriteria && cfg.activationCriteria.length > 20);
+    details.push({ label: 'Critères d\'activation du PCA', points: 10, earned: hasActivation ? 10 : 0, ok: hasActivation });
+    totalScore += hasActivation ? 10 : 0;
+
+    // 8. Programme d'exercices (5 pts)
+    const hasExercises = !!(cfg.exerciseFormative && cfg.planOwner);
+    details.push({ label: 'Programme d\'exercices et responsable définis', points: 5, earned: hasExercises ? 5 : 0, ok: hasExercises });
+    totalScore += hasExercises ? 5 : 0;
+
+    const level = totalScore >= 80 ? 'EXCELLENT' : totalScore >= 60 ? 'BON' : totalScore >= 40 ? 'A_AMELIORER' : 'INCOMPLET';
+    return { score: totalScore, level, details };
+  }
+
   async calculateQualityScore(projectId: string, organizationId: string): Promise<{
     score: number;
     level: 'EXCELLENT' | 'BON' | 'A_AMELIORER' | 'INCOMPLET';
@@ -162,7 +222,12 @@ export class ProjectsService {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, organizationId },
     });
-    if (!project) return { score: 0, level: 'INCOMPLET', details: [] };
+        if (!project) return { score: 0, level: 'INCOMPLET', details: [] };
+
+    // ── Branche PCA ──
+    if (project.documentType === 'PCA') {
+      return this.calculatePcaQualityScore(projectId, organizationId);
+    }
 
     const doc = await this.prisma.document.findFirst({ where: { projectId } });
     const plans = await this.prisma.buildingPlan.count({ where: { projectId } });

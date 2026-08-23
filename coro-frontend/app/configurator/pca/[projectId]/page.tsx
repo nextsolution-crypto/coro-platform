@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { ArrowLeft, Save, ChevronRight, ChevronLeft } from 'lucide-react';
+import { formatPhone } from '@/lib/formatPhone';
 
 const SECTIONS = [
   { id: 1, label: 'Informations générales' },
@@ -320,6 +321,10 @@ export default function PcaConfiguratorPage() {
     }));
   };
 
+  const handlePhoneChange = (field: string, value: string) => {
+    setConfig(prev => ({ ...prev, [field]: formatPhone(value) }));
+  };
+
   const BoolField = ({ label, field, hint }: { label: string; field: string; hint?: string }) => (
     <div className="flex items-start justify-between gap-4 py-3" style={{ borderBottom: '1px solid #F1F3F5' }}>
       <div>
@@ -532,12 +537,14 @@ export default function PcaConfiguratorPage() {
                   { label: 'Nom', field: 'coordinatorLastName', placeholder: 'Ex: Tremblay' },
                   { label: 'Titre', field: 'coordinatorTitle', placeholder: 'Ex: Directrice des opérations' },
                   { label: 'Courriel', field: 'coordinatorEmail', placeholder: 'Ex: marie.tremblay@entreprise.ca' },
-                  { label: 'Téléphone', field: 'coordinatorPhone', placeholder: 'Ex: 514-555-1234' },
+                                    { label: 'Téléphone', field: 'coordinatorPhone', placeholder: 'Ex: (514) 555-1234' },
                 ].map(f => (
                   <div key={f.field}>
                     <Label>{f.label}</Label>
                     <input type="text" value={(config as any)[f.field]}
-                      onChange={e => setConfig({ ...config, [f.field]: e.target.value })}
+                      onChange={e => f.field.includes('Phone')
+                        ? handlePhoneChange(f.field, e.target.value)
+                        : setConfig({ ...config, [f.field]: e.target.value })}
                       placeholder={f.placeholder}
                       className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
                       onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -555,12 +562,14 @@ export default function PcaConfiguratorPage() {
                   { label: 'Prénom', field: 'substituteFirstName', placeholder: 'Ex: Jean' },
                   { label: 'Nom', field: 'substituteLastName', placeholder: 'Ex: Côté' },
                   { label: 'Courriel', field: 'substituteEmail', placeholder: 'Ex: jean.cote@entreprise.ca' },
-                  { label: 'Téléphone', field: 'substitutePhone', placeholder: 'Ex: 514-555-5678' },
+                  { label: 'Téléphone', field: 'substitutePhone', placeholder: 'Ex: (514) 555-5678' },
                 ].map(f => (
                   <div key={f.field}>
                     <Label>{f.label}</Label>
                     <input type="text" value={(config as any)[f.field]}
-                      onChange={e => setConfig({ ...config, [f.field]: e.target.value })}
+                      onChange={e => f.field.includes('Phone')
+                        ? handlePhoneChange(f.field, e.target.value)
+                        : setConfig({ ...config, [f.field]: e.target.value })}
                       placeholder={f.placeholder}
                       className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
                       onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -638,8 +647,8 @@ export default function PcaConfiguratorPage() {
                         <div>
                           <Label>Téléphone</Label>
                           <input type="text" value={member.phone}
-                            onChange={e => updateCellMember(member.id, 'phone', e.target.value)}
-                            placeholder="514-555-0000"
+                            onChange={e => updateCellMember(member.id, 'phone', formatPhone(e.target.value))}
+                            placeholder="(514) 555-0000"
                             className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
                             onFocus={e => e.target.style.borderColor = '#C0392B'}
                             onBlur={e => e.target.style.borderColor = '#CED4DA'} />
