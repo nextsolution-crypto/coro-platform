@@ -367,27 +367,51 @@ export default function EditorPage() {
       />
     );
 
-    if (n === 2) return (
-      <Module2Section
-        projectId={projectId}
-        language={language}
-        initialData={{
-          section2_1: currentModule.sections.find((s: any) => s.id === '2.1')?.entries || [],
-          section2_2: currentModule.sections.find((s: any) => s.id === '2.2')?.entries || [],
-          section2_3: currentModule.sections.find((s: any) => s.id === '2.3')?.entries || [],
-          section2_4: currentModule.sections.find((s: any) => s.id === '2.4')?.entries || [],
-          section2_5: currentModule.sections.find((s: any) => s.id === '2.5')?.entries || [],
-          section2_5Enabled: false,
-          internalEmergencyNumber: currentModule.sections.find((s: any) => s.id === '2.1')?.internalEmergencyNumber || '',
-        }}
-        availableRoles2_2={
-          language === 'fr'
-            ? (isBureau ? ROLES_INTERNES_BUREAU_FR : ROLES_INTERNES_INDUSTRIEL_FR)
-            : (isBureau ? ROLES_INTERNES_BUREAU_EN : ROLES_INTERNES_INDUSTRIEL_EN)
-        }
-        availableRoles2_3={language === 'fr' ? ALL_EQUIPEMENTS_FR : ALL_EQUIPEMENTS_EN}
-      />
-    );
+    if (n === 2) {
+      if (document.project.documentType === 'PCA') {
+        return (
+          <div className="space-y-6">
+            {currentModule.sections.map((section: any) => (
+              <div key={section.id} className="rounded-md p-6"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+                <textarea
+                  defaultValue={section.content}
+                  rows={8}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y font-mono"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  onChange={(e) => {
+                    section.content = e.target.value;
+                  }}
+                  onBlur={handleSaveSection}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <Module2Section
+          projectId={projectId}
+          language={language}
+          initialData={{
+            section2_1: currentModule.sections.find((s: any) => s.id === '2.1')?.entries || [],
+            section2_2: currentModule.sections.find((s: any) => s.id === '2.2')?.entries || [],
+            section2_3: currentModule.sections.find((s: any) => s.id === '2.3')?.entries || [],
+            section2_4: currentModule.sections.find((s: any) => s.id === '2.4')?.entries || [],
+            section2_5: currentModule.sections.find((s: any) => s.id === '2.5')?.entries || [],
+            section2_5Enabled: false,
+            internalEmergencyNumber: currentModule.sections.find((s: any) => s.id === '2.1')?.internalEmergencyNumber || '',
+          }}
+          availableRoles2_2={
+            language === 'fr'
+              ? (isBureau ? ROLES_INTERNES_BUREAU_FR : ROLES_INTERNES_INDUSTRIEL_FR)
+              : (isBureau ? ROLES_INTERNES_BUREAU_EN : ROLES_INTERNES_INDUSTRIEL_EN)
+          }
+          availableRoles2_3={language === 'fr' ? ALL_EQUIPEMENTS_FR : ALL_EQUIPEMENTS_EN}
+        />
+      );
+    }
 
     // Module 1 — texte éditable
     return (
