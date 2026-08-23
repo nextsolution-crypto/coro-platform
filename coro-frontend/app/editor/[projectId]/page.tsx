@@ -317,56 +317,157 @@ export default function EditorPage() {
   const renderModuleContent = () => {
     const n = currentModule.moduleNumber;
 
-    if (n === 8) return (
-      <Module8Section
-        projectId={projectId}
-        language={language}
-        certBOMA={document?.content?.config?.certBOMA === true}
-        activeSectionFromParent={
-          currentModule?.sections?.[activeSection]?.id || null
-        }
-        initialData={{
-          sections: document?.content?.modules_fr?.find((m: any) => m.moduleNumber === 8)?.sections || [],
-        }}
-      />
-    );
-
-    if (n === 7) return (
-      <Module7Section projectId={projectId} language={language} />
-    );
-
-    if (n === 6) return (
-      <Module6Section projectId={projectId} language={language} />
-    );
-
-    if (n === 4) return (
-      <Module4Section
-        projectId={projectId}
-        language={language}
-        initialData={{
-          directivesGenerales: null,
-          procedures: currentModule.procedures || [],
-          customProcedureIds: currentModule.customProcedureIds || [],
-        }}
-      />
-    );
-
-    if (n === 3) return (
-      <Module3Section
-        key={activeSection}
-        projectId={projectId}
-        language={language}
-        isIndustriel={!isBureau}
-        initialActiveTab={activeSection === 1 ? '3.2' : '3.1'}
-        quartsOccupation={document?.content?.config?.quartsOccupation || []}
-        initialData={{
-          orgRoles:     currentModule.sections.find((s: any) => s.id === '3.1')?.orgRoles || [],
-          members:      currentModule.sections.find((s: any) => s.id === '3.2')?.members  || [],
-          activeShifts: currentModule.sections.find((s: any) => s.id === '3.2')?.activeShifts || ['jour'],
-        }}
-      />
-    );
-
+    if (n === 8) {
+      if (document.project.documentType === 'PCA') {
+        return (
+          <div className="space-y-6">
+            {currentModule.sections.map((section: any) => (
+              <div key={section.id} className="rounded-md p-6"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+                <textarea
+                  defaultValue={section.content}
+                  rows={8}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  onChange={(e) => { section.content = e.target.value; }}
+                  onBlur={handleSaveSection}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+            return (
+        <Module8Section
+          projectId={projectId}
+          language={language}
+          certBOMA={document?.content?.config?.certBOMA === true}
+          activeSectionFromParent={
+            currentModule?.sections?.[activeSection]?.id || null
+          }
+          initialData={{
+            sections: document?.content?.modules_fr?.find((m: any) => m.moduleNumber === 8)?.sections || [],
+          }}
+        />
+      );
+    }
+    if (n === 7) {
+      if (document.project.documentType === 'PCA') {
+        return (
+          <div className="space-y-6">
+            {currentModule.sections.map((section: any) => (
+              <div key={section.id} className="rounded-md p-6"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+                <textarea
+                  defaultValue={section.content}
+                  rows={8}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  onChange={(e) => { section.content = e.target.value; }}
+                  onBlur={handleSaveSection}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return <Module7Section projectId={projectId} language={language} />;
+    }
+    if (n === 6) {
+      if (document.project.documentType === 'PCA') {
+        return (
+          <div className="space-y-6">
+            {currentModule.sections.map((section: any) => (
+              <div key={section.id} className="rounded-md p-6"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+                <textarea
+                  defaultValue={section.content}
+                  rows={8}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  onChange={(e) => { section.content = e.target.value; }}
+                  onBlur={handleSaveSection}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return <Module6Section projectId={projectId} language={language} />;
+    }
+    if (n === 4) {
+      if (document.project.documentType === 'PCA') {
+        return (
+          <div className="space-y-6">
+            {currentModule.sections.map((section: any) => (
+              <div key={section.id} className="rounded-md p-6"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+                <textarea
+                  defaultValue={section.content}
+                  rows={8}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  onChange={(e) => { section.content = e.target.value; }}
+                  onBlur={handleSaveSection}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+            return (
+        <Module4Section
+          projectId={projectId}
+          language={language}
+          initialData={{
+            directivesGenerales: null,
+            procedures: currentModule.procedures || [],
+            customProcedureIds: currentModule.customProcedureIds || [],
+          }}
+        />
+      );
+    }
+    if (n === 3) {
+      if (document.project.documentType === 'PCA') {
+        return (
+          <div className="space-y-6">
+            {currentModule.sections.map((section: any) => (
+              <div key={section.id} className="rounded-md p-6"
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+                <h3 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>{section.title}</h3>
+                <textarea
+                  defaultValue={section.content}
+                  rows={8}
+                  className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
+                  style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
+                  onChange={(e) => { section.content = e.target.value; }}
+                  onBlur={handleSaveSection}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+            return (
+        <Module3Section
+          key={activeSection}
+          projectId={projectId}
+          language={language}
+          isIndustriel={!isBureau}
+          initialActiveTab={activeSection === 1 ? '3.2' : '3.1'}
+          quartsOccupation={document?.content?.config?.quartsOccupation || []}
+          initialData={{
+            orgRoles:     currentModule.sections.find((s: any) => s.id === '3.1')?.orgRoles || [],
+            members:      currentModule.sections.find((s: any) => s.id === '3.2')?.members  || [],
+            activeShifts: currentModule.sections.find((s: any) => s.id === '3.2')?.activeShifts || ['jour'],
+          }}
+        />
+      );
+    }
     if (n === 2) {
       if (document.project.documentType === 'PCA') {
         return (
