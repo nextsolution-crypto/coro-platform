@@ -143,7 +143,8 @@ export class PcaBuilder extends BaseDocumentBuilder {
       currentHtmlChunk.value = '';
     }
 
-    // Séparateur de module
+    // Séparateur de module — incrémente sequentialNumber
+    this.sequentialNumber += 1;
     const title = this.isFr
       ? PCA_MODULE_TITLES[moduleNum]?.fr
       : PCA_MODULE_TITLES[moduleNum]?.en;
