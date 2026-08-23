@@ -80,6 +80,55 @@ export class PcaConfiguratorService {
     return config;
   }
 
+  async getPcaProcedures(organizationId: string, projectId: string) {
+    const defaults = await this.prisma.procedureDefault.findMany({
+      where: { isActive: true, code: { startsWith: 'PC' } },
+      orderBy: { code: 'asc' },
+    });
+    const overrides = await this.prisma.procedureOverride.findMany({
+      where: { organizationId, projectId },
+    });
+    const overrideMap = new Map(overrides.map(o => [o.procedureId, o]));
+    return defaults.map(d => {
+      const override = overrideMap.get(d.id);
+      return {
+        ...d,
+        content: override ? override.content : d.content,
+        isOverridden: !!override,
+        isActive: override ? override.isActive : true,
+      };
+    });
+  }
+
+  async togglePcaProcedure(organizationId: string, projectId: string, procedureId: string, isActive: boolean) {
+    const proc = await this.prisma.procedureDefault.findUnique({ where: { id: procedureId } });
+    if (!proc) throw new NotFoundException('Procédure introuvable');
+    await this.prisma.procedureOverride.upsert({
+      where: { procedureId_organizationId_projectId: { procedureId, organizationId, projectId } },
+      create: { procedureId, organizationId, projectId, content: proc.content as any, isActive },
+      update: { isActive },
+    });
+    return { success: true };
+  }
+
+  async updatePcaProcedure(organizationId: string, projectId: string, procedureId: string, content: any) {
+    const proc = await this.prisma.procedureDefault.findUnique({ where: { id: procedureId } });
+    if (!proc) throw new NotFoundException('Procédure introuvable');
+    await this.prisma.procedureOverride.upsert({
+      where: { procedureId_organizationId_projectId: { procedureId, organizationId, projectId } },
+      create: { procedureId, organizationId, projectId, content, isActive: true },
+      update: { content },
+    });
+    return { success: true };
+  }
+
+  async restorePcaProcedure(organizationId: string, projectId: string, procedureId: string) {
+    await this.prisma.procedureOverride.deleteMany({
+      where: { procedureId, organizationId, projectId },
+    });
+    return { success: true };
+  }
+
   async getLinkedPmu(projectId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
