@@ -18,6 +18,10 @@ model Organization {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  // Champs PCA
+  sector      String?  // Secteur d'activité
+  employeeCount Int?   // Nombre d'employés
+  operatingHours String? // Heures d'opération
 
   users              User[]
   clients            Client[]
@@ -113,6 +117,11 @@ model Client {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  // Champs PCA
+  regulatoryRequirements String[] // ISO 22301, BOMA, AMF, etc.
+  sector         String?  // Secteur d'activité
+  employeeCount  Int?     // Nombre d'employés
+  operatingHours String?  // Heures d'opération
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -204,6 +213,7 @@ model Project {
   engagements DocumentEngagement[]
   bookings Booking[]
   files ProjectFile[]
+  pcaConfig    PcaConfig?
 }
 
 model RevisionHistory {
@@ -764,6 +774,89 @@ model BlogPost {
   scheduledAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model PcaConfig {
+  id            String   @id @default(uuid())
+  projectId     String   @unique
+  project       Project  @relation(fields: [projectId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Section 1 — Informations générales
+  planName          String?
+  effectiveDate     DateTime?
+  scope             String?   // ORGANIZATION | BUILDING | MULTI_BUILDING
+  pcaBuildingIds    String[]
+  sector            String?
+  employeeCount     Int?
+  operatingHours    String?
+  regulatoryReqs    String[]
+
+  // Section 2 — Gouvernance
+  coordinatorFirstName  String?
+  coordinatorLastName   String?
+  coordinatorTitle      String?
+  coordinatorEmail      String?
+  coordinatorPhone      String?
+  substituteFirstName   String?
+  substituteLastName    String?
+  substituteEmail       String?
+  substitutePhone       String?
+  cellMembers           Json?   // Array de { role, firstName, lastName, email, phone }
+  spokesperson          String?
+  socialMediaMonitor    String?
+
+  // Section 3 — Appréciation du risque
+  riskScenarios         Json?   // Array de { type, probability, impact }
+
+  // Section 4 — BIA
+  criticalServices      Json?   // Array de { name, minServiceLevel, rto, rpo, mad, financialImpact, reputationalImpact, legalImpact, resources }
+
+  // Section 5 — Stratégies de continuité
+  teleworkPossible      String?  // YES | NO | PARTIAL
+  alternativeSite       Boolean?
+  alternativeSiteAddress String?
+  sharingAgreement      Boolean?
+  itRedundancy          Boolean?
+  offSiteBackup         Boolean?
+  backupFrequency       String?
+  crossTraining         Boolean?
+  processDocumented     Boolean?
+  tempStaffAccess       Boolean?
+  alternativeSuppliers  Boolean?
+  safetyStock          Boolean?
+  safetyStockDuration  String?
+  generator            Boolean?
+  ups                  Boolean?
+  insuranceBI          Boolean?  // Assurance interruption affaires
+  insuranceProperty    Boolean?
+  insuranceCyber       Boolean?
+  insuranceLastReview  DateTime?
+
+  // Section 6 — Communication de crise
+  internalChannel       String?
+  massAlertSystem       Boolean?
+  externalChannel       String?
+  priorityClients       String?
+  authoritiesToNotify   String[]
+  mediaContact          String?
+
+  // Section 7 — Activation et reprise
+  activationCriteria    String?
+  coordinationLocation  String?
+  emergencyBridge       String?
+  linkedPmuId           String?
+  resumptionSequence    Json?    // Array de { activity, priority, responsible }
+
+  // Section 8 — Exercices et maintien
+  exerciseFormative     String?  // Fréquence
+  exerciseTable         String?
+  exerciseSimulation    String?
+  exerciseIT            String?
+  planOwner             String?
+  reviewFrequency       String?
+  nextReviewDate        DateTime?
 }
 
 model OrganizationModule1Template {
