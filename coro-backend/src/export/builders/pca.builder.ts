@@ -22,6 +22,10 @@ export class PcaBuilder extends BaseDocumentBuilder {
     return [1, 2, 3, 4, 5, 6, 7, 8];
   }
 
+  private renderPcaSectionWithHeader(moduleNum: number, section: any): string {
+    return this.renderPcaSection(section);
+  }
+
   private renderPcaSection(section: any): string {
     const content = (section.content || '').replace(/\n/g, '<br/>');
     return `
@@ -166,13 +170,15 @@ export class PcaBuilder extends BaseDocumentBuilder {
 
     // ── Module 4 — Procédures PCA ──
     if (moduleNum === 4) {
-      // Sections BIA du générateur
-      const biaHtml = this.buildPcaModuleHtml(moduleNum, sections);
-      pdfSegments.push({
-        type: 'html',
-        content: this.wrapHtml(biaHtml),
-        sequentialNumber: this.sequentialNumber,
-      });
+      // Sections BIA du générateur — une section par segment
+      for (const section of sections) {
+        pdfSegments.push({
+          type: 'html',
+          content: this.wrapHtml(`<div>${this.renderPcaSection(section)}</div>`),
+          sequentialNumber: this.sequentialNumber,
+          subsectionId: section.id,
+        });
+      }
 
       // Procédures PCA depuis la DB
       try {
@@ -269,13 +275,15 @@ export class PcaBuilder extends BaseDocumentBuilder {
       return true;
     }
 
-    // ── Tous les autres modules PCA (1, 2, 3, 5, 7, 8) ──
-    const moduleHtml = this.buildPcaModuleHtml(moduleNum, sections);
-    pdfSegments.push({
-      type: 'html',
-      content: this.wrapHtml(moduleHtml),
-      sequentialNumber: this.sequentialNumber,
-    });
+    // ── Tous les autres modules PCA (1, 2, 3, 5, 7, 8) — une section par segment ──
+    for (const section of sections) {
+      pdfSegments.push({
+        type: 'html',
+        content: this.wrapHtml(`<div>${this.renderPcaSectionWithHeader(moduleNum, section)}</div>`),
+        sequentialNumber: this.sequentialNumber,
+        subsectionId: section.id,
+      });
+    }
 
     return true;
   }
