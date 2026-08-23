@@ -32,6 +32,81 @@ export class ValidationService {
 
     const results: ValidationResult[] = [];
     const isPsi = project.documentType === 'PSI';
+    const isPca = project.documentType === 'PCA';
+
+    // ── Branche PCA — règles de validation spécifiques ──
+    if (isPca) {
+      const pcaConfig = await this.prisma.pcaConfig.findUnique({ where: { projectId } });
+      const cfg = pcaConfig as any || {};
+
+      // V-PCA-001 : Coordonnateur PCA manquant
+      if (!cfg.coordinatorFirstName || !cfg.coordinatorEmail) {
+        results.push({
+          id: 'V-PCA-001',
+          level: 'CRITIQUE',
+          message: 'Le coordonnateur PCA n\'est pas défini. → Compléter la Section 2 du configurateur PCA',
+          moduleNumber: 2,
+          action: 'Définir le coordonnateur PCA dans le configurateur',
+        });
+      }
+
+      // V-PCA-002 : Aucun scénario de risque
+      if (!cfg.riskScenarios || cfg.riskScenarios.length === 0) {
+        results.push({
+          id: 'V-PCA-002',
+          level: 'CRITIQUE',
+          message: 'Aucun scénario de risque identifié. → Compléter la Section 3 du configurateur PCA',
+          moduleNumber: 3,
+          action: 'Identifier les scénarios de risque dans le configurateur',
+        });
+      }
+
+      // V-PCA-003 : Aucun service critique (BIA vide)
+      if (!cfg.criticalServices || cfg.criticalServices.length === 0) {
+        results.push({
+          id: 'V-PCA-003',
+          level: 'CRITIQUE',
+          message: 'Aucun service critique défini dans le BIA. → Compléter la Section 4 du configurateur PCA',
+          moduleNumber: 4,
+          action: 'Définir les services critiques dans le BIA',
+        });
+      }
+
+      // V-PCA-004 : Aucune stratégie de continuité
+      if (!cfg.teleworkPossible && !cfg.alternativeSite && !cfg.itRedundancy && !cfg.crossTraining) {
+        results.push({
+          id: 'V-PCA-004',
+          level: 'AVERTISSEMENT',
+          message: 'Aucune stratégie de continuité définie. → Compléter la Section 5 du configurateur PCA',
+          moduleNumber: 5,
+          action: 'Définir les stratégies de continuité dans le configurateur',
+        });
+      }
+
+      // V-PCA-005 : Critères d'activation manquants
+      if (!cfg.activationCriteria || cfg.activationCriteria.length < 20) {
+        results.push({
+          id: 'V-PCA-005',
+          level: 'AVERTISSEMENT',
+          message: 'Les critères d\'activation du PCA ne sont pas définis. → Compléter la Section 7 du configurateur PCA',
+          moduleNumber: 7,
+          action: 'Définir les critères d\'activation dans le configurateur',
+        });
+      }
+
+      // V-PCA-006 : Responsable du plan manquant
+      if (!cfg.planOwner) {
+        results.push({
+          id: 'V-PCA-006',
+          level: 'AVERTISSEMENT',
+          message: 'Le responsable de la mise à jour du plan n\'est pas désigné. → Compléter la Section 8 du configurateur PCA',
+          moduleNumber: 8,
+          action: 'Désigner le responsable du plan dans le configurateur',
+        });
+      }
+
+      return results;
+    }
 
     // ── RÈGLE V-001 : Double signal sans EPI (PMU seulement) ──
     if (!isPsi && config.panneauType === 'DOUBLE') {

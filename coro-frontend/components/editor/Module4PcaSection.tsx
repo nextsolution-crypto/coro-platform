@@ -129,8 +129,64 @@ export default function Module4PcaSection({ projectId, language = 'fr' }: Props)
   };
 
   const updateStep = (roleIdx: number, stepIdx: number, field: 'textFR' | 'textEN', value: string) => {
-    const updated = { ...editContent };
+    const updated = JSON.parse(JSON.stringify(editContent));
     updated.roleSections[roleIdx].steps[stepIdx][field] = value;
+    setEditContent(updated);
+  };
+
+  const addStep = (roleIdx: number) => {
+    const updated = JSON.parse(JSON.stringify(editContent));
+    const newStep = {
+      id: `step_${Date.now()}`,
+      textFR: '',
+      textEN: '',
+      isBold: false,
+      isRed: false,
+    };
+    updated.roleSections[roleIdx].steps.push(newStep);
+    setEditContent(updated);
+  };
+
+  const removeStep = (roleIdx: number, stepIdx: number) => {
+    const updated = JSON.parse(JSON.stringify(editContent));
+    updated.roleSections[roleIdx].steps.splice(stepIdx, 1);
+    setEditContent(updated);
+  };
+
+  const toggleStepBold = (roleIdx: number, stepIdx: number) => {
+    const updated = JSON.parse(JSON.stringify(editContent));
+    updated.roleSections[roleIdx].steps[stepIdx].isBold = !updated.roleSections[roleIdx].steps[stepIdx].isBold;
+    setEditContent(updated);
+  };
+
+  const toggleStepRed = (roleIdx: number, stepIdx: number) => {
+    const updated = JSON.parse(JSON.stringify(editContent));
+    updated.roleSections[roleIdx].steps[stepIdx].isRed = !updated.roleSections[roleIdx].steps[stepIdx].isRed;
+    setEditContent(updated);
+  };
+
+  const addRole = () => {
+    const updated = JSON.parse(JSON.stringify(editContent));
+    updated.roleSections.push({
+      roleCode: `ROLE_CUSTOM_${Date.now()}`,
+      roleLabelFR: 'Nouveau rôle',
+      roleLabelEN: 'New role',
+      headerColor: '#6C757D',
+      steps: [],
+    });
+    setEditContent(updated);
+  };
+
+  const removeRole = (roleIdx: number) => {
+    if (!confirm(isFr ? 'Supprimer ce rôle ?' : 'Delete this role?')) return;
+    const updated = JSON.parse(JSON.stringify(editContent));
+    updated.roleSections.splice(roleIdx, 1);
+    setEditContent(updated);
+  };
+
+  const updateRoleLabel = (roleIdx: number, field: 'roleLabelFR' | 'roleLabelEN', value: string) => {
+    const updated = JSON.parse(JSON.stringify(editContent));
+    updated.roleSections[roleIdx][field] = value;
     setEditContent(updated);
   };
 
@@ -295,10 +351,30 @@ export default function Module4PcaSection({ projectId, language = 'fr' }: Props)
                             style={{ backgroundColor: role.headerColor + '15' }}>
                             <div className="w-2 h-2 rounded-full flex-shrink-0"
                               style={{ backgroundColor: role.headerColor }} />
-                            <p className="text-xs font-bold uppercase"
-                              style={{ color: role.headerColor, letterSpacing: '0.05em' }}>
-                              {isFr ? role.roleLabelFR : role.roleLabelEN}
-                            </p>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={isFr ? editContent.roleSections[roleIdx].roleLabelFR : editContent.roleSections[roleIdx].roleLabelEN}
+                                onChange={e => updateRoleLabel(roleIdx, isFr ? 'roleLabelFR' : 'roleLabelEN', e.target.value)}
+                                className="flex-1 text-xs font-bold uppercase rounded px-2 py-0.5 focus:outline-none"
+                                style={{ color: role.headerColor, letterSpacing: '0.05em', border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF' }}
+                              />
+                            ) : (
+                              <p className="text-xs font-bold uppercase flex-1"
+                                style={{ color: role.headerColor, letterSpacing: '0.05em' }}>
+                                {isFr ? role.roleLabelFR : role.roleLabelEN}
+                              </p>
+                            )}
+                            {isEditing && (
+                              <button
+                                onClick={() => removeRole(roleIdx)}
+                                className="text-xs ml-auto flex-shrink-0"
+                                style={{ color: '#ADB5BD' }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
+                                onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
+                                ✕
+                              </button>
+                            )}
                           </div>
 
                           {/* Étapes */}
@@ -310,13 +386,54 @@ export default function Module4PcaSection({ projectId, language = 'fr' }: Props)
                                   {stepIdx + 1}.
                                 </span>
                                 {isEditing ? (
-                                  <textarea
-                                    value={isFr ? editContent.roleSections[roleIdx].steps[stepIdx].textFR : editContent.roleSections[roleIdx].steps[stepIdx].textEN}
-                                    onChange={e => updateStep(roleIdx, stepIdx, isFr ? 'textFR' : 'textEN', e.target.value)}
-                                    rows={2}
-                                    className="flex-1 rounded px-2 py-1 text-sm focus:outline-none resize-none"
-                                    style={{ border: '1px solid #AED6F1', color: '#2C3E50', backgroundColor: '#F8FCFF' }}
-                                  />
+                                  <div className="flex-1 space-y-1">
+                                    <textarea
+                                      value={isFr ? editContent.roleSections[roleIdx].steps[stepIdx].textFR : editContent.roleSections[roleIdx].steps[stepIdx].textEN}
+                                      onChange={e => updateStep(roleIdx, stepIdx, isFr ? 'textFR' : 'textEN', e.target.value)}
+                                      rows={2}
+                                      className="w-full rounded px-2 py-1 text-sm focus:outline-none resize-none"
+                                      style={{ border: '1px solid #AED6F1', color: '#2C3E50', backgroundColor: '#F8FCFF' }}
+                                    />
+                                    {/* Aussi modifier l'autre langue */}
+                                    <textarea
+                                      value={isFr ? editContent.roleSections[roleIdx].steps[stepIdx].textEN : editContent.roleSections[roleIdx].steps[stepIdx].textFR}
+                                      onChange={e => updateStep(roleIdx, stepIdx, isFr ? 'textEN' : 'textFR', e.target.value)}
+                                      rows={2}
+                                      placeholder={isFr ? 'English version...' : 'Version française...'}
+                                      className="w-full rounded px-2 py-1 text-sm focus:outline-none resize-none"
+                                      style={{ border: '1px solid #E9ECEF', color: '#6C757D', backgroundColor: '#FAFAFA' }}
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => toggleStepBold(roleIdx, stepIdx)}
+                                        className="text-xs px-2 py-0.5 rounded font-bold transition-colors"
+                                        style={{
+                                          backgroundColor: editContent.roleSections[roleIdx].steps[stepIdx].isBold ? '#2C3E50' : '#F8F9FA',
+                                          color: editContent.roleSections[roleIdx].steps[stepIdx].isBold ? '#FFFFFF' : '#6C757D',
+                                          border: '1px solid #DEE2E6',
+                                        }}>
+                                        B
+                                      </button>
+                                      <button
+                                        onClick={() => toggleStepRed(roleIdx, stepIdx)}
+                                        className="text-xs px-2 py-0.5 rounded font-bold transition-colors"
+                                        style={{
+                                          backgroundColor: editContent.roleSections[roleIdx].steps[stepIdx].isRed ? '#C0392B' : '#F8F9FA',
+                                          color: editContent.roleSections[roleIdx].steps[stepIdx].isRed ? '#FFFFFF' : '#6C757D',
+                                          border: '1px solid #DEE2E6',
+                                        }}>
+                                        ⚠
+                                      </button>
+                                      <button
+                                        onClick={() => removeStep(roleIdx, stepIdx)}
+                                        className="text-xs px-2 py-0.5 rounded transition-colors ml-auto"
+                                        style={{ color: '#C0392B', border: '1px solid #F1948A' }}
+                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
+                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                        {isFr ? '✕ Supprimer' : '✕ Delete'}
+                                      </button>
+                                    </div>
+                                  </div>
                                 ) : (
                                   <p className="text-sm flex-1"
                                     style={{
@@ -328,9 +445,33 @@ export default function Module4PcaSection({ projectId, language = 'fr' }: Props)
                                 )}
                               </div>
                             ))}
+                            {/* Bouton ajouter une étape */}
+                            {isEditing && (
+                              <button
+                                onClick={() => addStep(roleIdx)}
+                                className="w-full text-xs py-1.5 rounded mt-2 transition-colors"
+                                style={{ border: '1px dashed #AED6F1', color: '#2980B9' }}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                + {isFr ? 'Ajouter une étape' : 'Add a step'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* Bouton ajouter un rôle */}
+                  {isEditing && isExpanded && (
+                    <div className="p-3 border-t" style={{ borderColor: '#E9ECEF' }}>
+                      <button
+                        onClick={addRole}
+                        className="w-full text-xs py-1.5 rounded transition-colors"
+                        style={{ border: '1px dashed #DEE2E6', color: '#6C757D' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        + {isFr ? 'Ajouter un rôle' : 'Add a role'}
+                      </button>
                     </div>
                   )}
                 </div>
