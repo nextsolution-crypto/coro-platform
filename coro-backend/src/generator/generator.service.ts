@@ -5,6 +5,7 @@ import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
 import { generateModule4, getActiveProcedures, getAllProcedures } from './module4.templates';
 import { generateModule8 } from './module8.templates';
+import { generatePcaModules } from './pca.templates';
 
 
 @Injectable()
@@ -178,7 +179,40 @@ private async loadProceduresFromDB(
   async generateAndSave(projectId: string, config: any, organizationId: string, userId?: string) {
     await this.assertProjectOwnership(projectId, organizationId);
     const ctx = await this.buildContext(projectId, config);
+    const isPca = ctx.documentType === 'PCA';
     const isPsi = ctx.documentType === 'PSI';
+
+    // ── Branche PCA ──
+    if (isPca) {
+      const pcaConfig = await this.prisma.pcaConfig.findUnique({
+        where: { projectId },
+      });
+      const pcaModules = generatePcaModules(ctx, pcaConfig);
+      const existing = await this.prisma.document.findFirst({ where: { projectId } });
+      const documentData = {
+        title: `PCA - ${ctx.clientName} ${ctx.year}`,
+        content: {
+          modules_fr: pcaModules.fr,
+          modules_en: pcaModules.en,
+          config,
+          generatedAt: new Date(),
+        },
+        status: 'IN_PROGRESS' as any,
+        version: existing ? existing.version + 1 : 1,
+        projectId,
+      };
+      let document;
+      if (existing) {
+        document = await this.prisma.document.update({ where: { id: existing.id }, data: documentData });
+      } else {
+        document = await this.prisma.document.create({ data: documentData });
+      }
+      await this.prisma.project.update({
+        where: { id: projectId },
+        data: { status: 'IN_PROGRESS', progress: 50, ...(userId ? { lastEditedById: userId } : {}) },
+      });
+      return { documentId: document.id, ...documentData };
+    }
 
     // Vérifier si l'organisation a un template Module 1 personnalisé
     const orgTemplate = await this.prisma.organizationModule1Template.findUnique({
