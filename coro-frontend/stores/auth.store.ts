@@ -16,6 +16,7 @@ interface AuthState {
   setAuth: (user: User, token: string, refreshToken?: string) => void;
   logout: () => void;
   initAuth: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -51,6 +52,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (token && userStr) {
       const user = JSON.parse(userStr);
       set({ user, token, isAuthenticated: true });
+    }
+  },
+  refreshUser: async () => {
+    const token = localStorage.getItem('coro_token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/users/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const user = await res.json();
+        localStorage.setItem('coro_user', JSON.stringify(user));
+        set({ user });
+      }
+    } catch (err) {
+      console.error('Erreur refreshUser:', err);
     }
   },
 }));

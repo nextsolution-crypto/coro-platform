@@ -10,7 +10,7 @@ import DragDropUpload from '@/components/ui/DragDropUpload';
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
-  const { user, isAuthenticated, initAuth } = useAuthStore();
+  const { user, isAuthenticated, initAuth, refreshUser } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,14 +77,11 @@ export default function OrganizationSettingsPage() {
 
   const handleSave = async () => {
     if (saving) return;
-
     setSaving(true);
-
     try {
       await api.put('/users/me', form);
-
+      await refreshUser();
       setSaved(true);
-
       setTimeout(() => {
         setSaved(false);
       }, 3000);
@@ -112,13 +109,12 @@ export default function OrganizationSettingsPage() {
 
     reader.onload = async ev => {
       const base64 = ev.target?.result as string;
-
       setLogoPreview(base64);
-
       try {
         await api.put('/users/me/logo', {
           companyLogoB64: base64,
         });
+        await refreshUser();
       } catch (err) {
         console.error(err);
       }
@@ -142,15 +138,14 @@ export default function OrganizationSettingsPage() {
 
     const reader = new FileReader();
 
-    reader.onload = async ev => {
+        reader.onload = async ev => {
       const base64 = ev.target?.result as string;
-
       setLogoFullPreview(base64);
-
       try {
-        await api.put('/users/me/logo-full', {
+        await api.put('/users/me/logo', {
           companyLogoFullB64: base64,
         });
+        await refreshUser();
       } catch (err) {
         console.error(err);
       }
