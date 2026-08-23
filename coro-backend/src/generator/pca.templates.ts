@@ -1,4 +1,5 @@
 import { DocumentContext } from './module1/module1.index';
+import { getAllPcaProcedures, getActivePcaProcedures } from './procedures/pca/index';
 
 export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
 
@@ -319,6 +320,9 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
     ],
   };
 
+  // ── Procédures PCA actives selon les scénarios de risque ──
+  const activePcaProcedures = getActivePcaProcedures(riskScenarios);
+
   // ── MODULE 5 — Stratégies de continuité ──
   const stratsFR: string[] = [];
   if (cfg.teleworkPossible === 'Oui') stratsFR.push('✓ Télétravail possible pour les employés concernés');
@@ -339,6 +343,14 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
   if (cfg.insuranceBI) assurancesFR.push('✓ Assurance interruption des affaires');
   if (cfg.insuranceProperty) assurancesFR.push('✓ Assurance dommages matériels');
   if (cfg.insuranceCyber) assurancesFR.push('✓ Assurance cyber');
+
+  const procedureListFR = activePcaProcedures.map(p =>
+    `• ${p.code} — ${p.titleFR}`
+  ).join('\n');
+
+  const procedureListEN = activePcaProcedures.map(p =>
+    `• ${p.code} — ${p.titleEN}`
+  ).join('\n');
 
   const m5fr = {
     moduleNumber: 5,
@@ -363,6 +375,13 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
         content: assurancesFR.length > 0
           ? `Couvertures d'assurance en place :\n\n${assurancesFR.join('\n')}${cfg.insuranceLastReview ? `\n\nDernière révision : ${new Date(cfg.insuranceLastReview).toLocaleDateString('fr-CA')}` : ''}`
           : 'Aucune couverture d\'assurance documentée — À vérifier avec le courtier d\'assurance',
+      },
+      {
+        id: 'm5_s4',
+        title: 'Procédures de continuité activées',
+        content: activePcaProcedures.length > 0
+          ? `Les procédures suivantes sont activées dans ce PCA selon les scénarios de risque identifiés :\n\n${procedureListFR}\n\nChaque procédure peut être personnalisée dans l'éditeur de procédures PCA.`
+          : 'Aucune procédure activée — Complétez l\'appréciation du risque (Section 3) pour activer les procédures applicables.',
       },
     ],
   };
@@ -390,6 +409,13 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
         content: assurancesFR.length > 0
           ? `Insurance coverage in place:\n\n${assurancesFR.join('\n')}`
           : 'No insurance coverage documented — To be verified with insurance broker',
+      },
+      {
+        id: 'm5_s4',
+        title: 'Activated continuity procedures',
+        content: activePcaProcedures.length > 0
+          ? `The following procedures are activated in this BCP based on identified risk scenarios:\n\n${procedureListEN}\n\nEach procedure can be customized in the PCA procedure editor.`
+          : 'No procedures activated — Complete the risk assessment (Section 3) to activate applicable procedures.',
       },
     ],
   };
