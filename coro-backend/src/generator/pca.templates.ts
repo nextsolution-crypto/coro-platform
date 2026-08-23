@@ -202,6 +202,11 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
         title: 'Concentrations de risques inacceptables',
         content: `Les scénarios identifiés comme ÉLEVÉ ou CRITIQUE nécessitent des stratégies de continuité prioritaires.\n\nNote : Il est important, lors des révisions du plan, de toujours considérer l'augmentation du nombre d'événements météorologiques extrêmes causés par les changements climatiques. — ISO 22301:2019/Amd 1:2024`,
       },
+      {
+        id: 'm3_s4',
+        title: 'Grille des niveaux d\'incident',
+        content: `NIVEAU 1 — INCIDENT MINEUR\n• Définition : Perturbation limitée, gérée localement sans activation du PCA\n• Exemples : Panne électrique < 2h, absence non critique, problème TI mineur\n• Responsable : Gestionnaire local\n• Activation PCA : Non requise\n\nNIVEAU 2 — INCIDENT MAJEUR\n• Définition : Perturbation significative nécessitant l'activation partielle du PCA\n• Exemples : Panne électrique > 4h, cyberincident modéré, absentéisme > 25%\n• Responsable : Coordonnateur PCA + membres clés de la cellule\n• Activation PCA : Partielle\n\nNIVEAU 3 — SINISTRE\n• Définition : Perturbation majeure nécessitant l'activation complète du PCA\n• Exemples : Sinistre bâtiment, cyberattaque majeure, pandémie\n• Responsable : Direction générale + cellule complète\n• Activation PCA : Complète\n\nCritères de passage au niveau supérieur :\n• Le RTO d'une activité critique est menacé\n• L'incident s'étend à plus d'un département\n• Des ressources externes sont nécessaires\n• Des impacts légaux ou réputationnels sont possibles`,
+      },
     ],
   };
 
@@ -230,6 +235,11 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
         id: 'm3_s3',
         title: 'Unacceptable risk concentrations',
         content: `Scenarios identified as HIGH or CRITICAL require priority continuity strategies.\n\nNote: Climate change is increasing the frequency of extreme weather events and must be considered during plan reviews. — ISO 22301:2019/Amd 1:2024`,
+      },
+      {
+        id: 'm3_s4',
+        title: 'Incident level grid',
+        content: `LEVEL 1 — MINOR INCIDENT\n• Definition: Limited disruption managed locally without BCP activation\n• Examples: Power outage < 2h, non-critical absence, minor IT issue\n• Responsible: Local manager\n• BCP Activation: Not required\n\nLEVEL 2 — MAJOR INCIDENT\n• Definition: Significant disruption requiring partial BCP activation\n• Examples: Power outage > 4h, moderate cyberincident, absenteeism > 25%\n• Responsible: BCP Coordinator + key cell members\n• BCP Activation: Partial\n\nLEVEL 3 — DISASTER\n• Definition: Major disruption requiring full BCP activation\n• Examples: Building disaster, major cyberattack, pandemic\n• Responsible: Senior management + full incident management team\n• BCP Activation: Full\n\nCriteria for escalation to next level:\n• RTO of a critical activity is at risk of being exceeded\n• Incident spreads to more than one department\n• External resources are required\n• Legal or reputational impacts are possible`,
       },
     ],
   };
