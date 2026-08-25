@@ -539,7 +539,9 @@ Emergency conference bridge | ${cfg.emergencyBridge || 'To be defined'}`,
         const prob = probLabel(r.probability || 'MOYENNE');
         const imp = impactLabel(r.impact || 'MOYEN');
         const niveau = riskScore(r.probability || 'MOYENNE', r.impact || 'MOYEN');
-        return `${co} | ${sc} | ${imp} | ${prob} | ${niveau} | À documenter | Voir stratégies chapitre 5`;
+        const mesures = r.existingControls || 'À documenter';
+        const commentaires = r.comments || '—';
+        return `${co} | ${sc} | ${imp} | ${prob} | ${niveau} | ${mesures} | ${commentaires}`;
       }).join('\n')
     : 'Aucun scénario identifié — À compléter dans le configurateur PCA (Section 3)';
 
@@ -549,7 +551,9 @@ Emergency conference bridge | ${cfg.emergencyBridge || 'To be defined'}`,
         const prob = probLabelEN(r.probability || 'MOYENNE');
         const imp = impactLabelEN(r.impact || 'MOYEN');
         const niveau = riskScoreEN(r.probability || 'MOYENNE', r.impact || 'MOYEN');
-        return `${sc} | ${imp} | ${prob} | ${niveau} | To be documented | See Chapter 5 strategies`;
+        const mesures = r.existingControls || 'To be documented';
+        const commentaires = r.comments || '—';
+        return `${sc} | ${imp} | ${prob} | ${niveau} | ${mesures} | ${commentaires}`;
       }).join('\n')
     : 'No scenarios identified — To be completed in BCP configurator (Section 3)';
 
@@ -617,12 +621,25 @@ Le niveau de risque ne remplace pas le BIA. L'ARA aide à déterminer ce qui peu
       {
         id: 'm3_s3',
         title: 'Scénarios d\'interruption identifiés',
-        content: `CONSÉQUENCE | CAUSE / SCÉNARIO | IMPACT | PROBABILITÉ | NIVEAU | MESURES EXISTANTES | COMMENTAIRES
+        content: `CONSÉQUENCE | CAUSE / SCÉNARIO | IMPACT | PROBABILITÉ | NIVEAU DE RISQUE | MESURES EXISTANTES | COMMENTAIRES
 ─────────────────────────────────────────────────────────────────────
 ${riskTableFR}
 
 LECTURE DES RÉSULTATS
-L'organisation ne doit pas interpréter un risque faible comme une absence de risque. Un scénario peu probable peut tout de même exiger une stratégie si ses conséquences sont incompatibles avec les tolérances établies au BIA.`,
+L'organisation ne doit pas interpréter un risque faible comme une absence de risque. Un scénario peu probable peut tout de même exiger une stratégie si ses conséquences sont incompatibles avec les tolérances établies au BIA.
+
+RÉSUMÉ DES CONCENTRATIONS DE RISQUES
+${riskScenarios.filter((r: any) => {
+  const p = r.probability === 'ELEVEE' ? 3 : r.probability === 'MOYENNE' ? 2 : 1;
+  const i = r.impact === 'ELEVE' ? 3 : r.impact === 'MOYEN' ? 2 : 1;
+  return (p * i) >= 6;
+}).length > 0
+  ? `Risques ÉLEVÉS identifiés (score ≥ 6) :\n${riskScenarios.filter((r: any) => {
+      const p = r.probability === 'ELEVEE' ? 3 : r.probability === 'MOYENNE' ? 2 : 1;
+      const i = r.impact === 'ELEVE' ? 3 : r.impact === 'MOYEN' ? 2 : 1;
+      return (p * i) >= 6;
+    }).map((r: any) => `• ${scenarioLabel(r.id)} — Score ${(r.probability === 'ELEVEE' ? 3 : r.probability === 'MOYENNE' ? 2 : 1) * (r.impact === 'ELEVE' ? 3 : r.impact === 'MOYEN' ? 2 : 1)}`).join('\n')}`
+  : 'Aucun risque de niveau ÉLEVÉ identifié — Maintenir la surveillance et réévaluer annuellement.'}`,
       },
       {
         id: 'm3_s4',
@@ -733,33 +750,118 @@ ESCALATION CRITERIA
   // ══════════════════════════════════════════════
   // MODULE 4 — BILAN D'IMPACT SUR LES ACTIVITÉS (BIA)
   // ══════════════════════════════════════════════
-  const biaTableFR = criticalServices.length > 0
-    ? criticalServices
-        .sort((a: any, b: any) => {
-          const order: Record<string, number> = { '1h': 1, '4h': 2, '8h': 3, '24h': 4, '48h': 5, '72h': 6, '1sem': 7, 'plus': 8 };
-          return (order[a.rto] || 9) - (order[b.rto] || 9);
-        })
-        .map((s: any, i: number) => {
-          const prio = i === 0 ? 'P1' : i <= 2 ? 'P1' : i <= 4 ? 'P2' : 'P3';
-          return `${s.name || `Service ${i + 1}`} | À documenter | ${s.rto || 'N/D'} | ${s.mad || 'N/D'} | ${s.rpo || 'N/D'} | ${s.financialImpact || 'N/D'} | ${prio}`;
-        }).join('\n')
+  const sortedServices = criticalServices.length > 0
+    ? [...criticalServices].sort((a: any, b: any) => {
+        const order: Record<string, number> = { '1h': 1, '4h': 2, '8h': 3, '24h': 4, '48h': 5, '72h': 6, '1sem': 7, 'plus': 8 };
+        return (order[a.rto] || 9) - (order[b.rto] || 9);
+      })
+    : [];
+
+  const biaTableFR = sortedServices.length > 0
+    ? sortedServices.map((s: any, i: number) => {
+        const prio = i <= 1 ? 'P1' : i <= 3 ? 'P2' : 'P3';
+        const owner = s.owner || 'À désigner';
+        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/D'} | ${s.mad || 'N/D'} | ${s.rpo || 'N/D'} | ${s.financialImpact || 'N/D'} | ${prio}`;
+      }).join('\n')
     : 'Aucun service critique défini — À compléter dans le configurateur PCA (Section 4)';
 
-  const biaTableEN = criticalServices.length > 0
-    ? criticalServices
-        .sort((a: any, b: any) => {
-          const order: Record<string, number> = { '1h': 1, '4h': 2, '8h': 3, '24h': 4, '48h': 5, '72h': 6, '1sem': 7, 'plus': 8 };
-          return (order[a.rto] || 9) - (order[b.rto] || 9);
-        })
-        .map((s: any, i: number) => {
-          const prio = i === 0 ? 'P1' : i <= 2 ? 'P1' : i <= 4 ? 'P2' : 'P3';
-          return `${s.name || `Service ${i + 1}`} | To be documented | ${s.rto || 'N/A'} | ${s.mad || 'N/A'} | ${s.rpo || 'N/A'} | ${s.financialImpact || 'N/A'} | ${prio}`;
-        }).join('\n')
+  const biaTableEN = sortedServices.length > 0
+    ? sortedServices.map((s: any, i: number) => {
+        const prio = i <= 1 ? 'P1' : i <= 3 ? 'P2' : 'P3';
+        const owner = s.owner || 'To be designated';
+        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/A'} | ${s.mad || 'N/A'} | ${s.rpo || 'N/A'} | ${s.financialImpact || 'N/A'} | ${prio}`;
+      }).join('\n')
     : 'No critical services defined — To be completed in BCP configurator (Section 4)';
 
-  const resourcesTableFR = criticalServices.length > 0
-    ? criticalServices.map((s: any) =>
-        `Personnel | Responsables de ${s.name || 'l\'activité'} | ${s.name || 'À documenter'} | Minimum requis selon RTO ${s.rto || 'N/D'}`
+  // Fiches BIA enrichies
+  const biaFichesFR = sortedServices.map((s: any, i: number) => {
+    const prio = i <= 1 ? 'P1' : i <= 3 ? 'P2' : 'P3';
+    return `
+FICHE BIA — ${(s.name || `Service ${i + 1}`).toUpperCase()}
+─────────────────────────────────────────────────────────────────────
+Responsable | ${s.owner || 'À désigner'}
+Priorité | ${prio}
+Niveau minimal de service | ${s.minServiceLevel || 'À définir'}
+RTO | ${s.rto || 'N/D'}
+MAD / Tolérance maximale | ${s.mad || 'N/D'}
+RPO | ${s.rpo || 'N/D'}
+Impact financier estimé / jour | ${s.financialImpact || 'N/D'}
+Impact réputationnel | ${s.reputationalImpact || 'N/D'}
+Impact légal | ${s.legalImpact ? 'Oui' : 'Non'}
+Périodes critiques | ${s.criticalPeriods || 'Non précisées'}
+Mode dégradé | ${s.degradedMode || 'Non documenté'}
+Durée soutenable du mode dégradé | ${s.degradedModeDuration || 'Non précisée'}
+
+RESSOURCES MINIMALES
+─────────────────────────────────────────────────────────────────────
+Personnel | ${s.resourcePersonnel || 'À documenter'}
+Systèmes TI | ${s.resourceIT || 'À documenter'}
+Équipements | ${s.resourceEquipment || 'À documenter'}
+Fournisseurs / partenaires | ${s.resourceSuppliers || 'À documenter'}
+Site / installations | ${s.resourceSite || 'À documenter'}
+Énergie | ${s.resourceEnergy || 'À documenter'}`;
+  }).join('\n\n');
+
+  const biaFichesEN = sortedServices.map((s: any, i: number) => {
+    const prio = i <= 1 ? 'P1' : i <= 3 ? 'P2' : 'P3';
+    return `
+BIA SHEET — ${(s.name || `Service ${i + 1}`).toUpperCase()}
+─────────────────────────────────────────────────────────────────────
+Owner | ${s.owner || 'To be designated'}
+Priority | ${prio}
+Minimum service level | ${s.minServiceLevel || 'To be defined'}
+RTO | ${s.rto || 'N/A'}
+MAD / Maximum tolerance | ${s.mad || 'N/A'}
+RPO | ${s.rpo || 'N/A'}
+Estimated financial impact / day | ${s.financialImpact || 'N/A'}
+Reputational impact | ${s.reputationalImpact || 'N/A'}
+Legal impact | ${s.legalImpact ? 'Yes' : 'No'}
+Critical periods | ${s.criticalPeriods || 'Not specified'}
+Degraded mode | ${s.degradedMode || 'Not documented'}
+Sustainable duration of degraded mode | ${s.degradedModeDuration || 'Not specified'}
+
+MINIMUM RESOURCES
+─────────────────────────────────────────────────────────────────────
+Personnel | ${s.resourcePersonnel || 'To be documented'}
+IT systems | ${s.resourceIT || 'To be documented'}
+Equipment | ${s.resourceEquipment || 'To be documented'}
+Suppliers / partners | ${s.resourceSuppliers || 'To be documented'}
+Site / facilities | ${s.resourceSite || 'To be documented'}
+Energy | ${s.resourceEnergy || 'To be documented'}`;
+  }).join('\n\n');
+
+  // Systèmes TI critiques
+  const itSystemsFR = (cfg.criticalITSystems || []).length > 0
+    ? (cfg.criticalITSystems || []).map((s: any) =>
+        `${s.name || 'N/D'} | ${s.rto || 'N/D'} | ${s.rpo || 'N/D'} | ${s.degradedMode || 'À documenter'} | ${s.backupSolution || 'À documenter'}`
+      ).join('\n')
+    : 'À documenter — Ajouter les systèmes TI critiques dans le configurateur (Section 5)';
+
+  const itSystemsEN = (cfg.criticalITSystems || []).length > 0
+    ? (cfg.criticalITSystems || []).map((s: any) =>
+        `${s.name || 'N/A'} | ${s.rto || 'N/A'} | ${s.rpo || 'N/A'} | ${s.degradedMode || 'To be documented'} | ${s.backupSolution || 'To be documented'}`
+      ).join('\n')
+    : 'To be documented — Add critical IT systems in configurator (Section 5)';
+
+  // Fournisseurs critiques
+  const statusLabelFR = (s: string) => s === 'PRET' ? '✅ Prêt' : s === 'PARTIEL' ? '⚠️ Partiel' : '🔴 À confirmer';
+  const statusLabelEN = (s: string) => s === 'PRET' ? '✅ Ready' : s === 'PARTIEL' ? '⚠️ Partial' : '🔴 To confirm';
+
+  const criticalSuppliersFR = (cfg.criticalSuppliers || []).length > 0
+    ? (cfg.criticalSuppliers || []).map((s: any) =>
+        `${s.name || 'N/D'} | ${s.service || 'N/D'} | ${s.tolerance || 'N/D'} | ${s.preventiveMeasure || 'À documenter'} | ${s.backupSolution || 'À documenter'} | ${s.activationDelay || 'N/D'} | ${statusLabelFR(s.status || 'A_CONFIRMER')}`
+      ).join('\n')
+    : 'À documenter — Ajouter les fournisseurs critiques dans le configurateur (Section 5)';
+
+  const criticalSuppliersEN = (cfg.criticalSuppliers || []).length > 0
+    ? (cfg.criticalSuppliers || []).map((s: any) =>
+        `${s.name || 'N/A'} | ${s.service || 'N/A'} | ${s.tolerance || 'N/A'} | ${s.preventiveMeasure || 'To be documented'} | ${s.backupSolution || 'To be documented'} | ${s.activationDelay || 'N/A'} | ${statusLabelEN(s.status || 'A_CONFIRMER')}`
+      ).join('\n')
+    : 'To be documented — Add critical suppliers in configurator (Section 5)';
+
+  const resourcesTableFR = sortedServices.length > 0
+    ? sortedServices.map((s: any) =>
+        `Personnel | ${s.resourcePersonnel || 'À documenter'} | ${s.name || 'À documenter'} | Minimum requis selon RTO ${s.rto || 'N/D'}`
       ).join('\n')
     : 'Personnel | À documenter | À documenter | À documenter selon le BIA\nTI | Applications critiques | À documenter | Selon RTO défini\nFournisseurs | À documenter | À documenter | À documenter';
 
@@ -806,7 +908,7 @@ Le RTO d'une activité doit normalement être inférieur à sa tolérance maxima
       {
         id: 'm4_s2',
         title: 'Services et activités critiques',
-        content: `PRODUIT / SERVICE | ACTIVITÉ CRITIQUE / RESPONSABLE | RTO | MAD | RPO | IMPACT FINANCIER / JOUR | PRIORITÉ
+        content: `PRODUIT / SERVICE | RESPONSABLE | RTO | MAD | RPO | IMPACT FINANCIER / JOUR | PRIORITÉ
 ─────────────────────────────────────────────────────────────────────
 ${biaTableFR}
 
@@ -821,7 +923,7 @@ ${criticalServices.map((s: any) => {
   return `${(s.name || 'Activité').substring(0, 30)} | ${rtoHours <= 4 ? 'Important' : 'Faible'} | ${rtoHours <= 8 ? 'Critique' : 'Modéré'} | ${rtoHours <= 24 ? 'Critique' : 'Important'} | Critique | Critique | Critique | ${s.mad || 'À définir'}`;
 }).join('\n')}` : ''}`,
       },
-      {
+            {
         id: 'm4_s3',
         title: 'Ressources critiques identifiées',
         content: `Une activité ne peut être reprise uniquement parce qu'un responsable est disponible. Il faut identifier les ressources minimales qui rendent réellement possible son fonctionnement.
@@ -829,11 +931,14 @@ ${criticalServices.map((s: any) => {
 CATÉGORIE | RESSOURCE CRITIQUE | ACTIVITÉS DÉPENDANTES | EXIGENCE MINIMALE
 ─────────────────────────────────────────────────────────────────────
 ${resourcesTableFR}
-Installations | ${cfg.alternativeSiteAddress ? `Site alternatif disponible : ${cfg.alternativeSiteAddress}` : 'Site alternatif : À identifier'} | Toutes les activités en cas de perte de site | Capacité minimale définie au BIA
+─────────────────────────────────────────────────────────────────────
+Installations | ${cfg.alternativeSiteAddress ? `Site alternatif disponible : ${cfg.alternativeSiteAddress}` : 'Site alternatif : À identifier'} | Toutes les activités en cas de perte de site | Minimum capacité définie au BIA
 ─────────────────────────────────────────────────────────────────────
 Énergie | ${cfg.generator ? 'Génératrice disponible' : 'Génératrice : Non disponible'} | Activités nécessitant alimentation électrique | ${cfg.generator ? 'Charges prioritaires à documenter' : 'Solution de relève à prévoir'}
 ─────────────────────────────────────────────────────────────────────
-Données / TI | Sauvegardes hors site : ${cfg.offSiteBackup ? 'Disponibles' : 'Non disponibles'} | Toutes les activités TI | RPO défini par activité au BIA`,
+Données / TI | Sauvegardes hors site : ${cfg.offSiteBackup ? 'Disponibles' : 'Non disponibles'} | Toutes les activités TI | RPO défini par activité au BIA
+
+${biaFichesFR ? `\nFICHES DE RESSOURCES CRITIQUES PAR ACTIVITÉ\n${biaFichesFR}` : ''}`,
       },
       {
         id: 'm4_s4',
@@ -986,7 +1091,12 @@ Sauvegardes hors site | ${cfg.offSiteBackup ? 'Disponibles' : 'Non disponibles'}
 ─────────────────────────────────────────────────────────────────────
 Procédures manuelles | ${cfg.processDocumented ? 'Documentées' : 'À documenter'} | ${cfg.processDocumented ? 'Procédures manuelles disponibles pour les activités critiques' : 'À documenter pour chaque activité critique'}
 ─────────────────────────────────────────────────────────────────────
-Accès mobiles / alternatifs | À confirmer | Téléphones mobiles, connexions cellulaires, accès VPN | Fonctions critiques en mode dégradé`,
+Accès mobiles / alternatifs | À confirmer | Téléphones mobiles, connexions cellulaires, accès VPN | Fonctions critiques en mode dégradé
+
+SYSTÈMES TI CRITIQUES — INVENTAIRE ET OBJECTIFS DE REPRISE
+SYSTÈME / APPLICATION | RTO | RPO | MODE DÉGRADÉ | SOLUTION DE RELÈVE
+─────────────────────────────────────────────────────────────────────
+${itSystemsFR}`,
       },
       {
         id: 'm5_s4',
@@ -1000,6 +1110,8 @@ Formation croisée | ${cfg.crossTraining ? 'En place' : 'À mettre en place'} | 
 Documentation des processus | ${cfg.processDocumented ? 'Disponible' : 'À compléter'} | ${cfg.processDocumented ? 'Procédures opérationnelles documentées et accessibles' : 'Documenter les processus critiques concentrés chez les employés clés'}
 ─────────────────────────────────────────────────────────────────────
 Personnel temporaire | ${cfg.tempStaffAccess ? 'Accessible' : 'À prévoir'} | ${cfg.tempStaffAccess ? 'Ententes avec agences de placement — contacts à jour' : 'Identifier des agences de placement spécialisées'}
+─────────────────────────────────────────────────────────────────────
+Seuil d'activation absentéisme | ${cfg.absenteeismThreshold ? (cfg.absenteeismThreshold === 'cle' ? 'Perte d\'un employé clé' : `≥ ${cfg.absenteeismThreshold}% du personnel absent`) : 'Non défini'} | ${cfg.absenteeismThreshold ? 'Déclenche la procédure PC013 — Pandémie / absentéisme massif' : 'À définir dans le configurateur PCA (Section 5)'}
 
 CONSÉQUENCE : Interruption d'un fournisseur ou partenaire critique
 
@@ -1007,7 +1119,12 @@ STRATÉGIE | DISPONIBILITÉ | DÉTAILS
 ─────────────────────────────────────────────────────────────────────
 Fournisseurs alternatifs | ${cfg.alternativeSuppliers ? 'Identifiés' : 'À identifier'} | ${cfg.alternativeSuppliers ? 'Fournisseurs de remplacement confirmés pour les approvisionnements critiques' : 'Identifier et valider des fournisseurs alternatifs pour chaque intrant critique'}
 ─────────────────────────────────────────────────────────────────────
-Stock de sécurité | ${cfg.safetyStock ? 'Maintenu' : 'Non disponible'} | ${cfg.safetyStock ? `Durée : ${cfg.safetyStockDuration || 'À documenter'} — Niveau minimal à maintenir` : 'Évaluer la faisabilité d\'un stock tampon pour les intrants critiques'}`,
+Stock de sécurité | ${cfg.safetyStock ? 'Maintenu' : 'Non disponible'} | ${cfg.safetyStock ? `Durée : ${cfg.safetyStockDuration || 'À documenter'} — Niveau minimal à maintenir` : 'Évaluer la faisabilité d\'un stock tampon pour les intrants critiques'}
+
+FOURNISSEURS CRITIQUES — MATRICE DE CONTINUITÉ
+FOURNISSEUR | SERVICE | TOLÉRANCE | MESURE PRÉVENTIVE | SOLUTION DE RELÈVE | DÉLAI ACTIVATION | ÉTAT
+─────────────────────────────────────────────────────────────────────
+${criticalSuppliersFR}`,
       },
       {
         id: 'm5_s5',
