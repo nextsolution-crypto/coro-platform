@@ -105,12 +105,15 @@ export default function PcaConfiguratorPage() {
     itRedundancy: false,
     offSiteBackup: false,
     backupFrequency: '',
+    criticalITSystems: [] as any[],
     crossTraining: false,
     processDocumented: false,
     tempStaffAccess: false,
+    absenteeismThreshold: '',
     alternativeSuppliers: false,
     safetyStock: false,
     safetyStockDuration: '',
+    criticalSuppliers: [] as any[],
     generator: false,
     ups: false,
     insuranceBI: false,
@@ -309,6 +312,68 @@ export default function PcaConfiguratorPage() {
       regulatoryReqs: prev.regulatoryReqs.includes(req)
         ? prev.regulatoryReqs.filter(r => r !== req)
         : [...prev.regulatoryReqs, req],
+    }));
+  };
+
+  const addITSystem = () => {
+    setConfig(prev => ({
+      ...prev,
+      criticalITSystems: [...prev.criticalITSystems, {
+        id: Date.now().toString(),
+        name: '',
+        rto: '',
+        rpo: '',
+        degradedMode: '',
+        backupSolution: '',
+      }],
+    }));
+  };
+
+  const updateITSystem = (id: string, field: string, value: string) => {
+    setConfig(prev => ({
+      ...prev,
+      criticalITSystems: prev.criticalITSystems.map((s: any) =>
+        s.id === id ? { ...s, [field]: value } : s
+      ),
+    }));
+  };
+
+  const removeITSystem = (id: string) => {
+    setConfig(prev => ({
+      ...prev,
+      criticalITSystems: prev.criticalITSystems.filter((s: any) => s.id !== id),
+    }));
+  };
+
+  const addCriticalSupplier = () => {
+    setConfig(prev => ({
+      ...prev,
+      criticalSuppliers: [...prev.criticalSuppliers, {
+        id: Date.now().toString(),
+        name: '',
+        service: '',
+        tolerance: '',
+        preventiveMeasure: '',
+        backupSolution: '',
+        activationDelay: '',
+        status: 'A_CONFIRMER',
+      }],
+    }));
+  };
+
+  const updateCriticalSupplier = (id: string, field: string, value: string) => {
+    setConfig(prev => ({
+      ...prev,
+      criticalSuppliers: prev.criticalSuppliers.map((s: any) =>
+        s.id === id ? { ...s, [field]: value } : s
+      ),
+    }));
+  };
+
+  const removeCriticalSupplier = (id: string) => {
+    setConfig(prev => ({
+      ...prev,
+      criticalSuppliers: prev.criticalSuppliers.filter((s: any) => s.id !== id),
     }));
   };
 
@@ -726,26 +791,65 @@ export default function PcaConfiguratorPage() {
                     </div>
 
                     {isSelected && (
-                      <div className="grid grid-cols-2 gap-4 ml-8">
+                      <div className="ml-8 space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Probabilité</Label>
+                            <select value={risk.probability}
+                              onChange={e => updateRisk(scenario.id, 'probability', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="FAIBLE">1 — Faible (peu probable)</option>
+                              <option value="MOYENNE">2 — Moyenne (probable)</option>
+                              <option value="ELEVEE">3 — Élevée (très probable)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label>Impact sur les activités</Label>
+                            <select value={risk.impact}
+                              onChange={e => updateRisk(scenario.id, 'impact', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="FAIBLE">1 — Faible (effets limités)</option>
+                              <option value="MOYEN">2 — Modéré (activités ralenties)</option>
+                              <option value="ELEVE">3 — Sévère (activités inopérantes)</option>
+                            </select>
+                          </div>
+                        </div>
+                        {/* Niveau de risque calculé */}
+                        {(() => {
+                          const p = risk.probability === 'ELEVEE' ? 3 : risk.probability === 'MOYENNE' ? 2 : 1;
+                          const i = risk.impact === 'ELEVE' ? 3 : risk.impact === 'MOYEN' ? 2 : 1;
+                          const score = p * i;
+                          const label = score >= 6 ? 'ÉLEVÉ' : score >= 3 ? 'MOYEN' : 'FAIBLE';
+                          const color = score >= 6 ? '#C0392B' : score >= 3 ? '#F39C12' : '#27AE60';
+                          const bg = score >= 6 ? '#FDEDEC' : score >= 3 ? '#FEF9E7' : '#EAFAF1';
+                          const border = score >= 6 ? '#F1948A' : score >= 3 ? '#FAD7A0' : '#A9DFBF';
+                          return (
+                            <div className="flex items-center gap-2 px-3 py-2 rounded text-xs font-bold"
+                              style={{ backgroundColor: bg, border: `1px solid ${border}`, color }}>
+                              Niveau de risque : {score} — {label}
+                              <span className="font-normal ml-1" style={{ color: '#6C757D' }}>
+                                (Impact {p} × Probabilité {i} = {score})
+                              </span>
+                            </div>
+                          );
+                        })()}
                         <div>
-                          <Label>Probabilité</Label>
-                          <select value={risk.probability}
-                            onChange={e => updateRisk(scenario.id, 'probability', e.target.value)}
-                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
-                            <option value="FAIBLE">Faible</option>
-                            <option value="MOYENNE">Moyenne</option>
-                            <option value="ELEVEE">Élevée</option>
-                          </select>
+                          <Label>Mesures de contrôle existantes</Label>
+                          <input type="text" value={risk.existingControls || ''}
+                            onChange={e => updateRisk(scenario.id, 'existingControls', e.target.value)}
+                            placeholder="Ex: Détection incendie, assurance, génératrice, MFA, sauvegardes EDR..."
+                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                            onFocus={e => e.target.style.borderColor = '#C0392B'}
+                            onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                         </div>
                         <div>
-                          <Label>Impact</Label>
-                          <select value={risk.impact}
-                            onChange={e => updateRisk(scenario.id, 'impact', e.target.value)}
-                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
-                            <option value="FAIBLE">Faible</option>
-                            <option value="MOYEN">Moyen</option>
-                            <option value="ELEVE">Élevé</option>
-                          </select>
+                          <Label>Commentaires</Label>
+                          <input type="text" value={risk.comments || ''}
+                            onChange={e => updateRisk(scenario.id, 'comments', e.target.value)}
+                            placeholder="Ex: Dépendance forte au site principal, ERP indispensable à plusieurs activités..."
+                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                            onFocus={e => e.target.style.borderColor = '#C0392B'}
+                            onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                         </div>
                       </div>
                     )}
@@ -915,6 +1019,90 @@ export default function PcaConfiguratorPage() {
                           Impact légal ou réglementaire
                         </label>
                       </div>
+
+                      {/* ── Champs enrichis BIA ── */}
+                      <div className="sm:col-span-2 pt-3 mt-1" style={{ borderTop: '1px solid #E9ECEF' }}>
+                        <p className="text-xs font-bold uppercase mb-3" style={{ color: '#ADB5BD', letterSpacing: '0.08em' }}>
+                          Mode dégradé et ressources
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label>Responsable de l'activité</Label>
+                        <input type="text" value={service.owner || ''}
+                          onChange={e => updateService(service.id, 'owner', e.target.value)}
+                          placeholder="Ex: Directrice, service à la clientèle"
+                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
+                          onFocus={e => e.target.style.borderColor = '#C0392B'}
+                          onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                      </div>
+
+                      <div>
+                        <Label>Périodes critiques</Label>
+                        <input type="text" value={service.criticalPeriods || ''}
+                          onChange={e => updateService(service.id, 'criticalPeriods', e.target.value)}
+                          placeholder="Ex: Fin de mois, périodes de pointe saisonnières, jours fériés"
+                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
+                          onFocus={e => e.target.style.borderColor = '#C0392B'}
+                          onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Label>Mode dégradé documenté</Label>
+                        <textarea value={service.degradedMode || ''}
+                          onChange={e => updateService(service.id, 'degradedMode', e.target.value)}
+                          rows={2}
+                          placeholder="Ex: Réception des commandes par téléphone/courriel, registre temporaire papier, saisie différée dans l'ERP"
+                          className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none" style={inputStyle}
+                          onFocus={e => e.target.style.borderColor = '#C0392B'}
+                          onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                      </div>
+
+                      <div>
+                        <Label>Durée soutenable du mode dégradé</Label>
+                        <select value={service.degradedModeDuration || ''}
+                          onChange={e => updateService(service.id, 'degradedModeDuration', e.target.value)}
+                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
+                          <option value="">Sélectionner...</option>
+                          <option value="2h">2 heures</option>
+                          <option value="4h">4 heures</option>
+                          <option value="8h">8 heures (1 journée)</option>
+                          <option value="24h">24 heures</option>
+                          <option value="48h">48 heures (2 jours)</option>
+                          <option value="72h">72 heures (3 jours)</option>
+                          <option value="1sem">1 semaine</option>
+                          <option value="indefini">Indéfini / selon situation</option>
+                        </select>
+                      </div>
+
+                      {/* Ressources minimales */}
+                      <div className="sm:col-span-2 pt-3 mt-1" style={{ borderTop: '1px solid #E9ECEF' }}>
+                        <p className="text-xs font-bold uppercase mb-3" style={{ color: '#ADB5BD', letterSpacing: '0.08em' }}>
+                          Ressources minimales requises
+                        </p>
+                        <div className="space-y-2">
+                          {[
+                            { key: 'resourcePersonnel', label: '👤 Personnel', placeholder: 'Ex: 4 agents + 1 superviseur en mode dégradé' },
+                            { key: 'resourceIT', label: '💻 Systèmes TI', placeholder: 'Ex: Accès ERP + courriel + téléphonie mobile' },
+                            { key: 'resourceEquipment', label: '🔧 Équipements', placeholder: 'Ex: 5 postes de travail sécurisés, imprimantes' },
+                            { key: 'resourceSuppliers', label: '🚚 Fournisseurs / partenaires', placeholder: 'Ex: Transporteur secondaire, fournisseur TI joignable 24/7' },
+                            { key: 'resourceSite', label: '🏢 Site / installations', placeholder: 'Ex: Zone de travail sécuritaire + 2 quais accessibles' },
+                            { key: 'resourceEnergy', label: '⚡ Énergie', placeholder: 'Ex: Alimentation normale ou génératrice pour charges prioritaires' },
+                          ].map(r => (
+                            <div key={r.key} className="flex items-center gap-3">
+                              <span className="text-xs font-medium flex-shrink-0" style={{ color: '#6C757D', minWidth: '160px' }}>
+                                {r.label}
+                              </span>
+                              <input type="text" value={service[r.key] || ''}
+                                onChange={e => updateService(service.id, r.key, e.target.value)}
+                                placeholder={r.placeholder}
+                                className="flex-1 rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                                onFocus={e => e.target.style.borderColor = '#C0392B'}
+                                onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -990,6 +1178,99 @@ export default function PcaConfiguratorPage() {
                   </select>
                 </div>
               )}
+
+              {/* Systèmes TI critiques */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+                    Systèmes TI critiques
+                  </p>
+                  <button onClick={addITSystem}
+                    className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                    style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    + Ajouter un système
+                  </button>
+                </div>
+                {config.criticalITSystems.length === 0 ? (
+                  <div className="p-3 text-center rounded" style={{ backgroundColor: '#F8F9FA', border: '1px dashed #DEE2E6' }}>
+                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                      Ex: ERP, courriel, téléphonie, accès Internet, fichiers partagés, logiciels métier
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {config.criticalITSystems.map((sys: any) => (
+                      <div key={sys.id} className="p-4 rounded" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="sm:col-span-2">
+                            <Label>Nom du système / application</Label>
+                            <input type="text" value={sys.name}
+                              onChange={e => updateITSystem(sys.id, 'name', e.target.value)}
+                              placeholder="Ex: ERP (Microsoft Dynamics), Courriel (Microsoft 365)"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                          <div>
+                            <Label>RTO du système</Label>
+                            <select value={sys.rto}
+                              onChange={e => updateITSystem(sys.id, 'rto', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="">Sélectionner...</option>
+                              <option value="1h">1 heure</option>
+                              <option value="4h">4 heures</option>
+                              <option value="8h">8 heures</option>
+                              <option value="24h">24 heures</option>
+                              <option value="48h">48 heures</option>
+                              <option value="72h">72 heures</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label>RPO du système</Label>
+                            <select value={sys.rpo}
+                              onChange={e => updateITSystem(sys.id, 'rpo', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="">Sélectionner...</option>
+                              <option value="0">Aucune perte (RPO = 0)</option>
+                              <option value="1h">1 heure</option>
+                              <option value="4h">4 heures</option>
+                              <option value="8h">8 heures</option>
+                              <option value="24h">24 heures</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label>Mode dégradé</Label>
+                            <input type="text" value={sys.degradedMode}
+                              onChange={e => updateITSystem(sys.id, 'degradedMode', e.target.value)}
+                              placeholder="Ex: Formulaires papier + saisie différée"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                          <div>
+                            <Label>Solution de relève / reprise</Label>
+                            <input type="text" value={sys.backupSolution}
+                              onChange={e => updateITSystem(sys.id, 'backupSolution', e.target.value)}
+                              placeholder="Ex: Restauration fournisseur / environnement infonuagique"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                        </div>
+                        <button onClick={() => removeITSystem(sys.id)}
+                          className="text-xs mt-2"
+                          style={{ color: '#ADB5BD' }}
+                          onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
+                          ✕ Supprimer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Absentéisme */}
@@ -1003,6 +1284,28 @@ export default function PcaConfiguratorPage() {
                 hint="Les procédures sont documentées et accessibles" />
               <BoolField label="Accès à du personnel temporaire" field="tempStaffAccess"
                 hint="Agences de placement, retraités, anciens employés" />
+              <div className="mt-3">
+                <Label>Seuil d'activation pour absentéisme massif</Label>
+                <div className="flex items-center gap-3">
+                  <select value={config.absenteeismThreshold}
+                    onChange={e => setConfig({ ...config, absenteeismThreshold: e.target.value })}
+                    className="rounded px-4 py-2.5 text-sm focus:outline-none" style={{ ...inputStyle, width: 'auto' }}>
+                    <option value="">Sélectionner...</option>
+                    <option value="15">≥ 15% du personnel absent</option>
+                    <option value="20">≥ 20% du personnel absent</option>
+                    <option value="25">≥ 25% du personnel absent</option>
+                    <option value="30">≥ 30% du personnel absent</option>
+                    <option value="40">≥ 40% du personnel absent</option>
+                    <option value="50">≥ 50% du personnel absent</option>
+                    <option value="cle">Perte d'un employé clé (sans seuil %)</option>
+                  </select>
+                  {config.absenteeismThreshold && config.absenteeismThreshold !== 'cle' && (
+                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                      → Déclenche la procédure PC013
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Fournisseurs */}
@@ -1027,6 +1330,120 @@ export default function PcaConfiguratorPage() {
                   </select>
                 </div>
               )}
+
+              {/* Fournisseurs critiques */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>
+                    Fournisseurs critiques
+                  </p>
+                  <button onClick={addCriticalSupplier}
+                    className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                    style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    + Ajouter un fournisseur
+                  </button>
+                </div>
+                {config.criticalSuppliers.length === 0 ? (
+                  <div className="p-3 text-center rounded" style={{ backgroundColor: '#F8F9FA', border: '1px dashed #DEE2E6' }}>
+                    <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                      Ex: transporteur principal, fournisseur ERP, fournisseur matières premières, télécoms
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {config.criticalSuppliers.map((sup: any) => (
+                      <div key={sup.id} className="p-4 rounded" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Nom du fournisseur</Label>
+                            <input type="text" value={sup.name}
+                              onChange={e => updateCriticalSupplier(sup.id, 'name', e.target.value)}
+                              placeholder="Ex: Transporteur XYZ"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                          <div>
+                            <Label>Service / produit fourni</Label>
+                            <input type="text" value={sup.service}
+                              onChange={e => updateCriticalSupplier(sup.id, 'service', e.target.value)}
+                              placeholder="Ex: Livraison des commandes prioritaires"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                          <div>
+                            <Label>Tolérance maximale à l'interruption</Label>
+                            <select value={sup.tolerance}
+                              onChange={e => updateCriticalSupplier(sup.id, 'tolerance', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="">Sélectionner...</option>
+                              <option value="1h">1 heure</option>
+                              <option value="4h">4 heures</option>
+                              <option value="8h">8 heures</option>
+                              <option value="24h">24 heures</option>
+                              <option value="48h">48 heures</option>
+                              <option value="72h">72 heures</option>
+                              <option value="1sem">1 semaine</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label>Délai d'activation de la relève</Label>
+                            <select value={sup.activationDelay}
+                              onChange={e => updateCriticalSupplier(sup.id, 'activationDelay', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="">Sélectionner...</option>
+                              <option value="immediate">Immédiat (contrat en place)</option>
+                              <option value="1h">Moins de 1 heure</option>
+                              <option value="4h">4 heures</option>
+                              <option value="24h">24 heures</option>
+                              <option value="48h">48 heures</option>
+                              <option value="1sem">1 semaine</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label>Mesure préventive en place</Label>
+                            <input type="text" value={sup.preventiveMeasure}
+                              onChange={e => updateCriticalSupplier(sup.id, 'preventiveMeasure', e.target.value)}
+                              placeholder="Ex: Stock de sécurité 3 jours, 2e transporteur identifié"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                          <div>
+                            <Label>Solution de relève</Label>
+                            <input type="text" value={sup.backupSolution}
+                              onChange={e => updateCriticalSupplier(sup.id, 'backupSolution', e.target.value)}
+                              placeholder="Ex: Fournisseur secondaire XYZ — contrat cadre signé"
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
+                              onFocus={e => e.target.style.borderColor = '#C0392B'}
+                              onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                          </div>
+                          <div>
+                            <Label>État de préparation</Label>
+                            <select value={sup.status}
+                              onChange={e => updateCriticalSupplier(sup.id, 'status', e.target.value)}
+                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
+                              <option value="PRET">✅ Prêt — contrat et contacts confirmés</option>
+                              <option value="PARTIEL">⚠️ Partiel — à renforcer ou tester</option>
+                              <option value="A_CONFIRMER">🔴 À confirmer — solution non contractualisée</option>
+                            </select>
+                          </div>
+                        </div>
+                        <button onClick={() => removeCriticalSupplier(sup.id)}
+                          className="text-xs mt-2"
+                          style={{ color: '#ADB5BD' }}
+                          onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#ADB5BD'}>
+                          ✕ Supprimer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Énergie */}
