@@ -647,11 +647,27 @@ function renderLithiumAnnexe(data: any, isFr: boolean, sectionHeader: (id: strin
 
 export function renderFormattedText(content: string): string {
   if (!content) return '';
+
+  // ── Pré-traitement : blocs encadrés ──────────────────────
+  // ⚠️ AVIS / POINT DE VIGILANCE → bloc orange
+  content = content.replace(
+    /⚠️([^\n]+)\n([^─\n][^\n]*(?:\n[^─\n][^\n]*)*)/g,
+    (_, title, body) =>
+      `<div style="padding:10px 14px;margin:12px 0;background:#FEF9E7;border-left:4px solid #F39C12;border-radius:3px;"><p style="font-weight:700;color:#F39C12;margin:0 0 4px;">⚠️ ${title.trim()}</p><p style="font-size:9.5pt;color:#7D6608;margin:0;">${body.trim()}</p></div>`
+  );
+  // ✅ RAPPEL / VALEUR AJOUTÉE → bloc vert
+  content = content.replace(
+    /✅([^\n]+)\n([^─\n][^\n]*(?:\n[^─\n][^\n]*)*)/g,
+    (_, title, body) =>
+      `<div style="padding:10px 14px;margin:12px 0;background:#EAFAF1;border-left:4px solid #27AE60;border-radius:3px;"><p style="font-weight:700;color:#27AE60;margin:0 0 4px;">✅ ${title.trim()}</p><p style="font-size:9.5pt;color:#1E8449;margin:0;">${body.trim()}</p></div>`
+  );
+
   const lines = content.split('\n');
   let html = '';
   let inList = false;
   let inTable = false;
   let tableRowIdx = 0;
+  let tableHeaders: string[] = [];
 
   const isTableRow = (line: string) => line.trim().startsWith('|') && line.trim().endsWith('|');
   const isTableSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim());
@@ -671,15 +687,26 @@ export function renderFormattedText(content: string): string {
       }
 
       const cells = parseTableCells(line);
-      const tag = tableRowIdx === 0 ? 'th' : 'td';
-      if (tableRowIdx === 0) html += '<thead><tr>';
-      else if (tableRowIdx === 1) html += '<tbody><tr>';
-      else html += '<tr>';
-
-      html += cells.map(cell => `<${tag}>${renderInlineBold(fixOrphanColon(escapeHtml(cell)))}</${tag}>`).join('');
+            const tag = tableRowIdx === 0 ? 'th' : 'td';
+      if (tableRowIdx === 0) {
+        tableHeaders = cells;
+        html += '<thead><tr>';
+      } else if (tableRowIdx === 1) {
+        html += '<tbody><tr>';
+      } else {
+        html += '<tr>';
+      }
+      if (tag === 'th') {
+        html += cells.map(cell => `<th>${renderInlineBold(fixOrphanColon(escapeHtml(cell)))}</th>`).join('');
+      } else {
+        html += cells.map((cell, ci) => {
+          const escaped = escapeHtml(cell);
+          const colored = colorizeCell(escaped, tableHeaders[ci] || '', ci);
+          return `<td>${renderInlineBold(fixOrphanColon(colored))}</td>`;
+        }).join('');
+      }
       html += '</tr>';
       if (tableRowIdx === 0) html += '</thead>';
-
       tableRowIdx++;
       continue;
     } else if (inTable) {
@@ -712,7 +739,60 @@ export function renderFormattedText(content: string): string {
 // ============================================================
 
 function fixOrphanColon(text: string): string {
-  return text.replace(/ (:)/g, '\u00A0$1');
+  // Espace insécable avant : ; , et »
+  return text
+    .replace(/ (:)/g, '\u00A0$1')
+    .replace(/ (;)/g, '\u00A0$1')
+    .replace(/ (,)/g, '\u00A0$1');
+}
+
+function colorizeCell(text: string, header: string, colIndex: number): string {
+  const h = header.toLowerCase();
+  const t = text.trim();
+
+  // ── Niveaux de risque ──
+  if (t === '9 - ÉLEVÉ' || t === '9 - HIGH' || t === '6 - ÉLEVÉ' || t === '6 - HIGH') {
+    return `<span style="font-weight:700;color:#C0392B;background:#FDEDEC;padding:2px 6px;border-radius:3px;">${t}</span>`;
+  }
+  if (t === '4 - MOYEN' || t === '4 - MEDIUM' || t === '3 - MOYEN' || t === '3 - MEDIUM') {
+    return `<span style="font-weight:700;color:#F39C12;background:#FEF9E7;padding:2px 6px;border-radius:3px;">${t}</span>`;
+  }
+  if (t === '1 - FAIBLE' || t === '2 - FAIBLE' || t === '1 - LOW' || t === '2 - LOW') {
+    return `<span style="font-weight:700;color:#27AE60;background:#EAFAF1;padding:2px 6px;border-radius:3px;">${t}</span>`;
+  }
+
+  // ── Priorités P1 / P2 / P3 ──
+  if (t === 'P1') return `<span style="font-weight:700;color:#C0392B;background:#FDEDEC;padding:2px 8px;border-radius:10px;">${t}</span>`;
+  if (t === 'P2') return `<span style="font-weight:700;color:#F39C12;background:#FEF9E7;padding:2px 8px;border-radius:10px;">${t}</span>`;
+  if (t === 'P3') return `<span style="font-weight:700;color:#27AE60;background:#EAFAF1;padding:2px 8px;border-radius:10px;">${t}</span>`;
+
+  // ── Statuts fournisseurs ──
+  if (t === '✅ Prêt' || t === '✅ Ready') return `<span style="font-weight:700;color:#27AE60;">${t}</span>`;
+  if (t === '⚠️ Partiel' || t === '⚠️ Partial') return `<span style="font-weight:700;color:#F39C12;">${t}</span>`;
+  if (t === '🔴 À confirmer' || t === '🔴 To confirm') return `<span style="font-weight:700;color:#C0392B;">${t}</span>`;
+
+  // ── Niveaux incident ──
+  if (t.includes('NIVEAU 1') || t.includes('LEVEL 1')) return `<span style="font-weight:700;color:#27AE60;">${t}</span>`;
+  if (t.includes('NIVEAU 2') || t.includes('LEVEL 2')) return `<span style="font-weight:700;color:#F39C12;">${t}</span>`;
+  if (t.includes('NIVEAU 3') || t.includes('LEVEL 3')) return `<span style="font-weight:700;color:#C0392B;">${t}</span>`;
+
+  // ── Colonnes spéciales ──
+  if ((h.includes('impact') || h.includes('probabilité') || h.includes('probability')) && (t === '3 - Sévère' || t === '3 - Severe' || t === '3 - Élevée' || t === '3 - High')) {
+    return `<span style="font-weight:700;color:#C0392B;">${t}</span>`;
+  }
+  if ((h.includes('impact') || h.includes('probabilité') || h.includes('probability')) && (t === '2 - Modéré' || t === '2 - Moderate' || t === '2 - Moyenne' || t === '2 - Medium')) {
+    return `<span style="font-weight:700;color:#F39C12;">${t}</span>`;
+  }
+  if ((h.includes('impact') || h.includes('probabilité') || h.includes('probability')) && (t === '1 - Faible' || t === '1 - Low')) {
+    return `<span style="font-weight:700;color:#27AE60;">${t}</span>`;
+  }
+
+  // ── RTO courts = priorité élevée ──
+  if (h.includes('rto') && (t === '1h' || t === '1 heure' || t === '4h' || t === '4 heures')) {
+    return `<span style="font-weight:700;color:#C0392B;">${t}</span>`;
+  }
+
+  return text;
 }
 
 // ============================================================
