@@ -358,7 +358,7 @@ export class ExportService {
       // ── Dernière page ──
       const lastPageHtml = generateLastPage({
         companyName: project.user?.companyName || undefined,
-        companyLogoFullB64: project.user?.companyLogoFullB64 || undefined,
+        companyLogoFullB64: project.user?.companyLogoB64 || project.user?.companyLogoFullB64 || undefined,
         companyLogoB64: project.user?.companyLogoB64 || undefined,
         companyPhone: project.user?.companyPhone || undefined,
         companyEmail: project.user?.companyEmail || undefined,

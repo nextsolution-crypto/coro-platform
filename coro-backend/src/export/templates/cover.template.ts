@@ -193,7 +193,7 @@ export interface LastPageData {
 
 export function generateLastPage(data: LastPageData): string {
   const isFr = data.language === 'fr';
-  const logoSrc = data.companyLogoFullB64 || data.companyLogoB64 || '';
+  const logoSrc = data.companyLogoB64 || data.companyLogoFullB64 || '';
   const year = data.year || new Date().getFullYear();
   const companyName = escapeHtml(data.companyName || '');
   const tagline = escapeHtml(data.companyTagline || '');
