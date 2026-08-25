@@ -370,7 +370,18 @@ export class ExportService {
       });
       const fullLastPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>@page{size:letter portrait;margin:0;}body{margin:0;padding:0;}</style></head><body>${lastPageHtml}</body></html>`;
       const lastPage = await browser.newPage();
-      await lastPage.setContent(fullLastPageHtml, { waitUntil: 'load' });
+      await lastPage.setContent(fullLastPageHtml, { waitUntil: 'networkidle0' as any });
+      // Attendre que les images base64 soient complètement rendues
+      await lastPage.evaluate(() => {
+        return Promise.all(
+          Array.from(document.images)
+            .filter(img => !img.complete)
+            .map(img => new Promise(resolve => {
+              img.onload = resolve;
+              img.onerror = resolve;
+            }))
+        );
+      });
       const lastPageBytes = await lastPage.pdf({
         format: 'Letter',
         printBackground: true,
