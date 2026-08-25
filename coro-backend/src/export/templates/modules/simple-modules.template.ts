@@ -648,20 +648,6 @@ function renderLithiumAnnexe(data: any, isFr: boolean, sectionHeader: (id: strin
 export function renderFormattedText(content: string): string {
   if (!content) return '';
 
-  // ── Pré-traitement : blocs encadrés ──────────────────────
-  // ⚠️ AVIS / POINT DE VIGILANCE → bloc orange
-  content = content.replace(
-    /⚠️([^\n]+)\n([^─\n][^\n]*(?:\n[^─\n][^\n]*)*)/g,
-    (_, title, body) =>
-      `<div style="padding:10px 14px;margin:12px 0;background:#FEF9E7;border-left:4px solid #F39C12;border-radius:3px;"><p style="font-weight:700;color:#F39C12;margin:0 0 4px;">⚠️ ${title.trim()}</p><p style="font-size:9.5pt;color:#7D6608;margin:0;">${body.trim()}</p></div>`
-  );
-  // ✅ RAPPEL / VALEUR AJOUTÉE → bloc vert
-  content = content.replace(
-    /✅([^\n]+)\n([^─\n][^\n]*(?:\n[^─\n][^\n]*)*)/g,
-    (_, title, body) =>
-      `<div style="padding:10px 14px;margin:12px 0;background:#EAFAF1;border-left:4px solid #27AE60;border-radius:3px;"><p style="font-weight:700;color:#27AE60;margin:0 0 4px;">✅ ${title.trim()}</p><p style="font-size:9.5pt;color:#1E8449;margin:0;">${body.trim()}</p></div>`
-  );
-
   const lines = content.split('\n');
   let html = '';
   let inList = false;
@@ -714,7 +700,28 @@ export function renderFormattedText(content: string): string {
       inTable = false;
     }
 
-    if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
+    if (line.startsWith('@@ALERT_WARNING:')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (inTable) { html += '</tbody></table>'; inTable = false; }
+      const parts = line.replace('@@ALERT_WARNING:', '').split('||');
+      const title = parts[0] || '';
+      const body = (parts[1] || '').replace(/\\n/g, '<br/>');
+      html += `<div style="padding:10px 14px;margin:12px 0;background:#FEF9E7;border-left:4px solid #F39C12;border-radius:3px;"><p style="font-weight:700;color:#F39C12;margin:0 0 4px;">⚠️ ${escapeHtml(title)}</p><p style="font-size:9.5pt;color:#7D6608;margin:0;">${escapeHtml(body)}</p></div>`;
+    } else if (line.startsWith('@@ALERT_SUCCESS:')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (inTable) { html += '</tbody></table>'; inTable = false; }
+      const parts = line.replace('@@ALERT_SUCCESS:', '').split('||');
+      const title = parts[0] || '';
+      const body = (parts[1] || '').replace(/\\n/g, '<br/>');
+      html += `<div style="padding:10px 14px;margin:12px 0;background:#EAFAF1;border-left:4px solid #27AE60;border-radius:3px;"><p style="font-weight:700;color:#27AE60;margin:0 0 4px;">✅ ${escapeHtml(title)}</p><p style="font-size:9.5pt;color:#1E8449;margin:0;">${escapeHtml(body)}</p></div>`;
+    } else if (line.startsWith('@@ALERT_INFO:')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (inTable) { html += '</tbody></table>'; inTable = false; }
+      const parts = line.replace('@@ALERT_INFO:', '').split('||');
+      const title = parts[0] || '';
+      const body = (parts[1] || '').replace(/\\n/g, '<br/>');
+      html += `<div style="padding:10px 14px;margin:12px 0;background:#EBF5FB;border-left:4px solid #2980B9;border-radius:3px;"><p style="font-weight:700;color:#2980B9;margin:0 0 4px;">ℹ️ ${escapeHtml(title)}</p><p style="font-size:9.5pt;color:#1A5276;margin:0;">${escapeHtml(body)}</p></div>`;
+    } else if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
       if (inList) { html += '</ul>'; inList = false; }
       html += `<h3 class="no-break-after" style="color:#2C3E50;font-weight:700;margin:16px 0 6px;font-size:12pt;">${escapeHtml(line.replace(/\*\*/g, ''))}</h3>`;
     } else if (line.startsWith('- ')) {

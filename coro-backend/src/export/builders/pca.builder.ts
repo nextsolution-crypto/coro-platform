@@ -44,7 +44,6 @@ export class PcaBuilder extends BaseDocumentBuilder {
   }
 
   private convertDashTablesToPipe(content: string): string {
-    // Convertit les tableaux avec ─────── en tableaux pipe Markdown
     const lines = content.split('\n');
     const result: string[] = [];
     let i = 0;
@@ -52,14 +51,51 @@ export class PcaBuilder extends BaseDocumentBuilder {
     while (i < lines.length) {
       const line = lines[i];
 
-      // Ligne séparateur ─────────────
+      // ── Blocs encadrés ⚠️ / ✅ / ℹ️ ──
+      if (line.startsWith('⚠️') || line.startsWith('⚠')) {
+        const title = line.replace(/^⚠️?\s*/, '').trim();
+        const bodyLines: string[] = [];
+        i++;
+        while (i < lines.length && lines[i].trim() !== '' && !lines[i].startsWith('⚠') && !lines[i].startsWith('✅') && !lines[i].startsWith('ℹ')) {
+          bodyLines.push(lines[i]);
+          i++;
+        }
+        result.push(`@@ALERT_WARNING:${title}||${bodyLines.join('\\n')}`);
+        continue;
+      }
+
+      if (line.startsWith('✅')) {
+        const title = line.replace(/^✅\s*/, '').trim();
+        const bodyLines: string[] = [];
+        i++;
+        while (i < lines.length && lines[i].trim() !== '' && !lines[i].startsWith('⚠') && !lines[i].startsWith('✅') && !lines[i].startsWith('ℹ')) {
+          bodyLines.push(lines[i]);
+          i++;
+        }
+        result.push(`@@ALERT_SUCCESS:${title}||${bodyLines.join('\\n')}`);
+        continue;
+      }
+
+      if (line.startsWith('ℹ️') || line.startsWith('ℹ')) {
+        const title = line.replace(/^ℹ️?\s*/, '').trim();
+        const bodyLines: string[] = [];
+        i++;
+        while (i < lines.length && lines[i].trim() !== '' && !lines[i].startsWith('⚠') && !lines[i].startsWith('✅') && !lines[i].startsWith('ℹ')) {
+          bodyLines.push(lines[i]);
+          i++;
+        }
+        result.push(`@@ALERT_INFO:${title}||${bodyLines.join('\\n')}`);
+        continue;
+      }
+
+      // ── Ligne séparateur ─────────────
       const isSeparator = /^─{10,}/.test(line.trim());
       if (isSeparator) {
         i++;
         continue;
       }
 
-      // Ligne tableau — COL1 | COL2 | COL3
+      // ── Ligne tableau COL1 | COL2 | COL3 ──
       const isPipeRow = line.includes(' | ') && !line.startsWith('•') && !line.startsWith('-');
       if (isPipeRow) {
         const cells = line.split(' | ');
@@ -68,10 +104,16 @@ export class PcaBuilder extends BaseDocumentBuilder {
         continue;
       }
 
-      // Ligne titre de section en majuscules (sans pipe)
-      const isSectionTitle = /^[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ\s\-\/()]{8,}$/.test(line.trim()) && !line.includes('|') && line.trim().length > 0;
-      if (isSectionTitle && !line.startsWith('•') && !line.startsWith('-')) {
-        result.push(`**${line.trim()}**`);
+      // ── Ligne titre en majuscules ──
+      const trimmed = line.trim();
+      const isSectionTitle = trimmed.length >= 8
+        && /^[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ0-9\s\-\/()''«»:]{8,}$/.test(trimmed)
+        && !trimmed.includes('|')
+        && !trimmed.startsWith('•')
+        && !trimmed.startsWith('-')
+        && !trimmed.startsWith('*');
+      if (isSectionTitle) {
+        result.push(`**${trimmed}**`);
         i++;
         continue;
       }
