@@ -27,21 +27,60 @@ export class PcaBuilder extends BaseDocumentBuilder {
   }
 
   private renderPcaSection(section: any): string {
-    const content = (section.content || '').replace(/\n/g, '<br/>');
+    const { renderFormattedText } = require('../templates/modules/simple-modules.template');
+    const content = this.convertDashTablesToPipe(section.content || '');
     return `
       <div class="no-break" style="margin-bottom: 28px;">
         <div class="section-header">
-          <span class="section-title-line2" style="font-size: 12pt; font-weight: 700; color: #2C3E50;
-            display: block; padding-bottom: 6px; border-bottom: 2px solid #C0392B;
-            margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em;">
-            ${section.title || ''}
-          </span>
+          <span class="section-id">${section.id || ''}</span>
+          <span class="section-title-line2">${section.title || ''}</span>
+          <div class="section-bar"></div>
         </div>
-        <div style="font-size: 10.5pt; line-height: 1.8; color: #2C3E50; white-space: pre-wrap;">
-          ${content}
+        <div style="font-size: 10.5pt; line-height: 1.8; color: #2C3E50;">
+          ${renderFormattedText(content)}
         </div>
       </div>
     `;
+  }
+
+  private convertDashTablesToPipe(content: string): string {
+    // Convertit les tableaux avec ─────── en tableaux pipe Markdown
+    const lines = content.split('\n');
+    const result: string[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Ligne séparateur ─────────────
+      const isSeparator = /^─{10,}/.test(line.trim());
+      if (isSeparator) {
+        i++;
+        continue;
+      }
+
+      // Ligne tableau — COL1 | COL2 | COL3
+      const isPipeRow = line.includes(' | ') && !line.startsWith('•') && !line.startsWith('-');
+      if (isPipeRow) {
+        const cells = line.split(' | ');
+        result.push('|' + cells.join('|') + '|');
+        i++;
+        continue;
+      }
+
+      // Ligne titre de section en majuscules (sans pipe)
+      const isSectionTitle = /^[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ\s\-\/()]{8,}$/.test(line.trim()) && !line.includes('|') && line.trim().length > 0;
+      if (isSectionTitle && !line.startsWith('•') && !line.startsWith('-')) {
+        result.push(`**${line.trim()}**`);
+        i++;
+        continue;
+      }
+
+      result.push(line);
+      i++;
+    }
+
+    return result.join('\n');
   }
 
   private buildPcaModuleHtml(moduleNum: number, sections: any[]): string {
