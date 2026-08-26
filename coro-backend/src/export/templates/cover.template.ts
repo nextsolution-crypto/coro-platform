@@ -77,9 +77,27 @@ export function generateCoverPage(data: CoverData): string {
 
   // Sépare le label de type de document en deux lignes
   const words = data.documentTypeLabel.split(' ');
-  let line1 = words[0] + (words[1] ? ' ' + words[1] : '');
-  let line2 = words.slice(2).join(' ');
-  if (!line2) { line1 = words[0]; line2 = words.slice(1).join(' '); }
+  let line1: string;
+  let line2: string;
+
+  // Découpage intelligent selon le type de document
+  if (data.documentType === 'PCA') {
+    line1 = 'PLAN DE CONTINUITÉ';
+    line2 = 'DES AFFAIRES';
+  } else if (data.documentType === 'PSI') {
+    line1 = 'PLAN DE SÉCURITÉ';
+    line2 = 'INCENDIE';
+  } else if (data.documentType === 'PMU') {
+    line1 = 'PLAN DE MESURES';
+    line2 = 'D\'URGENCE';
+  } else {
+    line1 = words[0] + (words[1] ? ' ' + words[1] : '');
+    line2 = words.slice(2).join(' ');
+    if (!line2) { line1 = words[0]; line2 = words.slice(1).join(' '); }
+  }
+  // Mettre en majuscules
+  line1 = line1.toUpperCase();
+  line2 = line2.toUpperCase();
 
   const clientLogoHtml = data.clientLogoBase64
     ? `<img src="${data.clientLogoBase64}" style="max-height:40px;max-width:150px;object-fit:contain;margin-bottom:8px;" />`
@@ -122,8 +140,8 @@ export function generateCoverPage(data: CoverData): string {
       <div class="cover-redbar"></div>
 
       <div class="cover-body">
-        <h1 class="cover-title-line1">${escapeHtml(line1.toUpperCase())}</h1>
-        <h1 class="cover-title-line2">${escapeHtml((line2 || data.documentTypeLabel).toUpperCase())}</h1>
+        <h1 class="cover-title-line1">${escapeHtml(line1)}</h1>
+        <h1 class="cover-title-line2">${escapeHtml(line2 || data.documentTypeLabel.toUpperCase())}</h1>
         <div class="cover-title-rule"></div>
         <p class="cover-edition">${labels.edition.toUpperCase()} ${data.year}</p>
 
@@ -193,7 +211,6 @@ export interface LastPageData {
 
 export function generateLastPage(data: LastPageData): string {
   const isFr = data.language === 'fr';
-  const logoSrc = data.companyLogoB64 || data.companyLogoFullB64 || '';
   const year = data.year || new Date().getFullYear();
   const companyName = escapeHtml(data.companyName || '');
   const tagline = escapeHtml(data.companyTagline || '');
@@ -263,28 +280,10 @@ export function generateLastPage(data: LastPageData): string {
         padding:50px 60px;
         box-sizing:border-box;
       ">
-        <!-- Logo ou nom -->
-        ${logoSrc ? `
-          <div style="max-height:80px;max-width:260px;margin-bottom:28px;
-            background-image:url('${logoSrc}');
-            background-repeat:no-repeat;
-            background-size:contain;
-            background-position:left center;
-            height:80px;
-            width:260px;
-            filter:brightness(0) invert(1);">
-          </div>
-        ` : `
-          <div style="font-size:36px;font-weight:700;color:#FFFFFF;margin-bottom:28px;letter-spacing:2px;">${companyName}</div>
-        `}
-
+                <!-- Nom de l'organisation -->
+        <div style="font-size:36px;font-weight:700;color:#FFFFFF;margin-bottom:28px;letter-spacing:2px;">${companyName}</div>
         <!-- Ligne de séparation -->
         <div style="width:70px;height:2px;background-color:rgba(255,255,255,0.5);margin-bottom:24px;"></div>
-
-        <!-- Nom si logo présent -->
-        ${companyName && logoSrc ? `
-          <div style="font-size:20px;font-weight:700;color:#FFFFFF;margin-bottom:12px;letter-spacing:1px;">${companyName}</div>
-        ` : ''}
 
         <!-- Tagline -->
         ${tagline ? `
