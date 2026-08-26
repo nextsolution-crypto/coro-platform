@@ -265,9 +265,15 @@ export function generateLastPage(data: LastPageData): string {
       ">
         <!-- Logo ou nom -->
         ${logoSrc ? `
-          <img src="${logoSrc}"
-            style="max-height:80px;max-width:260px;object-fit:contain;margin-bottom:28px;filter:brightness(0) invert(1);"
-            alt="${companyName}" />
+          <div style="max-height:80px;max-width:260px;margin-bottom:28px;
+            background-image:url('${logoSrc}');
+            background-repeat:no-repeat;
+            background-size:contain;
+            background-position:left center;
+            height:80px;
+            width:260px;
+            filter:brightness(0) invert(1);">
+          </div>
         ` : `
           <div style="font-size:36px;font-weight:700;color:#FFFFFF;margin-bottom:28px;letter-spacing:2px;">${companyName}</div>
         `}
