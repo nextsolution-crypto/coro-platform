@@ -56,6 +56,7 @@ model User {
   companyAddress     String?
   companyWebsite     String?
   companyTagline     String?
+  companyLicense     String?
   title              String?
   phoneDirect        String?
   phoneMobile        String?

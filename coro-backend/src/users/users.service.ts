@@ -31,10 +31,10 @@ export class UsersService {
         companyAddress: true,
         companyWebsite: true,
         companyTagline: true,
+        companyLicense: true,
       },
     });
   }
-
   async createUser(data: {
     email: string;
     password: string;
@@ -67,6 +67,7 @@ export class UsersService {
         companyAddress: true,
         companyWebsite: true,
         companyTagline: true,
+        companyLicense: true,
         horaireBase: true,
       },
     });

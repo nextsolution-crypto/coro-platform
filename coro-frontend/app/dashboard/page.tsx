@@ -25,7 +25,7 @@ const activityStatusConfig: Record<string, { label: string; color: string; bg: s
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, refreshUser } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [projets, setProjets] = useState<any[]>([]);
@@ -38,6 +38,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login');
+    else refreshUser();
   }, [isAuthenticated, router]);
 
   useEffect(() => {

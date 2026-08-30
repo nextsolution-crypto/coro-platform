@@ -25,6 +25,10 @@ export default function OrganizationSettingsPage() {
     companyName: '',
     companyPhone: '',
     companyEmail: '',
+    companyAddress: '',
+    companyWebsite: '',
+    companyTagline: '',
+    companyLicense: '',
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +57,10 @@ export default function OrganizationSettingsPage() {
         companyName: res.data.companyName || '',
         companyPhone: res.data.companyPhone || '',
         companyEmail: res.data.companyEmail || '',
+        companyAddress: res.data.companyAddress || '',
+        companyWebsite: res.data.companyWebsite || '',
+        companyTagline: res.data.companyTagline || '',
+        companyLicense: res.data.companyLicense || '',
       });
 
       if (res.data.companyLogoB64) {
@@ -552,15 +560,81 @@ export default function OrganizationSettingsPage() {
                   />
                 </div>
 
+                            </div>
+
+              {/* ADRESSE + SITE WEB */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div className="min-w-0">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Adresse
+                  </label>
+                  <input
+                    type="text"
+                    value={form.companyAddress}
+                    onChange={e => setForm({ ...form, companyAddress: e.target.value })}
+                    placeholder="123 rue Principale, Montréal, QC"
+                    className="w-full min-w-0 rounded px-4 py-2.5 text-base sm:text-sm focus:outline-none transition-colors"
+                    style={inputStyle}
+                    onFocus={focusInput}
+                    onBlur={blurInput}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Site web
+                  </label>
+                  <input
+                    type="url"
+                    value={form.companyWebsite}
+                    onChange={e => setForm({ ...form, companyWebsite: e.target.value })}
+                    placeholder="https://www.organisation.ca"
+                    className="w-full min-w-0 rounded px-4 py-2.5 text-base sm:text-sm focus:outline-none transition-colors"
+                    style={inputStyle}
+                    onFocus={focusInput}
+                    onBlur={blurInput}
+                  />
+                </div>
               </div>
 
+              {/* TAGLINE + LICENCE PROFESSIONNELLE */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div className="min-w-0">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Tagline / Slogan
+                  </label>
+                  <input
+                    type="text"
+                    value={form.companyTagline}
+                    onChange={e => setForm({ ...form, companyTagline: e.target.value })}
+                    placeholder="Ex: Expert-conseil en résilience organisationnelle"
+                    className="w-full min-w-0 rounded px-4 py-2.5 text-base sm:text-sm focus:outline-none transition-colors"
+                    style={inputStyle}
+                    onFocus={focusInput}
+                    onBlur={blurInput}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>
+                    Numéro de licence professionnelle
+                    <span className="ml-1 text-xs font-normal" style={{ color: '#ADB5BD' }}>(optionnel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.companyLicense}
+                    onChange={e => setForm({ ...form, companyLicense: e.target.value })}
+                    placeholder="Ex: OIQ-12345, CNESST-67890"
+                    className="w-full min-w-0 rounded px-4 py-2.5 text-base sm:text-sm focus:outline-none transition-colors"
+                    style={inputStyle}
+                    onFocus={focusInput}
+                    onBlur={blurInput}
+                  />
+                </div>
+              </div>
             </div>
           </section>
-
-
-          {/* ═════════════════════════════════
+          {/* ═══════════════════════════════
               LICENCE CORO
-          ═════════════════════════════════ */}
+          ═══════════════════════════════ */}
 
           {orgInfo && (
             <section
