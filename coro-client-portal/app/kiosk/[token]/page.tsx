@@ -55,8 +55,14 @@ export default function KioskPage() {
     if (!token) return;
     fetch(`${API_URL}/occupancy/kiosk/resolve/${token}`)
       .then(r => r.json())
-      .then(d => { if (d.buildingId) setBuildingId(d.buildingId); })
-      .catch(() => {});
+      .then(d => {
+        if (d.buildingId) {
+          setBuildingId(d.buildingId);
+        } else {
+          console.error('[CORO] buildingId non résolu:', d);
+        }
+      })
+      .catch((err) => console.error('[CORO] Erreur resolve token:', err));
   }, [token]);
 
   // Reset auto vers home après 30s d'inactivité
@@ -80,6 +86,10 @@ export default function KioskPage() {
   const handleCheckin = async () => {
     if (!form.firstName.trim() || !form.lastName.trim()) {
       setMessage({ text: 'Le prénom et le nom sont obligatoires.', type: 'error' });
+      return;
+    }
+    if (!buildingId) {
+      setMessage({ text: 'Erreur de configuration — bâtiment non résolu. Rechargez la page.', type: 'error' });
       return;
     }
     setLoading(true);
