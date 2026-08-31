@@ -232,4 +232,31 @@ export class OccupancyService {
       take: 20,
     });
   }
+
+    // Résoudre le buildingId depuis un token kiosque (route publique)
+  async resolveBuildingFromToken(token: string) {
+    const kiosk = await this.prisma.buildingKioskToken.findFirst({
+      where: { token, isActive: true },
+      select: { buildingId: true },
+    });
+    if (!kiosk) throw new NotFoundException('Token invalide');
+    return { buildingId: kiosk.buildingId };
+  }
+
+  // Recherche d'occupants présents pour le checkout (par nom)
+  async searchOccupantsForCheckout(buildingId: string, token: string, query: string) {
+    await this.validateKioskToken(buildingId, token);
+    return this.prisma.occupancyRecord.findMany({
+      where: {
+        buildingId,
+        status: 'IN',
+        OR: [
+          { firstName: { contains: query, mode: 'insensitive' } },
+          { lastName:  { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { checkedInAt: 'desc' },
+      take: 5,
+    });
+  }
 }

@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Param, UseGuards, Request, Put
+  Controller, Get, Post, Body, Param, UseGuards, Request, Put, Query
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OccupancyService } from './occupancy.service';
@@ -21,6 +21,22 @@ export class OccupancyController {
   @Post('checkout')
   checkOut(@Body() dto: CheckOutDto) {
     return this.occupancyService.checkOut(dto);
+  }
+
+    // Résoudre buildingId depuis token (public — borne kiosque)
+  @Get('kiosk/resolve/:token')
+  resolveToken(@Param('token') token: string) {
+    return this.occupancyService.resolveBuildingFromToken(token);
+  }
+
+  // Recherche occupants pour checkout (public — token dans query)
+  @Get('buildings/:buildingId/search')
+  searchForCheckout(
+    @Param('buildingId') buildingId: string,
+    @Query('q') q: string,
+    @Query('token') token: string,
+  ) {
+    return this.occupancyService.searchOccupantsForCheckout(buildingId, token, q);
   }
 
   // ── Routes PROTÉGÉES (dashboard admin CORO) ───────────────────────────────
