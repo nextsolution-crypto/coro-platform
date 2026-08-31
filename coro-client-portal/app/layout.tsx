@@ -58,6 +58,8 @@ export const viewport: Viewport = {
   themeColor: '#2C3E50',
 };
 
+import ServiceWorkerRegister from './components/ServiceWorkerRegister';
+
 export default function RootLayout({
   children,
 }: {
@@ -65,7 +67,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }
