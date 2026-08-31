@@ -36,10 +36,12 @@ const OFFLINE_QUEUE_KEY = 'coro-offline-checkins';
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Requêtes API check-in/checkout → mise en file si hors ligne
+  // Requêtes API check-in/checkout → mise en file si hors ligne (seulement si même domaine)
   if (
-    url.pathname.includes('/api/occupancy/checkin') ||
-    url.pathname.includes('/api/occupancy/checkout')
+    url.hostname !== 'api.getcoro.io' &&
+    url.hostname !== 'localhost' &&
+    (url.pathname.includes('/api/occupancy/checkin') ||
+    url.pathname.includes('/api/occupancy/checkout'))
   ) {
     event.respondWith(
       fetch(event.request.clone()).catch(async () => {
@@ -59,6 +61,12 @@ self.addEventListener('fetch', (event) => {
         );
       })
     );
+    return;
+  }
+
+  // Requêtes vers api.getcoro.io → toujours passer directement, jamais intercepter
+  if (url.hostname === 'api.getcoro.io' || url.hostname === 'localhost') {
+    event.respondWith(fetch(event.request));
     return;
   }
 
