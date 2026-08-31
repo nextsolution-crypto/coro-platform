@@ -157,7 +157,10 @@ model Building {
 
   clientId String
   client   Client   @relation(fields: [clientId], references: [id])
-  projects Project[]
+  projects           Project[]
+  occupancyRecords   OccupancyRecord[]
+  evacuationEvents   EvacuationEvent[]
+  kioskToken         BuildingKioskToken?
 }
 
 model Project {
@@ -956,4 +959,80 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   isRevoked Boolean  @default(false)
+}
+
+// ─── CORO SENTINELLE — Gestion des occupants ────────────────────────────────
+
+enum OccupantType {
+  EMPLOYE
+  VISITEUR
+  CONTRACTEUR
+}
+
+enum OccupancyStatus {
+  IN
+  OUT
+}
+
+model OccupancyRecord {
+  id             String          @id @default(uuid())
+  buildingId     String
+  building       Building        @relation(fields: [buildingId], references: [id])
+  type           OccupantType
+  status         OccupancyStatus @default(IN)
+  firstName      String
+  lastName       String
+  company        String?
+  email          String?
+  phone          String?
+  reason         String?
+  hostName       String?
+  floor          String?
+  qrToken        String?
+  checkedInAt    DateTime        @default(now())
+  checkedOutAt   DateTime?
+  organizationId String
+  createdAt      DateTime        @default(now())
+
+  evacuationCheckins EvacuationCheckIn[]
+}
+
+model EvacuationEvent {
+  id             String   @id @default(uuid())
+  buildingId     String
+  building       Building @relation(fields: [buildingId], references: [id])
+  triggeredAt    DateTime @default(now())
+  triggeredBy    String?
+  totalPresent   Int      @default(0)
+  snapshot       Json
+  status         String   @default("ACTIVE")
+  resolvedAt     DateTime?
+  notes          String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  checkins EvacuationCheckIn[]
+}
+
+model EvacuationCheckIn {
+  id                String          @id @default(uuid())
+  evacuationEventId String
+  evacuationEvent   EvacuationEvent @relation(fields: [evacuationEventId], references: [id])
+  occupantRecordId  String
+  occupantRecord    OccupancyRecord @relation(fields: [occupantRecordId], references: [id])
+  isAccountedFor    Boolean         @default(false)
+  checkedAt         DateTime?
+  checkedBy         String?
+  createdAt         DateTime        @default(now())
+}
+
+model BuildingKioskToken {
+  id         String   @id @default(uuid())
+  buildingId String   @unique
+  building   Building @relation(fields: [buildingId], references: [id])
+  token      String   @unique @default(uuid())
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

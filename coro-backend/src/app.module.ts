@@ -44,6 +44,7 @@ import { RemindersModule } from './reminders/reminders.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { ProjectFilesModule } from './project-files/project-files.module';
 import { PcaConfiguratorModule } from './pca/pca-configurator/pca-configurator.module';
+import { OccupancyModule } from './occupancy/occupancy.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -101,6 +102,7 @@ import { APP_GUARD } from '@nestjs/core';
     BookingsModule,
     ProjectFilesModule,
     PcaConfiguratorModule,
+    OccupancyModule,
 ],
   controllers: [AppController],
   providers: [
