@@ -808,8 +808,25 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Lien */}
-                <div style={{ marginTop: 14, textAlign: 'right' }}>
+                {/* Liens */}
+                <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/sentinelle/${b.id}`);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '5px 10px', borderRadius: 6,
+                      border: '1px solid #FADBD8',
+                      backgroundColor: '#FDEDEC',
+                      cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                      color: '#C0392B', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    🚨 Registre d&apos;accueil
+                  </button>
                   <span style={{ fontSize: 12, color: '#C0392B', fontWeight: 600 }}>
                     Voir les documents →
                   </span>
