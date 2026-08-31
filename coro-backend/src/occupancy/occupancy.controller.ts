@@ -29,6 +29,15 @@ export class OccupancyController {
     return this.occupancyService.resolveBuildingFromToken(token);
   }
 
+    // Occupants présents — authentification par token kiosque (portail client)
+  @Get('buildings/:buildingId/current-public')
+  getCurrentOccupantsPublic(
+    @Param('buildingId') buildingId: string,
+    @Query('token') token: string,
+  ) {
+    return this.occupancyService.getCurrentOccupantsPublic(buildingId, token);
+  }
+
   // Recherche occupants pour checkout (public — token dans query)
   @Get('buildings/:buildingId/search')
   searchForCheckout(

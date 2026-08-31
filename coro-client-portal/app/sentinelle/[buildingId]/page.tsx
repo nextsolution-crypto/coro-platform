@@ -35,37 +35,35 @@ export default function SentinelleDashboard() {
     fetchAll();
   }, [buildingId]);
 
-  // Rafraîchissement automatique toutes les 30 secondes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchOccupancy();
-      fetchActiveEvacuation();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [buildingId]);
-
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([
-      fetchOccupancy(),
-      fetchKioskToken(),
-      fetchActiveEvacuation(),
-    ]);
-    setLoading(false);
+    try {
+      // 1. D'abord récupérer le token kiosque
+      const kioskRes = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
+      const token = kioskRes.token;
+      setKioskToken(token);
+      // 2. Ensuite fetcher avec le token
+      await Promise.all([
+        fetchOccupancyWithToken(token),
+        fetchActiveEvacuation(),
+      ]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchOccupancy = async () => {
+  const fetchOccupancyWithToken = async (token: string) => {
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/current`);
+      const res = await apiGet(`/occupancy/buildings/${buildingId}/current-public?token=${token}`);
       setOccupancy(res);
     } catch (err) { console.error(err); }
   };
 
-  const fetchKioskToken = async () => {
-    try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
-      setKioskToken(res.token);
-    } catch (err) { console.error(err); }
+  const fetchOccupancy = async () => {
+    if (!kioskToken) return;
+    await fetchOccupancyWithToken(kioskToken);
   };
 
   const fetchActiveEvacuation = async () => {
@@ -74,6 +72,16 @@ export default function SentinelleDashboard() {
       setActiveEvacuation(res);
     } catch (err) { setActiveEvacuation(null); }
   };
+
+  // Rafraîchissement automatique toutes les 30 secondes
+  useEffect(() => {
+    if (!kioskToken) return;
+    const interval = setInterval(() => {
+      fetchOccupancy();
+      fetchActiveEvacuation();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [kioskToken]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

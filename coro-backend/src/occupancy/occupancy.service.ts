@@ -259,4 +259,20 @@ export class OccupancyService {
       take: 5,
     });
   }
+
+    // Version publique — authentifiée par token kiosque
+  async getCurrentOccupantsPublic(buildingId: string, token: string) {
+    await this.validateKioskToken(buildingId, token);
+    const records = await this.prisma.occupancyRecord.findMany({
+      where: { buildingId, status: 'IN' },
+      orderBy: { checkedInAt: 'desc' },
+    });
+    const total = records.length;
+    const byType = {
+      EMPLOYE:     records.filter((r) => r.type === 'EMPLOYE').length,
+      VISITEUR:    records.filter((r) => r.type === 'VISITEUR').length,
+      CONTRACTEUR: records.filter((r) => r.type === 'CONTRACTEUR').length,
+    };
+    return { total, byType, records };
+  }
 }
