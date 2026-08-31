@@ -144,29 +144,23 @@ export async function apiPost(
   body: unknown
 ) {
   const token = getToken();
-
   const res = await fetch(
     `${API_URL}${path}`,
     {
       method: 'POST',
-
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type':
           'application/json',
       },
-
       body: JSON.stringify(body),
     }
   );
-
   if (res.status === 401) {
     handleUnauthorized();
     throw new Error('Non autorisé');
   }
-
   const data = await parseResponse(res);
-
   if (!res.ok) {
     throw new Error(
       typeof data === 'string'
@@ -175,6 +169,38 @@ export async function apiPost(
             'Erreur API'
     );
   }
+  return data;
+}
 
+export async function apiPut(
+  path: string,
+  body: unknown
+) {
+  const token = getToken();
+  const res = await fetch(
+    `${API_URL}${path}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type':
+          'application/json',
+      },
+      body: JSON.stringify(body),
+    }
+  );
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error('Non autorisé');
+  }
+  const data = await parseResponse(res);
+  if (!res.ok) {
+    throw new Error(
+      typeof data === 'string'
+        ? data
+        : data?.message ||
+            'Erreur API'
+    );
+  }
   return data;
 }
