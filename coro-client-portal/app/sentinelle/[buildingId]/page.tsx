@@ -242,6 +242,18 @@ export default function SentinelleDashboard() {
         ))}
       </section>
 
+      {/* ── Navigation ── */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/employes`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
+          👤 Employés & QR codes
+        </button>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/invitations`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
+          📧 Invitations visiteurs
+        </button>
+      </div>
+
       {/* ── URL Borne kiosque ── */}
       {kioskToken && (
         <div style={{

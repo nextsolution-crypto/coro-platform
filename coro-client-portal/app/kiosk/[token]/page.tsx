@@ -10,7 +10,7 @@ const TYPE_OPTIONS = [
   { value: 'CONTRACTEUR', label: 'Contracteur', emoji: '🔧', color: '#E67E22', bg: '#FEF5E7' },
 ];
 
-type Screen = 'loading' | 'error' | 'home' | 'checkin-type' | 'checkin-form' | 'checkout' | 'success';
+type Screen = 'loading' | 'error' | 'home' | 'checkin-type' | 'checkin-form' | 'checkout' | 'scanner' | 'success';
 
 export default function KioskPage() {
   const params = useParams();
@@ -26,6 +26,56 @@ export default function KioskPage() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'offline' } | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [currentTime, setCurrentTime] = useState('');
+  const [scannerStarted, setScannerStarted] = useState(false);
+
+  const handleQrScan = async (qrToken: string) => {
+    if (!buildingId || loading) return;
+    setLoading(true);
+    try {
+      // Essayer d'abord comme employé
+      const resEmp = await fetch(`${API_URL}/occupancy/qr/employee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrToken, kioskToken: token }),
+      });
+      if (resEmp.ok) {
+        const data = await resEmp.json();
+        const name = `${data.employee.firstName} ${data.employee.lastName}`;
+        setMessage({
+          text: data.alreadyIn
+            ? `${name} est déjà enregistré(e) pour aujourd'hui.`
+            : `Bienvenue, ${name} ! Entrée enregistrée automatiquement.`,
+          type: 'success',
+        });
+        setScreen('success');
+        setTimeout(resetToHome, 4000);
+        return;
+      }
+      // Sinon essayer comme invitation visiteur
+      const resInv = await fetch(`${API_URL}/occupancy/qr/invitation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrToken, kioskToken: token }),
+      });
+      if (resInv.ok) {
+        const data = await resInv.json();
+        setMessage({
+          text: `Bienvenue, ${data.invitation.firstName} ! Votre invitation a été validée.`,
+          type: 'success',
+        });
+        setScreen('success');
+        setTimeout(resetToHome, 4000);
+        return;
+      }
+      setMessage({ text: 'QR Code invalide ou expiré.', type: 'error' });
+      setScreen('success');
+      setTimeout(resetToHome, 3000);
+    } catch {
+      setMessage({ text: 'Erreur lors de la lecture du QR.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Horloge
   useEffect(() => {
@@ -163,12 +213,23 @@ export default function KioskPage() {
           <p style={{ margin: '8px 0 0', fontSize: 14, color: '#ADB5BD' }}>{new Date().toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 420 }}>
-          <button type="button" onClick={() => setScreen('checkin-type')} style={{ padding: '28px 32px', borderRadius: 16, border: 'none', backgroundColor: '#27AE60', cursor: 'pointer', textAlign: 'center', boxShadow: '0 8px 24px rgba(39,174,96,0.3)' }}>
+          {/* Scanner QR — priorité visuelle */}
+          <button type="button" onClick={() => { setScannerStarted(true); setScreen('scanner'); }}
+            style={{ padding: '20px 32px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.12)', cursor: 'pointer', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            <p style={{ margin: 0, fontSize: 24 }}>📷</p>
+            <div>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#FFFFFF' }}>Scanner mon QR</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Employé ou visiteur invité</p>
+            </div>
+          </button>
+          <button type="button" onClick={() => setScreen('checkin-type')}
+            style={{ padding: '28px 32px', borderRadius: 16, border: 'none', backgroundColor: '#27AE60', cursor: 'pointer', textAlign: 'center', boxShadow: '0 8px 24px rgba(39,174,96,0.3)' }}>
             <p style={{ margin: '0 0 4px', fontSize: 28 }}>✅</p>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Entrée</p>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>Enregistrer mon arrivée</p>
           </button>
-          <button type="button" onClick={() => setScreen('checkout')} style={{ padding: '28px 32px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'center' }}>
+          <button type="button" onClick={() => setScreen('checkout')}
+            style={{ padding: '28px 32px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'center' }}>
             <p style={{ margin: '0 0 4px', fontSize: 28 }}>🚪</p>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Sortie</p>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Enregistrer mon départ</p>
@@ -231,6 +292,17 @@ export default function KioskPage() {
           </button>
         </div>
       </KioskWrapper>
+    );
+  }
+
+  // ── ÉCRAN SCANNER QR ──
+  if (screen === 'scanner') {
+    return (
+      <QrScannerScreen
+        onScan={handleQrScan}
+        onBack={resetToHome}
+        started={scannerStarted}
+      />
     );
   }
 
@@ -301,6 +373,58 @@ function KioskWrapper({ children, onBack, title }: { children: React.ReactNode; 
         </div>
         {children}
       </div>
+    </div>
+  );
+}
+
+function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) => void; onBack: () => void; started: boolean }) {
+  const scannerRef = (globalThis as any).__coroScanner;
+  const divId = 'coro-qr-reader';
+
+  useEffect(() => {
+    if (!started) return;
+    let scanner: any = null;
+    const initScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        scanner = new Html5Qrcode(divId);
+        (globalThis as any).__coroScanner = scanner;
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText: string) => {
+            // Extraire le token du QR (dernière partie de l'URL)
+            const parts = decodedText.split('/');
+            const qrToken = parts[parts.length - 1];
+            scanner.stop().catch(() => {});
+            onScan(qrToken);
+          },
+          () => {}
+        );
+      } catch (err) {
+        console.error('[CORO Scanner]', err);
+      }
+    };
+    initScanner();
+    return () => {
+      if (scanner) scanner.stop().catch(() => {});
+    };
+  }, [started]);
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>CORO Sentinelle</p>
+      <h2 style={{ margin: '0 0 24px', fontSize: 22, fontWeight: 800, color: '#FFFFFF' }}>Scanner votre QR Code</h2>
+      <div style={{ width: 300, height: 300, borderRadius: 16, overflow: 'hidden', border: '3px solid rgba(255,255,255,0.2)', backgroundColor: '#000' }}>
+        <div id={divId} style={{ width: '100%', height: '100%' }} />
+      </div>
+      <p style={{ margin: '20px 0', fontSize: 13, color: '#ADB5BD', textAlign: 'center' }}>
+        Pointez la caméra vers votre code QR
+      </p>
+      <button type="button" onClick={onBack}
+        style={{ padding: '12px 24px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: '#FFFFFF', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+        ← Retour
+      </button>
     </div>
   );
 }
