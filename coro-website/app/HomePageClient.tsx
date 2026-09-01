@@ -512,7 +512,7 @@ const getIcon = (name: string, size = 24, color = '#C0392B') => {
   }
 };
 
-export default function HomePage() {
+export default function WebAppProgress() {
   const [lang, setLang] = useState<'fr' | 'en'>('fr');
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -837,10 +837,7 @@ export default function HomePage() {
             }}
           >
             {t.solutions.items.map((solution, i) => {
-              const href =
-                lang === 'en'
-                  ? `${solution.href}?lang=en`
-                  : solution.href;
+              const href = solution.href;
 
               return (
                 <a
@@ -1137,6 +1134,117 @@ export default function HomePage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION WEB APP PROGRESS / SENTINELLE ── */}
+      <section id="sentinelle" style={{ backgroundColor: '#F8F9FA', padding: '100px 24px', borderTop: '1px solid #E9ECEF' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          {/* Tag */}
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <span style={{
+              display: 'inline-block', fontSize: 11, fontWeight: 800,
+              color: '#C0392B', textTransform: 'uppercase', letterSpacing: '0.12em',
+              background: '#FDEDEC', padding: '6px 14px', borderRadius: 99,
+            }}>
+              🆕 Nouveau module
+            </span>
+          </div>
+          {/* Titre */}
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, color: '#2C3E50', lineHeight: 1.15 }}>
+              CORO <span style={{ color: '#C0392B' }}>Sentinelle</span>
+            </h2>
+            <p style={{ margin: '0 auto', fontSize: 18, color: '#6C757D', maxWidth: 600, lineHeight: 1.7 }}>
+              Un registre d&apos;occupation intelligent pour vos bâtiments. Gérez les entrées et sorties, et soyez prêt en cas d&apos;évacuation.
+            </p>
+          </div>
+
+          {/* Image illustration */}
+          <div style={{ marginBottom: 64, borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 60px rgba(44,62,80,0.15)' }}>
+            <img
+              src="/sentinelle-illustration.webp"
+              alt="CORO Sentinelle — Registre d'occupation intelligent"
+              style={{ width: '100%', display: 'block' }}
+            />
+          </div>
+
+          {/* 3 colonnes features */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, marginBottom: 64 }}>
+            {[
+              {
+                icon: '📋',
+                title: 'Registre en temps réel',
+                desc: 'Suivez qui est présent dans votre bâtiment à tout moment — employés, visiteurs et contracteurs. Le comptage se met à jour automatiquement.',
+              },
+              {
+                icon: '📷',
+                title: 'Pointage par QR code et PIN',
+                desc: 'Chaque employé reçoit un code PIN personnel. Il suffit de scanner le QR de la borne avec son téléphone et d\'entrer son PIN. Entrée enregistrée en 5 secondes.',
+              },
+              {
+                icon: '🚨',
+                title: 'Mode évacuation instantané',
+                desc: 'En cas d\'alarme, déclenchez le mode évacuation. Un snapshot figé de tous les occupants est créé immédiatement. Le warden coche les présences sur son téléphone.',
+              },
+              {
+                icon: '📧',
+                title: 'Invitations visiteurs par courriel',
+                desc: 'Invitez un visiteur depuis le portail. Il reçoit un courriel avec son QR code personnel, valide uniquement le jour de sa visite.',
+              },
+              {
+                icon: '📊',
+                title: 'Historique et rapports',
+                desc: 'Accédez à l\'historique complet des présences sur 12 mois. Exportez en CSV ou générez un rapport PDF d\'évacuation conforme ISO 22301.',
+              },
+              {
+                icon: '📱',
+                title: 'Application web progressive',
+                desc: 'Fonctionne sur tablette, téléphone ou ordinateur. Installable en un clic. Mode hors ligne intégré — les enregistrements se synchronisent dès le retour de la connexion.',
+              },
+            ].map((f, i) => (
+              <div key={i} style={{
+                backgroundColor: '#FFFFFF', borderRadius: 12,
+                padding: '28px 24px', border: '1px solid #E9ECEF',
+                boxShadow: '0 2px 8px rgba(44,62,80,0.04)',
+              }}>
+                <p style={{ margin: '0 0 12px', fontSize: 32 }}>{f.icon}</p>
+                <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 800, color: '#2C3E50' }}>{f.title}</h3>
+                <p style={{ margin: 0, fontSize: 14, color: '#6C757D', lineHeight: 1.7 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Conformité */}
+          <div style={{
+            backgroundColor: '#2C3E50', borderRadius: 16, padding: '32px 40px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 24, flexWrap: 'wrap',
+          }}>
+            <div>
+              <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Conformité réglementaire
+              </p>
+              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.4 }}>
+                Conçu pour les exigences québécoises
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: 14, color: '#ADB5BD', maxWidth: 500 }}>
+                Conservation des registres 12 mois · Évacuations archivées 36 mois (ISO 22301) · Conforme Loi 25 · Code national de prévention des incendies
+              </p>
+            </div>
+            
+            <a
+              href="https://app.getcoro.io"
+              style={{
+                display: 'inline-block', padding: '14px 28px', borderRadius: 8,
+                backgroundColor: '#C0392B', color: '#FFFFFF',
+                fontSize: 14, fontWeight: 800, textDecoration: 'none',
+                whiteSpace: 'nowrap', flexShrink: 0,
+              }}
+            >
+              {'Essayer Sentinelle →'}
+            </a>
           </div>
         </div>
       </section>
