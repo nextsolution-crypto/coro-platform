@@ -115,4 +115,21 @@ export class OccupancyController {
       buildingId, req.user.organizationId
     );
   }
+
+    @UseGuards(AuthGuard('jwt'))
+  @Get('buildings/:buildingId/history')
+  getHistory(
+    @Param('buildingId') buildingId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Request() req: any,
+  ) {
+    return this.occupancyService.getHistory(buildingId, req.user.organizationId, from, to);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('evacuation/:id/detail')
+  getEvacuationDetail(@Param('id') id: string, @Request() req: any) {
+    return this.occupancyService.getEvacuationDetail(id, req.user.organizationId);
+  }
 }

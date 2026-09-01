@@ -252,6 +252,14 @@ export default function SentinelleDashboard() {
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
           📧 Invitations visiteurs
         </button>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/historique`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
+          📋 Historique
+        </button>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/rapports`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
+          🚨 Rapports évacuation
+        </button>
       </div>
 
       {/* ── URL Borne kiosque ── */}

@@ -289,4 +289,63 @@ export class OccupancyService {
     };
     return { total, byType, records };
   }
+
+    // Historique filtré par date
+  async getHistory(buildingId: string, organizationId: string, from: string, to: string) {
+    const building = await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId },
+    });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+
+    const fromDate = from ? new Date(from) : new Date(new Date().setDate(new Date().getDate() - 30));
+    const toDate = to ? new Date(to) : new Date();
+    toDate.setHours(23, 59, 59, 999);
+
+    const records = await this.prisma.occupancyRecord.findMany({
+      where: {
+        buildingId,
+        checkedInAt: { gte: fromDate, lte: toDate },
+      },
+      orderBy: { checkedInAt: 'desc' },
+    });
+
+    // Stats
+    const total = records.length;
+    const byType = {
+      EMPLOYE:     records.filter(r => r.type === 'EMPLOYE').length,
+      VISITEUR:    records.filter(r => r.type === 'VISITEUR').length,
+      CONTRACTEUR: records.filter(r => r.type === 'CONTRACTEUR').length,
+    };
+    const avgDuration = records
+      .filter(r => r.checkedOutAt)
+      .reduce((acc, r) => {
+        const diff = new Date(r.checkedOutAt!).getTime() - new Date(r.checkedInAt).getTime();
+        return acc + diff;
+      }, 0) / (records.filter(r => r.checkedOutAt).length || 1);
+
+    return { records, total, byType, avgDurationMs: avgDuration };
+  }
+
+  // Détail complet d'une évacuation pour rapport
+  async getEvacuationDetail(evacuationEventId: string, organizationId: string) {
+    const event = await this.prisma.evacuationEvent.findFirst({
+      where: { id: evacuationEventId, organizationId },
+      include: {
+        building: { select: { name: true, address: true, city: true } },
+        checkins: {
+          include: { occupantRecord: true },
+          orderBy: { isAccountedFor: 'asc' },
+        },
+      },
+    });
+    if (!event) throw new NotFoundException('Évacuation introuvable');
+
+    const accounted = event.checkins.filter(c => c.isAccountedFor).length;
+    const missing   = event.checkins.filter(c => !c.isAccountedFor).length;
+    const duration  = event.resolvedAt
+      ? Math.round((new Date(event.resolvedAt).getTime() - new Date(event.triggeredAt).getTime()) / 60000)
+      : null;
+
+    return { ...event, accounted, missing, durationMinutes: duration };
+  }
 }
