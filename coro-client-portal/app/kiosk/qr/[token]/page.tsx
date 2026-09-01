@@ -1,75 +1,200 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
+type Status = 'loading' | 'success' | 'checkedout' | 'already' | 'error';
+
 export default function QrLandingPage() {
   const params = useParams();
+  const router = useRouter();
   const qrToken = params.token as string;
 
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'invalid'>('loading');
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState<Status>('loading');
   const [name, setName] = useState('');
-  const [isEmployee, setIsEmployee] = useState(false);
+  const [kioskUrl, setKioskUrl] = useState('');
 
   useEffect(() => {
-    if (!qrToken) { setStatus('invalid'); return; }
+    if (!qrToken) { setStatus('error'); return; }
 
-    // Ce QR est scanné directement dans un navigateur (pas sur la borne)
-    // On affiche les infos du visiteur/employé pour qu'il sache que c'est bon
-    resolveToken();
+    // Récupérer le token kiosque depuis localStorage (sauvegardé par la borne)
+    const kioskToken = localStorage.getItem('coro_kiosk_token') || '';
+    const storedKioskUrl = localStorage.getItem('coro_kiosk_url') || '';
+    setKioskUrl(storedKioskUrl);
+
+    processQr(qrToken, kioskToken, storedKioskUrl);
   }, [qrToken]);
 
-  const resolveToken = async () => {
-    // Essayer employé
+  // Redirection automatique après 3 secondes
+  useEffect(() => {
+    if (status === 'loading') return;
+    const timeout = setTimeout(() => {
+      const url = kioskUrl || localStorage.getItem('coro_kiosk_url') || '/';
+      window.location.href = url;
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [status, kioskUrl]);
+
+  const processQr = async (qrToken: string, kioskToken: string, kUrl: string) => {
     try {
-      const res = await fetch(`${API_URL}/occupancy/qr/info/${qrToken}`);
-      if (res.ok) {
-        const data = await res.json();
-        setName(`${data.firstName} ${data.lastName}`);
-        setIsEmployee(data.type === 'employee');
+      // 1. Résoudre les infos du QR
+      const infoRes = await fetch(`${API_URL}/occupancy/qr/info/${qrToken}`);
+      const info = infoRes.ok ? await infoRes.json() : null;
+
+      if (!info) { setStatus('error'); return; }
+
+      const personName = `${info.firstName} ${info.lastName}`;
+      setName(personName);
+
+      if (!kioskToken) {
+        // Pas de token kiosque — juste afficher les infos
         setStatus('success');
         return;
       }
-    } catch {}
-    setStatus('invalid');
+
+      // 2. Essayer check-in employé
+      if (info.type === 'employee') {
+        const resEmp = await fetch(`${API_URL}/occupancy/qr/employee`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrToken, kioskToken }),
+        });
+        if (resEmp.ok) {
+          const data = await resEmp.json();
+          if (data.alreadyIn) {
+            // Déjà présent → faire le checkout
+            await fetch(`${API_URL}/occupancy/qr/checkout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ qrToken, kioskToken }),
+            });
+            setStatus('checkedout');
+          } else {
+            setStatus('success');
+          }
+          return;
+        }
+      }
+
+      // 3. Essayer check-in invitation
+      if (info.type === 'invitation') {
+        if (info.status === 'USED') {
+          // Déjà utilisée → checkout
+          await fetch(`${API_URL}/occupancy/qr/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qrToken, kioskToken }),
+          });
+          setStatus('checkedout');
+          return;
+        }
+
+        const resInv = await fetch(`${API_URL}/occupancy/qr/invitation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrToken, kioskToken }),
+        });
+        if (resInv.ok) {
+          setStatus('success');
+          return;
+        }
+      }
+
+      setStatus('error');
+    } catch {
+      setStatus('error');
+    }
   };
 
-  if (status === 'loading') {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#ADB5BD', fontSize: 14 }} className="animate-pulse">Vérification...</p>
-      </div>
-    );
-  }
+  const bgColor = {
+    loading: '#2C3E50',
+    success: '#EAFAF1',
+    checkedout: '#EBF5FB',
+    already: '#FEF5E7',
+    error: '#FDEDEC',
+  }[status];
 
-  if (status === 'invalid') {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
-        <p style={{ fontSize: 64, margin: '0 0 16px' }}>⚠️</p>
-        <h2 style={{ color: '#FFFFFF', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>QR Code invalide</h2>
-        <p style={{ color: '#ADB5BD', fontSize: 14, maxWidth: 300 }}>Ce code n&apos;est pas reconnu ou a expiré. Contactez votre responsable.</p>
-      </div>
-    );
-  }
+  const emoji = {
+    loading: '⏳',
+    success: '✅',
+    checkedout: '👋',
+    already: '📋',
+    error: '⚠️',
+  }[status];
+
+  const title = {
+    loading: 'Vérification...',
+    success: `Bienvenue, ${name} !`,
+    checkedout: `Au revoir, ${name} !`,
+    already: `${name} — Déjà enregistré`,
+    error: 'QR Code invalide',
+  }[status];
+
+  const subtitle = {
+    loading: 'Traitement en cours...',
+    success: 'Votre entrée a été enregistrée automatiquement.',
+    checkedout: 'Votre sortie a été enregistrée. Bonne journée !',
+    already: 'Vous êtes déjà enregistré pour aujourd\'hui.',
+    error: 'Ce code n\'est pas reconnu ou a expiré.',
+  }[status];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
-      <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>CORO Sentinelle</p>
-
-      <div style={{ margin: '24px 0', padding: 32, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, border: '2px solid rgba(255,255,255,0.15)' }}>
-        <p style={{ fontSize: 64, margin: '0 0 16px' }}>{isEmployee ? '👤' : '🪪'}</p>
-        <h2 style={{ color: '#FFFFFF', fontSize: 24, fontWeight: 900, margin: '0 0 4px' }}>{name}</h2>
-        <p style={{ color: '#ADB5BD', fontSize: 14, margin: 0 }}>{isEmployee ? 'Employé' : 'Visiteur invité'}</p>
-      </div>
-
-      <div style={{ padding: '16px 24px', backgroundColor: '#EAFAF1', borderRadius: 12, maxWidth: 320 }}>
-        <p style={{ margin: 0, fontSize: 14, color: '#27AE60', fontWeight: 700 }}>✅ QR Code valide</p>
-        <p style={{ margin: '6px 0 0', fontSize: 13, color: '#6C757D' }}>
-          Présentez ce code à la borne d&apos;accueil pour enregistrer votre entrée automatiquement.
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: bgColor,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      padding: 32, textAlign: 'center',
+      transition: 'background-color 0.3s',
+    }}>
+      {status !== 'loading' && (
+        <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          CORO Sentinelle
         </p>
-      </div>
+      )}
+
+      <p style={{ fontSize: status === 'loading' ? 48 : 80, margin: '0 0 20px' }}
+        className={status === 'loading' ? 'animate-pulse' : ''}>
+        {emoji}
+      </p>
+
+      {status !== 'loading' && (
+        <>
+          <h2 style={{
+            margin: '0 0 12px', fontSize: 'clamp(22px, 6vw, 32px)',
+            fontWeight: 900,
+            color: status === 'success' ? '#27AE60'
+              : status === 'checkedout' ? '#2980B9'
+              : status === 'error' ? '#C0392B'
+              : '#E67E22',
+          }}>
+            {title}
+          </h2>
+          <p style={{ margin: '0 0 32px', fontSize: 16, color: '#6C757D', maxWidth: 360, lineHeight: 1.6 }}>
+            {subtitle}
+          </p>
+
+          {/* Barre de progression retour */}
+          <div style={{ width: 200, height: 4, backgroundColor: '#E9ECEF', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 99,
+              backgroundColor: status === 'success' ? '#27AE60' : status === 'checkedout' ? '#2980B9' : '#ADB5BD',
+              animation: 'shrink 3s linear forwards',
+            }} />
+          </div>
+          <p style={{ margin: '12px 0 0', fontSize: 12, color: '#ADB5BD' }}>
+            Retour à la borne dans 3 secondes...
+          </p>
+        </>
+      )}
+
+      <style>{`
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 }

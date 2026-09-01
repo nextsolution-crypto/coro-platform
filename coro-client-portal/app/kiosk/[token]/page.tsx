@@ -135,6 +135,9 @@ export default function KioskPage() {
       .then(d => {
         if (d?.buildingId) {
           setBuildingId(d.buildingId);
+          // Sauvegarder le token kiosque pour la page QR landing
+          localStorage.setItem('coro_kiosk_token', token);
+          localStorage.setItem('coro_kiosk_url', window.location.href);
           setScreen('home');
         } else {
           setScreen('error');
