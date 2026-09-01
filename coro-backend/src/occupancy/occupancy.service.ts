@@ -89,16 +89,22 @@ export class OccupancyService {
   }
 
   // Check-out d'un occupant
-  async checkOut(dto: CheckOutDto) {
+  async checkOut(body: any) {
+    const recordId = body.recordId;
+    const kioskToken = body.kioskToken;
+
+    if (!recordId) throw new Error('recordId manquant');
+    if (!kioskToken) throw new Error('kioskToken manquant');
+
     const record = await this.prisma.occupancyRecord.findUnique({
-      where: { id: dto.recordId },
+      where: { id: recordId },
     });
     if (!record) throw new NotFoundException('Enregistrement introuvable');
 
-    await this.validateKioskToken(record.buildingId, dto.kioskToken);
+    await this.validateKioskToken(record.buildingId, kioskToken);
 
     return this.prisma.occupancyRecord.update({
-      where: { id: dto.recordId },
+      where: { id: recordId },
       data: { status: 'OUT', checkedOutAt: new Date() },
     });
   }

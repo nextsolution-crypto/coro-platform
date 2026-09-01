@@ -19,8 +19,8 @@ export class OccupancyController {
   }
 
   @Post('checkout')
-  checkOut(@Body() dto: CheckOutDto) {
-    return this.occupancyService.checkOut(dto);
+  checkOut(@Body() body: any) {
+    return this.occupancyService.checkOut(body);
   }
 
     // Résoudre buildingId depuis token (public — borne kiosque)
