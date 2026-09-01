@@ -14,8 +14,8 @@ export class OccupancyController {
   // ── Routes PUBLIQUES (borne kiosque — token dans le body) ─────────────────
 
   @Post('checkin')
-  checkIn(@Body() dto: CheckInDto) {
-    return this.occupancyService.checkIn(dto);
+  checkIn(@Body() body: any) {
+    return this.occupancyService.checkIn(body);
   }
 
   @Post('checkout')

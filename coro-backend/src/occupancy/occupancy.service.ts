@@ -53,29 +53,37 @@ export class OccupancyService {
   }
 
   // Check-in d'un occupant
-  async checkIn(dto: CheckInDto) {
-    await this.validateKioskToken(dto.buildingId, dto.kioskToken);
+  async checkIn(body: any) {
+    const buildingId = body.buildingId;
+    const kioskToken = body.kioskToken;
+
+    console.log('[Sentinelle] checkIn reçu:', JSON.stringify(body));
+
+    if (!buildingId) throw new Error('buildingId manquant');
+    if (!kioskToken) throw new Error('kioskToken manquant');
+
+    await this.validateKioskToken(buildingId, kioskToken);
 
     const building = await this.prisma.building.findUnique({
-      where: { id: dto.buildingId },
+      where: { id: buildingId },
       select: { organizationId: true },
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
     return this.prisma.occupancyRecord.create({
       data: {
-        buildingId: dto.buildingId,
+        buildingId,
         organizationId: building.organizationId,
-        type: dto.type,
+        type: body.type,
         status: 'IN',
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        company: dto.company,
-        email: dto.email,
-        phone: dto.phone,
-        reason: dto.reason,
-        hostName: dto.hostName,
-        floor: dto.floor,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        company: body.company,
+        email: body.email,
+        phone: body.phone,
+        reason: body.reason,
+        hostName: body.hostName,
+        floor: body.floor,
       },
     });
   }
