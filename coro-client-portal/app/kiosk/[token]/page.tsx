@@ -32,7 +32,11 @@ export default function KioskPage() {
     if (!buildingId || loading) return;
     setLoading(true);
     try {
-      // Essayer d'abord comme employé
+      // 1. Résoudre les infos du QR pour savoir qui c'est
+      const infoRes = await fetch(`${API_URL}/occupancy/qr/info/${qrToken}`);
+      const info = infoRes.ok ? await infoRes.json() : null;
+
+      // 2. Essayer check-in employé
       const resEmp = await fetch(`${API_URL}/occupancy/qr/employee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,17 +45,28 @@ export default function KioskPage() {
       if (resEmp.ok) {
         const data = await resEmp.json();
         const name = `${data.employee.firstName} ${data.employee.lastName}`;
-        setMessage({
-          text: data.alreadyIn
-            ? `${name} est déjà enregistré(e) pour aujourd'hui.`
-            : `Bienvenue, ${name} ! Entrée enregistrée automatiquement.`,
-          type: 'success',
-        });
+        if (data.alreadyIn) {
+          // Déjà présent → proposer checkout
+          const doCheckout = confirm(`${name} est déjà enregistré(e).\n\nEnregistrer la SORTIE ?`);
+          if (doCheckout) {
+            await fetch(`${API_URL}/occupancy/qr/checkout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ qrToken, kioskToken: token }),
+            });
+            setMessage({ text: `Au revoir, ${name} ! Votre sortie a été enregistrée.`, type: 'success' });
+          } else {
+            setMessage({ text: `${name} est déjà enregistré(e) en entrée.`, type: 'success' });
+          }
+        } else {
+          setMessage({ text: `Bienvenue, ${name} ! Entrée enregistrée automatiquement.`, type: 'success' });
+        }
         setScreen('success');
         setTimeout(resetToHome, 4000);
         return;
       }
-      // Sinon essayer comme invitation visiteur
+
+      // 3. Essayer check-in invitation visiteur
       const resInv = await fetch(`${API_URL}/occupancy/qr/invitation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,6 +82,22 @@ export default function KioskPage() {
         setTimeout(resetToHome, 4000);
         return;
       }
+
+      // 4. Invitation déjà utilisée → tenter checkout
+      if (info?.type === 'invitation' && info?.status === 'USED') {
+        const resOut = await fetch(`${API_URL}/occupancy/qr/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrToken, kioskToken: token }),
+        });
+        if (resOut.ok) {
+          setMessage({ text: `Au revoir, ${info.firstName} ! Votre sortie a été enregistrée.`, type: 'success' });
+          setScreen('success');
+          setTimeout(resetToHome, 4000);
+          return;
+        }
+      }
+
       setMessage({ text: 'QR Code invalide ou expiré.', type: 'error' });
       setScreen('success');
       setTimeout(resetToHome, 3000);

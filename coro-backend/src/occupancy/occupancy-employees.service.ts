@@ -234,4 +234,84 @@ export class OccupancyEmployeesService {
       }),
     });
   }
+
+    // Check-out via QR token (employé ou invitation)
+  async checkoutByQrToken(qrToken: string, kioskToken: string) {
+    // Essayer employé
+    const employee = await this.prisma.buildingEmployee.findFirst({
+      where: { qrToken, isActive: true },
+    });
+    if (employee) {
+      const kiosk = await this.prisma.buildingKioskToken.findFirst({
+        where: { buildingId: employee.buildingId, token: kioskToken, isActive: true },
+      });
+      if (!kiosk) throw new NotFoundException('Token borne invalide');
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const record = await this.prisma.occupancyRecord.findFirst({
+        where: { employeeId: employee.id, status: 'IN', checkedInAt: { gte: startOfDay } },
+      });
+      if (!record) return { alreadyOut: true, employee };
+
+      await this.prisma.occupancyRecord.update({
+        where: { id: record.id },
+        data: { status: 'OUT', checkedOutAt: new Date() },
+      });
+      return { alreadyOut: false, employee };
+    }
+
+    // Essayer invitation
+    const invitation = await this.prisma.visitorInvitation.findFirst({
+      where: { qrToken, status: 'USED' },
+    });
+    if (invitation) {
+      const kiosk = await this.prisma.buildingKioskToken.findFirst({
+        where: { buildingId: invitation.buildingId, token: kioskToken, isActive: true },
+      });
+      if (!kiosk) throw new NotFoundException('Token borne invalide');
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const record = await this.prisma.occupancyRecord.findFirst({
+        where: {
+          buildingId: invitation.buildingId,
+          firstName: invitation.firstName,
+          lastName: invitation.lastName,
+          status: 'IN',
+          checkedInAt: { gte: startOfDay },
+        },
+      });
+      if (!record) return { alreadyOut: true, invitation };
+
+      await this.prisma.occupancyRecord.update({
+        where: { id: record.id },
+        data: { status: 'OUT', checkedOutAt: new Date() },
+      });
+      return { alreadyOut: false, invitation };
+    }
+
+    throw new NotFoundException('QR Code invalide');
+  }
+
+    // Résoudre les infos d'un QR token (employé ou invitation) sans faire de check-in
+  async resolveQrInfo(qrToken: string) {
+    // Essayer employé
+    const employee = await this.prisma.buildingEmployee.findFirst({
+      where: { qrToken, isActive: true },
+    });
+    if (employee) {
+      return { type: 'employee', firstName: employee.firstName, lastName: employee.lastName, poste: employee.poste };
+    }
+
+    // Essayer invitation
+    const invitation = await this.prisma.visitorInvitation.findFirst({
+      where: { qrToken },
+    });
+    if (invitation) {
+      return { type: 'invitation', firstName: invitation.firstName, lastName: invitation.lastName, visitDate: invitation.visitDate, status: invitation.status };
+    }
+
+    return null;
+  }
 }

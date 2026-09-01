@@ -18,6 +18,11 @@ export class OccupancyEmployeesController {
     return this.service.checkinByInvitationToken(body.qrToken, body.kioskToken);
   }
 
+    @Post('qr/checkout')
+  checkoutByQr(@Body() body: any) {
+    return this.service.checkoutByQrToken(body.qrToken, body.kioskToken);
+  }
+
   // ── Routes protégées (portail client) ─────────────────────────────────────
 
   @UseGuards(AuthGuard('jwt'))
@@ -48,5 +53,10 @@ export class OccupancyEmployeesController {
   @Post('invitations')
   createInvitation(@Body() body: any, @Request() req: any) {
     return this.service.createInvitation(body, req.user.organizationId, req.user.sub);
+  }
+
+    @Get('qr/info/:token')
+  resolveQrInfo(@Param('token') token: string) {
+    return this.service.resolveQrInfo(token);
   }
 }
