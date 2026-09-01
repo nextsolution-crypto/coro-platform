@@ -161,6 +161,8 @@ model Building {
   occupancyRecords   OccupancyRecord[]
   evacuationEvents   EvacuationEvent[]
   kioskToken         BuildingKioskToken?
+  employees          BuildingEmployee[]
+  visitorInvitations VisitorInvitation[]
 }
 
 model Project {
@@ -995,6 +997,8 @@ model OccupancyRecord {
   createdAt      DateTime        @default(now())
 
   evacuationCheckins EvacuationCheckIn[]
+  employee           BuildingEmployee? @relation("EmployeeRecords", fields: [employeeId], references: [id])
+  employeeId         String?
 }
 
 model EvacuationEvent {
@@ -1035,4 +1039,41 @@ model BuildingKioskToken {
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model BuildingEmployee {
+  id          String   @id @default(uuid())
+  buildingId  String
+  building    Building @relation(fields: [buildingId], references: [id])
+  firstName   String
+  lastName    String
+  poste       String?
+  email       String?
+  phone       String?
+  qrToken     String   @unique @default(uuid())
+  isActive    Boolean  @default(true)
+  organizationId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  occupancyRecords OccupancyRecord[] @relation("EmployeeRecords")
+}
+
+model VisitorInvitation {
+  id            String   @id @default(uuid())
+  buildingId    String
+  building      Building @relation(fields: [buildingId], references: [id])
+  firstName     String
+  lastName      String
+  email         String
+  company       String?
+  reason        String?
+  hostName      String?
+  visitDate     DateTime
+  qrToken       String   @unique @default(uuid())
+  status        String   @default("PENDING") // PENDING | USED | EXPIRED
+  invitedById   String
+  organizationId String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
