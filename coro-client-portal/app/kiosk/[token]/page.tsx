@@ -415,28 +415,46 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
   useEffect(() => {
     if (!started) return;
     let scanner: any = null;
-    const initScanner = async () => {
+        const initScanner = async () => {
       try {
         const { Html5Qrcode } = await import('html5-qrcode');
         scanner = new Html5Qrcode(divId);
         (globalThis as any).__coroScanner = scanner;
+
+        let scanned = false; // Empêcher double scan
+
         await scanner.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
-                      (decodedText: string) => {
-              // Extraire le token — que ce soit une URL ou un token brut
-              let qrToken = decodedText.trim();
-              if (qrToken.includes('/')) {
-                const parts = qrToken.split('/');
-                qrToken = parts[parts.length - 1];
-              }
-              // Ignorer si vide ou trop court
-              if (!qrToken || qrToken.length < 10) return;
-              scanner.stop().catch(() => {});
-              onScan(qrToken);
-            },
-          () => {}
+          (decodedText: string) => {
+            if (scanned) return;
+            scanned = true;
+
+            // Extraire le token — que ce soit une URL ou un token brut
+            let qrToken = decodedText.trim();
+            if (qrToken.includes('/')) {
+              const parts = qrToken.split('/');
+              qrToken = parts[parts.length - 1];
+            }
+            // Ignorer si vide ou trop court
+            if (!qrToken || qrToken.length < 10) {
+              scanned = false;
+              return;
+            }
+
+            // Arrêter le scanner et traiter
+            scanner.stop().catch(() => {});
+            onScan(qrToken);
+          },
+          () => {} // Erreur de scan ignorée
         );
+
+        // Intercepter tous les clics dans le div scanner pour éviter navigation
+        const scanDiv = document.getElementById(divId);
+        if (scanDiv) {
+          scanDiv.addEventListener('click', (e) => e.preventDefault(), true);
+        }
+
       } catch (err) {
         console.error('[CORO Scanner]', err);
       }
