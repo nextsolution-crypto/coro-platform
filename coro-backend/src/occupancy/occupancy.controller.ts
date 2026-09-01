@@ -48,6 +48,16 @@ export class OccupancyController {
     return this.occupancyService.searchOccupantsForCheckout(buildingId, token, q);
   }
 
+    @Get('buildings/:buildingId/history-public')
+  getHistoryPublic(
+    @Param('buildingId') buildingId: string,
+    @Query('token') token: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.occupancyService.getHistoryPublic(buildingId, token, from, to);
+  }
+
   // ── Routes PROTÉGÉES (dashboard admin CORO) ───────────────────────────────
 
   @UseGuards(AuthGuard('jwt'))

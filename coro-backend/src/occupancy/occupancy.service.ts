@@ -348,4 +348,36 @@ export class OccupancyService {
 
     return { ...event, accounted, missing, durationMinutes: duration };
   }
+
+    // Historique public — authentifié par token kiosque
+  async getHistoryPublic(buildingId: string, token: string, from: string, to: string) {
+    await this.validateKioskToken(buildingId, token);
+
+    const fromDate = from ? new Date(from) : new Date(new Date().setDate(new Date().getDate() - 30));
+    const toDate = to ? new Date(to) : new Date();
+    toDate.setHours(23, 59, 59, 999);
+
+    const records = await this.prisma.occupancyRecord.findMany({
+      where: {
+        buildingId,
+        checkedInAt: { gte: fromDate, lte: toDate },
+      },
+      orderBy: { checkedInAt: 'desc' },
+    });
+
+    const total = records.length;
+    const byType = {
+      EMPLOYE:     records.filter(r => r.type === 'EMPLOYE').length,
+      VISITEUR:    records.filter(r => r.type === 'VISITEUR').length,
+      CONTRACTEUR: records.filter(r => r.type === 'CONTRACTEUR').length,
+    };
+    const avgDurationMs = records
+      .filter(r => r.checkedOutAt)
+      .reduce((acc, r) => {
+        const diff = new Date(r.checkedOutAt!).getTime() - new Date(r.checkedInAt).getTime();
+        return acc + diff;
+      }, 0) / (records.filter(r => r.checkedOutAt).length || 1);
+
+    return { records, total, byType, avgDurationMs };
+  }
 }

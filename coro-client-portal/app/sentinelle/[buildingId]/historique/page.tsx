@@ -36,7 +36,10 @@ export default function HistoriquePage() {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/history?from=${from}&to=${to}`);
+      // Récupérer le token kiosque d'abord
+      const kioskRes = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
+      const kioskToken = kioskRes.token;
+      const res = await apiGet(`/occupancy/buildings/${buildingId}/history-public?token=${kioskToken}&from=${from}&to=${to}`);
       setData(res);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
