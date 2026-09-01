@@ -423,13 +423,18 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
         await scanner.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText: string) => {
-            // Extraire le token du QR (dernière partie de l'URL)
-            const parts = decodedText.split('/');
-            const qrToken = parts[parts.length - 1];
-            scanner.stop().catch(() => {});
-            onScan(qrToken);
-          },
+                      (decodedText: string) => {
+              // Extraire le token — que ce soit une URL ou un token brut
+              let qrToken = decodedText.trim();
+              if (qrToken.includes('/')) {
+                const parts = qrToken.split('/');
+                qrToken = parts[parts.length - 1];
+              }
+              // Ignorer si vide ou trop court
+              if (!qrToken || qrToken.length < 10) return;
+              scanner.stop().catch(() => {});
+              onScan(qrToken);
+            },
           () => {}
         );
       } catch (err) {
