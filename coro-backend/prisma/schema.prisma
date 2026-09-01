@@ -1051,6 +1051,7 @@ model BuildingEmployee {
   email       String?
   phone       String?
   qrToken     String   @unique @default(uuid())
+  pin         String?
   isActive    Boolean  @default(true)
   organizationId String
   createdAt   DateTime @default(now())

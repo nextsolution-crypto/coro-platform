@@ -247,15 +247,16 @@ export default function KioskPage() {
           <p style={{ margin: '8px 0 0', fontSize: 14, color: '#ADB5BD' }}>{new Date().toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 420 }}>
-          {/* Scanner QR — priorité visuelle */}
-          <button type="button" onClick={() => { setScannerStarted(true); setScreen('scanner'); }}
-            style={{ padding: '20px 32px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.12)', cursor: 'pointer', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            <p style={{ margin: 0, fontSize: 24 }}>📷</p>
-            <div>
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#FFFFFF' }}>Scanner mon QR</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Employé ou visiteur invité</p>
-            </div>
-          </button>
+          {/* QR de la borne — l'employé scanne avec son téléphone */}
+          <div style={{ padding: '20px 24px', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.06)', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              📷 Scannez pour pointer votre présence
+            </p>
+            <KioskQrDisplay kioskToken={token} />
+            <p style={{ margin: '10px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+              Se régénère automatiquement
+            </p>
+          </div>
           <button type="button" onClick={() => setScreen('checkin-type')}
             style={{ padding: '28px 32px', borderRadius: 16, border: 'none', backgroundColor: '#27AE60', cursor: 'pointer', textAlign: 'center', boxShadow: '0 8px 24px rgba(39,174,96,0.3)' }}>
             <p style={{ margin: '0 0 4px', fontSize: 28 }}>✅</p>
@@ -483,6 +484,46 @@ function QrScannerScreen({ onScan, onBack, started }: { onScan: (token: string) 
         ← Retour
       </button>
     </div>
+  );
+}
+
+function KioskQrDisplay({ kioskToken }: { kioskToken: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  const generateQr = async () => {
+    try {
+      const QRCode = (await import('qrcode')).default;
+      const presenceUrl = `${window.location.origin}/presence/${kioskToken}`;
+      const url = await QRCode.toDataURL(presenceUrl, {
+        width: 180,
+        margin: 1,
+        color: { dark: '#2C3E50', light: '#FFFFFF' },
+      });
+      setQrDataUrl(url);
+    } catch (err) {
+      console.error('[CORO QR]', err);
+    }
+  };
+
+  useEffect(() => {
+    generateQr();
+    // Régénérer toutes les 60 secondes
+    const interval = setInterval(generateQr, 60000);
+    return () => clearInterval(interval);
+  }, [kioskToken]);
+
+  if (!qrDataUrl) return (
+    <div style={{ width: 180, height: 180, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#ADB5BD', fontSize: 12 }}>Chargement...</p>
+    </div>
+  );
+
+  return (
+    <img
+      src={qrDataUrl}
+      alt="QR Code borne"
+      style={{ width: 180, height: 180, borderRadius: 12, display: 'block', margin: '0 auto' }}
+    />
   );
 }
 

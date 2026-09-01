@@ -25,7 +25,18 @@ export class OccupancyEmployeesService {
     });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
-    return this.prisma.buildingEmployee.create({
+    // Générer un PIN unique à 4 chiffres pour ce bâtiment
+    let pin = '';
+    let unique = false;
+    while (!unique) {
+      pin = Math.floor(1000 + Math.random() * 9000).toString();
+      const existing = await this.prisma.buildingEmployee.findFirst({
+        where: { buildingId: body.buildingId, pin, isActive: true },
+      });
+      if (!existing) unique = true;
+    }
+
+    const employee = await this.prisma.buildingEmployee.create({
       data: {
         buildingId: body.buildingId,
         organizationId,
@@ -34,7 +45,62 @@ export class OccupancyEmployeesService {
         poste: body.poste,
         email: body.email,
         phone: body.phone,
+        pin,
       },
+    });
+
+    // Envoyer le PIN par courriel si email fourni
+    if (body.email) {
+      await this.sendPinEmail(employee, building);
+    }
+
+    return employee;
+  }
+
+  private async sendPinEmail(employee: any, building: any) {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY || '',
+      },
+      body: JSON.stringify({
+        sender: { name: 'CORO Sentinelle', email: 'info@getcoro.io' },
+        to: [{ email: employee.email, name: `${employee.firstName} ${employee.lastName}` }],
+        subject: `Votre code d'accès CORO Sentinelle — ${building.name}`,
+        htmlContent: `
+          <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;">
+              <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
+              <span style="color:#ADB5BD;font-size:14px;margin-left:12px;">Sentinelle</span>
+            </div>
+            <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
+              <h2 style="color:#2C3E50;margin:0 0 8px;">Votre code PIN d'accès</h2>
+              <p style="color:#6C757D;margin:0 0 24px;">
+                Bonjour ${employee.firstName},<br><br>
+                Vous avez été enregistré(e) dans le système de présence CORO Sentinelle 
+                pour <strong>${building.name}</strong>.
+              </p>
+              <div style="background:#F8F9FA;border-radius:12px;padding:32px;margin:0 0 24px;text-align:center;">
+                <p style="margin:0 0 8px;font-size:12px;color:#ADB5BD;text-transform:uppercase;letter-spacing:0.08em;">Votre PIN personnel</p>
+                <p style="margin:0;font-size:56px;font-weight:900;color:#2C3E50;letter-spacing:12px;">${employee.pin}</p>
+                <p style="margin:8px 0 0;font-size:12px;color:#ADB5BD;">Gardez ce code confidentiel</p>
+              </div>
+              <div style="background:#EBF5FB;border-radius:8px;padding:16px;margin:0 0 24px;">
+                <p style="margin:0;font-size:14px;color:#2980B9;font-weight:600;">Comment utiliser votre PIN :</p>
+                <ol style="margin:8px 0 0;padding-left:20px;color:#6C757D;font-size:13px;line-height:1.8;">
+                  <li>Scannez le QR code affiché sur la borne d'accueil</li>
+                  <li>Entrez votre PIN à 4 chiffres</li>
+                  <li>Votre entrée ou sortie est enregistrée automatiquement</li>
+                </ol>
+              </div>
+              <p style="color:#ADB5BD;font-size:12px;margin:0;">
+                Ce PIN est personnel. Ne le partagez pas avec vos collègues.
+              </p>
+            </div>
+          </div>
+        `,
+      }),
     });
   }
 
@@ -292,6 +358,56 @@ export class OccupancyEmployeesService {
     }
 
     throw new NotFoundException('QR Code invalide');
+  }
+
+    // Check-in ou check-out par PIN (depuis page /presence)
+  async checkinByPin(kioskToken: string, pin: string) {
+    // Valider le token kiosque et récupérer le bâtiment
+    const kiosk = await this.prisma.buildingKioskToken.findFirst({
+      where: { token: kioskToken, isActive: true },
+    });
+    if (!kiosk) throw new NotFoundException('Borne invalide');
+
+    // Trouver l'employé par PIN dans ce bâtiment
+    const employee = await this.prisma.buildingEmployee.findFirst({
+      where: { buildingId: kiosk.buildingId, pin, isActive: true },
+    });
+    if (!employee) throw new NotFoundException('PIN invalide');
+
+    // Vérifier si déjà présent aujourd'hui
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const existing = await this.prisma.occupancyRecord.findFirst({
+      where: {
+        employeeId: employee.id,
+        status: 'IN',
+        checkedInAt: { gte: startOfDay },
+      },
+    });
+
+    if (existing) {
+      // Déjà présent → checkout
+      await this.prisma.occupancyRecord.update({
+        where: { id: existing.id },
+        data: { status: 'OUT', checkedOutAt: new Date() },
+      });
+      return { action: 'checkout', employee };
+    }
+
+    // Pas présent → check-in
+    const record = await this.prisma.occupancyRecord.create({
+      data: {
+        buildingId: kiosk.buildingId,
+        organizationId: employee.organizationId,
+        type: 'EMPLOYE',
+        status: 'IN',
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        employeeId: employee.id,
+      },
+    });
+
+    return { action: 'checkin', employee, record };
   }
 
     // Résoudre les infos d'un QR token (employé ou invitation) sans faire de check-in

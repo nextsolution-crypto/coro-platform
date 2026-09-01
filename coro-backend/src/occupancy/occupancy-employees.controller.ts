@@ -23,6 +23,11 @@ export class OccupancyEmployeesController {
     return this.service.checkoutByQrToken(body.qrToken, body.kioskToken);
   }
 
+    @Post('presence/pin')
+  checkinByPin(@Body() body: any) {
+    return this.service.checkinByPin(body.kioskToken, body.pin);
+  }
+
   // ── Routes protégées (portail client) ─────────────────────────────────────
 
   @UseGuards(AuthGuard('jwt'))

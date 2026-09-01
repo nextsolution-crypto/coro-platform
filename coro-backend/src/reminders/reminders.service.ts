@@ -91,6 +91,46 @@ export class RemindersService {
     }
   }
 
+  // ── Purge automatique registre Sentinelle ─────────────────────────────────
+  @Cron('0 2 * * *') // Chaque nuit à 2h
+  async purgeOldOccupancyRecords() {
+    this.logger.log('Purge des anciens enregistrements Sentinelle...');
+    const cutoff12months = new Date();
+    cutoff12months.setMonth(cutoff12months.getMonth() - 12);
+
+    const cutoff36months = new Date();
+    cutoff36months.setMonth(cutoff36months.getMonth() - 36);
+
+    // Supprimer les OccupancyRecord de plus de 12 mois
+    const deletedRecords = await this.prisma.occupancyRecord.deleteMany({
+      where: { checkedInAt: { lt: cutoff12months } },
+    });
+
+    // Supprimer les EvacuationCheckIn orphelins
+    await this.prisma.evacuationCheckIn.deleteMany({
+      where: {
+        evacuationEvent: {
+          triggeredAt: { lt: cutoff36months },
+        },
+      },
+    });
+
+    // Supprimer les EvacuationEvent de plus de 36 mois (ISO 22301)
+    const deletedEvents = await this.prisma.evacuationEvent.deleteMany({
+      where: { triggeredAt: { lt: cutoff36months } },
+    });
+
+    // Supprimer les VisitorInvitation de plus de 12 mois
+    const deletedInvitations = await this.prisma.visitorInvitation.deleteMany({
+      where: { createdAt: { lt: cutoff12months } },
+    });
+
+    this.logger.log(
+      `Purge Sentinelle complétée — ${deletedRecords.count} présences, ` +
+      `${deletedEvents.count} évacuations, ${deletedInvitations.count} invitations supprimées`
+    );
+  }
+
   private async sendReminderEmail(data: {
     to: string;
     toName: string;
