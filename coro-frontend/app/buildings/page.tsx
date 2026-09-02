@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
-import { toast } from '@/lib/toast';
 import AppLayout from '@/components/layout/AppLayout';
+import { toast } from '@/lib/toast';
+import { PageTitle } from '@/components/ui/Typography';
 import { formatPhone } from '@/lib/formatPhone';
 
 interface Building {
@@ -158,12 +159,9 @@ export default function BuildingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
+          <PageTitle subtitle={`${buildings.length} bâtiment${buildings.length !== 1 ? 's' : ''}`}>
             Bâtiments
-          </h2>
-          <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            {buildings.length} bâtiment{buildings.length !== 1 ? 's' : ''}
-          </p>
+          </PageTitle>
         </div>
         <button
           onClick={() => setShowModal(true)}

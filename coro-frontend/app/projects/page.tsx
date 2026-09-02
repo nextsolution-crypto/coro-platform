@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
+import { PageTitle } from '@/components/ui/Typography';
 
 interface Project {
   id: string;
@@ -228,12 +229,9 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
-            Projets
-          </h2>
-          <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            {visibleProjects.length} / {maxProjects === null ? 'illimité' : maxProjects} projet{visibleProjects.length !== 1 ? 's' : ''}
-          </p>
+                      <PageTitle subtitle={`${visibleProjects.length} / ${maxProjects === null ? 'illimité' : maxProjects} projet${visibleProjects.length !== 1 ? 's' : ''}`}>
+              Projets
+            </PageTitle>
         </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (

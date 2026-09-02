@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
+import { PageTitle } from '@/components/ui/Typography';
 import ExportModal from '@/components/ExportModal';
 import EngagementPanel from '@/components/EngagementPanel';
 import ProjectFiles from '@/components/ProjectFiles';

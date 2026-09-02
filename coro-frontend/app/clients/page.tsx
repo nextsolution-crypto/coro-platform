@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
+import { PageTitle } from '@/components/ui/Typography';
 
 interface Client {
   id: string;
@@ -127,10 +128,9 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>Clients</h2>
-          <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            {clients.length} client{clients.length !== 1 ? 's' : ''}
-          </p>
+          <PageTitle subtitle={`${clients.length} client${clients.length !== 1 ? 's' : ''}`}>
+            Clients
+          </PageTitle>
         </div>
         <button
           onClick={() => setShowModal(true)}

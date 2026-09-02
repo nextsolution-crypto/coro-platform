@@ -21,6 +21,14 @@
   --text-primary: #2C3E50;
   --text-secondary: #6C757D;
   --text-muted: #ADB5BD;
+
+  /* Échelle typographique CORO */
+  --font-page-title: 700 24px/1.2 Arial, Helvetica, sans-serif;
+  --font-section-title: 600 16px/1.3 Arial, Helvetica, sans-serif;
+  --font-card-title: 600 14px/1.4 Arial, Helvetica, sans-serif;
+  --font-field-label: 600 11px/1 Arial, Helvetica, sans-serif;
+  --font-field-value: 400 14px/1.5 Arial, Helvetica, sans-serif;
+  --font-meta: 400 12px/1.4 Arial, Helvetica, sans-serif;
 }
 
 html,

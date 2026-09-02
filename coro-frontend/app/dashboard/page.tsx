@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import AppLayout from '@/components/layout/AppLayout';
 import api from '@/lib/api';
+import { PageTitle } from '@/components/ui/Typography';
 
 const statusConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
   DRAFT:       { label: 'Brouillon',   bg: '#F8F9FA', color: '#6C757D', border: '#DEE2E6' },
@@ -119,13 +120,19 @@ export default function DashboardPage() {
       {/* ── En-tête ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
-            {today}
-          </p>
-          <h2 className="text-2xl font-black" style={{ color: '#2C3E50' }}>
-            Bonjour, {user.firstName} 👋
-          </h2>
-          <p className="mt-1 text-sm" style={{ color: '#6C757D' }}>
+                      <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
+              {today}
+            </p>
+            <PageTitle
+              subtitle={
+                upcomingActivities.length > 0
+                  ? `${upcomingActivities.length} activité${upcomingActivities.length > 1 ? 's' : ''} prévue${upcomingActivities.length > 1 ? 's' : ''} dans les 30 prochains jours`
+                  : 'Aucune activité prévue dans les 30 prochains jours'
+              }
+            >
+              Bonjour, {user.firstName} 👋
+            </PageTitle>
+            <p className="mt-1 text-sm" style={{ color: '#6C757D' }}>
             {upcomingActivities.length > 0
               ? `${upcomingActivities.length} activité${upcomingActivities.length > 1 ? 's' : ''} prévue${upcomingActivities.length > 1 ? 's' : ''} dans les 30 prochains jours`
               : 'Aucune activité prévue dans les 30 prochains jours'}
