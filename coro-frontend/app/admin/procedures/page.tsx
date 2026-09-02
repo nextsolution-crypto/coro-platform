@@ -110,15 +110,26 @@ export default function ProceduresAdminPage() {
             {procedures.length} procédures par défaut — modifications appliquées à toutes les organisations
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors"
-          style={{ backgroundColor: '#C0392B' }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
-        >
-          + Nouvelle procédure
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => router.push('/admin/procedures/custom')}
+            className="w-full sm:w-auto text-sm font-medium px-4 py-2 rounded transition-colors"
+            style={{ border: '1px solid #AED6F1', color: '#2980B9', backgroundColor: '#EBF5FB' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#D6EAF8')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#EBF5FB')}
+          >
+            ✨ Procédures IA
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+            style={{ backgroundColor: '#C0392B' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#A93226')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C0392B')}
+          >
+            + Nouvelle procédure
+          </button>
+        </div>
       </div>
 
       {/* Recherche */}
