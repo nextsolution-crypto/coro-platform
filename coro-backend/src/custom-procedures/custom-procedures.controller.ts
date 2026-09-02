@@ -37,6 +37,21 @@ export class CustomProceduresController {
     );
   }
 
+  @Post('import-file')
+  importFile(
+    @Body() body: { fileBase64: string; fileName: string; mimeType: string; projectId: string },
+    @Request() req: any,
+  ) {
+    return this.service.generateFromFile(
+      body.fileBase64,
+      body.fileName,
+      body.mimeType,
+      body.projectId,
+      req.user.organizationId,
+      req.user.userId,
+    );
+  }
+
   @Put(':id')
   update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
     return this.service.update(id, body, req.user.organizationId);

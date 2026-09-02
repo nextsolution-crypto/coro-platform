@@ -664,7 +664,7 @@ model DangerousSubstance {
 
 model CustomProcedure {
   id             String   @id @default(cuid())
-  organizationId String
+  organizationId String?  // null = procédure globale CORO (super admin seulement)
   projectId      String?  // null = disponible pour tous les projets de l'org
   code           String   // Ex: "CP001"
   titleFR        String
@@ -674,13 +674,16 @@ model CustomProcedure {
   status         String   @default("DRAFT") // DRAFT | ACTIVE | ARCHIVED
   content        Json     // Structure complète de la procédure
   sourceText     String?  // Texte original saisi par l'utilisateur
-  isPublished    Boolean  @default(false) // Disponible pour autres projets
+  sourceType     String   @default("MANUAL") // MANUAL | AI_TEXT | AI_IMPORT
+  sourceFileName String?  // Nom du fichier importé (PDF/Word)
+  isGlobal       Boolean  @default(false) // true = procédure CORO globale (organizationId peut être null)
+  isPublished    Boolean  @default(false) // Disponible pour autres projets de l'org
   rolesDetected  String[] // Rôles détectés par l'IA
   createdById    String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   project        Project?     @relation(fields: [projectId], references: [id])
   createdBy      User         @relation(fields: [createdById], references: [id])
 

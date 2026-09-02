@@ -193,6 +193,82 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
     };
   }
 
+  // ── Générer depuis fichier Word ou PDF ──────────────────
+  async generateFromFile(
+    fileBase64: string,
+    fileName: string,
+    mimeType: string,
+    projectId: string,
+    organizationId: string,
+    userId: string,
+  ) {
+    let extractedText = '';
+
+    if (
+      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      fileName.endsWith('.docx')
+    ) {
+      // Extraction Word via mammoth
+      const mammoth = require('mammoth');
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const result = await mammoth.extractRawText({ buffer });
+      extractedText = result.value;
+    } else if (mimeType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      // Extraction PDF via Claude natif
+      const Anthropic = require('@anthropic-ai/sdk').default;
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const pdfResponse = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: fileBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: 'Extrais tout le texte de ce document de procédure. Retourne uniquement le texte brut, sans formatage ni commentaire.',
+            },
+          ],
+        }],
+      });
+      const pdfContent = pdfResponse.content[0];
+      if (pdfContent.type === 'text') extractedText = pdfContent.text;
+    } else {
+      throw new Error('Format non supporté. Utilisez PDF ou Word (.docx)');
+    }
+
+    if (!extractedText || extractedText.length < 50) {
+      throw new Error('Le fichier ne contient pas assez de texte extractible');
+    }
+
+    // Réutiliser generateFromText avec le texte extrait
+    const result = await this.generateFromText(
+      extractedText.substring(0, 8000),
+      projectId,
+      organizationId,
+      userId,
+    );
+
+    // Mettre à jour les champs source
+    await this.prisma.customProcedure.update({
+      where: { id: result.procedure.id },
+      data: {
+        sourceType: 'AI_IMPORT',
+        sourceFileName: fileName,
+        sourceText: extractedText.substring(0, 2000),
+      },
+    });
+
+    return { ...result, sourceFileName: fileName };
+  }
+
   // ── CRUD ────────────────────────────────────────────────
   async findAll(projectId: string, organizationId: string) {
     return this.prisma.customProcedure.findMany({
