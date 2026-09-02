@@ -116,14 +116,37 @@ export default function ProfilePage() {
       setPasswordError('Le mot de passe doit contenir au moins 8 caractères.');
       return;
     }
+    if (!/[A-Z]/.test(passwordForm.newPassword)) {
+      setPasswordError('Le mot de passe doit contenir au moins une majuscule.');
+      return;
+    }
+    if (!/[a-z]/.test(passwordForm.newPassword)) {
+      setPasswordError('Le mot de passe doit contenir au moins une minuscule.');
+      return;
+    }
+    if (!/[0-9]/.test(passwordForm.newPassword)) {
+      setPasswordError('Le mot de passe doit contenir au moins un chiffre.');
+      return;
+    }
+    if (!/[^A-Za-z0-9]/.test(passwordForm.newPassword)) {
+      setPasswordError('Le mot de passe doit contenir au moins un caractère spécial (!@#$%^&*...).');
+      return;
+    }
     setSavingPassword(true);
     try {
       await api.put('/users/me/password', { newPassword: passwordForm.newPassword });
       setPasswordSaved(true);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setPasswordSaved(false), 3000);
-    } catch (err) { console.error(err); }
-    finally { setSavingPassword(false); }
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Une erreur est survenue. Veuillez réessayer.';
+      setPasswordError(Array.isArray(message) ? message[0] : message);
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const inputCls = "w-full px-3 py-2.5 text-sm rounded focus:outline-none";
