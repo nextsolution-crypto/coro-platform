@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatPhone } from '@/lib/formatPhone';
+import { toast } from '@/lib/toast';
 
 interface Client {
   id: string;
@@ -75,14 +76,17 @@ export default function ClientDetailPage() {
       await api.put(`/clients/${clientId}`, form);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+      toast('Client mis à jour.');
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Erreur lors de la sauvegarde.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
+    } finally { setSaving(false); }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Le logo doit faire moins de 2MB'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast('Le logo doit faire moins de 2MB.', 'error'); return; }
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;

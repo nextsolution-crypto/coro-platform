@@ -120,7 +120,7 @@ export default function BuildingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert('La photo ne doit pas dépasser 10MB.');
+      toast('La photo ne doit pas dépasser 10MB.', 'error');
       return;
     }
     const reader = new FileReader();

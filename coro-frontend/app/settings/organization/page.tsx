@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { ArrowLeft, Save } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import DragDropUpload from '@/components/ui/DragDropUpload';
 
 export default function OrganizationSettingsPage() {
@@ -107,14 +108,12 @@ export default function OrganizationSettingsPage() {
 
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Le logo doit faire moins de 2MB');
+        if (file.size > 2 * 1024 * 1024) {
+      toast('Le logo doit faire moins de 2MB.', 'error');
       e.target.value = '';
       return;
     }
-
     const reader = new FileReader();
-
     reader.onload = async ev => {
       const base64 = ev.target?.result as string;
       setLogoPreview(base64);
@@ -138,14 +137,12 @@ export default function OrganizationSettingsPage() {
 
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Le logo doit faire moins de 2MB');
+        if (file.size > 2 * 1024 * 1024) {
+      toast('Le logo doit faire moins de 2MB.', 'error');
       e.target.value = '';
       return;
     }
-
     const reader = new FileReader();
-
         reader.onload = async ev => {
       const base64 = ev.target?.result as string;
       setLogoFullPreview(base64);
