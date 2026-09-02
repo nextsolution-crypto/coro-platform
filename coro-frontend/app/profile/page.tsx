@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { toast } from '@/lib/toast';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -68,8 +69,10 @@ export default function ProfilePage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       initAuth();
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+      toast('Profil sauvegardé avec succès.');
+    } catch (err) {
+      toast('Erreur lors de la sauvegarde du profil.', 'error');
+    } finally { setSaving(false); }
   };
 
   const handleSaveCompany = async () => {
@@ -89,11 +92,13 @@ export default function ProfilePage() {
         companyTagline: updated.data.companyTagline || '',
         companyLogoFullB64: updated.data.companyLogoFullB64 || updated.data.companyLogoB64 || '',
       });
-      setCompanySaved(true);
+            setCompanySaved(true);
       setTimeout(() => setCompanySaved(false), 3000);
-      initAuth(); // Recharger le user dans le store APRÈS avoir mis à jour le state
-    } catch (err) { console.error(err); }
-    finally { setSavingCompany(false); }
+      initAuth();
+      toast('Organisation sauvegardée avec succès.');
+    } catch (err) {
+      toast('Erreur lors de la sauvegarde de l\'organisation.', 'error');
+    } finally { setSavingCompany(false); }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,12 +143,14 @@ export default function ProfilePage() {
       setPasswordSaved(true);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setPasswordSaved(false), 3000);
+      toast('Mot de passe modifié avec succès.');
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
         err?.message ||
         'Une erreur est survenue. Veuillez réessayer.';
       setPasswordError(Array.isArray(message) ? message[0] : message);
+      toast(Array.isArray(message) ? message[0] : message, 'error');
     } finally {
       setSavingPassword(false);
     }
