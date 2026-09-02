@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { toast } from '@/lib/toast';
 
 interface Client {
   id: string;
@@ -100,9 +101,9 @@ export default function ClientsPage() {
     try {
       await api.delete(`/clients/${id}`);
       fetchClients();
+      toast('Client supprimé.');
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la suppression.');
+      toast('Erreur lors de la suppression du client.', 'error');
     }
   };
 
@@ -114,7 +115,11 @@ export default function ClientsPage() {
       setForm({ name: '', email: '', phone: '', address: '', city: '', province: '', contactFirstName: '', contactLastName: '', contactEmail: '', contactPhone: '' });
       setAddressPaste('');
       fetchClients();
-    } catch (err) { console.error(err); }
+      toast('Client créé avec succès.');
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Erreur lors de la création du client.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
+    }
   };
 
   return (

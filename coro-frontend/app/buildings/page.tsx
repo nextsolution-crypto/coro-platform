@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatPhone } from '@/lib/formatPhone';
 
@@ -95,9 +96,9 @@ export default function BuildingsPage() {
     try {
       await api.delete(`/buildings/${id}`);
       fetchData();
+      toast('Bâtiment supprimé.');
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la suppression.');
+      toast('Erreur lors de la suppression du bâtiment.', 'error');
     }
   };
 
@@ -140,9 +141,12 @@ export default function BuildingsPage() {
       setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '', responsableFirstName: '', responsableLastName: '', responsableTitre: '', responsableEmail: '', responsablePhone: '', photoBase64: '' });
       setAddressPaste('');
       fetchData();
-    } catch (err) { console.error(err); }
+      toast('Bâtiment créé avec succès.');
+        } catch (err: any) {
+      const message = err?.response?.data?.message || 'Erreur lors de la création du bâtiment.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
+    }
   };
-
   const inputStyle = {
     border: '1px solid #CED4DA',
     color: '#2C3E50',

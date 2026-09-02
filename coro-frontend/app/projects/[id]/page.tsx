@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { toast } from '@/lib/toast';
 import ExportModal from '@/components/ExportModal';
 import EngagementPanel from '@/components/EngagementPanel';
 import ProjectFiles from '@/components/ProjectFiles';
@@ -186,14 +187,14 @@ export default function ProjectDetailPage() {
     }
   };
 
-const handleChangeStatus = async (newStatus: string) => {
+  const handleChangeStatus = async (newStatus: string) => {
     setStatusChanging(true);
     try {
       await api.put(`/projects/${projectId}`, { status: newStatus });
       await fetchData();
+      toast(newStatus === 'ARCHIVED' ? 'Projet archivé.' : 'Statut mis à jour.');
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors du changement de statut.');
+      toast('Erreur lors du changement de statut.', 'error');
     } finally {
       setStatusChanging(false);
     }
@@ -210,8 +211,7 @@ const handleChangeStatus = async (newStatus: string) => {
       setJustGenerated(true);
       setTimeout(() => setJustGenerated(false), 5000);
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la génération.');
+      toast('Erreur lors de la génération du document.', 'error');
     } finally {
       setGenerating(false);
     }
@@ -230,8 +230,9 @@ const handleChangeStatus = async (newStatus: string) => {
       setTemplateName('');
       setTemplateDesc('');
       setTimeout(() => setTemplateSaved(false), 4000);
+      toast('Modèle enregistré avec succès.');
     } catch (err) {
-      console.error(err);
+      toast('Erreur lors de l\'enregistrement du modèle.', 'error');
     } finally {
       setSavingTemplate(false);
     }
@@ -262,8 +263,11 @@ const handleChangeStatus = async (newStatus: string) => {
       setShowApprovalModal(null);
       setApprovalComment('');
       await fetchData();
+      if (action === 'submit') toast('Document soumis pour approbation.');
+      else if (action === 'approve') toast('Document approuvé.');
+      else toast('Document retourné pour révision.');
     } catch (err) {
-      console.error(err);
+      toast('Erreur lors du traitement.', 'error');
     } finally {
       setProcessingApproval(false);
     }
@@ -292,8 +296,7 @@ const handleChangeStatus = async (newStatus: string) => {
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la prévisualisation.');
+      toast('Erreur lors de la prévisualisation.', 'error');
     } finally {
       setPreviewing(false);
     }
@@ -337,8 +340,7 @@ const handleChangeStatus = async (newStatus: string) => {
       await api.delete(`/projects/${projectId}`);
       router.push('/projects');
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la suppression.');
+      toast('Erreur lors de la suppression du projet.', 'error');
     } finally {
       setDeleting(false);
     }

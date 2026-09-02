@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { toast } from '@/lib/toast';
 import { ArrowLeft, Building2, MapPin, Layers, Edit2, FolderOpen, Plus, Calendar } from 'lucide-react';
 
 interface Building {
@@ -119,7 +120,11 @@ export default function BuildingDetailPage() {
       });
       setShowEditModal(false);
       fetchData();
-    } catch (err) { console.error(err); }
+      toast('Bâtiment mis à jour.');
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Erreur lors de la mise à jour.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,8 +151,12 @@ export default function BuildingDetailPage() {
       });
       setShowProjectModal(false);
       setProjectForm({ name: '', documentType: 'PMU', year: new Date().getFullYear().toString() });
+      toast('Projet créé avec succès.');
       router.push(`/projects/${res.data.id}`);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Erreur lors de la création du projet.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
+    }
   };
 
   const inputStyle = {

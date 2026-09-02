@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { toast } from '@/lib/toast';
 
 interface Project {
   id: string;
@@ -170,7 +171,10 @@ export default function ProjectsPage() {
     try {
       await api.put(`/projects/${projectId}`, { status: 'IN_PROGRESS' });
       fetchData();
-    } catch (err) { console.error(err); }
+      toast('Projet réactivé.');
+    } catch (err) {
+      toast('Erreur lors de la réactivation.', 'error');
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -180,9 +184,9 @@ export default function ProjectsPage() {
       setSelectedIds(new Set());
       setShowBulkDelete(false);
       fetchData();
+      toast(`${selectedIds.size} projet${selectedIds.size > 1 ? 's' : ''} supprimé${selectedIds.size > 1 ? 's' : ''}.`);
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la suppression.');
+      toast('Erreur lors de la suppression des projets.', 'error');
     } finally {
       setBulkDeleting(false);
     }
@@ -212,7 +216,11 @@ export default function ProjectsPage() {
       setShowModal(false);
       setForm({ name: '', documentType: '', year: new Date().getFullYear().toString(), clientId: '', buildingId: '' });
       fetchData();
-    } catch (err) { console.error(err); }
+      toast('Projet créé avec succès.');
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Erreur lors de la création du projet.';
+      toast(Array.isArray(message) ? message[0] : message, 'error');
+    }
   };
 
   return (
