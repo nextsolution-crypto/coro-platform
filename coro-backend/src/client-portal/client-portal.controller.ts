@@ -129,4 +129,24 @@ export class ClientPortalController {
   async getMyBookings(@Request() req: any) {
     return this.clientPortalService.getBookingsForClient(req.clientUser.sub);
   }
+
+  @Get('buildings')
+  async getBuildings(@Request() req: any) {
+    return this.clientPortalService.getBuildings(
+      req.clientUser.clientId,
+      req.clientUser.organizationId,
+      req.clientUser.role,
+      req.clientUser.buildingIds,
+    );
+  }
+
+  @Get('notifications')
+  async getNotifications(@Request() req: any) {
+    return this.clientPortalService.getClientNotifications(
+      req.clientUser.clientId,
+      req.clientUser.organizationId,
+      req.clientUser.role,
+      req.clientUser.buildingIds,
+    );
+  }
 }

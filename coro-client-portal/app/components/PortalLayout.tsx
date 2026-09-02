@@ -1,8 +1,9 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getUser, clearAuth } from '../store/auth';
+import { useToast } from '../store/useToast';
+import ToastContainer from './ToastContainer';
 import {
   LayoutDashboard,
   FileText,
@@ -11,6 +12,8 @@ import {
   Menu,
   X,
   User,
+  Building2,
+  Bell,
 } from 'lucide-react';
 
 export default function PortalLayout({
@@ -23,6 +26,28 @@ export default function PortalLayout({
 
   const [user, setUser] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+  const { toasts, showToast, removeToast } = useToast();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { message, type } = (e as CustomEvent).detail;
+      showToast(message, type);
+    };
+    window.addEventListener('portal:toast', handler);
+    return () => window.removeEventListener('portal:toast', handler);
+  }, [showToast]);
+
+  useEffect(() => {
+    const fetchNotifCount = async () => {
+      try {
+        const { apiGet } = await import('../store/auth');
+        const res = await apiGet('/client-portal/notifications');
+        setNotifCount((res || []).filter((n: any) => n.priority === 'HIGH').length);
+      } catch { /* silencieux */ }
+    };
+    fetchNotifCount();
+  }, [pathname]);
 
   useEffect(() => {
     const u = getUser();
@@ -56,14 +81,20 @@ export default function PortalLayout({
       icon: FileText,
     },
     {
+      label: 'Bâtiments',
+      path: '/buildings',
+      icon: Building2,
+    },
+    {
       label: 'Activités',
       path: '/activities',
       icon: Calendar,
     },
     {
-      label: 'Réservations',
-      path: '/bookings',
-      icon: Calendar,
+      label: 'Notifications',
+      path: '/notifications',
+      icon: Bell,
+      badge: notifCount,
     },
     {
       label: 'Mon profil',
@@ -209,6 +240,7 @@ export default function PortalLayout({
                     backgroundColor: active ? '#FDEDEC' : 'transparent',
                     color: active ? '#C0392B' : '#6C757D',
                     whiteSpace: 'nowrap',
+                    position: 'relative',
                   }}
                   onMouseEnter={(e) => {
                     if (!active) {
@@ -223,6 +255,17 @@ export default function PortalLayout({
                 >
                   <Icon size={16} />
                   {item.label}
+                  {(item as any).badge > 0 && (
+                    <span style={{
+                      position: 'absolute', top: 4, right: 4,
+                      width: 16, height: 16, borderRadius: '50%',
+                      backgroundColor: '#C0392B', color: '#FFFFFF',
+                      fontSize: 10, fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {(item as any).badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -472,6 +515,7 @@ export default function PortalLayout({
       >
         {children}
       </main>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

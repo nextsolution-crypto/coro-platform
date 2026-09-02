@@ -389,4 +389,120 @@ export class ClientPortalService {
   async getBookingsForClient(clientUserId: string) {
     return this.bookingsService.getBookingsForClient(clientUserId);
   }
+
+  async getBuildings(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+    const where: any = { organizationId };
+    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
+      where.id = { in: buildingIds };
+    } else if (role === 'CLIENT_MANAGER') {
+      where.clientId = clientId;
+    }
+    const buildings = await this.prisma.building.findMany({
+      where,
+      include: {
+        _count: { select: { projects: true } },
+        projects: {
+          select: { status: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    return buildings.map(b => ({
+      id: b.id,
+      name: b.name,
+      address: b.address,
+      city: b.city,
+      province: b.province,
+      photoBase64: b.photoBase64,
+      responsableFirstName: b.responsableFirstName,
+      responsableLastName: b.responsableLastName,
+      responsableTitre: b.responsableTitre,
+      buildingType: b.buildingType,
+      floors: b.floors,
+      projectCount: b.projects.length,
+      validatedCount: b.projects.filter(p => p.status === 'VALIDATED').length,
+      activeCount: b.projects.filter(p => ['DRAFT', 'IN_PROGRESS'].includes(p.status)).length,
+    }));
+  }
+
+  async getClientNotifications(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+    const where: any = { organizationId };
+    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
+      where.buildingId = { in: buildingIds };
+    } else if (role === 'CLIENT_MANAGER') {
+      where.clientId = clientId;
+    }
+
+    const projects = await this.prisma.project.findMany({
+      where,
+      include: {
+        building: { select: { name: true } },
+        signatures: { select: { clientUser: { select: { email: true } } } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const notifications: any[] = [];
+    const now = new Date();
+
+    for (const p of projects) {
+      // Document validé et non signé
+      if (p.status === 'VALIDATED') {
+        const isSigned = p.signatures?.some(
+          (s: any) => s.clientUser
+        );
+        if (!isSigned) {
+          notifications.push({
+            id: `sign-${p.id}`,
+            type: 'TO_SIGN',
+            priority: 'HIGH',
+            title: 'Document à signer',
+            message: `${p.documentType} — ${p.name}`,
+            building: p.building?.name || '',
+            projectId: p.id,
+            createdAt: p.updatedAt,
+          });
+        }
+      }
+
+      // Document récemment validé (moins de 7 jours)
+      if (p.status === 'VALIDATED' && p.approvedAt) {
+        const daysSince = Math.floor((now.getTime() - new Date(p.approvedAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince <= 7) {
+          notifications.push({
+            id: `new-${p.id}`,
+            type: 'NEW_DOCUMENT',
+            priority: 'MEDIUM',
+            title: 'Nouveau document disponible',
+            message: `${p.documentType} — ${p.name} vient d'être approuvé`,
+            building: p.building?.name || '',
+            projectId: p.id,
+            createdAt: p.approvedAt,
+          });
+        }
+      }
+
+      // Document en révision depuis plus de 30 jours
+      if (p.status === 'IN_PROGRESS') {
+        const daysSince = Math.floor((now.getTime() - new Date(p.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince >= 30) {
+          notifications.push({
+            id: `stale-${p.id}`,
+            type: 'STALE',
+            priority: 'LOW',
+            title: 'Document en attente',
+            message: `${p.documentType} — ${p.name} est en cours depuis ${daysSince} jours`,
+            building: p.building?.name || '',
+            projectId: p.id,
+            createdAt: p.updatedAt,
+          });
+        }
+      }
+    }
+
+    return notifications.sort((a, b) => {
+      const priority = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      return (priority[a.priority as keyof typeof priority] || 0) - (priority[b.priority as keyof typeof priority] || 0);
+    });
+  }
 }

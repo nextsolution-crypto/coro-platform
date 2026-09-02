@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUser, clearAuth } from '../store/auth';
+import { toast } from '../store/toast';
 import PortalLayout from '../components/PortalLayout';
 
 const API_URL =
@@ -84,20 +85,18 @@ export default function ProfilePage() {
         );
       }
 
-      setSaved(true);
-
+            setSaved(true);
       setPasswordForm({
         newPassword: '',
         confirmPassword: '',
       });
-
+      toast('Mot de passe modifié avec succès.');
       window.setTimeout(() => {
         setSaved(false);
       }, 3000);
     } catch {
-      setError(
-        'Erreur lors du changement de mot de passe.'
-      );
+      setError('Erreur lors du changement de mot de passe.');
+      toast('Erreur lors du changement de mot de passe.', 'error');
     } finally {
       setSaving(false);
     }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiGet, apiPost, getUser } from '../../store/auth';
+import { toast } from '../../store/toast';
 import PortalLayout from '../../components/PortalLayout';
 import {
   Download,
@@ -189,8 +190,7 @@ const handleRefuse = async () => {
       setRefuseComment('');
       await fetchData();
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors du refus.');
+      toast('Erreur lors du refus.', 'error');
     } finally {
       setRefusing(false);
     }
@@ -214,11 +214,10 @@ const handleRefuse = async () => {
         anchor.click();
         anchor.remove();
       } else {
-        alert('Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.');
+        toast('Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.', 'info');
       }
     } catch (err) {
-      console.error(err);
-      alert('Erreur lors du téléchargement.');
+      toast('Erreur lors du téléchargement.', 'error');
     } finally {
       setDownloading(false);
     }
