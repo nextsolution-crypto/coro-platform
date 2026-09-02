@@ -4,6 +4,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
+import { useToast } from '@/hooks/useToast';
+import ToastContainer from '@/components/ui/ToastContainer';
 
 // ── Navigation par groupes ──────────────────────────────────
 const NAV_GROUPS = [
@@ -89,6 +91,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { toasts, showToast, removeToast } = useToast();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { message, type } = (e as CustomEvent).detail;
+      showToast(message, type);
+    };
+    window.addEventListener('coro:toast', handler);
+    return () => window.removeEventListener('coro:toast', handler);
+  }, [showToast]);
 
   const [updates, setUpdates]               = useState<UpcomingUpdate[]>([]);
   const [showNotif, setShowNotif]           = useState(false);
@@ -625,6 +637,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }
