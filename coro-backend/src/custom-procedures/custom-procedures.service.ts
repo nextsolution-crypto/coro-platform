@@ -273,10 +273,13 @@ RÉPONDS UNIQUEMENT avec ce JSON, sans texte avant ou après :
   async findAll(projectId: string, organizationId: string) {
     return this.prisma.customProcedure.findMany({
       where: {
-        organizationId,
         OR: [
-          { projectId },
-          { projectId: null, isPublished: true },
+          // Procédures du projet courant
+          { organizationId, projectId },
+          // Procédures publiées de l'organisation (toutes)
+          { organizationId, projectId: null, isPublished: true },
+          // Procédures globales CORO (super admin)
+          { isGlobal: true, status: 'ACTIVE' },
         ],
       },
       orderBy: { createdAt: 'desc' },
