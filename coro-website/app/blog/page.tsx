@@ -208,17 +208,19 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ lang?: string }>;
+    searchParams: Promise<{ lang?: string; category?: string }>;
 }) {
   const posts = await getPosts();
-
-  const { lang: langParam } =
+  const { lang: langParam, category: categoryParam } =
     await searchParams;
-
   const lang =
     langParam === 'en'
       ? 'en'
       : 'fr';
+  const activeCategory = categoryParam || '';
+  const filteredPosts = activeCategory
+    ? posts.filter((p: any) => p.category === activeCategory)
+    : posts;
 
 
   return (
@@ -578,7 +580,7 @@ export default async function BlogPage({
             }}
           >
 
-            {posts.map(
+            {filteredPosts.map(
               (post: any) => {
 
                 const title =
@@ -796,33 +798,23 @@ export default async function BlogPage({
                         }}
                       >
 
-                        {post.category && (
-
-                          <span
-                            style={{
-                              fontSize:
-                                11,
-
-                              fontWeight:
-                                700,
-
-                              color:
-                                '#FFFFFF',
-
-                              backgroundColor:
-                                categoryColor,
-
-                              padding:
-                                '2px 8px',
-
-                              borderRadius:
-                                4,
-                            }}
-                          >
-                            {post.category}
-                          </span>
-
-                        )}
+                          {post.category && (
+  <a
+    href={`/blog?category=${encodeURIComponent(post.category)}${lang === 'en' ? '&lang=en' : ''}`}
+    style={{
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#FFFFFF',
+      backgroundColor: categoryColor,
+      padding: '2px 8px',
+      borderRadius: 4,
+      textDecoration: 'none',
+      cursor: 'pointer',
+    }}
+  >
+    {post.category}
+  </a>
+)}
 
 
                         {date && (
