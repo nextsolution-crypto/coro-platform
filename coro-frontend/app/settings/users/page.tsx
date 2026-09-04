@@ -87,6 +87,24 @@ export default function TeamUsersPage() {
     }
   };
 
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+    let pwd = '';
+    for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    return pwd;
+  };
+
+  const handleResendInvite = async (u: TeamUser) => {
+    const tempPassword = generatePassword();
+    if (!confirm(`Réinitialiser le mot de passe de ${u.firstName} ${u.lastName} et renvoyer l'invitation ?`)) return;
+    try {
+      await api.post(`/users/organization/${u.id}/resend-invite`, { password: tempPassword });
+      alert(`✅ Invitation renvoyée à ${u.email} avec un nouveau mot de passe temporaire.`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors de l\'envoi.');
+    }
+  };
+
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     try {
       await api.put(`/users/organization/${userId}/active`, { isActive });
@@ -116,7 +134,10 @@ export default function TeamUsersPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setShowModal(true);
+            setForm(prev => ({ ...prev, password: generatePassword() }));
+          }}
           disabled={maxUsers !== null && users.length >= maxUsers}
           title={maxUsers !== null && users.length >= maxUsers ? `Limite de ${maxUsers} membre(s) atteinte pour votre licence` : ''}
           className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -249,16 +270,26 @@ export default function TeamUsersPage() {
 
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   {u.id !== user?.id && (
-                    <button
-                      onClick={() => handleToggleActive(u.id, !u.isActive)}
-                      className="text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
-                      style={{
-                        border: `1px solid ${u.isActive ? '#DEE2E6' : '#A9DFBF'}`,
-                        color: u.isActive ? '#6C757D' : '#27AE60',
-                      }}
-                    >
-                      {u.isActive ? 'Désactiver' : 'Réactiver'}
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleResendInvite(u)}
+                        className="text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                        style={{ border: '1px solid #AED6F1', color: '#2980B9' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Renvoyer l'invitation par courriel">
+                        ✉️ Renvoyer
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(u.id, !u.isActive)}
+                        className="text-xs font-medium px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                        style={{
+                          border: `1px solid ${u.isActive ? '#DEE2E6' : '#A9DFBF'}`,
+                          color: u.isActive ? '#6C757D' : '#27AE60',
+                        }}>
+                        {u.isActive ? 'Désactiver' : 'Réactiver'}
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

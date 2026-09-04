@@ -231,4 +231,66 @@ export class EmailService {
 </html>`;
     return this.sendEmail({ email: data.toEmail, name: data.toName }, subject, htmlContent);
   }
+
+    async sendWelcomeTeamMember(data: {
+    toEmail: string;
+    toFirstName: string;
+    toLastName: string;
+    organizationName: string;
+    temporaryPassword: string;
+    loginUrl: string;
+  }) {
+    const subject = `Bienvenue dans l'équipe CORO — ${data.organizationName}`;
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
+<style>
+  body{margin:0;padding:0;background:#F8F9FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+  .container{max-width:600px;margin:40px auto;background:#FFFFFF;border-radius:12px;overflow:hidden;border:1px solid #E9ECEF;}
+  .header{background:#C0392B;padding:28px 32px;}
+  .logo{font-size:28px;font-weight:900;color:#FFFFFF;letter-spacing:-1px;}
+  .body{padding:32px;}
+  .cred-card{background:#F8F9FA;border:1px solid #DEE2E6;border-radius:8px;padding:20px;margin:20px 0;}
+  .cred-label{font-size:12px;font-weight:700;color:#ADB5BD;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px 0;}
+  .cred-value{font-size:16px;font-weight:700;color:#2C3E50;margin:0 0 16px 0;}
+  .password{font-size:20px;font-weight:900;color:#C0392B;background:#FDEDEC;padding:8px 16px;border-radius:6px;letter-spacing:2px;}
+  .btn{display:inline-block;background:#C0392B;color:#FFFFFF;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-top:24px;}
+  .warning{background:#FEF9E7;border:1px solid #FAD7A0;border-radius:8px;padding:16px;margin-top:20px;font-size:13px;color:#7D6608;}
+  .footer{background:#F8F9FA;padding:20px 32px;text-align:center;font-size:13px;color:#ADB5BD;border-top:1px solid #E9ECEF;}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><div class="logo">CORO</div></div>
+    <div class="body">
+      <p style="font-size:22px;font-weight:700;color:#2C3E50;">Bienvenue dans l'équipe !</p>
+      <p style="font-size:15px;color:#6C757D;">Bonjour ${data.toFirstName},</p>
+      <p style="font-size:15px;color:#6C757D;">
+        Un compte CORO a été créé pour vous dans l'organisation <strong>${data.organizationName}</strong>. 
+        Voici vos identifiants de connexion :
+      </p>
+      <div class="cred-card">
+        <p class="cred-label">Adresse courriel</p>
+        <p class="cred-value">${data.toEmail}</p>
+        <p class="cred-label">Mot de passe temporaire</p>
+        <div class="password">${data.temporaryPassword}</div>
+      </div>
+      <div class="warning">
+        ⚠️ Ce mot de passe est temporaire. Vous devrez le changer lors de votre première connexion.
+      </div>
+      <a href="${data.loginUrl}" class="btn">Accéder à CORO →</a>
+      <p style="font-size:13px;color:#ADB5BD;margin-top:24px;">
+        Si vous n'attendiez pas cet accès, ignorez ce courriel ou contactez votre administrateur.
+      </p>
+    </div>
+    <div class="footer">© 2026 CORO — <a href="https://getcoro.io" style="color:#ADB5BD;">getcoro.io</a></div>
+  </div>
+</body>
+</html>`;
+    return this.sendEmail(
+      { email: data.toEmail, name: `${data.toFirstName} ${data.toLastName}` },
+      subject,
+      htmlContent,
+    );
+  }
 }

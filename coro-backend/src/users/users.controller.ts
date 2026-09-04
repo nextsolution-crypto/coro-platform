@@ -25,6 +25,17 @@ export class UsersController {
     return this.usersService.createInOrganization(req.user.organizationId, body);
   }
 
+  @Post('organization/:userId/resend-invite')
+  @UseGuards(AuthGuard('jwt'))
+  async resendInvite(
+    @Param('userId') userId: string,
+    @Body() body: { password: string },
+    @Request() req: any,
+  ) {
+    this.assertAdmin(req);
+    return this.usersService.resendInvite(userId, body.password, req.user.organizationId);
+  }
+
   @Put('organization/:id/active')
   @UseGuards(AuthGuard('jwt'))
   async toggleOrganizationUserActive(

@@ -1,11 +1,15 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
 import { getLimitsForLicense } from '../organizations/license-limits';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
@@ -139,7 +143,7 @@ export class UsersService {
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
-    return this.prisma.user.create({
+        const newUser = await this.prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
@@ -156,6 +160,52 @@ export class UsersService {
         role: true,
       },
     });
+
+    // Envoyer le courriel de bienvenue avec le mot de passe temporaire
+    try {
+      await this.emailService.sendWelcomeTeamMember({
+        toEmail: data.email,
+        toFirstName: data.firstName,
+        toLastName: data.lastName,
+        organizationName: organization.name,
+        temporaryPassword: data.password,
+        loginUrl: 'https://app.getcoro.io/login',
+      });
+    } catch (err) {
+      console.error('Erreur envoi courriel bienvenue:', err);
+      // Ne pas bloquer la création si l'email échoue
+    }
+
+    return newUser;
+  }
+  async resendInvite(userId: string, newPassword: string, organizationId: string) {
+    const u = await this.prisma.user.findFirst({ where: { id: userId, organizationId } });
+    if (!u) throw new NotFoundException('Utilisateur introuvable');
+
+    const organization = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+
+    // Réinitialiser le mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    // Renvoyer le courriel
+    try {
+      await this.emailService.sendWelcomeTeamMember({
+        toEmail: u.email,
+        toFirstName: u.firstName,
+        toLastName: u.lastName,
+        organizationName: organization?.name || 'CORO',
+        temporaryPassword: newPassword,
+        loginUrl: 'https://app.getcoro.io/login',
+      });
+    } catch (err) {
+      console.error('Erreur envoi courriel renvoi invitation:', err);
+    }
+
+    return { success: true };
   }
 
   async toggleActiveInOrganization(userId: string, organizationId: string, isActive: boolean) {
