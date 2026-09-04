@@ -17,17 +17,6 @@ export default function ProfilePage() {
     email: '',
     horaireBase: 40,
   });
-  const [companyForm, setCompanyForm] = useState({
-    companyName: '',
-    companyPhone: '',
-    companyEmail: '',
-    companyAddress: '',
-    companyWebsite: '',
-    companyTagline: '',
-    companyLogoFullB64: '',
-  });
-  const [savingCompany, setSavingCompany] = useState(false);
-  const [companySaved, setCompanySaved] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -47,15 +36,6 @@ export default function ProfilePage() {
         email: user.email || '',
         horaireBase: (user as any).horaireBase || 40,
       });
-      setCompanyForm({
-        companyName: (user as any).companyName || '',
-        companyPhone: (user as any).companyPhone || '',
-        companyEmail: (user as any).companyEmail || '',
-        companyAddress: (user as any).companyAddress || '',
-        companyWebsite: (user as any).companyWebsite || '',
-        companyTagline: (user as any).companyTagline || '',
-        companyLogoFullB64: (user as any).companyLogoFullB64 || (user as any).companyLogoB64 || '',
-      });
     }
   }, [user]);
 
@@ -73,42 +53,6 @@ export default function ProfilePage() {
     } catch (err) {
       toast('Erreur lors de la sauvegarde du profil.', 'error');
     } finally { setSaving(false); }
-  };
-
-  const handleSaveCompany = async () => {
-    setSavingCompany(true);
-    try {
-      const updated = await api.put('/users/me', companyForm);
-      // Mettre à jour le localStorage avec les nouvelles données
-      const currentUser = JSON.parse(localStorage.getItem('coro_user') || '{}');
-      const updatedUser = { ...currentUser, ...updated.data };
-      localStorage.setItem('coro_user', JSON.stringify(updatedUser));
-      setCompanyForm({
-        companyName: updated.data.companyName || '',
-        companyPhone: updated.data.companyPhone || '',
-        companyEmail: updated.data.companyEmail || '',
-        companyAddress: updated.data.companyAddress || '',
-        companyWebsite: updated.data.companyWebsite || '',
-        companyTagline: updated.data.companyTagline || '',
-        companyLogoFullB64: updated.data.companyLogoFullB64 || updated.data.companyLogoB64 || '',
-      });
-            setCompanySaved(true);
-      setTimeout(() => setCompanySaved(false), 3000);
-      initAuth();
-      toast('Organisation sauvegardée avec succès.');
-    } catch (err) {
-      toast('Erreur lors de la sauvegarde de l\'organisation.', 'error');
-    } finally { setSavingCompany(false); }
-  };
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCompanyForm({ ...companyForm, companyLogoFullB64: reader.result as string });
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleChangePassword = async () => {
@@ -255,125 +199,6 @@ export default function ProfilePage() {
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}>
             {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé' : 'Sauvegarder'}
           </button>
-        </div>
-
-        {/* Section Organisation émettrice */}
-        <div className="rounded-md p-4 sm:p-6 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#2C3E50', marginBottom: '4px' }}>
-            Organisation émettrice
-          </h2>
-          <p style={{ fontSize: '13px', color: '#6C757D', marginBottom: '20px' }}>
-            Ces informations apparaissent sur la dernière page de vos documents exportés.
-          </p>
-
-          {/* Logo */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '8px' }}>
-              Logo de l'organisation
-            </label>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              {companyForm.companyLogoFullB64 ? (
-                <img src={companyForm.companyLogoFullB64} alt="Logo" style={{ height: '48px', maxWidth: '160px', objectFit: 'contain', border: '1px solid #E9ECEF', borderRadius: '4px', padding: '4px' }} />
-              ) : (
-                <div style={{ height: '48px', width: '120px', backgroundColor: '#F8F9FA', border: '1px dashed #DEE2E6', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '11px', color: '#ADB5BD' }}>Aucun logo</span>
-                </div>
-              )}
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <input type="file" accept="image/*" id="logo-upload" style={{ display: 'none' }} onChange={handleLogoUpload} />
-                <label htmlFor="logo-upload" className="w-full sm:w-auto text-center" style={{ cursor: 'pointer', padding: '8px 16px', backgroundColor: '#F8F9FA', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50' }}>
-                  {companyForm.companyLogoFullB64 ? 'Changer le logo' : 'Téléverser un logo'}
-                </label>
-                {companyForm.companyLogoFullB64 && (
-                  <button onClick={() => setCompanyForm({ ...companyForm, companyLogoFullB64: '' })}
-                    className="w-full sm:w-auto"
-                    style={{ padding: '8px 12px', backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', borderRadius: '4px', fontSize: '13px', color: '#C0392B', cursor: 'pointer' }}>
-                    Retirer
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Champs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Nom de l'organisation</label>
-              <input
-                value={companyForm.companyName}
-                onChange={e => setCompanyForm({ ...companyForm, companyName: e.target.value })}
-                placeholder="Ex: CORO Inc."
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Slogan / Tagline</label>
-              <input
-                value={companyForm.companyTagline}
-                onChange={e => setCompanyForm({ ...companyForm, companyTagline: e.target.value })}
-                placeholder="Ex: Expert-conseil en résilience"
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Téléphone</label>
-              <input
-                value={companyForm.companyPhone}
-                onChange={e => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                  let formatted = digits;
-                  if (digits.length >= 7) formatted = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
-                  else if (digits.length >= 4) formatted = `(${digits.slice(0,3)}) ${digits.slice(3)}`;
-                  else if (digits.length >= 1) formatted = `(${digits}`;
-                  setCompanyForm({ ...companyForm, companyPhone: formatted });
-                }}
-                placeholder="Ex: (514) 791-7871"
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Courriel</label>
-              <input
-                value={companyForm.companyEmail}
-                onChange={e => setCompanyForm({ ...companyForm, companyEmail: e.target.value })}
-                placeholder="Ex: info@votreentreprise.com"
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Site web</label>
-              <input
-                value={companyForm.companyWebsite}
-                onChange={e => setCompanyForm({ ...companyForm, companyWebsite: e.target.value })}
-                placeholder="Ex: www.votreentreprise.com"
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#2C3E50', display: 'block', marginBottom: '6px' }}>Adresse</label>
-              <input
-                value={companyForm.companyAddress}
-                onChange={e => setCompanyForm({ ...companyForm, companyAddress: e.target.value })}
-                placeholder="Ex: 123 Rue Principale, Montréal, QC"
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #DEE2E6', borderRadius: '4px', fontSize: '13px', color: '#2C3E50', boxSizing: 'border-box' }}
-              />
-            </div>
-          </div>
-
-          {/* Bouton sauvegarder */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <button
-              onClick={handleSaveCompany}
-              disabled={savingCompany}
-              className="w-full sm:w-auto"
-              style={{ padding: '10px 24px', backgroundColor: '#C0392B', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '600', cursor: savingCompany ? 'not-allowed' : 'pointer', opacity: savingCompany ? 0.7 : 1 }}
-            >
-              {savingCompany ? 'Sauvegarde...' : 'Sauvegarder l\'organisation'}
-            </button>
-            {companySaved && (
-              <span style={{ fontSize: '13px', color: '#27AE60', fontWeight: '600' }}>✅ Sauvegardé !</span>
-            )}
-          </div>
         </div>
 
         {/* Changer le mot de passe */}
