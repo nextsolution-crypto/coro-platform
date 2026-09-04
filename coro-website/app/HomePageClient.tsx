@@ -1235,7 +1235,7 @@ export default function WebAppProgress() {
             </div>
             
             <a
-              href="https://app.getcoro.io"
+              href="/sentinelle"
               style={{
                 display: 'inline-block', padding: '14px 28px', borderRadius: 8,
                 backgroundColor: '#C0392B', color: '#FFFFFF',
@@ -1243,7 +1243,7 @@ export default function WebAppProgress() {
                 whiteSpace: 'nowrap', flexShrink: 0,
               }}
             >
-              {'Essayer Sentinelle →'}
+              {'Découvrir Sentinelle →'}
             </a>
           </div>
         </div>
