@@ -117,6 +117,8 @@ export interface BuildingConfig {
 
   // ========== DÉTECTEURS DE GAZ ==========
   detecteurCO: boolean;
+  detecteurCOSeuil1?: number;
+  detecteurCOSeuil2?: number;
   detecteurGazNaturel: boolean;
   detecteurPropane: boolean;
   detecteurAmmoniac: boolean;
@@ -368,7 +370,8 @@ export class RulesEngineService {
 
     if (config.generatrice) {
       result.proceduresActives.push('PROC-PANNE-COURANT');
-      if (!config.equipementsSecours || config.equipementsSecours.length === 0) {
+      const equipSecours = (config as any).equipementsSecours || (config as any).equipementsSoins || [];
+      if (!equipSecours || equipSecours.length === 0) {
         result.validations.push({
           type: 'RECOMMANDATION',
           code: 'GENERATRICE-001',
@@ -432,11 +435,14 @@ export class RulesEngineService {
     }
 
     if (config.detecteurCO) {
-      result.validations.push({
-        type: 'INFO',
-        code: 'DETECTEUR-001',
-        message: 'Detecteur CO : documenter seuils activation (25 ppm alarme, 150 ppm max).',
-      });
+      const seuilsRemplis = config.detecteurCOSeuil1 && config.detecteurCOSeuil2;
+      if (!seuilsRemplis) {
+        result.validations.push({
+          type: 'INFO',
+          code: 'DETECTEUR-001',
+          message: 'Detecteur CO : documenter seuils activation (25 ppm alarme, 150 ppm max).',
+        });
+      }
     }
   }
 
@@ -641,7 +647,8 @@ export class RulesEngineService {
       });
     }
 
-    if (!config.salleGicleurs && config.gicleurs) {
+    const salleGicleurs = config.salleGicleurs || (config as any).salleGicleursLocalisation;
+    if (!salleGicleurs && config.gicleurs) {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'EMPL-003',
@@ -650,15 +657,20 @@ export class RulesEngineService {
     }
 
     // Validation premiers soins
-    if (!config.trousseSecoursPresente) {
+        const equipSoins = (config as any).equipementsSoins || [];
+    const hasTrausse = config.trousseSecoursPresente ||
+      equipSoins.some((e: any) => e.type && e.type.toLowerCase().includes('premiers soins'));
+    const hasDEA = config.defibrillateur ||
+      equipSoins.some((e: any) => e.type && e.type.toLowerCase().includes('dea'));
+
+    if (!hasTrausse) {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'SOINS-001',
         message: 'Trousse de premiers soins non declaree. Obligatoire selon le Code du travail.',
       });
     }
-
-    if (!config.defibrillateur && config.floors > 3) {
+    if (!hasDEA && config.floors > 3) {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'SOINS-002',
