@@ -68,12 +68,18 @@ function normalizeProvince(raw: string): string {
 
 // ── DynamicListEditor ────────────────────────────────────────
 
-function DynamicListEditor({ field, items, onChange }: {
+function DynamicListEditor({ field, items, onChange, autoExpandIdx }: {
   field: Field;
   items: any[];
   onChange: (items: any[]) => void;
+  autoExpandIdx?: number | null;
 }) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  useEffect(() => {
+    if (autoExpandIdx !== null && autoExpandIdx !== undefined) {
+      setExpandedIdx(autoExpandIdx);
+    }
+  }, [autoExpandIdx]);
   const schema = field.schema || [];
 
   const initItem = () => {
@@ -1060,6 +1066,7 @@ export default function ConfiguratorPage() {
                           field={field}
                           items={lists[field.key] || []}
                           onChange={items => updateList(field.key, items)}
+                          autoExpandIdx={field.key === 'matieresList' ? (lists[field.key] || []).length - 1 : null}
                         />
                       </div>
                     )}
