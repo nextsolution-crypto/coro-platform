@@ -475,10 +475,10 @@ export default function ConfiguratorPage() {
         savedConfig.typeDocument = projectRes.data.documentType;
       }
       // Pré-remplir l'année depuis le projet (ou année courante par défaut)
-      if (!savedConfig.anneeDocument) {
-        savedConfig.anneeDocument = projectRes.data.year
-          ? String(projectRes.data.year)
-          : String(new Date().getFullYear());
+      if (!savedConfig.anneDocument) {
+        savedConfig.anneDocument = projectRes.data.year
+          ? projectRes.data.year
+          : new Date().getFullYear();
       }
       // Pré-remplir la date de relevé avec la date courante si vide
       if (!savedConfig.dateReleve) {
