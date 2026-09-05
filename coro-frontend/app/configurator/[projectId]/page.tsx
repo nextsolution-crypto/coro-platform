@@ -453,11 +453,17 @@ export default function ConfiguratorPage() {
         if (!savedConfig.ville && building.city) {
           savedConfig.ville = building.city;
         }
-        if (!savedConfig.responsableNom && building.responsableNom) {
-          savedConfig.responsableNom = building.responsableNom;
+        if (!savedConfig.responsableNom && (building.responsableFirstName || building.responsableLastName)) {
+          savedConfig.responsableNom = `${building.responsableFirstName || ''} ${building.responsableLastName || ''}`.trim();
         }
         if (!savedConfig.responsableTitre && building.responsableTitre) {
           savedConfig.responsableTitre = building.responsableTitre;
+        }
+        if (!savedConfig.responsableEmail && building.responsableEmail) {
+          savedConfig.responsableEmail = building.responsableEmail;
+        }
+        if (!savedConfig.responsableTelephone && building.responsablePhone) {
+          savedConfig.responsableTelephone = building.responsablePhone;
         }
         if (!savedConfig.floors && building.floors) {
           savedConfig.floors = building.floors;
@@ -467,6 +473,16 @@ export default function ConfiguratorPage() {
       // Pré-remplir le type de document depuis le projet
       if (!savedConfig.typeDocument && projectRes.data.documentType) {
         savedConfig.typeDocument = projectRes.data.documentType;
+      }
+      // Pré-remplir l'année depuis le projet (ou année courante par défaut)
+      if (!savedConfig.anneeDocument) {
+        savedConfig.anneeDocument = projectRes.data.year
+          ? String(projectRes.data.year)
+          : String(new Date().getFullYear());
+      }
+      // Pré-remplir la date de relevé avec la date courante si vide
+      if (!savedConfig.dateReleve) {
+        savedConfig.dateReleve = new Date().toISOString().split('T')[0];
       }
 
       const defaults: Record<string, any> = {};
