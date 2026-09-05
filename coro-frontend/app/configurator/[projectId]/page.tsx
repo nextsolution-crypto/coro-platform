@@ -445,7 +445,22 @@ export default function ConfiguratorPage() {
       const building = projectRes.data.building;
       if (building) {
         if (!savedConfig.buildingType && building.buildingType) {
-          savedConfig.buildingType = building.buildingType;
+          // Normalisation pour correspondre aux options du configurateur
+          const buildingTypeMap: Record<string, string> = {
+            'tour a bureaux': 'Tour à bureaux',
+            'tour à bureaux': 'Tour à bureaux',
+            'immeuble residentiel': 'Immeuble résidentiel',
+            'immeuble résidentiel': 'Immeuble résidentiel',
+            'industriel': 'Industriel',
+            'commercial': 'Commercial',
+            'institutionnel': 'Institutionnel',
+            'hotel': 'Hôtel',
+            'hôtel': 'Hôtel',
+            'centre commercial': 'Centre commercial',
+            'autre': 'Autre',
+          };
+          const normalized = buildingTypeMap[building.buildingType.toLowerCase()] || building.buildingType;
+          savedConfig.buildingType = normalized;
         }
         if (!savedConfig.province && building.province) {
           savedConfig.province = normalizeProvince(building.province);

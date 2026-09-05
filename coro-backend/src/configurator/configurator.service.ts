@@ -94,8 +94,8 @@ export class ConfiguratorService {
           title: 'Description generale',
           icon: '🏢',
           fields: [
-            { key: 'buildingType', label: 'Type de batiment', type: 'select',
-              options: ['Tour a bureaux', 'Immeuble residentiel', 'Industriel', 'Commercial', 'Institutionnel', 'Hotel', 'Centre commercial', 'Autre'] },
+            { key: 'buildingType', label: 'Type de bâtiment', type: 'select',
+              options: ['Tour à bureaux', 'Immeuble résidentiel', 'Industriel', 'Commercial', 'Institutionnel', 'Hôtel', 'Centre commercial', 'Autre'] },
             { key: 'usagePrincipal', label: 'Usage principal (classification)', type: 'select',
               tooltip: 'Classification selon le Code national du batiment (CNB). Ex: D = etablissements d affaires (bureaux), E = commerces, F1/F2/F3 = industriel selon le niveau de risque. Determiner avec le proprietaire ou le gestionnaire.',
               options: [
