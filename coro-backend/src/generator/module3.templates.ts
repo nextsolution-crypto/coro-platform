@@ -249,7 +249,12 @@ export function activateSystemRoles(
         updated.isActive = config?.panneauType === 'DOUBLE';
         break;
       case 'sys_resp_secteur':
-        updated.isActive = !!(config?.multiLocataires || ctx.multiLocataires);
+        updated.isActive = !!(
+          config?.multiLocataires ||
+          ctx.multiLocataires ||
+          (config?.floors && config.floors > 3) ||
+          (ctx.floors && ctx.floors > 3)
+        );
         break;
       case 'sys_accompagnateur':
         updated.isActive = !!(config?.personnelHandicap);
