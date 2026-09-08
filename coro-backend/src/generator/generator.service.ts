@@ -258,13 +258,23 @@ private async loadProceduresFromDB(
       select: { content: true },
     });
     const existingContent = (existingDoc?.content as any) || {};
-    const section2_2 = existingContent?.module2?.section2_2 || [];
+    // Chercher les données M2 dans les deux structures possibles
+    const section2_2 =
+      existingContent?.module2?.section2_2 ||
+      existingContent?.modules_fr?.find((m: any) => m.moduleNumber === 2)
+        ?.sections?.find((s: any) => s.id === '2.2' || s.id === 'm2_contacts')?.contacts ||
+      [];
     const existingCustomRoles = existingContent?.module3?.customRoles || [];
 
     const module3Result = isPsi ? null : generateModule3(ctx, config, section2_2, existingCustomRoles);
 
     // Récupère les rôles actifs depuis Module 3
-    const savedOrgRoles = existingContent?.module3?.orgRoles || [];
+        // Chercher les rôles actifs dans les deux structures possibles
+    const savedOrgRoles =
+      existingContent?.module3?.orgRoles ||
+      existingContent?.modules_fr?.find((m: any) => m.moduleNumber === 3)
+        ?.sections?.find((s: any) => s.id === '3.1')?.orgRoles ||
+      [];
 
     const activeRoleCodes = savedOrgRoles.length > 0
       ? savedOrgRoles
