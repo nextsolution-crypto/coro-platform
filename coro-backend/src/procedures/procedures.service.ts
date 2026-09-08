@@ -41,7 +41,14 @@ export class ProceduresService {
   }
 
   // ── Toutes les procédures d'un projet (avec overrides appliqués) ──
-  async findAllForProject(organizationId: string, projectId: string) {
+    async findAllForProject(organizationId: string, projectId: string) {
+    // Récupérer le documentType du projet pour filtrer les procédures
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { documentType: true },
+    });
+    const documentType = project?.documentType || 'PMU';
+
     const defaults = await this.prisma.procedureDefault.findMany({
       where: { isActive: true },
       orderBy: { code: 'asc' },
@@ -53,15 +60,24 @@ export class ProceduresService {
 
     const overrideMap = new Map(overrides.map(o => [o.procedureId, o]));
 
-    return defaults.map(d => {
-      const override = overrideMap.get(d.id);
-      return {
-        ...d,
-        content: override ? override.content : d.content,
-        isOverridden: !!override,
-        isActive: override ? override.isActive : true,
-      };
-    });
+    return defaults
+      .filter(d => {
+        // Filtrer par documentType via le contenu JSON
+        const content = d.content as any;
+        const docTypes: string[] = content?.documentTypes || [];
+        // Si pas de documentTypes défini, inclure par défaut
+        if (docTypes.length === 0) return true;
+        return docTypes.includes(documentType);
+      })
+      .map(d => {
+        const override = overrideMap.get(d.id);
+        return {
+          ...d,
+          content: override ? override.content : d.content,
+          isOverridden: !!override,
+          isActive: override ? override.isActive : true,
+        };
+      });
   }
 
   // ── Sauvegarder un override par projet ─────────────────────
