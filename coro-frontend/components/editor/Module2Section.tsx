@@ -66,7 +66,7 @@ export default function Module2Section({
         const res = await api.get(`/projects/${projectId}/module2`);
         const saved = res.data?.module2;
 
-        if (saved && saved.section2_1?.length > 0) {
+        if (saved && saved.updatedAt) {
           // Données sauvegardées trouvées → on les utilise
           setSection2_1(ensureIds(saved.section2_1));
           setSection2_2(ensureIds(saved.section2_2));
