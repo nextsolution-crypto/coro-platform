@@ -62,11 +62,15 @@ private async loadProceduresFromDB(
       const tsCodeSet = new Set(autoFromTS.map(p => p?.code));
       const allTSCodes = new Set(getAllProcedures().map(p => p?.code));
       const newDefaultProcedures = allProcs
-        .filter(p =>
-          !allTSCodes.has(p.code) &&
-          !customProcedureIds.includes(p.id) &&
-          p.activationRule === 'always'
-        )
+        .filter(p => {
+          if (allTSCodes.has(p.code)) return false;
+          if (customProcedureIds.includes(p.id)) return false;
+          if (p.activationRule !== 'always') return false;
+          // Filtrer par documentType
+          const docTypes: string[] = p.documentTypes || [];
+          if (docTypes.length === 0) return true;
+          return docTypes.includes(documentType);
+        })
         .map(p => ({
           ...p,
           roleSections: (p.roleSections || []).filter((rs: any) =>
