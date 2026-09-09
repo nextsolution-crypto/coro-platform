@@ -282,9 +282,9 @@ export default function EngagementPanel({
                   "
                   style={{ color: '#6C757D' }}
                 >
-                  Premier accès le{' '}
+                  Dernier accès le{' '}
                   {new Date(
-                    data.firstOpenedAt
+                    data.lastOpenedAt || data.firstOpenedAt
                   ).toLocaleDateString('fr-CA', {
                     day: 'numeric',
                     month: 'long',
