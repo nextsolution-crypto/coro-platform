@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Qu
 import { AuthGuard } from '@nestjs/passport';
 import { ProjectsService } from './projects.service';
 import { AuditService } from '../audit/audit.service';
+import { ClientPortalService } from '../client-portal/client-portal.service';
 
 @Controller('projects')
 @UseGuards(AuthGuard('jwt'))
@@ -9,6 +10,7 @@ export class ProjectsController {
   constructor(
     private projectsService: ProjectsService,
     private auditService: AuditService,
+    private clientPortalService: ClientPortalService,
   ) {}
 
   @Get()
@@ -160,5 +162,11 @@ export class ProjectsController {
   @UseGuards(AuthGuard('jwt'))
   async getComments(@Param('id') id: string, @Request() req: any) {
     return this.projectsService.getComments(id, req.user.organizationId);
+  }
+
+  @Get(':id/engagement')
+  @UseGuards(AuthGuard('jwt'))
+  async getEngagement(@Param('id') id: string) {
+    return this.clientPortalService.getEngagement(id);
   }
 }

@@ -34,7 +34,7 @@ export default function EngagementPanel({
 
       try {
         const res = await api.get(
-          `/client-portal/projects/${projectId}/engagement`
+          `/projects/${projectId}/engagement`
         );
 
         setData(res.data);
