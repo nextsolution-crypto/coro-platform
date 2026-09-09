@@ -285,8 +285,8 @@ export default function ProjectDetailPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
-          moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
+          selectedModules: [1, 2, 3, 4, 6, 7, 8],
+          moduleOrder: [1, 2, 3, 4, 6, 7, 8],
           language: 'fr',
           isPreview: true,
         }),
