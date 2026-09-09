@@ -26,7 +26,7 @@ export class RemindersService {
         organization: {
           include: {
             users: {
-              where: { role: { in: ['ADMIN', 'ADVISOR'] as any } },
+              where: { role: { in: ['ADMIN', 'OPERATOR'] } },
               take: 1,
             },
           },
