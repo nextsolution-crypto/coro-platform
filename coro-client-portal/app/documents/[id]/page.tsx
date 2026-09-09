@@ -213,6 +213,10 @@ const handleRefuse = async () => {
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
+        // Tracker le téléchargement
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const device = isMobile ? 'mobile' : 'desktop';
+        await apiPost(`/client-portal/projects/${projectId}/engagement`, { event: 'downloaded', device });
       } else {
         toast('Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.', 'info');
       }
