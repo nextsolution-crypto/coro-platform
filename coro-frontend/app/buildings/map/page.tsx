@@ -220,7 +220,7 @@ export default function BuildingsMapPage() {
 
       {/* Légende */}
       <div style={{
-        position: 'absolute', bottom: 24, left: 16, zIndex: 1000,
+        position: 'absolute', top: 80, left: 16, zIndex: 1000,
         backgroundColor: 'rgba(15,25,35,0.9)',
         borderRadius: 10, padding: '12px 16px',
         border: '1px solid rgba(255,255,255,0.06)',
