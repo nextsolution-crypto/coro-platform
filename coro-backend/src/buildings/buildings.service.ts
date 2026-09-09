@@ -30,14 +30,33 @@ export class BuildingsService {
   ) {}
 
   async findAll(organizationId: string, clientId?: string) {
-    return this.prisma.building.findMany({
+    const buildings = await this.prisma.building.findMany({
       where: { isActive: true, organizationId, ...(clientId && { clientId }) },
       orderBy: { createdAt: 'desc' },
       include: {
         client: { select: { id: true, name: true } },
         _count: { select: { projects: true } },
+        projects: {
+          select: {
+            id: true,
+            name: true,
+            documentType: true,
+            status: true,
+            year: true,
+            updatedAt: true,
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
       },
     });
+    return buildings.map(b => ({
+      ...b,
+      latitude: b.latitude,
+      longitude: b.longitude,
+      projectCount: b.projects.length,
+      validatedCount: b.projects.filter(p => p.status === 'VALIDATED').length,
+      activeCount: b.projects.filter(p => ['DRAFT', 'IN_PROGRESS'].includes(p.status)).length,
+    }));
   }
 
   async findOne(id: string, organizationId: string) {

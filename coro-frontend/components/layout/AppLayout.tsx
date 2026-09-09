@@ -28,6 +28,7 @@ const NAV_GROUPS = [
     items: [
       { label: 'Clients',    path: '/clients',              icon: '👥' },
       { label: 'Bâtiments', path: '/buildings',             icon: '🏗' },
+      { label: 'Carte',     path: '/buildings/map',          icon: '🗺️' },
       { label: 'Conformité', path: '/buildings/compliance', icon: '✅' },
     ],
   },
