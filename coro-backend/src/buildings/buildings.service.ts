@@ -3,6 +3,25 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
 
+async function geocodeAddress(address: string, city: string, province: string): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const query = encodeURIComponent(`${address}, ${city}, ${province}, Canada`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
+      headers: { 'User-Agent': 'CORO-Platform/1.0 (info@getcoro.io)' },
+    });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return {
+        latitude: parseFloat(data[0].lat),
+        longitude: parseFloat(data[0].lon),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class BuildingsService {
   constructor(
@@ -60,7 +79,15 @@ export class BuildingsService {
     responsableEmail?: string;
     responsablePhone?: string;
   }) {
-    const building = await this.prisma.building.create({ data });
+    // Geocoding automatique
+    const coords = await geocodeAddress(data.address, data.city, data.province);
+    const building = await this.prisma.building.create({
+      data: {
+        ...data,
+        latitude: coords?.latitude ?? null,
+        longitude: coords?.longitude ?? null,
+      },
+    });
 
     // Créer automatiquement le compte CLIENT_MANAGER si email fourni
     if (data.responsableEmail) {
@@ -140,7 +167,21 @@ export class BuildingsService {
     const oldEmail = oldBuilding?.responsableEmail;
     const newEmail = data.responsableEmail;
 
-    const updated = await this.prisma.building.update({ where: { id }, data });
+    // Regéocoder si l'adresse a changé
+    let coords: { latitude: number; longitude: number } | null = null;
+    if (data.address || data.city || data.province) {
+      const addr = data.address || oldBuilding?.address || '';
+      const city = data.city || oldBuilding?.city || '';
+      const prov = data.province || oldBuilding?.province || '';
+      coords = await geocodeAddress(addr, city, prov);
+    }
+    const updated = await this.prisma.building.update({
+      where: { id },
+      data: {
+        ...data,
+        ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
+      },
+    });
 
     // Si le responsable a changé
     if (newEmail && newEmail !== oldEmail) {

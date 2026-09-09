@@ -414,7 +414,15 @@ export class ClientPortalService {
       include: {
         _count: { select: { projects: true } },
         projects: {
-          select: { status: true },
+          select: {
+            id: true,
+            name: true,
+            documentType: true,
+            status: true,
+            year: true,
+            updatedAt: true,
+          },
+          orderBy: { updatedAt: 'desc' },
         },
       },
       orderBy: { name: 'asc' },
@@ -425,6 +433,8 @@ export class ClientPortalService {
       address: b.address,
       city: b.city,
       province: b.province,
+      latitude: b.latitude,
+      longitude: b.longitude,
       photoBase64: b.photoBase64,
       responsableFirstName: b.responsableFirstName,
       responsableLastName: b.responsableLastName,
@@ -434,6 +444,7 @@ export class ClientPortalService {
       projectCount: b.projects.length,
       validatedCount: b.projects.filter(p => p.status === 'VALIDATED').length,
       activeCount: b.projects.filter(p => ['DRAFT', 'IN_PROGRESS'].includes(p.status)).length,
+      projects: b.projects,
     }));
   }
 

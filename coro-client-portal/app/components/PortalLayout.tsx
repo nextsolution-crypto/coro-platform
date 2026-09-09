@@ -14,6 +14,7 @@ import {
   User,
   Building2,
   Bell,
+  Map,
 } from 'lucide-react';
 
 export default function PortalLayout({
@@ -84,6 +85,11 @@ export default function PortalLayout({
       label: 'Bâtiments',
       path: '/buildings',
       icon: Building2,
+    },
+    {
+      label: 'Carte',
+      path: '/map',
+      icon: Map,
     },
     {
       label: 'Activités',
