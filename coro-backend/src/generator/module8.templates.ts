@@ -345,6 +345,12 @@ Les travaux produisant de la poussière sont, de manière exhaustive, des travau
 Il est formellement interdit de peinturer tout matériel de protection incendie soit : détecteur incendie, gicleurs et station manuelle.`,
       },
       {
+        id: '8.10',
+        title: 'ANNEXE — FICHE D\'INFORMATION AU SERVICE INCENDIE (VÉ ET SOURCES D\'EAU)',
+        type: 'text',
+        content: '',
+      },
+      {
         id: '8.11',
         title: 'REGISTRE D\'ANALYSE DE RISQUE — PROCÉDURES CLIMATIQUES BOMA',
         type: 'risk_analysis',
@@ -555,6 +561,12 @@ When performing work that may produce heat, flames or sparks, it is mandatory to
 
 **NON-COMPLIANCE**
 In the event of non-compliance, the permit will be revoked and penalties may be applied.`,
+      },
+      {
+        id: '8.10',
+        title: 'APPENDIX — FIRE DEPARTMENT INFORMATION SHEET (EV & WATER SOURCES)',
+        type: 'text',
+        content: '',
       },
       {
         id: '8.11',
