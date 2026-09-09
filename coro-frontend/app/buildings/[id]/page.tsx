@@ -452,6 +452,9 @@ export default function BuildingDetailPage() {
                     style={inputStyle}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
                     onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                  <p className="text-xs mt-1.5" style={{ color: '#6C757D' }}>
+                    👤 Cette personne a accès au portail client CORO (vue bâtiment — projets liés à ce bâtiment).
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#495057' }}>Téléphone</label>
