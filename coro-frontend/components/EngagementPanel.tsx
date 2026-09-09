@@ -12,7 +12,13 @@ interface EngagementData {
   totalDurationSeconds: number;
   dominantDevice: string | null;
   daysSinceFirstOpen: number | null;
-  status: 'not_opened' | 'opened' | 'viewed' | 'downloaded';
+  status: 'not_opened' | 'opened' | 'viewed' | 'downloaded' | 'signed';
+  signature: {
+    fullName: string;
+    email: string;
+    signedAt: string;
+    comment: string | null;
+  } | null;
 }
 
 export default function EngagementPanel({
@@ -92,6 +98,13 @@ export default function EngagementPanel({
       bg: '#EAFAF1',
       border: '#A9DFBF',
       icon: '✓',
+    },
+    signed: {
+      label: 'Signé',
+      color: '#8E44AD',
+      bg: '#F5EEF8',
+      border: '#D2B4DE',
+      icon: '✍️',
     },
   };
 
@@ -449,26 +462,51 @@ export default function EngagementPanel({
 
           {data.status === 'not_opened' && (
             <div
-              className="
-                rounded-md
-                p-3
-                mt-3
-              "
-              style={{
-                backgroundColor: '#FEF9E7',
-                border: '1px solid #FAD7A0',
-              }}
+              className="rounded-md p-3 mt-3"
+              style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}
             >
-              <p
-                className="
-                  text-xs
-                  leading-relaxed
-                "
-                style={{ color: '#F39C12' }}
-              >
+              <p className="text-xs leading-relaxed" style={{ color: '#F39C12' }}>
                 💡 Le client n&apos;a pas encore consulté le document.
                 Pensez à lui envoyer un rappel ou à utiliser un magic link.
               </p>
+            </div>
+          )}
+
+          {/* SIGNATURE */}
+          {data.signature && (
+            <div
+              className="rounded-md p-4 mt-4"
+              style={{ backgroundColor: '#F5EEF8', border: '1px solid #D2B4DE' }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#8E44AD' }}>
+                ✍️ Signature électronique
+              </p>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#6C757D' }}>Signataire</span>
+                  <span className="text-xs font-semibold" style={{ color: '#2C3E50' }}>{data.signature.fullName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#6C757D' }}>Courriel</span>
+                  <span className="text-xs" style={{ color: '#2C3E50' }}>{data.signature.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs" style={{ color: '#6C757D' }}>Date</span>
+                  <span className="text-xs font-semibold" style={{ color: '#8E44AD' }}>
+                    {new Date(data.signature.signedAt).toLocaleDateString('fr-CA', {
+                      year: 'numeric', month: 'long', day: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                {data.signature.comment && (
+                  <div className="mt-2 pt-2" style={{ borderTop: '1px solid #D2B4DE' }}>
+                    <p className="text-xs italic" style={{ color: '#6C757D' }}>
+                      « {data.signature.comment} »
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

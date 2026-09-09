@@ -357,6 +357,11 @@ export class ClientPortalService {
       ? Math.floor((new Date().getTime() - new Date(firstOpen).getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
+    const signature = await this.prisma.documentSignature.findFirst({
+      where: { projectId },
+      orderBy: { signedAt: 'desc' },
+    });
+
     return {
       totalOpens: opened.length,
       totalViews: viewed.length,
@@ -367,10 +372,17 @@ export class ClientPortalService {
       dominantDevice,
       daysSinceFirstOpen: daysSinceExport,
       engagements: engagements.slice(0, 10),
-      status: opened.length === 0 ? 'not_opened'
+      status: signature ? 'signed'
+        : opened.length === 0 ? 'not_opened'
         : downloaded.length > 0 ? 'downloaded'
         : viewed.length > 0 ? 'viewed'
         : 'opened',
+      signature: signature ? {
+        fullName: signature.fullName,
+        email: signature.email,
+        signedAt: signature.signedAt,
+        comment: signature.comment,
+      } : null,
     };
   }
 
