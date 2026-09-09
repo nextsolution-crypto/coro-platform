@@ -106,12 +106,17 @@ export default function MapPage() {
 
     mapInstanceRef.current = map;
 
-    // Tuiles sombres CartoDB
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap © CARTO',
-      subdomains: 'abcd',
+    // Tuiles OSM avec filtre CSS sombre — 100% gratuit, aucune clé requise
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
-    }).addTo(map);
+    });
+    tileLayer.addTo(map);
+
+    // Appliquer le filtre sombre via CSS sur le canvas Leaflet
+    const style = document.createElement('style');
+    style.textContent = `.leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.7) contrast(0.9) !important; }`;
+    document.head.appendChild(style);
 
     // Contrôle zoom en bas à droite
     L.control.zoom({ position: 'bottomright' }).addTo(map);
