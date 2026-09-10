@@ -241,6 +241,12 @@ export class ConfiguratorService {
             { key: 'lieuDocument', label: 'Lieu ou est conserve le document (PMU/PSI/etc.)', type: 'text',
               tooltip: 'Indiquer l endroit precis ou est conserve l exemplaire papier officiel du document en cas d urgence. Ex: Poste de securite, bureau du gestionnaire.' },
             {
+              key: 'psiDerniereRevision',
+              label: 'Date de la dernière révision du PSI',
+              type: 'date',
+              tooltip: 'Le CNPI 2020 art. 2.8.2.2 exige une révision à intervalles ne dépassant pas 12 mois. Cette date déclenche automatiquement les alertes dans le panneau d\'analyse.',
+            },
+            {
               key: 'programmeInspectionEntretien',
               label: 'Programme d\'inspection et d\'entretien des installations de sécurité incendie en place',
               type: 'boolean',

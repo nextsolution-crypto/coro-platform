@@ -32,6 +32,9 @@ export interface BuildingConfig {
   // ========== CNPI 2020 — T10 Matières dangereuses ==========
   psiEntreePrincipale?: boolean;
 
+  // ========== CNPI 2020 — Révision annuelle PSI ==========
+  psiDerniereRevision?: string;
+
   // ========== CNPI 2020 — T2 Checklist PSI ==========
   programmeInspectionEntretien?: boolean;
 
@@ -307,6 +310,9 @@ export class RulesEngineService {
 
     // T1 — Validation PSI dans le panneau
     this.addPsiValidation(profil, result);
+
+    // Révision annuelle PSI (art. 2.8.2.2)
+    this.applyPsiRevisionRules(config, result, profil);
 
     // T8 — Information fréquence exercices dans le panneau
     result.validations.push({
@@ -1166,6 +1172,56 @@ export class RulesEngineService {
         code: 'T10-EMPLACEMENT-MANQUANT',
         message: `${substancesSansEmplacement.length} substance(s) sans emplacement précis documenté — requis pour l'annexe PSI destinée aux intervenants.`,
         reference: 'CNPI 2020 art. 2.8.2.12',
+      });
+    }
+  }
+
+  // ── Révision annuelle du PSI ─────────────────────────────────────────────
+
+  private applyPsiRevisionRules(
+    config: BuildingConfig,
+    result: ConfiguratorResult,
+    profil: ProfilReglementaire,
+  ): void {
+    if (profil.psiRequis !== 'OUI') return;
+
+    if (!config.psiDerniereRevision) {
+      result.validations.push({
+        type: 'RECOMMANDATION',
+        code: 'PSI-REVISION-NR',
+        message: 'Date de dernière révision du PSI non renseignée — révision annuelle obligatoire (intervalles ≤ 12 mois).',
+        reference: 'CNPI 2020 art. 2.8.2.2',
+      });
+      return;
+    }
+
+    const diff = Math.floor(
+      (Date.now() - new Date(config.psiDerniereRevision).getTime()) / 86400000,
+    );
+    const prochaine = new Date(
+      new Date(config.psiDerniereRevision).getTime() + 365 * 86400000,
+    ).toLocaleDateString('fr-CA');
+
+    if (diff > 365) {
+      result.validations.push({
+        type: 'ERREUR',
+        code: 'PSI-REVISION-ECHUE',
+        message: `Révision annuelle du PSI échue depuis ${diff - 365} jour(s) — intervalle de 12 mois dépassé.`,
+        reference: 'CNPI 2020 art. 2.8.2.2',
+      });
+    } else if (diff > 305) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'PSI-REVISION-PROCHE',
+        message: `Révision du PSI à prévoir dans ${365 - diff} jour(s) — échéance : ${prochaine}.`,
+        reference: 'CNPI 2020 art. 2.8.2.2',
+      });
+    } else {
+      result.validations.push({
+        type: 'INFO',
+        code: 'PSI-REVISION-OK',
+        message: `Révision annuelle du PSI en règle ✓ — prochaine révision avant le ${prochaine}.`,
+        reference: 'CNPI 2020 art. 2.8.2.2',
       });
     }
   }
