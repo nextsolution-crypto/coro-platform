@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -26,7 +27,7 @@ export class RemindersService {
         organization: {
           include: {
             users: {
-              where: { role: { in: ['ADMIN', 'OPERATOR'] } },
+              where: { role: { in: [UserRole.ADMIN, UserRole.OPERATOR] } },
               take: 1,
             },
           },
@@ -71,7 +72,7 @@ export class RemindersService {
 
         // À J+21, notifier aussi l'admin
         if (daysSinceExport === 21) {
-          const admin = p.organization?.users?.find((u: any) => u.role === 'ADMIN');
+          const admin = p.organization?.users?.find((u: any) => u.role === UserRole.ADMIN);
           if (admin && admin.email !== conseiller.email) {
             await this.sendReminderEmail({
               to: admin.email,
