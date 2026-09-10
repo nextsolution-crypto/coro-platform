@@ -1089,21 +1089,22 @@ export class RulesEngineService {
           message: `${interconnexions.length} interconnexion(s) déclarée(s) — essai intégré CAN/ULC-S1001 non documenté. Requis pour bâtiments existants à compter du 17 avril 2028.`,
           reference: 'CNPI 2020 art. 6.8.1.1 + 2.1.3.7',
         });
-      } else if (!config.s1001RapportDisponible) {
+      } else if (config.s1001RapportDisponible === false) {
         result.validations.push({
           type: 'RECOMMANDATION',
           code: 'T5-S1001-RAPPORT-ABSENT',
           message: 'Essai S1001 documenté mais rapport non disponible. Conserver le rapport pour les inspections.',
           reference: 'CAN/ULC-S1001',
         });
-      } else {
+      } else if (config.s1001RapportDisponible === true) {
         result.validations.push({
           type: 'INFO',
           code: 'T5-S1001-CONFORME',
-          message: `Systèmes intégrés documentés (${interconnexions.length} interconnexion(s)) — essai S1001 et rapport en règle.`,
+          message: `Systèmes intégrés documentés (${interconnexions.length} interconnexion(s)) — essai S1001 et rapport en règle ✓`,
           reference: 'CAN/ULC-S1001',
         });
       }
+      // undefined = non encore répondu → pas de validation, pas d'erreur
     } else {
       result.validations.push({
         type: 'INFO',
@@ -1120,18 +1121,21 @@ export class RulesEngineService {
     if (!config.matieresDangereuses) return;
 
     // PSI accessible à l'entrée principale (art. 2.8.2.12)
-    if (config.psiEntreePrincipale === false) {
+    if (config.psiEntreePrincipale === true) {
       result.validations.push({
-        type: 'ERREUR',
-        code: 'T10-PSI-ENTREE',
-        message: 'Matières dangereuses présentes : le plan de sécurité incendie doit être conservé et accessible à l\'entrée principale du bâtiment.',
+        type: 'INFO',
+        code: 'T10-PSI-ENTREE-OK',
+        message: 'PSI conservé et accessible à l\'entrée principale ✓',
         reference: 'CNPI 2020 art. 2.8.2.12',
       });
-    } else if (config.psiEntreePrincipale === undefined || config.psiEntreePrincipale === null) {
+    } else {
+      // false OU undefined = non encore confirmé ou non conforme
+      // On utilise AVERTISSEMENT dans les deux cas : on ne peut pas distinguer
+      // "explicitement répondu Non" de "champ non encore rempli sur un projet existant"
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'T10-PSI-ENTREE-NR',
-        message: 'Matières dangereuses déclarées — confirmer que le PSI est accessible à l\'entrée principale pour les intervenants d\'urgence.',
+        message: 'Matières dangereuses déclarées — confirmer que le PSI est accessible à l\'entrée principale du bâtiment (intervenants d\'urgence).',
         reference: 'CNPI 2020 art. 2.8.2.12',
       });
     }
