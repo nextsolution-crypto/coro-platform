@@ -1,0 +1,319 @@
+═══════════════════════════════════════════════════════════
+  CORO — Scan de couverture PDF
+  2026-09-10 19 h 28 min 39 s
+═══════════════════════════════════════════════════════════
+
+  Champs configurateur scannés : 273
+  Champs présents dans un template PDF : 146 (53%)
+  Champs absents de tous les templates : 127 (47%)
+
+═══════════════════════════════════════════════════════════
+  CHAMPS COUVERTS (présents dans au moins 1 template)
+═══════════════════════════════════════════════════════════
+  ✓ accesEtages                              → module7.template.ts
+  ✓ accesEtagesDetails                       → module7.template.ts
+  ✓ accesSousSol                             → module7.template.ts
+  ✓ accesSousSolDetails                      → module7.template.ts
+  ✓ accesToit                                → module7.template.ts
+  ✓ anneeConstruction                        → module7.template.ts
+  ✓ armireCabinetVentile                     → module7.template.ts
+  ✓ ascenseurPompier                         → module7.template.ts
+  ✓ autonomieGeneratrice                     → module7.template.ts
+  ✓ autonomieTotale                          → module7.template.ts
+  ✓ basements                                → module7.template.ts
+  ✓ buildingType                             → module7.template.ts
+  ✓ capaciteMaxReglementaire                 → module7.template.ts
+  ✓ capaciteReservoir                        → module7.template.ts
+  ✓ chuteADechets                            → module7.template.ts
+  ✓ compacteur                               → module7.template.ts
+  ✓ compacteurGicleurs                       → module7.template.ts
+  ✓ compacteurGicleursType                   → module7.template.ts
+  ✓ compacteurVanneIsolement                 → module7.template.ts
+  ✓ cvac                                     → module7.template.ts
+  ✓ cvacLocalisation                         → module7.template.ts
+  ✓ derniereRenovation                       → module7.template.ts
+  ✓ desenfumage                              → module7.template.ts
+  ✓ desenfumageLieu                          → module7.template.ts
+  ✓ detecteurAmmoniac                        → module7.template.ts
+  ✓ detecteurAmmoniacSeuil1                  → module7.template.ts
+  ✓ detecteurAmmoniacSeuil2                  → module7.template.ts
+  ✓ detecteurCO                              → module7.template.ts
+  ✓ detecteurCOLieu                          → module7.template.ts
+  ✓ detecteurCOSeuil1                        → module7.template.ts
+  ✓ detecteurCOSeuil2                        → module7.template.ts
+  ✓ detecteurFM200                           → module7.template.ts
+  ✓ detecteurFreon                           → module7.template.ts
+  ✓ detecteurGazNaturel                      → module7.template.ts
+  ✓ detecteurGazNaturelLieu                  → module7.template.ts
+  ✓ detecteurO2                              → module7.template.ts
+  ✓ detecteurPropane                         → module7.template.ts
+  ✓ detectionGazLabo                         → module7.template.ts
+  ✓ emplacementBac                           → module7.template.ts
+  ✓ equipementsSoins                         → module7.template.ts, module4.template.ts
+  ✓ escaliersPressurises                     → module7.template.ts
+  ✓ extincteursList                          → module7.template.ts
+  ✓ floors                                   → module7.template.ts
+  ✓ fonctionneSecours                        → module7.template.ts
+  ✓ gapmUsgpm                                → module7.template.ts
+  ✓ gazComprimesPresents                     → module7.template.ts
+  ✓ gazNaturel                               → module7.template.ts, module4.template.ts
+  ✓ gazNaturelLieu                           → module7.template.ts, module4.template.ts
+  ✓ gazToxiquesPresents                      → module7.template.ts
+  ✓ generatrice                              → module7.template.ts
+  ✓ generatriceCarburant                     → module7.template.ts
+  ✓ generatriceEquipements                   → module7.template.ts
+  ✓ generatriceEquipementsPersonnalises      → module7.template.ts
+  ✓ generatriceLieu                          → module7.template.ts
+  ✓ gicleurs                                 → module7.template.ts
+  ✓ gicleursSystemes                         → module7.template.ts
+  ✓ hauteurBatiment                          → module7.template.ts
+  ✓ infosBatiment                            → module7.template.ts
+  ✓ inspectionFinaleDocumentee               → module7.template.ts
+  ✓ laboratoirePresent                       → module7.template.ts
+  ✓ lieu                                     → module7.template.ts
+  ✓ lieuAccueilTemporaire                    → module7.template.ts
+  ✓ lieuDocument                             → module7.template.ts
+  ✓ lieuSommeil                              → module7.template.ts
+  ✓ matieresList                             → module7.template.ts
+  ✓ methodeInspectionTPC                     → module7.template.ts
+  ✓ nbEscaliers                              → module7.template.ts
+  ✓ panneauAnnonciateurDistance              → module7.template.ts
+  ✓ panneauAnnonciateurLieu                  → module7.template.ts
+  ✓ panneauLocalisation                      → module7.template.ts
+  ✓ panneauMarque                            → module7.template.ts
+  ✓ panneauModele                            → module7.template.ts
+  ✓ panneauTechno                            → module7.template.ts
+  ✓ panneauType                              → module7.template.ts
+  ✓ panneauxTMDLabo                          → module7.template.ts
+  ✓ permisTravauxChauds                      → module7.template.ts
+  ✓ personnelHandicap                        → module7.template.ts
+  ✓ pointRassemblement                       → module7.template.ts
+  ✓ pointRassemblement2                      → module7.template.ts
+  ✓ pompeIncendie                            → module7.template.ts
+  ✓ pompeIncendieLieu                        → module7.template.ts
+  ✓ portesIssueExposees                      → module7.template.ts
+  ✓ portesIssueMesure                        → module7.template.ts
+  ✓ posteCommandement                        → module7.template.ts
+  ✓ ppnaeMesures                             → module7.template.ts
+  ✓ ppnaeRegistreAJour                       → module7.template.ts
+  ✓ ppnaeTypesLimitations                    → module7.template.ts
+  ✓ programmeInspectionEntretien             → module7.template.ts
+  ✓ psiEntreePrincipale                      → module7.template.ts
+  ✓ quartsOccupation                         → module7.template.ts
+  ✓ rappelAscenseurs                         → module7.template.ts
+  ✓ rappelAscenseursLieu                     → module7.template.ts
+  ✓ registresCoupeFeu                        → module7.template.ts
+  ✓ registresCoupeFeuDerniereInspection      → module7.template.ts
+  ✓ registresCoupeFeuNombre                  → module7.template.ts
+  ✓ registresCoupeFeuRapport                 → module7.template.ts
+  ✓ reservoirsAuxiliaires                    → module7.template.ts
+  ✓ reservoirsAuxiliairesCapacite            → module7.template.ts
+  ✓ reservoirsAuxiliairesLieu                → module7.template.ts
+  ✓ responsable                              → module7.template.ts
+  ✓ responsableTravauxChauds                 → module7.template.ts
+  ✓ s1001Coordonnateur                       → module7.template.ts
+  ✓ s1001DernierEssai                        → module7.template.ts
+  ✓ s1001Interconnexions                     → module7.template.ts
+  ✓ s1001RapportDisponible                   → module7.template.ts
+  ✓ salleAscenseur                           → module7.template.ts
+  ✓ salleElectrique                          → module7.template.ts
+  ✓ salleGicleurs                            → module7.template.ts
+  ✓ separationCoupeFeu                       → module7.template.ts
+  ✓ separationCoupeFeuLieu                   → module7.template.ts
+  ✓ signalisationIssue                       → module7.template.ts
+  ✓ signalisationIssueDerniereInspection     → module7.template.ts
+  ✓ signalisationIssueType                   → module7.template.ts
+  ✓ superficie                               → module7.template.ts
+  ✓ surveillanceIncendieTPC                  → module7.template.ts
+  ✓ systemePhonic                            → module7.template.ts
+  ✓ telephoneAscenseurs                      → module7.template.ts
+  ✓ telephonePompier                         → module7.template.ts
+  ✓ toitVerrouille                           → module7.template.ts
+  ✓ traitementsMedicauxSurPlace              → module7.template.ts
+  ✓ travauxPointsChauds                      → module7.template.ts
+  ✓ travauxToiture                           → module7.template.ts
+  ✓ treizeEtage                              → module7.template.ts
+  ✓ trousseClesPompier                       → module7.template.ts
+  ✓ trousseClesPompierLieu                   → module7.template.ts
+  ✓ trousseDeversement                       → module7.template.ts
+  ✓ trousseDeversementListe                  → module7.template.ts
+  ✓ type                                     → module7.template.ts
+  ✓ typeAscenseur                            → module7.template.ts
+  ✓ typeChautfage                            → module7.template.ts
+  ✓ typeConstructionEtages                   → module7.template.ts
+  ✓ typeConstructionToit                     → module7.template.ts
+  ✓ typeLaboratoire                          → module7.template.ts
+  ✓ typeRefroidissement                      → module7.template.ts
+  ✓ usagePrincipal                           → module7.template.ts
+  ✓ usageSecondaire                          → module7.template.ts
+  ✓ valve1_5                                 → module7.template.ts
+  ✓ valve1_5Lieu                             → module7.template.ts
+  ✓ valve2_5                                 → module7.template.ts
+  ✓ valve2_5Lieu                             → module7.template.ts
+  ✓ vannesArretEauDomestique                 → module7.template.ts
+  ✓ vannesArretGazNaturel                    → module7.template.ts
+  ✓ vannesArretSalleElectrique               → module7.template.ts
+  ✓ vannesArretSalleGicleurs                 → module7.template.ts
+  ✓ vannesIsolement                          → module7.template.ts
+  ✓ vannesIsolementLieu                      → module7.template.ts
+
+═══════════════════════════════════════════════════════════
+  CHAMPS MANQUANTS (absents de tous les templates PDF)
+═══════════════════════════════════════════════════════════
+  ✗ agentSecurite                            [À vérifier]
+  ✗ ammoniac                                 [À vérifier]
+  ✗ anneDocument                             [Métadonnées — couvert en couverture/M1]
+  ✗ arretVentilation                         [À vérifier]
+  ✗ ascenseurPompierLequel                   [À vérifier]
+  ✗ ascenseurs                               [À vérifier]
+  ✗ autresCertifications                     [À vérifier]
+  ✗ batteriesLithium                         [À vérifier]
+  ✗ batteriesLithiumDetection                [À vérifier]
+  ✗ batteriesLithiumDetectionCommentaire     [À vérifier]
+  ✗ batteriesLithiumLocalEspace              [À vérifier]
+  ✗ batteriesLithiumLocalEspaceCommentaire   [À vérifier]
+  ✗ batteriesLithiumPresent                  [À vérifier]
+  ✗ batteriesLithiumSignalisation            [À vérifier]
+  ✗ batteriesLithiumSignalisationCommentaire [À vérifier]
+  ✗ boiteClePompier                          [À vérifier]
+  ✗ bornesFontaine                           [À vérifier]
+  ✗ bornesFontaineLieu                       [À vérifier]
+  ✗ boyauCabinet                             [À vérifier]
+  ✗ boyauIncendie                            [À vérifier]
+  ✗ cameras                                  [À vérifier]
+  ✗ centraleCodeClient                       [À vérifier]
+  ✗ centraleSurveillance                     [À vérifier]
+  ✗ centraleTelephone                        [À vérifier]
+  ✗ certBOMA                                 [À vérifier]
+  ✗ certBOMANiveau                           [À vérifier]
+  ✗ certEnergyStar                           [À vérifier]
+  ✗ certISO22301                             [À vérifier]
+  ✗ certISO31000                             [À vérifier]
+  ✗ certLEED                                 [À vérifier]
+  ✗ certLEEDNiveau                           [À vérifier]
+  ✗ chariotsEmplacementRecharge              [À vérifier]
+  ✗ chariotsNombre                           [À vérifier]
+  ✗ chariotsPresent                          [À vérifier]
+  ✗ chariotsType                             [À vérifier]
+  ✗ complet                                  [À vérifier]
+  ✗ controleAcces                            [À vérifier]
+  ✗ cvacType                                 [À vérifier]
+  ✗ date                                     [À vérifier]
+  ✗ dateReleve                               [Métadonnées — couvert en couverture/M1]
+  ✗ desenfumageAutomatique                   [À vérifier]
+  ✗ detecteurCO2                             [À vérifier]
+  ✗ detecteurChaleur                         [À vérifier]
+  ✗ detecteurDebitGicleurs                   [À vérifier]
+  ✗ detecteurFumee                           [À vérifier]
+  ✗ deverrouillagePorces                     [À vérifier]
+  ✗ emplacementPrecis                        [À vérifier]
+  ✗ espaceClos                               [À vérifier]
+  ✗ espaceClosLieu                           [À vérifier]
+  ✗ extincteurPortatif                       [À vérifier]
+  ✗ fermeturePortesCoupeFeu                  [À vérifier]
+  ✗ generatriceNom                           [À vérifier]
+  ✗ heureDebut                               [À vérifier]
+  ✗ heureFin                                 [À vérifier]
+  ✗ heuresFonctionnement                     [À vérifier]
+  ✗ historiqueList                           [À vérifier]
+  ✗ intercomUrgence                          [À vérifier]
+  ✗ matieresDangereuses                      [À vérifier]
+  ✗ messagesAutomatises                      [À vérifier]
+  ✗ mesures                                  [À vérifier]
+  ✗ mezzanineEncloisonnee                    [À vérifier]
+  ✗ mezzanineGicle                           [À vérifier]
+  ✗ mezzanineLieu                            [À vérifier]
+  ✗ mezzaninePresent                         [À vérifier]
+  ✗ multiLocataires                          [À vérifier]
+  ✗ nbAscenseurs                             [À vérifier]
+  ✗ nbGeneratrices                           [À vérifier]
+  ✗ nbLocataires                             [À vérifier]
+  ✗ nbRadios                                 [À vérifier]
+  ✗ nom                                      [À vérifier]
+  ✗ nomQuart                                 [À vérifier]
+  ✗ numeroUN                                 [À vérifier]
+  ✗ occupantsDimanche                        [À vérifier]
+  ✗ occupantsSamedi                          [À vérifier]
+  ✗ occupantsSemaine                         [À vérifier]
+  ✗ palettierAgencement                      [À vérifier]
+  ✗ palettierAlles                           [À vérifier]
+  ✗ palettierGicleurs                        [À vérifier]
+  ✗ palettierPresent                         [À vérifier]
+  ✗ panneauAlarme                            [À vérifier]
+  ✗ posteSurveillance                        [À vérifier]
+  ✗ priseRefoulement                         [À vérifier]
+  ✗ procedure                                [À vérifier]
+  ✗ procesDangereux                          [À vérifier]
+  ✗ procesDangereuxDetails                   [À vérifier]
+  ✗ propane                                  [À vérifier]
+  ✗ propaneLieu                              [À vérifier]
+  ✗ province                                 [Métadonnées — couvert en couverture/M1]
+  ✗ psiDerniereRevision                      [CNPI 2020 — à ajouter au PDF]
+  ✗ quantite                                 [À vérifier]
+  ✗ quantiteMax                              [À vérifier]
+  ✗ raccordPompier                           [À vérifier]
+  ✗ raccordPompierLieu                       [À vérifier]
+  ✗ radiosCommunication                      [À vérifier]
+  ✗ reglementMunicipal                       [Métadonnées — couvert en couverture/M1]
+  ✗ responsableNom                           [Couvert en couverture/M1]
+  ✗ responsableTitre                         [Couvert en couverture/M1]
+  ✗ risque                                   [À vérifier]
+  ✗ securite24h                              [À vérifier]
+  ✗ signalisationTMD                         [À vérifier]
+  ✗ simdut                                   [À vérifier]
+  ✗ stationManuelle                          [À vérifier]
+  ✗ stockageClassification                   [À vérifier]
+  ✗ stockageEmplacement                      [À vérifier]
+  ✗ stockageHauteur                          [À vérifier]
+  ✗ stockageLargeurAllee                     [À vérifier]
+  ✗ stockagePalettes                         [À vérifier]
+  ✗ stockagePalettesCombustible              [À vérifier]
+  ✗ stockagePresent                          [À vérifier]
+  ✗ systemeCO2                               [À vérifier]
+  ✗ systemeCO2Lieu                           [À vérifier]
+  ✗ systemeCadenassage                       [À vérifier]
+  ✗ systemeExtinctionFixe                    [À vérifier]
+  ✗ systemeExtinctionFixeLieu                [À vérifier]
+  ✗ systemeHalogen                           [À vérifier]
+  ✗ systemeHalogenLieu                       [À vérifier]
+  ✗ systemePhonicType                        [À vérifier]
+  ✗ systemePreAction                         [À vérifier]
+  ✗ systemePreActionLieu                     [À vérifier]
+  ✗ teleSurveillance                         [À vérifier]
+  ✗ tmd                                      [À vérifier]
+  ✗ typeDocument                             [Métadonnées — couvert en couverture/M1]
+  ✗ utilisation                              [À vérifier]
+  ✗ versionDocument                          [Métadonnées — couvert en couverture/M1]
+  ✗ ville                                    [Métadonnées — couvert en couverture/M1]
+  ✗ zoneConfinement                          [À vérifier]
+  ✗ zoneRafraichissement                     [À vérifier]
+
+═══════════════════════════════════════════════════════════
+  SECTIONS DU CONFIGURATEUR DÉTECTÉES
+═══════════════════════════════════════════════════════════
+  infos_document            → Infos du document
+  description               → Description generale
+  certifications            → Certifications du batiment
+  emplacements              → Emplacements strategiques
+  alarme                    → Alarme incendie
+  communication             → Communication
+  gicleurs                  → Gicleurs et protection eau
+  systemes_integres         → Systèmes intégrés S1001
+  extincteurs               → Extincteurs et suppression
+  mecanique                 → Systemes mecaniques
+  detecteurs                → Detecteurs de gaz
+  matieres                  → Matieres dangereuses
+  points_chauds             → Travaux par points chauds
+  laboratoires              → Laboratoires
+  premiers_soins            → Equipements premiers soins
+  industriel                → Specifique industriel
+  historique                → Historique des mises a jour
+
+═══════════════════════════════════════════════════════════
+  TEMPLATES SCANNÉS
+═══════════════════════════════════════════════════════════
+  ✓ module7.template.ts (49307 chars)
+  ✓ simple-modules.template.ts (44034 chars)
+  ✓ module3.template.ts (5863 chars)
+  ✓ module4.template.ts (11614 chars)
+  ✓ cover.template.ts (15019 chars)

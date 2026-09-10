@@ -50,6 +50,16 @@ function subHeading(text: string): string {
   return `<p class="sub-heading">${text}</p>`;
 }
 
+// Version qui enveloppe le titre ET son contenu dans un bloc non-cassable
+function subSection(heading: string, content: string): string {
+  return `
+    <div style="break-inside:avoid;page-break-inside:avoid;">
+      <p class="sub-heading">${heading}</p>
+      ${content}
+    </div>
+  `;
+}
+
 function computeReferentielCNB(anneeRaw: any): { label: string; periode: string } {
   const annee = typeof anneeRaw === 'string' ? parseInt(anneeRaw, 10) : (anneeRaw || 0);
   if (!annee || isNaN(annee)) return { label: '—', periode: 'Année non renseignée' };
@@ -253,14 +263,14 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
       ` : `<p style="color:#ADB5BD;">${isFr ? 'Aucun quart de travail déclaré' : 'No work shift declared'}</p>`}
       ${quarts.infosSup ? `<p style="margin-top:8px;font-size:10pt;color:#495057;"><strong>${isFr ? 'Informations supplémentaires' : 'Additional information'} :</strong> ${escapeHtml(quarts.infosSup)}</p>` : ''}
 
-      ${config.personnelHandicap ? `
-        ${subHeading(isFr ? 'Personnes nécessitant assistance à l\'évacuation (PPNAE)' : 'Persons Requiring Evacuation Assistance (PPNAE)')}
-        <table><tbody>
+      ${config.personnelHandicap ? subSection(
+        isFr ? 'Personnes nécessitant assistance à l\'évacuation (PPNAE)' : 'Persons Requiring Evacuation Assistance (PPNAE)',
+        `<table><tbody>
           ${(config.ppnaeTypesLimitations || []).length > 0 ? infoRow(isFr ? 'Types de limitations' : 'Types of limitations', config.ppnaeTypesLimitations.join(', ')) : ''}
           ${(config.ppnaeMesures || []).length > 0 ? infoRow(isFr ? 'Mesures d\'évacuation prévues' : 'Evacuation measures in place', config.ppnaeMesures.join(', ')) : ''}
           ${config.ppnaeRegistreAJour !== undefined ? infoRow(isFr ? 'Registre à jour' : 'Up-to-date register', bool(config.ppnaeRegistreAJour, isFr)) : ''}
-        </tbody></table>
-      ` : ''}
+        </tbody></table>`
+      ) : ''}
     </div>
   `;
 
@@ -335,14 +345,16 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         </tbody>
       </table>
 
-      ${config.registresCoupeFeu ? `
-        ${subHeading(isFr ? 'Registres coupe-feu et de contrôle de la fumée' : 'Fire Dampers and Smoke Control Registers')}
+            ${config.registresCoupeFeu ? `
+        <div style="break-inside:avoid;page-break-inside:avoid;">
+        ${subHeading(isFr ? 'Registres coupe-feu / contrôle de la fumée' : 'Fire Dampers and Smoke Control Registers')}
         <table><tbody>
           ${config.registresCoupeFeuNombre ? infoRow(isFr ? 'Nombre approximatif' : 'Approximate count', val(config.registresCoupeFeuNombre)) : ''}
           ${config.registresCoupeFeuDerniereInspection ? infoRow(isFr ? 'Dernière inspection' : 'Last inspection', val(config.registresCoupeFeuDerniereInspection)) : ''}
           ${config.registresCoupeFeuRapport !== undefined ? infoRow(isFr ? 'Rapport disponible' : 'Report available', bool(config.registresCoupeFeuRapport, isFr)) : ''}
           ${infoRow(isFr ? 'Fréquence requise' : 'Required frequency', isFr ? 'Aux 12 mois — CNPI 2020 art. 2.2.2.4' : 'Every 12 months — CNPI 2020 art. 2.2.2.4')}
         </tbody></table>
+        </div>
       ` : ''}
 
       ${subHeading(isFr ? 'Salle électrique' : 'Electrical room')}
@@ -370,12 +382,12 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${infoRow(isFr ? 'Autonomie totale' : 'Total runtime', config.autonomieTotale ? `${config.autonomieTotale}h` : '—')}
         </tbody></table>
       ` : ''}
-      ${config.generatriceEquipements?.length > 0 ? `
-        ${subHeading(isFr ? 'Équipements sur alimentation de secours' : 'Equipment on backup power')}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+      ${config.generatriceEquipements?.length > 0 ? subSection(
+        isFr ? 'Équipements sur alimentation de secours' : 'Equipment on backup power',
+        `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
           ${config.generatriceEquipements.map((e: string) => checklistItem(escapeHtml(e), true)).join('')}
-        </div>
-      ` : ''}
+        </div>`
+      ) : ''}
       ${config.generatriceEquipementsPersonnalises?.length > 0 ? `
         ${subHeading(isFr ? 'Autres équipements alimentés' : 'Other powered equipment')}
         <table><tbody>
@@ -383,6 +395,7 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         </tbody></table>
       ` : ''}
 
+      <div style="break-inside:avoid;page-break-inside:avoid;">
       ${subHeading(isFr ? 'Vannes d\'arrêt' : 'Shutoff valves')}
       <table><tbody>
         ${config.vannesArretSalleGicleurs ? infoRow(isFr ? 'Salle de gicleurs' : 'Sprinkler room', val(config.vannesArretSalleGicleurs)) : ''}
@@ -390,6 +403,7 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         ${config.vannesArretEauDomestique ? infoRow(isFr ? 'Arrivée eau domestique' : 'Domestic water supply', val(config.vannesArretEauDomestique)) : ''}
         ${config.vannesArretSalleElectrique ? infoRow(isFr ? 'Salle électrique' : 'Electrical room', val(config.vannesArretSalleElectrique)) : ''}
       </tbody></table>
+      </div>
     </div>
   `;
 
