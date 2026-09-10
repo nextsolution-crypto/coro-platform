@@ -10,6 +10,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; 
   IN_PROGRESS: { bg: 'rgba(41,128,185,0.15)',  text: '#5DADE2', border: 'rgba(41,128,185,0.3)', label: 'En cours' },
   REVIEW:      { bg: 'rgba(243,156,18,0.15)',  text: '#F8C471', border: 'rgba(243,156,18,0.3)', label: 'En révision' },
   VALIDATED:   { bg: 'rgba(39,174,96,0.15)',   text: '#58D68D', border: 'rgba(39,174,96,0.3)',  label: 'Validé' },
+  EXPORTED:    { bg: 'rgba(142,68,173,0.15)',  text: '#C39BD3', border: 'rgba(142,68,173,0.3)', label: 'Exporté' },
   ARCHIVED:    { bg: 'rgba(192,57,43,0.15)',   text: '#EC7063', border: 'rgba(192,57,43,0.3)',  label: 'Archivé' },
 };
 
@@ -21,15 +22,16 @@ const DOC_COLORS: Record<string, string> = {
 function getBuildingStatus(building: any): { color: string; glow: string; label: string; priority: number } {
   const projects = building.projects || [];
   if (projects.length === 0) return { color: '#4A5568', glow: 'rgba(74,85,104,0.4)', label: 'Aucun document', priority: 3 };
+  const VALID_STATUSES = ['VALIDATED', 'EXPORTED'];
   const hasExpired = projects.some((p: any) => {
-    if (p.status !== 'VALIDATED') return false;
+    if (!VALID_STATUSES.includes(p.status)) return false;
     const age = (Date.now() - new Date(p.updatedAt).getTime()) / (1000 * 60 * 60 * 24 * 365);
     return age > 1;
   });
   if (hasExpired) return { color: '#E74C3C', glow: 'rgba(231,76,60,0.5)', label: 'À renouveler', priority: 0 };
   const hasInProgress = projects.some((p: any) => ['DRAFT', 'IN_PROGRESS', 'REVIEW'].includes(p.status));
   if (hasInProgress) return { color: '#F39C12', glow: 'rgba(243,156,18,0.5)', label: 'En cours', priority: 1 };
-  const allValidated = projects.every((p: any) => p.status === 'VALIDATED');
+  const allValidated = projects.every((p: any) => VALID_STATUSES.includes(p.status));
   if (allValidated) return { color: '#27AE60', glow: 'rgba(39,174,96,0.5)', label: 'À jour', priority: 2 };
   return { color: '#7F8C8D', glow: 'rgba(127,140,141,0.4)', label: 'Partiel', priority: 3 };
 }
@@ -365,7 +367,7 @@ export default function MapPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             {[
               { value: selected.projectCount || 0, label: 'Documents', color: '#FFFFFF' },
-              { value: selected.validatedCount || 0, label: 'Validés', color: '#27AE60' },
+              { value: (selected.projects || []).filter((p: any) => ['VALIDATED', 'EXPORTED'].includes(p.status)).length, label: 'Validés', color: '#27AE60' },
               { value: selected.activeCount || 0, label: 'En cours', color: '#F39C12' },
             ].map((m, i) => (
               <div key={m.label} style={{
