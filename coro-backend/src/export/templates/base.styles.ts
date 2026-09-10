@@ -37,6 +37,29 @@ export const BASE_STYLES = `
     page-break-after: avoid;
   }
 
+  /* ── Sous-titres rouges — anti-orphelin ── */
+  .sub-heading {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #C0392B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 18px 0 6px 0;
+    /* Empêche le titre d'être seul en bas de page */
+    page-break-after: avoid;
+    break-after: avoid;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* L'élément qui suit un sous-titre ne peut pas commencer une nouvelle page */
+  .sub-heading + table,
+  .sub-heading + div,
+  .sub-heading + p {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+
   /* ── En-tête de section (style M2/M8) ── */
   .section-header {
     margin-bottom: 24px;

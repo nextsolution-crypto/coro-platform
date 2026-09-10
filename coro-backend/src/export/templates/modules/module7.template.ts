@@ -47,7 +47,7 @@ function checklistItem(label: string, checked: boolean): string {
 }
 
 function subHeading(text: string): string {
-  return `<p style="font-size:9pt;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px 0;page-break-after:avoid;orphans:3;widows:3;">${text}</p>`;
+  return `<p class="sub-heading">${text}</p>`;
 }
 
 function computeReferentielCNB(anneeRaw: any): { label: string; periode: string } {
