@@ -32,6 +32,41 @@ export interface BuildingConfig {
   // ========== CNPI 2020 — T10 Matières dangereuses ==========
   psiEntreePrincipale?: boolean;
 
+  // ========== CNPI 2020 — T2 Checklist PSI ==========
+  programmeInspectionEntretien?: boolean;
+
+  // ========== CNPI 2020 — T6 Travaux par points chauds ==========
+  travauxPointsChauds?: string;
+  permisTravauxChauds?: boolean;
+  surveillanceIncendieTPC?: boolean;
+  inspectionFinaleDocumentee?: boolean;
+  methodeInspectionTPC?: string;
+  travauxToiture?: boolean;
+
+  // ========== CNPI 2020 — T7 Laboratoires ==========
+  laboratoirePresent?: boolean;
+  typeLaboratoire?: string[];
+  gazComprimesPresents?: boolean;
+  armireCabinetVentile?: boolean;
+  gazToxiquesPresents?: boolean;
+  detectionGazLabo?: boolean;
+  panneauxTMDLabo?: boolean;
+
+  // ========== CNPI 2020 — T11 Registres coupe-feu ==========
+  registresCoupeFeu?: boolean;
+  registresCoupeFeuNombre?: number;
+  registresCoupeFeuDerniereInspection?: string;
+  registresCoupeFeuRapport?: boolean;
+
+  // ========== CNPI 2020 — T12 Signalisation d'issue ==========
+  signalisationIssue?: boolean;
+  signalisationIssueType?: string;
+  signalisationIssueDerniereInspection?: string;
+
+  // ========== CNPI 2020 — T13 Obstruction portes d'issue ==========
+  portesIssueExposees?: boolean;
+  portesIssueMesure?: string;
+
   // Occupation
   multiLocataires: boolean;
   nbLocataires?: number;
@@ -226,8 +261,14 @@ export class RulesEngineService {
 
     // ── CNPI 2020 — doit être exécuté en premier (génère profilReglementaire) ──
     this.applyReglementaireRules(config, result);
-    this.applyS1001Rules(config, result);           // T5
-    this.applyMatieresDangereusesRules(config, result); // T10
+    this.applyS1001Rules(config, result);                    // T5
+    this.applyMatieresDangereusesRules(config, result);      // T10
+    this.applyPsiChecklistRules(config, result);             // T2 — après T1
+    this.applyPointsChaudsRules(config, result);             // T6
+    this.applyLaboratoireRules(config, result);              // T7
+    this.applyRegistresCoupeFeuRules(config, result);        // T11
+    this.applySignalisationIssueRules(config, result);       // T12
+    this.applyPortesIssueRules(config, result);              // T13
 
     this.applyBaseRules(config, result);
     this.applyAlarmRules(config, result);
@@ -1119,6 +1160,242 @@ export class RulesEngineService {
         code: 'T10-EMPLACEMENT-MANQUANT',
         message: `${substancesSansEmplacement.length} substance(s) sans emplacement précis documenté — requis pour l'annexe PSI destinée aux intervenants.`,
         reference: 'CNPI 2020 art. 2.8.2.12',
+      });
+    }
+  }
+
+  // ── T2 — Checklist 12 éléments PSI ──────────────────────────────────────
+
+  private applyPsiChecklistRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    if (!result.profilReglementaire || result.profilReglementaire.psiRequis !== 'OUI') return;
+
+    const elements: { label: string; ok: boolean }[] = [
+      { label: 'Alarme incendie',                ok: config.panneauAlarme === true },
+      { label: 'Appel service incendie',         ok: config.teleSurveillance === true || !!((config as any).centraleSurveillance) },
+      { label: 'Instructions aux occupants',     ok: config.panneauAlarme === true },
+      { label: 'Évacuation',                     ok: !!(config as any).pointRassemblement },
+      { label: 'Mesures PPNAE',                  ok: !config.personnelHandicap || ((config.ppnaeMesures || []).length > 0) },
+      { label: 'Maîtrise initiale de l\'incendie', ok: config.extincteurPortatif === true },
+      { label: 'Personnel de surveillance',      ok: config.agentSecurite === true || config.securite24h === true || config.posteSurveillance === true },
+      { label: 'Formation du personnel',         ok: true },
+      { label: 'Installations sécurité incendie', ok: config.panneauAlarme === true && !!((config as any).panneauLocalisation) },
+      { label: 'Exercices d\'incendie',          ok: !!(result.profilReglementaire?.frequenceExercices) },
+      { label: 'Surveillance des risques',       ok: !config.matieresDangereuses || ((config as any).matieresList || []).length > 0 },
+      { label: 'Inspection et entretien',        ok: config.programmeInspectionEntretien === true },
+    ];
+
+    const documentes = elements.filter(e => e.ok).length;
+    const manquants  = elements.filter(e => !e.ok);
+
+    if (manquants.length === 0) {
+      result.validations.push({
+        type: 'INFO',
+        code: 'T2-PSI-COMPLET',
+        message: `PSI — ${documentes}/12 éléments obligatoires documentés ✓`,
+        reference: 'CNPI 2020 art. 2.8.2.1',
+      });
+    } else {
+      result.validations.push({
+        type: manquants.length >= 4 ? 'ERREUR' : 'AVERTISSEMENT',
+        code: 'T2-PSI-INCOMPLET',
+        message: `PSI — ${documentes}/12 éléments documentés. Manquants : ${manquants.map(e => e.label).join(', ')}.`,
+        reference: 'CNPI 2020 art. 2.8.2.1',
+      });
+    }
+  }
+
+  // ── T6 — Travaux par points chauds ──────────────────────────────────────
+
+  private applyPointsChaudsRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    const tpc = config.travauxPointsChauds;
+    if (!tpc || tpc === 'Jamais') return;
+
+    result.proceduresActives.push('PROC-TRAVAIL-CHAUD');
+
+    if (!config.permisTravauxChauds) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T6-PERMIS-ABSENT',
+        message: 'Travaux par points chauds déclarés sans permis formalisé — permis obligatoire avant chaque intervention.',
+        reference: 'CNPI 2020 art. 5.2',
+      });
+    }
+    if (!config.surveillanceIncendieTPC) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T6-SURVEILLANCE-ABSENTE',
+        message: 'Surveillance incendie continue non déclarée — requise pendant tous travaux par points chauds.',
+        reference: 'CNPI 2020 art. 5.2.2.1',
+      });
+    }
+    if (!config.inspectionFinaleDocumentee) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T6-INSPECTION-ABSENTE',
+        message: 'Inspection finale après travaux non documentée — requise 4h après l\'achèvement ou après surveillance exhaustive.',
+        reference: 'CNPI 2020 art. 5.2.3.3',
+      });
+    }
+    if (config.travauxToiture) {
+      result.validations.push({
+        type: config.inspectionFinaleDocumentee ? 'INFO' : 'ERREUR',
+        code: 'T6-TOITURE',
+        message: config.inspectionFinaleDocumentee
+          ? 'Travaux sur toiture : inspection des espaces cachés documentée ✓'
+          : 'Travaux sur toiture déclarés : inspection obligatoire des vides de construction après chaque intervention.',
+        reference: 'CNPI 2020 art. 5.2.3.2',
+      });
+    }
+  }
+
+  // ── T7 — Laboratoires ────────────────────────────────────────────────────
+
+  private applyLaboratoireRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    if (!config.laboratoirePresent) return;
+
+    // Exercices portés à 3 mois (hors école)
+    const usage = (config.usagePrincipal || '').trim();
+    if (!usage.startsWith('A2') && result.profilReglementaire) {
+      result.profilReglementaire.frequenceExercices     = 'Tous les 3 mois';
+      result.profilReglementaire.frequenceExercicesBase = 'Laboratoire présent hors établissement scolaire (CNPI 2020 art. 2.8.3.2 d)';
+    }
+
+    result.validations.push({
+      type: 'INFO',
+      code: 'T7-LABO-DETECTE',
+      message: 'Laboratoire détecté — fréquence des exercices d\'incendie portée à 3 mois (hors écoles).',
+      reference: 'CNPI 2020 art. 2.8.3.2',
+    });
+
+    if (config.gazComprimesPresents && !config.armireCabinetVentile) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T7-GAZ-ARMOIRE',
+        message: 'Gaz comprimés en laboratoire : bonbonnes non branchées doivent être stockées dans une armoire ou cabinet ventilé.',
+        reference: 'CNPI 2020 art. 5.5.5.3',
+      });
+    }
+    if (config.gazToxiquesPresents && !config.detectionGazLabo) {
+      result.validations.push({
+        type: 'ERREUR',
+        code: 'T7-GAZ-TOXIQUES-DETECTION',
+        message: 'Gaz toxiques en laboratoire sans système de détection — détection avec signal audible et visible obligatoire.',
+        reference: 'CNPI 2020 art. 5.5.5.3',
+      });
+    }
+    if (!config.panneauxTMDLabo) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T7-PANNEAUX-TMD',
+        message: 'Panneaux TMD conformes requis à l\'entrée du laboratoire pour identifier les matières dangereuses.',
+        reference: 'CNPI 2020 art. 3.2.7.14',
+      });
+    }
+  }
+
+  // ── T11 — Registres coupe-feu ────────────────────────────────────────────
+
+  private applyRegistresCoupeFeuRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    if (!config.registresCoupeFeu) {
+      if (config.cvac || config.desenfumage) {
+        result.validations.push({
+          type: 'RECOMMANDATION',
+          code: 'T11-SUGGESTION',
+          message: 'Système CVAC / désenfumage détecté — confirmer la présence de registres coupe-feu (inspection annuelle requise).',
+          reference: 'CNPI 2020 art. 2.2.2.4',
+        });
+      }
+      return;
+    }
+    if (!config.registresCoupeFeuDerniereInspection) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T11-INSPECTION-ABSENTE',
+        message: 'Registres coupe-feu présents sans date d\'inspection — inspection annuelle obligatoire.',
+        reference: 'CNPI 2020 art. 2.2.2.4',
+      });
+      return;
+    }
+    const diff = Math.floor(
+      (Date.now() - new Date(config.registresCoupeFeuDerniereInspection).getTime()) / 86400000,
+    );
+    if (diff > 365) {
+      result.validations.push({
+        type: 'ERREUR',
+        code: 'T11-INSPECTION-ECHUE',
+        message: `Inspection des registres coupe-feu échue depuis ${diff - 365} jour(s) — intervalle de 12 mois dépassé.`,
+        reference: 'CNPI 2020 art. 2.2.2.4',
+      });
+    } else if (diff > 305) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T11-INSPECTION-PROCHE',
+        message: `Inspection des registres coupe-feu à prévoir dans ${365 - diff} jour(s).`,
+        reference: 'CNPI 2020 art. 2.2.2.4',
+      });
+    } else {
+      result.validations.push({
+        type: 'INFO',
+        code: 'T11-INSPECTION-OK',
+        message: 'Registres coupe-feu — inspection annuelle en règle ✓',
+        reference: 'CNPI 2020 art. 2.2.2.4',
+      });
+    }
+  }
+
+  // ── T12 — Signalisation d'issue ──────────────────────────────────────────
+
+  private applySignalisationIssueRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    if (!config.signalisationIssue) return;
+    if (!config.signalisationIssueDerniereInspection) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T12-INSPECTION-ABSENTE',
+        message: 'Signalisation d\'issue présente sans date d\'inspection — inspection annuelle obligatoire.',
+        reference: 'CNPI 2020 art. 6.5.1.8',
+      });
+      return;
+    }
+    const diff = Math.floor(
+      (Date.now() - new Date(config.signalisationIssueDerniereInspection).getTime()) / 86400000,
+    );
+    const isPiles = config.signalisationIssueType === 'Piles de secours intégrées';
+    const max     = isPiles ? 30 : 365;
+    const label   = isPiles ? '30 jours (piles)' : '12 mois';
+    if (diff > max) {
+      result.validations.push({
+        type: 'ERREUR',
+        code: 'T12-INSPECTION-ECHUE',
+        message: `Inspection de la signalisation d'issue échue — intervalle maximal de ${label} dépassé.`,
+        reference: 'CNPI 2020 art. 6.5.1.8',
+      });
+    } else {
+      result.validations.push({
+        type: 'INFO',
+        code: 'T12-INSPECTION-OK',
+        message: `Signalisation d'issue — inspection en règle (intervalle : ${label}) ✓`,
+        reference: 'CNPI 2020 art. 6.5.1.8',
+      });
+    }
+  }
+
+  // ── T13 — Obstruction portes d'issue ─────────────────────────────────────
+
+  private applyPortesIssueRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    if (!config.portesIssueExposees) return;
+    if (!config.portesIssueMesure || config.portesIssueMesure === 'Aucune mesure') {
+      result.validations.push({
+        type: 'ERREUR',
+        code: 'T13-PORTE-NON-PROTEGEE',
+        message: 'Porte(s) d\'issue exposée(s) à un risque d\'obstruction sans protection — signalisation visible ou obstacle physique obligatoire côté extérieur.',
+        reference: 'CNPI 2020 art. 2.7.1.8',
+      });
+    } else {
+      result.validations.push({
+        type: 'INFO',
+        code: 'T13-PORTE-PROTEGEE',
+        message: `Portes d'issue exposées — mesure en place : ${config.portesIssueMesure} ✓`,
+        reference: 'CNPI 2020 art. 2.7.1.8',
       });
     }
   }

@@ -816,6 +816,33 @@ export default function ConfiguratorPage() {
     if (['ppnaeTypesLimitations', 'ppnaeMesures', 'ppnaeRegistreAJour'].includes(field.key)) {
       return config['personnelHandicap'] === true;
     }
+    // T6 — Travaux par points chauds
+    if (['permisTravauxChauds', 'surveillanceIncendieTPC', 'responsableTravauxChauds',
+         'inspectionFinaleDocumentee', 'methodeInspectionTPC', 'travauxToiture'].includes(field.key)) {
+      const tpc: string = config['travauxPointsChauds'] || '';
+      return tpc === 'Occasionnellement' || tpc === 'Régulièrement';
+    }
+    // T7 — Laboratoires
+    if (['typeLaboratoire', 'gazComprimesPresents', 'gazToxiquesPresents',
+         'detectionGazLabo', 'panneauxTMDLabo'].includes(field.key)) {
+      return config['laboratoirePresent'] === true;
+    }
+    if (field.key === 'armireCabinetVentile') {
+      return config['laboratoirePresent'] === true && config['gazComprimesPresents'] === true;
+    }
+    // T11 — Registres coupe-feu
+    if (['registresCoupeFeuNombre', 'registresCoupeFeuDerniereInspection',
+         'registresCoupeFeuRapport'].includes(field.key)) {
+      return config['registresCoupeFeu'] === true;
+    }
+    // T12 — Signalisation d'issue
+    if (['signalisationIssueType', 'signalisationIssueDerniereInspection'].includes(field.key)) {
+      return config['signalisationIssue'] === true;
+    }
+    // T13 — Obstruction portes d'issue
+    if (field.key === 'portesIssueMesure') {
+      return config['portesIssueExposees'] === true;
+    }
     return true;
   };
 
@@ -943,7 +970,7 @@ export default function ConfiguratorPage() {
                 { label: 'Général',           ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
                 { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'systemes_integres', 'extincteurs', 'detecteurs'] },
                 { label: 'Équipements',       ids: ['mecanique', 'communication', 'premiers_soins'] },
-                { label: 'Risques',           ids: ['matieres'] },
+                { label: 'Risques',           ids: ['matieres', 'points_chauds', 'laboratoires'] },
                 { label: 'Industriel',        ids: ['industriel'] },
               ];
 
@@ -1458,7 +1485,7 @@ export default function ConfiguratorPage() {
                     { label: 'Général', ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
                     { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'systemes_integres', 'extincteurs', 'detecteurs'] },
                     { label: 'Équipements', ids: ['mecanique', 'communication', 'premiers_soins'] },
-                    { label: 'Risques', ids: ['matieres'] },
+                    { label: 'Risques', ids: ['matieres', 'points_chauds', 'laboratoires'] },
                     { label: 'Industriel', ids: ['industriel'] },
                   ];
 
