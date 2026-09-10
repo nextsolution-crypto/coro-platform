@@ -37,6 +37,12 @@ export class OrganizationsController {
     return this.organizationsService.updateLicense(id, body.licenseType);
   }
 
+  @Get('map/overview')
+  async getMapOverview(@Request() req: any) {
+    this.assertSuperAdmin(req);
+    return this.organizationsService.getMapOverview();
+  }
+
   @Put(':id/active')
   toggleActive(@Param('id') id: string, @Body() body: { isActive: boolean }, @Request() req: any) {
     this.assertSuperAdmin(req);

@@ -245,4 +245,89 @@ export class OrganizationsService {
       };
     }).sort((a, b) => a.score - b.score); // Les plus à risque en premier
   }
+
+  async getMapOverview() {
+    const organizations = await this.prisma.organization.findMany({
+      where: { isActive: true },
+      include: {
+        _count: { select: { users: true, projects: true, clients: true, buildings: true } },
+        buildings: {
+          where: {
+            isActive: true,
+            latitude: { not: null },
+            longitude: { not: null },
+          },
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            province: true,
+            latitude: true,
+            longitude: true,
+            projects: {
+              select: { status: true, documentType: true, updatedAt: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return organizations.map(org => {
+      const buildings = org.buildings;
+      const withCoords = buildings.filter(b => b.latitude && b.longitude);
+
+      // Centroïde de l'organisation
+      const latitude = withCoords.length > 0
+        ? withCoords.reduce((s, b) => s + (b.latitude as number), 0) / withCoords.length
+        : null;
+      const longitude = withCoords.length > 0
+        ? withCoords.reduce((s, b) => s + (b.longitude as number), 0) / withCoords.length
+        : null;
+
+      // Statut global de l'organisation
+      const allProjects = buildings.flatMap(b => b.projects);
+      const totalProjects = allProjects.length;
+      const validatedProjects = allProjects.filter(p => p.status === 'VALIDATED').length;
+      const inProgressProjects = allProjects.filter(p => ['DRAFT', 'IN_PROGRESS', 'REVIEW'].includes(p.status)).length;
+
+      // Ville principale (la plus fréquente)
+      const cities = buildings.map(b => b.city).filter(Boolean);
+      const cityCount = cities.reduce((acc: any, c) => { acc[c!] = (acc[c!] || 0) + 1; return acc; }, {});
+      const mainCity = Object.keys(cityCount).sort((a, b) => cityCount[b] - cityCount[a])[0] || null;
+
+      // Licence
+      const licenseColor: Record<string, string> = {
+        ESSAI_GRATUIT: '#F39C12',
+        STANDARD: '#2980B9',
+        ENTREPRISE: '#27AE60',
+      };
+
+      return {
+        id: org.id,
+        name: org.name,
+        licenseType: org.licenseType,
+        licenseColor: licenseColor[org.licenseType] || '#ADB5BD',
+        isInternal: org.isInternal,
+        latitude,
+        longitude,
+        mainCity,
+        metrics: {
+          users: org._count.users,
+          clients: org._count.clients,
+          buildings: org._count.buildings,
+          projects: totalProjects,
+          validated: validatedProjects,
+          inProgress: inProgressProjects,
+        },
+        buildings: withCoords.map(b => ({
+          id: b.id,
+          name: b.name,
+          city: b.city,
+          latitude: b.latitude,
+          longitude: b.longitude,
+        })),
+      };
+    });
+  }
 }

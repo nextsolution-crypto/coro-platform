@@ -59,6 +59,7 @@ const SUPER_ADMIN_GROUP = {
   label: 'Super Admin',
   items: [
     { label: 'Organisations',   path: '/admin/organizations',  icon: '🏢' },
+    { label: 'Carte globale',   path: '/admin/map',            icon: '🌍' },
     { label: 'Health Score',    path: '/admin/health',         icon: '🏥' },
     { label: 'Tous les projets', path: '/admin/projects',      icon: '📁' },
     { label: 'Procédures',      path: '/admin/procedures',     icon: '📋' },
