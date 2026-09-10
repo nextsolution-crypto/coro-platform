@@ -7,8 +7,8 @@ type PageProps = {
 };
 
 const SITE_URL = 'https://getcoro.io';
-const LAST_UPDATED_FR = '11 août 2026';
-const LAST_UPDATED_EN = 'August 11, 2026';
+const LAST_UPDATED_FR = '10 septembre 2026';
+const LAST_UPDATED_EN = 'September 10, 2026';
 
 const CONTENT = {
   fr: {
@@ -18,12 +18,12 @@ metaDescription:
     title: 'Conditions d’utilisation',
     updated: `Dernière mise à jour : ${LAST_UPDATED_FR}`,
     intro:
-      'Les présentes conditions encadrent l’accès et l’utilisation du site Web, de la plateforme SaaS CORO et des services qui y sont associés. En utilisant CORO ou en créant un compte, vous acceptez d’être lié par les présentes conditions ainsi que par les modalités commerciales applicables à votre abonnement.',
+  'Les présentes conditions encadrent l’accès et l’utilisation du site Web, de la plateforme SaaS CORO et des services qui y sont associés. CORO est le nom commercial utilisé pour l’exploitation de la plateforme. En utilisant CORO ou en créant un compte, vous acceptez d’être lié par les présentes conditions ainsi que par les modalités commerciales applicables à votre abonnement.',
     sections: [
       {
         title: '1. Objet et portée',
         paragraphs: [
-          'CORO est une plateforme SaaS professionnelle destinée notamment à la création, à la structuration, à la gestion, à la révision et à l’exportation de documents de conformité liés aux mesures d’urgence, à la sécurité incendie, à la continuité des activités, à la gestion de crise et à d’autres domaines connexes.',
+          'CORO est une plateforme SaaS professionnelle exploitée par Mathieu Montaroux, entreprise individuelle immatriculée au Registraire des entreprises du Québec sous le nom utilisé CORO, NEQ 2282543935. La plateforme est destinée notamment à la création, à la structuration, à la gestion, à la révision et à l’exportation de documents de conformité liés aux mesures d’urgence, à la sécurité incendie, à la continuité des activités, à la gestion de crise et à d’autres domaines connexes.',
           'Les présentes conditions s’appliquent aux visiteurs du site, aux utilisateurs autorisés de la plateforme et, lorsque pertinent, aux organisations ayant souscrit aux services CORO.',
         ],
       },
@@ -72,7 +72,7 @@ metaDescription:
       {
         title: '7. Propriété intellectuelle de CORO',
         paragraphs: [
-          'La plateforme CORO, son architecture, son code, ses interfaces, sa marque, ses éléments graphiques, ses modèles, ses fonctionnalités, sa documentation et les éléments propriétaires fournis par CORO sont protégés par les lois applicables en matière de propriété intellectuelle.',
+          'La plateforme CORO, son architecture, son code, ses interfaces, sa marque et ses signes distinctifs, ses éléments graphiques, ses modèles, ses fonctionnalités, sa documentation et les éléments propriétaires qui lui sont associés sont protégés par les lois applicables en matière de propriété intellectuelle.',
           'Aucun droit de propriété sur CORO n’est transféré à l’utilisateur. Sous réserve du respect des présentes conditions et du paiement des frais applicables, l’utilisateur bénéficie uniquement d’un droit limité, non exclusif, non transférable et révocable d’utiliser la plateforme pendant la durée de son accès autorisé.',
         ],
       },
@@ -174,12 +174,12 @@ metaDescription:
     title: 'Terms of Use',
     updated: `Last updated: ${LAST_UPDATED_EN}`,
     intro:
-      'These terms govern access to and use of the CORO website, CORO SaaS platform and related services. By using CORO or creating an account, you agree to be bound by these terms and by the commercial terms applicable to your subscription.',
+  'These terms govern access to and use of the CORO website, CORO SaaS platform and related services. CORO is the trade name used to operate the platform. By using CORO or creating an account, you agree to be bound by these terms and by the commercial terms applicable to your subscription.',
     sections: [
       {
         title: '1. Purpose and scope',
         paragraphs: [
-          'CORO is a professional SaaS platform intended, among other things, for the creation, structuring, management, review and export of compliance documentation related to emergency management, fire safety, business continuity, crisis management and related fields.',
+          'CORO is a professional SaaS platform operated by Mathieu Montaroux, a sole proprietorship registered with the Québec Enterprise Register under the trade name CORO, NEQ 2282543935. The platform is intended, among other things, for the creation, structuring, management, review and export of compliance documentation related to emergency management, fire safety, business continuity, crisis management and related fields.',
           'These terms apply to website visitors, authorized platform users and, where relevant, organizations subscribing to CORO services.',
         ],
       },
@@ -228,7 +228,7 @@ metaDescription:
       {
         title: '7. CORO intellectual property',
         paragraphs: [
-          'The CORO platform, architecture, code, interfaces, brand, graphics, templates, features, documentation and proprietary materials supplied by CORO are protected by applicable intellectual property laws.',
+          'The CORO platform, its architecture, code, interfaces, brand and distinctive signs, graphic elements, templates, features, documentation, and associated proprietary materials are protected by applicable intellectual property laws.',
           'No ownership right in CORO is transferred to the user. Subject to compliance with these terms and payment of applicable fees, users receive only a limited, non-exclusive, non-transferable and revocable right to use the platform for the duration of their authorized access.',
         ],
       },
@@ -524,6 +524,7 @@ export default async function TermsPage({ searchParams }: PageProps) {
                   <div style={{ marginTop: 20, padding: 24, backgroundColor: '#F8F9FA', borderLeft: '4px solid #C0392B', borderRadius: 8 }}>
                     <p style={{ margin: 0, color: '#495057', fontSize: 15, lineHeight: 1.8 }}>
                       <strong>CORO</strong><br />
+                      NEQ 2282543935<br />
                       2879 Boul. Pierre-Bernard<br />
                       Montréal (QC), H1L 4R2<br />
                       Canada<br />

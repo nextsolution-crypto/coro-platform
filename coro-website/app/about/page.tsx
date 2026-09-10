@@ -563,30 +563,24 @@ export default async function AboutPage({ searchParams }: PageProps) {
       ? `${SITE_URL}/about?lang=en`
       : `${SITE_URL}/about`;
 
-  const organizationJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'CORO',
-    alternateName:
-      'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
-    url: SITE_URL,
-    logo: {
-      '@type': 'ImageObject',
-      url: `${SITE_URL}/coro-logo.png`,
-      contentUrl: `${SITE_URL}/coro-logo.png`,
-    },
-    email: 'info@getcoro.io',
-    telephone: '+1-514-791-7871',
-    address: {
-      '@type': 'PostalAddress',
-      streetAddress: '2879 Boul. Pierre-Bernard',
-      addressLocality: 'Montréal',
-      addressRegion: 'QC',
-      postalCode: 'H1L 4R2',
-      addressCountry: 'CA',
-    },
-    description: t.metadata.description,
-  };
+  const softwareApplicationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'CORO',
+  alternateName:
+    'CORO — Conformité Opérationnelle et Résilience Organisationnelle',
+  url: SITE_URL,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description: t.metadata.description,
+  inLanguage: ['fr-CA', 'en-CA'],
+  image: `${SITE_URL}/og-coro.jpg`,
+  offers: {
+    '@type': 'Offer',
+    url: `${SITE_URL}/#pricing`,
+    availability: 'https://schema.org/OnlineOnly',
+  },
+};
 
   const aboutPageJsonLd = {
     '@context': 'https://schema.org',
@@ -596,10 +590,12 @@ export default async function AboutPage({ searchParams }: PageProps) {
     url: currentUrl,
     inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
     mainEntity: {
-      '@type': 'Organization',
-      name: 'CORO',
-      url: SITE_URL,
-    },
+  '@type': 'SoftwareApplication',
+  name: 'CORO',
+  url: SITE_URL,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+},
     isPartOf: {
       '@type': 'WebSite',
       name: 'CORO',
@@ -618,7 +614,7 @@ export default async function AboutPage({ searchParams }: PageProps) {
       <script
   type="application/ld+json"
   dangerouslySetInnerHTML={{
-    __html: JSON.stringify(organizationJsonLd).replace(/</g, '\\u003c'),
+    __html: JSON.stringify(softwareApplicationJsonLd).replace(/</g, '\\u003c'),
   }}
 />
 

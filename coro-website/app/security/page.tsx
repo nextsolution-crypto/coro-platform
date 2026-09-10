@@ -97,11 +97,11 @@ const CONTENT = {
           desc: 'Infrastructure infonuagique utilisée pour l’exploitation de CORO.',
         },
         {
-          icon: 'compliance',
-          title: 'Cadre fournisseur',
-          value: 'SOC 2 Type II',
-          desc: 'Certification du fournisseur d’infrastructure, distincte de CORO elle-même.',
-        },
+  icon: 'compliance',
+  title: 'Cadre fournisseur',
+  value: 'SOC 2 Type II',
+  desc: 'Attestation SOC 2 Type II du fournisseur d’infrastructure, distincte de CORO elle-même.',
+},
       ],
       note:
         'Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Les détails techniques à jour peuvent être fournis aux équipes TI dans le cadre d’une évaluation de sécurité.',
@@ -144,11 +144,11 @@ const CONTENT = {
           desc: 'Snapshots de l’infrastructure pour soutenir les scénarios de récupération.',
         },
         {
-          icon: 'availability',
-          title: 'Disponibilité infrastructure',
-          value: '99,9 %',
-          desc: 'SLA publié par le fournisseur d’infrastructure applicable à ses services concernés.',
-        },
+  icon: 'availability',
+  title: 'SLA infrastructure',
+  value: '99,9 %',
+  desc: 'SLA publié par le fournisseur pour les services d’infrastructure concernés. Ce taux ne constitue pas un SLA propre à CORO.',
+},
       ],
     },
     perimeter: {
@@ -184,9 +184,9 @@ const CONTENT = {
         'CORO traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents adaptées à ses activités.',
       badges: [
         {
-          title: 'Loi 25',
-          desc: 'Protection des renseignements personnels au Québec',
-        },
+  title: 'Québec — Loi 25',
+  desc: 'Pratiques de protection des renseignements personnels tenant compte du cadre législatif québécois',
+},
         {
           title: 'LPRPDE / PIPEDA',
           desc: 'Cadre fédéral canadien lorsqu’applicable',
@@ -246,7 +246,7 @@ const CONTENT = {
     metadata: {
   title: 'CORO Security | Data Protection and Canadian Hosting',
   description:
-    'Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and continuous monitoring.',
+  'Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and security monitoring.',
 },
     nav: {
       features: 'Features',
@@ -314,11 +314,11 @@ const CONTENT = {
           desc: 'Cloud infrastructure provider used to operate CORO.',
         },
         {
-          icon: 'compliance',
-          title: 'Provider framework',
-          value: 'SOC 2 Type II',
-          desc: 'Infrastructure provider certification; this is distinct from CORO itself.',
-        },
+  icon: 'compliance',
+  title: 'Provider framework',
+  value: 'SOC 2 Type II',
+  desc: 'SOC 2 Type II attestation of the infrastructure provider; this is distinct from CORO itself.',
+},
       ],
       note:
         'Infrastructure characteristics may evolve with the platform. Current technical details can be provided to IT teams as part of a security assessment.',
@@ -361,11 +361,11 @@ const CONTENT = {
           desc: 'Infrastructure snapshots supporting recovery scenarios.',
         },
         {
-          icon: 'availability',
-          title: 'Infrastructure availability',
-          value: '99.9%',
-          desc: 'Published infrastructure-provider SLA for applicable services.',
-        },
+  icon: 'availability',
+  title: 'Infrastructure SLA',
+  value: '99.9%',
+  desc: 'Published provider SLA for applicable infrastructure services. This figure does not constitute a CORO service-level commitment.',
+},
       ],
     },
     perimeter: {
@@ -401,9 +401,9 @@ const CONTENT = {
         'CORO processes personal information under applicable legislation and maintains protection, retention and incident-management practices appropriate to its activities.',
       badges: [
         {
-          title: 'Law 25',
-          desc: 'Quebec personal information protection',
-        },
+  title: 'Quebec — Law 25',
+  desc: 'Privacy practices designed with Quebec’s legislative framework in mind',
+},
         {
           title: 'PIPEDA',
           desc: 'Canadian federal framework where applicable',
@@ -662,20 +662,12 @@ export default async function SecurityPage({ searchParams }: PageProps) {
     },
 
     about: {
-      '@type': 'Organization',
-      name: 'CORO',
-      url: SITE_URL,
-    },
-
-    publisher: {
-      '@type': 'Organization',
-      name: 'CORO',
-      url: SITE_URL,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE_URL}/coro-logo.png`,
-      },
-    },
+  '@type': 'SoftwareApplication',
+  name: 'CORO',
+  url: SITE_URL,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+},
   };
 
   return (

@@ -7,8 +7,8 @@ type PageProps = {
 };
 
 const SITE_URL = 'https://getcoro.io';
-const LAST_UPDATED_FR = '11 août 2026';
-const LAST_UPDATED_EN = 'August 11, 2026';
+const LAST_UPDATED_FR = '10 septembre 2026';
+const LAST_UPDATED_EN = 'September 10, 2026';
 
 const CONTENT = {
   fr: {
@@ -21,12 +21,12 @@ metaDescription:
       'CORO accorde une grande importance à la protection des renseignements personnels. La présente politique explique, de manière transparente, quels renseignements peuvent être recueillis lorsque vous visitez notre site Web, demandez une démonstration ou utilisez la plateforme CORO, pourquoi ils sont utilisés, avec qui ils peuvent être communiqués et quels sont vos droits.',
     sections: [
       {
-        title: '1. Portée de la politique',
-        paragraphs: [
-          'La présente politique s’applique aux renseignements personnels recueillis par CORO dans le cadre de ses activités, notamment par l’intermédiaire du site getcoro.io, de la plateforme app.getcoro.io, de nos formulaires, de nos communications et de nos services de soutien.',
-          'Un renseignement personnel est un renseignement qui concerne une personne physique et qui permet, directement ou indirectement, de l’identifier.',
-        ],
-      },
+  title: '1. Portée de la politique',
+  paragraphs: [
+    'La présente politique s’applique aux renseignements personnels recueillis dans le cadre de l’exploitation de CORO, plateforme SaaS exploitée sous le nom CORO par Mathieu Montaroux, entreprise individuelle immatriculée au Registraire des entreprises du Québec, NEQ 2282543935. Elle couvre notamment le site getcoro.io, la plateforme app.getcoro.io, nos formulaires, nos communications et nos services de soutien.',
+    'Un renseignement personnel est un renseignement qui concerne une personne physique et qui permet, directement ou indirectement, de l’identifier.',
+  ],
+},
       {
         title: '2. Renseignements que nous pouvons recueillir',
         paragraphs: [
@@ -81,7 +81,7 @@ metaDescription:
         title: '7. Hébergement et localisation des données',
         paragraphs: [
           'CORO héberge les données de la plateforme au Canada. Notre architecture est conçue afin de favoriser la souveraineté des données et de répondre aux attentes des organisations canadiennes en matière de protection de l’information.',
-          'Si un fournisseur devait traiter certains renseignements à l’extérieur du Québec ou du Canada pour une fonction particulière, CORO applique les évaluations et mesures de protection exigées par la législation applicable avant une telle communication.',
+          'Lorsque des renseignements personnels doivent être communiqués ou traités à l’extérieur du Québec, CORO effectue les évaluations requises et met en place les mesures de protection appropriées conformément à la législation applicable.',
         ],
       },
       {
@@ -119,12 +119,12 @@ metaDescription:
         ],
       },
       {
-        title: '13. Responsable de la protection des renseignements personnels',
-        paragraphs: [
-          'Toute question, demande d’accès, demande de rectification ou plainte concernant la protection des renseignements personnels peut être adressée au Responsable de la protection des renseignements personnels de CORO :',
-        ],
-        contact: true,
-      },
+  title: '13. Responsable de la protection des renseignements personnels',
+  paragraphs: [
+    'Toute question, demande d’accès, demande de rectification, demande relative à vos droits ou plainte concernant la protection des renseignements personnels peut être adressée au Responsable de la protection des renseignements personnels de CORO :',
+  ],
+  contact: true,
+},
       {
         title: '14. Modifications de la politique',
         paragraphs: [
@@ -149,12 +149,12 @@ metaDescription:
       'CORO places great importance on protecting personal information. This policy explains, transparently, what information may be collected when you visit our website, request a demonstration or use the CORO platform, why it is used, with whom it may be shared and what rights you have.',
     sections: [
       {
-        title: '1. Scope of this policy',
-        paragraphs: [
-          'This policy applies to personal information collected by CORO in the course of its activities, including through getcoro.io, app.getcoro.io, our forms, communications and support services.',
-          'Personal information is information about an identifiable individual, whether the individual can be identified directly or indirectly.',
-        ],
-      },
+  title: '1. Scope of this policy',
+  paragraphs: [
+    'This policy applies to personal information collected in connection with the operation of CORO, a SaaS platform operated under the CORO trade name by Mathieu Montaroux, a sole proprietorship registered with the Québec Enterprise Register, NEQ 2282543935. It applies in particular to getcoro.io, app.getcoro.io, our forms, communications and support services.',
+    'Personal information is information about an identifiable individual, whether the individual can be identified directly or indirectly.',
+  ],
+},
       {
         title: '2. Information we may collect',
         paragraphs: ['Depending on how you interact with CORO, we may collect the following categories of information:'],
@@ -205,7 +205,7 @@ metaDescription:
         title: '7. Hosting and data location',
         paragraphs: [
           'CORO hosts platform data in Canada. Our architecture is designed to support data sovereignty and the expectations of Canadian organizations regarding information protection.',
-          'If a provider were to process certain information outside Quebec or Canada for a specific function, CORO applies the assessments and safeguards required by applicable legislation before such disclosure.',
+          'Where personal information must be disclosed or processed outside Quebec, CORO conducts the required assessments and implements appropriate safeguards in accordance with applicable legislation.',
         ],
       },
       {
@@ -243,12 +243,12 @@ metaDescription:
         ],
       },
       {
-        title: '13. Privacy Officer',
-        paragraphs: [
-          'Questions, access requests, correction requests or complaints relating to personal information may be directed to CORO’s Privacy Officer:',
-        ],
-        contact: true,
-      },
+  title: '13. Privacy Officer',
+  paragraphs: [
+    'Questions, access requests, correction requests, requests relating to your privacy rights or complaints concerning personal information may be directed to CORO’s Privacy Officer:',
+  ],
+  contact: true,
+},
       {
         title: '14. Changes to this policy',
         paragraphs: [
@@ -456,13 +456,25 @@ export default async function PrivacyPage({ searchParams }: PageProps) {
                 {section.contact && (
                   <div style={{ marginTop: 20, padding: 24, backgroundColor: '#F8F9FA', borderLeft: '4px solid #C0392B', borderRadius: 8 }}>
                     <p style={{ margin: 0, color: '#495057', fontSize: 15, lineHeight: 1.8 }}>
-                      <strong>{lang === 'fr' ? 'Responsable de la protection des renseignements personnels' : 'Privacy Officer'}</strong><br />
-                      CORO<br />
-                      2879 Boul. Pierre-Bernard<br />
-                      Montréal (QC), H1L 4R2<br />
-                      Canada<br />
-                      <a href="mailto:info@getcoro.io" style={{ color: '#C0392B' }}>info@getcoro.io</a><br />
-                      +1 (514) 791-7871
+                      <strong>
+  {lang === 'fr'
+    ? 'Responsable de la protection des renseignements personnels'
+    : 'Privacy Officer'}
+</strong>
+<br />
+CORO<br />
+NEQ 2282543935<br />
+2879 Boul. Pierre-Bernard<br />
+Montréal (QC), H1L 4R2<br />
+Canada<br />
+<a
+  href="mailto:info@getcoro.io"
+  style={{ color: '#C0392B' }}
+>
+  info@getcoro.io
+</a>
+<br />
++1 (514) 791-7871
                     </p>
                   </div>
                 )}

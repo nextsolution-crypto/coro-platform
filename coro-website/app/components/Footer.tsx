@@ -8,7 +8,7 @@ const translations = {
       tagline: 'Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle.',
       product: 'Produit',
       legal: 'Légal',
-      rights: '© 2026 CORO. Tous droits réservés.',
+      rights: '© 2026 CORO. Tous droits réservés. · NEQ 2282543935',
       hosting: 'Hébergé au Canada 🇨🇦',
       links: {
         features: 'Fonctionnalités',
@@ -25,7 +25,7 @@ const translations = {
       tagline: 'Canadian SaaS platform for operational compliance and organizational resilience.',
       product: 'Product',
       legal: 'Legal',
-      rights: '© 2026 CORO. All rights reserved.',
+      rights: '© 2026 CORO. All rights reserved. · NEQ 2282543935',
       hosting: 'Hosted in Canada 🇨🇦',
       links: {
         features: 'Features',
