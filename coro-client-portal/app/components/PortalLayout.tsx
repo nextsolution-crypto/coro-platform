@@ -218,7 +218,7 @@ export default function PortalLayout({
             className="hidden md:flex"
             style={{
               alignItems: 'center',
-              gap: 4,
+              gap: 2,
             }}
             aria-label="Navigation principale"
           >
@@ -236,9 +236,9 @@ export default function PortalLayout({
                     alignItems: 'center',
                     gap: 6,
                     minHeight: 40,
-                    padding: '8px 12px',
+                    padding: '8px 8px',
                     borderRadius: 6,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 500,
                     border: 'none',
                     cursor: 'pointer',
