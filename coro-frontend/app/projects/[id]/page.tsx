@@ -741,27 +741,39 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {project.status === 'VALIDATED' && (
+      {['VALIDATED', 'EXPORTED'].includes(project.status) && (
         <div className="rounded-md p-4 mb-6 flex items-center justify-between gap-3"
-          style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}>
+          style={{
+            backgroundColor: project.progress === 100 ? '#EBF5FB' : '#EAFAF1',
+            border: `1px solid ${project.progress === 100 ? '#AED6F1' : '#A9DFBF'}`,
+          }}>
           <div className="flex items-center gap-3">
-            <span style={{ fontSize: '20px' }}>✓</span>
+            <span style={{ fontSize: '20px' }}>
+              {project.progress === 100 ? '✍️' : '✓'}
+            </span>
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#27AE60' }}>
-                Document approuvé et verrouillé
+              <p className="text-sm font-semibold"
+                style={{ color: project.progress === 100 ? '#2980B9' : '#27AE60' }}>
+                {project.progress === 100
+                  ? 'Document signé et complété'
+                  : 'Document approuvé et verrouillé'}
               </p>
               <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
                 {project.approvedBy
                   ? `Approuvé par ${project.approvedBy.firstName} ${project.approvedBy.lastName}${project.approvedAt ? ` le ${new Date(project.approvedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}`
                   : 'Ce document a été validé officiellement. Il est en lecture seule.'}
+                {project.progress === 100 && ' · Signature client reçue ✓'}
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowApprovalModal('request-revision')}
             className="text-xs font-medium px-3 py-1.5 rounded transition-colors flex-shrink-0"
-            style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#D5F5E3'}
+            style={{
+              border: `1px solid ${project.progress === 100 ? '#AED6F1' : '#A9DFBF'}`,
+              color: project.progress === 100 ? '#2980B9' : '#27AE60',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = project.progress === 100 ? '#D6EAF8' : '#D5F5E3'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             ✏️ Apporter une mise à jour
@@ -1092,7 +1104,7 @@ export default function ProjectDetailPage() {
 
         <button
           onClick={() => setShowExportModal(true)}
-          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE') || project.status === 'REVIEW' || project.status !== 'VALIDATED'}
+          disabled={!hasDocument || validations.some(v => v.level === 'CRITIQUE') || project.status === 'REVIEW' || !['VALIDATED', 'EXPORTED'].includes(project.status)}
           title={validations.some(v => v.level === 'CRITIQUE') ? 'Corrigez les erreurs critiques avant d\'exporter' : ''}
           className="text-white text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
@@ -1107,7 +1119,7 @@ export default function ProjectDetailPage() {
 
         <button
           onClick={() => setShowGuideModal(true)}
-          disabled={!hasDocument || project.status === 'REVIEW' || project.status !== 'VALIDATED'}
+          disabled={!hasDocument || project.status === 'REVIEW' || !['VALIDATED', 'EXPORTED'].includes(project.status)}
           className="ml-3 text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             border: '1px solid #2980B9',

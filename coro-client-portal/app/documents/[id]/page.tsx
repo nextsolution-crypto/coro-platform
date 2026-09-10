@@ -53,6 +53,12 @@ const STATUS_COLORS: Record<
     label: 'Validé',
   },
 
+  EXPORTED: {
+    bg: '#F4ECF7',
+    text: '#8E44AD',
+    border: '#D2B4DE',
+    label: 'Exporté',
+  },
   ARCHIVED: {
     bg: '#FDEDEC',
     text: '#C0392B',
@@ -290,7 +296,7 @@ const handleRefuse = async () => {
   );
 
   const isValidated =
-    project.status === 'VALIDATED';
+    project.status === 'VALIDATED' || project.status === 'EXPORTED';
 
   return (
     <PortalLayout>
@@ -532,7 +538,7 @@ const handleRefuse = async () => {
                 </button>
               )}
 
-              {project?.exportedPdfEn && (
+              {(project?.officialPdfEn || (project?.exportedPdfEn && mySignature)) && (
                 <button
                   type="button"
                   onClick={() => handleDownload('en')}
@@ -561,7 +567,7 @@ const handleRefuse = async () => {
                 </button>
               )}
 
-              {!project?.exportedPdfFr && !project?.exportedPdfEn && (
+              {mySignature && !project?.officialPdfFr && !project?.exportedPdfFr && (
                 <button
                   type="button"
                   onClick={() => handleDownload('fr')}

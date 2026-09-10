@@ -166,7 +166,8 @@ export class ClientPortalService {
         const updateData: any = {
           exportedAt: signedAt,
           progress:   100,
-          status:     'EXPORTED',
+          // Status reste VALIDATED — EXPORTED est réservé à l'export explicite
+          // par l'organisation via /projects/:id/export
         };
 
         if (result.fr) {
