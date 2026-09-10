@@ -14,6 +14,7 @@ export class VersionsService {
         id: true,
         versionNumber: true,
         label: true,
+        snapshot: true,
         createdAt: true,
       },
     });
