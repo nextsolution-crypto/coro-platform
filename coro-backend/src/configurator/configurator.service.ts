@@ -115,6 +115,18 @@ export class ConfiguratorService {
               ] },
             { key: 'usageSecondaire', label: 'Usage secondaire (si applicable)', type: 'select',
               options: ['Aucun', 'A1 - Etablissements de reunion - Spectacle', 'A2 - Etablissements de reunion - Education, culte, divertissement, restauration', 'A3 - Etablissements de reunion de type arena', 'A4 - Etablissements de reunion en plein air', 'B1 - Etablissements de detention', 'B2 - Etablissements de traitement', 'B3 - Etablissements de soins', 'C - Etablissements d habitation', 'D - Etablissements d affaires', 'E - Etablissements commerciaux', 'F1 - Etablissement industriel a risques tres eleves', 'F2 - Etablissement industriel a risques moyens', 'F3 - Etablissement industriel a risques faibles'] },
+            {
+              key: 'capaciteMaxReglementaire',
+              label: 'Capacité maximale réglementaire (personnes)',
+              type: 'number',
+              tooltip: 'Capacité maximale autorisée par le certificat d\'occupation. Utilisée pour déterminer l\'applicabilité du PSI — seuil de 30 personnes pour usage A (CNPI 2020 art. 2.8.1.1).',
+            },
+            {
+              key: 'traitementsMedicauxSurPlace',
+              label: 'Des traitements médicaux pouvant empêcher l\'évacuation autonome sont-ils offerts sur place?',
+              type: 'boolean',
+              tooltip: 'Ex: chirurgie d\'un jour, sédation, perfusion. Si Oui, le PSI est requis même pour un usage D (établissements d\'affaires). CNPI 2020 art. 2.8.1.1.',
+            },
             { key: 'floors', label: 'Nombre d etages', type: 'number' },
             { key: 'basements', label: 'Nombre de sous-sols', type: 'number' },
             { key: 'superficie', label: 'Superficie du batiment (pi2)', type: 'number' },

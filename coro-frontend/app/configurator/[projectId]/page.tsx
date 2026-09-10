@@ -39,6 +39,19 @@ interface ValidationResult {
   reference?: string;
 }
 
+interface ProfilReglementaire {
+  referentielCNB: string;
+  referentielAnnee: string;
+  codeSurveillance: string;
+  periodeTransitoire: string;
+  exceptionS1001: string;
+  psiRequis: 'OUI' | 'EXEMPTE' | 'VERIFICATION_REQUISE';
+  psiRaisonCode: string;
+  psiRaisonMessage: string;
+  frequenceExercices: string;
+  frequenceExercicesBase: string;
+}
+
 interface AnalysisResult {
   rolesActives: string[];
   rolesRecommandes: string[];
@@ -46,6 +59,7 @@ interface AnalysisResult {
   sectionsDocument: string[];
   validations: ValidationResult[];
   score: number;
+  profilReglementaire?: ProfilReglementaire;
 }
 
 const validationStyles: Record<string, { bg: string; text: string; border: string; icon: string }> = {
@@ -394,6 +408,71 @@ function ScheduleGrid({ value, onChange }: {
   );
 }
 
+// ── ProfilReglementaireCard ──────────────────────────────────
+
+function ProfilReglementaireCard({ profil }: { profil: ProfilReglementaire }) {
+  const psiConfig: Record<string, { bg: string; text: string; border: string; label: string; icon: string }> = {
+    OUI:                  { bg: '#EAFAF1', text: '#27AE60', border: '#A9DFBF', label: 'PSI requis',   icon: '✓' },
+    EXEMPTE:              { bg: '#EBF5FB', text: '#2980B9', border: '#AED6F1', label: 'PSI exempté',  icon: '○' },
+    VERIFICATION_REQUISE: { bg: '#FEF9E7', text: '#F39C12', border: '#FAD7A0', label: 'À vérifier',   icon: '?' },
+  };
+  const psi = psiConfig[profil.psiRequis] || psiConfig['VERIFICATION_REQUISE'];
+
+  return (
+    <div className="rounded-md overflow-hidden mb-4" style={{ border: '1px solid #CED4DA' }}>
+      {/* En-tête */}
+      <div className="px-3 py-2 flex items-center gap-2" style={{ backgroundColor: '#2C3E50' }}>
+        <span style={{ color: '#ADB5BD', fontSize: '13px' }}>⚖</span>
+        <div>
+          <p className="text-xs font-bold text-white">Profil réglementaire</p>
+          <p style={{ color: '#ADB5BD', fontSize: '10px' }}>CNPI 2020 modifié Québec</p>
+        </div>
+      </div>
+
+      <div className="p-3 space-y-2.5" style={{ backgroundColor: '#FAFAFA' }}>
+        {/* Référentiel CNB */}
+        <div>
+          <p style={{ color: '#6C757D', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            Référentiel de construction
+          </p>
+          <p className="text-xs font-semibold" style={{ color: '#2C3E50' }}>{profil.referentielCNB}</p>
+          <p style={{ color: '#ADB5BD', fontSize: '10px' }}>{profil.referentielAnnee}</p>
+        </div>
+
+        {/* Période transitoire */}
+        <div className="rounded px-2 py-1.5" style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+          <p style={{ color: '#2980B9', fontSize: '11px', fontWeight: 500 }}>⏱ {profil.periodeTransitoire}</p>
+        </div>
+
+        {/* PSI */}
+        <div>
+          <p style={{ color: '#6C757D', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+            Plan de sécurité incendie
+          </p>
+          <div className="rounded px-2 py-1.5" style={{ backgroundColor: psi.bg, border: `1px solid ${psi.border}` }}>
+            <p className="text-xs font-bold" style={{ color: psi.text }}>{psi.icon} {psi.label}</p>
+            <p style={{ color: psi.text, fontSize: '11px', opacity: 0.85, marginTop: '2px' }}>{profil.psiRaisonMessage}</p>
+          </div>
+        </div>
+
+        {/* Fréquence exercices */}
+        <div>
+          <p style={{ color: '#6C757D', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            Exercices d'incendie
+          </p>
+          <p className="text-xs font-semibold" style={{ color: '#2C3E50' }}>{profil.frequenceExercices}</p>
+          <p style={{ color: '#ADB5BD', fontSize: '10px' }}>{profil.frequenceExercicesBase}</p>
+        </div>
+
+        {/* S1001 */}
+        <div className="rounded px-2 py-1.5" style={{ backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE' }}>
+          <p style={{ color: '#8E44AD', fontSize: '11px', fontWeight: 500 }}>🔗 {profil.exceptionS1001}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PAGE PRINCIPALE ──────────────────────────────────────────
 
 export default function ConfiguratorPage() {
@@ -721,6 +800,10 @@ export default function ConfiguratorPage() {
     if (field.key === 'accesSousSolDetails') return (config['accesSousSol'] || []).length > 0;
     if (field.key === 'accesEtagesDetails') return (config['accesEtages'] || []).length > 0;
     if (field.key === 'infosBatiment') return config['treizeEtage'] === true;
+    if (field.key === 'traitementsMedicauxSurPlace') {
+      const usage: string = config['usagePrincipal'] || '';
+      return usage.startsWith('D') || usage.startsWith('B');
+    }
     return true;
   };
 
@@ -1162,6 +1245,11 @@ export default function ConfiguratorPage() {
             ) : (
               <div className="space-y-4">
 
+                {/* Profil réglementaire CNPI 2020 */}
+                {analysis.profilReglementaire && (
+                  <ProfilReglementaireCard profil={analysis.profilReglementaire} />
+                )}
+
                 {/* Score */}
                 <div className="rounded-md p-4"
                   style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
@@ -1460,6 +1548,11 @@ export default function ConfiguratorPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {/* Profil réglementaire CNPI 2020 */}
+                    {analysis.profilReglementaire && (
+                      <ProfilReglementaireCard profil={analysis.profilReglementaire} />
+                    )}
+
                     <div
                       className="rounded-md p-4"
                       style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}

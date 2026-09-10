@@ -8,9 +8,15 @@ export interface BuildingConfig {
   floors: number;
   basements: number;
   superficie?: number;
-  anneeConstruction?: number;
+  anneeConstruction?: number | string; // Select retourne une string côté frontend
+  derniereRenovation?: string;         // 'Aucune' ou ex: '2015'
   typeConstruction?: string;
   hauteurBatiment?: 'STANDARD' | 'GRANDE_HAUTEUR';
+
+  // ========== CNPI 2020 — APPLICABILITÉ PSI (T1 + T3) ==========
+  province?: string;
+  capaciteMaxReglementaire?: number;
+  traitementsMedicauxSurPlace?: boolean;
 
   // Occupation
   multiLocataires: boolean;
@@ -159,6 +165,21 @@ export interface BuildingConfig {
   autresCertifications?: string[];
 }
 
+// ── Profil réglementaire CNPI 2020 (T3 + T1 + T8) ──────────────────────────
+
+export interface ProfilReglementaire {
+  referentielCNB: string;            // T3 — référentiel de construction
+  referentielAnnee: string;          // T3 — période couverte
+  codeSurveillance: string;          // T3 — code de sécurité applicable
+  periodeTransitoire: string;        // T3 — période transitoire en vigueur
+  exceptionS1001: string;            // T3 — exception art. 2.1.3.7
+  psiRequis: 'OUI' | 'EXEMPTE' | 'VERIFICATION_REQUISE';  // T1
+  psiRaisonCode: string;             // T1 — code de la règle déclenchée
+  psiRaisonMessage: string;          // T1 — message affiché
+  frequenceExercices: string;        // T8 — fréquence calculée
+  frequenceExercicesBase: string;    // T8 — base réglementaire
+}
+
 export interface ValidationResult {
   type: 'INFO' | 'RECOMMANDATION' | 'AVERTISSEMENT' | 'ERREUR' | 'CRITIQUE';
   code: string;
@@ -173,6 +194,7 @@ export interface ConfiguratorResult {
   sectionsDocument: string[];
   validations: ValidationResult[];
   score: number;
+  profilReglementaire?: ProfilReglementaire;  // ← NOUVEAU
 }
 
 @Injectable()
@@ -187,6 +209,9 @@ export class RulesEngineService {
       validations: [],
       score: 0,
     };
+
+    // ── CNPI 2020 — doit être exécuté en premier (génère profilReglementaire) ──
+    this.applyReglementaireRules(config, result);
 
     this.applyBaseRules(config, result);
     this.applyAlarmRules(config, result);
@@ -212,6 +237,306 @@ export class RulesEngineService {
     return result;
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // CNPI 2020 — Règles réglementaires (T3 Profil · T1 PSI · T8 Exercices)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private applyReglementaireRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    const annee = this.parseAnneeConstruction(config.anneeConstruction);
+    const profil = this.computeProfilReglementaire(config, annee);
+    result.profilReglementaire = profil;
+
+    // T1 — Validation PSI dans le panneau
+    this.addPsiValidation(profil, result);
+
+    // T8 — Information fréquence exercices dans le panneau
+    result.validations.push({
+      type: 'INFO',
+      code: 'CNPI2020-T8-EXERCICES',
+      message: `Exercices d'incendie : ${profil.frequenceExercices} — ${profil.frequenceExercicesBase}`,
+      reference: 'CNPI 2020 art. 2.8.3.2',
+    });
+  }
+
+  private parseAnneeConstruction(raw?: number | string): number {
+    if (!raw) return 0;
+    const n = typeof raw === 'string' ? parseInt(raw, 10) : raw;
+    return isNaN(n) ? 0 : n;
+  }
+
+  private computeProfilReglementaire(config: BuildingConfig, annee: number): ProfilReglementaire {
+    // ── T3 — Référentiel CNB (art. 344, tableau mis à jour) ─────────────────
+    const { referentielCNB, referentielAnnee } = this.getReferentielCNB(annee);
+
+    // ── T1 — Applicabilité PSI ──────────────────────────────────────────────
+    const psiResult = this.computePsiRequis(config);
+
+    // ── T8 — Fréquence exercices ────────────────────────────────────────────
+    const { frequence, base } = this.computeFrequenceExercices(config);
+
+    return {
+      referentielCNB,
+      referentielAnnee,
+      codeSurveillance: 'CNPI 2020 modifié Québec (Chap. VIII, Code de sécurité)',
+      periodeTransitoire: 'Ancienne version applicable jusqu\'au ~17 oct. 2027 (décret 1353-2026, effectif 10 sept. 2026)',
+      exceptionS1001: 'Essais intégrés S1001 requis à compter du 17 avril 2028 pour bâtiments existants (art. 2.1.3.7)',
+      psiRequis: psiResult.statut,
+      psiRaisonCode: psiResult.code,
+      psiRaisonMessage: psiResult.message,
+      frequenceExercices: frequence,
+      frequenceExercicesBase: base,
+    };
+  }
+
+  private getReferentielCNB(annee: number): { referentielCNB: string; referentielAnnee: string } {
+    // Source : art. 344, Code de sécurité du Québec (décret 438-2025)
+    // Les bornes sont par année entière — pour les années-charnières,
+    // la date exacte de construction peut modifier le référentiel applicable.
+    if (annee === 0) {
+      return {
+        referentielCNB: 'Non déterminé',
+        referentielAnnee: 'Renseigner l\'année de construction',
+      };
+    }
+    if (annee < 1976) {
+      return {
+        referentielCNB: 'Règlement sur la sécurité dans les édifices publics',
+        referentielAnnee: 'Avant le 1er décembre 1976',
+      };
+    }
+    if (annee <= 1983) {
+      return {
+        referentielCNB: 'Code du bâtiment (R.R.Q., 1981, c. S-3, r. 2)',
+        referentielAnnee: '1976–1984',
+      };
+    }
+    if (annee <= 1985) {
+      return {
+        referentielCNB: 'CNB 1980',
+        referentielAnnee: '1984–1986 ⚠ vérifier la date exacte',
+      };
+    }
+    if (annee <= 1993) {
+      return {
+        referentielCNB: 'CNB 1985 modifié Québec',
+        referentielAnnee: '1986–1993',
+      };
+    }
+    if (annee <= 2000) {
+      return {
+        referentielCNB: 'CNB 1990 modifié Québec',
+        referentielAnnee: '1993–2000',
+      };
+    }
+    if (annee <= 2008) {
+      return {
+        referentielCNB: 'CNB 1995 modifié Québec',
+        referentielAnnee: '2000–2008',
+      };
+    }
+    if (annee <= 2015) {
+      return {
+        referentielCNB: 'CNB 2005 modifié Québec',
+        referentielAnnee: '2008–2015',
+      };
+    }
+    if (annee <= 2021) {
+      return {
+        referentielCNB: 'CNB 2010 modifié Québec',
+        referentielAnnee: '2015–2022',
+      };
+    }
+    if (annee <= 2024) {
+      return {
+        referentielCNB: 'CNB 2015 modifié Québec',
+        referentielAnnee: '2022–2025 ⚠ vérifier la date exacte (pivot : 17 avr. 2025)',
+      };
+    }
+    return {
+      referentielCNB: 'CNB 2020 modifié Québec',
+      referentielAnnee: 'Depuis le 17 avril 2025',
+    };
+  }
+
+  private computePsiRequis(config: BuildingConfig): {
+    statut: 'OUI' | 'EXEMPTE' | 'VERIFICATION_REQUISE';
+    code: string;
+    message: string;
+  } {
+    const usage = (config.usagePrincipal || '').trim();
+    const capacite = config.capaciteMaxReglementaire || 0;
+    const traitements = config.traitementsMedicauxSurPlace || false;
+
+    if (!usage) {
+      return {
+        statut: 'VERIFICATION_REQUISE',
+        code: 'PSI-USAGE-MANQUANT',
+        message: 'Usage principal non renseigné — impossible de déterminer l\'applicabilité du PSI',
+      };
+    }
+
+    // Groupe B — toujours requis (détention, traitement, soins)
+    if (usage.startsWith('B')) {
+      return {
+        statut: 'OUI',
+        code: 'PSI-GROUPE-B',
+        message: 'PSI requis — usage du groupe B (détention, traitement ou soins)',
+      };
+    }
+
+    // Usage D (affaires) avec traitements médicaux → requis
+    if (usage.startsWith('D') && traitements) {
+      return {
+        statut: 'OUI',
+        code: 'PSI-D-TRAITEMENTS',
+        message: 'PSI requis — usage D avec traitements médicaux pouvant empêcher l\'évacuation autonome (CNPI 2020 art. 2.8.1.1)',
+      };
+    }
+
+    // Usage D sans traitements → à vérifier
+    if (usage.startsWith('D')) {
+      return {
+        statut: 'VERIFICATION_REQUISE',
+        code: 'PSI-D-STANDARD',
+        message: 'Usage D — confirmer si des traitements médicaux sont offerts sur place; sinon vérifier autres conditions d\'applicabilité',
+      };
+    }
+
+    // Groupe A — seuil 30 personnes avec exceptions
+    if (usage.startsWith('A')) {
+      // A1 (spectacle) et A3 (aréna) — jamais exemptés
+      if (usage.startsWith('A1') || usage.startsWith('A3') || usage.startsWith('A4')) {
+        return {
+          statut: 'OUI',
+          code: 'PSI-GROUPE-A-TOUJOURS',
+          message: 'PSI requis — établissement de réunion non admissible à l\'exemption (spectacle, aréna, plein air)',
+        };
+      }
+      // A2 peut contenir école, garderie, débit de boisson, restaurant → jamais exemptés
+      if (usage.startsWith('A2')) {
+        return {
+          statut: 'OUI',
+          code: 'PSI-GROUPE-A2',
+          message: 'PSI requis — usage A2 (éducation, culte, divertissement, restauration)',
+        };
+      }
+      // Groupe A générique — vérifier capacité
+      if (capacite === 0) {
+        return {
+          statut: 'VERIFICATION_REQUISE',
+          code: 'PSI-GROUPE-A-CAPACITE-MANQUANTE',
+          message: 'Usage A — renseigner la capacité maximale réglementaire pour vérifier l\'exemption ≤30 personnes (art. 2.8.1.1)',
+        };
+      }
+      if (capacite <= 30) {
+        return {
+          statut: 'EXEMPTE',
+          code: 'PSI-GROUPE-A-EXEMPT',
+          message: `PSI non requis — établissement de réunion de ${capacite} personne${capacite > 1 ? 's' : ''} (exemption ≤30 personnes, art. 2.8.1.1)`,
+        };
+      }
+      return {
+        statut: 'OUI',
+        code: 'PSI-GROUPE-A-CAPACITE',
+        message: `PSI requis — établissement de réunion de plus de 30 personnes (capacité déclarée : ${capacite})`,
+      };
+    }
+
+    // C (habitation)
+    if (usage.startsWith('C')) {
+      return {
+        statut: 'OUI',
+        code: 'PSI-GROUPE-C',
+        message: 'PSI requis — établissement d\'habitation (usage C)',
+      };
+    }
+
+    // E (commercial)
+    if (usage.startsWith('E')) {
+      return {
+        statut: 'OUI',
+        code: 'PSI-GROUPE-E',
+        message: 'PSI requis — établissement commercial (usage E)',
+      };
+    }
+
+    // F (industriel)
+    if (usage.startsWith('F')) {
+      return {
+        statut: 'OUI',
+        code: 'PSI-GROUPE-F',
+        message: 'PSI requis — établissement industriel (usage F)',
+      };
+    }
+
+    return {
+      statut: 'VERIFICATION_REQUISE',
+      code: 'PSI-INCONNU',
+      message: 'Applicabilité du PSI à vérifier selon l\'usage déclaré',
+    };
+  }
+
+  private computeFrequenceExercices(config: BuildingConfig): { frequence: string; base: string } {
+    const usage = (config.usagePrincipal || '').trim();
+
+    // Groupe B ou lieu de sommeil → 6 mois
+    if (usage.startsWith('B') || config.lieuSommeil) {
+      return {
+        frequence: 'Tous les 6 mois',
+        base: 'Usage B ou lieu de sommeil (art. 2.8.3.2 a)',
+      };
+    }
+
+    // Grande hauteur (sauf C) → 6 mois
+    if (config.hauteurBatiment === 'GRANDE_HAUTEUR' && !usage.startsWith('C')) {
+      return {
+        frequence: 'Tous les 6 mois',
+        base: 'Bâtiment grande hauteur, usage non résidentiel (art. 2.8.3.2 c)',
+      };
+    }
+
+    // A1 (spectacle/assemblée) → 3 mois
+    if (usage.startsWith('A1')) {
+      return {
+        frequence: 'Tous les 3 mois',
+        base: 'Usage A, division 1 — établissement de spectacle (art. 2.8.3.2 d)',
+      };
+    }
+
+    // A2 → école/garderie → 2×/an (automne + printemps)
+    if (usage.startsWith('A2')) {
+      return {
+        frequence: '2 fois par an (automne et printemps)',
+        base: 'Usage A2 — école ou garderie inclus (art. 2.8.3.2 b)',
+      };
+    }
+
+    // Laboratoire hors école → 3 mois (sera enrichi en T7, Sprint 2)
+    // Default → 12 mois
+    return {
+      frequence: 'Tous les 12 mois',
+      base: 'Fréquence standard (art. 2.8.3.2)',
+    };
+  }
+
+  private addPsiValidation(profil: ProfilReglementaire, result: ConfiguratorResult): void {
+    const typeMap: Record<string, ValidationResult['type']> = {
+      OUI:                  'INFO',
+      EXEMPTE:              'INFO',
+      VERIFICATION_REQUISE: 'AVERTISSEMENT',
+    };
+    result.validations.push({
+      type: typeMap[profil.psiRequis] || 'AVERTISSEMENT',
+      code: profil.psiRaisonCode,
+      message: profil.psiRaisonMessage,
+      reference: 'CNPI 2020 art. 2.8.1.1',
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Règles existantes (inchangées sauf mise à jour des références CNPI 2020)
+  // ══════════════════════════════════════════════════════════════════════════
+
   private applyBaseRules(config: BuildingConfig, result: ConfiguratorResult) {
     result.rolesActives.push('ROLE-CU');
     result.rolesActives.push('ROLE-RPR');
@@ -231,8 +556,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'HANDICAP-001',
-        message: 'Personnes necessitant assistance declarees : registre PPNAE requis et accompagnateur active.',
-        reference: 'CNPI 2010 art. 2.8',
+        message: 'Personnes nécessitant assistance déclarées : registre PPNAE requis et accompagnateur activé.',
+        reference: 'CNPI 2020 art. 2.8.2.1',
       });
     }
   }
@@ -242,8 +567,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'CRITIQUE',
         code: 'ALARME-001',
-        message: 'Aucun panneau alarme incendie declare. Requis par le CNPI 2010 art. 2.8.',
-        reference: 'CNPI 2010',
+        message: 'Aucun panneau alarme incendie déclaré. Requis par le CNPI 2020 art. 2.8.',
+        reference: 'CNPI 2020',
       });
       return;
     }
@@ -256,8 +581,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'ALARME-002',
-        message: 'Panneau double signal : procedures ALERTE et ALARME activees. Equipe EPI obligatoire.',
-        reference: 'CNPI 2010 art. 2.8',
+        message: 'Panneau double signal : procédures ALERTE et ALARME activées. Équipe EPI obligatoire.',
+        reference: 'CNPI 2020 art. 2.8',
       });
     } else if (config.panneauType === 'SIMPLE') {
       result.proceduresActives.push('PROC-ALARME-INCENDIE');
@@ -268,7 +593,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'ALARME-003',
-        message: 'Aucune centrale de telesurveillance declaree. Recommande pour conformite ULC-S536.',
+        message: 'Aucune centrale de télésurveillance déclarée. Recommandé pour conformité ULC-S536.',
         reference: 'ULC-S536',
       });
     }
@@ -277,8 +602,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'ALARME-004',
-        message: 'Aucune station manuelle d alarme declaree. Verifier la conformite.',
-        reference: 'CNPI 2010',
+        message: 'Aucune station manuelle d\'alarme déclarée. Vérifier la conformité.',
+        reference: 'CNPI 2020',
       });
     }
 
@@ -286,7 +611,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'ALARME-005',
-        message: 'Telephone pompier non declare. Requis dans les batiments de grande hauteur.',
+        message: 'Téléphone pompier non déclaré. Requis dans les bâtiments de grande hauteur.',
       });
     }
   }
@@ -298,7 +623,7 @@ export class RulesEngineService {
         result.validations.push({
           type: 'RECOMMANDATION',
           code: 'GICLEUR-001',
-          message: 'Gicleurs sans pompe incendie declaree. Verifier la configuration du reseau.',
+          message: 'Gicleurs sans pompe incendie déclarée. Vérifier la configuration du réseau.',
           reference: 'NFPA 25',
         });
       }
@@ -306,15 +631,15 @@ export class RulesEngineService {
         result.validations.push({
           type: 'RECOMMANDATION',
           code: 'GICLEUR-002',
-          message: 'Vannes d isolement de zones non declarees. Documenter les emplacements.',
+          message: 'Vannes d\'isolement de zones non déclarées. Documenter les emplacements.',
         });
       }
     } else if (config.floors > 2) {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'GICLEUR-003',
-        message: 'Batiment de plus de 2 etages sans gicleurs declares. Verifier la conformite au CNPI.',
-        reference: 'CNPI 2010',
+        message: 'Bâtiment de plus de 2 étages sans gicleurs déclarés. Vérifier la conformité au CNPI.',
+        reference: 'CNPI 2020',
       });
     }
 
@@ -322,7 +647,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'GICLEUR-004',
-        message: 'Boyaux incendie presents : inspections selon NFPA 1962 requises annuellement.',
+        message: 'Boyaux incendie présents : inspections selon NFPA 1962 requises annuellement.',
         reference: 'NFPA 1962',
       });
     }
@@ -333,14 +658,14 @@ export class RulesEngineService {
       result.validations.push({
         type: 'CRITIQUE',
         code: 'EXTINCTEUR-001',
-        message: 'Aucun extincteur portatif declare. Requis par le CNPI. Inspection annuelle NFPA 10.',
+        message: 'Aucun extincteur portatif déclaré. Requis par le CNPI. Inspection annuelle NFPA 10.',
         reference: 'NFPA 10',
       });
     } else {
       result.validations.push({
         type: 'INFO',
         code: 'EXTINCTEUR-002',
-        message: 'Extincteurs portatifs presents : inspection annuelle selon NFPA 10 requise.',
+        message: 'Extincteurs portatifs présents : inspection annuelle selon NFPA 10 requise.',
         reference: 'NFPA 10',
       });
     }
@@ -350,7 +675,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'EXTINCTEUR-003',
-        message: 'Systeme extinction hotte detecte : procedure incendie service alimentaire activee.',
+        message: 'Système extinction hotte détecté : procédure incendie service alimentaire activée.',
         reference: 'NFPA 17A',
       });
     }
@@ -363,7 +688,7 @@ export class RulesEngineService {
         result.validations.push({
           type: 'AVERTISSEMENT',
           code: 'ASCENSEUR-001',
-          message: 'Ascenseurs sans ascenseur pompier declare. Requis selon le code du batiment.',
+          message: 'Ascenseurs sans ascenseur pompier déclaré. Requis selon le code du bâtiment.',
         });
       }
     }
@@ -375,7 +700,7 @@ export class RulesEngineService {
         result.validations.push({
           type: 'RECOMMANDATION',
           code: 'GENERATRICE-001',
-          message: 'Generatrice presente : documenter les equipements fonctionnant sur alimentation de secours.',
+          message: 'Génératrice présente : documenter les équipements fonctionnant sur alimentation de secours.',
         });
       }
     } else {
@@ -383,7 +708,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'GENERATRICE-002',
-        message: 'Aucune generatrice : documenter les equipements critiques sans alimentation de secours.',
+        message: 'Aucune génératrice : documenter les équipements critiques sans alimentation de secours.',
       });
     }
 
@@ -395,7 +720,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'MECANIQUE-001',
-        message: 'Systeme desenfumage present : documenter activation et procedure contournement.',
+        message: 'Système désenfumage présent : documenter activation et procédure contournement.',
       });
     }
   }
@@ -407,7 +732,7 @@ export class RulesEngineService {
         result.validations.push({
           type: 'AVERTISSEMENT',
           code: 'MD-001',
-          message: 'Matieres dangereuses sans trousse de deversement declaree. Requis SIMDUT/TMD.',
+          message: 'Matières dangereuses sans trousse de déversement déclarée. Requis SIMDUT/TMD.',
           reference: 'SIMDUT 2015',
         });
       }
@@ -418,7 +743,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'MD-002',
-        message: 'Batteries lithium-ion : procedure specifique activee. Extincteur eau recommande.',
+        message: 'Batteries lithium-ion : procédure spécifique activée. Extincteur eau recommandé.',
       });
     }
 
@@ -429,7 +754,7 @@ export class RulesEngineService {
         result.validations.push({
           type: 'CRITIQUE',
           code: 'MD-003',
-          message: 'Ammoniac present sans detecteur NH3 declare. CRITIQUE - risque vie humaine.',
+          message: 'Ammoniac présent sans détecteur NH3 déclaré. CRITIQUE — risque vie humaine.',
         });
       }
     }
@@ -440,7 +765,7 @@ export class RulesEngineService {
         result.validations.push({
           type: 'INFO',
           code: 'DETECTEUR-001',
-          message: 'Detecteur CO : documenter seuils activation (25 ppm alarme, 150 ppm max).',
+          message: 'Détecteur CO : documenter seuils activation (25 ppm alarme, 150 ppm max).',
         });
       }
     }
@@ -452,7 +777,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'IND-001',
-        message: 'Espaces clos : procedure cadenassage et programme entree espace clos OBLIGATOIRES.',
+        message: 'Espaces clos : procédure cadenassage et programme entrée espace clos OBLIGATOIRES.',
         reference: 'LSST Québec',
       });
     }
@@ -462,8 +787,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'IND-002',
-        message: 'Travaux a chaud : permis travail chaud requis. Procedure et registre actives.',
-        reference: 'CNPI 2010',
+        message: 'Travaux à chaud : permis travail chaud requis. Procédure et registre activés.',
+        reference: 'CNPI 2020 art. 5.2',
       });
     }
 
@@ -471,7 +796,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'IND-003',
-        message: 'Chariots elevateurs : documenter zones operation et procedures recharge batteries.',
+        message: 'Chariots élévateurs : documenter zones opération et procédures recharge batteries.',
       });
     }
 
@@ -479,7 +804,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'IND-004',
-        message: 'Procedes dangereux declares : section specifique requise dans le document.',
+        message: 'Procédés dangereux déclarés : section spécifique requise dans le document.',
       });
     }
   }
@@ -502,7 +827,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'OCCUP-001',
-        message: `Batiment grande hauteur : secteurs evacuation par etage recommandes. Telephone pompier requis.`,
+        message: 'Bâtiment grande hauteur : secteurs évacuation par étage recommandés. Téléphone pompier requis.',
       });
     }
 
@@ -510,8 +835,8 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'OCCUP-002',
-        message: 'Lieu de sommeil : exigences renforcees CNPI Québec applicables.',
-        reference: 'Code securite Québec',
+        message: 'Lieu de sommeil : exigences renforcées CNPI 2020 Québec applicables.',
+        reference: 'Code sécurité Québec',
       });
     }
 
@@ -519,7 +844,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'OCCUP-003',
-        message: 'Occupation de nuit sans securite 24h : evaluer la pertinence d une surveillance nocturne.',
+        message: 'Occupation de nuit sans sécurité 24h : évaluer la pertinence d\'une surveillance nocturne.',
       });
     }
   }
@@ -529,7 +854,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'COMM-001',
-        message: 'Aucun systeme de communication phonique declare. Recommande pour batiments multi-etages.',
+        message: 'Aucun système de communication phonique déclaré. Recommandé pour bâtiments multi-étages.',
       });
     }
 
@@ -537,7 +862,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'COMM-002',
-        message: 'Messages automatises detectes : documenter les messages ALERTE et ALARME dans les annexes.',
+        message: 'Messages automatisés détectés : documenter les messages ALERTE et ALARME dans les annexes.',
       });
     }
 
@@ -545,7 +870,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'COMM-003',
-        message: 'Batiment de plus de 5 etages : radios de communication recommandees pour l equipe urgence.',
+        message: 'Bâtiment de plus de 5 étages : radios de communication recommandées pour l\'équipe urgence.',
       });
     }
   }
@@ -556,7 +881,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'CERT-001',
-        message: 'Certification BOMA BEST : exigences sante-securite et plan urgence integrees a l evaluation.',
+        message: 'Certification BOMA BEST : exigences santé-sécurité et plan urgence intégrées à l\'évaluation.',
         reference: 'BOMA BEST',
       });
     }
@@ -566,7 +891,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'CERT-002',
-        message: 'Certification LEED : documenter les systemes durables impactant les procedures urgence.',
+        message: 'Certification LEED : documenter les systèmes durables impactant les procédures urgence.',
         reference: 'LEED Canada',
       });
     }
@@ -576,14 +901,13 @@ export class RulesEngineService {
       result.validations.push({
         type: 'INFO',
         code: 'CERT-003',
-        message: 'ISO 22301 active : sections continuite activites et plan reprise requises.',
+        message: 'ISO 22301 active : sections continuité activités et plan reprise requises.',
         reference: 'ISO 22301',
       });
     }
   }
 
   private applySectionRules(config: BuildingConfig, result: ConfiguratorResult) {
-    // Sections toujours presentes
     result.sectionsDocument.push(
       'PAGE_COUVERTURE',
       'TABLE_MATIERES',
@@ -629,13 +953,12 @@ export class RulesEngineService {
   }
 
   private applyValidations(config: BuildingConfig, result: ConfiguratorResult) {
-    // Validations liées aux emplacements stratégiques
     if (!config.pointRassemblement) {
       result.validations.push({
         type: 'ERREUR',
         code: 'EMPL-001',
-        message: 'Point de rassemblement non defini. Obligatoire selon CNPI.',
-        reference: 'CNPI 2010 art. 2.8',
+        message: 'Point de rassemblement non défini. Obligatoire selon CNPI 2020.',
+        reference: 'CNPI 2020 art. 2.8',
       });
     }
 
@@ -643,7 +966,7 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'EMPL-002',
-        message: 'Poste de commandement non defini. Recommande pour coordination urgence.',
+        message: 'Poste de commandement non défini. Recommandé pour coordination urgence.',
       });
     }
 
@@ -652,12 +975,11 @@ export class RulesEngineService {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'EMPL-003',
-        message: 'Localisation salle gicleurs non documentee. A completer.',
+        message: 'Localisation salle gicleurs non documentée. À compléter.',
       });
     }
 
-    // Validation premiers soins
-        const equipSoins = (config as any).equipementsSoins || [];
+    const equipSoins = (config as any).equipementsSoins || [];
     const hasTrausse = config.trousseSecoursPresente ||
       equipSoins.some((e: any) => e.type && e.type.toLowerCase().includes('premiers soins'));
     const hasDEA = config.defibrillateur ||
@@ -667,25 +989,24 @@ export class RulesEngineService {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'SOINS-001',
-        message: 'Trousse de premiers soins non declaree. Obligatoire selon le Code du travail.',
+        message: 'Trousse de premiers soins non déclarée. Obligatoire selon le Code du travail.',
       });
     }
     if (!hasDEA && config.floors > 3) {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'SOINS-002',
-        message: 'DEA non declare. Fortement recommande pour batiments multi-etages.',
+        message: 'DEA non déclaré. Fortement recommandé pour bâtiments multi-étages.',
       });
     }
   }
 
   private calculateScore(config: BuildingConfig, result: ConfiguratorResult): void {
-    let score = 0;
-    const critiques = result.validations.filter(v => v.type === 'CRITIQUE').length;
-    const erreurs = result.validations.filter(v => v.type === 'ERREUR').length;
+    const critiques      = result.validations.filter(v => v.type === 'CRITIQUE').length;
+    const erreurs        = result.validations.filter(v => v.type === 'ERREUR').length;
     const avertissements = result.validations.filter(v => v.type === 'AVERTISSEMENT').length;
 
-    score = 100 - (critiques * 25) - (erreurs * 15) - (avertissements * 5);
+    const score = 100 - (critiques * 25) - (erreurs * 15) - (avertissements * 5);
     result.score = Math.max(0, Math.min(100, score));
   }
 }
