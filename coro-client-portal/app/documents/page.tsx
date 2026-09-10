@@ -47,6 +47,12 @@ const STATUS_COLORS: Record<
     label: 'Validé',
   },
 
+  EXPORTED: {
+    bg: '#F4ECF7',
+    text: '#8E44AD',
+    border: '#D2B4DE',
+    label: 'Exporté',
+  },
   ARCHIVED: {
     bg: '#FDEDEC',
     text: '#C0392B',
