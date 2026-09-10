@@ -804,6 +804,18 @@ export default function ConfiguratorPage() {
       const usage: string = config['usagePrincipal'] || '';
       return usage.startsWith('D') || usage.startsWith('B');
     }
+    // T5 — Systèmes intégrés S1001
+    if (['s1001DernierEssai', 's1001RapportDisponible', 's1001Coordonnateur'].includes(field.key)) {
+      return (config['s1001Interconnexions'] || []).length > 0;
+    }
+    // T10 — Matières dangereuses enrichies
+    if (field.key === 'psiEntreePrincipale') {
+      return config['matieresDangereuses'] === true;
+    }
+    // T9 — PPNAE enrichi
+    if (['ppnaeTypesLimitations', 'ppnaeMesures', 'ppnaeRegistreAJour'].includes(field.key)) {
+      return config['personnelHandicap'] === true;
+    }
     return true;
   };
 
@@ -929,7 +941,7 @@ export default function ConfiguratorPage() {
             {(() => {
               const GROUPS: { label: string; ids: string[] }[] = [
                 { label: 'Général',           ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
-                { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'extincteurs', 'detecteurs'] },
+                { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'systemes_integres', 'extincteurs', 'detecteurs'] },
                 { label: 'Équipements',       ids: ['mecanique', 'communication', 'premiers_soins'] },
                 { label: 'Risques',           ids: ['matieres'] },
                 { label: 'Industriel',        ids: ['industriel'] },
@@ -1444,7 +1456,7 @@ export default function ConfiguratorPage() {
                 {(() => {
                   const GROUPS: { label: string; ids: string[] }[] = [
                     { label: 'Général', ids: ['infos_document', 'description', 'certifications', 'emplacements', 'historique'] },
-                    { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'extincteurs', 'detecteurs'] },
+                    { label: 'Sécurité incendie', ids: ['alarme', 'gicleurs', 'systemes_integres', 'extincteurs', 'detecteurs'] },
                     { label: 'Équipements', ids: ['mecanique', 'communication', 'premiers_soins'] },
                     { label: 'Risques', ids: ['matieres'] },
                     { label: 'Industriel', ids: ['industriel'] },

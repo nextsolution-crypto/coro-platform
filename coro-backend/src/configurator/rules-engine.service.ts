@@ -18,6 +18,20 @@ export interface BuildingConfig {
   capaciteMaxReglementaire?: number;
   traitementsMedicauxSurPlace?: boolean;
 
+  // ========== CNPI 2020 — T5 Systèmes intégrés S1001 ==========
+  s1001Interconnexions?: string[];
+  s1001DernierEssai?: string;
+  s1001RapportDisponible?: boolean;
+  s1001Coordonnateur?: string;
+
+  // ========== CNPI 2020 — T9 PPNAE enrichi ==========
+  ppnaeTypesLimitations?: string[];
+  ppnaeMesures?: string[];
+  ppnaeRegistreAJour?: boolean;
+
+  // ========== CNPI 2020 — T10 Matières dangereuses ==========
+  psiEntreePrincipale?: boolean;
+
   // Occupation
   multiLocataires: boolean;
   nbLocataires?: number;
@@ -212,6 +226,8 @@ export class RulesEngineService {
 
     // ── CNPI 2020 — doit être exécuté en premier (génère profilReglementaire) ──
     this.applyReglementaireRules(config, result);
+    this.applyS1001Rules(config, result);           // T5
+    this.applyMatieresDangereusesRules(config, result); // T10
 
     this.applyBaseRules(config, result);
     this.applyAlarmRules(config, result);
@@ -559,6 +575,23 @@ export class RulesEngineService {
         message: 'Personnes nécessitant assistance déclarées : registre PPNAE requis et accompagnateur activé.',
         reference: 'CNPI 2020 art. 2.8.2.1',
       });
+      // T9 — Mesures et registre PPNAE
+      if (!config.ppnaeMesures || config.ppnaeMesures.length === 0) {
+        result.validations.push({
+          type: 'AVERTISSEMENT',
+          code: 'T9-PPNAE-MESURES',
+          message: 'Personnes PPNAE déclarées sans mesures d\'évacuation documentées — mesures spécifiques requises.',
+          reference: 'CNPI 2020 art. 2.8.2.1',
+        });
+      }
+      if (config.ppnaeRegistreAJour === false) {
+        result.validations.push({
+          type: 'AVERTISSEMENT',
+          code: 'T9-PPNAE-REGISTRE',
+          message: 'Registre PPNAE non maintenu à jour — requis pour la coordination avec les services d\'urgence.',
+          reference: 'CNPI 2020 art. 2.8.2.1',
+        });
+      }
     }
   }
 
@@ -997,6 +1030,95 @@ export class RulesEngineService {
         type: 'RECOMMANDATION',
         code: 'SOINS-002',
         message: 'DEA non déclaré. Fortement recommandé pour bâtiments multi-étages.',
+      });
+    }
+  }
+
+  // ── T5 — Systèmes intégrés CAN/ULC-S1001 ──────────────────────────────────
+
+  private applyS1001Rules(config: BuildingConfig, result: ConfiguratorResult): void {
+    const interconnexions = config.s1001Interconnexions || [];
+    if (interconnexions.length === 0) return;
+
+    if (interconnexions.length >= 2) {
+      if (!config.s1001DernierEssai) {
+        result.validations.push({
+          type: 'AVERTISSEMENT',
+          code: 'T5-S1001-ESSAI-ABSENT',
+          message: `${interconnexions.length} interconnexion(s) déclarée(s) — essai intégré CAN/ULC-S1001 non documenté. Requis pour bâtiments existants à compter du 17 avril 2028.`,
+          reference: 'CNPI 2020 art. 6.8.1.1 + 2.1.3.7',
+        });
+      } else if (!config.s1001RapportDisponible) {
+        result.validations.push({
+          type: 'RECOMMANDATION',
+          code: 'T5-S1001-RAPPORT-ABSENT',
+          message: 'Essai S1001 documenté mais rapport non disponible. Conserver le rapport pour les inspections.',
+          reference: 'CAN/ULC-S1001',
+        });
+      } else {
+        result.validations.push({
+          type: 'INFO',
+          code: 'T5-S1001-CONFORME',
+          message: `Systèmes intégrés documentés (${interconnexions.length} interconnexion(s)) — essai S1001 et rapport en règle.`,
+          reference: 'CAN/ULC-S1001',
+        });
+      }
+    } else {
+      result.validations.push({
+        type: 'INFO',
+        code: 'T5-S1001-VERIFICATION',
+        message: '1 interconnexion déclarée — confirmer si d\'autres systèmes sont interconnectés pour évaluer l\'applicabilité de S1001.',
+        reference: 'CNPI 2020 art. 6.8.1.1',
+      });
+    }
+  }
+
+  // ── T10 — Matières dangereuses enrichies (PSI entrée + signalisation TMD) ──
+
+  private applyMatieresDangereusesRules(config: BuildingConfig, result: ConfiguratorResult): void {
+    if (!config.matieresDangereuses) return;
+
+    // PSI accessible à l'entrée principale (art. 2.8.2.12)
+    if (config.psiEntreePrincipale === false) {
+      result.validations.push({
+        type: 'ERREUR',
+        code: 'T10-PSI-ENTREE',
+        message: 'Matières dangereuses présentes : le plan de sécurité incendie doit être conservé et accessible à l\'entrée principale du bâtiment.',
+        reference: 'CNPI 2020 art. 2.8.2.12',
+      });
+    } else if (config.psiEntreePrincipale === undefined || config.psiEntreePrincipale === null) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T10-PSI-ENTREE-NR',
+        message: 'Matières dangereuses déclarées — confirmer que le PSI est accessible à l\'entrée principale pour les intervenants d\'urgence.',
+        reference: 'CNPI 2020 art. 2.8.2.12',
+      });
+    }
+
+    // Signalisation TMD par substance (art. 3.2.7.14)
+    const matieresList: any[] = (config as any).matieresList || [];
+    const substancesTMDSansSignalisation = matieresList.filter(
+      (m: any) => m.tmd === true && m.signalisationTMD === false,
+    );
+    if (substancesTMDSansSignalisation.length > 0) {
+      result.validations.push({
+        type: 'AVERTISSEMENT',
+        code: 'T10-TMD-SIGNALISATION',
+        message: `${substancesTMDSansSignalisation.length} substance(s) TMD sans signalisation déclarée à l'entrée de l'aire de stockage.`,
+        reference: 'CNPI 2020 art. 3.2.7.14',
+      });
+    }
+
+    // Emplacements manquants
+    const substancesSansEmplacement = matieresList.filter(
+      (m: any) => m.nom && (!m.emplacementPrecis || m.emplacementPrecis.trim() === ''),
+    );
+    if (substancesSansEmplacement.length > 0) {
+      result.validations.push({
+        type: 'RECOMMANDATION',
+        code: 'T10-EMPLACEMENT-MANQUANT',
+        message: `${substancesSansEmplacement.length} substance(s) sans emplacement précis documenté — requis pour l'annexe PSI destinée aux intervenants.`,
+        reference: 'CNPI 2020 art. 2.8.2.12',
       });
     }
   }
