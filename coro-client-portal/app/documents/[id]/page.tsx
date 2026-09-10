@@ -1705,38 +1705,104 @@ const handleRefuse = async () => {
               <button
                 type="button"
                 onClick={handleSign}
-                disabled={
-                  signing ||
-                  !signName.trim()
-                }
+                disabled={signing || !signName.trim()}
                 style={{
                   minHeight: 48,
                   padding: '12px',
                   borderRadius: 7,
-                  backgroundColor:
-                    signing ||
-                    !signName.trim()
-                      ? '#ADB5BD'
-                      : '#8E44AD',
+                  backgroundColor: signing || !signName.trim() ? '#ADB5BD' : '#8E44AD',
                   color: '#FFFFFF',
                   border: 'none',
                   fontSize: 14,
                   fontWeight: 700,
-                  cursor:
-                    signing ||
-                    !signName.trim()
-                      ? 'not-allowed'
-                      : 'pointer',
+                  cursor: signing || !signName.trim() ? 'not-allowed' : 'pointer',
                 }}
               >
-                {signing
-                  ? 'Signature...'
-                  : '✓ Signer'}
+                {signing ? '⏳ Traitement...' : '✓ Signer'}
               </button>
             </div>
           </div>
         </div>
       )}
+      {/* Overlay chargement signature */}
+      {signing && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2000,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              padding: 'clamp(28px, 6vw, 48px)',
+              maxWidth: 420,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
+            }}
+          >
+            {/* Spinner */}
+            <div style={{
+              width: 56, height: 56,
+              borderRadius: '50%',
+              border: '4px solid #F4ECF7',
+              borderTopColor: '#8E44AD',
+              margin: '0 auto 24px',
+              animation: 'spin 1s linear infinite',
+            }} />
+
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#2C3E50' }}>
+              Signature en cours...
+            </h3>
+            <p style={{ margin: '0 0 24px', fontSize: 14, lineHeight: 1.6, color: '#6C757D' }}>
+              Votre signature est enregistrée. Nous générons maintenant votre document officiel. Cette opération peut prendre jusqu'à 45 secondes.
+            </p>
+
+            {/* Étapes animées */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
+              {[
+                { label: 'Signature enregistrée',             delay: '0s' },
+                { label: 'Génération du PDF officiel (FR/EN)', delay: '1s' },
+                { label: 'Finalisation du document',          delay: '2s' },
+              ].map((step, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px', borderRadius: 8,
+                  backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF',
+                  animation: `fadeIn 0.5s ease ${step.delay} both`,
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    border: '2px solid #8E44AD', borderTopColor: 'transparent',
+                    animation: `spin 1s linear infinite`,
+                  }} />
+                  <span style={{ fontSize: 13, color: '#495057', fontWeight: 500 }}>
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ margin: '20px 0 0', fontSize: 12, color: '#ADB5BD' }}>
+              Ne fermez pas cette fenêtre.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </PortalLayout>
   );
 }
