@@ -8,8 +8,8 @@ export class AuthController {
 
   @Post('login')
   @Throttle({ short: { ttl: 60000, limit: 5 } })
-  async login(@Body() body: { email: string; password: string }) {
-    return this.authService.login(body.email, body.password);
+  async login(@Body() body: { email: string; password: string; trustedToken?: string }) {
+    return this.authService.login(body.email, body.password, body.trustedToken);
   }
 
   @Post('forgot-password')

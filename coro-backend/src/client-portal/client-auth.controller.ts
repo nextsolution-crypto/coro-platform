@@ -9,8 +9,14 @@ export class ClientAuthController {
 
   @Post('login')
   @Throttle({ short: { ttl: 60000, limit: 5 } })
-  async login(@Body() body: { email: string; password: string }) {
-    return this.clientAuthService.login(body.email, body.password);
+  async login(@Body() body: { email: string; password: string; trustedToken?: string }) {
+    return this.clientAuthService.login(body.email, body.password, body.trustedToken);
+  }
+
+  @Post('verify-mfa')
+  @Throttle({ short: { ttl: 60000, limit: 5 } })
+  async verifyMfa(@Body() body: { email: string; code: string }) {
+    return this.clientAuthService.verifyMfa(body.email, body.code);
   }
 
   @Put('change-password')

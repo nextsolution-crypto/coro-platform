@@ -16,7 +16,7 @@ export class AuthService {
 
   private readonly logger = new Logger('AuthService');
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, trustedToken?: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       this.logger.warn(`[AUTH] Tentative de connexion échouée — courriel inconnu : ${email}`);
@@ -27,6 +27,24 @@ export class AuthService {
       this.logger.warn(`[AUTH] Tentative de connexion échouée — mot de passe incorrect : ${email}`);
       throw new UnauthorizedException('Identifiants invalides');
     }
+
+    // Vérifier si un token de confiance valide existe (skip MFA 90 jours)
+    if (trustedToken) {
+      const trusted = await this.prisma.trustedDevice.findFirst({
+        where: { token: trustedToken, userId: user.id, expiresAt: { gt: new Date() } },
+      });
+      if (trusted) {
+        this.logger.log(`[AUTH] Token de confiance valide — skip MFA : ${email}`);
+        const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
+        const refreshToken = await this.generateRefreshToken(user.id);
+        return {
+          access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
+          refresh_token: refreshToken,
+          user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: user.organizationId },
+        };
+      }
+    }
+
     this.logger.log(`[AUTH] Identifiants valides — envoi code MFA : ${email}`);
 
     // Générer code MFA 6 chiffres
@@ -90,11 +108,22 @@ export class AuthService {
 
     this.logger.log(`[AUTH] MFA validé — connexion complète : ${email}`);
 
+    // Générer un token de confiance 90 jours
+    const trustedToken = crypto.randomUUID();
+    await this.prisma.trustedDevice.create({
+      data: {
+        token: trustedToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      },
+    });
+
     const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
     const refreshToken = await this.generateRefreshToken(user.id);
     return {
       access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
       refresh_token: refreshToken,
+      trusted_token: trustedToken,
       user: {
         id: user.id,
         email: user.email,
@@ -108,7 +137,7 @@ export class AuthService {
 
     private async generateRefreshToken(userId: string): Promise<string> {
     const token = crypto.randomBytes(40).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 jours
     await this.prisma.refreshToken.create({
       data: { token, userId, expiresAt },
     });

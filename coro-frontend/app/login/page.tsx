@@ -27,9 +27,11 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
+      const trustedToken = localStorage.getItem(`coro_trusted_${email.trim()}`);
       const response = await api.post('/auth/login', {
         email: email.trim(),
         password,
+        ...(trustedToken ? { trustedToken } : {}),
       });
       if (response.data.mfaRequired) {
         setView('mfa');
@@ -55,7 +57,10 @@ export default function LoginPage() {
         email: email.trim(),
         code: mfaCode.trim(),
       });
-      const { access_token, refresh_token, user } = response.data;
+      const { access_token, refresh_token, trusted_token, user } = response.data;
+      if (trusted_token) {
+        localStorage.setItem(`coro_trusted_${email.trim()}`, trusted_token);
+      }
       setAuth(user, access_token, refresh_token);
       router.push('/dashboard');
     } catch (err: any) {

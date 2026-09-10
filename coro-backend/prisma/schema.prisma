@@ -85,6 +85,7 @@ model User {
   timelogEntries  TimelogEntry[]
   customProcedures CustomProcedure[]
   refreshTokens RefreshToken[]
+  trustedDevices TrustedDevice[]
 
   resetToken        String?
   resetTokenExpiry  DateTime?
@@ -741,7 +742,10 @@ model ClientUser {
   magicLinks MagicLink[]
   engagements DocumentEngagement[]
   bookings Booking[]
-  uploadedFiles ProjectFile[] @relation("ClientFileUploader")
+  mfaCode        String?
+  mfaCodeExpiry  DateTime?
+  uploadedFiles  ProjectFile[]         @relation("ClientFileUploader")
+  trustedDevices ClientTrustedDevice[]
 }
 
 model DocumentSignature {
@@ -1082,4 +1086,22 @@ model VisitorInvitation {
   organizationId String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model TrustedDevice {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ClientTrustedDevice {
+  id        String     @id @default(uuid())
+  token     String     @unique
+  userId    String
+  user      ClientUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
 }
