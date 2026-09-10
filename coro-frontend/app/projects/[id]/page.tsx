@@ -135,7 +135,9 @@ export default function ProjectDetailPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  const [projectComments, setProjectComments] = useState<any[]>([]);
+  const [projectComments,  setProjectComments]  = useState<any[]>([]);
+  const [versionHistory,   setVersionHistory]   = useState<any[]>([]);
+  const [showVersions,     setShowVersions]     = useState(false);
 
   useEffect(() => { initAuth(); }, []);
 
@@ -180,6 +182,21 @@ export default function ProjectDetailPage() {
         setObservations(obsRes.data || []);
         setCanApprove(canRes.data?.canApprove || false);
         setProjectComments(commentsRes.data || []);
+      } catch { }
+
+      try {
+        const versRes = await api.get(`/projects/${projectId}/versions`);
+        const versions = (versRes.data || []).map((v: any) => ({
+          versionNumber: v.versionNumber,
+          label:         v.label || `v${v.versionNumber}`,
+          createdAt:     v.createdAt,
+          approvedBy:    v.snapshot?.approvedBy    ?? null,
+          approvedAt:    v.snapshot?.approvedAt    ?? null,
+          signedBy:      v.snapshot?.signedBy      ?? null,
+          signedAt:      v.snapshot?.signedAt      ?? null,
+          signedEmail:   v.snapshot?.signedEmail   ?? null,
+        }));
+        setVersionHistory(versions);
       } catch { }
     } catch (err) {
       console.error(err);
@@ -1156,6 +1173,121 @@ export default function ProjectDetailPage() {
       {/* ── Engagement client ── */}
       {(project.status === 'VALIDATED' || project.status === 'EXPORTED') && (
         <EngagementPanel projectId={project.id} />
+      )}
+
+      {/* ── Historique des versions et signatures ── */}
+      {versionHistory.length > 0 && (
+        <div className="rounded-md mb-6 overflow-hidden"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <button
+            onClick={() => setShowVersions(!showVersions)}
+            className="w-full flex items-center justify-between px-6 py-4 transition-colors"
+            style={{ backgroundColor: '#FAFAFA', borderBottom: showVersions ? '1px solid #E9ECEF' : 'none' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FAFAFA'}
+          >
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: '16px' }}>📋</span>
+              <span className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+                Historique des versions et signatures
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={{ backgroundColor: '#EBF5FB', color: '#2980B9', border: '1px solid #AED6F1' }}>
+                {versionHistory.length} version{versionHistory.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <span style={{ color: '#ADB5BD', fontSize: '12px' }}>
+              {showVersions ? '▲' : '▼'}
+            </span>
+          </button>
+
+          {showVersions && (
+            <div className="p-6 space-y-3">
+              {versionHistory.map(v => (
+                <div key={v.versionNumber} className="rounded-md p-4"
+                  style={{
+                    border: `1px solid ${v.signedAt ? '#D2B4DE' : '#E9ECEF'}`,
+                    backgroundColor: v.signedAt ? '#F9F5FB' : '#F8F9FA',
+                  }}>
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                        style={{
+                          backgroundColor: v.signedAt ? '#8E44AD' : '#2980B9',
+                          color: '#FFFFFF',
+                        }}>
+                        v{v.versionNumber}
+                      </span>
+                      <span className="text-xs font-medium"
+                        style={{ color: v.signedAt ? '#8E44AD' : '#2980B9' }}>
+                        {v.signedAt ? '✍️ Signé' : '⏳ En attente de signature'}
+                      </span>
+                    </div>
+                    <span className="text-xs" style={{ color: '#ADB5BD' }}>
+                      {new Date(v.createdAt).toLocaleDateString('fr-CA', {
+                        day: 'numeric', month: 'long', year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {v.approvedBy && (
+                      <div className="rounded px-3 py-2"
+                        style={{ backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF' }}>
+                        <p className="text-xs font-semibold" style={{ color: '#27AE60' }}>
+                          ✓ Approuvé par
+                        </p>
+                        <p className="text-sm font-bold mt-0.5" style={{ color: '#1E8449' }}>
+                          {v.approvedBy}
+                        </p>
+                        {v.approvedAt && (
+                          <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                            {new Date(v.approvedAt).toLocaleDateString('fr-CA', {
+                              day: 'numeric', month: 'long', year: 'numeric',
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {v.signedBy ? (
+                      <div className="rounded px-3 py-2"
+                        style={{ backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE' }}>
+                        <p className="text-xs font-semibold" style={{ color: '#8E44AD' }}>
+                          ✍️ Signé par
+                        </p>
+                        <p className="text-sm font-bold mt-0.5" style={{ color: '#6C3483' }}>
+                          {v.signedBy}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: '#6C757D' }}>
+                          {v.signedEmail}
+                        </p>
+                        {v.signedAt && (
+                          <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                            {new Date(v.signedAt).toLocaleDateString('fr-CA', {
+                              day: 'numeric', month: 'long', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded px-3 py-2"
+                        style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
+                        <p className="text-xs font-semibold" style={{ color: '#F39C12' }}>
+                          ⏳ Signature client
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>
+                          En attente
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Espace de fichiers ── */}

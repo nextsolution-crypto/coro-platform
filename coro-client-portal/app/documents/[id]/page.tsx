@@ -89,7 +89,8 @@ export default function DocumentDetailPage() {
   const [downloading, setDownloading] = useState(false);
   const [showRefuseModal, setShowRefuseModal] = useState(false);
   const [refuseComment, setRefuseComment] = useState('');
-  const [refusing, setRefusing] = useState(false);
+  const [refusing,        setRefusing]        = useState(false);
+  const [versionHistory,  setVersionHistory]  = useState<any[]>([]);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -119,13 +120,15 @@ export default function DocumentDetailPage() {
 
   const fetchData = async () => {
     try {
-      const [projectRes, commentsRes] = await Promise.all([
+      const [projectRes, commentsRes, versionsRes] = await Promise.all([
         apiGet(`/client-portal/projects/${projectId}`),
         apiGet(`/client-portal/projects/${projectId}/comments`),
+        apiGet(`/client-portal/projects/${projectId}/versions`).catch(() => []),
       ]);
 
       setProject(projectRes);
       setComments(commentsRes || []);
+      setVersionHistory(versionsRes || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1071,6 +1074,73 @@ const handleRefuse = async () => {
             )}
           </div>
         </section>
+
+        {/* Historique des versions */}
+        {versionHistory.length > 0 && (
+          <section
+            style={{
+              minWidth: 0,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              border: '1px solid #E9ECEF',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ padding: '16px clamp(16px, 4vw, 24px)', borderBottom: '1px solid #E9ECEF' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>
+                📋 Historique du document ({versionHistory.length} version{versionHistory.length > 1 ? 's' : ''})
+              </h2>
+            </div>
+            <div style={{ padding: 'clamp(16px, 4vw, 24px)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {versionHistory.map((v: any) => (
+                <div key={v.versionNumber}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 8,
+                    border: `1px solid ${v.signedAt ? '#D2B4DE' : '#E9ECEF'}`,
+                    backgroundColor: v.signedAt ? '#F9F5FB' : '#F8F9FA',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 800, color: '#FFFFFF',
+                        backgroundColor: v.signedAt ? '#8E44AD' : '#2980B9',
+                        padding: '2px 8px', borderRadius: 10,
+                      }}>
+                        v{v.versionNumber}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: v.signedAt ? '#8E44AD' : '#F39C12' }}>
+                        {v.signedAt ? '✍️ Signé' : '⏳ En attente'}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 11, color: '#ADB5BD' }}>
+                      {new Date(v.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+
+                  {v.approvedBy && (
+                    <p style={{ margin: '0 0 4px', fontSize: 12, color: '#27AE60' }}>
+                      ✓ Approuvé par <strong>{v.approvedBy}</strong>
+                      {v.approvedAt && ` · ${new Date(v.approvedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+                    </p>
+                  )}
+
+                  {v.signedBy && (
+                    <div style={{ marginTop: 6, padding: '8px 10px', borderRadius: 6, backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE' }}>
+                      <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#8E44AD' }}>
+                        ✍️ {v.signedBy}
+                      </p>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6C757D' }}>
+                        {v.signedEmail}
+                        {v.signedAt && ` · ${new Date(v.signedAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Commentaires */}
         <section
