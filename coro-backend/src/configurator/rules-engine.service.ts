@@ -242,7 +242,8 @@ export interface ConfiguratorResult {
   proceduresActives: string[];
   sectionsDocument: string[];
   validations: ValidationResult[];
-  score: number;
+  score: number;              // Conformité réglementaire (validations)
+  scoreCompletude: number;    // Complétude (champs clés remplis)
   profilReglementaire?: ProfilReglementaire;  // ← NOUVEAU
 }
 
@@ -257,6 +258,7 @@ export class RulesEngineService {
       sectionsDocument: [],
       validations: [],
       score: 0,
+      scoreCompletude: 0,
     };
 
     // ── CNPI 2020 — doit être exécuté en premier (génère profilReglementaire) ──
@@ -1405,11 +1407,69 @@ export class RulesEngineService {
   }
 
   private calculateScore(config: BuildingConfig, result: ConfiguratorResult): void {
+    // ── Score conformité réglementaire (basé sur les validations) ──────────
     const critiques      = result.validations.filter(v => v.type === 'CRITIQUE').length;
     const erreurs        = result.validations.filter(v => v.type === 'ERREUR').length;
     const avertissements = result.validations.filter(v => v.type === 'AVERTISSEMENT').length;
+    result.score = Math.max(0, Math.min(100,
+      100 - (critiques * 25) - (erreurs * 15) - (avertissements * 5)
+    ));
 
-    const score = 100 - (critiques * 25) - (erreurs * 15) - (avertissements * 5);
-    result.score = Math.max(0, Math.min(100, score));
+    // ── Score complétude (% de champs clés remplis) ─────────────────────────
+    result.scoreCompletude = this.calculateCompletude(config);
+  }
+
+  private calculateCompletude(config: BuildingConfig): number {
+    const c = config as any;
+
+    // Chaque check : { earned: boolean, weight: number }
+    // Contextuels : earned = true si la condition n'est pas applicable
+    const checks: { earned: boolean; weight: number }[] = [
+      // Identité du document (13 pts)
+      { earned: !!c.province,          weight: 2 },
+      { earned: !!c.typeDocument,      weight: 3 },
+      { earned: !!c.responsableNom,    weight: 5 },
+      { earned: !!c.dateReleve,        weight: 3 },
+
+      // Description du bâtiment (26 pts)
+      { earned: !!config.usagePrincipal,                          weight: 10 },
+      { earned: !!(config.anneeConstruction),                     weight: 8 },
+      { earned: (config.floors || 0) > 0,                        weight: 5 },
+      { earned: !!c.buildingType,                                 weight: 3 },
+
+      // Emplacements (18 pts)
+      { earned: !!config.pointRassemblement,                      weight: 8 },
+      { earned: !!config.posteCommandement,                       weight: 5 },
+      { earned: !!c.lieuDocument,                                 weight: 5 },
+
+      // Alarme (8 pts)
+      { earned: config.panneauAlarme !== undefined && config.panneauAlarme !== null, weight: 5 },
+      { earned: !config.panneauAlarme || !!c.panneauLocalisation, weight: 3 },
+
+      // Extinction (5 pts)
+      { earned: config.extincteurPortatif !== undefined && config.extincteurPortatif !== null, weight: 5 },
+
+      // Occupation (8 pts)
+      { earned: (c.quartsOccupation || []).length > 0,            weight: 8 },
+
+      // Premiers soins (5 pts)
+      { earned: (c.equipementsSoins || []).length > 0,            weight: 5 },
+
+      // CNPI 2020 — contextuels (17 pts)
+      // Capacité max (si usage A)
+      { earned: !config.usagePrincipal?.startsWith('A') || !!config.capaciteMaxReglementaire, weight: 4 },
+      // Traitements médicaux (si usage D ou B)
+      { earned: !config.usagePrincipal?.startsWith('D') || config.traitementsMedicauxSurPlace !== undefined, weight: 3 },
+      // Matières dan. — liste remplie si déclarées
+      { earned: !config.matieresDangereuses || (c.matieresList || []).length > 0, weight: 4 },
+      // PSI entrée principale répondu (si matières dan.)
+      { earned: !config.matieresDangereuses || config.psiEntreePrincipale !== undefined, weight: 3 },
+      // Programme inspection et entretien répondu
+      { earned: c.programmeInspectionEntretien !== undefined,     weight: 3 },
+    ];
+
+    const total  = checks.reduce((s, ch) => s + ch.weight, 0); // 105
+    const earned = checks.reduce((s, ch) => s + (ch.earned ? ch.weight : 0), 0);
+    return Math.round((earned / total) * 100);
   }
 }

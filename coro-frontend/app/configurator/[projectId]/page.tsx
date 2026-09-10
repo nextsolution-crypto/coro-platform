@@ -59,6 +59,7 @@ interface AnalysisResult {
   sectionsDocument: string[];
   validations: ValidationResult[];
   score: number;
+  scoreCompletude: number;
   profilReglementaire?: ProfilReglementaire;
 }
 
@@ -900,15 +901,27 @@ export default function ConfiguratorPage() {
             className="hidden"
           />
           {analysis && (
-            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded order-first xl:order-none"
+            <div className="flex items-center gap-3 px-2 sm:px-3 py-1.5 rounded order-first xl:order-none"
               style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-              <span className="hidden sm:inline text-xs" title="Mesure la conformité réglementaire de votre configuration — pas le pourcentage de champs remplis" style={{ color: '#6C757D', cursor: 'help' }}>Conformité ⓘ</span>
-              <span className="font-bold text-base" style={{
-                color: analysis.score >= 80 ? '#27AE60' :
-                       analysis.score >= 60 ? '#F39C12' : '#C0392B',
-              }}>
-                {analysis.score}/100
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="hidden sm:inline text-xs" style={{ color: '#6C757D' }}>Complétude</span>
+                <span className="font-bold text-sm" style={{
+                  color: analysis.scoreCompletude >= 80 ? '#2980B9' :
+                         analysis.scoreCompletude >= 60 ? '#F39C12' : '#C0392B',
+                }}>
+                  {analysis.scoreCompletude}%
+                </span>
+              </div>
+              <span style={{ color: '#DEE2E6', fontSize: '12px' }}>|</span>
+              <div className="flex items-center gap-1.5">
+                <span className="hidden sm:inline text-xs" title="Conformité réglementaire CNPI 2020 — pénalités selon critiques, erreurs et avertissements" style={{ color: '#6C757D', cursor: 'help' }}>Conformité ⓘ</span>
+                <span className="font-bold text-sm" style={{
+                  color: analysis.score >= 80 ? '#27AE60' :
+                         analysis.score >= 60 ? '#F39C12' : '#C0392B',
+                }}>
+                  {analysis.score}/100
+                </span>
+              </div>
             </div>
           )}
           <button
@@ -1289,28 +1302,48 @@ export default function ConfiguratorPage() {
                   <ProfilReglementaireCard profil={analysis.profilReglementaire} />
                 )}
 
-                {/* Score */}
-                <div className="rounded-md p-4"
-                  style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                  <p className="text-xs mb-2" style={{ color: '#6C757D' }}>
-                    Score de conformité
-                  </p>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-bold" style={{
-                      color: analysis.score >= 80 ? '#27AE60' :
-                             analysis.score >= 60 ? '#F39C12' : '#C0392B',
-                    }}>
-                      {analysis.score}
-                    </span>
-                    <span className="text-sm mb-1" style={{ color: '#ADB5BD' }}>/100</span>
+                {/* Scores — Complétude + Conformité */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-md p-3"
+                    style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+                    <p className="text-xs mb-1" style={{ color: '#2980B9', fontWeight: 600 }}>Complétude</p>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold" style={{
+                        color: analysis.scoreCompletude >= 80 ? '#2980B9' :
+                               analysis.scoreCompletude >= 60 ? '#F39C12' : '#C0392B',
+                      }}>
+                        {analysis.scoreCompletude}
+                      </span>
+                      <span className="text-xs mb-1" style={{ color: '#ADB5BD' }}>%</span>
+                    </div>
+                    <div className="w-full rounded-full h-1.5 mt-1.5" style={{ backgroundColor: '#D6EAF8' }}>
+                      <div className="h-1.5 rounded-full transition-all" style={{
+                        width: `${analysis.scoreCompletude}%`,
+                        backgroundColor: '#2980B9',
+                      }} />
+                    </div>
+                    <p style={{ color: '#85C1E9', fontSize: '9px', marginTop: '4px' }}>Champs clés remplis</p>
                   </div>
-                  <div className="w-full rounded-full h-2 mt-2"
-                    style={{ backgroundColor: '#E9ECEF' }}>
-                    <div className="h-2 rounded-full transition-all" style={{
-                      width: `${analysis.score}%`,
-                      backgroundColor: analysis.score >= 80 ? '#27AE60' :
-                                       analysis.score >= 60 ? '#F39C12' : '#C0392B',
-                    }} />
+                  <div className="rounded-md p-3"
+                    style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                    <p className="text-xs mb-1" style={{ color: '#6C757D', fontWeight: 600 }}>Conformité</p>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold" style={{
+                        color: analysis.score >= 80 ? '#27AE60' :
+                               analysis.score >= 60 ? '#F39C12' : '#C0392B',
+                      }}>
+                        {analysis.score}
+                      </span>
+                      <span className="text-xs mb-1" style={{ color: '#ADB5BD' }}>/100</span>
+                    </div>
+                    <div className="w-full rounded-full h-1.5 mt-1.5" style={{ backgroundColor: '#E9ECEF' }}>
+                      <div className="h-1.5 rounded-full transition-all" style={{
+                        width: `${analysis.score}%`,
+                        backgroundColor: analysis.score >= 80 ? '#27AE60' :
+                                         analysis.score >= 60 ? '#F39C12' : '#C0392B',
+                      }} />
+                    </div>
+                    <p style={{ color: '#ADB5BD', fontSize: '9px', marginTop: '4px' }}>Réglementaire CNPI 2020</p>
                   </div>
                 </div>
 
@@ -1592,44 +1625,47 @@ export default function ConfiguratorPage() {
                       <ProfilReglementaireCard profil={analysis.profilReglementaire} />
                     )}
 
-                    <div
-                      className="rounded-md p-4"
-                      style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}
-                    >
-                      <p className="text-xs mb-2" style={{ color: '#6C757D' }}>
-                        Score de conformité
-                      </p>
-                      <div className="flex items-end gap-2">
-                        <span
-                          className="text-3xl font-bold"
-                          style={{
-                            color:
-                              analysis.score >= 80
-                                ? '#27AE60'
-                                : analysis.score >= 60
-                                ? '#F39C12'
-                                : '#C0392B',
-                          }}
-                        >
-                          {analysis.score}
-                        </span>
-                        <span className="text-sm mb-1" style={{ color: '#ADB5BD' }}>
-                          /100
-                        </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-md p-3"
+                        style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+                        <p className="text-xs mb-1" style={{ color: '#2980B9', fontWeight: 600 }}>Complétude</p>
+                        <div className="flex items-end gap-1">
+                          <span className="text-2xl font-bold" style={{
+                            color: analysis.scoreCompletude >= 80 ? '#2980B9' :
+                                   analysis.scoreCompletude >= 60 ? '#F39C12' : '#C0392B',
+                          }}>
+                            {analysis.scoreCompletude}
+                          </span>
+                          <span className="text-xs mb-1" style={{ color: '#ADB5BD' }}>%</span>
+                        </div>
+                        <div className="w-full rounded-full h-1.5 mt-1.5" style={{ backgroundColor: '#D6EAF8' }}>
+                          <div className="h-1.5 rounded-full transition-all" style={{
+                            width: `${analysis.scoreCompletude}%`,
+                            backgroundColor: '#2980B9',
+                          }} />
+                        </div>
+                        <p style={{ color: '#85C1E9', fontSize: '9px', marginTop: '4px' }}>Champs clés remplis</p>
                       </div>
-                      <div className="w-full rounded-full h-2 mt-2" style={{ backgroundColor: '#E9ECEF' }}>
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{
+                      <div className="rounded-md p-3"
+                        style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                        <p className="text-xs mb-1" style={{ color: '#6C757D', fontWeight: 600 }}>Conformité</p>
+                        <div className="flex items-end gap-1">
+                          <span className="text-2xl font-bold" style={{
+                            color: analysis.score >= 80 ? '#27AE60' :
+                                   analysis.score >= 60 ? '#F39C12' : '#C0392B',
+                          }}>
+                            {analysis.score}
+                          </span>
+                          <span className="text-xs mb-1" style={{ color: '#ADB5BD' }}>/100</span>
+                        </div>
+                        <div className="w-full rounded-full h-1.5 mt-1.5" style={{ backgroundColor: '#E9ECEF' }}>
+                          <div className="h-1.5 rounded-full transition-all" style={{
                             width: `${analysis.score}%`,
-                            backgroundColor:
-                              analysis.score >= 80
-                                ? '#27AE60'
-                                : analysis.score >= 60
-                                ? '#F39C12'
-                                : '#C0392B',
-                          }}
-                        />
+                            backgroundColor: analysis.score >= 80 ? '#27AE60' :
+                                             analysis.score >= 60 ? '#F39C12' : '#C0392B',
+                          }} />
+                        </div>
+                        <p style={{ color: '#ADB5BD', fontSize: '9px', marginTop: '4px' }}>Réglementaire CNPI 2020</p>
                       </div>
                     </div>
 
