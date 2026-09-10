@@ -50,6 +50,49 @@ function subHeading(text: string): string {
   return `<p style="font-size:9pt;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px 0;">${text}</p>`;
 }
 
+function computeReferentielCNB(anneeRaw: any): { label: string; periode: string } {
+  const annee = typeof anneeRaw === 'string' ? parseInt(anneeRaw, 10) : (anneeRaw || 0);
+  if (!annee || isNaN(annee)) return { label: '—', periode: 'Année non renseignée' };
+  if (annee < 1976)  return { label: 'Règlement sur la sécurité dans les édifices publics', periode: 'Avant le 1er déc. 1976' };
+  if (annee <= 1983) return { label: 'Code du bâtiment (R.R.Q., 1981)', periode: '1976–1984' };
+  if (annee <= 1985) return { label: 'CNB 1980', periode: '1984–1986' };
+  if (annee <= 1993) return { label: 'CNB 1985 modifié Québec', periode: '1986–1993' };
+  if (annee <= 2000) return { label: 'CNB 1990 modifié Québec', periode: '1993–2000' };
+  if (annee <= 2008) return { label: 'CNB 1995 modifié Québec', periode: '2000–2008' };
+  if (annee <= 2015) return { label: 'CNB 2005 modifié Québec', periode: '2008–2015' };
+  if (annee <= 2021) return { label: 'CNB 2010 modifié Québec', periode: '2015–2022' };
+  if (annee <= 2024) return { label: 'CNB 2015 modifié Québec', periode: '2022–2025' };
+  return { label: 'CNB 2020 modifié Québec', periode: 'Depuis le 17 avril 2025' };
+}
+
+function computePsiRequisLabel(config: any, isFr: boolean): string {
+  const usage = (config.usagePrincipal || '').trim();
+  const capacite = config.capaciteMaxReglementaire || 0;
+  const traitements = config.traitementsMedicauxSurPlace || false;
+  if (!usage) return isFr ? 'Non déterminé' : 'Undetermined';
+  if (usage.startsWith('B')) return isFr ? '✓ Requis — Usage groupe B' : '✓ Required — Group B use';
+  if (usage.startsWith('D') && traitements) return isFr ? '✓ Requis — Traitements médicaux sur place' : '✓ Required — Medical treatments on site';
+  if (usage.startsWith('D')) return isFr ? 'À vérifier — Confirmer les traitements médicaux' : 'To verify — Confirm medical treatments';
+  if (usage.startsWith('A1') || usage.startsWith('A2') || usage.startsWith('A3') || usage.startsWith('A4')) return isFr ? '✓ Requis' : '✓ Required';
+  if (usage.startsWith('A')) {
+    if (!capacite) return isFr ? 'À vérifier — Renseigner la capacité maximale réglementaire' : 'To verify — Enter maximum regulatory capacity';
+    if (capacite <= 30) return isFr ? `Exempté — ${capacite} personnes (≤ 30, art. 2.8.1.1)` : `Exempted — ${capacite} persons (≤ 30, art. 2.8.1.1)`;
+    return isFr ? `✓ Requis — Capacité déclarée : ${capacite} personnes` : `✓ Required — Declared capacity: ${capacite} persons`;
+  }
+  if (usage.startsWith('C') || usage.startsWith('E') || usage.startsWith('F')) return isFr ? '✓ Requis' : '✓ Required';
+  return isFr ? 'À vérifier' : 'To verify';
+}
+
+function computeFrequenceLabel(config: any, isFr: boolean): string {
+  const usage = (config.usagePrincipal || '').trim();
+  if (config.laboratoirePresent) return isFr ? 'Tous les 3 mois (laboratoire — art. 2.8.3.2)' : 'Every 3 months (laboratory — art. 2.8.3.2)';
+  if (usage.startsWith('B') || config.lieuSommeil) return isFr ? 'Tous les 6 mois (art. 2.8.3.2)' : 'Every 6 months (art. 2.8.3.2)';
+  if (config.hauteurBatiment && !usage.startsWith('C')) return isFr ? 'Tous les 6 mois — grande hauteur (art. 2.8.3.2)' : 'Every 6 months — high-rise (art. 2.8.3.2)';
+  if (usage.startsWith('A1')) return isFr ? 'Tous les 3 mois (art. 2.8.3.2)' : 'Every 3 months (art. 2.8.3.2)';
+  if (usage.startsWith('A2')) return isFr ? '2 fois par an — automne et printemps (art. 2.8.3.2)' : 'Twice a year — fall and spring (art. 2.8.3.2)';
+  return isFr ? 'Tous les 12 mois (art. 2.8.3.2)' : 'Every 12 months (art. 2.8.3.2)';
+}
+
 export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', moduleSeqNumber: number = 7): { id: string; title: string; html: string }[] {
   const isFr = lang === 'fr';
   config = config || {};
@@ -102,6 +145,21 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${config.infosBatiment ? infoRow(isFr ? 'Informations supplémentaires' : 'Additional information', val(config.infosBatiment)) : ''}
         </tbody>
       </table>
+
+      ${subHeading(isFr ? 'Cadre réglementaire applicable' : 'Applicable Regulatory Framework')}
+      <div style="background:#F8F9FA;border-left:4px solid #2C3E50;border-radius:0 4px 4px 0;padding:12px 16px;margin-bottom:12px;">
+        <table style="width:100%;margin:0;">
+          <tbody>
+            ${infoRow(isFr ? 'Code de sécurité' : 'Fire Safety Code', 'CNPI 2020 modifié Québec (Chapitre VIII)')}
+            ${(() => { const ref = computeReferentielCNB(config.anneeConstruction); return infoRow(isFr ? 'Référentiel de construction' : 'Construction reference', `${ref.label} <span style="color:#6C757D;font-size:8pt;">(${ref.periode})</span>`); })()}
+            ${infoRow(isFr ? 'Période transitoire' : 'Transitional period', isFr ? 'Ancienne version applicable jusqu\'au ~17 oct. 2027 (décret 1353-2026, effectif 10 sept. 2026)' : 'Previous version applicable until ~Oct. 17, 2027 (Order 1353-2026, effective Sept. 10, 2026)')}
+            ${infoRow(isFr ? 'Plan de sécurité incendie (PSI)' : 'Fire Safety Plan (FSP)', computePsiRequisLabel(config, isFr))}
+            ${config.capaciteMaxReglementaire ? infoRow(isFr ? 'Capacité maximale réglementaire' : 'Maximum regulatory capacity', `${config.capaciteMaxReglementaire} ${isFr ? 'personnes' : 'persons'}`) : ''}
+            ${infoRow(isFr ? 'Fréquence des exercices d\'incendie' : 'Fire drill frequency', computeFrequenceLabel(config, isFr))}
+            ${infoRow(isFr ? 'Essais intégrés CAN/ULC-S1001' : 'CAN/ULC-S1001 integrated testing', isFr ? 'Bâtiments existants : à compter du 17 avril 2028 (art. 2.1.3.7)' : 'Existing buildings: as of April 17, 2028 (art. 2.1.3.7)')}
+          </tbody>
+        </table>
+      </div>
 
       ${subHeading(isFr ? 'Accès' : 'Access')}
       <table>
@@ -156,8 +214,28 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${infoRow(isFr ? 'Trousseau de clés pompier' : 'Fire department key box', bool(config.trousseClesPompier, isFr))}
           ${config.trousseClesPompierLieu ? infoRow(isFr ? 'Localisation trousseau pompier' : 'Fire key box location', val(config.trousseClesPompierLieu)) : ''}
           ${config.lieuDocument ? infoRow(isFr ? 'Lieu de conservation du document' : 'Document storage location', val(config.lieuDocument)) : ''}
+          ${config.programmeInspectionEntretien !== undefined ? infoRow(isFr ? 'Programme inspection et entretien' : 'Inspection and maintenance program', bool(config.programmeInspectionEntretien, isFr)) : ''}
         </tbody>
       </table>
+
+      ${config.signalisationIssue ? `
+        ${subHeading(isFr ? 'Signalisation d\'issue' : 'Exit Signs')}
+        <table><tbody>
+          ${infoRow(isFr ? 'Type d\'alimentation' : 'Power type', val(config.signalisationIssueType))}
+          ${config.signalisationIssueDerniereInspection ? infoRow(isFr ? 'Dernière inspection' : 'Last inspection', val(config.signalisationIssueDerniereInspection)) : ''}
+          ${infoRow(isFr ? 'Fréquence requise' : 'Required frequency', config.signalisationIssueType === 'Piles de secours intégrées'
+            ? (isFr ? 'Mensuelle (piles) + annuelle — CNPI 2020 art. 6.5.1.8' : 'Monthly (battery) + annual — CNPI 2020 art. 6.5.1.8')
+            : (isFr ? 'Annuelle — CNPI 2020 art. 6.5.1.8' : 'Annual — CNPI 2020 art. 6.5.1.8'))}
+        </tbody></table>
+      ` : ''}
+
+      ${config.portesIssueExposees ? `
+        ${subHeading(isFr ? 'Portes d\'issue — Protection contre l\'obstruction' : 'Exit Doors — Obstruction Protection')}
+        <table><tbody>
+          ${infoRow(isFr ? 'Mesure en place' : 'Measure in place', val(config.portesIssueMesure))}
+          ${infoRow(isFr ? 'Référence' : 'Reference', 'CNPI 2020 art. 2.7.1.8')}
+        </tbody></table>
+      ` : ''}
 
       ${subHeading(isFr ? 'Occupation des lieux' : 'Building occupancy')}
       ${quartsOccupation.length > 0 ? `
@@ -174,6 +252,15 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
         </table>
       ` : `<p style="color:#ADB5BD;">${isFr ? 'Aucun quart de travail déclaré' : 'No work shift declared'}</p>`}
       ${quarts.infosSup ? `<p style="margin-top:8px;font-size:10pt;color:#495057;"><strong>${isFr ? 'Informations supplémentaires' : 'Additional information'} :</strong> ${escapeHtml(quarts.infosSup)}</p>` : ''}
+
+      ${config.personnelHandicap ? `
+        ${subHeading(isFr ? 'Personnes nécessitant assistance à l\'évacuation (PPNAE)' : 'Persons Requiring Evacuation Assistance (PPNAE)')}
+        <table><tbody>
+          ${(config.ppnaeTypesLimitations || []).length > 0 ? infoRow(isFr ? 'Types de limitations' : 'Types of limitations', config.ppnaeTypesLimitations.join(', ')) : ''}
+          ${(config.ppnaeMesures || []).length > 0 ? infoRow(isFr ? 'Mesures d\'évacuation prévues' : 'Evacuation measures in place', config.ppnaeMesures.join(', ')) : ''}
+          ${config.ppnaeRegistreAJour !== undefined ? infoRow(isFr ? 'Registre à jour' : 'Up-to-date register', bool(config.ppnaeRegistreAJour, isFr)) : ''}
+        </tbody></table>
+      ` : ''}
     </div>
   `;
 
@@ -247,6 +334,16 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${infoRow(isFr ? 'Localisation entrée de gaz' : 'Gas inlet location', val(config.gazNaturelLieu))}
         </tbody>
       </table>
+
+      ${config.registresCoupeFeu ? `
+        ${subHeading(isFr ? 'Registres coupe-feu et de contrôle de la fumée' : 'Fire Dampers and Smoke Control Registers')}
+        <table><tbody>
+          ${config.registresCoupeFeuNombre ? infoRow(isFr ? 'Nombre approximatif' : 'Approximate count', val(config.registresCoupeFeuNombre)) : ''}
+          ${config.registresCoupeFeuDerniereInspection ? infoRow(isFr ? 'Dernière inspection' : 'Last inspection', val(config.registresCoupeFeuDerniereInspection)) : ''}
+          ${config.registresCoupeFeuRapport !== undefined ? infoRow(isFr ? 'Rapport disponible' : 'Report available', bool(config.registresCoupeFeuRapport, isFr)) : ''}
+          ${infoRow(isFr ? 'Fréquence requise' : 'Required frequency', isFr ? 'Aux 12 mois — CNPI 2020 art. 2.2.2.4' : 'Every 12 months — CNPI 2020 art. 2.2.2.4')}
+        </tbody></table>
+      ` : ''}
 
       ${subHeading(isFr ? 'Salle électrique' : 'Electrical room')}
       <table>
@@ -338,6 +435,21 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           ${detectionItems.map(item => checklistItem(isFr ? item.fr : item.en, !!config[item.key])).join('')}
         </div>
       </div>
+
+      ${(config.s1001Interconnexions || []).length > 0 ? `
+        ${subHeading(isFr ? 'Systèmes intégrés — CAN/ULC-S1001' : 'Integrated Systems — CAN/ULC-S1001')}
+        <div style="background:#F4ECF7;border-left:4px solid #8E44AD;border-radius:0 4px 4px 0;padding:10px 14px;margin-bottom:10px;">
+          <p style="margin:0;font-size:9pt;color:#8E44AD;font-weight:600;">
+            ${isFr ? '⚠ Bâtiments existants : essais intégrés requis à compter du 17 avril 2028 (art. 2.1.3.7)' : '⚠ Existing buildings: integrated testing required as of April 17, 2028 (art. 2.1.3.7)'}
+          </p>
+        </div>
+        <table><tbody>
+          ${infoRow(isFr ? 'Interconnexions déclarées' : 'Declared interconnections', (config.s1001Interconnexions || []).join(', '))}
+          ${config.s1001DernierEssai ? infoRow(isFr ? 'Dernier essai intégré' : 'Last integrated test', val(config.s1001DernierEssai)) : ''}
+          ${config.s1001RapportDisponible !== undefined ? infoRow(isFr ? 'Rapport disponible' : 'Report available', bool(config.s1001RapportDisponible, isFr)) : ''}
+          ${config.s1001Coordonnateur ? infoRow(isFr ? 'Coordonnateur des essais' : 'Test coordinator', val(config.s1001Coordonnateur)) : ''}
+        </tbody></table>
+      ` : ''}
     </div>
   `;
 
@@ -402,11 +514,14 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
 
   const matieresRows = (config.matieresList || []).map((m: any) => `
     <tr>
-      <td>${escapeHtml(m.nom) || '—'}</td>
+      <td style="font-weight:600;">${escapeHtml(m.nom) || '—'}</td>
       <td>${escapeHtml(m.numeroUN) || '—'}</td>
-      <td>${escapeHtml(m.quantiteEmplacement) || '—'}</td>
+      <td>${escapeHtml(m.utilisation || m.quantiteEmplacement) || '—'}</td>
+      <td>${escapeHtml(m.emplacementPrecis) || escapeHtml(m.quantiteEmplacement) || '—'}</td>
+      <td>${escapeHtml(m.quantiteMax) || '—'}</td>
       <td style="text-align:center;">${m.tmd ? '✓' : '—'}</td>
       <td style="text-align:center;">${m.simdut ? '✓' : '—'}</td>
+      <td style="text-align:center;font-weight:700;color:${m.signalisationTMD === true ? '#27AE60' : m.signalisationTMD === false ? '#C0392B' : '#ADB5BD'};">${m.signalisationTMD === true ? '✓' : m.signalisationTMD === false ? '✗' : '—'}</td>
     </tr>
   `).join('');
 
@@ -418,15 +533,28 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
           <thead>
             <tr>
               <th>${isFr ? 'Nom du produit' : 'Product name'}</th>
-              <th>${isFr ? 'Numéro UN' : 'UN number'}</th>
-              <th>${isFr ? 'Quantité et emplacement' : 'Quantity and location'}</th>
+              <th>${isFr ? 'No UN' : 'UN No.'}</th>
+              <th>${isFr ? 'Utilisation' : 'Use'}</th>
+              <th>${isFr ? 'Emplacement précis' : 'Exact location'}</th>
+              <th>${isFr ? 'Qté max' : 'Max qty'}</th>
               <th>TMD</th>
               <th>SIMDUT</th>
+              <th>${isFr ? 'Signal. TMD' : 'TMD Sign.'}</th>
             </tr>
           </thead>
           <tbody>${matieresRows}</tbody>
         </table>
       ` : `<p style="color:#ADB5BD;">${isFr ? 'Aucune matière dangereuse déclarée' : 'No hazardous materials declared'}</p>`}
+
+      ${config.psiEntreePrincipale !== undefined ? `
+        <div style="background:${config.psiEntreePrincipale ? '#EAFAF1' : '#FDEDEC'};border-left:4px solid ${config.psiEntreePrincipale ? '#27AE60' : '#C0392B'};border-radius:0 4px 4px 0;padding:10px 14px;margin:12px 0;">
+          <p style="margin:0;font-size:9pt;font-weight:700;color:${config.psiEntreePrincipale ? '#27AE60' : '#C0392B'};">
+            ${config.psiEntreePrincipale
+              ? (isFr ? '✓ PSI conservé et accessible à l\'entrée principale (CNPI 2020 art. 2.8.2.12)' : '✓ Fire safety plan stored and accessible at main entrance (CNPI 2020 art. 2.8.2.12)')
+              : (isFr ? '✗ PSI non accessible à l\'entrée principale — CNPI 2020 art. 2.8.2.12' : '✗ Fire safety plan not accessible at main entrance — CNPI 2020 art. 2.8.2.12')}
+          </p>
+        </div>
+      ` : ''}
 
       ${subHeading(isFr ? 'Trousse de déversement' : 'Spill kit')}
       <table>
@@ -654,6 +782,45 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
     </div>
   `;
 
+  const htmlT6 = config.travauxPointsChauds && config.travauxPointsChauds !== 'Jamais' ? `
+    <div class="page-break">
+      ${sectionHeader('TPC', isFr ? 'TRAVAUX PAR POINTS CHAUDS' : 'HOT WORK OPERATIONS')}
+      <div style="background:#FEF9E7;border-left:4px solid #F39C12;border-radius:0 4px 4px 0;padding:10px 14px;margin-bottom:12px;">
+        <p style="margin:0;font-size:9pt;color:#F39C12;font-weight:600;">
+          ${isFr ? '⚠ Inclut : soudage, découpage, meulage, brasage, toiture, dégèlement — CNPI 2020 art. 5.2' : '⚠ Includes: welding, cutting, grinding, brazing, roofing, pipe thawing — CNPI 2020 art. 5.2'}
+        </p>
+      </div>
+      <table><tbody>
+        ${infoRow(isFr ? 'Fréquence' : 'Frequency', val(config.travauxPointsChauds))}
+        ${infoRow(isFr ? 'Permis de travail à chaud formalisé' : 'Formalized hot work permit', bool(config.permisTravauxChauds, isFr))}
+        ${infoRow(isFr ? 'Surveillance incendie continue' : 'Continuous fire watch', bool(config.surveillanceIncendieTPC, isFr))}
+        ${config.responsableTravauxChauds ? infoRow(isFr ? 'Responsable désigné' : 'Designated responsible', val(config.responsableTravauxChauds)) : ''}
+        ${infoRow(isFr ? 'Inspection finale documentée' : 'Documented final inspection', bool(config.inspectionFinaleDocumentee, isFr))}
+        ${config.methodeInspectionTPC ? infoRow(isFr ? 'Méthode d\'inspection finale' : 'Final inspection method', val(config.methodeInspectionTPC)) : ''}
+        ${infoRow(isFr ? 'Travaux sur toiture possibles' : 'Roof work possible', bool(config.travauxToiture, isFr))}
+      </tbody></table>
+    </div>
+  ` : '';
+
+  const htmlT7 = config.laboratoirePresent ? `
+    <div class="page-break">
+      ${sectionHeader('LABO', isFr ? 'LABORATOIRES' : 'LABORATORIES')}
+      <table><tbody>
+        ${(config.typeLaboratoire || []).length > 0 ? infoRow(isFr ? 'Type(s)' : 'Type(s)', config.typeLaboratoire.join(', ')) : ''}
+        ${infoRow(isFr ? 'Gaz comprimés présents' : 'Compressed gas present', bool(config.gazComprimesPresents, isFr))}
+        ${config.gazComprimesPresents ? infoRow(isFr ? 'Armoire / cabinet ventilé disponible' : 'Ventilated cabinet available', bool(config.armireCabinetVentile, isFr)) : ''}
+        ${infoRow(isFr ? 'Gaz toxiques présents' : 'Toxic gas present', bool(config.gazToxiquesPresents, isFr))}
+        ${config.gazToxiquesPresents ? infoRow(isFr ? 'Détection avec signal audible et visible' : 'Detection with audible and visible signal', bool(config.detectionGazLabo, isFr)) : ''}
+        ${infoRow(isFr ? 'Panneaux TMD à l\'entrée du laboratoire' : 'TMD signs at laboratory entrance', bool(config.panneauxTMDLabo, isFr))}
+      </tbody></table>
+      <div style="background:#EBF5FB;border-left:4px solid #2980B9;border-radius:0 4px 4px 0;padding:10px 14px;margin-top:12px;">
+        <p style="margin:0;font-size:9pt;color:#2980B9;font-weight:600;">
+          ${isFr ? 'ℹ Exercices d\'incendie : tous les 3 mois (laboratoire hors école — CNPI 2020 art. 2.8.3.2)' : 'ℹ Fire drills: every 3 months (laboratory, non-educational — CNPI 2020 art. 2.8.3.2)'}
+        </p>
+      </div>
+    </div>
+  ` : '';
+
   return [
     { id: 'site_general', title: isFr ? 'Description générale' : 'General Description', html: html71 },
     { id: 'site_mecanique', title: isFr ? 'Mécanique du bâtiment' : 'Building Mechanical Systems', html: html72 },
@@ -664,5 +831,7 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
     { id: 'site_soins', title: isFr ? 'Équipements de premiers soins' : 'First Aid Equipment', html: html77 },
     { id: 'site_detecteurs', title: isFr ? 'Détecteurs de gaz' : 'Gas Detectors', html: html78 },
     { id: 'site_photos', title: isFr ? 'Photos des équipements de protection' : 'Protection Equipment Photos', html: html79 },
+    ...(htmlT6 ? [{ id: 'site_points_chauds', title: isFr ? 'Travaux par points chauds' : 'Hot Work Operations', html: htmlT6 }] : []),
+    ...(htmlT7 ? [{ id: 'site_laboratoires', title: isFr ? 'Laboratoires' : 'Laboratories', html: htmlT7 }] : []),
   ];
 }
