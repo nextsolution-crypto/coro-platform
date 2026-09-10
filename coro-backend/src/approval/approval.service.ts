@@ -164,7 +164,7 @@ export class ApprovalService {
       include: { client: true, building: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
-    if (!['REVIEW', 'VALIDATED'].includes(project.status)) {
+    if (!['REVIEW', 'VALIDATED', 'EXPORTED'].includes(project.status)) {
       throw new ForbiddenException('Ce projet ne peut pas être retourné en révision');
     }
     // Bloquer seulement si REVIEW et que c'est le soumetteur
