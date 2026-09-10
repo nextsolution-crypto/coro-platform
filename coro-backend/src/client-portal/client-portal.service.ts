@@ -117,7 +117,34 @@ export class ClientPortalService {
       },
     });
 
-    // Régénérer le PDF sans filigrane et sauvegarder sur Spaces
+    const signedAt = new Date();
+
+    // ── 1. Mettre à jour le snapshot de version avec les infos de signature ──
+    try {
+      const latestVersion = await this.prisma.projectVersion.findFirst({
+        where: { projectId },
+        orderBy: { versionNumber: 'desc' },
+      });
+      if (latestVersion) {
+        const snap = (latestVersion.snapshot as any) || {};
+        await this.prisma.projectVersion.update({
+          where: { id: latestVersion.id },
+          data: {
+            label: `v${latestVersion.versionNumber} — signé`,
+            snapshot: {
+              ...snap,
+              signedBy:    data.fullName,
+              signedAt:    signedAt.toISOString(),
+              signedEmail: clientUser.email,
+            },
+          },
+        });
+      }
+    } catch (e) {
+      console.error('Erreur mise à jour version après signature:', e);
+    }
+
+    // ── 2. Régénérer le PDF officiel et passer le projet à EXPORTED ──────────
     try {
       const project = await this.prisma.project.findUnique({
         where: { id: projectId },
@@ -128,43 +155,49 @@ export class ClientPortalService {
           projectId,
           {
             selectedModules: [1, 2, 3, 4, 5, 6, 7, 8],
-            moduleOrder: [1, 2, 3, 4, 5, 6, 7, 8],
-            language: 'both',
-            isPreview: false,
+            moduleOrder:     [1, 2, 3, 4, 5, 6, 7, 8],
+            language:        'both',
+            isPreview:       false,
           },
           project.organizationId,
         );
 
         const timestamp = Date.now();
-        const updateData: any = { exportedAt: new Date() };
+        const updateData: any = {
+          exportedAt: signedAt,
+          progress:   100,
+          status:     'EXPORTED',
+        };
 
         if (result.fr) {
-          const urlFr = await this.storageService.uploadFile(
+          updateData.officialPdfFr = await this.storageService.uploadFile(
             result.fr,
             `${projectId}-${timestamp}-FR-OFFICIEL.pdf`,
             'documents',
             'application/pdf',
           );
-          updateData.officialPdfFr = urlFr;
         }
-
         if (result.en) {
-          const urlEn = await this.storageService.uploadFile(
+          updateData.officialPdfEn = await this.storageService.uploadFile(
             result.en,
             `${projectId}-${timestamp}-EN-OFFICIEL.pdf`,
             'documents',
             'application/pdf',
           );
-          updateData.officialPdfEn = urlEn;
         }
 
         await this.prisma.project.update({
           where: { id: projectId },
-          data: updateData,
+          data:  updateData,
         });
       }
     } catch (e) {
       console.error('Erreur régénération PDF officiel:', e);
+      // En cas d'échec PDF, on marque quand même comme exporté
+      await this.prisma.project.update({
+        where: { id: projectId },
+        data:  { progress: 100, status: 'EXPORTED' },
+      }).catch(() => {});
     }
 
     // Notifier le conseiller que le client a signé
@@ -400,6 +433,33 @@ export class ClientPortalService {
 
   async getBookingsForClient(clientUserId: string) {
     return this.bookingsService.getBookingsForClient(clientUserId);
+  }
+
+  // ── Historique des versions (côté portail client et côté org) ─────────────
+
+  async getProjectVersionHistory(projectId: string) {
+    const versions = await this.prisma.projectVersion.findMany({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+    });
+
+    return versions.map(v => {
+      const snap = (v.snapshot as any) || {};
+      return {
+        versionNumber: v.versionNumber,
+        label:         v.label || `v${v.versionNumber}`,
+        createdAt:     v.createdAt,
+        // Approbation
+        approvedBy:    snap.approvedBy    ?? null,
+        approvedAt:    snap.approvedAt    ?? null,
+        // Signature
+        signedBy:      snap.signedBy      ?? null,
+        signedAt:      snap.signedAt      ?? null,
+        signedEmail:   snap.signedEmail   ?? null,
+        // Statut lisible
+        status: snap.signedAt ? 'SIGNÉ' : 'EN ATTENTE DE SIGNATURE',
+      };
+    });
   }
 
   async getBuildings(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {

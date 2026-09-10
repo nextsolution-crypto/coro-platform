@@ -1,0 +1,126 @@
+══════════════════════════════════════════
+  ROUTES FRONTEND (pages Next.js)
+══════════════════════════════════════════
+  Dossier app détecté : F:\coro-platform\coro-frontend\app
+  /
+  /activities/portfolio
+  /admin/capacity
+  /admin/changelog
+  /admin/feedback
+  /admin/health
+  /admin/mandates
+  /admin/map
+  /admin/organizations
+  /admin/procedures
+  /admin/procedures/[id]
+  /admin/procedures/custom
+  /admin/projects
+  /admin/task-templates
+  /blog
+  /blog/[id]/edit
+  /blog/new
+  /bookings
+  /buildings
+  /buildings/[id]
+  /buildings/compliance
+  /buildings/map
+  /clients
+  /clients/[id]
+  /clients/[id]/portfolio
+  /configurator/[projectId]
+  /configurator/pca/[projectId]
+  /dashboard
+  /dashboard/rendement
+  /editor/[projectId]
+  /editor/[projectId]/procedures/[procedureId]
+  /library
+  /login
+  /notifications
+  /profile
+  /profile/rendement
+  /projects
+  /projects/[id]
+  /projects/[id]/activities
+  /projects/[id]/mandate
+  /projects/[id]/procedures
+  /reset-password
+  /settings
+  /settings/feedback
+  /settings/module1-template
+  /settings/organization
+  /settings/profile
+  /settings/task-templates
+  /settings/timelog-categories
+  /settings/users
+  /timelog
+
+══════════════════════════════════════════
+  LAYOUTS ET COMPOSANTS SPÉCIAUX
+══════════════════════════════════════════
+  /layout.tsx
+
+══════════════════════════════════════════
+  COMPOSANTS FRONTEND
+══════════════════════════════════════════
+  Dossier composants : F:\coro-platform\coro-frontend\components
+  /EngagementPanel.tsx
+  /ExportModal.tsx
+  /MapPicker.tsx
+  /ProjectFiles.tsx
+  /configurator/DangerousSubstanceSearch.tsx
+  /editor/Module2PhoneTable.tsx
+  /editor/Module2Section.tsx
+  /editor/Module3MemberTable.tsx
+  /editor/Module3OrgChart.tsx
+  /editor/Module3Section.tsx
+  /editor/Module4Library.tsx
+  /editor/Module4PcaSection.tsx
+  /editor/Module4ProcedureCard.tsx
+  /editor/Module4Section.tsx
+  /editor/Module6PcaContacts.tsx
+  /editor/Module6Section.tsx
+  /editor/Module7Section.tsx
+  /editor/Module8Section.tsx
+  /editor/Module8Section10.tsx
+  /editor/SpellCheckedTextarea.tsx
+  /editor/VersionHistory.tsx
+  /layout/AppLayout.tsx
+  /layout/AuthProvider.tsx
+  /ui/DragDropUpload.tsx
+  /ui/ToastContainer.tsx
+  /ui/Typography.tsx
+
+══════════════════════════════════════════
+  STORES ZUSTAND
+══════════════════════════════════════════
+  Dossier stores : F:\coro-platform\coro-frontend\stores
+  auth.store.ts
+
+══════════════════════════════════════════
+  STRUCTURE RACINE FRONTEND
+══════════════════════════════════════════
+  Racine : F:\coro-platform\coro-frontend
+  [FIL] .gitignore
+  [FIL] AGENTS.md
+  [DIR] app
+  [FIL] CLAUDE.md
+  [DIR] components
+  [FIL] Dockerfile
+  [FIL] eslint.config.mjs
+  [DIR] hooks
+  [DIR] lib
+  [FIL] next-env.d.ts
+  [FIL] next.config.ts
+  [FIL] package-lock.json
+  [FIL] package.json
+  [FIL] postcss.config.mjs
+  [DIR] public
+  [FIL] README.md
+  [DIR] src
+  [DIR] stores
+  [FIL] tsconfig.json
+  [FIL] tsconfig.tsbuildinfo
+  [DIR] types
+
+══════════════════════════════════════════
+  Scan terminé : 2026-09-10 09 h 37 min 02 s

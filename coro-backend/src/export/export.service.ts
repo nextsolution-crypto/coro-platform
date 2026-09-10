@@ -79,6 +79,14 @@ export class ExportService {
       result.en = await this.generateSingleLanguagePdf(doc, content, 'en', options);
     }
 
+    // ── Progression → 85% après export (sauf aperçu) ─────────────────────────
+    if (!options.isPreview) {
+      await this.prisma.project.update({
+        where: { id: projectId },
+        data: { progress: 85 },
+      });
+    }
+
     return result;
   }
 

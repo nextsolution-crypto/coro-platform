@@ -103,9 +103,14 @@ export class ClientPortalController {
     });
   }
 
-  @Get('projects/:id/engagement')
+    @Get('projects/:id/engagement')
   async getEngagement(@Param('id') id: string) {
     return this.clientPortalService.getEngagement(id);
+  }
+
+  @Get('projects/:id/versions')
+  async getVersionHistory(@Param('id') id: string) {
+    return this.clientPortalService.getProjectVersionHistory(id);
   }
 
   @Post('projects/:id/bookings')

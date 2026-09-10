@@ -30,6 +30,7 @@ export class ApprovalService {
         status: 'REVIEW',
         submittedById: userId,
         submittedAt: new Date(),
+        progress: 50,
       },
     });
 
@@ -65,51 +66,91 @@ export class ApprovalService {
       throw new ForbiddenException('Vous ne pouvez pas approuver votre propre soumission');
     }
 
+    const approver = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    const approverName = `${approver?.firstName ?? ''} ${approver?.lastName ?? ''}`.trim();
+    const now = new Date();
+
+    // ── 1. Réinitialiser signatures et PDF officiel ───────────────────────────
+    // Obligatoire pour forcer une nouvelle signature côté portail client
+    await this.prisma.documentSignature.deleteMany({ where: { projectId } });
+
+    // ── 2. Calculer le prochain numéro de version ─────────────────────────────
+    const lastVersion = await this.prisma.projectVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+      select: { versionNumber: true },
+    });
+    const nextVersionNumber = (lastVersion?.versionNumber ?? 0) + 1;
+
+    // ── 3. Créer l'entrée de version (snapshot léger) ─────────────────────────
+    await this.prisma.projectVersion.create({
+      data: {
+        projectId,
+        versionNumber: nextVersionNumber,
+        label: `v${nextVersionNumber} — approuvé`,
+        snapshot: {
+          type: 'APPROVAL',
+          versionNumber: nextVersionNumber,
+          approvedBy: approverName,
+          approvedById: userId,
+          approvedAt: now.toISOString(),
+          signedBy: null,
+          signedAt: null,
+          signedEmail: null,
+        },
+      },
+    });
+
+    // ── 4. Mettre à jour le projet ────────────────────────────────────────────
     await this.prisma.project.update({
       where: { id: projectId },
       data: {
         status: 'VALIDATED',
         approvedById: userId,
-        approvedAt: new Date(),
+        approvedAt: now,
+        progress: 75,
+        // Réinitialiser le PDF officiel — force le client à signer à nouveau
+        officialPdfFr: null,
+        officialPdfEn: null,
       },
     });
 
-    // Notifier le soumetteur
+    // ── 5. Notifier le soumetteur ─────────────────────────────────────────────
     if (project.submittedById) {
-      const approver = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { firstName: true, lastName: true },
-      });
       await this.notifications.create({
         userId: project.submittedById,
         organizationId,
         type: 'APPROUVE',
         title: '✅ Document approuvé',
-        message: `${approver?.firstName} ${approver?.lastName} a approuvé le projet "${project.name}". L'export PDF est maintenant disponible.`,
+        message: `${approverName} a approuvé le projet "${project.name}" (v${nextVersionNumber}). L'export PDF est maintenant disponible.`,
         projectId,
       });
     }
 
-    // Envoyer email aux ClientUsers du client
-      try {
-        const clientUsers = await this.prisma.clientUser.findMany({
-          where: { clientId: project.clientId, isActive: true },
+    // ── 6. Envoyer email + notification portail aux clients ───────────────────
+    try {
+      const clientUsers = await this.prisma.clientUser.findMany({
+        where: { clientId: project.clientId, isActive: true },
+      });
+      for (const clientUser of clientUsers) {
+        // Email
+        await this.emailService.sendDocumentAvailable({
+          toEmail: clientUser.email,
+          toName: `${clientUser.firstName} ${clientUser.lastName}`,
+          projectName: project.name,
+          documentType: project.documentType,
+          clientName: project.client.name,
         });
-        for (const clientUser of clientUsers) {
-          await this.emailService.sendDocumentAvailable({
-            toEmail: clientUser.email,
-            toName: `${clientUser.firstName} ${clientUser.lastName}`,
-            projectName: project.name,
-            documentType: project.documentType,
-            clientName: project.client.name,
-          });
-        }
-      } catch (e) {
-        console.error('Erreur envoi email client:', e);
       }
-
-      return { success: true, status: 'VALIDATED' };
+    } catch (e) {
+      console.error('Erreur envoi email client:', e);
     }
+
+    return { success: true, status: 'VALIDATED', version: nextVersionNumber };
+  }
 
   // ── Retourner pour révision ──────────────────────────────
   async requestRevision(

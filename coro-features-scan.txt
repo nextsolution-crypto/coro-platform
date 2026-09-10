@@ -1,0 +1,520 @@
+
+══════════════════════════════════════════
+  ROUTES FRONTEND (Next.js app directory)
+══════════════════════════════════════════
+  ⚠ Dossier non trouvé : coro-frontend/src/app
+
+══════════════════════════════════════════
+  ENDPOINTS BACKEND (NestJS controllers)
+══════════════════════════════════════════
+
+  [activities.controller.ts]  base: /activities
+    Get    /activities/activities/catalog
+    Get    /activities/projects/:projectId/activities
+    Post   /activities/projects/:projectId/activities
+    Put    /activities/activities/:activityId
+    Delete /activities/activities/:activityId
+    Post   /activities/projects/:projectId/activities/from-mandate
+    Post   /activities/projects/:projectId/activities/duplicate
+    Get    /activities/activities/:activityId/ics
+    Get    /activities/clients/:clientId/activities/portfolio
+    Get    /activities/activities/recurring-to-renew
+    Get    /activities/activities/upcoming
+
+  [app.controller.ts]  base: /app
+    Get    /app
+
+  [approval.controller.ts]  base: /approval
+    Post   /approval/:projectId/submit
+    Post   /approval/:projectId/approve
+    Post   /approval/:projectId/request-revision
+    Get    /approval/:projectId/can-edit
+    Get    /approval/:projectId/can-approve
+    Get    /approval/:projectId/observations
+    Post   /approval/:projectId/observations
+    Put    /approval/observations/:id
+    Delete /approval/observations/:id
+
+  [audit.controller.ts]  base: /audit
+    Get    /audit/project/:projectId
+    Get    /audit/organization
+
+  [auth.controller.ts]  base: /auth
+    Post   /auth/login
+    Post   /auth/forgot-password
+    Post   /auth/reset-password
+    Post   /auth/verify-mfa
+    Post   /auth/refresh
+    Post   /auth/logout
+
+  [blog.controller.ts]  base: /blog
+    Get    /blog/public
+    Get    /blog/public/:slug
+    Get    /blog
+    Get    /blog/:id
+    Post   /blog
+    Put    /blog/:id
+    Post   /blog/:id/publish
+    Post   /blog/:id/publish
+    Post   /blog/:id/schedule
+    Post   /blog/:id/unpublish
+    Delete /blog/:id
+
+  [bookings.controller.ts]  base: /bookings
+    Get    /bookings/organization
+    Get    /bookings/project/:projectId
+    Put    /bookings/:id/status
+    Put    /bookings/:id/cancel
+
+  [building-plans.controller.ts]  base: /projects/:projectId/building-plans
+    Get    /projects/:projectId/building-plans
+    Post   /projects/:projectId/building-plans
+    Put    /projects/:projectId/building-plans/:planId
+    Delete /projects/:projectId/building-plans/:planId
+    Patch  /projects/:projectId/building-plans/:planId/reorder
+
+  [buildings.controller.ts]  base: /buildings
+    Get    /buildings
+    Get    /buildings/:id/projects
+    Get    /buildings/:id
+    Post   /buildings
+    Patch  /buildings/:id
+    Delete /buildings/:id
+
+  [changelog.controller.ts]  base: /changelog
+    Get    /changelog
+    Post   /changelog
+    Delete /changelog/:id
+
+  [chat.controller.ts]  base: /chat
+    Post   /chat/vitrine
+    Post   /chat/notify
+
+  [client-auth.controller.ts]  base: /client-auth
+    Post   /client-auth/login
+    Post   /client-auth/verify-mfa
+    Put    /client-auth/change-password
+    Post   /client-auth/magic-link/validate
+
+  [client-portal.controller.ts]  base: /client-portal
+    Get    /client-portal/dashboard
+    Get    /client-portal/projects
+    Get    /client-portal/projects/:id
+    Get    /client-portal/activities
+    Post   /client-portal/projects/:id/sign
+    Post   /client-portal/projects/:id/comments
+    Post   /client-portal/projects/:id/refuse
+    Get    /client-portal/projects/:id/comments
+    Post   /client-portal/projects/:id/engagement
+    Get    /client-portal/projects/:id/engagement
+    Post   /client-portal/projects/:id/bookings
+    Get    /client-portal/bookings
+    Get    /client-portal/buildings
+    Get    /client-portal/notifications
+
+  [clients.controller.ts]  base: /clients
+    Get    /clients
+    Get    /clients/:id
+    Post   /clients
+    Put    /clients/:id
+    Put    /clients/:id/logo
+    Delete /clients/:id
+
+  [configurator.controller.ts]  base: /configurator
+    Get    /configurator/questions
+    Post   /configurator/analyze
+    Post   /configurator/save/:projectId
+    Get    /configurator/load/:projectId
+    Post   /configurator/import-word
+
+  [custom-procedures.controller.ts]  base: /custom-procedures
+    Get    /custom-procedures/roles
+    Get    /custom-procedures/library
+    Get    /custom-procedures/project/:projectId
+    Get    /custom-procedures/:id
+    Post   /custom-procedures/generate
+    Post   /custom-procedures/import-file
+    Put    /custom-procedures/:id
+    Post   /custom-procedures/:id/clone
+    Post   /custom-procedures/:id/publish
+    Delete /custom-procedures/:id
+
+  [dangerous-substances.controller.ts]  base: /dangerous-substances
+    Get    /dangerous-substances/search
+    Get    /dangerous-substances/common
+
+  [export.controller.ts]  base: /projects/:projectId/export
+    Post   /projects/:projectId/export
+
+  [feedback.controller.ts]  base: /feedback
+    Post   /feedback
+    Get    /feedback
+    Put    /feedback/:id/status
+    Delete /feedback/:id
+
+  [generator.controller.ts]  base: /generator
+    Post   /generator/generate/:projectId
+    Get    /generator/document/:projectId
+    Put    /generator/document/:documentId/module/:moduleId/section/:sectionId
+    Get    /generator/validate/:projectId
+
+  [guide.controller.ts]  base: /projects/:projectId/guide
+    Post   /projects/:projectId/guide/export
+
+  [language-check.controller.ts]  base: /language-check
+    Post   /language-check
+
+  [library.controller.ts]  base: /library
+    Get    /library/incident-codes
+    Get    /library/roles
+    Get    /library/procedures
+    Post   /library/procedures
+    Put    /library/procedures/:id
+
+  [capacity.controller.ts]  base: /admin/capacity
+    Get    /admin/capacity
+
+  [mandate.controller.ts]  base: /projects/:projectId
+    Get    /projects/:projectId/mandate
+    Put    /projects/:projectId/mandate
+    Get    /projects/:projectId/comments
+    Post   /projects/:projectId/comments
+    Put    /projects/:projectId/comments/:commentId
+    Delete /projects/:projectId/comments/:commentId
+    Get    /projects/:projectId/tasks
+    Post   /projects/:projectId/tasks/init
+    Put    /projects/:projectId/tasks/:taskId
+    Post   /projects/:projectId/tasks/:taskId/time
+    Delete /projects/:projectId/time/:entryId
+    Get    /projects/:projectId/timesheet
+    Get    /projects/:projectId/timesheet/export
+
+  [portfolio.controller.ts]  base: /admin/portfolio
+    Get    /admin/portfolio
+
+  [rendement.controller.ts]  base: /rendement
+    Get    /rendement
+
+  [module2.controller.ts]  base: /projects/:projectId/module2
+    Get    /projects/:projectId/module2
+    Put    /projects/:projectId/module2
+
+  [module3.controller.ts]  base: /projects/:projectId/module3
+    Get    /projects/:projectId/module3
+    Put    /projects/:projectId/module3
+
+  [library.controller.ts]  base: /procedures
+    Get    /procedures/library
+    Get    /procedures/:procedureId/full
+
+  [module4.controller.ts]  base: /projects/:projectId/module4
+    Get    /projects/:projectId/module4
+    Put    /projects/:projectId/module4
+
+  [module7.controller.ts]  base: /projects/:projectId/module7
+    Get    /projects/:projectId/module7
+    Get    /projects/:projectId/module7/config
+    Put    /projects/:projectId/module7
+
+  [module8.controller.ts]  base: /projects/:projectId/module8
+    Get    /projects/:projectId/module8
+    Put    /projects/:projectId/module8
+    Post   /projects/:projectId/module8/print-attendance
+
+  [notifications.controller.ts]  base: /notifications
+    Get    /notifications
+    Get    /notifications/unread-count
+    Get    /notifications/mandate-delays
+    Put    /notifications/:id/read
+    Put    /notifications/read-all
+    Delete /notifications/:id
+
+  [occupancy-employees.controller.ts]  base: /occupancy
+    Post   /occupancy/qr/employee
+    Post   /occupancy/qr/invitation
+    Post   /occupancy/qr/checkout
+    Post   /occupancy/presence/pin
+    Get    /occupancy/buildings/:buildingId/employees
+    Post   /occupancy/employees
+    Delete /occupancy/employees/:id
+    Get    /occupancy/buildings/:buildingId/invitations
+    Post   /occupancy/invitations
+    Get    /occupancy/qr/info/:token
+
+  [occupancy.controller.ts]  base: /occupancy
+    Post   /occupancy/checkin
+    Post   /occupancy/checkout
+    Get    /occupancy/kiosk/resolve/:token
+    Get    /occupancy/buildings/:buildingId/current-public
+    Get    /occupancy/buildings/:buildingId/search
+    Get    /occupancy/buildings/:buildingId/history-public
+    Get    /occupancy/buildings/:buildingId/current
+    Get    /occupancy/buildings/:buildingId/history
+    Get    /occupancy/buildings/:buildingId/kiosk-token
+    Post   /occupancy/buildings/:buildingId/kiosk-token/regenerate
+    Post   /occupancy/evacuation/trigger
+    Get    /occupancy/buildings/:buildingId/evacuation/active
+    Post   /occupancy/evacuation/account
+    Put    /occupancy/evacuation/:id/resolve
+    Get    /occupancy/buildings/:buildingId/evacuation/history
+    Get    /occupancy/buildings/:buildingId/history
+    Get    /occupancy/evacuation/:id/detail
+
+  [module1-template.controller.ts]  base: /organizations/module1-template
+    Get    /organizations/module1-template
+    Put    /organizations/module1-template
+
+  [organizations.controller.ts]  base: /organizations
+    Get    /organizations
+    Get    /organizations/:id
+    Post   /organizations
+    Put    /organizations/:id/license
+    Get    /organizations/map/overview
+    Put    /organizations/:id/active
+    Get    /organizations/me/info
+    Get    /organizations/admin/all-projects
+    Get    /organizations/admin/health-scores
+
+  [pca-configurator.controller.ts]  base: /pca/configurator
+    Get    /pca/configurator/:projectId
+    Post   /pca/configurator/:projectId
+    Get    /pca/configurator/:projectId/linked-pmu
+    Get    /pca/configurator/:projectId/procedures
+    Put    /pca/configurator/:projectId/procedures/:procedureId/toggle
+    Put    /pca/configurator/:projectId/procedures/:procedureId
+    Delete /pca/configurator/:projectId/procedures/:procedureId
+
+  [procedures.controller.ts]  base: /procedures
+    Get    /procedures
+    Get    /procedures/project/:projectId
+    Post   /procedures/default
+    Delete /procedures/:id/default
+    Get    /procedures/:id
+    Put    /procedures/:id/project/:projectId
+    Put    /procedures/:id/project/:projectId/toggle
+    Delete /procedures/:id/project/:projectId
+    Put    /procedures/:id/default
+
+  [project-files-client.controller.ts]  base: /project-files/client
+    Get    /project-files/client/:projectId
+    Post   /project-files/client/:projectId
+
+  [project-files.controller.ts]  base: /project-files
+    Get    /project-files/project/:projectId
+    Post   /project-files/project/:projectId
+    Put    /project-files/:id/validate
+    Delete /project-files/:id
+    Get    /project-files/:id/download
+
+  [projects.controller.ts]  base: /projects
+    Get    /projects
+    Get    /projects/search
+    Get    /projects/upcoming-updates
+    Get    /projects/buildings-compliance
+    Get    /projects/pending-approval
+    Get    /projects/:id/quality-score
+    Get    /projects/:id
+    Post   /projects
+    Put    /projects/:id
+    Delete /projects/:id
+    Post   /projects/:id/submit
+    Post   /projects/:id/approve
+    Post   /projects/:id/reject
+    Post   /projects/:id/request-revision
+    Get    /projects/:id/comments
+    Get    /projects/:id/engagement
+
+  [storage.controller.ts]  base: /storage
+    Post   /storage/upload
+
+  [task-lists.controller.ts]  base: /task-lists
+    Get    /task-lists
+    Get    /task-lists/global
+    Post   /task-lists/global
+    Post   /task-lists
+    Put    /task-lists/:id
+    Delete /task-lists/:id
+    Post   /task-lists/:id/templates
+    Post   /task-lists/:id/import/:projectId
+    Get    /task-lists/project/:projectId
+    Put    /task-lists/project-list/:id
+    Delete /task-lists/project-list/:id
+
+  [task-templates.controller.ts]  base: /task-templates
+    Get    /task-templates
+    Post   /task-templates
+    Put    /task-templates/:id
+    Delete /task-templates/:id
+    Post   /task-templates/seed
+    Get    /task-templates/my
+    Post   /task-templates/my
+    Get    /task-templates/combined
+
+  [templates.controller.ts]  base: /templates
+    Get    /templates
+    Get    /templates/:id
+    Post   /templates/from-project/:projectId
+    Delete /templates/:id
+
+  [timelog.controller.ts]  base: /timelog
+    Get    /timelog/catalog
+    Post   /timelog/catalog
+    Put    /timelog/catalog/:key
+    Delete /timelog/catalog/:key
+    Get    /timelog/me
+    Post   /timelog/me
+    Put    /timelog/me/:entryId
+    Delete /timelog/me/:entryId
+    Get    /timelog/team
+
+  [users.controller.ts]  base: /users
+    Get    /users/organization
+    Post   /users/organization
+    Post   /users/organization/:userId/resend-invite
+    Put    /users/organization/:id/active
+    Get    /users/me
+    Put    /users/me
+    Put    /users/me/password
+    Put    /users/me/logo
+    Put    /users/me/logo-full
+
+  [versions.controller.ts]  base: /projects/:projectId/versions
+    Get    /projects/:projectId/versions
+    Post   /projects/:projectId/versions
+    Post   /projects/:projectId/versions/:versionId/restore
+    Delete /projects/:projectId/versions/:versionId
+
+══════════════════════════════════════════
+  SERVICES BACKEND
+══════════════════════════════════════════
+  activities.service.ts
+  app.service.ts
+  approval.service.ts
+  audit.service.ts
+  auth.service.ts
+  blog.service.ts
+  bookings.service.ts
+  building-plans.service.ts
+  buildings.service.ts
+  capacity.service.ts
+  changelog.service.ts
+  chat.service.ts
+  client-auth.service.ts
+  client-portal.service.ts
+  clients.service.ts
+  configurator.service.ts
+  custom-procedures.service.ts
+  email.service.ts
+  export.service.ts
+  feedback.service.ts
+  generator.service.ts
+  guide.service.ts
+  import.service.ts
+  language-check.service.ts
+  library.service.ts
+  mandate.service.ts
+  module1-template.service.ts
+  module2.service.ts
+  module3.service.ts
+  module4.service.ts
+  module7.service.ts
+  module8.service.ts
+  notifications.service.ts
+  occupancy-employees.service.ts
+  occupancy.service.ts
+  organizations.service.ts
+  pca-configurator.service.ts
+  prisma.service.ts
+  procedures.service.ts
+  project-files.service.ts
+  projects.service.ts
+  reminders.service.ts
+  rules-engine.service.ts
+  storage.service.ts
+  task-lists.service.ts
+  task-templates.service.ts
+  templates.service.ts
+  timelog.service.ts
+  users.service.ts
+  validation.service.ts
+  versions.service.ts
+
+══════════════════════════════════════════
+  MODÈLES PRISMA (schema.prisma)
+══════════════════════════════════════════
+  Organization
+  User
+  Client
+  Building
+  Project
+  RevisionHistory
+  Document
+  IncidentCode
+  Role
+  Procedure
+  LibrarySection
+  BuildingPlan
+  Module7Data
+  ChangelogEntry
+  ProcedureDefault
+  ProcedureOverride
+  Feedback
+  ProjectVersion
+  ProjectTemplate
+  AuditLog
+  ProjectActivity
+  TaskList
+  TaskTemplate
+  ProjectTaskList
+  ProjectTask
+  ProjectTaskAssignee
+  TaskTimeEntry
+  ProjectMandate
+  ProjectComment
+  TimelogEntry
+  TimelogCategory
+  DangerousSubstance
+  CustomProcedure
+  ReviewObservation
+  Notification
+  ClientUser
+  DocumentSignature
+  BlogPost
+  PcaConfig
+  OrganizationModule1Template
+  MagicLink
+  DocumentEngagement
+  Booking
+  BookingNotification
+  ProjectFile
+  RefreshToken
+  OccupancyRecord
+  EvacuationEvent
+  EvacuationCheckIn
+  BuildingKioskToken
+  BuildingEmployee
+  VisitorInvitation
+  TrustedDevice
+  ClientTrustedDevice
+
+══════════════════════════════════════════
+  COMPOSANTS FRONTEND
+══════════════════════════════════════════
+  ⚠ Dossier non trouvé : coro-frontend/src/components
+
+══════════════════════════════════════════
+  TEMPLATES PDF (export)
+══════════════════════════════════════════
+  export.controller.ts
+  export.module.ts
+  export.service.ts
+
+══════════════════════════════════════════
+  STORES FRONTEND (Zustand)
+══════════════════════════════════════════
+  ⚠ Dossier stores non trouvé
+
+══════════════════════════════════════════
+  RÉSUMÉ
+══════════════════════════════════════════
+  Scan terminé : 2026-09-10 09 h 34 min 24 s

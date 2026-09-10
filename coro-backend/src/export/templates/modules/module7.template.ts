@@ -47,7 +47,7 @@ function checklistItem(label: string, checked: boolean): string {
 }
 
 function subHeading(text: string): string {
-  return `<p style="font-size:9pt;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px 0;">${text}</p>`;
+  return `<p style="font-size:9pt;font-weight:700;color:#C0392B;text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 6px 0;page-break-after:avoid;orphans:3;widows:3;">${text}</p>`;
 }
 
 function computeReferentielCNB(anneeRaw: any): { label: string; periode: string } {
@@ -516,8 +516,8 @@ export function renderModule7(module7Data: any, config: any, lang: 'fr' | 'en', 
     <tr>
       <td style="font-weight:600;">${escapeHtml(m.nom) || '—'}</td>
       <td>${escapeHtml(m.numeroUN) || '—'}</td>
-      <td>${escapeHtml(m.utilisation || m.quantiteEmplacement) || '—'}</td>
-      <td>${escapeHtml(m.emplacementPrecis) || escapeHtml(m.quantiteEmplacement) || '—'}</td>
+      <td>${escapeHtml(m.utilisation) || '—'}</td>
+      <td>${escapeHtml(m.emplacementPrecis || m.quantiteEmplacement) || '—'}</td>
       <td>${escapeHtml(m.quantiteMax) || '—'}</td>
       <td style="text-align:center;">${m.tmd ? '✓' : '—'}</td>
       <td style="text-align:center;">${m.simdut ? '✓' : '—'}</td>
