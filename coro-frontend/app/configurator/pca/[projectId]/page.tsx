@@ -1755,7 +1755,15 @@ export default function PcaConfiguratorPage() {
           </button>
         ) : (
           <button
-            onClick={async () => { await handleSave(); router.push(`/projects/${projectId}`); }}
+            onClick={async () => {
+              await handleSave();
+              try {
+                await api.post(`/generator/generate/${projectId}`);
+              } catch (err) {
+                console.error('Erreur génération PCA:', err);
+              }
+              router.push(`/projects/${projectId}`);
+            }}
             className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded text-white"
             style={{ backgroundColor: '#27AE60' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
