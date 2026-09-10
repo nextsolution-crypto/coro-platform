@@ -132,11 +132,6 @@ export default function DashboardPage() {
             >
               Bonjour, {user.firstName} 👋
             </PageTitle>
-            <p className="mt-1 text-sm" style={{ color: '#6C757D' }}>
-            {upcomingActivities.length > 0
-              ? `${upcomingActivities.length} activité${upcomingActivities.length > 1 ? 's' : ''} prévue${upcomingActivities.length > 1 ? 's' : ''} dans les 30 prochains jours`
-              : 'Aucune activité prévue dans les 30 prochains jours'}
-          </p>
         </div>
         <button onClick={() => router.push('/projects')}
           className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2.5 rounded flex items-center justify-center gap-2 flex-shrink-0"
