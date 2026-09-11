@@ -260,6 +260,10 @@ export default function SentinelleDashboard() {
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2C3E50' }}>
           🚨 Rapports évacuation
         </button>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/resilience`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '2px solid #C0392B', backgroundColor: '#FDEDEC', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#C0392B' }}>
+          🛡️ Résilience opérationnelle
+        </button>
       </div>
 
       {/* ── URL Borne kiosque ── */}
