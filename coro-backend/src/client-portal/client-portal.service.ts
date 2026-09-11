@@ -509,6 +509,65 @@ export class ClientPortalService {
     }));
   }
 
+  async getBuildingsReadiness(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+    const where: any = { organizationId };
+    if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
+      where.id = { in: buildingIds };
+    } else if (role === 'CLIENT_MANAGER') {
+      where.clientId = clientId;
+    }
+
+    const buildings = await this.prisma.building.findMany({
+      where,
+      select: { id: true, name: true },
+    });
+
+    const buildingIdsList = buildings.map(b => b.id);
+
+    const [allMembers, presentRecords] = await Promise.all([
+      this.prisma.buildingEmployee.findMany({
+        where: { buildingId: { in: buildingIdsList }, isActive: true, isEmergencyMember: true },
+        include: { emergencyRoles: { orderBy: { priority: 'asc' } } },
+      }),
+      this.prisma.occupancyRecord.findMany({
+        where: {
+          buildingId: { in: buildingIdsList },
+          status: 'IN',
+          type: 'EMPLOYE',
+          checkedInAt: { gte: (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })() },
+        },
+        select: { buildingId: true, employeeId: true },
+      }),
+    ]);
+
+    const ROLE_TYPES = ['COORDINATOR','EPI','ASSEMBLY_WARDEN','SEARCHER','EXIT_WARDEN','PNA_ESCORT','FIRST_AIDER'];
+
+    return buildings.map(building => {
+      const members = allMembers.filter(m => m.buildingId === building.id);
+      const presentIds = new Set(
+        presentRecords.filter(r => r.buildingId === building.id).map(r => r.employeeId).filter(Boolean)
+      );
+
+      if (members.length === 0) {
+        return { buildingId: building.id, status: 'NO_TEAM', readinessIndex: null, presentMembers: 0, totalMembers: 0 };
+      }
+
+      const rolesConfigured = ROLE_TYPES.filter(rt => members.some(m => m.emergencyRoles.some(r => r.role === rt)));
+      const rolesCovered = rolesConfigured.filter(rt => members.filter(m => m.emergencyRoles.some(r => r.role === rt)).some(m => presentIds.has(m.id)));
+
+      const readinessIndex = rolesConfigured.length > 0 ? Math.round((rolesCovered.length / rolesConfigured.length) * 100) : 100;
+      const status = readinessIndex === 100 ? 'READY' : readinessIndex >= 60 ? 'REDUCED' : 'CRITICAL';
+
+      return {
+        buildingId: building.id,
+        status,
+        readinessIndex,
+        presentMembers: members.filter(m => presentIds.has(m.id)).length,
+        totalMembers: members.length,
+      };
+    });
+  }
+
   async getClientNotifications(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
     const where: any = { organizationId };
     if (role === 'CLIENT_MANAGER' && buildingIds?.length) {

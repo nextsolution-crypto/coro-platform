@@ -145,6 +145,16 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings-readiness')
+  async getBuildingsReadiness(@Request() req: any) {
+    return this.clientPortalService.getBuildingsReadiness(
+      req.clientUser.clientId,
+      req.clientUser.organizationId,
+      req.clientUser.role,
+      req.clientUser.buildingIds,
+    );
+  }
+
   @Get('notifications')
   async getNotifications(@Request() req: any) {
     return this.clientPortalService.getClientNotifications(
