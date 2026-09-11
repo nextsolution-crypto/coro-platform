@@ -93,6 +93,7 @@ export class ExportController {
           'Content-Type': 'application/pdf',
           'Content-Disposition': this.buildContentDisposition(filename),
           'Cache-Control': 'no-store',
+          'Access-Control-Expose-Headers': 'Content-Disposition',
         });
 
         return res.send(result.fr);
@@ -105,6 +106,7 @@ export class ExportController {
           'Content-Type': 'application/pdf',
           'Content-Disposition': this.buildContentDisposition(filename),
           'Cache-Control': 'no-store',
+          'Access-Control-Expose-Headers': 'Content-Disposition',
         });
 
         return res.send(result.en);
@@ -191,6 +193,7 @@ export class ExportController {
         'Content-Disposition': this.buildContentDisposition(filename),
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Expose-Headers': 'Content-Disposition',
       });
 
       return res.send(pdfBuffer);
