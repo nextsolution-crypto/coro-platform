@@ -24,7 +24,7 @@ const TRANSLATIONS = {
       trusted: 'Conçue pour les professionnels de la sécurité au Québec et au Canada',
     },
     stats: [
-      { value: '6', label: 'Types de documents' },
+      { value: '3+', label: 'Types de documents', note: 'Phase 2 en cours' },
       { value: '43+', label: 'Procédures intégrées' },
       { value: '2', label: 'Langues (FR/EN)' },
       { value: '3', label: 'Cadres provinciaux couverts' },
@@ -41,7 +41,7 @@ const TRANSLATIONS = {
       title: 'Production & conformité documentaire',
       headline: 'Créez et gérez vos documents de conformité',
       desc:
-        'PMU, PSI, PCA, PGC, PRA et PUE, procédures intégrées, génération automatisée, édition structurée, contrôle qualité, approbation et export PDF professionnel.',
+        'PMU, PSI et PCA disponibles — procédures intégrées, génération automatisée, édition structurée, contrôle qualité, approbation et export PDF professionnel. PGC, PRA et PUE en Phase 2.',
       cta: 'Découvrir la gestion documentaire',
       image: '/images/solutions/coro-gestion-documentaire.webp',
       href: '/gestion-documentaire',
@@ -127,15 +127,15 @@ const TRANSLATIONS = {
     },
     documents: {
       tag: 'Documents supportés',
-      title: 'Six types de documents de conformité',
-      subtitle: 'CORO prend en charge plusieurs des principaux documents de conformité utilisés au Québec, en Ontario et en Alberta.',
+      title: 'Documents de conformité supportés',
+      subtitle: '3 documents disponibles dès maintenant — PGC, PRA et PUE arrivent en Phase 2.',
       items: [
         { code: 'PMU', name: 'Plan de Mesures d\'Urgence', desc: 'Document maître pour la gestion des situations d\'urgence dans les bâtiments commerciaux et industriels.', color: '#2980B9' },
         { code: 'PSI', name: 'Plan de Sécurité Incendie', desc: 'Plan spécifique aux mesures de prévention et d\'intervention en cas d\'incendie.', color: '#C0392B' },
         { code: 'PCA', name: 'Plan de Continuité des Activités', desc: 'Assure la continuité des opérations critiques lors d\'interruptions majeures.', color: '#27AE60' },
-        { code: 'PGC', name: 'Plan de Gestion de Crise', desc: 'Protocoles de gestion et de communication lors de situations de crise.', color: '#8E44AD' },
-        { code: 'PRA', name: 'Plan de Reprise des Activités', desc: 'Procédures de rétablissement après un sinistre ou une interruption majeure.', color: '#E67E22' },
-        { code: 'PUE', name: 'Plan d\'Urgence Environnementale', desc: 'Réponse aux incidents environnementaux et déversements de matières dangereuses.', color: '#16A085' },
+        { code: 'PGC', name: 'Plan de Gestion de Crise', desc: 'Protocoles de gestion et de communication lors de situations de crise.', color: '#8E44AD', phase: 2 },
+        { code: 'PRA', name: 'Plan de Reprise des Activités', desc: 'Procédures de rétablissement après un sinistre ou une interruption majeure.', color: '#E67E22', phase: 2 },
+        { code: 'PUE', name: 'Plan d\'Urgence Environnementale', desc: 'Réponse aux incidents environnementaux et déversements de matières dangereuses.', color: '#16A085', phase: 2 },
       ],
     },
     howItWorks: {
@@ -162,7 +162,7 @@ const TRANSLATIONS = {
   features: [
     '1 utilisateur',
     '3 projets maximum',
-    'Tous les types de documents',
+    'PMU, PSI et PCA (+ Phase 2 à sa sortie)',
     'Export PDF avec filigrane',
     'Support par email',
     'Accès activé à la suite d’une démonstration',
@@ -268,7 +268,7 @@ const TRANSLATIONS = {
       trusted: 'Built for safety professionals across Quebec and Canada',
     },
     stats: [
-      { value: '6', label: 'Document types' },
+      { value: '3+', label: 'Document types', note: 'Phase 2 in progress' },
       { value: '43+', label: 'Built-in procedures' },
       { value: '2', label: 'Languages (FR/EN)' },
       { value: '3', label: 'Provincial frameworks covered' },
@@ -285,7 +285,7 @@ const TRANSLATIONS = {
       title: 'Document Production & Compliance',
       headline: 'Create and manage your compliance documents',
       desc:
-        'ERP, FSP, BCP, CMP, DRP and EEP, built-in procedures, automated generation, structured editing, quality control, approval workflows and professional PDF export.',
+        'ERP, FSP and BCP available now — built-in procedures, automated generation, structured editing, quality control, approval workflows and professional PDF export. CMP, DRP and EEP coming in Phase 2.',
       cta: 'Discover document management',
       image: '/images/solutions/en/coro-document-management.webp',
       href: '/gestion-documentaire?lang=en',
@@ -371,15 +371,15 @@ const TRANSLATIONS = {
     },
     documents: {
       tag: 'Supported documents',
-      title: 'Six types of compliance documents',
-      subtitle: 'CORO supports several of the main compliance documents used in Quebec, Ontario and Alberta.',
+      title: 'Compliance documents',
+      subtitle: '3 documents available now — CMP, DRP and EEP coming in Phase 2.',
       items: [
         { code: 'ERP', name: 'Emergency Response Plan', desc: 'Master document for emergency management in commercial and industrial buildings.', color: '#2980B9' },
         { code: 'FSP', name: 'Fire Safety Plan', desc: 'Specific plan for fire prevention and intervention measures.', color: '#C0392B' },
         { code: 'BCP', name: 'Business Continuity Plan', desc: 'Ensures continuity of critical operations during major interruptions.', color: '#27AE60' },
-        { code: 'CMP', name: 'Crisis Management Plan', desc: 'Crisis management and communication protocols.', color: '#8E44AD' },
-        { code: 'DRP', name: 'Disaster Recovery Plan', desc: 'Recovery procedures after a disaster or major interruption.', color: '#E67E22' },
-        { code: 'EEP', name: 'Environmental Emergency Plan', desc: 'Response to environmental incidents and hazardous materials spills.', color: '#16A085' },
+        { code: 'CMP', name: 'Crisis Management Plan', desc: 'Crisis management and communication protocols.', color: '#8E44AD', phase: 2 },
+        { code: 'DRP', name: 'Disaster Recovery Plan', desc: 'Recovery procedures after a disaster or major interruption.', color: '#E67E22', phase: 2 },
+        { code: 'EEP', name: 'Environmental Emergency Plan', desc: 'Response to environmental incidents and hazardous materials spills.', color: '#16A085', phase: 2 },
       ],
     },
     howItWorks: {
@@ -406,7 +406,7 @@ const TRANSLATIONS = {
   features: [
     '1 user',
     '3 projects maximum',
-    'All document types',
+    'ERP, FSP and BCP (+ Phase 2 at launch)',
     'Watermarked PDF export',
     'Email support',
     'Access activated following a demo',
@@ -1014,6 +1014,11 @@ export default function WebAppProgress() {
               <div key={i}>
                 <p style={{ fontSize: 48, fontWeight: 900, color: '#C0392B', lineHeight: 1 }}>{stat.value}</p>
                 <p style={{ fontSize: 15, color: '#6C757D', marginTop: 8 }}>{stat.label}</p>
+                {(stat as any).note && (
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#E67E22', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    {(stat as any).note}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -1294,7 +1299,7 @@ export default function WebAppProgress() {
                   e.currentTarget.style.boxShadow = 'none';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <span style={{
                     fontSize: 13, fontWeight: 900, color: '#FFFFFF',
                     backgroundColor: doc.color,
@@ -1303,6 +1308,19 @@ export default function WebAppProgress() {
                   }}>
                     {doc.code}
                   </span>
+                  {(doc as any).phase === 2 && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 800,
+                      color: '#B7770D',
+                      backgroundColor: '#FEF3C7',
+                      border: '1px solid #F59E0B',
+                      padding: '3px 8px', borderRadius: 4,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase' as const,
+                    }}>
+                      Phase 2
+                    </span>
+                  )}
                 </div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', margin: 0 }}>
                   {doc.name}
