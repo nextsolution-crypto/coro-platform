@@ -1,6 +1,39 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { getProcedureById, getAllProcedures } from '../generator/procedures/index';
+import { P003_ALERTE_INCENDIE } from '../generator/procedures/p003_alerte_incendie';
+import { P004_ALARME_INCENDIE } from '../generator/procedures/p004_alarme_incendie';
+import { P002_DECOUVERTE_FUMEE } from '../generator/procedures/p002_decouverte_fumee';
+import { P005_FUITE_GAZ } from '../generator/procedures/p005_fuite_gaz';
+import { P011_MENACE_ACTIVE } from '../generator/procedures/p011_menace_active';
+import { P013_URGENCE_MEDICALE } from '../generator/procedures/p013_urgence_medicale';
+import { P014_GAZ_TOXIQUE } from '../generator/procedures/p014_gaz_toxique';
+import { P015_COLIS_SUSPECT } from '../generator/procedures/p015_colis_suspect';
+import { P016_COUPURE_COURANT } from '../generator/procedures/p016_coupure_courant';
+import { P018_MATIERES_DANGEREUSES } from '../generator/procedures/p018_matieres_dangereuses';
+import { P019_ALERTE_BOMBE } from '../generator/procedures/p019_alerte_bombe';
+import { P026_BATTERIE_LITHIUM } from '../generator/procedures/p026_batterie_lithium';
+import { P024_INONDATIONS } from '../generator/procedures/p024_inondations';
+import { P022_VENTS_VIOLENTS } from '../generator/procedures/p022_vents_violents';
+import { P001_DIRECTIVES_GENERALES } from '../generator/procedures/p001_directives_generales';
+import { ProcedureTemplate } from '../generator/procedures/types';
+
+const PROCEDURE_MAP: Record<string, ProcedureTemplate> = {
+  P001: P001_DIRECTIVES_GENERALES,
+  P002: P002_DECOUVERTE_FUMEE,
+  P003: P003_ALERTE_INCENDIE,
+  P004: P004_ALARME_INCENDIE,
+  P005: P005_FUITE_GAZ,
+  P011: P011_MENACE_ACTIVE,
+  P013: P013_URGENCE_MEDICALE,
+  P014: P014_GAZ_TOXIQUE,
+  P015: P015_COLIS_SUSPECT,
+  P016: P016_COUPURE_COURANT,
+  P018: P018_MATIERES_DANGEREUSES,
+  P019: P019_ALERTE_BOMBE,
+  P022: P022_VENTS_VIOLENTS,
+  P024: P024_INONDATIONS,
+  P026: P026_BATTERIE_LITHIUM,
+};
 
 // ── Mapping IncidentType → code procédure CORO ────────────────────────────
 const INCIDENT_PROCEDURE_MAP: Record<string, string> = {
@@ -60,20 +93,15 @@ export class IncidentService {
   // ── Charger les étapes du coordonnateur depuis la bibliothèque ────────────
   private async getCoordinatorSteps(procedureCode: string): Promise<Array<{stepId: string; stepText: string; stepOrder: number}>> {
     try {
-      const id = `${procedureCode.toLowerCase()}_${this.getProcedureSlug(procedureCode)}`;
-      let procedure: any = getProcedureById(id);
-      if (!procedure) {
-        const all = getAllProcedures();
-        procedure = all.find((p: any) => p.code === procedureCode);
-      }
+      const procedure = PROCEDURE_MAP[procedureCode];
       if (!procedure) return [];
 
-      const coordSection = (procedure.roleSections || []).find(
-        (s: any) => s.roleCode === 'ROLE-CU' || s.roleCode === 'ROLE-AS'
+      const coordSection = procedure.roleSections?.find(
+        s => s.roleCode === 'ROLE-CU' || s.roleCode === 'ROLE-AS'
       );
       if (!coordSection?.steps) return [];
 
-      return coordSection.steps.map((step: any, index: number) => ({
+      return coordSection.steps.map((step, index) => ({
         stepId:    step.id || `${procedureCode}-step-${index}`,
         stepText:  (step.textFR || step.textEN || '').replace(/\*\*/g, ''),
         stepOrder: index,
@@ -81,20 +109,6 @@ export class IncidentService {
     } catch {
       return [];
     }
-  }
-
-  private getProcedureSlug(code: string): string {
-    const slugs: Record<string, string> = {
-      P001: 'directives_generales', P002: 'decouverte_fumee',
-      P003: 'alerte_incendie',      P004: 'alarme_incendie',
-      P005: 'fuite_gaz',            P011: 'menace_active',
-      P013: 'urgence_medicale',     P014: 'gaz_toxique',
-      P015: 'colis_suspect',        P016: 'coupure_courant',
-      P018: 'matieres_dangereuses', P019: 'alerte_bombe',
-      P024: 'inondations',          P026: 'batterie_lithium',
-      P022: 'vents_violents',
-    };
-    return slugs[code] || 'directives_generales';
   }
 
   // ── Déclencher un incident ────────────────────────────────────────────────
