@@ -352,21 +352,41 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleOfficialDownload = (lang: 'fr' | 'en') => {
-    const url = lang === 'fr' ? project?.officialPdfFr : project?.officialPdfEn;
-    if (!url) {
+  const handleOfficialDownload = async (lang: 'fr' | 'en') => {
+    const hasOfficialPdf =
+      lang === 'fr' ? project?.officialPdfFr : project?.officialPdfEn;
+
+    if (!hasOfficialPdf) {
       toast('Le PDF officiel signé n’est pas encore disponible.', 'error');
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.download = `${(project?.name || 'document').replace(/[^a-z0-9]/gi, '-')}-${lang.toUpperCase()}-OFFICIEL.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+      const response = await api.get(
+        `/projects/${projectId}/export/official/${lang}`,
+        { responseType: 'blob' },
+      );
+
+      const disposition = response.headers['content-disposition'] || '';
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
+      const filename = utf8Match?.[1]
+        ? decodeURIComponent(utf8Match[1])
+        : simpleMatch?.[1] || `document-${lang.toUpperCase()}-OFFICIEL.pdf`;
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      toast('Erreur lors du téléchargement du PDF officiel.', 'error');
+    }
   };
 
   const handleAddObservation = async () => {

@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Param,
   Body,
@@ -80,13 +81,9 @@ export class ExportController {
 
       const year = this.extractProjectYear(project);
 
-      const baseFilename = [
-        documentType,
-        buildingName,
-        year ? String(year) : null,
-      ]
-        .filter(Boolean)
-        .join('---');
+      const baseFilename = `${documentType}---${buildingName}${
+        year ? `-${year}` : ''
+      }`;
 
       // Une seule langue → fichier PDF direct.
       if (result.fr && !result.en) {
@@ -138,6 +135,91 @@ export class ExportController {
             : 'Erreur inconnue lors de la génération du document',
       });
     }
+  }
+
+  @Get('official/:lang')
+  async downloadOfficialPdf(
+    @Param('projectId') projectId: string,
+    @Param('lang') lang: string,
+    @Res() res: Response,
+    @Request() req: any,
+  ) {
+    const normalizedLang = lang.toLowerCase();
+
+    if (!['fr', 'en'].includes(normalizedLang)) {
+      return res.status(400).json({ message: 'Langue invalide' });
+    }
+
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId: req.user.organizationId,
+      },
+      include: { building: true },
+    });
+
+    if (!project) {
+      return res.status(404).json({ message: 'Projet introuvable' });
+    }
+
+    const pdfUrl =
+      normalizedLang === 'fr' ? project.officialPdfFr : project.officialPdfEn;
+
+    if (!pdfUrl) {
+      return res.status(404).json({
+        message: 'Le PDF officiel signé n’est pas encore disponible',
+      });
+    }
+
+    try {
+      const pdfBuffer = await this.fetchPdfBuffer(pdfUrl);
+
+      const documentType = this.sanitizeFilenamePart(
+        project.documentType || 'DOCUMENT',
+      );
+      const buildingName = this.sanitizeFilenamePart(
+        project.building?.name || project.name || 'Projet',
+      );
+      const year = this.extractProjectYear(project);
+      const filename = `${documentType}---${buildingName}${
+        year ? `-${year}` : ''
+      }-${normalizedLang.toUpperCase()}-OFFICIEL.pdf`;
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': String(pdfBuffer.length),
+        'Content-Disposition': this.buildContentDisposition(filename),
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+
+      return res.send(pdfBuffer);
+    } catch (error) {
+      console.error(
+        `[ExportController] Échec téléchargement PDF officiel ${projectId}/${normalizedLang}:`,
+        error,
+      );
+
+      return res.status(502).json({
+        message: 'Impossible de récupérer le PDF officiel',
+      });
+    }
+  }
+
+  private async fetchPdfBuffer(url: string): Promise<Buffer> {
+    const response = await fetch(url, { redirect: 'follow' });
+
+    if (!response.ok) {
+      throw new Error(`Stockage distant: HTTP ${response.status}`);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    if (buffer.length < 5 || buffer.subarray(0, 5).toString('ascii') !== '%PDF-') {
+      throw new Error('Le fichier distant récupéré n’est pas un PDF valide');
+    }
+
+    return buffer;
   }
 
   private sanitizeFilenamePart(value: string): string {

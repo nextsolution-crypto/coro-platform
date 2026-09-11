@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ClientPortalService } from './client-portal.service';
 import { ClientJwtGuard } from './client-jwt.guard';
 
@@ -63,6 +64,90 @@ export class ClientPortalController {
   @Get('projects/:id/sign-status')
   async getSignatureStatus(@Param('id') id: string, @Request() req: any) {
     return this.clientPortalService.getSignatureStatus(id, req.clientUser);
+  }
+
+  @Get('projects/:id/official/:lang')
+  async downloadOfficialPdf(
+    @Param('id') id: string,
+    @Param('lang') lang: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const normalizedLang = lang.toLowerCase();
+
+    if (!['fr', 'en'].includes(normalizedLang)) {
+      return res.status(400).json({ message: 'Langue invalide' });
+    }
+
+    const project = await this.clientPortalService.getProject(
+      id,
+      req.clientUser.clientId,
+      req.clientUser.organizationId,
+      req.clientUser.role,
+    );
+
+    if (!project) {
+      return res.status(404).json({ message: 'Projet introuvable' });
+    }
+
+    const pdfUrl =
+      normalizedLang === 'fr' ? project.officialPdfFr : project.officialPdfEn;
+
+    if (!pdfUrl) {
+      return res.status(404).json({
+        message: 'Le PDF officiel signé n’est pas encore disponible',
+      });
+    }
+
+    try {
+      const remoteResponse = await fetch(pdfUrl, { redirect: 'follow' });
+
+      if (!remoteResponse.ok) {
+        throw new Error(`Stockage distant: HTTP ${remoteResponse.status}`);
+      }
+
+      const pdfBuffer = Buffer.from(await remoteResponse.arrayBuffer());
+
+      if (
+        pdfBuffer.length < 5 ||
+        pdfBuffer.subarray(0, 5).toString('ascii') !== '%PDF-'
+      ) {
+        throw new Error('Le fichier distant récupéré n’est pas un PDF valide');
+      }
+
+      const documentType = this.sanitizeFilenamePart(
+        project.documentType || 'DOCUMENT',
+      );
+      const buildingName = this.sanitizeFilenamePart(
+        project.building?.name || project.name || 'Projet',
+      );
+      const year =
+        typeof project.year === 'number' && Number.isFinite(project.year)
+          ? project.year
+          : null;
+      const filename = `${documentType}---${buildingName}${
+        year ? `-${year}` : ''
+      }-${normalizedLang.toUpperCase()}-OFFICIEL.pdf`;
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Length': String(pdfBuffer.length),
+        'Content-Disposition': this.buildContentDisposition(filename),
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+
+      return res.send(pdfBuffer);
+    } catch (error) {
+      console.error(
+        `[ClientPortalController] Échec téléchargement PDF officiel ${id}/${normalizedLang}:`,
+        error,
+      );
+
+      return res.status(502).json({
+        message: 'Impossible de récupérer le PDF officiel',
+      });
+    }
   }
 
   @Post('projects/:id/sign/retry')
@@ -174,4 +259,21 @@ export class ClientPortalController {
       req.clientUser.buildingIds,
     );
   }
+  private sanitizeFilenamePart(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9-_]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  private buildContentDisposition(filename: string): string {
+    const fallback = filename.replace(/[^\x20-\x7E]/g, '-');
+
+    return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(
+      filename,
+    )}`;
+  }
+
 }

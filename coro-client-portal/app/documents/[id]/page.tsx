@@ -284,27 +284,62 @@ const handleRefuse = async () => {
     setDownloading(true);
 
     try {
-      // Après signature, seul le PDF officiel est téléchargeable.
-      const pdfUrl = lang === 'fr'
-        ? project?.officialPdfFr
-        : project?.officialPdfEn;
+      const hasOfficialPdf =
+        lang === 'fr' ? project?.officialPdfFr : project?.officialPdfEn;
 
-      if (pdfUrl) {
-        const anchor = document.createElement('a');
-        anchor.href = pdfUrl;
-        anchor.download = `${project?.name || 'document'}-${lang.toUpperCase()}.pdf`;
-        anchor.target = '_blank';
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        // Tracker le téléchargement
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const device = isMobile ? 'mobile' : 'desktop';
-        await apiPost(`/client-portal/projects/${projectId}/engagement`, { event: 'downloaded', device });
-      } else {
-        toast('Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.', 'info');
+      if (!hasOfficialPdf) {
+        toast(
+          'Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.',
+          'info',
+        );
+        return;
       }
+
+      const token = localStorage.getItem('coro_client_token');
+      const response = await fetch(
+        `${API_URL}/client-portal/projects/${projectId}/official/${lang}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Téléchargement impossible (${response.status})`);
+      }
+
+      const blob = await response.blob();
+
+      if (blob.type && blob.type !== 'application/pdf') {
+        throw new Error('La réponse reçue n’est pas un PDF');
+      }
+
+      const disposition = response.headers.get('content-disposition') || '';
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
+      const filename = utf8Match?.[1]
+        ? decodeURIComponent(utf8Match[1])
+        : simpleMatch?.[1] || `document-${lang.toUpperCase()}-OFFICIEL.pdf`;
+
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const device = isMobile ? 'mobile' : 'desktop';
+      await apiPost(`/client-portal/projects/${projectId}/engagement`, {
+        event: 'downloaded',
+        device,
+      });
     } catch (err) {
+      console.error(err);
       toast('Erreur lors du téléchargement.', 'error');
     } finally {
       setDownloading(false);
