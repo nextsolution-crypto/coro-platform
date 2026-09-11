@@ -203,7 +203,7 @@ export interface BuildingConfig {
   capaciteReservoir?: number;
   reservoirsAuxiliaires?: boolean;
   reservoirsAuxiliairesLieu?: string;
-  reservoirsAuxiliairesCapacite?: number;
+  reservoirsAuxiliairesCapacite?: string | number;
   autonomieTotale?: number;
   generatriceEquipements?: string[];
   generatriceEquipementsPersonnalises?: Array<{ nom?: string }>;
@@ -282,32 +282,38 @@ export interface BuildingConfig {
   // ========== SPÉCIFIQUE INDUSTRIEL ==========
   espaceClos?: boolean;
   espaceClosLieu?: string;
+
   palettierPresent?: boolean;
   palettierAgencement?: string;
-  palettierGicleurs?: boolean;
+  palettierGicleurs?: string | boolean;
   palettierAlles?: string;
+
   stockagePresent?: boolean;
-  stockagePalettes?: string | number;
-  stockagePalettesCombustible?: boolean;
+  stockagePalettes?: string;
+  stockagePalettesCombustible?: string | boolean;
   stockageEmplacement?: string;
-  stockageHauteur?: string | number;
-  stockageLargeurAllee?: string | number;
-  stockageClassification?: string;
+  stockageHauteur?: string;
+  stockageLargeurAllee?: string;
+  stockageClassification?: string[] | string;
+
   mezzaninePresent?: boolean;
-  mezzanineGicle?: boolean;
-  mezzanineEncloisonnee?: boolean;
+  mezzanineGicle?: string | boolean;
+  mezzanineEncloisonnee?: string | boolean;
   mezzanineLieu?: string;
+
   chariotsPresent?: boolean;
-  chariotsNombre?: number;
+  chariotsNombre?: string | number;
   chariotsType?: string;
   chariotsEmplacementRecharge?: string;
+
   batteriesLithiumPresent?: boolean;
-  batteriesLithiumLocalEspace?: boolean;
+  batteriesLithiumLocalEspace?: string | boolean;
   batteriesLithiumLocalEspaceCommentaire?: string;
-  batteriesLithiumDetection?: boolean;
+  batteriesLithiumDetection?: string | boolean;
   batteriesLithiumDetectionCommentaire?: string;
-  batteriesLithiumSignalisation?: boolean;
+  batteriesLithiumSignalisation?: string | boolean;
   batteriesLithiumSignalisationCommentaire?: string;
+
   procesDangereux?: boolean;
   procesDangereuxDetails?: Array<{
     procedure?: string;
@@ -315,6 +321,7 @@ export interface BuildingConfig {
     risque?: string;
     mesures?: string;
   }>;
+
   systemeCadenassage?: boolean;
 
   // Compatibilité anciens champs industriels
@@ -331,22 +338,20 @@ export interface BuildingConfig {
   certISO22301?: boolean;
   certISO31000?: boolean;
   certEnergyStar?: boolean;
-  autresCertifications?: string[];
+  autresCertifications?: string | string[];
 }
 
-// ── Profil réglementaire CNPI 2020 (T3 + T1 + T8) ──────────────────────────
-
 export interface ProfilReglementaire {
-  referentielCNB: string;            // T3 — référentiel de construction
-  referentielAnnee: string;          // T3 — période couverte
-  codeSurveillance: string;          // T3 — code de sécurité applicable
-  periodeTransitoire: string;        // T3 — période transitoire en vigueur
-  exceptionS1001: string;            // T3 — exception art. 2.1.3.7
-  psiRequis: 'OUI' | 'EXEMPTE' | 'VERIFICATION_REQUISE';  // T1
-  psiRaisonCode: string;             // T1 — code de la règle déclenchée
-  psiRaisonMessage: string;          // T1 — message affiché
-  frequenceExercices: string;        // T8 — fréquence calculée
-  frequenceExercicesBase: string;    // T8 — base réglementaire
+  referentielCNB: string;
+  referentielAnnee: string;
+  codeSurveillance: string;
+  periodeTransitoire: string;
+  exceptionS1001: string;
+  psiRequis: 'OUI' | 'EXEMPTE' | 'VERIFICATION_REQUISE';
+  psiRaisonCode: string;
+  psiRaisonMessage: string;
+  frequenceExercices: string;
+  frequenceExercicesBase: string;
 }
 
 export interface ValidationResult {
@@ -362,17 +367,15 @@ export interface ConfiguratorResult {
   proceduresActives: string[];
   sectionsDocument: string[];
   validations: ValidationResult[];
-  score: number;              // Conformité réglementaire (validations)
-  scoreCompletude: number;    // Complétude (champs clés remplis)
-  profilReglementaire?: ProfilReglementaire;  // ← NOUVEAU
+  score: number;
+  scoreCompletude: number;
+  profilReglementaire?: ProfilReglementaire;
 }
 
 @Injectable()
 export class RulesEngineService {
-
   private isHighRise(config: BuildingConfig): boolean {
-    return config.hauteurBatiment === true ||
-      config.hauteurBatiment === 'GRANDE_HAUTEUR';
+    return config.hauteurBatiment === true || config.hauteurBatiment === 'GRANDE_HAUTEUR';
   }
 
   private hasNightOccupancy(config: BuildingConfig): boolean {
@@ -385,10 +388,28 @@ export class RulesEngineService {
   }
 
   private hasLithiumRisk(config: BuildingConfig): boolean {
-    return config.batteriesLithium === true ||
-      config.batteriesLithiumPresent === true;
+    return config.batteriesLithium === true || config.batteriesLithiumPresent === true;
   }
 
+  private hasChariots(config: BuildingConfig): boolean {
+    return config.chariotsPresent ?? config.chariotsElevateurs ?? false;
+  }
+
+  private hasPalettier(config: BuildingConfig): boolean {
+    return config.palettierPresent ?? config.palettiers ?? false;
+  }
+
+  private hasMezzanine(config: BuildingConfig): boolean {
+    return config.mezzaninePresent ?? config.mezzanine ?? false;
+  }
+
+  private hasTravauxPointsChauds(config: BuildingConfig): boolean {
+    if (config.travauxPointsChauds !== undefined) {
+      return config.travauxPointsChauds !== '' && config.travauxPointsChauds !== 'Jamais';
+    }
+
+    return config.travailChaud === true;
+  }
 
   analyzeConfiguration(config: BuildingConfig): ConfiguratorResult {
     const result: ConfiguratorResult = {
@@ -401,16 +422,15 @@ export class RulesEngineService {
       scoreCompletude: 0,
     };
 
-    // ── CNPI 2020 — doit être exécuté en premier (génère profilReglementaire) ──
     this.applyReglementaireRules(config, result);
-    this.applyS1001Rules(config, result);                    // T5
-    this.applyMatieresDangereusesRules(config, result);      // T10
-    this.applyPsiChecklistRules(config, result);             // T2 — après T1
-    this.applyPointsChaudsRules(config, result);             // T6
-    this.applyLaboratoireRules(config, result);              // T7
-    this.applyRegistresCoupeFeuRules(config, result);        // T11
-    this.applySignalisationIssueRules(config, result);       // T12
-    this.applyPortesIssueRules(config, result);              // T13
+    this.applyS1001Rules(config, result);
+    this.applyMatieresDangereusesRules(config, result);
+    this.applyPsiChecklistRules(config, result);
+    this.applyPointsChaudsRules(config, result);
+    this.applyLaboratoireRules(config, result);
+    this.applyRegistresCoupeFeuRules(config, result);
+    this.applySignalisationIssueRules(config, result);
+    this.applyPortesIssueRules(config, result);
 
     this.applyBaseRules(config, result);
     this.applyAlarmRules(config, result);
@@ -428,7 +448,7 @@ export class RulesEngineService {
 
     result.rolesActives = [...new Set(result.rolesActives)];
     result.rolesRecommandes = [...new Set(
-      result.rolesRecommandes.filter(r => !result.rolesActives.includes(r))
+      result.rolesRecommandes.filter((r) => !result.rolesActives.includes(r)),
     )];
     result.proceduresActives = [...new Set(result.proceduresActives)];
     result.sectionsDocument = [...new Set(result.sectionsDocument)];
@@ -436,22 +456,14 @@ export class RulesEngineService {
     return result;
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // CNPI 2020 — Règles réglementaires (T3 Profil · T1 PSI · T8 Exercices)
-  // ══════════════════════════════════════════════════════════════════════════
-
   private applyReglementaireRules(config: BuildingConfig, result: ConfiguratorResult): void {
     const annee = this.parseAnneeConstruction(config.anneeConstruction);
     const profil = this.computeProfilReglementaire(config, annee);
     result.profilReglementaire = profil;
 
-    // T1 — Validation PSI dans le panneau
     this.addPsiValidation(profil, result);
-
-    // Révision annuelle PSI (art. 2.8.2.2)
     this.applyPsiRevisionRules(config, result, profil);
 
-    // T8 — Information fréquence exercices dans le panneau
     result.validations.push({
       type: 'INFO',
       code: 'CNPI2020-T8-EXERCICES',
@@ -467,13 +479,8 @@ export class RulesEngineService {
   }
 
   private computeProfilReglementaire(config: BuildingConfig, annee: number): ProfilReglementaire {
-    // ── T3 — Référentiel CNB (art. 344, tableau mis à jour) ─────────────────
     const { referentielCNB, referentielAnnee } = this.getReferentielCNB(annee);
-
-    // ── T1 — Applicabilité PSI ──────────────────────────────────────────────
     const psiResult = this.computePsiRequis(config);
-
-    // ── T8 — Fréquence exercices ────────────────────────────────────────────
     const { frequence, base } = this.computeFrequenceExercices(config);
 
     return {
@@ -491,9 +498,6 @@ export class RulesEngineService {
   }
 
   private getReferentielCNB(annee: number): { referentielCNB: string; referentielAnnee: string } {
-    // Source : art. 344, Code de sécurité du Québec (décret 438-2025)
-    // Les bornes sont par année entière — pour les années-charnières,
-    // la date exacte de construction peut modifier le référentiel applicable.
     if (annee === 0) {
       return {
         referentielCNB: 'Non déterminé',
@@ -577,7 +581,6 @@ export class RulesEngineService {
       };
     }
 
-    // Groupe B — toujours requis (détention, traitement, soins)
     if (usage.startsWith('B')) {
       return {
         statut: 'OUI',
@@ -586,7 +589,6 @@ export class RulesEngineService {
       };
     }
 
-    // Usage D (affaires) avec traitements médicaux → requis
     if (usage.startsWith('D') && traitements) {
       return {
         statut: 'OUI',
@@ -595,7 +597,6 @@ export class RulesEngineService {
       };
     }
 
-    // Usage D sans traitements → à vérifier
     if (usage.startsWith('D')) {
       return {
         statut: 'VERIFICATION_REQUISE',
@@ -604,9 +605,7 @@ export class RulesEngineService {
       };
     }
 
-    // Groupe A — seuil 30 personnes avec exceptions
     if (usage.startsWith('A')) {
-      // A1 (spectacle) et A3 (aréna) — jamais exemptés
       if (usage.startsWith('A1') || usage.startsWith('A3') || usage.startsWith('A4')) {
         return {
           statut: 'OUI',
@@ -614,7 +613,6 @@ export class RulesEngineService {
           message: 'PSI requis — établissement de réunion non admissible à l\'exemption (spectacle, aréna, plein air)',
         };
       }
-      // A2 peut contenir école, garderie, débit de boisson, restaurant → jamais exemptés
       if (usage.startsWith('A2')) {
         return {
           statut: 'OUI',
@@ -622,7 +620,6 @@ export class RulesEngineService {
           message: 'PSI requis — usage A2 (éducation, culte, divertissement, restauration)',
         };
       }
-      // Groupe A générique — vérifier capacité
       if (capacite === 0) {
         return {
           statut: 'VERIFICATION_REQUISE',
@@ -644,7 +641,6 @@ export class RulesEngineService {
       };
     }
 
-    // C (habitation)
     if (usage.startsWith('C')) {
       return {
         statut: 'OUI',
@@ -653,7 +649,6 @@ export class RulesEngineService {
       };
     }
 
-    // E (commercial)
     if (usage.startsWith('E')) {
       return {
         statut: 'OUI',
@@ -662,7 +657,6 @@ export class RulesEngineService {
       };
     }
 
-    // F (industriel)
     if (usage.startsWith('F')) {
       return {
         statut: 'OUI',
@@ -681,9 +675,6 @@ export class RulesEngineService {
   private computeFrequenceExercices(config: BuildingConfig): { frequence: string; base: string } {
     const usage = (config.usagePrincipal || '').trim();
 
-    // Laboratoire hors école → 3 mois
-    // Doit être évalué ici afin que la validation T8 créée en début d'analyse
-    // reflète déjà la bonne fréquence.
     if (config.laboratoirePresent && !usage.startsWith('A2')) {
       return {
         frequence: 'Tous les 3 mois',
@@ -691,7 +682,6 @@ export class RulesEngineService {
       };
     }
 
-    // Groupe B ou lieu de sommeil → 6 mois
     if (usage.startsWith('B') || config.lieuSommeil) {
       return {
         frequence: 'Tous les 6 mois',
@@ -699,7 +689,6 @@ export class RulesEngineService {
       };
     }
 
-    // Grande hauteur (sauf C) → 6 mois
     if (this.isHighRise(config) && !usage.startsWith('C')) {
       return {
         frequence: 'Tous les 6 mois',
@@ -707,7 +696,6 @@ export class RulesEngineService {
       };
     }
 
-    // A1 (spectacle/assemblée) → 3 mois
     if (usage.startsWith('A1')) {
       return {
         frequence: 'Tous les 3 mois',
@@ -715,7 +703,6 @@ export class RulesEngineService {
       };
     }
 
-    // A2 → école/garderie → 2×/an (automne + printemps)
     if (usage.startsWith('A2')) {
       return {
         frequence: '2 fois par an (automne et printemps)',
@@ -723,8 +710,6 @@ export class RulesEngineService {
       };
     }
 
-    // Laboratoire hors école → 3 mois (sera enrichi en T7, Sprint 2)
-    // Default → 12 mois
     return {
       frequence: 'Tous les 12 mois',
       base: 'Fréquence standard (art. 2.8.3.2)',
@@ -733,8 +718,8 @@ export class RulesEngineService {
 
   private addPsiValidation(profil: ProfilReglementaire, result: ConfiguratorResult): void {
     const typeMap: Record<string, ValidationResult['type']> = {
-      OUI:                  'INFO',
-      EXEMPTE:              'INFO',
+      OUI: 'INFO',
+      EXEMPTE: 'INFO',
       VERIFICATION_REQUISE: 'AVERTISSEMENT',
     };
     result.validations.push({
@@ -744,10 +729,6 @@ export class RulesEngineService {
       reference: 'CNPI 2020 art. 2.8.1.1',
     });
   }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // Règles existantes (inchangées sauf mise à jour des références CNPI 2020)
-  // ══════════════════════════════════════════════════════════════════════════
 
   private applyBaseRules(config: BuildingConfig, result: ConfiguratorResult) {
     result.rolesActives.push('ROLE-CU');
@@ -771,7 +752,6 @@ export class RulesEngineService {
         message: 'Personnes nécessitant assistance déclarées : registre PPNAE requis et accompagnateur activé.',
         reference: 'CNPI 2020 art. 2.8.2.1',
       });
-      // T9 — Mesures et registre PPNAE
       if (!config.ppnaeMesures || config.ppnaeMesures.length === 0) {
         result.validations.push({
           type: 'AVERTISSEMENT',
@@ -924,10 +904,7 @@ export class RulesEngineService {
 
     if (config.generatrice) {
       result.proceduresActives.push('PROC-PANNE-COURANT');
-      const equipSecours =
-        config.generatriceEquipements ||
-        config.equipementsSecours ||
-        [];
+      const equipSecours = config.generatriceEquipements || config.equipementsSecours || [];
       const equipPerso = config.generatriceEquipementsPersonnalises || [];
 
       if (equipSecours.length === 0 && equipPerso.length === 0) {
@@ -1016,18 +993,11 @@ export class RulesEngineService {
       });
     }
 
-    // Compatibilité : le configurateur actuel utilise travauxPointsChauds.
-    // L'ancien booléen travailChaud reste accepté pour les projets historiques.
-    if (
-      (config.travauxPointsChauds && config.travauxPointsChauds !== 'Jamais') ||
-      config.travailChaud === true
-    ) {
-      // applyPointsChaudsRules active déjà la procédure pour le nouveau schéma.
-      // Set() en fin d'analyse éliminera tout doublon avec les projets historiques.
+    if (this.hasTravauxPointsChauds(config)) {
       result.proceduresActives.push('PROC-TRAVAIL-CHAUD');
     }
 
-    if (config.chariotsPresent || config.chariotsElevateurs) {
+    if (this.hasChariots(config)) {
       result.validations.push({
         type: 'INFO',
         code: 'IND-003',
@@ -1035,7 +1005,7 @@ export class RulesEngineService {
       });
     }
 
-    if (config.palettierPresent && !config.palettierAgencement) {
+    if (this.hasPalettier(config) && !config.palettierAgencement) {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'IND-PALETTIER-001',
@@ -1052,7 +1022,11 @@ export class RulesEngineService {
     }
 
     if (this.hasLithiumRisk(config)) {
-      if (config.batteriesLithiumPresent && config.batteriesLithiumDetection === false) {
+      const lithiumDetectionAbsente =
+        config.batteriesLithiumDetection === false ||
+        config.batteriesLithiumDetection === 'Non';
+
+      if (config.batteriesLithiumPresent && lithiumDetectionAbsente) {
         result.validations.push({
           type: 'AVERTISSEMENT',
           code: 'IND-LITHIUM-DETECTION',
@@ -1185,11 +1159,17 @@ export class RulesEngineService {
       });
     }
 
-    if ((config.autresCertifications || []).length > 0) {
+    const autresCertifications = Array.isArray(config.autresCertifications)
+      ? config.autresCertifications.filter(Boolean)
+      : config.autresCertifications
+        ? [config.autresCertifications]
+        : [];
+
+    if (autresCertifications.length > 0) {
       result.validations.push({
         type: 'INFO',
         code: 'CERT-006',
-        message: `Autres certifications déclarées : ${(config.autresCertifications || []).join(', ')}.`,
+        message: `Autres certifications déclarées : ${autresCertifications.join(', ')}.`,
       });
     }
   }
@@ -1242,8 +1222,20 @@ export class RulesEngineService {
     }
     if (config.ammoniac) result.sectionsDocument.push('PROCEDURES_AMMONIAC');
     if (config.espaceClos) result.sectionsDocument.push('ESPACE_CLOS_CADENASSAGE');
-    if ((config.travauxPointsChauds && config.travauxPointsChauds !== 'Jamais') || config.travailChaud) result.sectionsDocument.push('PERMIS_TRAVAIL_CHAUD');
-    if (config.chariotsPresent || config.chariotsElevateurs || config.palettierPresent || config.palettiers || config.stockagePresent || config.mezzaninePresent || config.mezzanine) result.sectionsDocument.push('ENTREPOSAGE_MANUTENTION');
+
+    if (this.hasTravauxPointsChauds(config)) {
+      result.sectionsDocument.push('PERMIS_TRAVAIL_CHAUD');
+    }
+
+    if (
+      this.hasChariots(config) ||
+      this.hasPalettier(config) ||
+      config.stockagePresent === true ||
+      this.hasMezzanine(config)
+    ) {
+      result.sectionsDocument.push('ENTREPOSAGE_MANUTENTION');
+    }
+
     if (config.procesDangereux) result.sectionsDocument.push('PROCEDES_DANGEREUX');
     if (config.messagesAutomatises || config.systemePhonic) result.sectionsDocument.push('MESSAGES_PHONIQUES');
     if (this.hasLithiumRisk(config)) result.sectionsDocument.push('FEU_BATTERIE_LITHIUM');
@@ -1267,7 +1259,7 @@ export class RulesEngineService {
       });
     }
 
-    const salleGicleurs = config.salleGicleurs || (config as any).salleGicleursLocalisation;
+    const salleGicleurs = config.salleGicleurs ?? config.salleGicleursLocalisation;
     if (!salleGicleurs && config.gicleurs) {
       result.validations.push({
         type: 'RECOMMANDATION',
@@ -1276,13 +1268,15 @@ export class RulesEngineService {
       });
     }
 
-    const equipSoins = (config as any).equipementsSoins || [];
-    const hasTrausse = config.trousseSecoursPresente ||
-      equipSoins.some((e: any) => e.type && e.type.toLowerCase().includes('premiers soins'));
-    const hasDEA = config.defibrillateur ||
-      equipSoins.some((e: any) => e.type && e.type.toLowerCase().includes('dea'));
+    const equipSoins = config.equipementsSoins ?? [];
+    const hasTrousse =
+      config.trousseSecoursPresente === true ||
+      equipSoins.some((e) => !!e.type && e.type.toLowerCase().includes('premiers soins'));
+    const hasDEA =
+      config.defibrillateur === true ||
+      equipSoins.some((e) => !!e.type && e.type.toLowerCase().includes('dea'));
 
-    if (!hasTrausse) {
+    if (!hasTrousse) {
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'SOINS-001',
@@ -1297,8 +1291,6 @@ export class RulesEngineService {
       });
     }
   }
-
-  // ── T5 — Systèmes intégrés CAN/ULC-S1001 ──────────────────────────────────
 
   private applyS1001Rules(config: BuildingConfig, result: ConfiguratorResult): void {
     const interconnexions = config.s1001Interconnexions || [];
@@ -1327,7 +1319,6 @@ export class RulesEngineService {
           reference: 'CAN/ULC-S1001',
         });
       }
-      // undefined = non encore répondu → pas de validation, pas d'erreur
     } else {
       result.validations.push({
         type: 'INFO',
@@ -1338,12 +1329,9 @@ export class RulesEngineService {
     }
   }
 
-  // ── T10 — Matières dangereuses enrichies (PSI entrée + signalisation TMD) ──
-
   private applyMatieresDangereusesRules(config: BuildingConfig, result: ConfiguratorResult): void {
     if (!config.matieresDangereuses) return;
 
-    // PSI accessible à l'entrée principale (art. 2.8.2.12)
     if (config.psiEntreePrincipale === true) {
       result.validations.push({
         type: 'INFO',
@@ -1352,9 +1340,6 @@ export class RulesEngineService {
         reference: 'CNPI 2020 art. 2.8.2.12',
       });
     } else {
-      // false OU undefined = non encore confirmé ou non conforme
-      // On utilise AVERTISSEMENT dans les deux cas : on ne peut pas distinguer
-      // "explicitement répondu Non" de "champ non encore rempli sur un projet existant"
       result.validations.push({
         type: 'AVERTISSEMENT',
         code: 'T10-PSI-ENTREE-NR',
@@ -1363,10 +1348,9 @@ export class RulesEngineService {
       });
     }
 
-    // Signalisation TMD par substance (art. 3.2.7.14)
-    const matieresList: any[] = (config as any).matieresList || [];
+    const matieresList = config.matieresList ?? [];
     const substancesTMDSansSignalisation = matieresList.filter(
-      (m: any) => m.tmd === true && m.signalisationTMD === false,
+      (m) => m.tmd === true && m.signalisationTMD === false,
     );
     if (substancesTMDSansSignalisation.length > 0) {
       result.validations.push({
@@ -1377,9 +1361,8 @@ export class RulesEngineService {
       });
     }
 
-    // Emplacements manquants
     const substancesSansEmplacement = matieresList.filter(
-      (m: any) => m.nom && (!m.emplacementPrecis || m.emplacementPrecis.trim() === ''),
+      (m) => !!m.nom && (!m.emplacementPrecis || m.emplacementPrecis.trim() === ''),
     );
     if (substancesSansEmplacement.length > 0) {
       result.validations.push({
@@ -1390,8 +1373,6 @@ export class RulesEngineService {
       });
     }
   }
-
-  // ── Révision annuelle du PSI ─────────────────────────────────────────────
 
   private applyPsiRevisionRules(
     config: BuildingConfig,
@@ -1441,28 +1422,26 @@ export class RulesEngineService {
     }
   }
 
-  // ── T2 — Checklist 12 éléments PSI ──────────────────────────────────────
-
   private applyPsiChecklistRules(config: BuildingConfig, result: ConfiguratorResult): void {
     if (!result.profilReglementaire || result.profilReglementaire.psiRequis !== 'OUI') return;
 
     const elements: { label: string; ok: boolean }[] = [
-      { label: 'Alarme incendie',                ok: config.panneauAlarme === true },
-      { label: 'Appel service incendie',         ok: config.teleSurveillance === true || !!((config as any).centraleSurveillance) },
-      { label: 'Instructions aux occupants',     ok: config.panneauAlarme === true },
-      { label: 'Évacuation',                     ok: !!(config as any).pointRassemblement },
-      { label: 'Mesures PPNAE',                  ok: !config.personnelHandicap || ((config.ppnaeMesures || []).length > 0) },
+      { label: 'Alarme incendie', ok: config.panneauAlarme === true },
+      { label: 'Appel service incendie', ok: config.teleSurveillance === true || !!config.centraleSurveillance },
+      { label: 'Instructions aux occupants', ok: config.panneauAlarme === true },
+      { label: 'Évacuation', ok: !!config.pointRassemblement },
+      { label: 'Mesures PPNAE', ok: !config.personnelHandicap || (config.ppnaeMesures || []).length > 0 },
       { label: 'Maîtrise initiale de l\'incendie', ok: config.extincteurPortatif === true },
-      { label: 'Personnel de surveillance',      ok: config.agentSecurite === true || config.securite24h === true || config.posteSurveillance === true },
-      { label: 'Formation du personnel',         ok: true },
-      { label: 'Installations sécurité incendie', ok: config.panneauAlarme === true && !!((config as any).panneauLocalisation) },
-      { label: 'Exercices d\'incendie',          ok: !!(result.profilReglementaire?.frequenceExercices) },
-      { label: 'Surveillance des risques',       ok: !config.matieresDangereuses || ((config as any).matieresList || []).length > 0 },
-      { label: 'Inspection et entretien',        ok: config.programmeInspectionEntretien === true },
+      { label: 'Personnel de surveillance', ok: config.agentSecurite === true || config.securite24h === true || config.posteSurveillance === true },
+      { label: 'Formation du personnel', ok: true },
+      { label: 'Installations sécurité incendie', ok: config.panneauAlarme === true && !!config.panneauLocalisation },
+      { label: 'Exercices d\'incendie', ok: !!result.profilReglementaire?.frequenceExercices },
+      { label: 'Surveillance des risques', ok: !config.matieresDangereuses || (config.matieresList ?? []).length > 0 },
+      { label: 'Inspection et entretien', ok: config.programmeInspectionEntretien === true },
     ];
 
-    const documentes = elements.filter(e => e.ok).length;
-    const manquants  = elements.filter(e => !e.ok);
+    const documentes = elements.filter((e) => e.ok).length;
+    const manquants = elements.filter((e) => !e.ok);
 
     if (manquants.length === 0) {
       result.validations.push({
@@ -1475,13 +1454,11 @@ export class RulesEngineService {
       result.validations.push({
         type: manquants.length >= 4 ? 'ERREUR' : 'AVERTISSEMENT',
         code: 'T2-PSI-INCOMPLET',
-        message: `PSI — ${documentes}/12 éléments documentés. Manquants : ${manquants.map(e => e.label).join(', ')}.`,
+        message: `PSI — ${documentes}/12 éléments documentés. Manquants : ${manquants.map((e) => e.label).join(', ')}.`,
         reference: 'CNPI 2020 art. 2.8.2.1',
       });
     }
   }
-
-  // ── T6 — Travaux par points chauds ──────────────────────────────────────
 
   private applyPointsChaudsRules(config: BuildingConfig, result: ConfiguratorResult): void {
     const tpc = config.travauxPointsChauds;
@@ -1525,15 +1502,12 @@ export class RulesEngineService {
     }
   }
 
-  // ── T7 — Laboratoires ────────────────────────────────────────────────────
-
   private applyLaboratoireRules(config: BuildingConfig, result: ConfiguratorResult): void {
     if (!config.laboratoirePresent) return;
 
-    // Exercices portés à 3 mois (hors école)
     const usage = (config.usagePrincipal || '').trim();
     if (!usage.startsWith('A2') && result.profilReglementaire) {
-      result.profilReglementaire.frequenceExercices     = 'Tous les 3 mois';
+      result.profilReglementaire.frequenceExercices = 'Tous les 3 mois';
       result.profilReglementaire.frequenceExercicesBase = 'Laboratoire présent hors établissement scolaire (CNPI 2020 art. 2.8.3.2 d)';
     }
 
@@ -1569,8 +1543,6 @@ export class RulesEngineService {
       });
     }
   }
-
-  // ── T11 — Registres coupe-feu ────────────────────────────────────────────
 
   private applyRegistresCoupeFeuRules(config: BuildingConfig, result: ConfiguratorResult): void {
     if (!config.registresCoupeFeu) {
@@ -1620,8 +1592,6 @@ export class RulesEngineService {
     }
   }
 
-  // ── T12 — Signalisation d'issue ──────────────────────────────────────────
-
   private applySignalisationIssueRules(config: BuildingConfig, result: ConfiguratorResult): void {
     if (!config.signalisationIssue) return;
     if (!config.signalisationIssueDerniereInspection) {
@@ -1637,8 +1607,8 @@ export class RulesEngineService {
       (Date.now() - new Date(config.signalisationIssueDerniereInspection).getTime()) / 86400000,
     );
     const isPiles = config.signalisationIssueType === 'Piles de secours intégrées';
-    const max     = isPiles ? 30 : 365;
-    const label   = isPiles ? '30 jours (piles)' : '12 mois';
+    const max = isPiles ? 30 : 365;
+    const label = isPiles ? '30 jours (piles)' : '12 mois';
     if (diff > max) {
       result.validations.push({
         type: 'ERREUR',
@@ -1655,8 +1625,6 @@ export class RulesEngineService {
       });
     }
   }
-
-  // ── T13 — Obstruction portes d'issue ─────────────────────────────────────
 
   private applyPortesIssueRules(config: BuildingConfig, result: ConfiguratorResult): void {
     if (!config.portesIssueExposees) return;
@@ -1678,68 +1646,52 @@ export class RulesEngineService {
   }
 
   private calculateScore(config: BuildingConfig, result: ConfiguratorResult): void {
-    // ── Score conformité réglementaire (basé sur les validations) ──────────
-    const critiques      = result.validations.filter(v => v.type === 'CRITIQUE').length;
-    const erreurs        = result.validations.filter(v => v.type === 'ERREUR').length;
-    const avertissements = result.validations.filter(v => v.type === 'AVERTISSEMENT').length;
-    result.score = Math.max(0, Math.min(100,
-      100 - (critiques * 25) - (erreurs * 15) - (avertissements * 5)
-    ));
+    const critiques = result.validations.filter((v) => v.type === 'CRITIQUE').length;
+    const erreurs = result.validations.filter((v) => v.type === 'ERREUR').length;
+    const avertissements = result.validations.filter((v) => v.type === 'AVERTISSEMENT').length;
+    result.score = Math.max(
+      0,
+      Math.min(100, 100 - critiques * 25 - erreurs * 15 - avertissements * 5),
+    );
 
-    // ── Score complétude (% de champs clés remplis) ─────────────────────────
     result.scoreCompletude = this.calculateCompletude(config);
   }
 
   private calculateCompletude(config: BuildingConfig): number {
     const c = config as any;
 
-    // Chaque check : { earned: boolean, weight: number }
-    // Contextuels : earned = true si la condition n'est pas applicable
     const checks: { earned: boolean; weight: number }[] = [
-      // Identité du document (13 pts)
-      { earned: !!c.province,          weight: 2 },
-      { earned: !!c.typeDocument,      weight: 3 },
-      { earned: !!c.responsableNom,    weight: 5 },
-      { earned: !!c.dateReleve,        weight: 3 },
+      { earned: !!c.province, weight: 2 },
+      { earned: !!c.typeDocument, weight: 3 },
+      { earned: !!c.responsableNom, weight: 5 },
+      { earned: !!c.dateReleve, weight: 3 },
 
-      // Description du bâtiment (26 pts)
-      { earned: !!config.usagePrincipal,                          weight: 10 },
-      { earned: !!(config.anneeConstruction),                     weight: 8 },
-      { earned: (config.floors || 0) > 0,                        weight: 5 },
-      { earned: !!c.buildingType,                                 weight: 3 },
+      { earned: !!config.usagePrincipal, weight: 10 },
+      { earned: !!config.anneeConstruction, weight: 8 },
+      { earned: (config.floors || 0) > 0, weight: 5 },
+      { earned: !!c.buildingType, weight: 3 },
 
-      // Emplacements (18 pts)
-      { earned: !!config.pointRassemblement,                      weight: 8 },
-      { earned: !!config.posteCommandement,                       weight: 5 },
-      { earned: !!c.lieuDocument,                                 weight: 5 },
+      { earned: !!config.pointRassemblement, weight: 8 },
+      { earned: !!config.posteCommandement, weight: 5 },
+      { earned: !!c.lieuDocument, weight: 5 },
 
-      // Alarme (8 pts)
       { earned: config.panneauAlarme !== undefined && config.panneauAlarme !== null, weight: 5 },
       { earned: !config.panneauAlarme || !!c.panneauLocalisation, weight: 3 },
 
-      // Extinction (5 pts)
       { earned: config.extincteurPortatif !== undefined && config.extincteurPortatif !== null, weight: 5 },
 
-      // Occupation (8 pts)
-      { earned: (c.quartsOccupation || []).length > 0,            weight: 8 },
+      { earned: (c.quartsOccupation || []).length > 0, weight: 8 },
 
-      // Premiers soins (5 pts)
-      { earned: (c.equipementsSoins || []).length > 0,            weight: 5 },
+      { earned: (c.equipementsSoins || []).length > 0, weight: 5 },
 
-      // CNPI 2020 — contextuels (17 pts)
-      // Capacité max (si usage A)
       { earned: !config.usagePrincipal?.startsWith('A') || !!config.capaciteMaxReglementaire, weight: 4 },
-      // Traitements médicaux (si usage D ou B)
       { earned: !config.usagePrincipal?.startsWith('D') || config.traitementsMedicauxSurPlace !== undefined, weight: 3 },
-      // Matières dan. — liste remplie si déclarées
       { earned: !config.matieresDangereuses || (c.matieresList || []).length > 0, weight: 4 },
-      // PSI entrée principale répondu (si matières dan.)
       { earned: !config.matieresDangereuses || config.psiEntreePrincipale !== undefined, weight: 3 },
-      // Programme inspection et entretien répondu
-      { earned: c.programmeInspectionEntretien !== undefined,     weight: 3 },
+      { earned: c.programmeInspectionEntretien !== undefined, weight: 3 },
     ];
 
-    const total  = checks.reduce((s, ch) => s + ch.weight, 0); // 105
+    const total = checks.reduce((s, ch) => s + ch.weight, 0);
     const earned = checks.reduce((s, ch) => s + (ch.earned ? ch.weight : 0), 0);
     return Math.round((earned / total) * 100);
   }

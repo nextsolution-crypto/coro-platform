@@ -72,27 +72,29 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title:
-      'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
+  url: 'https://getcoro.io/',
 
-    description:
-      'Créez et gérez vos PMU, PSI, PCA et autres documents de conformité avec une plateforme conçue pour les professionnels du terrain.',
+  title:
+    'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
 
-    siteName: 'CORO',
+  description:
+    'Créez et gérez vos PMU, PSI, PCA et autres documents de conformité avec une plateforme conçue pour les professionnels du terrain.',
 
-    locale: 'fr_CA',
+  siteName: 'CORO',
 
-    type: 'website',
+  locale: 'fr_CA',
 
-    images: [
-      {
-        url: '/og-coro.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'CORO — Plateforme SaaS de conformité opérationnelle',
-      },
-    ],
-  },
+  type: 'website',
+
+  images: [
+    {
+      url: '/og-coro.jpg',
+      width: 1200,
+      height: 630,
+      alt: 'CORO — Plateforme SaaS de conformité opérationnelle',
+    },
+  ],
+},
 
   twitter: {
     card: 'summary_large_image',
