@@ -60,11 +60,6 @@ export class ConfiguratorService {
       type: 'date',
     },
     {
-      key: 'ville',
-      label: 'Ville du batiment',
-      type: 'text',
-    },
-    {
       key: 'reglementMunicipal',
       label: 'Reglement municipal applicable (si connu)',
       type: 'text',
@@ -74,11 +69,6 @@ export class ConfiguratorService {
       label: 'Type de document',
       type: 'select',
       options: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'],
-    },
-    {
-      key: 'anneDocument',
-      label: 'Annee du document',
-      type: 'number',
     },
     {
       key: 'versionDocument',

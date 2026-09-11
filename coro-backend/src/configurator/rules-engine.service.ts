@@ -6,6 +6,8 @@ export interface BuildingConfig {
   responsableNom?: string;
   responsableTitre?: string;
   dateReleve?: string;
+  // Champs legacy conservés uniquement pour la lecture des anciens configData / snapshots.
+  // Sources canoniques actuelles : Building.city et Project.year.
   ville?: string;
   reglementMunicipal?: string;
   typeDocument?: string;

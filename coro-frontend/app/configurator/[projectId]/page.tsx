@@ -572,9 +572,6 @@ export default function ConfiguratorPage() {
         if (!savedConfig.province && building.province) {
           savedConfig.province = normalizeProvince(building.province);
         }
-        if (!savedConfig.ville && building.city) {
-          savedConfig.ville = building.city;
-        }
         if (!savedConfig.responsableNom && (building.responsableFirstName || building.responsableLastName)) {
           savedConfig.responsableNom = `${building.responsableFirstName || ''} ${building.responsableLastName || ''}`.trim();
         }
@@ -596,15 +593,23 @@ export default function ConfiguratorPage() {
       if (!savedConfig.typeDocument && projectRes.data.documentType) {
         savedConfig.typeDocument = projectRes.data.documentType;
       }
-      // Pré-remplir l'année depuis le projet (ou année courante par défaut)
-      if (!savedConfig.anneDocument) {
-        savedConfig.anneDocument = projectRes.data.year
-          ? projectRes.data.year
-          : new Date().getFullYear();
-      }
       // Pré-remplir la date de relevé avec la date courante si vide
       if (!savedConfig.dateReleve) {
         savedConfig.dateReleve = new Date().toISOString().split('T')[0];
+      }
+
+      // Compatibilite ascendante : les anciens snapshots peuvent encore contenir
+      // certaines cles legacy. On les lit comme fallback uniquement lorsque la cle
+      // canonique actuelle est absente. Un false explicite de la nouvelle cle reste
+      // donc prioritaire.
+      if (savedConfig.palettierPresent === undefined && savedConfig.palettiers !== undefined) {
+        savedConfig.palettierPresent = savedConfig.palettiers;
+      }
+      if (savedConfig.mezzaninePresent === undefined && savedConfig.mezzanine !== undefined) {
+        savedConfig.mezzaninePresent = savedConfig.mezzanine;
+      }
+      if (savedConfig.chariotsPresent === undefined && savedConfig.chariotsElevateurs !== undefined) {
+        savedConfig.chariotsPresent = savedConfig.chariotsElevateurs;
       }
 
       const defaults: Record<string, any> = {};
@@ -781,6 +786,10 @@ export default function ConfiguratorPage() {
     }
   };
 
+  const isIndustrialContext =
+    config['buildingType'] === 'Industriel' ||
+    String(config['usagePrincipal'] || '').startsWith('F');
+
   const isFieldVisible = (field: Field): boolean => {
     if (field.key === 'zoneConfinement' || field.key === 'zoneRafraichissement') return config['certBOMA'] === true;
     if (field.key === 'certBOMANiveau') return config['certBOMA'] === true;
@@ -821,10 +830,37 @@ export default function ConfiguratorPage() {
     if (['detecteurAmmoniacSeuil1','detecteurAmmoniacSeuil2'].includes(field.key)) return config['detecteurAmmoniac'] === true;
     if (field.key === 'matieresList') return config['matieresDangereuses'] === true;
     if (field.key === 'trousseDeversementLieu') return config['trousseDeversement'] === true;
-    if (['chariotsElevateursBatterie','chariotsElevateursLieu'].includes(field.key)) return config['chariotsElevateurs'] === true;
-    if (field.key === 'mezzanineLieu') return config['mezzanine'] === true;
-    if (field.key === 'procesDangereuxDesc') return config['procesDangereux'] === true;
+
+    // Section industrielle — dependances sur les cles canoniques actuelles.
     if (field.key === 'espaceClosLieu') return config['espaceClos'] === true;
+
+    if (['palettierAgencement', 'palettierGicleurs', 'palettierAlles'].includes(field.key)) {
+      return config['palettierPresent'] === true;
+    }
+
+    if (['stockagePalettes', 'stockageEmplacement', 'stockageHauteur',
+         'stockageLargeurAllee', 'stockageClassification'].includes(field.key)) {
+      return config['stockagePresent'] === true;
+    }
+    if (field.key === 'stockagePalettesCombustible') {
+      return config['stockagePresent'] === true && config['stockagePalettes'] === 'Oui';
+    }
+
+    if (['mezzanineGicle', 'mezzanineEncloisonnee', 'mezzanineLieu'].includes(field.key)) {
+      return config['mezzaninePresent'] === true;
+    }
+
+    if (['chariotsNombre', 'chariotsType', 'chariotsEmplacementRecharge'].includes(field.key)) {
+      return config['chariotsPresent'] === true;
+    }
+
+    if (['batteriesLithiumLocalEspace', 'batteriesLithiumLocalEspaceCommentaire',
+         'batteriesLithiumDetection', 'batteriesLithiumDetectionCommentaire',
+         'batteriesLithiumSignalisation', 'batteriesLithiumSignalisationCommentaire'].includes(field.key)) {
+      return config['batteriesLithiumPresent'] === true;
+    }
+
+    if (field.key === 'procesDangereuxDetails') return config['procesDangereux'] === true;
     if (['systemePhonicType','messagesAutomatises'].includes(field.key)) return config['systemePhonic'] === true;
     if (field.key === 'nbRadios') return config['radiosCommunication'] === true;
     if (field.key === 'accesSousSolDetails') return (config['accesSousSol'] || []).length > 0;
@@ -1022,7 +1058,7 @@ export default function ConfiguratorPage() {
                 if (groupSections.length === 0) return null;
 
                 // Masquer le groupe Industriel si pas industriel
-                if (group.ids.includes('industriel') && config['buildingType'] !== 'Industriel') return null;
+                if (group.ids.includes('industriel') && !isIndustrialContext) return null;
 
                 return (
                   <div key={groupIdx} className="mb-3">
@@ -1248,7 +1284,7 @@ export default function ConfiguratorPage() {
                 {activeSection > 0 && (
                   <button onClick={() => {
                     let prev = activeSection - 1;
-                    while (prev > 0 && sections[prev].id === 'industriel' && config['buildingType'] !== 'Industriel') {
+                    while (prev > 0 && sections[prev].id === 'industriel' && !isIndustrialContext) {
                       prev--;
                     }
                     setActiveSection(prev);
@@ -1264,7 +1300,7 @@ export default function ConfiguratorPage() {
                 {activeSection < sections.length - 1 && (
                   <button onClick={() => {
                     let next = activeSection + 1;
-                    while (next < sections.length - 1 && sections[next].id === 'industriel' && config['buildingType'] !== 'Industriel') {
+                    while (next < sections.length - 1 && sections[next].id === 'industriel' && !isIndustrialContext) {
                       next++;
                     }
                     setActiveSection(next);
@@ -1555,7 +1591,7 @@ export default function ConfiguratorPage() {
                       .filter(s => group.ids.includes(s.id));
 
                     if (groupSections.length === 0) return null;
-                    if (group.ids.includes('industriel') && config['buildingType'] !== 'Industriel') return null;
+                    if (group.ids.includes('industriel') && !isIndustrialContext) return null;
 
                     return (
                       <div key={groupIdx} className="mb-3">
