@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { ClientPortalService } from './client-portal.service';
 import { ClientJwtGuard } from './client-jwt.guard';
+import { IncidentService } from '../occupancy/incident.service';
 
 @Controller('client-portal')
 @UseGuards(ClientJwtGuard)
 export class ClientPortalController {
-  constructor(private clientPortalService: ClientPortalService) {}
+  constructor(
+    private clientPortalService: ClientPortalService,
+    private incidentService: IncidentService,
+  ) {}
 
   @Get('dashboard')
   async getDashboard(@Request() req: any) {
@@ -249,6 +253,48 @@ export class ClientPortalController {
       req.clientUser.role,
       req.clientUser.buildingIds,
     );
+  }
+
+  // ── Module Incident ──────────────────────────────────────────────────────
+
+  @Post('incidents/trigger')
+  async triggerIncident(@Body() body: any, @Request() req: any) {
+    return this.incidentService.triggerIncident(body, req.clientUser.organizationId);
+  }
+
+  @Get('incidents/buildings/:buildingId/active')
+  async getActiveIncident(@Param('buildingId') buildingId: string, @Request() req: any) {
+    return this.incidentService.getActiveIncident(buildingId, req.clientUser.organizationId);
+  }
+
+  @Put('incidents/tasks/:taskId/acknowledge')
+  async acknowledgeTask(@Param('taskId') taskId: string, @Request() req: any) {
+    return this.incidentService.acknowledgeTask(taskId, req.clientUser.organizationId);
+  }
+
+  @Put('incidents/tasks/:taskId/complete')
+  async completeTask(@Param('taskId') taskId: string, @Request() req: any) {
+    return this.incidentService.completeTask(taskId, req.clientUser.organizationId);
+  }
+
+  @Post('incidents/:incidentId/logs')
+  async addIncidentLog(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
+    return this.incidentService.addLog(incidentId, body, req.clientUser.organizationId);
+  }
+
+  @Put('incidents/:incidentId/contain')
+  async containIncident(@Param('incidentId') incidentId: string, @Request() req: any) {
+    return this.incidentService.containIncident(incidentId, req.clientUser.organizationId);
+  }
+
+  @Put('incidents/:incidentId/resolve')
+  async resolveIncident(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
+    return this.incidentService.resolveIncident(incidentId, body, req.clientUser.organizationId);
+  }
+
+  @Get('incidents/buildings/:buildingId/history')
+  async getIncidentHistory(@Param('buildingId') buildingId: string, @Request() req: any) {
+    return this.incidentService.getIncidentHistory(buildingId, req.clientUser.organizationId);
   }
 
   @Get('notifications')

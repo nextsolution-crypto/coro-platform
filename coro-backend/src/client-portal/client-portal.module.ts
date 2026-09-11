@@ -9,6 +9,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ExportModule } from '../export/export.module';
 import { StorageModule } from '../storage/storage.module';
 import { BookingsModule } from '../bookings/bookings.module';
+import { OccupancyModule } from '../occupancy/occupancy.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { BookingsModule } from '../bookings/bookings.module';
     ExportModule,
     StorageModule,
     BookingsModule,
+    OccupancyModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'coro-secret',
       signOptions: { expiresIn: '7d' },

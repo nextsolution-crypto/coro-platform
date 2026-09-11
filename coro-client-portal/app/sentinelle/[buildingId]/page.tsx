@@ -264,6 +264,10 @@ export default function SentinelleDashboard() {
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '2px solid #C0392B', backgroundColor: '#FDEDEC', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#C0392B' }}>
           🛡️ Résilience opérationnelle
         </button>
+        <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/incident`)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '2px solid #E67E22', backgroundColor: '#FEF9E7', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#E67E22' }}>
+          🚨 Déclencher un incident
+        </button>
       </div>
 
       {/* ── URL Borne kiosque ── */}
