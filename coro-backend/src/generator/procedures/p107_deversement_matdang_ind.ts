@@ -14,7 +14,7 @@ export const P107_DEVERSEMENT_MATDANG_IND: ProcedureTemplate = {
   titleEN: 'HAZARDOUS MATERIALS SPILL',
   icon: '⚠️',
   headerColor: COLORS.brown,
-  activationRule: 'is_industrial',
+  activationRule: 'industrial_with_hazmat',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
     {

@@ -4,11 +4,13 @@
 // ============================================================
 
 import type { ActivationRule, ProcedureTemplate } from './types';
+
 import { P001_DIRECTIVES_GENERALES } from './p001_directives_generales';
 import { P002_DECOUVERTE_FUMEE } from './p002_decouverte_fumee';
 import { P003_ALERTE_INCENDIE } from './p003_alerte_incendie';
 import { P004_ALARME_INCENDIE } from './p004_alarme_incendie';
 import { P005_FUITE_GAZ } from './p005_fuite_gaz';
+
 import { P011_MENACE_ACTIVE } from './p011_menace_active';
 import { P012_ASCENSEUR } from './p012_ascenseur';
 import { P013_URGENCE_MEDICALE } from './p013_urgence_medicale';
@@ -27,6 +29,7 @@ import { P025_VERGLAS } from './p025_verglas';
 import { P026_BATTERIE_LITHIUM } from './p026_batterie_lithium';
 import { P027_NOYADE } from './p027_noyade';
 import { P028_INCENDIE_CUISINE } from './p028_incendie_cuisine';
+
 import { P101_ALERTE_INCENDIE_IND } from './p101_alerte_incendie_ind';
 import { P102_ALARME_INCENDIE_IND } from './p102_alarme_incendie_ind';
 import { P103_FUITE_GAZ_IND } from './p103_fuite_gaz_ind';
@@ -35,6 +38,7 @@ import { P105_EXPOSITION_AMMONIAC_IND } from './p105_exposition_ammoniac_ind';
 import { P106_URGENCE_MEDICALE_IND } from './p106_urgence_medicale_ind';
 import { P107_DEVERSEMENT_MATDANG_IND } from './p107_deversement_matdang_ind';
 import { P108_BRIS_GICLEUR_IND } from './p108_bris_gicleur_ind';
+
 import { P111_DECOUVERTE_FUMEE_OCC } from './p111_decouverte_fumee_occ';
 import { P112_ALERTE_INCENDIE_OCC } from './p112_alerte_incendie_occ';
 import { P113_ALARME_INCENDIE_OCC } from './p113_alarme_incendie_occ';
@@ -54,11 +58,13 @@ import { P122_DEVERSEMENT_MATDANG_OCC } from './p122_deversement_matdang_occ';
 // ============================================================
 
 export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
+  // ── Procédures générales ──────────────────────────────────
   P001_DIRECTIVES_GENERALES,
   P002_DECOUVERTE_FUMEE,
   P003_ALERTE_INCENDIE,
   P004_ALARME_INCENDIE,
   P005_FUITE_GAZ,
+
   P011_MENACE_ACTIVE,
   P012_ASCENSEUR,
   P013_URGENCE_MEDICALE,
@@ -77,6 +83,8 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P026_BATTERIE_LITHIUM,
   P027_NOYADE,
   P028_INCENDIE_CUISINE,
+
+  // ── Procédures industrielles ──────────────────────────────
   P101_ALERTE_INCENDIE_IND,
   P102_ALARME_INCENDIE_IND,
   P103_FUITE_GAZ_IND,
@@ -85,6 +93,8 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
   P106_URGENCE_MEDICALE_IND,
   P107_DEVERSEMENT_MATDANG_IND,
   P108_BRIS_GICLEUR_IND,
+
+  // ── Procédures industrielles — occupants ──────────────────
   P111_DECOUVERTE_FUMEE_OCC,
   P112_ALERTE_INCENDIE_OCC,
   P113_ALARME_INCENDIE_OCC,
@@ -104,7 +114,10 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
 // ============================================================
 
 function asBool(value: unknown): boolean {
-  if (value === true || value === 1) return true;
+  if (value === true || value === 1) {
+    return true;
+  }
+
   if (
     value === false ||
     value === 0 ||
@@ -118,8 +131,17 @@ function asBool(value: unknown): boolean {
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase();
 
-    if (['true', 'oui', 'yes', '1', 'on', 'o', 'y'].includes(normalized)) return true;
-    if (['false', 'non', 'no', '0', 'off', 'n'].includes(normalized)) return false;
+    if (
+      ['true', 'oui', 'yes', '1', 'on', 'o', 'y'].includes(normalized)
+    ) {
+      return true;
+    }
+
+    if (
+      ['false', 'non', 'no', '0', 'off', 'n'].includes(normalized)
+    ) {
+      return false;
+    }
   }
 
   return Boolean(value);
@@ -133,11 +155,23 @@ function hasNonEmptyArray(value: unknown): boolean {
   return Array.isArray(value) && value.length > 0;
 }
 
+// ============================================================
+// CONTEXTE DU BÂTIMENT
+// ============================================================
+
 function isIndustrialBuilding(config: any): boolean {
   const value = normalize(config?.buildingType);
 
-  return ['industriel', 'industrial', 'industrie'].includes(value);
+  return [
+    'industriel',
+    'industrial',
+    'industrie',
+  ].includes(value);
 }
+
+// ============================================================
+// RISQUES / SYSTÈMES
+// ============================================================
 
 function hasLithiumRisk(config: any): boolean {
   return (
@@ -181,41 +215,143 @@ function hasElevators(config: any): boolean {
   );
 }
 
+function hasOxygenDetection(config: any): boolean {
+  return asBool(config?.detecteurO2);
+}
+
+function hasCO2Detection(config: any): boolean {
+  return asBool(config?.detecteurCO2);
+}
+
 // ============================================================
 // RÈGLES D'ACTIVATION AUTOMATIQUE
 // ============================================================
 
 type ActivationPredicate = (config: any) => boolean;
 
-export const ACTIVATION_RULES: Record<ActivationRule, ActivationPredicate> = {
+export const ACTIVATION_RULES: Record<
+  ActivationRule,
+  ActivationPredicate
+> = {
+  // ==========================================================
+  // RÈGLES GÉNÉRALES
+  // ==========================================================
+
   always: () => true,
 
-  double_signal: (c) => normalize(c?.panneauType) === 'double',
-  simple_signal: (c) => normalize(c?.panneauType) === 'simple',
+  double_signal: (c) =>
+    normalize(c?.panneauType) === 'double',
 
-  has_gas: (c) => hasGas(c),
-  has_ammonia: (c) => hasAmmonia(c),
-  has_sprinklers: (c) => hasSprinklers(c),
-  has_elevators: (c) => hasElevators(c),
-  has_hazmat: (c) => hasHazmat(c),
-  has_lithium: (c) => hasLithiumRisk(c),
+  simple_signal: (c) =>
+    normalize(c?.panneauType) === 'simple',
 
-  boma_certified: (c) => asBool(c?.certBOMA),
+  // ==========================================================
+  // RISQUES / SYSTÈMES PRÉSENTS
+  // ==========================================================
 
-  // Compatibilité avec d'anciens projets / futures extensions.
-  // Ces champs ne font pas partie du schéma principal actuel.
-  has_pool: (c) => asBool(c?.piscine),
-  has_kitchen: (c) => asBool(c?.cuisineCommerciale),
+  has_gas: (c) =>
+    hasGas(c),
 
-  // Jamais activée automatiquement : seulement via la bibliothèque.
+  has_ammonia: (c) =>
+    hasAmmonia(c),
+
+  has_sprinklers: (c) =>
+    hasSprinklers(c),
+
+  has_elevators: (c) =>
+    hasElevators(c),
+
+  has_hazmat: (c) =>
+    hasHazmat(c),
+
+  has_lithium: (c) =>
+    hasLithiumRisk(c),
+
+  has_oxygen_detection: (c) =>
+    hasOxygenDetection(c),
+
+  has_co2_detection: (c) =>
+    hasCO2Detection(c),
+
+  // ==========================================================
+  // CERTIFICATIONS / CARACTÉRISTIQUES
+  // ==========================================================
+
+  boma_certified: (c) =>
+    asBool(c?.certBOMA),
+
+  // Compatibilité avec les projets utilisant ces champs.
+  // Ces données ne font pas actuellement partie de toutes les
+  // configurations CORO.
+  has_pool: (c) =>
+    asBool(c?.piscine),
+
+  has_kitchen: (c) =>
+    asBool(c?.cuisineCommerciale),
+
+  // ==========================================================
+  // ACTIVATION MANUELLE
+  // ==========================================================
+
+  // Jamais activée automatiquement.
+  // Disponible uniquement via sélection manuelle.
   manual: () => false,
 
-  is_industrial: (c) => isIndustrialBuilding(c),
+  // ==========================================================
+  // CONTEXTE INDUSTRIEL
+  // ==========================================================
 
-  // Règle composée : utilisée par les procédures industrielles
-  // qui ne s'appliquent que lorsqu'un risque ammoniac est présent.
+  is_industrial: (c) =>
+    isIndustrialBuilding(c),
+
+  // ==========================================================
+  // RÈGLES INDUSTRIELLES COMPOSÉES
+  // ==========================================================
+
+  // Industriel + système d'alarme à double signal.
+  industrial_with_double_signal: (c) =>
+    isIndustrialBuilding(c) &&
+    normalize(c?.panneauType) === 'double',
+
+  // Industriel + gaz naturel / détection gaz naturel.
+  industrial_with_gas: (c) =>
+    isIndustrialBuilding(c) &&
+    hasGas(c),
+
+  // Industriel + ammoniac / détection ammoniac.
   industrial_with_ammonia: (c) =>
-    isIndustrialBuilding(c) && hasAmmonia(c),
+    isIndustrialBuilding(c) &&
+    hasAmmonia(c),
+
+  // Industriel + matières dangereuses.
+  industrial_with_hazmat: (c) =>
+    isIndustrialBuilding(c) &&
+    hasHazmat(c),
+
+  // Industriel + système de gicleurs.
+  industrial_with_sprinklers: (c) =>
+    isIndustrialBuilding(c) &&
+    hasSprinklers(c),
+
+  // Industriel + risque lithium.
+  industrial_with_lithium: (c) =>
+    isIndustrialBuilding(c) &&
+    hasLithiumRisk(c),
+
+  // Industriel + détection d'oxygène.
+  industrial_with_oxygen_detection: (c) =>
+    isIndustrialBuilding(c) &&
+    hasOxygenDetection(c),
+
+  // Industriel + détection de CO2.
+  industrial_with_co2_detection: (c) =>
+    isIndustrialBuilding(c) &&
+    hasCO2Detection(c),
+
+  // Industriel + ascenseurs.
+  industrial_with_elevators: (c) =>
+    isIndustrialBuilding(c) &&
+    hasElevators(c),
 };
 
 // ============================================================
@@ -233,62 +369,92 @@ export function getActiveProcedures(
     : [];
 
   return PROCEDURES_REGISTRY
-    .filter((p) => {
-      // 1. Filtre par type de document.
+
+    // ========================================================
+    // 1. TYPE DE DOCUMENT + RÈGLE D'ACTIVATION
+    // ========================================================
+
+    .filter((procedure) => {
+      // Vérifie que la procédure appartient au type de document.
       if (
-        !Array.isArray(p.documentTypes) ||
-        !p.documentTypes.includes(documentType)
+        !Array.isArray(procedure.documentTypes) ||
+        !procedure.documentTypes.includes(documentType)
       ) {
         return false;
       }
 
-      // 2. Filtre par règle d'activation.
-      // activationRule est typé, donc une valeur invalide doit normalement
-      // déjà être détectée à la compilation.
-      const rule = ACTIVATION_RULES[p.activationRule];
+      // activationRule est typé par ActivationRule.
+      const rule = ACTIVATION_RULES[procedure.activationRule];
 
-      // Protection runtime utile pour données anciennes, DB, migration,
-      // ou objet construit dynamiquement.
+      // Protection runtime pour :
+      // - anciennes données;
+      // - DB;
+      // - migrations;
+      // - objets construits dynamiquement.
       if (!rule) {
         console.warn(
           `[CORO][Procedures] Règle d'activation inconnue "${String(
-            p.activationRule,
-          )}" pour ${p.code} (${p.id}).`,
+            procedure.activationRule,
+          )}" pour ${procedure.code} (${procedure.id}).`,
         );
+
         return false;
       }
 
       return rule(config);
     })
-    .map((p) => ({
-      ...p,
 
-      // 3. Filtre les sections selon les rôles actifs dans le Module 3.
-      // ROLE-OCC est un rôle générique Occupant et reste disponible.
-      roleSections: Array.isArray(p.roleSections)
-        ? p.roleSections.filter(
-            (rs) =>
-              rs.roleCode === 'TOUS' ||
-              rs.roleCode === 'ROLE-OCC' ||
-              safeActiveRoleCodes.includes(rs.roleCode),
+    // ========================================================
+    // 2. FILTRAGE DES SECTIONS PAR RÔLES
+    // ========================================================
+
+    .map((procedure) => ({
+      ...procedure,
+
+      roleSections: Array.isArray(procedure.roleSections)
+        ? procedure.roleSections.filter(
+            (roleSection) =>
+              // Section applicable à tous.
+              roleSection.roleCode === 'TOUS' ||
+
+              // ROLE-OCC est un rôle générique Occupant /
+              // Travailleur et demeure disponible même s'il
+              // n'est pas explicitement configuré au Module 3.
+              roleSection.roleCode === 'ROLE-OCC' ||
+
+              // Rôle réellement actif dans l'organisation
+              // d'urgence du projet.
+              safeActiveRoleCodes.includes(roleSection.roleCode),
           )
         : [],
     }))
-    .filter((p) => {
-      // P001 peut contenir des directives générales sans dépendre
-      // strictement des roleSections.
-      if (p.id === 'p001_directives_generales') {
-        return true;
-      }
 
-      // Empêche de générer une procédure dont toutes les sections
-      // de rôles ont été éliminées.
-      return p.roleSections.length > 0;
+    // ========================================================
+    // 3. ÉLIMINATION DES PROCÉDURES SANS CONTENU APPLICABLE
+    // ========================================================
+
+    .filter((procedure) => {
+      // Certaines procédures peuvent contenir du contenu global
+      // indépendant des rôles.
+      // Exemple : P001 — Directives générales.
+      const hasGeneralDirectives =
+        Array.isArray(procedure.directivesGenerales) &&
+        procedure.directivesGenerales.length > 0;
+
+      const hasApplicableRoleSections =
+        Array.isArray(procedure.roleSections) &&
+        procedure.roleSections.length > 0;
+
+      return (
+        hasGeneralDirectives ||
+        hasApplicableRoleSections
+      );
     });
 }
 
 // ============================================================
-// FONCTION — Retourne toute la bibliothèque (pour l'UI)
+// FONCTION — Retourne toute la bibliothèque
+// Utilisée notamment par l'interface de sélection manuelle
 // ============================================================
 
 export function getAllProcedures(): ProcedureTemplate[] {
@@ -299,12 +465,16 @@ export function getAllProcedures(): ProcedureTemplate[] {
 // FONCTION — Trouve une procédure par ID
 // ============================================================
 
-export function getProcedureById(id: string): ProcedureTemplate | undefined {
-  return PROCEDURES_REGISTRY.find((p) => p.id === id);
+export function getProcedureById(
+  id: string,
+): ProcedureTemplate | undefined {
+  return PROCEDURES_REGISTRY.find(
+    (procedure) => procedure.id === id,
+  );
 }
 
 // ============================================================
-// RE-EXPORTS pour usage externe
+// RE-EXPORTS POUR USAGE EXTERNE
 // ============================================================
 
 export type {

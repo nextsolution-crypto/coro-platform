@@ -14,7 +14,7 @@ export const P103_FUITE_GAZ_IND: ProcedureTemplate = {
   titleEN: 'NATURAL GAS LEAK',
   icon: '💨',
   headerColor: COLORS.gray,
-  activationRule: 'is_industrial',
+  activationRule: 'industrial_with_gas',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
     {

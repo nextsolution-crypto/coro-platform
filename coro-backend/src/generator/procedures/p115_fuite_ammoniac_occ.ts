@@ -12,7 +12,7 @@ export const P115_FUITE_AMMONIAC_OCC: ProcedureTemplate = {
 
   icon: '☣️', headerColor: COLORS.purple,
 
-  activationRule: 'industrial_with_ammonia', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_ammonia', documentTypes: ['PMU'],
 
   roleSections: [{
 

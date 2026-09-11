@@ -5,7 +5,7 @@ export const P113_ALARME_INCENDIE_OCC: ProcedureTemplate = {
   titleFR: 'DÉCLENCHEMENT DE L\'ALARME INCENDIE — OCCUPANTS',
   titleEN: 'FIRE ALARM ACTIVATION — OCCUPANTS',
   icon: '🚨', headerColor: COLORS.red,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'], phase: 'alarme',
+  activationRule: 'always', documentTypes: ['PMU', 'PSI'], phase: 'alarme',
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.red,

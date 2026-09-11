@@ -5,7 +5,7 @@ export const P118_ALARME_CO2_OCC: ProcedureTemplate = {
   titleFR: 'ALARME DE DIOXYDE DE CARBONE (CO₂) — OCCUPANTS',
   titleEN: 'CARBON DIOXIDE (CO₂) ALARM — OCCUPANTS',
   icon: '🌫️', headerColor: COLORS.dark,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_co2_detection', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.dark,

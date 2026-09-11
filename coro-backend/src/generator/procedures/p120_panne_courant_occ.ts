@@ -5,7 +5,7 @@ export const P120_PANNE_COURANT_OCC: ProcedureTemplate = {
   titleFR: 'PANNE DE COURANT — OCCUPANTS',
   titleEN: 'POWER OUTAGE — OCCUPANTS',
   icon: '⚡', headerColor: COLORS.amber,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'always', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.amber,

@@ -92,7 +92,9 @@ private async loadProceduresFromDB(
         .map(p => ({
           ...p,
           roleSections: (p.roleSections || []).filter((rs: any) =>
-            rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+            rs.roleCode === 'TOUS' ||
+            rs.roleCode === 'ROLE-OCC' ||
+            activeRoleCodes.includes(rs.roleCode)
           ),
         }));
 
@@ -325,19 +327,18 @@ private async loadProceduresFromDB(
       projectId,
     );
 
-    // Pour PSI : seulement P001 (découverte fumée/flamme)
-    const psiProcedureIds = isPsi ? ['P001', 'P002'] : customProcedureIds;
-    const psiActiveRoles = isPsi ? ['ROLE-AS'] : activeRoleCodes;
-    const psiProceduresFromDB = isPsi
-      ? proceduresFromDB.filter((p: any) => p.code === 'P001')
-      : proceduresFromDB;
-
+    // Module 4 :
+    // Les procédures applicables au PSI sont déjà déterminées par
+    // getActiveProcedures() / loadProceduresFromDB() selon
+    // documentTypes + activationRule.
+    // Ne pas imposer ici une seconde liste P001/P002 : cela supprimerait
+    // des procédures pourtant explicitement compatibles avec le PSI.
     const module4Result = generateModule4(
       ctx,
       config,
-      isPsi ? psiActiveRoles : activeRoleCodes,
-      isPsi ? psiProcedureIds : customProcedureIds,
-      psiProceduresFromDB,
+      activeRoleCodes,
+      customProcedureIds,
+      proceduresFromDB,
     );
 
     // Module 6 — Plans techniques (structure vide, contenu géré via BuildingPlans)

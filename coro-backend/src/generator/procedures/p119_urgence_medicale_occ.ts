@@ -5,7 +5,7 @@ export const P119_URGENCE_MEDICALE_OCC: ProcedureTemplate = {
   titleFR: 'URGENCE MÉDICALE — OCCUPANTS',
   titleEN: 'MEDICAL EMERGENCY — OCCUPANTS',
   icon: '🚑', headerColor: COLORS.blue,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'always', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.blue,

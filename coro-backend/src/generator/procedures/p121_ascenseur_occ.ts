@@ -5,7 +5,7 @@ export const P121_ASCENSEUR_OCC: ProcedureTemplate = {
   titleFR: 'PERSONNE COINCÉE DANS UN ASCENSEUR — OCCUPANTS',
   titleEN: 'PERSON TRAPPED IN AN ELEVATOR — OCCUPANTS',
   icon: '🛗', headerColor: COLORS.teal,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_elevators', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.teal,

@@ -13,12 +13,30 @@ export type ActivationRule =
   | 'has_elevators'
   | 'has_hazmat'
   | 'has_lithium'
+  | 'has_oxygen_detection'
+  | 'has_co2_detection'
   | 'boma_certified'
   | 'has_pool'
   | 'has_kitchen'
   | 'manual'
   | 'is_industrial'
-  | 'industrial_with_ammonia';
+  | 'industrial_with_ammonia'
+  | 'industrial_with_double_signal'
+  | 'industrial_with_gas'
+  | 'industrial_with_hazmat'
+  | 'industrial_with_sprinklers'
+  | 'industrial_with_lithium'
+  | 'industrial_with_oxygen_detection'
+  | 'industrial_with_co2_detection'
+  | 'industrial_with_elevators'
+
+  // PCA
+  | 'has_sinistre'
+  | 'has_cyber'
+  | 'has_pandemie'
+  | 'has_electrique'
+  | 'has_fournisseur'
+  | 'has_personnel';
 
 export interface ProcedureStep {
   id: string;

@@ -14,7 +14,7 @@ export const P108_BRIS_GICLEUR_IND: ProcedureTemplate = {
   titleEN: 'SPRINKLER FAILURE',
   icon: '💧',
   headerColor: COLORS.turquoise,
-  activationRule: 'is_industrial',
+  activationRule: 'industrial_with_sprinklers',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
     {

@@ -5,7 +5,7 @@ export const P114_BATTERIE_LITHIUM_OCC: ProcedureTemplate = {
   titleFR: 'FEU DE BATTERIE AU LITHIUM — OCCUPANTS',
   titleEN: 'LITHIUM BATTERY FIRE — OCCUPANTS',
   icon: '🔋', headerColor: COLORS.garnet,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_lithium', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.garnet,

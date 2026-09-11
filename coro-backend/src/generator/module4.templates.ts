@@ -45,7 +45,9 @@ export function generateModule4(
       .map(p => ({
         ...p!,
         roleSections: p!.roleSections.filter(rs =>
-          rs.roleCode === 'TOUS' || activeRoleCodes.includes(rs.roleCode)
+          rs.roleCode === 'TOUS' ||
+          rs.roleCode === 'ROLE-OCC' ||
+          activeRoleCodes.includes(rs.roleCode)
         ),
       }));
 

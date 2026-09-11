@@ -5,7 +5,7 @@ export const P122_DEVERSEMENT_MATDANG_OCC: ProcedureTemplate = {
   titleFR: 'DÉVERSEMENT DE MATIÈRES DANGEREUSES — OCCUPANTS',
   titleEN: 'HAZARDOUS MATERIALS SPILL — OCCUPANTS',
   icon: '⚠️', headerColor: COLORS.brown,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_hazmat', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.brown,

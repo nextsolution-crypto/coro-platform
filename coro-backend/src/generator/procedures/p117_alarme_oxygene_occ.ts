@@ -5,7 +5,7 @@ export const P117_ALARME_OXYGENE_OCC: ProcedureTemplate = {
   titleFR: 'ALARME DE BAS NIVEAU D\'OXYGÈNE — OCCUPANTS',
   titleEN: 'LOW OXYGEN LEVEL ALARM — OCCUPANTS',
   icon: '🫁', headerColor: COLORS.blue,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_oxygen_detection', documentTypes: ['PMU'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.blue,
