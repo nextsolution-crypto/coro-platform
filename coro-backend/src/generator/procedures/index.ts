@@ -352,6 +352,34 @@ export const ACTIVATION_RULES: Record<
   industrial_with_elevators: (c) =>
     isIndustrialBuilding(c) &&
     hasElevators(c),
+
+  // ==========================================================
+  // RÈGLES PCA — Scénarios de risque
+  // ==========================================================
+
+  has_sinistre: (c) =>
+    Array.isArray(c?.riskScenarios) &&
+    c.riskScenarios.some((r: any) => r.id === 'sinistre'),
+
+  has_cyber: (c) =>
+    Array.isArray(c?.riskScenarios) &&
+    c.riskScenarios.some((r: any) => r.id === 'cyber'),
+
+  has_pandemie: (c) =>
+    Array.isArray(c?.riskScenarios) &&
+    c.riskScenarios.some((r: any) => r.id === 'pandemie'),
+
+  has_electrique: (c) =>
+    Array.isArray(c?.riskScenarios) &&
+    c.riskScenarios.some((r: any) => r.id === 'electrique'),
+
+  has_fournisseur: (c) =>
+    Array.isArray(c?.riskScenarios) &&
+    c.riskScenarios.some((r: any) => r.id === 'fournisseur'),
+
+  has_personnel: (c) =>
+    Array.isArray(c?.riskScenarios) &&
+    c.riskScenarios.some((r: any) => r.id === 'personnel'),
 };
 
 // ============================================================
