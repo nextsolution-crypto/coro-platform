@@ -71,8 +71,26 @@ export abstract class BaseDocumentBuilder {
     return DOCUMENT_TYPE_LABELS[this.project.documentType]?.[this.lang] || this.project.documentType;
   }
 
+  /**
+   * Décision documentaire : priorité au snapshot figé dans Document.content.config.
+   * Le Building courant ne sert que de fallback pour les anciens snapshots.
+   */
   get isIndustriel() {
-    return this.project.building.buildingType?.toLowerCase() === 'industriel';
+    const snapshotType = this.content?.config?.buildingType;
+
+    if (
+      snapshotType !== undefined &&
+      snapshotType !== null &&
+      snapshotType !== ''
+    ) {
+      return String(snapshotType).trim().toLowerCase() === 'industriel';
+    }
+
+    return (
+      String(this.project.building?.buildingType || '')
+        .trim()
+        .toLowerCase() === 'industriel'
+    );
   }
 
   get modules() {

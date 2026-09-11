@@ -450,6 +450,181 @@ export class OccupancyService {
     };
   }
 
+  // ── Résilience enrichie + Intelligence organisationnelle ──────────────────
+
+  async getReadinessEnriched(buildingId: string, token: string) {
+    const base = await this.getReadiness(buildingId, token);
+    const recommendations: Array<{ type: string; category: string; message: string; action: string }> = [];
+
+    // ── Plans (PMU/PSI) ───────────────────────────────────────────────────
+    const activePlan = await this.prisma.project.findFirst({
+      where: {
+        buildingId,
+        documentType: { in: ['PMU', 'PSI'] },
+        isActive: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { status: true, updatedAt: true, documentType: true },
+    });
+
+    const planStatus    = activePlan?.status || null;
+    const planUpdatedAt = activePlan?.updatedAt || null;
+    const daysSincePlan = planUpdatedAt
+      ? Math.floor((Date.now() - new Date(planUpdatedAt).getTime()) / 86400000)
+      : null;
+    const isPlanValid   = planStatus === 'VALIDATED' || planStatus === 'EXPORTED';
+    const isPlanCurrent = daysSincePlan !== null && daysSincePlan < 548; // 18 mois
+
+    let plansScore = 0;
+    if (!activePlan)           { plansScore = 0;  }
+    else if (!isPlanValid)     { plansScore = 40; }
+    else if (!isPlanCurrent)   { plansScore = 70; }
+    else                       { plansScore = 100; }
+
+    if (!activePlan) {
+      recommendations.push({ type: 'CRITICAL', category: 'PLANS', message: 'Aucun PMU ou PSI actif associé à ce bâtiment.', action: 'Créer et approuver un plan de mesures d\'urgence dans CORO.' });
+    } else if (!isPlanValid) {
+      recommendations.push({ type: 'CRITICAL', category: 'PLANS', message: `Le ${activePlan.documentType} est en statut ${planStatus} — non approuvé.`, action: 'Soumettre le plan pour approbation dans CORO.' });
+    } else if (daysSincePlan !== null && daysSincePlan > 548) {
+      recommendations.push({ type: 'WARNING', category: 'PLANS', message: `Le ${activePlan.documentType} n'a pas été mis à jour depuis ${Math.floor(daysSincePlan / 30)} mois.`, action: 'Réviser et mettre à jour le plan de mesures d\'urgence.' });
+    } else if (daysSincePlan !== null && daysSincePlan > 365) {
+      recommendations.push({ type: 'INFO', category: 'PLANS', message: `Le ${activePlan.documentType} approuvé a ${Math.floor(daysSincePlan / 30)} mois — une révision annuelle est recommandée.`, action: 'Planifier une révision du plan.' });
+    }
+
+    // ── Exercices (CNPI 2020 : 1x/an minimum) ────────────────────────────
+    const lastExercise = await this.prisma.evacuationEvent.findFirst({
+      where: { buildingId, status: 'RESOLVED' },
+      orderBy: { triggeredAt: 'desc' },
+      select: { triggeredAt: true },
+    });
+    const totalExercises = await this.prisma.evacuationEvent.count({ where: { buildingId } });
+    const daysSinceExercise = lastExercise
+      ? Math.floor((Date.now() - new Date(lastExercise.triggeredAt).getTime()) / 86400000)
+      : null;
+    const isExerciseCurrent = daysSinceExercise !== null && daysSinceExercise < 365;
+
+    let exercisesScore = 0;
+    if (!lastExercise)                                       { exercisesScore = 0;  }
+    else if (daysSinceExercise !== null && daysSinceExercise > 730) { exercisesScore = 20; }
+    else if (daysSinceExercise !== null && daysSinceExercise > 365) { exercisesScore = 60; }
+    else                                                      { exercisesScore = 100; }
+
+    if (!lastExercise) {
+      recommendations.push({ type: 'CRITICAL', category: 'EXERCISES', message: 'Aucun exercice d\'évacuation enregistré pour ce bâtiment.', action: 'Planifier et réaliser un exercice d\'évacuation (exigence CNPI 2020).' });
+    } else if (daysSinceExercise !== null && daysSinceExercise > 365) {
+      recommendations.push({ type: 'WARNING', category: 'EXERCISES', message: `Dernier exercice il y a ${Math.floor(daysSinceExercise / 30)} mois — exigence CNPI : 1 exercice par an.`, action: 'Planifier un exercice d\'évacuation dans les 30 prochains jours.' });
+    }
+
+    // ── Qualifications ────────────────────────────────────────────────────
+    const allMembers = base.members as any[];
+    const presentMembers = allMembers.filter(m => m.isPresent);
+    const criticalQuals  = ['FIRST_AID_CPR', 'AED'];
+
+    const membersWithCriticalQuals = presentMembers.filter(m =>
+      (m.qualifications || []).some((q: any) => criticalQuals.includes(q.type))
+    ).length;
+
+    const hasFirstAid = presentMembers.some(m =>
+      (m.qualifications || []).some((q: any) => q.type === 'FIRST_AID_CPR')
+    );
+    const hasAed = presentMembers.some(m =>
+      (m.qualifications || []).some((q: any) => q.type === 'AED')
+    );
+
+    const qualRatio      = presentMembers.length > 0 ? membersWithCriticalQuals / presentMembers.length : 0;
+    const qualScore      = Math.round(qualRatio * 100);
+
+    if (presentMembers.length > 0) {
+      if (!hasFirstAid) recommendations.push({ type: 'CRITICAL', category: 'QUALIFICATIONS', message: 'Aucun membre présent ne possède une certification de premiers soins / RCR.', action: 'S\'assurer qu\'au moins un secouriste certifié est présent en tout temps.' });
+      if (!hasAed)      recommendations.push({ type: 'WARNING',  category: 'QUALIFICATIONS', message: 'Aucun membre présent n\'est certifié pour l\'utilisation du DEA.', action: 'Former au moins un membre à l\'utilisation du défibrillateur automatisé.' });
+    }
+
+    // ── Rôles critiques ───────────────────────────────────────────────────
+    if (base.gaps.some((g: any) => g.role === 'COORDINATOR')) {
+      recommendations.push({ type: 'CRITICAL', category: 'ROLES', message: 'Aucun coordonnateur d\'urgence ou substitut présent dans le bâtiment.', action: 'Assigner un coordonnateur substitut disponible immédiatement.' });
+    }
+    if (base.substitutions.some((s: any) => s.role === 'COORDINATOR')) {
+      recommendations.push({ type: 'WARNING', category: 'ROLES', message: 'Le coordonnateur titulaire est absent — le substitut est en fonction.', action: 'Informer le substitut de sa responsabilité opérationnelle actuelle.' });
+    }
+    if (base.reduced.length > 2) {
+      recommendations.push({ type: 'WARNING', category: 'ROLES', message: `${base.reduced.length} rôles d'urgence ont une couverture réduite.`, action: 'Vérifier la disponibilité des membres absents ou former des substituts supplémentaires.' });
+    }
+
+    // ── Incidents répétés (90 derniers jours) ─────────────────────────────
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000);
+    const recentIncidents = await this.prisma.incidentEvent.findMany({
+      where: { buildingId, triggeredAt: { gte: ninetyDaysAgo } },
+      select: { type: true, rexCorrectiveActions: true },
+    });
+
+    const incidentCounts: Record<string, number> = {};
+    for (const inc of recentIncidents) {
+      incidentCounts[inc.type] = (incidentCounts[inc.type] || 0) + 1;
+    }
+    for (const [type, count] of Object.entries(incidentCounts)) {
+      if (count >= 3) {
+        recommendations.push({ type: 'WARNING', category: 'INCIDENTS', message: `${count} incidents de type « ${type} » en 90 jours — récurrence anormale.`, action: 'Consulter l\'historique des incidents et les REX associés pour identifier la cause racine.' });
+      }
+    }
+
+    const pendingRex = recentIncidents.filter(i => i.rexCorrectiveActions && i.rexCorrectiveActions.length > 0).length;
+    if (pendingRex > 0) {
+      recommendations.push({ type: 'INFO', category: 'INCIDENTS', message: `${pendingRex} incident(s) récent(s) ont des actions correctives documentées dans leur REX.`, action: 'S\'assurer que les actions correctives ont été mises en œuvre.' });
+    }
+
+    // ── Score global enrichi ──────────────────────────────────────────────
+    const roleScore    = Math.round((base.roleCoverage.filter((r: any) => r.present > 0).length / Math.max(base.roleCoverage.length, 1)) * 100);
+    const enrichedScore = Math.round(
+      roleScore    * 0.40 +
+      qualScore    * 0.20 +
+      plansScore   * 0.25 +
+      exercisesScore * 0.15
+    );
+    const enrichedStatus = enrichedScore >= 85 ? 'READY' : enrichedScore >= 60 ? 'REDUCED' : 'CRITICAL';
+
+    // Trier les recommandations : CRITICAL → WARNING → INFO
+    const order = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+    recommendations.sort((a, b) => (order[a.type as keyof typeof order] || 0) - (order[b.type as keyof typeof order] || 0));
+
+    return {
+      ...base,
+      enriched: {
+        score:          enrichedScore,
+        status:         enrichedStatus,
+        components: {
+          roles:       { score: roleScore,      weight: 40 },
+          qualifications: { score: qualScore,   weight: 20 },
+          plans:       { score: plansScore,     weight: 25 },
+          exercises:   { score: exercisesScore, weight: 15 },
+        },
+      },
+      plansAnalysis: {
+        hasPlan:         !!activePlan,
+        planType:        activePlan?.documentType || null,
+        planStatus,
+        planUpdatedAt,
+        daysSincePlan,
+        isPlanValid,
+        isPlanCurrent,
+      },
+      exercisesAnalysis: {
+        lastExerciseDate:    lastExercise?.triggeredAt || null,
+        daysSinceExercise,
+        isExerciseCurrent,
+        totalExercises,
+      },
+      qualificationsAnalysis: {
+        membersWithCriticalQuals,
+        totalPresentEmergencyMembers: presentMembers.length,
+        qualScore,
+        hasFirstAid,
+        hasAed,
+      },
+      recentIncidentsCount: recentIncidents.length,
+      recommendations,
+    };
+  }
+
   // Historique public — authentifié par token kiosque
   async getHistoryPublic(buildingId: string, token: string, from: string, to: string) {
     await this.validateKioskToken(buildingId, token);

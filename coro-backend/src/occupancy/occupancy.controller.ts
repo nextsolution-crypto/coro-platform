@@ -56,6 +56,14 @@ export class OccupancyController {
     return this.occupancyService.getReadiness(buildingId, token);
   }
 
+  @Get('buildings/:buildingId/readiness-enriched')
+  getReadinessEnriched(
+    @Param('buildingId') buildingId: string,
+    @Query('token') token: string,
+  ) {
+    return this.occupancyService.getReadinessEnriched(buildingId, token);
+  }
+
   @Get('buildings/:buildingId/history-public')
   getHistoryPublic(
     @Param('buildingId') buildingId: string,

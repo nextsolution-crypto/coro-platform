@@ -218,19 +218,9 @@ export class PsiBuilder extends PmuBuilder {
 
     // ── Module 8 ──
     if (moduleNum === 8) {
-      let module8Data = this.content.module8;
-
-      if (!module8Data) {
-        const freshDoc =
-          await this.prisma.document.findFirst({
-            where: { projectId: this.project.id },
-            select: { content: true },
-          });
-
-        module8Data =
-          (freshDoc?.content as any)?.module8 ||
-          null;
-      }
+      // Le builder rend strictement le snapshot reçu par ExportService.
+      // Aucune seconde lecture du Document en DB pendant la génération PDF.
+      const module8Data = this.content.module8 ?? null;
 
       const allSections8 = renderModule8(
         module8Data,
