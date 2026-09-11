@@ -349,7 +349,76 @@ export class OccupancyService {
     return { ...event, accounted, missing, durationMinutes: duration };
   }
 
-    // Historique public — authentifié par token kiosque
+    // ── Résilience opérationnelle ─────────────────────────────────────────────
+
+  async getReadiness(buildingId: string, token: string) {
+    await this.validateKioskToken(buildingId, token);
+
+    // Tous les membres de l'équipe d'urgence du bâtiment
+    const allMembers = await this.prisma.buildingEmployee.findMany({
+      where: { buildingId, isActive: true, isEmergencyMember: true },
+      include: { emergencyRoles: { orderBy: { priority: 'asc' } }, qualifications: true },
+    });
+
+    // Employés présents aujourd'hui
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const presentRecords = await this.prisma.occupancyRecord.findMany({
+      where: { buildingId, status: 'IN', type: 'EMPLOYE', checkedInAt: { gte: startOfDay } },
+      select: { employeeId: true },
+    });
+    const presentIds = new Set(presentRecords.map(r => r.employeeId).filter(Boolean));
+
+    // Membres avec statut de présence
+    const membersWithPresence = allMembers.map(emp => ({
+      ...emp,
+      isPresent: presentIds.has(emp.id),
+    }));
+
+    // Couverture par rôle
+    const ROLE_TYPES = ['COORDINATOR', 'EPI', 'ASSEMBLY_WARDEN', 'SEARCHER', 'EXIT_WARDEN', 'PNA_ESCORT', 'FIRST_AIDER'];
+    const roleCoverage = ROLE_TYPES.map(roleType => {
+      const membersForRole = allMembers.filter(m => m.emergencyRoles.some(r => r.role === roleType));
+      const presentForRole = membersForRole.filter(m => presentIds.has(m.id));
+      return {
+        role: roleType,
+        total: membersForRole.length,
+        present: presentForRole.length,
+        members: membersForRole.map(m => ({
+          id: m.id,
+          firstName: m.firstName,
+          lastName: m.lastName,
+          isPresent: presentIds.has(m.id),
+          assignType: m.emergencyRoles.find(r => r.role === roleType)?.assignType ?? 'PRIMARY',
+          zone: m.emergencyRoles.find(r => r.role === roleType)?.zone ?? null,
+        })),
+      };
+    }).filter(r => r.total > 0);
+
+    // Lacunes et réductions
+    const gaps    = roleCoverage.filter(r => r.present === 0);
+    const reduced = roleCoverage.filter(r => r.present > 0 && r.present < r.total);
+
+    // Indice de préparation (% rôles couverts au minimum par 1 membre présent)
+    const totalRoles   = roleCoverage.length;
+    const coveredRoles = roleCoverage.filter(r => r.present > 0).length;
+    const readinessIndex = totalRoles > 0 ? Math.round((coveredRoles / totalRoles) * 100) : 100;
+    const status = readinessIndex === 100 ? 'READY' : readinessIndex >= 60 ? 'REDUCED' : 'CRITICAL';
+
+    return {
+      status,
+      readinessIndex,
+      totalMembers: allMembers.length,
+      presentMembers: membersWithPresence.filter(m => m.isPresent).length,
+      roleCoverage,
+      gaps,
+      reduced,
+      members: membersWithPresence,
+      computedAt: new Date().toISOString(),
+    };
+  }
+
+  // Historique public — authentifié par token kiosque
   async getHistoryPublic(buildingId: string, token: string, from: string, to: string) {
     await this.validateKioskToken(buildingId, token);
 
