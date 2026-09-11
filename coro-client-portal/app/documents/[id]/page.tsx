@@ -280,31 +280,60 @@ const handleRefuse = async () => {
     }
   };
 
+  const buildOfficialFilename = (lang: 'fr' | 'en') => {
+    const clean = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9-_]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const documentType = clean(project?.documentType || 'DOCUMENT');
+    const buildingName = clean(project?.building?.name || project?.name || 'Document');
+    const year = project?.year ? String(project.year) : new Date().getFullYear().toString();
+
+    return `${documentType}---${buildingName}-${year}-${lang.toUpperCase()}-OFFICIEL.pdf`;
+  };
+
   const handleDownload = async (lang: 'fr' | 'en' = 'fr') => {
     setDownloading(true);
 
     try {
-      // Après signature, seul le PDF officiel est téléchargeable.
       const pdfUrl = lang === 'fr'
         ? project?.officialPdfFr
         : project?.officialPdfEn;
 
-      if (pdfUrl) {
-        const anchor = document.createElement('a');
-        anchor.href = pdfUrl;
-        anchor.download = `${project?.name || 'document'}-${lang.toUpperCase()}.pdf`;
-        anchor.target = '_blank';
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        // Tracker le téléchargement
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const device = isMobile ? 'mobile' : 'desktop';
-        await apiPost(`/client-portal/projects/${projectId}/engagement`, { event: 'downloaded', device });
-      } else {
+      if (!pdfUrl) {
         toast('Le PDF n\'est pas encore disponible. Veuillez contacter votre conseiller.', 'info');
+        return;
       }
+
+      // Télécharger d'abord le fichier en Blob. Un lien direct vers un stockage
+      // externe peut ignorer l'attribut `download` et conserver le nom UUID du fichier.
+      const response = await fetch(pdfUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Téléchargement PDF impossible (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = buildOfficialFilename(lang);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
+
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const device = isMobile ? 'mobile' : 'desktop';
+      await apiPost(`/client-portal/projects/${projectId}/engagement`, {
+        event: 'downloaded',
+        device,
+      });
     } catch (err) {
+      console.error('Erreur téléchargement PDF officiel:', err);
       toast('Erreur lors du téléchargement.', 'error');
     } finally {
       setDownloading(false);

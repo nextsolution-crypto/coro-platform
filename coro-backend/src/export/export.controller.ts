@@ -1,10 +1,17 @@
-import { Controller, Post, Param, Body, UseGuards, Res, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Res,
+  Request,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { ExportService } from './export.service';
 import type { ExportOptions } from './export.service';
 import { AuditService } from '../audit/audit.service';
-import { StorageService } from '../storage/storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('projects/:projectId/export')
@@ -13,7 +20,6 @@ export class ExportController {
   constructor(
     private readonly exportService: ExportService,
     private readonly auditService: AuditService,
-    private readonly storageService: StorageService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -24,75 +30,145 @@ export class ExportController {
     @Res() res: Response,
     @Request() req: any,
   ) {
-    const result = await this.exportService.generatePdf(projectId, options, req.user.organizationId);
-
-    await this.auditService.log({
-      action: 'EXPORT',
-      entityType: 'DOCUMENT',
-      entityId: projectId,
-      projectId,
-      description: `Export PDF — langue(s): ${[options.language].filter(Boolean).join(', ')}`,
-      metadata: { language: options.language, modules: options.selectedModules },
-      userId: req.user.userId,
-      organizationId: req.user.organizationId,
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId: req.user.organizationId,
+      },
+      include: {
+        building: true,
+      },
     });
 
-    // Upload sur Spaces — PDF avec filigrane APERÇU pour le portail client
-    const timestamp = Date.now();
-    const updateData: any = { exportedAt: new Date() };
+    if (!project) {
+      return res.status(404).json({
+        message: 'Projet introuvable',
+      });
+    }
 
     try {
-      // Générer aussi la version avec filigrane pour le portail client
-      const previewResult = await this.exportService.generatePdf(projectId, {
-        ...options,
-        isPreview: true,
-      }, req.user.organizationId);
+      // Une seule génération par demande.
+      // Aucun upload secondaire, aucune régénération APERÇU.
+      const result = await this.exportService.generatePdf(
+        projectId,
+        options,
+        req.user.organizationId,
+      );
 
-      if (previewResult.fr) {
-        const urlFr = await this.storageService.uploadFile(
-          previewResult.fr,
-          `${projectId}-${timestamp}-FR-APERCU.pdf`,
-          'documents',
-          'application/pdf',
-        );
-        updateData.exportedPdfFr = urlFr;
-      }
-      if (previewResult.en) {
-        const urlEn = await this.storageService.uploadFile(
-          previewResult.en,
-          `${projectId}-${timestamp}-EN-APERCU.pdf`,
-          'documents',
-          'application/pdf',
-        );
-        updateData.exportedPdfEn = urlEn;
-      }
-      await this.prisma.project.update({
-        where: { id: projectId },
-        data: updateData,
+      await this.auditService.log({
+        action: 'EXPORT',
+        entityType: 'DOCUMENT',
+        entityId: projectId,
+        projectId,
+        description: `Export PDF — langue(s): ${options.language}`,
+        metadata: {
+          language: options.language,
+          modules: options.selectedModules,
+          isPreview: options.isPreview === true,
+        },
+        userId: req.user.userId,
+        organizationId: req.user.organizationId,
       });
-    } catch (e) {
-      console.error('Erreur upload PDF Spaces:', e);
+
+      const documentType = this.sanitizeFilenamePart(
+        project.documentType || 'DOCUMENT',
+      );
+
+      const buildingName = this.sanitizeFilenamePart(
+        project.building?.name || project.name || 'Projet',
+      );
+
+      const year = this.extractProjectYear(project);
+
+      const baseFilename = [
+        documentType,
+        buildingName,
+        year ? String(year) : null,
+      ]
+        .filter(Boolean)
+        .join('---');
+
+      // Une seule langue → fichier PDF direct.
+      if (result.fr && !result.en) {
+        const filename = `${baseFilename}-FR.pdf`;
+
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': this.buildContentDisposition(filename),
+          'Cache-Control': 'no-store',
+        });
+
+        return res.send(result.fr);
+      }
+
+      if (result.en && !result.fr) {
+        const filename = `${baseFilename}-EN.pdf`;
+
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': this.buildContentDisposition(filename),
+          'Cache-Control': 'no-store',
+        });
+
+        return res.send(result.en);
+      }
+
+      // Deux langues → JSON base64.
+      // Les noms proposés sont retournés au frontend pour garantir des téléchargements
+      // cohérents même lorsque le navigateur traite deux fichiers séparément.
+      return res.json({
+        fr: result.fr ? result.fr.toString('base64') : null,
+        en: result.en ? result.en.toString('base64') : null,
+        filenames: {
+          fr: result.fr ? `${baseFilename}-FR.pdf` : null,
+          en: result.en ? `${baseFilename}-EN.pdf` : null,
+        },
+      });
+    } catch (error) {
+      console.error(
+        `[ExportController] Échec export PDF projet ${projectId}:`,
+        error,
+      );
+
+      return res.status(500).json({
+        message: 'Erreur lors de la génération du PDF',
+        detail:
+          error instanceof Error
+            ? error.message
+            : 'Erreur inconnue lors de la génération du document',
+      });
+    }
+  }
+
+  private sanitizeFilenamePart(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9-_]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  private extractProjectYear(project: any): number | null {
+    if (typeof project.year === 'number' && Number.isFinite(project.year)) {
+      return project.year;
     }
 
-    // Si une seule langue demandée → retourne le PDF directement
-    if (result.fr && !result.en) {
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="document-FR.pdf"',
-      });
-      return res.send(result.fr);
+    if (project.createdAt) {
+      const date = new Date(project.createdAt);
+      if (!Number.isNaN(date.getTime())) {
+        return date.getFullYear();
+      }
     }
-    if (result.en && !result.fr) {
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="document-EN.pdf"',
-      });
-      return res.send(result.en);
-    }
-    // Si les deux langues → retourne en base64 JSON pour que le frontend gère 2 téléchargements
-    return res.json({
-      fr: result.fr ? result.fr.toString('base64') : null,
-      en: result.en ? result.en.toString('base64') : null,
-    });
+
+    return null;
+  }
+
+  private buildContentDisposition(filename: string): string {
+    const fallback = filename.replace(/[^\x20-\x7E]/g, '-');
+
+    return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(
+      filename,
+    )}`;
   }
 }

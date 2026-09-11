@@ -352,21 +352,51 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleOfficialDownload = (lang: 'fr' | 'en') => {
+  const buildOfficialFilename = (lang: 'fr' | 'en') => {
+    const clean = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9-_]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const documentType = clean(project?.documentType || 'DOCUMENT');
+    const buildingName = clean(project?.building?.name || project?.name || 'Document');
+    const year = project?.year ? String(project.year) : new Date().getFullYear().toString();
+
+    return `${documentType}---${buildingName}-${year}-${lang.toUpperCase()}-OFFICIEL.pdf`;
+  };
+
+  const handleOfficialDownload = async (lang: 'fr' | 'en') => {
     const url = lang === 'fr' ? project?.officialPdfFr : project?.officialPdfEn;
+
     if (!url) {
       toast('Le PDF officiel signé n’est pas encore disponible.', 'error');
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.download = `${(project?.name || 'document').replace(/[^a-z0-9]/gi, '-')}-${lang.toUpperCase()}-OFFICIEL.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+      // Le téléchargement en Blob permet d'imposer un nom métier même lorsque
+      // le PDF est stocké sur un domaine externe avec un nom UUID.
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Téléchargement PDF impossible (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = buildOfficialFilename(lang);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Erreur téléchargement PDF officiel:', err);
+      toast('Erreur lors du téléchargement du PDF officiel.', 'error');
+    }
   };
 
   const handleAddObservation = async () => {
