@@ -118,7 +118,7 @@ export class PmuBuilder extends BaseDocumentBuilder {
 
     // ── Module 4 ──
     if (moduleNum === 4) {
-      const procedures = this.getModule4Procedures();
+      const procedures = await this.getModule4Procedures();
       const buildingAddress = `${this.project.building.address}, ${this.project.building.city}, ${this.project.building.province}`;
       procedures.forEach((proc: any) => {
         const title = this.lang === 'fr' ? proc.titleFR : proc.titleEN;

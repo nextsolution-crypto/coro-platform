@@ -15,7 +15,7 @@ export const P021_VE_INCENDIE: ProcedureTemplate = {
   icon: '🔋',
   headerColor: COLORS.garnet,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────
     {

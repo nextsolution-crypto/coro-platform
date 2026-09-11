@@ -15,7 +15,7 @@ export const P005_FUITE_GAZ: ProcedureTemplate = {
   icon: '💨',
   headerColor: COLORS.gray,
   activationRule: 'has_gas',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

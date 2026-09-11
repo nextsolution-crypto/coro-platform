@@ -16,7 +16,7 @@ export const P015_COLIS_SUSPECT: ProcedureTemplate = {
   icon: '📦',
   headerColor: COLORS.dark,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────
     {

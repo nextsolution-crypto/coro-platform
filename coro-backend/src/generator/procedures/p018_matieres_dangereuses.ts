@@ -15,7 +15,7 @@ export const P018_MATIERES_DANGEREUSES: ProcedureTemplate = {
   icon: '☣️',
   headerColor: COLORS.brown,
   activationRule: 'has_hazmat',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

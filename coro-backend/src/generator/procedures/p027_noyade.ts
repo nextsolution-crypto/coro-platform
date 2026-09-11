@@ -15,7 +15,7 @@ export const P027_NOYADE: ProcedureTemplate = {
   icon: '🏊',
   headerColor: COLORS.cobalt,
   activationRule: 'has_pool',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

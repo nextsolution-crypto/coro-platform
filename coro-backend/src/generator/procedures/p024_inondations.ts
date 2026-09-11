@@ -15,7 +15,7 @@ export const P024_INONDATIONS: ProcedureTemplate = {
   icon: '🌊',
   headerColor: COLORS.sapphire,
   activationRule: 'boma_certified',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

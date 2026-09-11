@@ -15,7 +15,7 @@ export const P023_VAGUES_CHALEUR: ProcedureTemplate = {
   icon: '🌡️',
   headerColor: COLORS.coral,
   activationRule: 'boma_certified',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

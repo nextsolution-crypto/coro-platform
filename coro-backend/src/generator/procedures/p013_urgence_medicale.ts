@@ -15,7 +15,7 @@ export const P013_URGENCE_MEDICALE: ProcedureTemplate = {
   icon: '🚑',
   headerColor: COLORS.blue,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────
     {

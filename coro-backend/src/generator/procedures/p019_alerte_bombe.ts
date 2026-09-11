@@ -15,7 +15,7 @@ export const P019_ALERTE_BOMBE: ProcedureTemplate = {
   icon: '💣',
   headerColor: COLORS.onyx,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────
     {

@@ -15,7 +15,7 @@ export const P012_ASCENSEUR: ProcedureTemplate = {
   icon: '🛗',
   headerColor: COLORS.teal,
   activationRule: 'has_elevators',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

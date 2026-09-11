@@ -15,7 +15,7 @@ export const P011_MENACE_ACTIVE: ProcedureTemplate = {
   icon: '🔫',
   headerColor: COLORS.white,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────
     {

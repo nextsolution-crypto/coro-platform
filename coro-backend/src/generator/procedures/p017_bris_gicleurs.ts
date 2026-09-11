@@ -15,7 +15,7 @@ export const P017_BRIS_GICLEURS: ProcedureTemplate = {
   icon: '💧',
   headerColor: COLORS.turquoise,
   activationRule: 'has_sprinklers',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

@@ -14,8 +14,8 @@ export const P014_GAZ_TOXIQUE: ProcedureTemplate = {
   titleEN: 'CONTAINMENT PROCEDURES IN CASE OF TOXIC GAS PRESENCE',
   icon: '☁️',
   headerColor: COLORS.olive,
-  activationRule: 'has_gas',
-  documentTypes: ['PMU', 'PSI'],
+  activationRule: 'always',
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

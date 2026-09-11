@@ -39,121 +39,289 @@ private async loadProceduresFromDB(
     projectId?: string,
   ): Promise<any[]> {
     try {
-      // Charger toutes les procédures par défaut actives
+      // ─────────────────────────────────────────────────────────────
+      // 1) Procédures par défaut actives
+      // ─────────────────────────────────────────────────────────────
       const defaults = await this.prisma.procedureDefault.findMany({
         where: { isActive: true },
         orderBy: { code: 'asc' },
       });
 
-      // Charger les overrides de cette organisation
-      const overrides = await this.prisma.procedureOverride.findMany({
-        where: { organizationId },
-      });
+      // ─────────────────────────────────────────────────────────────
+      // 2) Overrides organisation + projet
+      //
+      // Priorité métier :
+      // override projet > override organisation > défaut
+      // ─────────────────────────────────────────────────────────────
+      const organizationOverrides: any[] =
+        await this.prisma.procedureOverride.findMany({
+          where: {
+            organizationId,
+            projectId: null,
+          },
+        });
 
-      const overrideMap = new Map(overrides.map(o => [o.procedureId, o.content]));
+      const projectOverrides: any[] = projectId
+        ? await this.prisma.procedureOverride.findMany({
+            where: {
+              organizationId,
+              projectId,
+            },
+          })
+        : [];
 
-      // Fusionner défaut + override
+      const organizationOverrideMap = new Map<string, any>(
+        organizationOverrides.map((o: any) => [o.procedureId, o]),
+      );
+
+      const projectOverrideMap = new Map<string, any>(
+        projectOverrides.map((o: any) => [o.procedureId, o]),
+      );
+
+      // ─────────────────────────────────────────────────────────────
+      // 3) Construire la version effective de chaque procédure
+      // ─────────────────────────────────────────────────────────────
       const allProcs = defaults.map(d => {
-        const content = overrideMap.has(d.id)
-          ? overrideMap.get(d.id) as any
-          : d.content as any;
-        return { ...content, id: d.id, _originalId: content.id };
-      });
+        const organizationOverride = organizationOverrideMap.get(d.id);
+        const projectOverride = projectOverrideMap.get(d.id);
 
-      // Filtrer selon activationRule (même logique que getActiveProcedures)
-      const autoFromTS = getActiveProcedures(config, documentType, activeRoleCodes);
-      const autoIds = new Set(autoFromTS.map(p => p?.code));
+        const content =
+          (projectOverride?.content as any) ??
+          (organizationOverride?.content as any) ??
+          (d.content as any) ??
+          {};
 
-      // Procédures auto = celles dont le code est dans la liste auto TS
-      const autoProcedures = allProcs
-        .filter(p => autoIds.has(p.code))
-        .map(p => ({
-          ...p,
-          roleSections: (p.roleSections || []).filter((rs: any) =>
-            rs.roleCode === 'TOUS' ||
-            rs.roleCode === 'ROLE-OCC' ||
-            activeRoleCodes.includes(rs.roleCode)
-          ),
-        }));
-
-      // Procédures nouvelles créées en DB (pas dans les fichiers TS) avec activationRule 'always'
-      const tsCodeSet = new Set(autoFromTS.map(p => p?.code));
-      const allTSCodes = new Set(getAllProcedures().map(p => p?.code));
-      const newDefaultProcedures = allProcs
-        .filter(p => {
-          if (allTSCodes.has(p.code)) return false;
-          if (customProcedureIds.includes(p.id)) return false;
-          if (p.activationRule !== 'always') return false;
-          // Filtrer par documentType
-          const docTypes: string[] = p.documentTypes || [];
-          if (docTypes.length === 0) return true;
-          return docTypes.includes(documentType);
-        })
-        .map(p => ({
-          ...p,
-          roleSections: (p.roleSections || []).filter((rs: any) =>
-            rs.roleCode === 'TOUS' ||
-            rs.roleCode === 'ROLE-OCC' ||
-            activeRoleCodes.includes(rs.roleCode)
-          ),
-        }));
-
-      // Procédures custom = ajoutées manuellement par l'utilisateur pour ce projet
-      const manualProcedures = allProcs
-        .filter(p => customProcedureIds.includes(p.id) && !autoIds.has(p.code))
-        .map(p => ({
-          ...p,
-          roleSections: (p.roleSections || []).filter((rs: any) =>
-            rs.roleCode === 'TOUS' ||
-            rs.roleCode === 'ROLE-OCC' ||
-            activeRoleCodes.includes(rs.roleCode)
-          ),
-        }));
-
-      // Procédures IA (CustomProcedure) ajoutées au projet
-      const customIAProcedures = await this.prisma.customProcedure.findMany({
-        where: {
-          OR: [
-            { projectId, organizationId },
-            { isPublished: true, organizationId },
-          ],
-          id: { in: customProcedureIds.filter((id: string) =>
-            !allProcs.find(p => p.id === id)
-          )},
-        },
-      });
-
-      const iaProcedures = customIAProcedures.map(p => {
-        const content = p.content as any;
         return {
-          id: p.id,
-          code: p.code,
-          titleFR: p.titleFR,
-          titleEN: p.titleEN,
-          headerColor: p.color,
-          color: p.color,
-          activationRule: 'manual',
-          roleSections: (content.roleSections || []).map((rs: any) => ({
-            roleCode: rs.roleCode,
-            roleLabelFR: rs.roleName || rs.roleCode,
-            roleLabelEN: rs.roleNameEN || rs.roleName || rs.roleCode,
-            headerColor: p.color,
-            steps: (rs.actions || []).map((action: string, idx: number) => ({
-              id: `${p.code}_${idx}`,
-              textFR: action,
-              textEN: (rs.actionsEN && rs.actionsEN[idx]) ? rs.actionsEN[idx] : action,
-            })),
-          })),
-          importantBoxes: content.importantBoxes || [],
-          objective: p.objective,
-          _isCustomIA: true,
+          ...content,
+          id: d.id,
+          _originalId: content.id,
+
+          // L'activation/désactivation propre au projet est prioritaire.
+          // En l'absence d'override projet, la procédure reste active.
+          _projectIsActive: projectOverride
+            ? projectOverride.isActive !== false
+            : true,
         };
       });
 
-      return [...autoProcedures, ...newDefaultProcedures, ...manualProcedures, ...iaProcedures];
+      // ─────────────────────────────────────────────────────────────
+      // 4) Déterminer les procédures automatiquement applicables
+      //    avec la même logique que la registry TypeScript
+      // ─────────────────────────────────────────────────────────────
+      const autoFromTS = getActiveProcedures(
+        config,
+        documentType,
+        activeRoleCodes,
+      );
+
+      const autoCodes = new Set(
+        autoFromTS
+          .map(p => p?.code)
+          .filter(Boolean),
+      );
+
+      const allTSCodes = new Set(
+        getAllProcedures()
+          .map(p => p?.code)
+          .filter(Boolean),
+      );
+
+      const filterRoleSections = (procedure: any) => ({
+        ...procedure,
+        roleSections: (procedure.roleSections || []).filter((rs: any) =>
+          rs.roleCode === 'TOUS' ||
+          rs.roleCode === 'ROLE-OCC' ||
+          activeRoleCodes.includes(rs.roleCode),
+        ),
+      });
+
+      const isUsable = (procedure: any) => {
+        if (!procedure) return false;
+        if (procedure._projectIsActive === false) return false;
+
+        const filtered = filterRoleSections(procedure);
+
+        const hasGeneralDirectives =
+          Array.isArray(filtered.directivesGenerales) &&
+          filtered.directivesGenerales.length > 0;
+
+        const hasApplicableRoleSections =
+          Array.isArray(filtered.roleSections) &&
+          filtered.roleSections.length > 0;
+
+        return hasGeneralDirectives || hasApplicableRoleSections;
+      };
+
+      // ─────────────────────────────────────────────────────────────
+      // 5) Procédures automatiques
+      // ─────────────────────────────────────────────────────────────
+      const autoProcedures = allProcs
+        .filter(p => autoCodes.has(p.code))
+        .filter(isUsable)
+        .map(filterRoleSections);
+
+      // ─────────────────────────────────────────────────────────────
+      // 6) Nouvelles procédures créées directement en DB
+      //    (absentes des fichiers TS), activées par défaut avec
+      //    activationRule = 'always'
+      // ─────────────────────────────────────────────────────────────
+      const newDefaultProcedures = allProcs
+        .filter(p => {
+          if (p._projectIsActive === false) return false;
+          if (allTSCodes.has(p.code)) return false;
+          if (customProcedureIds.includes(p.id)) return false;
+          if (p.activationRule !== 'always') return false;
+
+          const docTypes: string[] = Array.isArray(p.documentTypes)
+            ? p.documentTypes
+            : [];
+
+          if (docTypes.length === 0) return true;
+          return docTypes.includes(documentType);
+        })
+        .filter(isUsable)
+        .map(filterRoleSections);
+
+      // ─────────────────────────────────────────────────────────────
+      // 7) Procédures standards ajoutées manuellement
+      // ─────────────────────────────────────────────────────────────
+      const manualProcedures = allProcs
+        .filter(p =>
+          customProcedureIds.includes(p.id) &&
+          !autoCodes.has(p.code) &&
+          p._projectIsActive !== false,
+        )
+        .filter(isUsable)
+        .map(filterRoleSections);
+
+      // ─────────────────────────────────────────────────────────────
+      // 8) Procédures IA / CustomProcedure ajoutées au projet
+      // ─────────────────────────────────────────────────────────────
+      const standardProcedureIds = new Set(
+        allProcs.map(p => p.id),
+      );
+
+      const customIAIds = customProcedureIds.filter(
+        (id: string) => !standardProcedureIds.has(id),
+      );
+
+      const customIAProcedures =
+        customIAIds.length > 0
+          ? await this.prisma.customProcedure.findMany({
+              where: {
+                organizationId,
+                id: { in: customIAIds },
+                OR: [
+                  ...(projectId ? [{ projectId }] : []),
+                  { isPublished: true },
+                ],
+              },
+            })
+          : [];
+
+      const customIAMap = new Map(
+        customIAProcedures.map(p => [p.id, p]),
+      );
+
+      // Respecter l'ordre de customProcedureIds.
+      const iaProcedures = customIAIds
+        .map(id => customIAMap.get(id))
+        .filter(Boolean)
+        .filter((p: any) => {
+          // Le toggle de l'éditeur utilise ACTIVE / DRAFT.
+          // Si le champ status n'existe pas sur un ancien enregistrement,
+          // on conserve la compatibilité en le considérant actif.
+          return !p.status || p.status === 'ACTIVE';
+        })
+        .map((p: any) => {
+          const content = (p.content as any) || {};
+
+          return {
+            id: p.id,
+            code: p.code,
+            titleFR: content.titleFR || p.titleFR,
+            titleEN: content.titleEN || p.titleEN,
+            icon: content.icon,
+            headerColor:
+              content.headerColor ||
+              content.color ||
+              p.color ||
+              '#2C3E50',
+            color:
+              content.color ||
+              p.color ||
+              '#2C3E50',
+            activationRule: content.activationRule || 'manual',
+            documentTypes: content.documentTypes || [],
+            phase: content.phase,
+            directivesGenerales: content.directivesGenerales || [],
+            roleSections: (content.roleSections || [])
+              .filter((rs: any) =>
+                rs.roleCode === 'TOUS' ||
+                rs.roleCode === 'ROLE-OCC' ||
+                activeRoleCodes.includes(rs.roleCode),
+              )
+              .map((rs: any) => ({
+                roleCode: rs.roleCode,
+                roleLabelFR:
+                  rs.roleLabelFR ||
+                  rs.roleName ||
+                  rs.roleCode,
+                roleLabelEN:
+                  rs.roleLabelEN ||
+                  rs.roleNameEN ||
+                  rs.roleName ||
+                  rs.roleCode,
+                headerColor:
+                  rs.headerColor ||
+                  content.headerColor ||
+                  p.color ||
+                  '#2C3E50',
+                steps: Array.isArray(rs.steps)
+                  ? rs.steps
+                  : (rs.actions || []).map(
+                      (action: string, idx: number) => ({
+                        id: `${p.code}_${idx}`,
+                        textFR: action,
+                        textEN:
+                          rs.actionsEN && rs.actionsEN[idx]
+                            ? rs.actionsEN[idx]
+                            : action,
+                      }),
+                    ),
+              })),
+            importantBoxes: content.importantBoxes || [],
+            objective: content.objective || p.objective,
+            _isCustomIA: true,
+          };
+        })
+        .filter(isUsable)
+        .map(filterRoleSections);
+
+      // ─────────────────────────────────────────────────────────────
+      // 9) Dédupliquer en conservant l'ordre
+      // ─────────────────────────────────────────────────────────────
+      const combined = [
+        ...autoProcedures,
+        ...newDefaultProcedures,
+        ...manualProcedures,
+        ...iaProcedures,
+      ];
+
+      const seen = new Set<string>();
+
+      return combined.filter(proc => {
+        const key = proc.id || proc.code;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     } catch (err) {
       console.warn('Fallback aux procédures TypeScript:', err);
-      return []; // Retourne vide → generateModule4 utilisera le fallback TS
+
+      // Retourne vide :
+      // generateModule4() utilisera alors son fallback TypeScript.
+      return [];
     }
   }
 

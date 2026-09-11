@@ -14,8 +14,8 @@ export const P026_BATTERIE_LITHIUM: ProcedureTemplate = {
   titleEN: 'LITHIUM BATTERY FIRE',
   icon: '🔥',
   headerColor: COLORS.garnet,
-  activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  activationRule: 'has_lithium',
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

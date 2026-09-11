@@ -15,7 +15,7 @@ export const P020_MANIFESTATION: ProcedureTemplate = {
   icon: '📢',
   headerColor: COLORS.purple,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────
     {

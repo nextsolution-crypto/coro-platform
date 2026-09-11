@@ -15,7 +15,7 @@ export const P022_VENTS_VIOLENTS: ProcedureTemplate = {
   icon: '🌬️',
   headerColor: COLORS.steel,
   activationRule: 'boma_certified',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

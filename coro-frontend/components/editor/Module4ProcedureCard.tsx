@@ -1,12 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-
-// ============================================================
-// TYPES
-// ============================================================
 
 export interface ProcedureStep {
   id: string;
@@ -40,37 +36,50 @@ export interface Procedure {
   roleSections: RoleSection[];
 }
 
+export interface LocalizedStepOverride {
+  fr?: string;
+  en?: string;
+}
+
+export type StepOverrideValue = string | LocalizedStepOverride;
+
 interface Module4ProcedureCardProps {
   procedure: Procedure;
   projectId?: string;
   isActive?: boolean;
   onToggleActive?: (id: string, isActive: boolean) => void;
   language?: 'fr' | 'en';
-  overrides?: Record<string, string>;
+  overrides?: Record<string, StepOverrideValue>;
   comments?: Record<string, string>;
-  onOverride?: (stepId: string, text: string) => void;
+  onOverride?: (stepId: string, language: 'fr' | 'en', text: string) => void;
   onComment?: (stepId: string, comment: string) => void;
   defaultExpanded?: boolean;
 }
 
-// ============================================================
-// RENDU D'UNE ÉTAPE
-// ============================================================
+function getLocalizedOverride(
+  value: StepOverrideValue | undefined,
+  language: 'fr' | 'en',
+): string | undefined {
+  if (typeof value === 'string') {
+    return language === 'fr' ? value : undefined;
+  }
+  return value?.[language];
+}
 
 function StepRenderer({
   step,
   language,
-  override,
-  comment,
+  overrides,
+  comments,
   onOverride,
   onComment,
   depth = 0,
 }: {
   step: ProcedureStep;
   language: 'fr' | 'en';
-  override?: string;
-  comment?: string;
-  onOverride?: (id: string, text: string) => void;
+  overrides: Record<string, StepOverrideValue>;
+  comments: Record<string, string>;
+  onOverride?: (id: string, language: 'fr' | 'en', text: string) => void;
   onComment?: (id: string, comment: string) => void;
   depth?: number;
 }) {
@@ -78,7 +87,9 @@ function StepRenderer({
   const [editingStep, setEditingStep] = useState(false);
 
   const rawText = language === 'fr' ? step.textFR : step.textEN;
-  const displayText = override || rawText;
+  const overrideText = getLocalizedOverride(overrides[step.id], language);
+  const displayText = overrideText ?? rawText;
+  const comment = comments[step.id];
   const isFr = language === 'fr';
 
   const renderText = (text: string) => {
@@ -98,11 +109,15 @@ function StepRenderer({
     <div className={`${indent} mb-1`}>
       <div className={`group flex items-start gap-2 py-1 px-2 rounded hover:bg-gray-50 transition-colors ${step.isRed ? 'text-red-600' : 'text-gray-800'}`}>
         {bullet && <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{bullet}</span>}
+
         <div className="flex-1 text-sm leading-relaxed">
           {editingStep ? (
             <textarea
               defaultValue={displayText}
-              onBlur={e => { onOverride?.(step.id, e.target.value); setEditingStep(false); }}
+              onBlur={e => {
+                onOverride?.(step.id, language, e.target.value);
+                setEditingStep(false);
+              }}
               autoFocus
               className="w-full text-sm border border-orange-300 rounded px-2 py-1 focus:outline-none focus:border-orange-500 bg-white text-gray-800 resize-none"
               rows={3}
@@ -114,10 +129,13 @@ function StepRenderer({
               title={isFr ? 'Cliquer pour modifier' : 'Click to edit'}
             >
               {renderText(displayText)}
-              {override && <span className="ml-1 text-xs text-orange-400 font-normal">✎</span>}
+              {overrideText !== undefined && (
+                <span className="ml-1 text-xs text-orange-400 font-normal">✎</span>
+              )}
             </span>
           )}
         </div>
+
         {step.isCommentable && (
           <button
             onClick={() => setEditingComment(!editingComment)}
@@ -146,7 +164,8 @@ function StepRenderer({
           key={sub.id}
           step={sub}
           language={language}
-          override={override}
+          overrides={overrides}
+          comments={comments}
           onOverride={onOverride}
           onComment={onComment}
           depth={depth + 1}
@@ -155,10 +174,6 @@ function StepRenderer({
     </div>
   );
 }
-
-// ============================================================
-// COMPOSANT PRINCIPAL
-// ============================================================
 
 export default function Module4ProcedureCard({
   procedure,
@@ -172,7 +187,6 @@ export default function Module4ProcedureCard({
   onComment,
   defaultExpanded = true,
 }: Module4ProcedureCardProps) {
-
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
   const isFr = language === 'fr';
@@ -191,10 +205,9 @@ export default function Module4ProcedureCard({
     <div className="mb-4 rounded overflow-hidden shadow-sm bg-white"
       style={{ border: '1px solid #E9ECEF', opacity: isActive ? 1 : 0.5 }}>
 
-      {/* Header procédure */}
-      <div className="flex items-center" style={{ borderLeft: `4px solid ${procedure.headerColor}`, backgroundColor: '#F8F9FA' }}>
+      <div className="flex items-center"
+        style={{ borderLeft: `4px solid ${procedure.headerColor}`, backgroundColor: '#F8F9FA' }}>
 
-        {/* Bouton expand */}
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex-1 flex items-center justify-between px-4 py-3 text-left transition-colors"
@@ -223,7 +236,6 @@ export default function Module4ProcedureCard({
           </div>
         </button>
 
-        {/* Toggle actif/inactif + Bouton Modifier */}
         {projectId && (
           <div className="flex items-center gap-2 mx-2 flex-shrink-0">
             <button
@@ -242,8 +254,14 @@ export default function Module4ProcedureCard({
               href={`/editor/${projectId}/procedures/${procedure.id}`}
               className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#6C757D', whiteSpace: 'nowrap' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#C0392B'; e.currentTarget.style.color = '#C0392B'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#DEE2E6'; e.currentTarget.style.color = '#6C757D'; }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#C0392B';
+                e.currentTarget.style.color = '#C0392B';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = '#DEE2E6';
+                e.currentTarget.style.color = '#6C757D';
+              }}
             >
               Modifier
             </Link>
@@ -251,13 +269,14 @@ export default function Module4ProcedureCard({
         )}
       </div>
 
-      {/* Contenu */}
       {expanded && (
         <div>
           {procedure.directivesGenerales && procedure.directivesGenerales.length > 0 && (
             <div className="p-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
-              <div className="rounded p-3" style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#C0392B' }}>
+              <div className="rounded p-3"
+                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2"
+                  style={{ color: '#C0392B' }}>
                   {isFr ? 'Directives générales' : 'General directives'}
                 </p>
                 {procedure.directivesGenerales.map(step => (
@@ -265,8 +284,8 @@ export default function Module4ProcedureCard({
                     key={step.id}
                     step={step}
                     language={language}
-                    override={overrides[step.id]}
-                    comment={comments[step.id]}
+                    overrides={overrides}
+                    comments={comments}
                     onOverride={onOverride}
                     onComment={onComment}
                   />
@@ -306,8 +325,8 @@ export default function Module4ProcedureCard({
                         key={step.id}
                         step={step}
                         language={language}
-                        override={overrides[step.id]}
-                        comment={comments[step.id]}
+                        overrides={overrides}
+                        comments={comments}
                         onOverride={onOverride}
                         onComment={onComment}
                       />

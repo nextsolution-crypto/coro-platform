@@ -15,7 +15,7 @@ export const P016_COUPURE_COURANT: ProcedureTemplate = {
   icon: '⚡',
   headerColor: COLORS.amber,
   activationRule: 'always',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',

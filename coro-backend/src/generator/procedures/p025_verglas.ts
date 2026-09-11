@@ -15,7 +15,7 @@ export const P025_VERGLAS: ProcedureTemplate = {
   icon: '🧊',
   headerColor: COLORS.glacier,
   activationRule: 'boma_certified',
-  documentTypes: ['PMU', 'PSI'],
+  documentTypes: ['PMU'],
   roleSections: [
     {
       roleCode: 'ROLE-CU',
