@@ -56,4 +56,14 @@ export class IncidentController {
   history(@Param('buildingId') buildingId: string, @Request() req: any) {
     return this.service.getIncidentHistory(buildingId, req.user.organizationId);
   }
+
+  @Get(':incidentId/detail')
+  detail(@Param('incidentId') incidentId: string, @Request() req: any) {
+    return this.service.getIncidentDetail(incidentId, req.user.organizationId);
+  }
+
+  @Put(':incidentId/rex')
+  updateRex(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
+    return this.service.updateRex(incidentId, body, req.user.organizationId);
+  }
 }

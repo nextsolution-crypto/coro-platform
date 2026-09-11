@@ -367,7 +367,37 @@ export class IncidentService {
       take: 50,
       include: {
         tasks: { select: { status: true, isCoordinatorStep: true } },
-        logs:  { orderBy: { timestamp: 'asc' }, take: 3 },
+        logs:  { orderBy: { timestamp: 'asc' }, take: 1 },
+      },
+    });
+  }
+
+  async getIncidentDetail(incidentId: string, organizationId: string) {
+    const incident = await this.prisma.incidentEvent.findFirst({
+      where: { id: incidentId, organizationId },
+      include: {
+        tasks: { orderBy: { stepOrder: 'asc' } },
+        logs:  { orderBy: { timestamp: 'asc' } },
+      },
+    });
+    if (!incident) throw new NotFoundException('Incident introuvable');
+    return incident;
+  }
+
+  async updateRex(incidentId: string, body: any, organizationId: string) {
+    const incident = await this.prisma.incidentEvent.findFirst({
+      where: { id: incidentId, organizationId },
+    });
+    if (!incident) throw new NotFoundException('Incident introuvable');
+
+    return this.prisma.incidentEvent.update({
+      where: { id: incidentId },
+      data: {
+        rexWentWell:          body.rexWentWell          ?? null,
+        rexToImprove:         body.rexToImprove         ?? null,
+        rexRecommendations:   body.rexRecommendations   ?? null,
+        rexCorrectiveActions: body.rexCorrectiveActions ?? null,
+        rexCompletedAt:       body.rexCompletedAt ? new Date(body.rexCompletedAt) : null,
       },
     });
   }

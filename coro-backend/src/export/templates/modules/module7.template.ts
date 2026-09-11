@@ -1,6 +1,6 @@
 // ============================================================
 // CORO — Module 7 : Description du site et équipements
-// Renderer PDF — version alignée avec le configurateur actuel
+// Renderer PDF — aligné configurateur actuel + compatibilité snapshots legacy
 // ============================================================
 
 import { PASS_EXTINGUISHER_IMAGE } from './pass-image.asset';
@@ -47,6 +47,51 @@ function withUnit(v: any, unit: string, fallback = '—'): string {
 
 function hasValue(v: any): boolean {
   return v !== undefined && v !== null && v !== '';
+}
+
+/**
+ * Affiche correctement les champs qui sont aujourd'hui des sélections texte
+ * mais qui peuvent exister sous forme booléenne dans d'anciens snapshots.
+ */
+function boolOrValue(v: any, isFr: boolean, fallback = '—'): string {
+  if (v === true || v === false) return bool(v, isFr);
+  return safeVal(v, fallback);
+}
+
+/**
+ * Accepte le format actuel tableau ainsi qu'un ancien format texte simple.
+ */
+function listOrValue(v: any, fallback = '—'): string {
+  if (Array.isArray(v)) return listVal(v, fallback);
+  return safeVal(v, fallback);
+}
+
+/**
+ * Les nouvelles données travaux par points chauds ont priorité sur
+ * l'ancien booléen travailChaud. Un choix explicite "Jamais" ne doit donc
+ * pas être annulé par une ancienne valeur legacy à true.
+ */
+function hasHotWorkConfigured(config: any): boolean {
+  if (config?.travauxPointsChauds !== undefined) {
+    return (
+      config.travauxPointsChauds !== '' &&
+      config.travauxPointsChauds !== 'Jamais'
+    );
+  }
+
+  return config?.travailChaud === true;
+}
+
+function hotWorkFrequencyValue(config: any, isFr: boolean): string {
+  if (hasValue(config?.travauxPointsChauds)) {
+    return safeVal(config.travauxPointsChauds);
+  }
+
+  if (config?.travailChaud === true) {
+    return isFr ? 'Oui — donnée historique' : 'Yes — legacy data';
+  }
+
+  return '—';
 }
 
 function isHighRise(config: any): boolean {
@@ -212,7 +257,7 @@ function computePsiRequisLabel(config: any, isFr: boolean): string {
 function computeFrequenceLabel(config: any, isFr: boolean): string {
   const usage = (config.usagePrincipal || '').trim();
 
-  if (config.laboratoirePresent) {
+  if (config.laboratoirePresent && !usage.startsWith('A2')) {
     return isFr
       ? 'Tous les 3 mois (laboratoire — art. 2.8.3.2)'
       : 'Every 3 months (laboratory — art. 2.8.3.2)';
@@ -277,10 +322,7 @@ export function renderModule7(
   const chariotsPresent =
     config.chariotsPresent ?? config.chariotsElevateurs;
 
-  const hasHotWork =
-    (config.travauxPointsChauds &&
-      config.travauxPointsChauds !== 'Jamais') ||
-    config.travailChaud === true;
+  const hasHotWork = hasHotWorkConfigured(config);
 
   let subsectionCounter = 0;
 
@@ -546,7 +588,7 @@ export function renderModule7(
           )}
           ${infoRow(
             isFr ? 'Poste de surveillance' : 'Security station',
-            safeVal(config.posteSurveillance),
+            boolOrValue(config.posteSurveillance, isFr),
           )}
           ${infoRow(
             isFr ? "Contrôle d'accès" : 'Access control',
@@ -2365,7 +2407,11 @@ export function renderModule7(
         : 'Carbon Dioxide Detector (CO₂)',
       present: config.detecteurCO2,
     },
-  ].filter(detector => detector.present);
+  ].filter(
+    detector =>
+      detector.present !== undefined &&
+      detector.present !== null,
+  );
 
   const detectorsHtml = detectors
     .map(
@@ -2555,7 +2601,7 @@ export function renderModule7(
         <tbody>
           ${infoRow(
             isFr ? 'Fréquence' : 'Frequency',
-            safeVal(config.travauxPointsChauds),
+            hotWorkFrequencyValue(config, isFr),
           )}
           ${infoRow(
             isFr
@@ -2731,7 +2777,7 @@ export function renderModule7(
               isFr
                 ? 'Gicleurs dans les palettiers'
                 : 'In-rack sprinklers',
-              bool(config.palettierGicleurs, isFr),
+              boolOrValue(config.palettierGicleurs, isFr),
             )}
             ${infoRow(
               isFr ? 'Allées' : 'Aisles',
@@ -2761,7 +2807,7 @@ export function renderModule7(
               isFr
                 ? 'Palettes combustibles'
                 : 'Combustible pallets',
-              bool(config.stockagePalettesCombustible, isFr),
+              boolOrValue(config.stockagePalettesCombustible, isFr),
             )}
             ${infoRow(
               isFr ? 'Emplacement' : 'Location',
@@ -2777,7 +2823,7 @@ export function renderModule7(
             )}
             ${infoRow(
               isFr ? 'Classification' : 'Classification',
-              safeVal(config.stockageClassification),
+              listOrValue(config.stockageClassification),
             )}
           `
               : ''
@@ -2797,11 +2843,11 @@ export function renderModule7(
               ? `
             ${infoRow(
               isFr ? 'Giclée' : 'Sprinklered',
-              bool(config.mezzanineGicle, isFr),
+              boolOrValue(config.mezzanineGicle, isFr),
             )}
             ${infoRow(
               isFr ? 'Encloisonnée' : 'Enclosed',
-              bool(config.mezzanineEncloisonnee, isFr),
+              boolOrValue(config.mezzanineEncloisonnee, isFr),
             )}
             ${infoRow(
               isFr ? 'Localisation' : 'Location',
@@ -2861,7 +2907,7 @@ export function renderModule7(
               isFr
                 ? 'Local / espace dédié'
                 : 'Dedicated room / area',
-              bool(config.batteriesLithiumLocalEspace, isFr),
+              boolOrValue(config.batteriesLithiumLocalEspace, isFr),
             )}
             ${
               config.batteriesLithiumLocalEspaceCommentaire
@@ -2877,7 +2923,7 @@ export function renderModule7(
             }
             ${infoRow(
               isFr ? 'Détection dédiée' : 'Dedicated detection',
-              bool(config.batteriesLithiumDetection, isFr),
+              boolOrValue(config.batteriesLithiumDetection, isFr),
             )}
             ${
               config.batteriesLithiumDetectionCommentaire
@@ -2893,7 +2939,7 @@ export function renderModule7(
             }
             ${infoRow(
               isFr ? 'Signalisation' : 'Signage',
-              bool(config.batteriesLithiumSignalisation, isFr),
+              boolOrValue(config.batteriesLithiumSignalisation, isFr),
             )}
             ${
               config.batteriesLithiumSignalisationCommentaire

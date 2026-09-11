@@ -1179,6 +1179,11 @@ model IncidentEvent {
   containedAt        DateTime?
   resolvedAt       DateTime?
   closingNotes     String?
+  rexWentWell      String?        // Ce qui a bien fonctionné
+  rexToImprove     String?        // Points à améliorer
+  rexRecommendations String?      // Recommandations
+  rexCorrectiveActions String?    // Actions correctives
+  rexCompletedAt   DateTime?      // Date de finalisation du REX
   isActive         Boolean        @default(true)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt

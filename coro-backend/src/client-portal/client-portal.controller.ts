@@ -307,6 +307,16 @@ export class ClientPortalController {
     return this.incidentService.getIncidentHistory(buildingId, req.clientUser.organizationId);
   }
 
+  @Get('incidents/:incidentId/detail')
+  async getIncidentDetail(@Param('incidentId') incidentId: string, @Request() req: any) {
+    return this.incidentService.getIncidentDetail(incidentId, req.clientUser.organizationId);
+  }
+
+  @Put('incidents/:incidentId/rex')
+  async updateRex(@Param('incidentId') incidentId: string, @Body() body: any, @Request() req: any) {
+    return this.incidentService.updateRex(incidentId, body, req.clientUser.organizationId);
+  }
+
   @Get('notifications')
   async getNotifications(@Request() req: any) {
     return this.clientPortalService.getClientNotifications(

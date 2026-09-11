@@ -332,6 +332,48 @@ private async loadProceduresFromDB(
     }
   }
 
+  /**
+   * Résout la configuration utilisée pour une génération.
+   *
+   * Source canonique : Project.configData sauvegardé par le configurateur.
+   * Fallback legacy : body reçu par /generator/generate/:projectId lorsque
+   * configData n'existe pas encore (anciens projets / transition).
+   *
+   * IMPORTANT :
+   * - on ne fusionne pas le body avec configData : un navigateur possédant
+   *   un ancien localStorage ne doit jamais réintroduire des valeurs obsolètes;
+   * - false, 0, tableaux vides et chaînes explicites sont conservés tels quels;
+   * - une copie JSON détache le snapshot de l'objet Prisma / du body.
+   */
+  private async resolveGenerationConfig(
+    projectId: string,
+    organizationId: string,
+    fallbackConfig: any,
+  ): Promise<any> {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId },
+      select: { configData: true },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+
+    const persistedConfig = project.configData as any;
+    const hasPersistedConfig =
+      persistedConfig !== null &&
+      persistedConfig !== undefined &&
+      typeof persistedConfig === 'object' &&
+      !Array.isArray(persistedConfig) &&
+      Object.keys(persistedConfig).length > 0;
+
+    const source = hasPersistedConfig
+      ? persistedConfig
+      : (fallbackConfig ?? {});
+
+    return JSON.parse(JSON.stringify(source));
+  }
+
   private async buildContext(projectId: string, config: any): Promise<DocumentContext> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -377,7 +419,16 @@ private async loadProceduresFromDB(
 
   async generateAndSave(projectId: string, config: any, organizationId: string, userId?: string) {
     await this.assertProjectOwnership(projectId, organizationId);
-    const ctx = await this.buildContext(projectId, config);
+
+    // Une seule configuration résolue alimente toute la génération.
+    // Project.configData est canonique; le body n'est qu'un fallback legacy.
+    const resolvedConfig = await this.resolveGenerationConfig(
+      projectId,
+      organizationId,
+      config,
+    );
+
+    const ctx = await this.buildContext(projectId, resolvedConfig);
     const isPca = ctx.documentType === 'PCA';
     const isPsi = ctx.documentType === 'PSI';
 
@@ -393,7 +444,7 @@ private async loadProceduresFromDB(
         content: {
           modules_fr: pcaModules.fr,
           modules_en: pcaModules.en,
-          config,
+          config: resolvedConfig,
           generatedAt: new Date(),
         },
         status: 'IN_PROGRESS' as any,
@@ -461,7 +512,7 @@ private async loadProceduresFromDB(
       [];
     const existingCustomRoles = existingContent?.module3?.customRoles || [];
 
-    const module3Result = isPsi ? null : generateModule3(ctx, config, section2_2, existingCustomRoles);
+    const module3Result = isPsi ? null : generateModule3(ctx, resolvedConfig, section2_2, existingCustomRoles);
 
     // Récupère les rôles actifs depuis Module 3.
     // Chercher les rôles actifs dans les deux structures possibles.
@@ -488,7 +539,7 @@ private async loadProceduresFromDB(
     // Charger les procédures depuis la DB (avec overrides par organisation)
     const proceduresFromDB = await this.loadProceduresFromDB(
       organizationId,
-      config,
+      resolvedConfig,
       ctx.documentType,
       activeRoleCodes,
       customProcedureIds,
@@ -503,7 +554,7 @@ private async loadProceduresFromDB(
     // des procédures pourtant explicitement compatibles avec le PSI.
     const module4Result = generateModule4(
       ctx,
-      config,
+      resolvedConfig,
       activeRoleCodes,
       customProcedureIds,
       proceduresFromDB,
@@ -540,7 +591,7 @@ private async loadProceduresFromDB(
     };
 
     // Module 8 — Registres et Annexes
-    const module8Result = generateModule8(ctx, config);
+    const module8Result = generateModule8(ctx, resolvedConfig);
 
     const existing = await this.prisma.document.findFirst({
       where: { projectId },
@@ -569,7 +620,7 @@ private async loadProceduresFromDB(
           module7EN,
           module8Result.en,
         ],
-        config,
+        config: resolvedConfig,
         generatedAt: new Date(),
         // Préserve les données éditées manuellement, non régénérées automatiquement
         module2: previousContent.module2 || undefined,
