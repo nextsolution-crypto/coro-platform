@@ -375,46 +375,78 @@ export class OccupancyService {
       isPresent: presentIds.has(emp.id),
     }));
 
-    // Couverture par rôle
+    // Couverture par rôle avec logique de substitution
     const ROLE_TYPES = ['COORDINATOR', 'EPI', 'ASSEMBLY_WARDEN', 'SEARCHER', 'EXIT_WARDEN', 'PNA_ESCORT', 'FIRST_AIDER'];
     const roleCoverage = ROLE_TYPES.map(roleType => {
-      const membersForRole = allMembers.filter(m => m.emergencyRoles.some(r => r.role === roleType));
-      const presentForRole = membersForRole.filter(m => presentIds.has(m.id));
+      const membersForRole = allMembers
+        .filter(m => m.emergencyRoles.some(r => r.role === roleType))
+        .map(m => {
+          const roleEntry = m.emergencyRoles.find(r => r.role === roleType)!;
+          return {
+            id:         m.id,
+            firstName:  m.firstName,
+            lastName:   m.lastName,
+            isPresent:  presentIds.has(m.id),
+            assignType: roleEntry.assignType,
+            priority:   roleEntry.priority,
+            zone:       roleEntry.zone ?? null,
+          };
+        })
+        // Tri : titulaires en premier (PRIMARY avant ALTERNATE), puis par priorité croissante
+        .sort((a, b) => {
+          if (a.assignType === b.assignType) return a.priority - b.priority;
+          return a.assignType === 'PRIMARY' ? -1 : 1;
+        });
+
+      const presentForRole = membersForRole.filter(m => m.isPresent);
+
+      // Membre effectif : le premier présent dans l'ordre de priorité
+      const effectiveMember = presentForRole.length > 0 ? presentForRole[0] : null;
+
+      // Titulaire théorique (PRIMARY priorité 1)
+      const primaryMember = membersForRole.find(m => m.assignType === 'PRIMARY' && m.priority === 1) ?? null;
+
+      // Substitution active si le titulaire est absent et que le membre effectif est un substitut
+      const substitutionActive = !!effectiveMember
+        && !!primaryMember
+        && !primaryMember.isPresent
+        && effectiveMember.id !== primaryMember.id;
+
       return {
-        role: roleType,
-        total: membersForRole.length,
-        present: presentForRole.length,
-        members: membersForRole.map(m => ({
-          id: m.id,
-          firstName: m.firstName,
-          lastName: m.lastName,
-          isPresent: presentIds.has(m.id),
-          assignType: m.emergencyRoles.find(r => r.role === roleType)?.assignType ?? 'PRIMARY',
-          zone: m.emergencyRoles.find(r => r.role === roleType)?.zone ?? null,
-        })),
+        role:              roleType,
+        total:             membersForRole.length,
+        present:           presentForRole.length,
+        effectiveMember,
+        primaryMember,
+        substitutionActive,
+        members:           membersForRole,
       };
     }).filter(r => r.total > 0);
 
-    // Lacunes et réductions
+    // Lacunes (aucun membre présent) et capacité réduite
     const gaps    = roleCoverage.filter(r => r.present === 0);
     const reduced = roleCoverage.filter(r => r.present > 0 && r.present < r.total);
 
-    // Indice de préparation (% rôles couverts au minimum par 1 membre présent)
-    const totalRoles   = roleCoverage.length;
-    const coveredRoles = roleCoverage.filter(r => r.present > 0).length;
+    // Rôles avec substitution active
+    const substitutions = roleCoverage.filter(r => r.substitutionActive);
+
+    // Indice de préparation (% rôles couverts par au moins 1 membre présent)
+    const totalRoles     = roleCoverage.length;
+    const coveredRoles   = roleCoverage.filter(r => r.present > 0).length;
     const readinessIndex = totalRoles > 0 ? Math.round((coveredRoles / totalRoles) * 100) : 100;
-    const status = readinessIndex === 100 ? 'READY' : readinessIndex >= 60 ? 'REDUCED' : 'CRITICAL';
+    const status         = readinessIndex === 100 ? 'READY' : readinessIndex >= 60 ? 'REDUCED' : 'CRITICAL';
 
     return {
       status,
       readinessIndex,
-      totalMembers: allMembers.length,
-      presentMembers: membersWithPresence.filter(m => m.isPresent).length,
+      totalMembers:    allMembers.length,
+      presentMembers:  membersWithPresence.filter(m => m.isPresent).length,
       roleCoverage,
       gaps,
       reduced,
-      members: membersWithPresence,
-      computedAt: new Date().toISOString(),
+      substitutions,
+      members:         membersWithPresence,
+      computedAt:      new Date().toISOString(),
     };
   }
 

@@ -178,6 +178,34 @@ export default function ResiliencePage() {
             </div>
           )}
 
+          {/* Substitutions actives */}
+          {data.substitutions?.length > 0 && (
+            <div style={{ marginBottom: 20, padding: '16px 20px', borderRadius: 10, backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Shield size={15} color="#2980B9" />
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#2980B9' }}>Substitutions automatiques actives</p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {data.substitutions.map((r: any) => (
+                  <div key={r.role} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#2C3E50' }}>{ROLE_LABELS[r.role] || r.role}</span>
+                    <span style={{ fontSize: 12, color: '#ADB5BD' }}>→</span>
+                    <span style={{ fontSize: 12, color: '#ADB5BD', textDecoration: 'line-through' }}>
+                      {r.primaryMember?.firstName} {r.primaryMember?.lastName} (absent)
+                    </span>
+                    <span style={{ fontSize: 12, color: '#ADB5BD' }}>→</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#2980B9' }}>
+                      {r.effectiveMember?.firstName} {r.effectiveMember?.lastName}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#2980B9', backgroundColor: '#FFFFFF', border: '1px solid #AED6F1', padding: '2px 7px', borderRadius: 4 }}>
+                      Substitut actif
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Tableau par rôle */}
           <section style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden', marginBottom: 20 }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #E9ECEF' }}>
@@ -203,19 +231,25 @@ export default function ResiliencePage() {
                   </div>
                   {/* Membres */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {role.members.map((m: any) => (
-                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                        backgroundColor: m.isPresent ? '#EAFAF1' : '#F8F9FA',
-                        border: `1px solid ${m.isPresent ? '#A9DFBF' : '#E9ECEF'}`,
-                        color: m.isPresent ? '#27AE60' : '#ADB5BD' }}>
-                        {m.isPresent
-                          ? <CheckCircle size={12} color="#27AE60" />
-                          : <XCircle size={12} color="#DEE2E6" />}
-                        {m.firstName} {m.lastName}
-                        {m.assignType === 'ALTERNATE' && <span style={{ fontSize: 10, color: '#ADB5BD' }}>(sub.)</span>}
-                        {m.zone && <span style={{ fontSize: 10, color: '#ADB5BD' }}>— {m.zone}</span>}
-                      </div>
-                    ))}
+                    {role.members.map((m: any) => {
+                      const isEffective = role.effectiveMember?.id === m.id;
+                      const isSubActive = isEffective && role.substitutionActive;
+                      return (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                          backgroundColor: isSubActive ? '#EBF5FB' : m.isPresent ? '#EAFAF1' : '#F8F9FA',
+                          border: `1px solid ${isSubActive ? '#AED6F1' : m.isPresent ? '#A9DFBF' : '#E9ECEF'}`,
+                          color: isSubActive ? '#2980B9' : m.isPresent ? '#27AE60' : '#ADB5BD',
+                          boxShadow: isEffective ? '0 0 0 2px rgba(41,128,185,0.2)' : 'none' }}>
+                          {m.isPresent
+                            ? <CheckCircle size={12} color={isSubActive ? '#2980B9' : '#27AE60'} />
+                            : <XCircle size={12} color="#DEE2E6" />}
+                          {m.firstName} {m.lastName}
+                          {isSubActive && <span style={{ fontSize: 10, fontWeight: 700, color: '#2980B9' }}>★ actif</span>}
+                          {!isSubActive && m.assignType === 'ALTERNATE' && <span style={{ fontSize: 10, color: '#ADB5BD' }}>(sub.)</span>}
+                          {m.zone && <span style={{ fontSize: 10, color: '#ADB5BD' }}>— {m.zone}</span>}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
