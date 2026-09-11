@@ -137,20 +137,49 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const waitForOfficialPdf = async (maxAttempts = 45, delayMs = 2000) => {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const status = await apiGet(`/client-portal/projects/${projectId}/sign-status`);
-      if (status?.status === 'READY') return status;
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+  // Tant que le client a signé mais que les deux PDF officiels ne sont pas prêts,
+  // la page vérifie silencieusement leur disponibilité. Aucun écran bloquant.
+  useEffect(() => {
+    if (!user || !project) return;
+
+    const signedByCurrentUser = project.signatures?.some(
+      (signature: any) => signature.clientUser?.email === user.email
+    );
+
+    if (!signedByCurrentUser || (project.officialPdfFr && project.officialPdfEn)) {
+      return;
     }
-    return null;
-  };
+
+    const interval = window.setInterval(async () => {
+      try {
+        const status = await apiGet(
+          `/client-portal/projects/${projectId}/sign-status`
+        );
+
+        if (status?.status === 'READY') {
+          window.clearInterval(interval);
+          await fetchData();
+          toast('Les PDF officiels FR et EN sont maintenant disponibles.', 'success');
+        }
+      } catch (err) {
+        // Vérification silencieuse : la signature reste enregistrée.
+        console.error('Vérification statut PDF officiel:', err);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [
+    user?.email,
+    projectId,
+    project?.officialPdfFr,
+    project?.officialPdfEn,
+    project?.signatures?.length,
+  ]);
 
   const handleSign = async () => {
     if (!signName.trim()) return;
 
     setSigning(true);
-    setFinalizingSignature(true);
 
     try {
       await apiPost(
@@ -161,49 +190,49 @@ export default function DocumentDetailPage() {
         }
       );
 
-      const ready = await waitForOfficialPdf();
-
+      // La signature est l'action métier principale.
+      // La génération FR/EN se poursuit côté serveur sans bloquer le client.
       await fetchData();
       setShowSignModal(false);
       setSignComment('');
 
-      if (ready) {
-        toast('Document signé. Les PDF officiels FR et EN sont prêts.', 'success');
-      } else {
-        toast(
-          'Votre signature est enregistrée. La finalisation du PDF officiel prend plus de temps que prévu; vous pouvez revenir ici sans signer de nouveau.',
-          'info',
-        );
-      }
+      toast(
+        'Document signé. CORO prépare maintenant les PDF officiels FR et EN en arrière-plan.',
+        'success',
+      );
     } catch (err) {
       console.error(err);
+
+      // Réconciliation : si la réponse HTTP s'est perdue après l'enregistrement
+      // de la signature, on recharge l'état réel avant d'afficher l'erreur.
       await fetchData().catch(() => {});
+
       toast(
-        'Impossible de confirmer la finalisation. Si votre signature apparaît ci-dessous, elle est bien enregistrée et vous ne devez pas signer de nouveau.',
+        'Impossible de confirmer la réponse du serveur. Si votre signature apparaît, elle est bien enregistrée et vous ne devez pas signer de nouveau.',
         'error',
       );
     } finally {
-      setFinalizingSignature(false);
       setSigning(false);
     }
   };
 
   const handleRetryOfficialPdf = async () => {
     setFinalizingSignature(true);
+
     try {
       await apiPost(`/client-portal/projects/${projectId}/sign/retry`, {});
-      const ready = await waitForOfficialPdf();
+      toast(
+        'La préparation des PDF officiels a été relancée. Vous pouvez quitter cette page.',
+        'info',
+      );
 
-      await fetchData();
-
-      if (ready) {
-        toast('PDF officiels finalisés avec succès.', 'success');
-      } else {
-        toast('La finalisation est toujours en cours. Réessayez dans quelques instants.', 'info');
-      }
+      // Un simple rafraîchissement suffit; aucune attente bloquante.
+      setTimeout(() => {
+        fetchData().catch(() => {});
+      }, 2500);
     } catch (err) {
       console.error(err);
-      toast('Impossible de relancer la finalisation du PDF officiel.', 'error');
+      toast('Impossible de relancer la préparation du PDF officiel.', 'error');
     } finally {
       setFinalizingSignature(false);
     }
@@ -617,31 +646,80 @@ const handleRefuse = async () => {
               )}
 
               {mySignature && (!project?.officialPdfFr || !project?.officialPdfEn) && (
-                <button
-                  type="button"
-                  onClick={handleRetryOfficialPdf}
-                  disabled={finalizingSignature}
+                <div
                   style={{
-                    minHeight: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                    padding: '10px 16px',
-                    borderRadius: 7,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    backgroundColor: '#FEF9E7',
-                    color: '#F39C12',
-                    border: '1px solid #FAD7A0',
-                    cursor: finalizingSignature ? 'not-allowed' : 'pointer',
-                    opacity: finalizingSignature ? 0.7 : 1,
                     width: '100%',
-                    minWidth: 0,
+                    padding: '14px 16px',
+                    borderRadius: 7,
+                    backgroundColor: '#FEF9E7',
+                    border: '1px solid #FAD7A0',
                   }}
                 >
-                  {finalizingSignature ? '⏳ Finalisation...' : '↻ Finaliser le PDF officiel'}
-                </button>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        fontSize: 18,
+                        lineHeight: 1.2,
+                        color: '#F39C12',
+                      }}
+                    >
+                      ⏳
+                    </span>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: '#B9770E',
+                        }}
+                      >
+                        Document signé — PDF officiel en préparation
+                      </p>
+
+                      <p
+                        style={{
+                          margin: '4px 0 0',
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                          color: '#6C757D',
+                        }}
+                      >
+                        Votre signature est enregistrée. CORO prépare les versions FR et EN en arrière-plan. Vous pouvez quitter cette page et revenir plus tard.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={handleRetryOfficialPdf}
+                        disabled={finalizingSignature}
+                        style={{
+                          marginTop: 9,
+                          padding: 0,
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#B9770E',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: finalizingSignature ? 'not-allowed' : 'pointer',
+                          opacity: finalizingSignature ? 0.6 : 1,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        {finalizingSignature
+                          ? 'Relance en cours...'
+                          : 'Relancer la préparation en cas de problème'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {!mySignature && (
@@ -1769,82 +1847,7 @@ const handleRefuse = async () => {
           </div>
         </div>
       )}
-      {/* Overlay chargement signature */}
-      {(signing || finalizingSignature) && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 2000,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 16,
-              padding: 'clamp(28px, 6vw, 48px)',
-              maxWidth: 420,
-              width: '100%',
-              textAlign: 'center',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
-            }}
-          >
-            {/* Spinner */}
-            <div style={{
-              width: 56, height: 56,
-              borderRadius: '50%',
-              border: '4px solid #F4ECF7',
-              borderTopColor: '#8E44AD',
-              margin: '0 auto 24px',
-              animation: 'spin 1s linear infinite',
-            }} />
-
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#2C3E50' }}>
-              Finalisation du document...
-            </h3>
-            <p style={{ margin: '0 0 24px', fontSize: 14, lineHeight: 1.6, color: '#6C757D' }}>
-              Votre signature est enregistrée. CORO prépare maintenant les versions officielles FR et EN. Vous n'aurez pas à signer une deuxième fois.
-            </p>
-
-            {/* Étapes animées */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
-              {[
-                { label: 'Signature enregistrée',             delay: '0s' },
-                { label: 'Génération du PDF officiel (FR/EN)', delay: '1s' },
-                { label: 'Finalisation du document',          delay: '2s' },
-              ].map((step, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 14px', borderRadius: 8,
-                  backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF',
-                  animation: `fadeIn 0.5s ease ${step.delay} both`,
-                }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                    border: '2px solid #8E44AD', borderTopColor: 'transparent',
-                    animation: `spin 1s linear infinite`,
-                  }} />
-                  <span style={{ fontSize: 13, color: '#495057', fontWeight: 500 }}>
-                    {step.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <p style={{ margin: '20px 0 0', fontSize: 12, color: '#ADB5BD' }}>
-              Vous pouvez laisser cette fenêtre ouverte pendant la finalisation.
-            </p>
-          </div>
-        </div>
-      )}
-
-      <style>{`
+<style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>

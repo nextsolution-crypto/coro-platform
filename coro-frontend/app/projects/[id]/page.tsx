@@ -289,7 +289,35 @@ export default function ProjectDetailPage() {
       else if (action === 'approve') toast('Document approuvé.');
       else toast('Document retourné pour révision.');
     } catch (err) {
-      toast('Erreur lors du traitement.', 'error');
+      console.error('Erreur workflow approbation:', err);
+
+      // Un appel peut avoir été appliqué côté serveur avant qu'une opération
+      // secondaire (notification, réponse HTTP, proxy, etc.) échoue.
+      // On relit donc l'état réel avant d'inviter l'utilisateur à recliquer.
+      try {
+        const stateRes = await api.get(`/projects/${projectId}`);
+        const actualStatus = stateRes.data?.status;
+
+        if (action === 'submit' && actualStatus === 'REVIEW') {
+          await fetchData();
+          toast('Document soumis pour approbation.');
+          return;
+        }
+        if (action === 'approve' && ['VALIDATED', 'EXPORTED'].includes(actualStatus)) {
+          await fetchData();
+          toast('Document approuvé.');
+          return;
+        }
+        if ((action === 'reject' || action === 'request-revision') && actualStatus === 'IN_PROGRESS') {
+          await fetchData();
+          toast('Document retourné pour révision.');
+          return;
+        }
+      } catch (stateErr) {
+        console.error('Impossible de réconcilier l’état d’approbation:', stateErr);
+      }
+
+      toast('Erreur lors du traitement. L’état du projet n’a pas pu être confirmé.', 'error');
     } finally {
       setProcessingApproval(false);
     }
@@ -404,6 +432,20 @@ export default function ProjectDetailPage() {
   const sc  = statusColors[project.status] || statusColors.DRAFT;
   const dc  = docTypeColors[project.documentType] || '#6C757D';
 
+  // Une URL officialPdf* peut appartenir à une ancienne version du projet.
+  // On n'affiche la version officielle que si la version documentaire courante
+  // (la plus récente) porte réellement une signature client.
+  const latestVersion = versionHistory.length > 0
+    ? versionHistory.reduce((latest, current) =>
+        Number(current.versionNumber) > Number(latest.versionNumber) ? current : latest
+      )
+    : null;
+  const currentVersionIsSigned = Boolean(latestVersion?.signedAt);
+  const canShowOfficialSignedPdf =
+    ['VALIDATED', 'EXPORTED'].includes(project.status) &&
+    currentVersionIsSigned &&
+    Boolean(project.officialPdfFr || project.officialPdfEn);
+
   const steps = [
     {
       num: 1,
@@ -490,7 +532,7 @@ export default function ProjectDetailPage() {
             {project.status === 'IN_PROGRESS' && hasDocument && (
               <button
                 onClick={() => handleApproval('submit')}
-                disabled={statusChanging}
+                disabled={statusChanging || processingApproval}
                 className="text-sm font-medium px-4 py-2 rounded transition-colors disabled:opacity-50"
                 style={{ border: '1px solid #A9DFBF', color: '#27AE60' }}
                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EAFAF1'}
@@ -943,7 +985,8 @@ export default function ProjectDetailPage() {
               </div>
               <button
                 onClick={() => handleApproval('submit')}
-                className="text-sm font-medium px-4 py-2 rounded flex-shrink-0 text-white"
+                disabled={processingApproval}
+                className="text-sm font-medium px-4 py-2 rounded flex-shrink-0 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: '#27AE60' }}
                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}
@@ -1125,7 +1168,7 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         )}
-        {(project.officialPdfFr || project.officialPdfEn) && (
+        {canShowOfficialSignedPdf && (
           <div className="rounded p-3 mb-4"
             style={{ backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE' }}>
             <p className="text-sm font-semibold mb-1" style={{ color: '#8E44AD' }}>

@@ -79,14 +79,11 @@ export class ExportService {
       result.en = await this.generateSingleLanguagePdf(doc, content, 'en', options);
     }
 
-    // ── Progression → 85% après export (sauf aperçu) ─────────────────────────
-    if (!options.isPreview) {
-      await this.prisma.project.update({
-        where: { id: projectId },
-        data: { progress: 85 },
-      });
-    }
-
+    // IMPORTANT : la génération PDF est un moteur de rendu, pas une étape
+    // de workflow. Elle ne doit jamais modifier la progression du projet.
+    // La progression est pilotée par les services métier (génération,
+    // approbation, signature/finalisation), afin qu'un export ou un retry
+    // ne puisse pas faire reculer un projet signé de 100 % à 85 %.
     return result;
   }
 
