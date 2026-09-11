@@ -167,6 +167,7 @@ model Building {
   employees          BuildingEmployee[]
   visitorInvitations VisitorInvitation[]
   emergencyRoles     EmployeeEmergencyRole[]
+  incidentEvents     IncidentEvent[]
 }
 
 model Project {
@@ -973,6 +974,32 @@ model RefreshToken {
   isRevoked Boolean  @default(false)
 }
 
+// ─── CORO SENTINELLE — Module Incident ──────────────────────────────────────
+
+enum IncidentType {
+  FIRE
+  EVACUATION
+  MEDICAL
+  SECURITY
+  HAZMAT
+  LOCKDOWN
+  OTHER
+}
+
+enum IncidentStatus {
+  ACTIVE
+  CONTAINED
+  RESOLVED
+}
+
+enum IncidentTaskStatus {
+  PENDING
+  ACKNOWLEDGED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 // ─── CORO SENTINELLE — Organisation d'urgence ───────────────────────────────
 
 enum EmergencyRoleType {
@@ -1097,6 +1124,7 @@ model BuildingEmployee {
   emergencyRoles   EmployeeEmergencyRole[]
   qualifications   EmployeeQualification[]
   isEmergencyMember Boolean @default(false)
+  incidentTasks    IncidentTask[]
 }
 
 model EmployeeEmergencyRole {
@@ -1123,6 +1151,56 @@ model EmployeeQualification {
   expiresAt    DateTime?
   notes        String?
   createdAt    DateTime         @default(now())
+}
+
+model IncidentEvent {
+  id               String         @id @default(uuid())
+  buildingId       String
+  building         Building       @relation(fields: [buildingId], references: [id])
+  organizationId   String
+  type             IncidentType
+  status           IncidentStatus @default(ACTIVE)
+  triggeredAt      DateTime       @default(now())
+  triggeredBy      String         // Nom de la personne qui a déclenché
+  description      String?
+  occupantsSnapshot Json          // Snapshot des occupants au moment du déclenchement
+  teamSnapshot      Json          // Snapshot de l'équipe mobilisable au moment du déclenchement
+  containedAt      DateTime?
+  resolvedAt       DateTime?
+  closingNotes     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  tasks  IncidentTask[]
+  logs   IncidentLog[]
+}
+
+model IncidentTask {
+  id               String             @id @default(uuid())
+  incidentEventId  String
+  incidentEvent    IncidentEvent      @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  employeeId       String?
+  employee         BuildingEmployee?  @relation(fields: [employeeId], references: [id])
+  role             EmergencyRoleType
+  title            String
+  description      String?
+  status           IncidentTaskStatus @default(PENDING)
+  notifiedAt       DateTime?
+  acknowledgedAt   DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model IncidentLog {
+  id              String        @id @default(uuid())
+  incidentEventId String
+  incidentEvent   IncidentEvent @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  timestamp       DateTime      @default(now())
+  action          String
+  actor           String?
+  details         String?
+  isAutomatic     Boolean       @default(true)
 }
 
 model VisitorInvitation {
