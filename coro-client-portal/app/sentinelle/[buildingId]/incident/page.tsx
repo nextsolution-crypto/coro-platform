@@ -60,6 +60,7 @@ export default function IncidentPage() {
   const [selectedType, setSelectedType]   = useState('FIRE_ALERT');
   const [description, setDescription]    = useState('');
   const [showTrigger, setShowTrigger]     = useState(false);
+  const [isExercise, setIsExercise]       = useState(false);
 
   useEffect(() => {
     const u = getUser();
@@ -90,6 +91,7 @@ export default function IncidentPage() {
         buildingId, type: selectedType,
         triggeredBy: `${user?.firstName} ${user?.lastName}`,
         description: description || null,
+        isExercise,
       });
       setDescription(''); setShowTrigger(false);
       await fetchIncidents();
@@ -204,10 +206,25 @@ export default function IncidentPage() {
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
             placeholder="Description complémentaire (optionnel)..."
             style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, resize: 'none', boxSizing: 'border-box', marginBottom: 12 }} />
+          {/* Toggle mode exercice */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 8, backgroundColor: isExercise ? '#FEF9E7' : '#F8F9FA', border: `1px solid ${isExercise ? '#F59E0B' : '#E9ECEF'}`, marginBottom: 12 }}>
+            <button type="button" onClick={() => setIsExercise(!isExercise)}
+              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', position: 'relative', backgroundColor: isExercise ? '#E67E22' : '#DEE2E6', transition: 'background 0.2s', flexShrink: 0 }}>
+              <span style={{ position: 'absolute', top: 2, left: isExercise ? 22 : 2, width: 20, height: 20, borderRadius: '50%', backgroundColor: '#FFFFFF', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </button>
+            <div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isExercise ? '#E67E22' : '#6C757D' }}>
+                {isExercise ? '🎯 Mode EXERCICE activé' : 'Mode exercice'}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#ADB5BD' }}>
+                {isExercise ? 'Les occupants ne seront PAS notifiés. Courriels/SMS préfixés [EXERCICE].' : 'Activer pour une simulation sans notifier les occupants.'}
+              </p>
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={handleTrigger} disabled={triggering}
-              style={{ padding: '12px 24px', borderRadius: 8, border: 'none', backgroundColor: '#C0392B', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: triggering ? 0.7 : 1 }}>
-              {triggering ? 'Déclenchement...' : '🚨 Déclencher'}
+              style={{ padding: '12px 24px', borderRadius: 8, border: 'none', backgroundColor: isExercise ? '#E67E22' : '#C0392B', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: triggering ? 0.7 : 1 }}>
+              {triggering ? 'Déclenchement...' : isExercise ? '🎯 Lancer l\'exercice' : '🚨 Déclencher'}
             </button>
             <button type="button" onClick={() => setShowTrigger(false)}
               style={{ padding: '12px 20px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -243,6 +260,7 @@ export default function IncidentPage() {
                 <AlertTriangle size={20} color={scfg.color} />
                 <div>
                   <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: scfg.color }}>
+                    {incident.isExercise && <span style={{ fontSize: 12, backgroundColor: '#E67E22', color: '#FFFFFF', padding: '2px 8px', borderRadius: 4, marginRight: 8 }}>🎯 EXERCICE</span>}
                     {scfg.label} — {typeInfo?.label || incident.type}
                   </p>
                   <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6C757D' }}>
@@ -338,6 +356,29 @@ export default function IncidentPage() {
                   })}
                 </div>
               </div>
+
+              {/* Tâches membres — accusés de réception */}
+              {(incident.tasks || []).filter((t: any) => !t.isCoordinatorStep).length > 0 && (
+                <div style={{ borderRight: '1px solid #F1F3F5', borderTop: '1px solid #F1F3F5' }}>
+                  <div style={{ padding: '12px 20px', borderBottom: '1px solid #F1F3F5' }}>
+                    <h2 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>Équipe mobilisée — Accusés de réception</h2>
+                  </div>
+                  {(incident.tasks || []).filter((t: any) => !t.isCoordinatorStep).map((task: any) => (
+                    <div key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: '1px solid #F8F9FA', gap: 8 }}>
+                      <span style={{ fontSize: 13, color: '#2C3E50', fontWeight: 500 }}>
+                        {task.employee ? `${task.employee.firstName} ${task.employee.lastName}` : task.title}
+                      </span>
+                      {task.status === 'ACKNOWLEDGED' ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#27AE60', backgroundColor: '#EAFAF1', padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap' as const }}>
+                          ✅ {task.acknowledgedAt ? new Date(task.acknowledgedAt).toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' }) : 'Confirmé'}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#ADB5BD' }}>En attente…</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Journal */}
               <div>

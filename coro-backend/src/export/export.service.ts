@@ -18,6 +18,7 @@ import { renderModule7 } from './templates/modules/module7.template';
 import { renderModule3 } from './templates/modules/module3.template';
 import { renderModule4, renderProcedure } from './templates/modules/module4.template';
 import { createDocumentBuilder } from './builders/document-builder.factory';
+import { generateCertificationPage, CertificationData, CERTIFICATION_STYLES } from './templates/certification.template';
 
 export interface ExportOptions {
   selectedModules: number[];   // ex: [1, 2, 3, 4, 7, 8]
@@ -72,11 +73,18 @@ export class ExportService {
     const content = doc.content as any;
     const result: { fr?: Buffer; en?: Buffer } = {};
 
+    // La certification est une couche documentaire CORO, distincte des modules.
+    // Elle n'est chargée que pour un rendu non-aperçu et uniquement si la
+    // version documentaire courante possède une signature client rattachée.
+    const certification = options.isPreview
+      ? null
+      : await this.getCurrentVersionCertification(projectId);
+
     if (options.language === 'fr' || options.language === 'both') {
-      result.fr = await this.generateSingleLanguagePdf(doc, content, 'fr', options);
+      result.fr = await this.generateSingleLanguagePdf(doc, content, 'fr', options, certification);
     }
     if (options.language === 'en' || options.language === 'both') {
-      result.en = await this.generateSingleLanguagePdf(doc, content, 'en', options);
+      result.en = await this.generateSingleLanguagePdf(doc, content, 'en', options, certification);
     }
 
     // IMPORTANT : la génération PDF est un moteur de rendu, pas une étape
@@ -96,6 +104,7 @@ export class ExportService {
     content: any,
     lang: 'fr' | 'en',
     options: ExportOptions,
+    certification: CertificationData | null,
   ): Promise<Buffer> {
     const project = doc.project;
     const modules = lang === 'fr' ? content.modules_fr : content.modules_en;
@@ -360,6 +369,38 @@ export class ExportService {
       });
       await coverPage.close();
 
+      // ── Page de certification CORO ──
+      // Présente uniquement pour un document non-aperçu dont la version courante
+      // possède une signature client explicitement rattachée.
+      let certificationPageBytes: Uint8Array | null = null;
+
+      if (certification) {
+        const certificationHtml = generateCertificationPage(certification, lang);
+        const fullCertificationHtml = `
+          <!DOCTYPE html>
+          <html lang="${lang}">
+          <head>
+            <meta charset="UTF-8" />
+            <style>
+              ${CERTIFICATION_STYLES}
+              @page { size: letter portrait; margin: 0; }
+            </style>
+          </head>
+          <body>${certificationHtml}</body>
+          </html>
+        `;
+
+        const certificationPage = await browser.newPage();
+        await certificationPage.setContent(fullCertificationHtml, { waitUntil: 'load' });
+        certificationPageBytes = await certificationPage.pdf({
+          format: 'Letter',
+          printBackground: true,
+          displayHeaderFooter: false,
+          margin: { top: '0', bottom: '0', left: '0', right: '0' },
+        });
+        await certificationPage.close();
+      }
+
       // ── Dernière page ──
       const lastPageHtml = generateLastPage({
         companyName: project.user?.companyName || undefined,
@@ -400,6 +441,7 @@ export class ExportService {
         Buffer.from(coverBytes),
         Buffer.from(tocBytes),
         ...bodyBuffersWithMeta.map(b => b.buffer),
+        ...(certificationPageBytes ? [Buffer.from(certificationPageBytes)] : []),
         Buffer.from(lastPageBytes),
       ];
 
@@ -424,6 +466,12 @@ export class ExportService {
         if (b.isSeparator) separatorSourceIndices.add(idx + 2);
       });
 
+      // La certification possède sa propre identité visuelle CORO et ne reçoit
+      // donc pas les filigranes génériques du corps du document.
+      if (certificationPageBytes) {
+        separatorSourceIndices.add(2 + bodyBuffersWithMeta.length);
+      }
+
       await this.drawWatermarks(
         mergedPdf.pdfDoc,
         mergedPdf.pageRanges,
@@ -443,6 +491,54 @@ export class ExportService {
         console.warn('Avertissement fermeture navigateur (ignoré) :', err);
       }
     }
+  }
+
+  // ============================================================
+  // CERTIFICATION DE LA VERSION DOCUMENTAIRE COURANTE
+  // ============================================================
+
+  private async getCurrentVersionCertification(
+    projectId: string,
+  ): Promise<CertificationData | null> {
+    const version = await this.prisma.projectVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+      include: {
+        signatures: {
+          orderBy: { signedAt: 'asc' },
+          take: 1,
+        },
+        project: {
+          include: {
+            building: true,
+          },
+        },
+      },
+    });
+
+    if (!version || version.signatures.length === 0) {
+      return null;
+    }
+
+    const signature = version.signatures[0];
+    const snapshot = (version.snapshot as any) || {};
+
+    return {
+      projectId,
+      projectName: version.project.name,
+      documentType: version.project.documentType,
+      buildingName: version.project.building?.name || version.project.name,
+      year: version.project.year,
+      versionId: version.id,
+      versionNumber: version.versionNumber,
+      approvedBy: snapshot.approvedBy ?? null,
+      approvedAt: snapshot.approvedAt ?? null,
+      signatureId: signature.id,
+      signedBy: signature.fullName,
+      signedEmail: signature.email,
+      signedAt: signature.signedAt,
+      comment: signature.comment ?? null,
+    };
   }
 
   // ============================================================

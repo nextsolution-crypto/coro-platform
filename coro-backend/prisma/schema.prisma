@@ -434,7 +434,10 @@ model ProjectVersion {
   snapshot      Json
   createdAt     DateTime @default(now())
 
-  project Project @relation(fields: [projectId], references: [id])
+  project    Project             @relation(fields: [projectId], references: [id])
+  signatures DocumentSignature[]
+
+  @@unique([projectId, versionNumber])
 }
 
 model ProjectTemplate {
@@ -751,16 +754,25 @@ model ClientUser {
 }
 
 model DocumentSignature {
-  id            String   @id @default(uuid())
-  projectId     String
-  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  clientUserId  String
-  clientUser    ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
-  fullName      String
-  email         String
-  signedAt      DateTime @default(now())
-  ipAddress     String?
-  comment       String?
+  id               String   @id @default(uuid())
+
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  projectVersionId String?
+  projectVersion   ProjectVersion? @relation(fields: [projectVersionId], references: [id], onDelete: SetNull)
+
+  clientUserId     String
+  clientUser       ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  fullName         String
+  email            String
+  signedAt         DateTime @default(now())
+  ipAddress        String?
+  comment          String?
+
+  @@index([projectId])
+  @@index([projectVersionId])
 }
 
 enum ClientUserRole {
@@ -1185,6 +1197,7 @@ model IncidentEvent {
   rexCorrectiveActions String?    // Actions correctives
   rexCompletedAt   DateTime?      // Date de finalisation du REX
   isActive         Boolean        @default(true)
+  isExercise       Boolean        @default(false)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -1206,6 +1219,7 @@ model IncidentTask {
   stepOrder        Int               @default(0)
   isCoordinatorStep Boolean          @default(false)
   status           IncidentTaskStatus @default(PENDING)
+  ackToken         String?        @unique
   notifiedAt       DateTime?
   acknowledgedAt   DateTime?
   completedAt      DateTime?

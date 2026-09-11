@@ -87,12 +87,12 @@ export class ApprovalService {
     const approverName = `${approver?.firstName ?? ''} ${approver?.lastName ?? ''}`.trim();
     const now = new Date();
 
-    // 1. Réinitialiser les anciennes signatures.
-    await this.prisma.documentSignature.deleteMany({
-      where: { projectId },
-    });
-
-    // 2. Calculer le prochain numéro de version.
+    // 1. Calculer le prochain numéro de version.
+    //
+    // Important :
+    // les signatures des anciennes versions sont volontairement conservées.
+    // Une nouvelle approbation crée une nouvelle version documentaire non signée,
+    // sans supprimer la piste d'audit des versions précédentes.
     const lastVersion = await this.prisma.projectVersion.findFirst({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },
@@ -101,7 +101,10 @@ export class ApprovalService {
 
     const nextVersionNumber = (lastVersion?.versionNumber ?? 0) + 1;
 
-    // 3. Créer la version approuvée.
+    // 2. Créer la nouvelle version approuvée.
+    //
+    // La signature client sera rattachée explicitement à cette ProjectVersion
+    // lorsqu'elle sera créée depuis le portail client.
     await this.prisma.projectVersion.create({
       data: {
         projectId,
@@ -120,8 +123,13 @@ export class ApprovalService {
       },
     });
 
-    // 4. Mutation métier principale.
+    // 3. Mutation métier principale.
     // Cette mise à jour termine l'approbation métier.
+    //
+    // Les PDF officiels de la version précédente ne sont plus les artefacts officiels
+    // de la nouvelle version approuvée. Ils restent dans le stockage / historique,
+    // mais les pointeurs actifs du projet sont remis à null afin d'exiger une nouvelle
+    // signature et une nouvelle génération officielle pour cette version.
     await this.prisma.project.update({
       where: { id: projectId },
       data: {
@@ -134,7 +142,7 @@ export class ApprovalService {
       },
     });
 
-    // 5. Notifications / emails secondaires.
+    // 4. Notifications / emails secondaires.
     // Une panne de notification ou d'email ne doit pas invalider une approbation déjà
     // enregistrée en base.
     void this.notifyApproval(

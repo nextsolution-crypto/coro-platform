@@ -98,8 +98,26 @@ export class ClientPortalService {
     clientUser: any,
     data: { fullName: string; comment?: string; ipAddress?: string },
   ) {
+    // La signature doit toujours être rattachée à la version documentaire
+    // actuellement approuvée. Une signature d'une ancienne version ne doit
+    // jamais rendre la nouvelle version "signée".
+    const latestVersion = await this.prisma.projectVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+    });
+
+    if (!latestVersion) {
+      throw new Error(
+        'Aucune version approuvée n’est disponible pour ce document.',
+      );
+    }
+
     const existing = await this.prisma.documentSignature.findFirst({
-      where: { projectId, clientUserId: clientUser.sub },
+      where: {
+        projectId,
+        projectVersionId: latestVersion.id,
+        clientUserId: clientUser.sub,
+      },
     });
 
     if (existing) {
@@ -117,40 +135,37 @@ export class ClientPortalService {
       };
     }
 
+    const signedAt = new Date();
+
     const signature = await this.prisma.documentSignature.create({
       data: {
         projectId,
+        projectVersionId: latestVersion.id,
         clientUserId: clientUser.sub,
         fullName: data.fullName,
         email: clientUser.email,
+        signedAt,
         comment: data.comment,
         ipAddress: data.ipAddress,
       },
     });
 
-    const signedAt = new Date();
-
     try {
-      const latestVersion = await this.prisma.projectVersion.findFirst({
-        where: { projectId },
-        orderBy: { versionNumber: 'desc' },
-      });
+      const snap = (latestVersion.snapshot as any) || {};
 
-      if (latestVersion) {
-        const snap = (latestVersion.snapshot as any) || {};
-        await this.prisma.projectVersion.update({
-          where: { id: latestVersion.id },
-          data: {
-            label: `v${latestVersion.versionNumber} — signé`,
-            snapshot: {
-              ...snap,
-              signedBy: data.fullName,
-              signedAt: signedAt.toISOString(),
-              signedEmail: clientUser.email,
-            },
+      await this.prisma.projectVersion.update({
+        where: { id: latestVersion.id },
+        data: {
+          label: `v${latestVersion.versionNumber} — signé`,
+          snapshot: {
+            ...snap,
+            signedBy: data.fullName,
+            signedAt: signedAt.toISOString(),
+            signedEmail: clientUser.email,
+            signatureId: signature.id,
           },
-        });
-      }
+        },
+      });
     } catch (e) {
       console.error('Erreur mise à jour version après signature:', e);
     }
@@ -188,9 +203,28 @@ export class ClientPortalService {
   }
 
   async getSignatureStatus(projectId: string, clientUser: any) {
+    const latestVersion = await this.prisma.projectVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+      select: { id: true },
+    });
+
+    if (!latestVersion) {
+      return {
+        status: 'NOT_SIGNED' as const,
+        signature: null,
+        officialPdfFr: null,
+        officialPdfEn: null,
+      };
+    }
+
     const [signature, project] = await Promise.all([
       this.prisma.documentSignature.findFirst({
-        where: { projectId, clientUserId: clientUser.sub },
+        where: {
+          projectId,
+          projectVersionId: latestVersion.id,
+          clientUserId: clientUser.sub,
+        },
       }),
       this.prisma.project.findUnique({
         where: { id: projectId },
@@ -225,8 +259,22 @@ export class ClientPortalService {
   }
 
   async retryOfficialPdfGeneration(projectId: string, clientUser: any) {
+    const latestVersion = await this.prisma.projectVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+      select: { id: true },
+    });
+
+    if (!latestVersion) {
+      throw new Error('Aucune version approuvée n’est disponible pour ce document.');
+    }
+
     const signature = await this.prisma.documentSignature.findFirst({
-      where: { projectId, clientUserId: clientUser.sub },
+      where: {
+        projectId,
+        projectVersionId: latestVersion.id,
+        clientUserId: clientUser.sub,
+      },
     });
 
     if (!signature) {
@@ -267,6 +315,30 @@ export class ClientPortalService {
         officialPdfFr: project.officialPdfFr,
         officialPdfEn: project.officialPdfEn,
       };
+    }
+
+    const latestVersion = await this.prisma.projectVersion.findFirst({
+      where: { projectId },
+      orderBy: { versionNumber: 'desc' },
+      select: { id: true },
+    });
+
+    if (!latestVersion) {
+      throw new Error('Aucune version approuvée n’est disponible pour ce document.');
+    }
+
+    const signature = await this.prisma.documentSignature.findFirst({
+      where: {
+        projectId,
+        projectVersionId: latestVersion.id,
+      },
+      orderBy: { signedAt: 'asc' },
+    });
+
+    if (!signature) {
+      throw new Error(
+        'La version courante doit être signée avant de générer le PDF officiel.',
+      );
     }
 
     const result = await this.exportService.generatePdf(

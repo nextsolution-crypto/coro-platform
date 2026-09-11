@@ -27,6 +27,12 @@ export class IncidentController {
     return this.service.uncompleteStep(taskId, req.user.organizationId);
   }
 
+  // Route publique — pas de guard JWT
+  @Get('tasks/ack/:ackToken')
+  acknowledgeByToken(@Param('ackToken') ackToken: string) {
+    return this.service.acknowledgeByToken(ackToken);
+  }
+
   @Put('tasks/:taskId/acknowledge')
   acknowledge(@Param('taskId') taskId: string, @Request() req: any) {
     return this.service.acknowledgeTask(taskId, req.user.organizationId);
