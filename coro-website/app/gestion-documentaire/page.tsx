@@ -19,8 +19,8 @@ export async function generateMetadata({
     : 'Production & Conformité Documentaire — CORO';
 
   const description = isEnglish
-    ? 'Create, structure and manage ERP, FSP, BCP, CMP, DRP and EEP documents with CORO. Integrated procedures, approval workflows and professional PDF exports.'
-    : 'Générez, structurez et gérez vos PMU, PSI, PCA, PGC, PRA et PUE avec CORO. Procédures intégrées, workflow d’approbation et export PDF professionnel.';
+    ? 'Create, structure and manage ERP, FSP and BCP documents with CORO. CMP, DRP and EEP coming in Phase 2. Integrated procedures, approval workflows and professional PDF exports.'
+    : 'Générez, structurez et gérez vos PMU, PSI et PCA avec CORO. PGC, PRA et PUE en Phase 2. Procédures intégrées, workflow d approbation et export PDF professionnel.';
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -90,7 +90,7 @@ export default async function GestionDocumentairePage({
     fr: {
       tag: 'Production & Conformité documentaire',
       title: 'Créez et gérez vos documents de conformité',
-      intro: 'CORO centralise la production, la structuration et la gestion de vos PMU, PSI, PCA, PGC, PRA et PUE — avec la rigueur qu\'exige le terrain et l\'efficacité qu\'exige votre pratique.',
+      intro: 'CORO centralise la production, la structuration et la gestion de vos PMU, PSI et PCA — avec la rigueur qu\'exige le terrain et l\'efficacité qu\'exige votre pratique. PGC, PRA et PUE arrivent en Phase 2.',
       image: '/images/solutions/coro-gestion-documentaire.webp',
       sections: [
         { title: '43 procédures intégrées et codifiées', content: 'CORO intègre 43 procédures d\'urgence standardisées (P001–P028 standards, P101–P108 équipe d\'intervention industrielle, P111–P122 occupants industriels). Chaque procédure est structurée avec titre bilingue, objectif, étapes, rôles et code couleur. Les procédures pertinentes sont présélectionnées automatiquement selon la configuration du bâtiment.' },
@@ -104,9 +104,9 @@ export default async function GestionDocumentairePage({
         { code: 'PMU', name: 'Plan de Mesures d\'Urgence', color: '#2980B9', href: '/documents/plan-mesures-urgence-pmu' },
         { code: 'PSI', name: 'Plan de Sécurité Incendie', color: '#C0392B', href: '/documents/plan-securite-incendie-psi' },
         { code: 'PCA', name: 'Plan de Continuité des Activités', color: '#27AE60', href: '/documents/plan-continuite-activites-pca' },
-        { code: 'PGC', name: 'Plan de Gestion de Crise', color: '#8E44AD', href: '/documents/plan-gestion-crise-pgc' },
-        { code: 'PRA', name: 'Plan de Reprise des Activités', color: '#E67E22', href: '/documents/plan-reprise-activites-pra' },
-        { code: 'PUE', name: 'Plan d\'Urgence Environnementale', color: '#16A085', href: '/documents/plan-urgence-environnementale-pue' },
+        { code: 'PGC', name: 'Plan de Gestion de Crise', color: '#8E44AD', href: '/documents/plan-gestion-crise-pgc', phase: 2 },
+        { code: 'PRA', name: 'Plan de Reprise des Activités', color: '#E67E22', href: '/documents/plan-reprise-activites-pra', phase: 2 },
+        { code: 'PUE', name: 'Plan d\'Urgence Environnementale', color: '#16A085', href: '/documents/plan-urgence-environnementale-pue', phase: 2 },
       ],
       faq: [
         { q: 'Combien de temps faut-il pour produire un PMU complet ?', a: 'Avec CORO, un PMU complet pour un bâtiment standard peut être produit en quelques heures. La structure est générée automatiquement ; il ne reste qu\'à compléter les informations spécifiques au site.' },
@@ -119,7 +119,7 @@ export default async function GestionDocumentairePage({
     en: {
       tag: 'Document Production & Compliance',
       title: 'Create and manage your compliance documents',
-      intro: 'CORO centralizes the production, structuring and management of your ERP, FSP, BCP, CMP, DRP and EEP — with the rigor field work demands and the efficiency your practice requires.',
+      intro: 'CORO centralizes the production, structuring and management of your ERP, FSP and BCP — with the rigor field work demands and the efficiency your practice requires. CMP, DRP and EEP coming in Phase 2.',
       image: '/images/solutions/en/coro-document-management.webp',
       sections: [
         { title: '43 integrated and codified procedures', content: 'CORO integrates 43 standardized emergency procedures (P001–P028 standard, P101–P108 industrial intervention team, P111–P122 industrial occupants). Each procedure is structured with bilingual title, objective, steps, roles and color code. Relevant procedures are automatically pre-selected based on building configuration.' },
@@ -133,9 +133,9 @@ export default async function GestionDocumentairePage({
         { code: 'ERP', name: 'Emergency Response Plan', color: '#2980B9', href: '/documents/plan-mesures-urgence-pmu' },
         { code: 'FSP', name: 'Fire Safety Plan', color: '#C0392B', href: '/documents/plan-securite-incendie-psi' },
         { code: 'BCP', name: 'Business Continuity Plan', color: '#27AE60', href: '/documents/plan-continuite-activites-pca' },
-        { code: 'CMP', name: 'Crisis Management Plan', color: '#8E44AD', href: '/documents/plan-gestion-crise-pgc' },
-        { code: 'DRP', name: 'Disaster Recovery Plan', color: '#E67E22', href: '/documents/plan-reprise-activites-pra' },
-        { code: 'EEP', name: 'Environmental Emergency Plan', color: '#16A085', href: '/documents/plan-urgence-environnementale-pue' },
+        { code: 'CMP', name: 'Crisis Management Plan', color: '#8E44AD', href: '/documents/plan-gestion-crise-pgc', phase: 2 },
+        { code: 'DRP', name: 'Disaster Recovery Plan', color: '#E67E22', href: '/documents/plan-reprise-activites-pra', phase: 2 },
+        { code: 'EEP', name: 'Environmental Emergency Plan', color: '#16A085', href: '/documents/plan-urgence-environnementale-pue', phase: 2 },
       ],
       faq: [
         { q: 'How long does it take to produce a complete ERP?', a: 'With CORO, a complete ERP for a standard building can be produced in a few hours. The structure is automatically generated; you only need to fill in site-specific information.' },
@@ -313,7 +313,12 @@ export default async function GestionDocumentairePage({
                 textDecoration: 'none', transition: 'box-shadow 0.2s, transform 0.2s',
               }}>
                 <span style={{ fontSize: 13, fontWeight: 900, color: '#FFFFFF', backgroundColor: doc.color, padding: '4px 10px', borderRadius: 6, flexShrink: 0 }}>{doc.code}</span>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#2C3E50' }}>{doc.name}</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: '#2C3E50', flex: 1 }}>{doc.name}</span>
+                {(doc as any).phase === 2 && (
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#B7770D', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', padding: '2px 7px', borderRadius: 4, whiteSpace: 'nowrap' as const }}>
+                    Phase 2
+                  </span>
+                )}
               </a>
             ))}
           </div>
