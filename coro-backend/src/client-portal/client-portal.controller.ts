@@ -267,6 +267,16 @@ export class ClientPortalController {
     return this.incidentService.getActiveIncident(buildingId, req.clientUser.organizationId);
   }
 
+  @Get('incidents/buildings/:buildingId/active-all')
+  async getActiveIncidents(@Param('buildingId') buildingId: string, @Request() req: any) {
+    return this.incidentService.getActiveIncidents(buildingId, req.clientUser.organizationId);
+  }
+
+  @Put('incidents/tasks/:taskId/uncomplete')
+  async uncompleteStep(@Param('taskId') taskId: string, @Request() req: any) {
+    return this.incidentService.uncompleteStep(taskId, req.clientUser.organizationId);
+  }
+
   @Put('incidents/tasks/:taskId/acknowledge')
   async acknowledgeTask(@Param('taskId') taskId: string, @Request() req: any) {
     return this.incidentService.acknowledgeTask(taskId, req.clientUser.organizationId);

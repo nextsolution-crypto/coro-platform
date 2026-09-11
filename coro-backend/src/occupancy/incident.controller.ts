@@ -17,6 +17,16 @@ export class IncidentController {
     return this.service.getActiveIncident(buildingId, req.user.organizationId);
   }
 
+  @Get('buildings/:buildingId/active-all')
+  getActiveAll(@Param('buildingId') buildingId: string, @Request() req: any) {
+    return this.service.getActiveIncidents(buildingId, req.user.organizationId);
+  }
+
+  @Put('tasks/:taskId/uncomplete')
+  uncomplete(@Param('taskId') taskId: string, @Request() req: any) {
+    return this.service.uncompleteStep(taskId, req.user.organizationId);
+  }
+
   @Put('tasks/:taskId/acknowledge')
   acknowledge(@Param('taskId') taskId: string, @Request() req: any) {
     return this.service.acknowledgeTask(taskId, req.user.organizationId);

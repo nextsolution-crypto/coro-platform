@@ -49,6 +49,26 @@ function hasValue(v: any): boolean {
   return v !== undefined && v !== null && v !== '';
 }
 
+function isHighRise(config: any): boolean {
+  return (
+    config?.hauteurBatiment === true ||
+    config?.hauteurBatiment === 'GRANDE_HAUTEUR'
+  );
+}
+
+function highRiseBoolValue(config: any): boolean | undefined {
+  if (isHighRise(config)) return true;
+
+  if (
+    config?.hauteurBatiment === false ||
+    config?.hauteurBatiment === 'STANDARD'
+  ) {
+    return false;
+  }
+
+  return undefined;
+}
+
 function infoRow(label: string, value: string): string {
   return `
     <tr>
@@ -204,7 +224,7 @@ function computeFrequenceLabel(config: any, isFr: boolean): string {
       : 'Every 6 months (art. 2.8.3.2)';
   }
 
-  if (config.hauteurBatiment && !usage.startsWith('C')) {
+  if (isHighRise(config) && !usage.startsWith('C')) {
     return isFr
       ? 'Tous les 6 mois — grande hauteur (art. 2.8.3.2)'
       : 'Every 6 months — high-rise (art. 2.8.3.2)';
@@ -243,9 +263,24 @@ export function renderModule7(
   const quarts = module7Data?.quartsData || {};
   const photos = module7Data?.photosData || {};
 
+  const salleGicleursLieu =
+    config.salleGicleurs ?? config.salleGicleursLocalisation;
+
   const isIndustriel =
     config.buildingType === 'Industriel' ||
     config.usagePrincipal?.startsWith('F');
+
+  const palettierPresent =
+    config.palettierPresent ?? config.palettiers;
+  const mezzaninePresent =
+    config.mezzaninePresent ?? config.mezzanine;
+  const chariotsPresent =
+    config.chariotsPresent ?? config.chariotsElevateurs;
+
+  const hasHotWork =
+    (config.travauxPointsChauds &&
+      config.travauxPointsChauds !== 'Jamais') ||
+    config.travailChaud === true;
 
   let subsectionCounter = 0;
 
@@ -338,7 +373,7 @@ export function renderModule7(
           )}
           ${infoRow(
             isFr ? 'Grande hauteur (+18m)' : 'High-rise (+18m)',
-            bool(config.hauteurBatiment, isFr),
+            bool(highRiseBoolValue(config), isFr),
           )}
           ${infoRow(
             isFr
@@ -1129,7 +1164,7 @@ export function renderModule7(
           <table>
             <tbody>
               ${
-                config.registresCoupeFeuNombre
+                hasValue(config.registresCoupeFeuNombre)
                   ? infoRow(
                       isFr
                         ? 'Nombre approximatif'
@@ -1648,7 +1683,7 @@ export function renderModule7(
                   isFr
                     ? 'Localisation salle des gicleurs'
                     : 'Sprinkler room location',
-                  safeVal(config.salleGicleurs),
+                  safeVal(salleGicleursLieu),
                 )
               : ''
           }
@@ -2498,9 +2533,7 @@ export function renderModule7(
   // SECTION CONDITIONNELLE — TRAVAUX PAR POINTS CHAUDS
   // ============================================================
 
-  const htmlHotWork =
-    config.travauxPointsChauds &&
-    config.travauxPointsChauds !== 'Jamais'
+  const htmlHotWork = hasHotWork
       ? `
     <div class="page-break">
       ${sectionHeader(
@@ -2685,10 +2718,10 @@ export function renderModule7(
         <tbody>
           ${infoRow(
             isFr ? 'Palettiers présents' : 'Racking present',
-            bool(config.palettierPresent, isFr),
+            bool(palettierPresent, isFr),
           )}
           ${
-            config.palettierPresent
+            palettierPresent
               ? `
             ${infoRow(
               isFr ? 'Agencement' : 'Arrangement',
@@ -2757,10 +2790,10 @@ export function renderModule7(
         <tbody>
           ${infoRow(
             isFr ? 'Mezzanine présente' : 'Mezzanine present',
-            bool(config.mezzaninePresent, isFr),
+            bool(mezzaninePresent, isFr),
           )}
           ${
-            config.mezzaninePresent
+            mezzaninePresent
               ? `
             ${infoRow(
               isFr ? 'Giclée' : 'Sprinklered',
@@ -2785,10 +2818,10 @@ export function renderModule7(
         <tbody>
           ${infoRow(
             isFr ? 'Chariots présents' : 'Forklifts present',
-            bool(config.chariotsPresent, isFr),
+            bool(chariotsPresent, isFr),
           )}
           ${
-            config.chariotsPresent
+            chariotsPresent
               ? `
             ${infoRow(
               isFr ? 'Nombre' : 'Number',
@@ -2938,6 +2971,26 @@ export function renderModule7(
           : ''
       }
 
+    </div>
+  `
+      : '';
+
+
+  // ============================================================
+  // SECTION CONDITIONNELLE — CADENASSAGE
+  // Indépendante des procédés dangereux : false est une valeur explicite.
+  // ============================================================
+
+  const htmlLockout =
+    config.systemeCadenassage !== undefined &&
+    config.systemeCadenassage !== null
+      ? `
+    <div class="page-break">
+      ${sectionHeader(
+        'CAD',
+        isFr ? 'CADENASSAGE' : 'LOCKOUT / TAGOUT',
+      )}
+
       <table>
         <tbody>
           ${infoRow(
@@ -3055,6 +3108,16 @@ export function renderModule7(
               ? 'Procédés dangereux'
               : 'Hazardous Processes',
             html: htmlDangerousProcesses,
+          },
+        ]
+      : []),
+
+    ...(htmlLockout
+      ? [
+          {
+            id: 'site_cadenassage',
+            title: isFr ? 'Cadenassage' : 'Lockout / Tagout',
+            html: htmlLockout,
           },
         ]
       : []),

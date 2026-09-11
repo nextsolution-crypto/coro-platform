@@ -977,13 +977,21 @@ model RefreshToken {
 // ─── CORO SENTINELLE — Module Incident ──────────────────────────────────────
 
 enum IncidentType {
-  FIRE
-  EVACUATION
-  MEDICAL
-  SECURITY
-  HAZMAT
-  LOCKDOWN
-  OTHER
+  SMOKE_DISCOVERY      // P002 — Découverte de fumée
+  FIRE_ALERT           // P003 — Alerte incendie (double signal)
+  FIRE_ALARM           // P004 — Alarme incendie générale
+  GAS_LEAK             // P005 — Fuite de gaz
+  ACTIVE_THREAT        // P011 — Menace active / confinement
+  MEDICAL              // P013 — Urgence médicale
+  TOXIC_GAS            // P014 — Gaz toxique
+  SUSPICIOUS_PACKAGE   // P015 — Colis suspect
+  POWER_OUTAGE         // P016 — Coupure de courant
+  HAZMAT               // P018 — Matières dangereuses
+  BOMB_THREAT          // P019 — Alerte à la bombe
+  LITHIUM_BATTERY      // P026 — Batterie lithium
+  FLOODING             // P024 — Inondations
+  VIOLENT_WINDS        // P022 — Vents violents
+  OTHER                // P001 — Directives générales
 }
 
 enum IncidentStatus {
@@ -1163,11 +1171,15 @@ model IncidentEvent {
   triggeredAt      DateTime       @default(now())
   triggeredBy      String         // Nom de la personne qui a déclenché
   description      String?
-  occupantsSnapshot Json          // Snapshot des occupants au moment du déclenchement
-  teamSnapshot      Json          // Snapshot de l'équipe mobilisable au moment du déclenchement
-  containedAt      DateTime?
+  occupantsSnapshot  Json          // Snapshot des occupants au moment du déclenchement
+  teamSnapshot       Json          // Snapshot de l'équipe mobilisable au moment du déclenchement
+  procedureCode      String?       // Code de la procédure liée (ex: P003)
+  procedureSnapshot  Json?         // Étapes ROLE-CU capturées au déclenchement
+  assemblyPoint      String?       // Point de rassemblement récupéré du configData PMU
+  containedAt        DateTime?
   resolvedAt       DateTime?
   closingNotes     String?
+  isActive         Boolean        @default(true)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -1184,6 +1196,10 @@ model IncidentTask {
   role             EmergencyRoleType
   title            String
   description      String?
+  stepId           String?           // ID de l'étape dans la procédure CORO
+  stepText         String?           // Texte complet de l'étape (pour affichage offline)
+  stepOrder        Int               @default(0)
+  isCoordinatorStep Boolean          @default(false)
   status           IncidentTaskStatus @default(PENDING)
   notifiedAt       DateTime?
   acknowledgedAt   DateTime?
