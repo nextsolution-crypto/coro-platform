@@ -60,6 +60,16 @@ export class ClientPortalController {
     });
   }
 
+  @Get('projects/:id/sign-status')
+  async getSignatureStatus(@Param('id') id: string, @Request() req: any) {
+    return this.clientPortalService.getSignatureStatus(id, req.clientUser);
+  }
+
+  @Post('projects/:id/sign/retry')
+  async retryOfficialPdfGeneration(@Param('id') id: string, @Request() req: any) {
+    return this.clientPortalService.retryOfficialPdfGeneration(id, req.clientUser);
+  }
+
   @Post('projects/:id/comments')
   async addComment(
     @Param('id') id: string,
@@ -103,7 +113,7 @@ export class ClientPortalController {
     });
   }
 
-    @Get('projects/:id/engagement')
+  @Get('projects/:id/engagement')
   async getEngagement(@Param('id') id: string) {
     return this.clientPortalService.getEngagement(id);
   }

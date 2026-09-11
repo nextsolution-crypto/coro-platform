@@ -103,7 +103,18 @@ export class ClientPortalService {
     });
 
     if (existing) {
-      return existing;
+      const status = await this.getSignatureStatus(projectId, clientUser);
+
+      if (status.status !== 'READY') {
+        void this.generateOfficialPdfs(projectId).catch((e) => {
+          console.error('Erreur finalisation PDF officiel (reprise):', e);
+        });
+      }
+
+      return {
+        signature: existing,
+        status: status.status === 'READY' ? 'READY' : 'PROCESSING',
+      };
     }
 
     const signature = await this.prisma.documentSignature.create({
@@ -119,12 +130,12 @@ export class ClientPortalService {
 
     const signedAt = new Date();
 
-    // ── 1. Mettre à jour le snapshot de version avec les infos de signature ──
     try {
       const latestVersion = await this.prisma.projectVersion.findFirst({
         where: { projectId },
         orderBy: { versionNumber: 'desc' },
       });
+
       if (latestVersion) {
         const snap = (latestVersion.snapshot as any) || {};
         await this.prisma.projectVersion.update({
@@ -133,8 +144,8 @@ export class ClientPortalService {
             label: `v${latestVersion.versionNumber} — signé`,
             snapshot: {
               ...snap,
-              signedBy:    data.fullName,
-              signedAt:    signedAt.toISOString(),
+              signedBy: data.fullName,
+              signedAt: signedAt.toISOString(),
               signedEmail: clientUser.email,
             },
           },
@@ -144,84 +155,167 @@ export class ClientPortalService {
       console.error('Erreur mise à jour version après signature:', e);
     }
 
-    // ── 2. Régénérer le PDF officiel et passer le projet à EXPORTED ──────────
-    try {
-      const project = await this.prisma.project.findUnique({
-        where: { id: projectId },
-      });
-
-      if (project) {
-        const result = await this.exportService.generatePdf(
-          projectId,
-          {
-            selectedModules: [1, 2, 3, 4, 6, 7, 8],
-            moduleOrder:     [1, 2, 3, 4, 6, 7, 8],
-            language:        'both',
-            isPreview:       false,
-          },
-          project.organizationId,
-        );
-
-        const timestamp = Date.now();
-        const updateData: any = {
-          exportedAt: signedAt,
-          progress:   100,
-          // Status reste VALIDATED — EXPORTED est réservé à l'export explicite
-          // par l'organisation via /projects/:id/export
-        };
-
-        if (result.fr) {
-          updateData.officialPdfFr = await this.storageService.uploadFile(
-            result.fr,
-            `${projectId}-${timestamp}-FR-OFFICIEL.pdf`,
-            'documents',
-            'application/pdf',
-          );
-        }
-        if (result.en) {
-          updateData.officialPdfEn = await this.storageService.uploadFile(
-            result.en,
-            `${projectId}-${timestamp}-EN-OFFICIEL.pdf`,
-            'documents',
-            'application/pdf',
-          );
-        }
-
-        await this.prisma.project.update({
-          where: { id: projectId },
-          data:  updateData,
-        });
-      }
-    } catch (e) {
+    void this.generateOfficialPdfs(projectId).catch((e) => {
       console.error('Erreur régénération PDF officiel:', e);
-      // En cas d'échec PDF, on marque quand même comme exporté
-      await this.prisma.project.update({
-        where: { id: projectId },
-        data:  { progress: 100, status: 'EXPORTED' },
-      }).catch(() => {});
-    }
+    });
 
-    // Notifier le conseiller que le client a signé
-    try {
-      const fullProject = await this.prisma.project.findUnique({
-        where: { id: projectId },
-        include: { client: true, user: true },
-      });
-      if (fullProject?.user?.email) {
-        await this.emailService.sendDocumentSigned({
-          toEmail: fullProject.user.email,
-          toName: `${fullProject.user.firstName} ${fullProject.user.lastName}`,
-          projectName: fullProject.name,
-          clientName: fullProject.client.name,
-          signerName: data.fullName,
-          portalUrl: 'https://app.getcoro.io',
+    void (async () => {
+      try {
+        const fullProject = await this.prisma.project.findUnique({
+          where: { id: projectId },
+          include: { client: true, user: true },
         });
+
+        if (fullProject?.user?.email) {
+          await this.emailService.sendDocumentSigned({
+            toEmail: fullProject.user.email,
+            toName: `${fullProject.user.firstName} ${fullProject.user.lastName}`,
+            projectName: fullProject.name,
+            clientName: fullProject.client.name,
+            signerName: data.fullName,
+            portalUrl: 'https://app.getcoro.io',
+          });
+        }
+      } catch (e) {
+        console.error('Erreur email signature:', e);
       }
-    } catch (e) {
-      console.error('Erreur email signature:', e);
+    })();
+
+    return {
+      signature,
+      status: 'PROCESSING',
+    };
+  }
+
+  async getSignatureStatus(projectId: string, clientUser: any) {
+    const [signature, project] = await Promise.all([
+      this.prisma.documentSignature.findFirst({
+        where: { projectId, clientUserId: clientUser.sub },
+      }),
+      this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: {
+          officialPdfFr: true,
+          officialPdfEn: true,
+          exportedAt: true,
+          progress: true,
+        },
+      }),
+    ]);
+
+    if (!signature) {
+      return {
+        status: 'NOT_SIGNED' as const,
+        signature: null,
+        officialPdfFr: null,
+        officialPdfEn: null,
+      };
     }
 
-    return signature;
+    const ready = !!project?.officialPdfFr && !!project?.officialPdfEn;
+
+    return {
+      status: ready ? ('READY' as const) : ('PROCESSING' as const),
+      signature,
+      officialPdfFr: project?.officialPdfFr ?? null,
+      officialPdfEn: project?.officialPdfEn ?? null,
+      exportedAt: project?.exportedAt ?? null,
+      progress: project?.progress ?? null,
+    };
+  }
+
+  async retryOfficialPdfGeneration(projectId: string, clientUser: any) {
+    const signature = await this.prisma.documentSignature.findFirst({
+      where: { projectId, clientUserId: clientUser.sub },
+    });
+
+    if (!signature) {
+      throw new Error('Le document doit être signé avant de générer le PDF officiel.');
+    }
+
+    const current = await this.getSignatureStatus(projectId, clientUser);
+    if (current.status === 'READY') return current;
+
+    void this.generateOfficialPdfs(projectId).catch((e) => {
+      console.error('Erreur nouvelle tentative PDF officiel:', e);
+    });
+
+    return {
+      ...current,
+      status: 'PROCESSING' as const,
+    };
+  }
+
+  private async generateOfficialPdfs(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        organizationId: true,
+        officialPdfFr: true,
+        officialPdfEn: true,
+      },
+    });
+
+    if (!project) {
+      throw new Error('Projet introuvable');
+    }
+
+    if (project.officialPdfFr && project.officialPdfEn) {
+      return {
+        status: 'READY' as const,
+        officialPdfFr: project.officialPdfFr,
+        officialPdfEn: project.officialPdfEn,
+      };
+    }
+
+    const result = await this.exportService.generatePdf(
+      projectId,
+      {
+        selectedModules: [1, 2, 3, 4, 6, 7, 8],
+        moduleOrder: [1, 2, 3, 4, 6, 7, 8],
+        language: 'both',
+        isPreview: false,
+      },
+      project.organizationId,
+    );
+
+    if (!result.fr || !result.en) {
+      throw new Error('La génération officielle doit produire les versions FR et EN.');
+    }
+
+    const timestamp = Date.now();
+
+    const [officialPdfFr, officialPdfEn] = await Promise.all([
+      this.storageService.uploadFile(
+        result.fr,
+        `${projectId}-${timestamp}-FR-OFFICIEL.pdf`,
+        'documents',
+        'application/pdf',
+      ),
+      this.storageService.uploadFile(
+        result.en,
+        `${projectId}-${timestamp}-EN-OFFICIEL.pdf`,
+        'documents',
+        'application/pdf',
+      ),
+    ]);
+
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: {
+        officialPdfFr,
+        officialPdfEn,
+        exportedAt: new Date(),
+        progress: 100,
+      },
+    });
+
+    return {
+      status: 'READY' as const,
+      officialPdfFr,
+      officialPdfEn,
+    };
   }
 
   async refuseDocument(

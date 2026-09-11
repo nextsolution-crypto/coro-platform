@@ -82,6 +82,7 @@ export default function DocumentDetailPage() {
   const [addingComment, setAddingComment] = useState(false);
 
   const [signing, setSigning] = useState(false);
+  const [finalizingSignature, setFinalizingSignature] = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
   const [signName, setSignName] = useState('');
   const [signComment, setSignComment] = useState('');
@@ -136,12 +137,20 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const handleSign = async () => {
-    if (!signName.trim()) {
-      return;
+  const waitForOfficialPdf = async (maxAttempts = 45, delayMs = 2000) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const status = await apiGet(`/client-portal/projects/${projectId}/sign-status`);
+      if (status?.status === 'READY') return status;
+      await new Promise(resolve => setTimeout(resolve, delayMs));
     }
+    return null;
+  };
+
+  const handleSign = async () => {
+    if (!signName.trim()) return;
 
     setSigning(true);
+    setFinalizingSignature(true);
 
     try {
       await apiPost(
@@ -152,14 +161,51 @@ export default function DocumentDetailPage() {
         }
       );
 
-      await fetchData();
+      const ready = await waitForOfficialPdf();
 
+      await fetchData();
       setShowSignModal(false);
       setSignComment('');
+
+      if (ready) {
+        toast('Document signé. Les PDF officiels FR et EN sont prêts.', 'success');
+      } else {
+        toast(
+          'Votre signature est enregistrée. La finalisation du PDF officiel prend plus de temps que prévu; vous pouvez revenir ici sans signer de nouveau.',
+          'info',
+        );
+      }
     } catch (err) {
       console.error(err);
+      await fetchData().catch(() => {});
+      toast(
+        'Impossible de confirmer la finalisation. Si votre signature apparaît ci-dessous, elle est bien enregistrée et vous ne devez pas signer de nouveau.',
+        'error',
+      );
     } finally {
+      setFinalizingSignature(false);
       setSigning(false);
+    }
+  };
+
+  const handleRetryOfficialPdf = async () => {
+    setFinalizingSignature(true);
+    try {
+      await apiPost(`/client-portal/projects/${projectId}/sign/retry`, {});
+      const ready = await waitForOfficialPdf();
+
+      await fetchData();
+
+      if (ready) {
+        toast('PDF officiels finalisés avec succès.', 'success');
+      } else {
+        toast('La finalisation est toujours en cours. Réessayez dans quelques instants.', 'info');
+      }
+    } catch (err) {
+      console.error(err);
+      toast('Impossible de relancer la finalisation du PDF officiel.', 'error');
+    } finally {
+      setFinalizingSignature(false);
     }
   };
 
@@ -209,10 +255,10 @@ const handleRefuse = async () => {
     setDownloading(true);
 
     try {
-      // Utiliser le PDF officiel (sans filigrane) si disponible après signature
+      // Après signature, seul le PDF officiel est téléchargeable.
       const pdfUrl = lang === 'fr'
-        ? (project?.officialPdfFr || project?.exportedPdfFr)
-        : (project?.officialPdfEn || project?.exportedPdfEn);
+        ? project?.officialPdfFr
+        : project?.officialPdfEn;
 
       if (pdfUrl) {
         const anchor = document.createElement('a');
@@ -512,7 +558,7 @@ const handleRefuse = async () => {
                 </button>
               )}
 
-              {(project?.officialPdfFr || (project?.exportedPdfFr && mySignature)) && (
+              {project?.officialPdfFr && mySignature && (
                 <button
                   type="button"
                   onClick={() => handleDownload('fr')}
@@ -541,7 +587,7 @@ const handleRefuse = async () => {
                 </button>
               )}
 
-              {(project?.officialPdfEn || (project?.exportedPdfEn && mySignature)) && (
+              {project?.officialPdfEn && mySignature && (
                 <button
                   type="button"
                   onClick={() => handleDownload('en')}
@@ -570,11 +616,11 @@ const handleRefuse = async () => {
                 </button>
               )}
 
-              {mySignature && !project?.officialPdfFr && !project?.exportedPdfFr && (
+              {mySignature && (!project?.officialPdfFr || !project?.officialPdfEn) && (
                 <button
                   type="button"
-                  onClick={() => handleDownload('fr')}
-                  disabled={downloading}
+                  onClick={handleRetryOfficialPdf}
+                  disabled={finalizingSignature}
                   style={{
                     minHeight: 46,
                     display: 'flex',
@@ -585,17 +631,16 @@ const handleRefuse = async () => {
                     borderRadius: 7,
                     fontSize: 14,
                     fontWeight: 600,
-                    backgroundColor: '#C0392B',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    cursor: downloading ? 'not-allowed' : 'pointer',
-                    opacity: downloading ? 0.7 : 1,
+                    backgroundColor: '#FEF9E7',
+                    color: '#F39C12',
+                    border: '1px solid #FAD7A0',
+                    cursor: finalizingSignature ? 'not-allowed' : 'pointer',
+                    opacity: finalizingSignature ? 0.7 : 1,
                     width: '100%',
                     minWidth: 0,
                   }}
                 >
-                  <Download size={16} />
-                  {downloading ? 'Téléchargement...' : 'Télécharger PDF'}
+                  {finalizingSignature ? '⏳ Finalisation...' : '↻ Finaliser le PDF officiel'}
                 </button>
               )}
 
@@ -1725,7 +1770,7 @@ const handleRefuse = async () => {
         </div>
       )}
       {/* Overlay chargement signature */}
-      {signing && (
+      {(signing || finalizingSignature) && (
         <div
           style={{
             position: 'fixed',
@@ -1761,10 +1806,10 @@ const handleRefuse = async () => {
             }} />
 
             <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#2C3E50' }}>
-              Signature en cours...
+              Finalisation du document...
             </h3>
             <p style={{ margin: '0 0 24px', fontSize: 14, lineHeight: 1.6, color: '#6C757D' }}>
-              Votre signature est enregistrée. Nous générons maintenant votre document officiel. Cette opération peut prendre jusqu'à 45 secondes.
+              Votre signature est enregistrée. CORO prépare maintenant les versions officielles FR et EN. Vous n'aurez pas à signer une deuxième fois.
             </p>
 
             {/* Étapes animées */}
@@ -1793,7 +1838,7 @@ const handleRefuse = async () => {
             </div>
 
             <p style={{ margin: '20px 0 0', fontSize: 12, color: '#ADB5BD' }}>
-              Ne fermez pas cette fenêtre.
+              Vous pouvez laisser cette fenêtre ouverte pendant la finalisation.
             </p>
           </div>
         </div>

@@ -25,6 +25,10 @@ interface Project {
   approvedById?: string | null;
   approvedAt?: string | null;
   approvedBy?: { firstName: string; lastName: string } | null;
+  officialPdfFr?: string | null;
+  officialPdfEn?: string | null;
+  exportedPdfFr?: string | null;
+  exportedPdfEn?: string | null;
 }
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -318,6 +322,23 @@ export default function ProjectDetailPage() {
     } finally {
       setPreviewing(false);
     }
+  };
+
+  const handleOfficialDownload = (lang: 'fr' | 'en') => {
+    const url = lang === 'fr' ? project?.officialPdfFr : project?.officialPdfEn;
+    if (!url) {
+      toast('Le PDF officiel signé n’est pas encore disponible.', 'error');
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.download = `${(project?.name || 'document').replace(/[^a-z0-9]/gi, '-')}-${lang.toUpperCase()}-OFFICIEL.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const handleAddObservation = async () => {
@@ -1104,6 +1125,36 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         )}
+        {(project.officialPdfFr || project.officialPdfEn) && (
+          <div className="rounded p-3 mb-4"
+            style={{ backgroundColor: '#F4ECF7', border: '1px solid #D2B4DE' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#8E44AD' }}>
+              ✍️ Version officielle signée
+            </p>
+            <p className="text-xs mb-3" style={{ color: '#6C757D' }}>
+              Téléchargez ici le même artefact officiel que celui disponible au client. Aucun nouveau rendu PDF n'est lancé.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {project.officialPdfFr && (
+                <button
+                  onClick={() => handleOfficialDownload('fr')}
+                  className="text-xs font-medium px-3 py-2 rounded"
+                  style={{ backgroundColor: '#8E44AD', color: '#FFFFFF' }}>
+                  Télécharger officiel FR
+                </button>
+              )}
+              {project.officialPdfEn && (
+                <button
+                  onClick={() => handleOfficialDownload('en')}
+                  className="text-xs font-medium px-3 py-2 rounded"
+                  style={{ backgroundColor: '#2980B9', color: '#FFFFFF' }}>
+                  Télécharger officiel EN
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handlePreview}
           disabled={!hasDocument || previewing}
