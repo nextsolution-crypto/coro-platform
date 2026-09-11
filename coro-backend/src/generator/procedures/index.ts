@@ -3,7 +3,7 @@
 // Pour ajouter une procédure : importer + ajouter au registre
 // ============================================================
 
-import { ProcedureTemplate } from './types';
+import type { ActivationRule, ProcedureTemplate } from './types';
 import { P001_DIRECTIVES_GENERALES } from './p001_directives_generales';
 import { P002_DECOUVERTE_FUMEE } from './p002_decouverte_fumee';
 import { P003_ALERTE_INCENDIE } from './p003_alerte_incendie';
@@ -100,24 +100,122 @@ export const PROCEDURES_REGISTRY: ProcedureTemplate[] = [
 ];
 
 // ============================================================
+// HELPERS D'ACTIVATION
+// ============================================================
+
+function asBool(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (
+    value === false ||
+    value === 0 ||
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return false;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+
+    if (['true', 'oui', 'yes', '1', 'on', 'o', 'y'].includes(normalized)) return true;
+    if (['false', 'non', 'no', '0', 'off', 'n'].includes(normalized)) return false;
+  }
+
+  return Boolean(value);
+}
+
+function normalize(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function hasNonEmptyArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function isIndustrialBuilding(config: any): boolean {
+  const value = normalize(config?.buildingType);
+
+  return ['industriel', 'industrial', 'industrie'].includes(value);
+}
+
+function hasLithiumRisk(config: any): boolean {
+  return (
+    asBool(config?.batteriesLithium) ||
+    asBool(config?.batteriesLithiumPresent)
+  );
+}
+
+function hasHazmat(config: any): boolean {
+  return (
+    asBool(config?.matieresDangereuses) ||
+    hasNonEmptyArray(config?.matieresList)
+  );
+}
+
+function hasAmmonia(config: any): boolean {
+  return (
+    asBool(config?.ammoniac) ||
+    asBool(config?.detecteurAmmoniac)
+  );
+}
+
+function hasGas(config: any): boolean {
+  return (
+    asBool(config?.gazNaturel) ||
+    asBool(config?.detecteurGazNaturel)
+  );
+}
+
+function hasSprinklers(config: any): boolean {
+  return (
+    asBool(config?.gicleurs) ||
+    hasNonEmptyArray(config?.gicleursSystemes)
+  );
+}
+
+function hasElevators(config: any): boolean {
+  return (
+    asBool(config?.ascenseurs) ||
+    Number(config?.nbAscenseurs ?? 0) > 0
+  );
+}
+
+// ============================================================
 // RÈGLES D'ACTIVATION AUTOMATIQUE
 // ============================================================
 
-export const ACTIVATION_RULES: Record<string, (config: any) => boolean> = {
-  always:          ()      => true,
-  double_signal:   (c)     => c?.panneauType === 'DOUBLE',
-  simple_signal:   (c)     => c?.panneauType === 'SIMPLE',
-  has_gas:         (c)     => !!c?.gazNaturel,
-  has_ammonia:     (c)     => !!c?.ammoniac,
-  has_sprinklers:  (c)     => !!c?.gicleurs,
-  has_elevators:   (c)     => !!c?.ascenseurs,
-  has_hazmat:      (c)     => !!c?.matieresDangereuses,
-  has_lithium:     (c)     => !!c?.batteriesLithium,
-  boma_certified:  (c)     => !!c?.certBOMA,
-  has_pool:        (c)     => !!c?.piscine,
-  has_kitchen:     (c)     => !!c?.cuisineCommerciale,
-  manual:          ()      => false, // Jamais auto — seulement via bibliothèque
-  is_industrial:   (c)     => c?.buildingType === 'Industriel',
+type ActivationPredicate = (config: any) => boolean;
+
+export const ACTIVATION_RULES: Record<ActivationRule, ActivationPredicate> = {
+  always: () => true,
+
+  double_signal: (c) => normalize(c?.panneauType) === 'double',
+  simple_signal: (c) => normalize(c?.panneauType) === 'simple',
+
+  has_gas: (c) => hasGas(c),
+  has_ammonia: (c) => hasAmmonia(c),
+  has_sprinklers: (c) => hasSprinklers(c),
+  has_elevators: (c) => hasElevators(c),
+  has_hazmat: (c) => hasHazmat(c),
+  has_lithium: (c) => hasLithiumRisk(c),
+
+  boma_certified: (c) => asBool(c?.certBOMA),
+
+  // Compatibilité avec d'anciens projets / futures extensions.
+  // Ces champs ne font pas partie du schéma principal actuel.
+  has_pool: (c) => asBool(c?.piscine),
+  has_kitchen: (c) => asBool(c?.cuisineCommerciale),
+
+  // Jamais activée automatiquement : seulement via la bibliothèque.
+  manual: () => false,
+
+  is_industrial: (c) => isIndustrialBuilding(c),
+
+  // Règle composée : utilisée par les procédures industrielles
+  // qui ne s'appliquent que lorsqu'un risque ammoniac est présent.
+  industrial_with_ammonia: (c) =>
+    isIndustrialBuilding(c) && hasAmmonia(c),
 };
 
 // ============================================================
@@ -130,26 +228,63 @@ export function getActiveProcedures(
   documentType: string,
   activeRoleCodes: string[],
 ): ProcedureTemplate[] {
-  return PROCEDURES_REGISTRY
-    .filter(p => {
-      // 1. Filtre par type de document
-      if (!p.documentTypes.includes(documentType)) return false;
+  const safeActiveRoleCodes = Array.isArray(activeRoleCodes)
+    ? activeRoleCodes
+    : [];
 
-      // 2. Filtre par règle d'activation
+  return PROCEDURES_REGISTRY
+    .filter((p) => {
+      // 1. Filtre par type de document.
+      if (
+        !Array.isArray(p.documentTypes) ||
+        !p.documentTypes.includes(documentType)
+      ) {
+        return false;
+      }
+
+      // 2. Filtre par règle d'activation.
+      // activationRule est typé, donc une valeur invalide doit normalement
+      // déjà être détectée à la compilation.
       const rule = ACTIVATION_RULES[p.activationRule];
-      if (!rule) return true;
+
+      // Protection runtime utile pour données anciennes, DB, migration,
+      // ou objet construit dynamiquement.
+      if (!rule) {
+        console.warn(
+          `[CORO][Procedures] Règle d'activation inconnue "${String(
+            p.activationRule,
+          )}" pour ${p.code} (${p.id}).`,
+        );
+        return false;
+      }
+
       return rule(config);
     })
-    .map(p => ({
+    .map((p) => ({
       ...p,
-      // 3. Filtre les sections de rôles selon les rôles actifs dans Module 3
-      // ROLE-OCC est toujours inclus car c'est un rôle occupant (pas dans l'organigramme)
-      roleSections: p.roleSections.filter(rs =>
-        rs.roleCode === 'TOUS' ||
-        rs.roleCode === 'ROLE-OCC' ||
-        activeRoleCodes.includes(rs.roleCode)
-      ),
-    }));
+
+      // 3. Filtre les sections selon les rôles actifs dans le Module 3.
+      // ROLE-OCC est un rôle générique Occupant et reste disponible.
+      roleSections: Array.isArray(p.roleSections)
+        ? p.roleSections.filter(
+            (rs) =>
+              rs.roleCode === 'TOUS' ||
+              rs.roleCode === 'ROLE-OCC' ||
+              safeActiveRoleCodes.includes(rs.roleCode),
+          )
+        : [],
+    }))
+    .filter((p) => {
+      // P001 peut contenir des directives générales sans dépendre
+      // strictement des roleSections.
+      if (p.id === 'p001_directives_generales') {
+        return true;
+      }
+
+      // Empêche de générer une procédure dont toutes les sections
+      // de rôles ont été éliminées.
+      return p.roleSections.length > 0;
+    });
 }
 
 // ============================================================
@@ -165,11 +300,16 @@ export function getAllProcedures(): ProcedureTemplate[] {
 // ============================================================
 
 export function getProcedureById(id: string): ProcedureTemplate | undefined {
-  return PROCEDURES_REGISTRY.find(p => p.id === id);
+  return PROCEDURES_REGISTRY.find((p) => p.id === id);
 }
 
 // ============================================================
 // RE-EXPORTS pour usage externe
 // ============================================================
 
-export type { ProcedureTemplate, ProcedureStep, RoleSection } from './types';
+export type {
+  ActivationRule,
+  ProcedureTemplate,
+  ProcedureStep,
+  RoleSection,
+} from './types';

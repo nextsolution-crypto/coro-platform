@@ -14,7 +14,7 @@ export const P104_FUITE_AMMONIAC_IND: ProcedureTemplate = {
   titleEN: 'AMMONIA LEAK',
   icon: '☣️',
   headerColor: COLORS.purple,
-  activationRule: 'is_industrial',
+  activationRule: 'industrial_with_ammonia',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
     // ── Coordonnateur d'urgence ────────────────────────────

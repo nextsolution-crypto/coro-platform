@@ -5,7 +5,7 @@ export const P116_EXPOSITION_AMMONIAC_OCC: ProcedureTemplate = {
   titleFR: 'EXPOSITION À L\'AMMONIAC — OCCUPANTS',
   titleEN: 'AMMONIA EXPOSURE — OCCUPANTS',
   icon: '🧪', headerColor: COLORS.purple,
-  activationRule: 'is_industrial', documentTypes: ['PMU', 'PSI'],
+  activationRule: 'industrial_with_ammonia', documentTypes: ['PMU', 'PSI'],
   roleSections: [{
     roleCode: 'ROLE-OCC', roleLabelFR: 'Occupants / Travailleurs', roleLabelEN: 'Occupants / Workers',
     headerColor: COLORS.purple,

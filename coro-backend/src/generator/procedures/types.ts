@@ -3,6 +3,23 @@
 // Partagés par toutes les procédures de la bibliothèque
 // ============================================================
 
+export type ActivationRule =
+  | 'always'
+  | 'double_signal'
+  | 'simple_signal'
+  | 'has_gas'
+  | 'has_ammonia'
+  | 'has_sprinklers'
+  | 'has_elevators'
+  | 'has_hazmat'
+  | 'has_lithium'
+  | 'boma_certified'
+  | 'has_pool'
+  | 'has_kitchen'
+  | 'manual'
+  | 'is_industrial'
+  | 'industrial_with_ammonia';
+
 export interface ProcedureStep {
   id: string;
   textFR: string;
@@ -30,7 +47,7 @@ export interface ProcedureTemplate {
   icon?: string;
   headerColor: string;
   incidentCode?: string;
-  activationRule: string;   // 'always' | 'double_signal' | 'has_gas' | etc.
+  activationRule: ActivationRule;
   documentTypes: string[];
   phase?: string;
   directivesGenerales?: ProcedureStep[];
@@ -55,36 +72,36 @@ export interface ProcedureImage {
 
 export const COLORS = {
   // Codes incidents officiels
-  red:       '#C0392B',  // P004 Alarme incendie / Code Rouge
-  green:     '#27AE60',  // Code Vert
-  blue:      '#2980B9',  // P013 Urgence médicale / Code Bleu
-  gray:      '#7F8C8D',  // P005 Fuite de gaz / Code Gris
-  white:     '#ECF0F1',  // P011 Menace active / Code Blanc
-  dark:      '#2C3E50',  // P015 Colis suspect / Code Noir
-  orange:    '#E67E22',  // P002 Découverte fumée / Code Orange
-  yellow:    '#F1C40F',  // Code Jaune
-  brown:     '#8B4513',  // P018 Mat. dangereuses / Code Brun
-  turquoise: '#1ABC9C',  // P017 Bris gicleurs / Code Turquoise
-  garnet:    '#8B0000',  // P021 VE incendie + P026 Batterie lithium / Code Grenat
-  pink:      '#E91E63',  // Code Rose
-  purple:    '#8E44AD',  // P020 Manifestation / Code Violet
-  silver:    '#95A5A6',  // Code Argent
-  indigo:    '#4B0082',  // Protocole-18
-  fireAlert: '#FF6600',  // P003 Alerte incendie
-  fireAlarm: '#FF0000',  // Alarme incendie
-  teal:      '#008B8B',  // P012 Ascenseur
+  red:       '#C0392B',
+  green:     '#27AE60',
+  blue:      '#2980B9',
+  gray:      '#7F8C8D',
+  white:     '#ECF0F1',
+  dark:      '#2C3E50',
+  orange:    '#E67E22',
+  yellow:    '#F1C40F',
+  brown:     '#8B4513',
+  turquoise: '#1ABC9C',
+  garnet:    '#8B0000',
+  pink:      '#E91E63',
+  purple:    '#8E44AD',
+  silver:    '#95A5A6',
+  indigo:    '#4B0082',
+  fireAlert: '#FF6600',
+  fireAlarm: '#FF0000',
+  teal:      '#008B8B',
 
   // Couleurs procédures uniquement
-  slate:     '#607D8B',  // P001 Directives générales
-  olive:     '#808000',  // P014 Gaz toxique
-  amber:     '#FF8F00',  // P016 Coupure de courant
-  onyx:      '#353839',  // P019 Alerte bombe
-  steel:     '#4682B4',  // P022 Vents violents
-  coral:     '#FF6B6B',  // P023 Vagues de chaleur
-  sapphire:  '#0057A8',  // P024 Inondations
-  glacier:   '#A8D8EA',  // P025 Verglas
-  cobalt:    '#0047AB',  // P027 Noyade
-  scarlet:   '#FF2400',  // P028 Incendie cuisine
+  slate:     '#607D8B',
+  olive:     '#808000',
+  amber:     '#FF8F00',
+  onyx:      '#353839',
+  steel:     '#4682B4',
+  coral:     '#FF6B6B',
+  sapphire:  '#0057A8',
+  glacier:   '#A8D8EA',
+  cobalt:    '#0047AB',
+  scarlet:   '#FF2400',
 };
 
 // ============================================================

@@ -50,6 +50,60 @@ export interface EvacuationSectorRow {
   notes: string;
 }
 
+export interface LithiumAnnexeInitialData {
+  bornesFontaines: boolean;
+  distanceBornesFontaines: string;
+  raccordsPompiers: boolean;
+  localisationRaccords: string;
+  alimentationSprinklers: boolean;
+  alimentationColonneSeche: boolean;
+  alimentationAutre: boolean;
+  alimentationAutreTexte: string;
+  reserveEauSite: boolean;
+  capaciteReserve: string;
+  autresSourcesEau: string;
+  accesSouterrain: boolean;
+  contraintesAcces: string;
+  nombreVehiculesEstime: string;
+  methodeDonneesOccupation: boolean;
+  methodeTauxOccupation: boolean;
+  methodeAutre: boolean;
+  methodeAutreTexte: string;
+  nombreBornes: string;
+  typeBorneNiveau2: boolean;
+  typeBorneRapideDC: boolean;
+  typeBorneAutre: boolean;
+  typeBorneAutreTexte: string;
+  tensionNominale: string;
+  courantMaximal: string;
+  localisationStationnementInterieur: boolean;
+  localisationStationnementExterieur: boolean;
+  localisationZoneSpecifique: boolean;
+  localisationZoneSpecifiqueTexte: string;
+  vehiculeElectrique: boolean;
+  vehiculeHybrideRechargeable: boolean;
+  vehiculeUtilitaireElectrique: boolean;
+  vehiculeVisiteurInconnu: boolean;
+  hauteurLibreMax: string;
+  largeurVoies: string;
+  contrainteHauteurLimitee: boolean;
+  contrainteAccesRestreint: boolean;
+  contrainteRayonsVirage: boolean;
+  contrainteAutres: boolean;
+  contrainteAutresTexte: string;
+  zoneAiresRecharge: boolean;
+  zoneStationnementInterieur: boolean;
+  zoneProximiteStructures: boolean;
+  zoneAutres: boolean;
+  zoneAutresTexte: string;
+  dispositifCoupureManuelle: 'oui' | 'non' | '';
+  localisationCoupureManuelle: string;
+  localisationCoupureElectrique: string;
+}
+
+type Module8Config = Record<string, any>;
+
+
 // ============================================================
 // DONNÉES FIXES — MESSAGES PHONIQUES
 // ============================================================
@@ -159,16 +213,201 @@ const INSPECTIONS_RISQUES_EN: RiskInspectionRow[] = [
 ];
 
 // ============================================================
-// GÉNÉRATION DES SECTEURS D'ÉVACUATION selon nb d'étages
+// HELPERS — CONFIGURATEUR → MODULE 8
 // ============================================================
 
-function buildEvacuationSectors(floors: number): EvacuationSectorRow[] {
-  const sectors: EvacuationSectorRow[] = [
-    { etage: 'RDC', evacue: false, notes: '' },
-  ];
-  for (let i = 2; i <= Math.max(floors, 2); i++) {
-    sectors.push({ etage: String(i), evacue: false, notes: '' });
+function asBool(value: any): boolean {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0 || value == null) return false;
+  if (typeof value !== 'string') return Boolean(value);
+
+  const normalized = value.trim().toLowerCase();
+  return ['oui', 'yes', 'true', '1', 'présent', 'present'].includes(normalized);
+}
+
+function hasValue(value: any): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string') return value.trim() !== '';
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+function hotWorkApplies(config: Module8Config): boolean {
+  const raw = config.travauxPointsChauds;
+
+  if (raw === true) return true;
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().toLowerCase();
+    if (normalized && !['jamais', 'never', 'non', 'no', 'false', 'aucun', 'none'].includes(normalized)) {
+      return true;
+    }
   }
+
+  return asBool(config.permisTravauxChauds)
+    || asBool(config.surveillanceIncendieTPC)
+    || asBool(config.inspectionFinaleDocumentee)
+    || asBool(config.travauxToiture)
+    || hasValue(config.responsableTravauxChauds)
+    || hasValue(config.methodeInspectionTPC);
+}
+
+function lockoutOrConfinedSpaceApplies(config: Module8Config): boolean {
+  return asBool(config.espaceClos)
+    || asBool(config.systemeCadenassage)
+    || hasValue(config.espaceClosLieu);
+}
+
+function lithiumApplies(config: Module8Config): boolean {
+  return asBool(config.batteriesLithium) || asBool(config.batteriesLithiumPresent);
+}
+
+function buildLithiumAnnexeData(config: Module8Config): LithiumAnnexeInitialData {
+  return {
+    bornesFontaines: asBool(config.bornesFontaine),
+    distanceBornesFontaines: '',
+    raccordsPompiers: asBool(config.raccordPompier),
+    localisationRaccords: config.raccordPompierLieu || '',
+    alimentationSprinklers: asBool(config.gicleurs),
+    alimentationColonneSeche: false,
+    alimentationAutre: false,
+    alimentationAutreTexte: '',
+    reserveEauSite: false,
+    capaciteReserve: '',
+    autresSourcesEau: '',
+    accesSouterrain: asBool(config.accesSousSol),
+    contraintesAcces: config.accesSousSolDetails || '',
+    nombreVehiculesEstime: '',
+    methodeDonneesOccupation: false,
+    methodeTauxOccupation: false,
+    methodeAutre: false,
+    methodeAutreTexte: '',
+    nombreBornes: '',
+    typeBorneNiveau2: false,
+    typeBorneRapideDC: false,
+    typeBorneAutre: false,
+    typeBorneAutreTexte: '',
+    tensionNominale: '',
+    courantMaximal: '',
+    localisationStationnementInterieur: false,
+    localisationStationnementExterieur: false,
+    localisationZoneSpecifique: false,
+    localisationZoneSpecifiqueTexte: '',
+    vehiculeElectrique: lithiumApplies(config),
+    vehiculeHybrideRechargeable: false,
+    vehiculeUtilitaireElectrique: false,
+    vehiculeVisiteurInconnu: false,
+    hauteurLibreMax: '',
+    largeurVoies: '',
+    contrainteHauteurLimitee: false,
+    contrainteAccesRestreint: false,
+    contrainteRayonsVirage: false,
+    contrainteAutres: false,
+    contrainteAutresTexte: '',
+    zoneAiresRecharge: false,
+    zoneStationnementInterieur: false,
+    zoneProximiteStructures: false,
+    zoneAutres: false,
+    zoneAutresTexte: '',
+    dispositifCoupureManuelle: '',
+    localisationCoupureManuelle: '',
+    localisationCoupureElectrique: '',
+  };
+}
+
+function buildRiskInspections(config: Module8Config, lang: 'fr' | 'en'): RiskInspectionRow[] {
+  const source = lang === 'fr' ? INSPECTIONS_RISQUES_FR : INSPECTIONS_RISQUES_EN;
+
+  const includeByEquipment: Record<string, boolean> = {
+    'PANNEAU INCENDIE': asBool(config.panneauAlarme),
+    'FIRE ALARM PANEL': asBool(config.panneauAlarme),
+    'AVERTISSEUR DE MONOXYDE DE CARBONE': asBool(config.detecteurCO),
+    'CARBON MONOXIDE DETECTOR': asBool(config.detecteurCO),
+    'SYSTÈME DE GICLEURS': asBool(config.gicleurs),
+    'SPRINKLER SYSTEM': asBool(config.gicleurs),
+    'EXTINCTEURS PORTATIFS': asBool(config.extincteurPortatif),
+    'PORTABLE FIRE EXTINGUISHERS': asBool(config.extincteurPortatif),
+    'POMPE INCENDIE': asBool(config.pompeIncendie),
+    'FIRE PUMP': asBool(config.pompeIncendie),
+    'RACCORD-POMPIER': asBool(config.raccordPompier),
+    'FIRE DEPARTMENT CONNECTION': asBool(config.raccordPompier),
+    'ACCÈS AU TOIT': asBool(config.accesToit) || asBool(config.toitVerrouille),
+    'ROOF ACCESS': asBool(config.accesToit) || asBool(config.toitVerrouille),
+    'ASCENSEUR': asBool(config.ascenseurs),
+    'ELEVATOR': asBool(config.ascenseurs),
+    "SYSTÈME D'EXTINCTION SPÉCIAL": asBool(config.systemeExtinctionFixe) || asBool(config.systemePreAction) || asBool(config.systemeHalogen) || asBool(config.systemeCO2),
+    'SPECIAL SUPPRESSION SYSTEM': asBool(config.systemeExtinctionFixe) || asBool(config.systemePreAction) || asBool(config.systemeHalogen) || asBool(config.systemeCO2),
+    'GÉNÉRATRICE': asBool(config.generatrice),
+    'GENERATOR': asBool(config.generatrice),
+    'VENTILATION': asBool(config.cvac) || asBool(config.desenfumage),
+  };
+
+  return source.filter(row => includeByEquipment[row.equipement] ?? true);
+}
+
+function yesNo(value: any, lang: 'fr' | 'en'): string {
+  if (value == null || value === '') return lang === 'fr' ? 'Non précisé' : 'Not specified';
+  return asBool(value) ? (lang === 'fr' ? 'Oui' : 'Yes') : (lang === 'fr' ? 'Non' : 'No');
+}
+
+function buildLockoutContext(config: Module8Config, lang: 'fr' | 'en'): string {
+  const lines: string[] = [];
+  if (lang === 'fr') {
+    if (hasValue(config.espaceClosLieu)) lines.push(`- Emplacement(s) d'espace clos déclaré(s) : ${config.espaceClosLieu}`);
+    if (config.systemeCadenassage != null) lines.push(`- Système de cadenassage en place : ${yesNo(config.systemeCadenassage, 'fr')}`);
+    if (config.espaceClos != null) lines.push(`- Présence d'espace clos : ${yesNo(config.espaceClos, 'fr')}`);
+    return lines.length ? `**Informations propres au site**\n${lines.join('\\n')}\n\n` : '';
+  }
+
+  if (hasValue(config.espaceClosLieu)) lines.push(`- Declared confined-space location(s): ${config.espaceClosLieu}`);
+  if (config.systemeCadenassage != null) lines.push(`- Lockout/tagout system in place: ${yesNo(config.systemeCadenassage, 'en')}`);
+  if (config.espaceClos != null) lines.push(`- Confined spaces present: ${yesNo(config.espaceClos, 'en')}`);
+  return lines.length ? `**Site-specific information**\n${lines.join('\\n')}\n\n` : '';
+}
+
+function buildHotWorkContext(config: Module8Config, lang: 'fr' | 'en'): string {
+  const lines: string[] = [];
+  if (lang === 'fr') {
+    if (hasValue(config.travauxPointsChauds)) lines.push(`- Travaux à chaud : ${config.travauxPointsChauds}`);
+    if (config.permisTravauxChauds != null) lines.push(`- Permis de travail à chaud : ${yesNo(config.permisTravauxChauds, 'fr')}`);
+    if (config.surveillanceIncendieTPC != null) lines.push(`- Surveillance incendie : ${yesNo(config.surveillanceIncendieTPC, 'fr')}`);
+    if (hasValue(config.responsableTravauxChauds)) lines.push(`- Responsable : ${config.responsableTravauxChauds}`);
+    if (config.inspectionFinaleDocumentee != null) lines.push(`- Inspection finale documentée : ${yesNo(config.inspectionFinaleDocumentee, 'fr')}`);
+    if (hasValue(config.methodeInspectionTPC)) lines.push(`- Méthode d'inspection : ${config.methodeInspectionTPC}`);
+    if (config.travauxToiture != null) lines.push(`- Travaux de toiture : ${yesNo(config.travauxToiture, 'fr')}`);
+    return lines.length ? `**Informations propres au site**\n${lines.join('\\n')}\n\n` : '';
+  }
+
+  if (hasValue(config.travauxPointsChauds)) lines.push(`- Hot work: ${config.travauxPointsChauds}`);
+  if (config.permisTravauxChauds != null) lines.push(`- Hot-work permit: ${yesNo(config.permisTravauxChauds, 'en')}`);
+  if (config.surveillanceIncendieTPC != null) lines.push(`- Fire watch: ${yesNo(config.surveillanceIncendieTPC, 'en')}`);
+  if (hasValue(config.responsableTravauxChauds)) lines.push(`- Responsible person: ${config.responsableTravauxChauds}`);
+  if (config.inspectionFinaleDocumentee != null) lines.push(`- Final inspection documented: ${yesNo(config.inspectionFinaleDocumentee, 'en')}`);
+  if (hasValue(config.methodeInspectionTPC)) lines.push(`- Inspection method: ${config.methodeInspectionTPC}`);
+  if (config.travauxToiture != null) lines.push(`- Roofing work: ${yesNo(config.travauxToiture, 'en')}`);
+  return lines.length ? `**Site-specific information**\n${lines.join('\\n')}\n\n` : '';
+}
+
+// ============================================================
+// GÉNÉRATION DES SECTEURS D'ÉVACUATION
+// Convention nord-américaine : RDC, 2e, 3e, etc.
+// ============================================================
+
+function buildEvacuationSectors(floors: number, basements: number = 0): EvacuationSectorRow[] {
+  const normalizedFloors = Math.max(Number(floors) || 1, 1);
+  const normalizedBasements = Math.max(Number(basements) || 0, 0);
+  const sectors: EvacuationSectorRow[] = [];
+
+  for (let i = normalizedBasements; i >= 1; i--) {
+    sectors.push({ etage: `SS${i}`, evacue: false, notes: '' });
+  }
+
+  sectors.push({ etage: 'RDC', evacue: false, notes: '' });
+
+  // Convention nord-américaine : RDC, 2e, 3e, etc.
+  for (let i = 2; i <= normalizedFloors; i++) {
+    sectors.push({ etage: `${i}e`, evacue: false, notes: '' });
+  }
+
   return sectors;
 }
 
@@ -176,7 +415,7 @@ function buildEvacuationSectors(floors: number): EvacuationSectorRow[] {
 // GÉNÉRATION MODULE 8 — FR
 // ============================================================
 
-function generateModule8FR(ctx: DocumentContext): any {
+function generateModule8FR(ctx: DocumentContext, config: Module8Config): any {
   return {
     moduleNumber: 8,
     title: 'REGISTRES ET ANNEXES',
@@ -232,7 +471,7 @@ function generateModule8FR(ctx: DocumentContext): any {
         columns: ['ÉQUIPEMENT', 'CODE / NORME / RÈGLEMENT EN RÉFÉRENCE', 'ARTICLE', 'OBSERVATIONS'],
         allowAdd: true,
         allowDelete: false,
-        entries: INSPECTIONS_RISQUES_FR,
+        entries: buildRiskInspections(config, 'fr'),
       },
       {
         id: '8.5',
@@ -241,7 +480,7 @@ function generateModule8FR(ctx: DocumentContext): any {
         columns: ['ÉTAGE / SECTEUR', 'ÉVACUÉ?', 'AUTRES INFORMATIONS'],
         allowAdd: true,
         allowDelete: true,
-        entries: buildEvacuationSectors(ctx.floors || 1),
+        entries: buildEvacuationSectors(ctx.floors || 1, Number(config.basements) || 0),
       },
       {
         id: '8.6',
@@ -253,7 +492,9 @@ function generateModule8FR(ctx: DocumentContext): any {
         id: '8.7',
         title: 'CADENASSAGE ET ESPACE CLOS',
         type: 'text',
-        content: `**1) Objectif**
+        applicable: lockoutOrConfinedSpaceApplies(config),
+        sourceFields: ['espaceClos', 'espaceClosLieu', 'systemeCadenassage'],
+        content: `${buildLockoutContext(config, 'fr')}**1) Objectif**
 Assurer le contrôle sécuritaire des énergies dangereuses (cadenassage) et encadrer l'entrée, le travail et les mesures de sauvetage en espace clos afin de :
 - Prévenir les blessures graves et incidents majeurs lors de travaux hors production
 - Réduire les risques d'exposition à une atmosphère dangereuse
@@ -284,7 +525,9 @@ Cette section s'applique à toute activité sur le site impliquant :
         id: '8.8',
         title: 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT DE COMPOSANTE',
         type: 'hot_work_permit',
-        content: `**Permis de travail à chaud**
+        applicable: hotWorkApplies(config),
+        sourceFields: ['travauxPointsChauds', 'permisTravauxChauds', 'surveillanceIncendieTPC', 'responsableTravauxChauds', 'inspectionFinaleDocumentee', 'methodeInspectionTPC', 'travauxToiture'],
+        content: `${buildHotWorkContext(config, 'fr')}**Permis de travail à chaud**
 Lors de la réalisation de travaux susceptibles de produire de la chaleur, des flammes ou des étincelles, il est impératif d'obtenir un permis de travail à chaud. Ce permis garantit que toutes les mesures de sécurité sont prises pour prévenir les risques d'incendie.
 
 **Demande d'évitement** : Lorsque les travaux risquent de déclencher le système d'alarme incendie, comme dans le cas de travaux produisant beaucoup de poussières, une demande d'évitement doit être déposée.
@@ -316,6 +559,8 @@ La personne délivrant le permis doit s'assurer que tous les critères de sécur
         id: '8.9',
         title: 'COPIE À L\'ENTREPRENEUR',
         type: 'text',
+        applicable: hotWorkApplies(config),
+        sourceFields: ['travauxPointsChauds'],
         content: `**CONDITIONS ET EXIGENCES**
 
 **Matériel :**
@@ -346,14 +591,18 @@ Il est formellement interdit de peinturer tout matériel de protection incendie 
       },
       {
         id: '8.10',
-        title: 'ANNEXE — FICHE D\'INFORMATION AU SERVICE INCENDIE (VÉ ET SOURCES D\'EAU)',
-        type: 'text',
-        content: '',
+        title: 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION',
+        type: 'lithium_annexe',
+        applicable: lithiumApplies(config),
+        sourceFields: ['batteriesLithium', 'batteriesLithiumPresent', 'bornesFontaine', 'raccordPompier', 'raccordPompierLieu', 'gicleurs', 'accesSousSol', 'accesSousSolDetails'],
+        data: buildLithiumAnnexeData(config),
       },
       {
         id: '8.11',
         title: 'REGISTRE D\'ANALYSE DE RISQUE — PROCÉDURES CLIMATIQUES BOMA',
         type: 'risk_analysis',
+        applicable: asBool(config.certBOMA),
+        sourceFields: ['certBOMA', 'certBOMANiveau'],
         tables: [
           {
             id: 'vents',
@@ -422,7 +671,7 @@ Il est formellement interdit de peinturer tout matériel de protection incendie 
           },
         ],
       },
-    ],
+    ].filter((section: any) => section.applicable !== false),
   };
 }
 
@@ -430,7 +679,7 @@ Il est formellement interdit de peinturer tout matériel de protection incendie 
 // GÉNÉRATION MODULE 8 — EN
 // ============================================================
 
-function generateModule8EN(ctx: DocumentContext): any {
+function generateModule8EN(ctx: DocumentContext, config: Module8Config): any {
   return {
     moduleNumber: 8,
     title: 'RECORDS AND APPENDICES',
@@ -486,7 +735,7 @@ function generateModule8EN(ctx: DocumentContext): any {
         columns: ['EQUIPMENT', 'CODE / STANDARD / REFERENCE REGULATION', 'ARTICLE', 'OBSERVATIONS'],
         allowAdd: true,
         allowDelete: false,
-        entries: INSPECTIONS_RISQUES_EN,
+        entries: buildRiskInspections(config, 'en'),
       },
       {
         id: '8.5',
@@ -495,7 +744,7 @@ function generateModule8EN(ctx: DocumentContext): any {
         columns: ['FLOOR / SECTOR', 'EVACUATED?', 'OTHER INFORMATION'],
         allowAdd: true,
         allowDelete: true,
-        entries: buildEvacuationSectors(ctx.floors || 1),
+        entries: buildEvacuationSectors(ctx.floors || 1, Number(config.basements) || 0),
       },
       {
         id: '8.6',
@@ -507,7 +756,9 @@ function generateModule8EN(ctx: DocumentContext): any {
         id: '8.7',
         title: 'LOCKOUT/TAGOUT AND CONFINED SPACES',
         type: 'text',
-        content: `**1) Objective**
+        applicable: lockoutOrConfinedSpaceApplies(config),
+        sourceFields: ['espaceClos', 'espaceClosLieu', 'systemeCadenassage'],
+        content: `${buildLockoutContext(config, 'en')}**1) Objective**
 Ensure safe control of hazardous energies (lockout/tagout) and manage entry, work and rescue in confined spaces in order to:
 - Prevent serious injuries and major incidents during non-production work
 - Reduce the risks of exposure to a hazardous atmosphere
@@ -525,7 +776,9 @@ This section applies to any activity on site involving:
         id: '8.8',
         title: 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST',
         type: 'text',
-        content: `**Hot Work Permit**
+        applicable: hotWorkApplies(config),
+        sourceFields: ['travauxPointsChauds', 'permisTravauxChauds', 'surveillanceIncendieTPC', 'responsableTravauxChauds', 'inspectionFinaleDocumentee', 'methodeInspectionTPC', 'travauxToiture'],
+        content: `${buildHotWorkContext(config, 'en')}**Hot Work Permit**
 When performing work that may produce heat, flames or sparks, it is mandatory to obtain a hot work permit. This permit ensures that all safety measures are in place to prevent fire hazards.
 
 **Bypass Request:** When work risks triggering the fire alarm system, such as work producing excessive dust, a bypass request must be submitted.
@@ -539,6 +792,8 @@ When performing work that may produce heat, flames or sparks, it is mandatory to
         id: '8.9',
         title: 'COPY TO CONTRACTOR',
         type: 'text',
+        applicable: hotWorkApplies(config),
+        sourceFields: ['travauxPointsChauds'],
         content: `**CONDITIONS AND REQUIREMENTS**
 
 **Equipment:**
@@ -564,14 +819,18 @@ In the event of non-compliance, the permit will be revoked and penalties may be 
       },
       {
         id: '8.10',
-        title: 'APPENDIX — FIRE DEPARTMENT INFORMATION SHEET (EV & WATER SOURCES)',
-        type: 'text',
-        content: '',
+        title: 'APPENDIX — LITHIUM-ION BATTERY FIRE',
+        type: 'lithium_annexe',
+        applicable: lithiumApplies(config),
+        sourceFields: ['batteriesLithium', 'batteriesLithiumPresent', 'bornesFontaine', 'raccordPompier', 'raccordPompierLieu', 'gicleurs', 'accesSousSol', 'accesSousSolDetails'],
+        data: buildLithiumAnnexeData(config),
       },
       {
         id: '8.11',
         title: 'RISK ANALYSIS REGISTER — BOMA CLIMATE PROCEDURES',
         type: 'risk_analysis',
+        applicable: asBool(config.certBOMA),
+        sourceFields: ['certBOMA', 'certBOMANiveau'],
         tables: [
           {
             id: 'vents',
@@ -640,7 +899,7 @@ In the event of non-compliance, the permit will be revoked and penalties may be 
           },
         ],
       },
-    ],
+    ].filter((section: any) => section.applicable !== false),
   };
 }
 
@@ -648,9 +907,9 @@ In the event of non-compliance, the permit will be revoked and penalties may be 
 // EXPORT PRINCIPAL
 // ============================================================
 
-export function generateModule8(ctx: DocumentContext): any {
+export function generateModule8(ctx: DocumentContext, config: Module8Config = {}): any {
   return {
-    fr: generateModule8FR(ctx),
-    en: generateModule8EN(ctx),
+    fr: generateModule8FR(ctx, config),
+    en: generateModule8EN(ctx, config),
   };
 }

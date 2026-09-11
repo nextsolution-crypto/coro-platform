@@ -14,7 +14,7 @@ export const P105_EXPOSITION_AMMONIAC_IND: ProcedureTemplate = {
   titleEN: 'AMMONIA EXPOSURE',
   icon: '🧪',
   headerColor: COLORS.purple,
-  activationRule: 'is_industrial',
+  activationRule: 'industrial_with_ammonia',
   documentTypes: ['PMU', 'PSI'],
   roleSections: [
     {

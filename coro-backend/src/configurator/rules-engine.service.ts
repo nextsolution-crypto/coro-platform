@@ -1,52 +1,264 @@
 import { Injectable } from '@nestjs/common';
 
 export interface BuildingConfig {
+  // ========== IDENTITÉ / DOCUMENT ==========
+  province?: string;
+  responsableNom?: string;
+  responsableTitre?: string;
+  dateReleve?: string;
+  ville?: string;
+  reglementMunicipal?: string;
+  typeDocument?: string;
+  anneDocument?: string | number; // clé historique conservée
+  versionDocument?: string;
+
   // ========== DESCRIPTION GÉNÉRALE ==========
   buildingType: string;
   usagePrincipal: string;
   usageSecondaire?: string;
+  capaciteMaxReglementaire?: number;
+  traitementsMedicauxSurPlace?: boolean;
   floors: number;
   basements: number;
   superficie?: number;
-  anneeConstruction?: number | string; // Select retourne une string côté frontend
-  derniereRenovation?: string;         // 'Aucune' ou ex: '2015'
-  typeConstruction?: string;
-  hauteurBatiment?: 'STANDARD' | 'GRANDE_HAUTEUR';
+  anneeConstruction?: number | string;
+  derniereRenovation?: string;
+  typeConstructionEtages?: string;
+  typeConstructionToit?: string;
+  accesSousSol?: string[];
+  accesSousSolDetails?: string;
+  accesEtages?: string[];
+  accesEtagesDetails?: string;
+  treizeEtage?: boolean;
+  infosBatiment?: string;
+  hauteurBatiment?: boolean | 'STANDARD' | 'GRANDE_HAUTEUR';
 
-  // ========== CNPI 2020 — APPLICABILITÉ PSI (T1 + T3) ==========
-  province?: string;
-  capaciteMaxReglementaire?: number;
-  traitementsMedicauxSurPlace?: boolean;
+  // ========== OCCUPATION ==========
+  multiLocataires?: boolean;
+  nbLocataires?: number;
+  quartsOccupation?: Array<{
+    nomQuart?: string;
+    heureDebut?: string;
+    heureFin?: string;
+    occupantsSemaine?: number | string;
+    occupantsSamedi?: number | string;
+    occupantsDimanche?: number | string;
+  }>;
+  // Compatibilité anciens projets
+  occupationJour?: boolean;
+  occupationSoir?: boolean;
+  occupationNuit?: boolean;
+  lieuSommeil?: boolean;
+  securite24h?: boolean;
+  agentSecurite?: boolean;
+  posteSurveillance?: boolean | string;
+  personnelHandicap?: boolean;
+  ppnaeTypesLimitations?: string[];
+  ppnaeMesures?: string[];
+  ppnaeRegistreAJour?: boolean;
+  controleAcces?: boolean;
+  cameras?: boolean;
 
-  // ========== CNPI 2020 — T5 Systèmes intégrés S1001 ==========
+  // ========== EMPLACEMENTS ==========
+  posteCommandement?: string;
+  pointRassemblement?: string;
+  pointRassemblement2?: string;
+  lieuAccueilTemporaire?: string;
+  zoneConfinement?: string;
+  zoneRafraichissement?: string;
+  boiteClePompier?: string;
+  trousseClePompier?: boolean; // compatibilité potentielle
+  trousseClesPompier?: boolean; // clé historique actuellement rendue
+  trousseClesPompierLieu?: string;
+  lieuDocument?: string;
+  psiDerniereRevision?: string;
+  programmeInspectionEntretien?: boolean;
+  portesIssueExposees?: boolean;
+  portesIssueMesure?: string;
+  signalisationIssue?: boolean;
+  signalisationIssueType?: string;
+  signalisationIssueDerniereInspection?: string;
+
+  // ========== ALARME INCENDIE ==========
+  panneauAlarme?: boolean;
+  panneauType?: 'SIMPLE' | 'DOUBLE' | 'AUCUN' | string;
+  panneauTechno?: string;
+  heuresFonctionnement?: string;
+  panneauMarque?: string;
+  panneauModele?: string;
+  panneauLocalisation?: string;
+  panneauAnnonciateurDistance?: boolean;
+  panneauAnnonciateurLieu?: string;
+  teleSurveillance?: boolean;
+  centraleSurveillance?: string;
+  centraleTelephone?: string;
+  centraleCodeClient?: string;
+  telephonePompier?: boolean;
+  stationManuelle?: boolean;
+  detecteurFumee?: boolean;
+  detecteurChaleur?: boolean;
+  detecteurDebitGicleurs?: boolean;
+  rappelAscenseurs?: boolean;
+  arretVentilation?: boolean;
+  desenfumageAutomatique?: boolean;
+  deverrouillagePorces?: boolean;
+  fermeturePortesCoupeFeu?: boolean;
+
+  // ========== COMMUNICATION ==========
+  systemePhonic?: boolean;
+  systemePhonicType?: string;
+  systemePhonicAutomatise?: boolean; // compatibilité anciens projets
+  messagesAutomatises?: boolean;
+  radiosCommunication?: boolean;
+  nbRadios?: number;
+  intercomUrgence?: boolean;
+
+  // ========== GICLEURS & PROTECTION EAU ==========
+  gicleurs?: boolean;
+  gicleursSystemes?: Array<{
+    type?: string;
+    lieu?: string;
+    complet?: boolean;
+  }>;
+  salleGicleurs?: string;
+  salleGicleursLocalisation?: string; // compatibilité anciens projets
+  pompeIncendie?: boolean;
+  pompeIncendieLieu?: string;
+  gapmUsgpm?: number | string | boolean;
+  boyauIncendie?: boolean;
+  boyauCabinet?: boolean;
+  priseRefoulement?: boolean;
+  raccordPompier?: boolean;
+  raccordPompierLieu?: string;
+  bornesFontaine?: boolean;
+  bornesFontaineLieu?: string;
+  vannesIsolement?: boolean;
+  vannesIsolementLieu?: string;
+  valve2_5?: boolean;
+  valve2_5Lieu?: string;
+  valve1_5?: boolean;
+  valve1_5Lieu?: string;
+
+  // ========== SYSTÈMES INTÉGRÉS ==========
   s1001Interconnexions?: string[];
   s1001DernierEssai?: string;
   s1001RapportDisponible?: boolean;
   s1001Coordonnateur?: string;
 
-  // ========== CNPI 2020 — T9 PPNAE enrichi ==========
-  ppnaeTypesLimitations?: string[];
-  ppnaeMesures?: string[];
-  ppnaeRegistreAJour?: boolean;
+  // ========== EXTINCTEURS / EXTINCTION FIXE ==========
+  extincteurPortatif?: boolean;
+  extincteursList?: Array<{ type?: string; lieu?: string }>;
+  systemeExtinctionFixe?: boolean;
+  systemeExtinctionFixeLieu?: string;
+  systemePreAction?: boolean;
+  systemePreActionLieu?: string;
+  systemeHalogen?: boolean;
+  systemeHalogenLieu?: string;
+  systemeCO2?: boolean;
+  systemeCO2Lieu?: string;
+  systemeHotte?: boolean; // compatibilité anciens projets / futur mapping explicite
 
-  // ========== CNPI 2020 — T10 Matières dangereuses ==========
+  // ========== MÉCANIQUE ==========
+  ascenseurs?: boolean;
+  nbAscenseurs?: number;
+  typeAscenseur?: string;
+  salleAscenseur?: string;
+  ascenseurPompier?: boolean;
+  ascenseurPompierLequel?: string;
+  rappelAscenseursLieu?: string;
+  telephoneAscenseurs?: boolean;
+  fonctionneSecours?: boolean;
+  escaliersPressurises?: boolean;
+  nbEscaliers?: number;
+  toitVerrouille?: boolean;
+  accesToit?: string;
+  separationCoupeFeu?: boolean;
+  separationCoupeFeuLieu?: string;
+  emplacementBac?: string;
+  compacteur?: boolean;
+  compacteurGicleurs?: boolean;
+  compacteurGicleursType?: string;
+  compacteurVanneIsolement?: string;
+  chuteADechets?: boolean;
+  cvac?: boolean;
+  cvacType?: string;
+  cvacLocalisation?: string;
+  typeChautfage?: string;
+  typeRefroidissement?: string;
+  desenfumage?: boolean;
+  desenfumageLieu?: string;
+  registresCoupeFeu?: boolean;
+  registresCoupeFeuNombre?: number;
+  registresCoupeFeuDerniereInspection?: string;
+  registresCoupeFeuRapport?: boolean;
+  salleElectrique?: string;
+  generatrice?: boolean;
+  nbGeneratrices?: number;
+  generatriceNom?: string;
+  generatriceLieu?: string;
+  generatriceCarburant?: string;
+  autonomieGeneratrice?: number;
+  capaciteReservoir?: number;
+  reservoirsAuxiliaires?: boolean;
+  reservoirsAuxiliairesLieu?: string;
+  reservoirsAuxiliairesCapacite?: number;
+  autonomieTotale?: number;
+  generatriceEquipements?: string[];
+  generatriceEquipementsPersonnalises?: Array<{ nom?: string }>;
+  equipementsSecours?: string[]; // compatibilité anciens projets
+  gazNaturel?: boolean;
+  gazNaturelLieu?: string;
+  propane?: boolean;
+  propaneLieu?: string;
+  vannesArretSalleGicleurs?: string;
+  vannesArretGazNaturel?: string;
+  vannesArretEauDomestique?: string;
+  vannesArretSalleElectrique?: string;
+
+  // ========== DÉTECTEURS DE GAZ ==========
+  detecteurCO?: boolean;
+  detecteurCOSeuil1?: number;
+  detecteurCOSeuil2?: number;
+  detecteurCOLieu?: string;
+  detecteurGazNaturel?: boolean;
+  detecteurGazNaturelLieu?: string;
+  detecteurPropane?: boolean;
+  detecteurAmmoniac?: boolean;
+  detecteurAmmoniacSeuil1?: number;
+  detecteurAmmoniacSeuil2?: number;
+  detecteurFreon?: boolean;
+  detecteurO2?: boolean;
+  detecteurFM200?: boolean;
+  detecteurCO2?: boolean;
+
+  // ========== MATIÈRES DANGEREUSES ==========
+  matieresDangereuses?: boolean;
+  matieresList?: Array<{
+    nom?: string;
+    numeroUN?: string;
+    utilisation?: string;
+    emplacementPrecis?: string;
+    quantiteMax?: string | number;
+    tmd?: boolean;
+    simdut?: boolean;
+    signalisationTMD?: boolean;
+  }>;
   psiEntreePrincipale?: boolean;
+  ammoniac?: boolean;
+  batteriesLithium?: boolean;
+  trousseDeversement?: boolean;
+  trousseDeversementListe?: Array<{ lieu?: string }>;
 
-  // ========== CNPI 2020 — Révision annuelle PSI ==========
-  psiDerniereRevision?: string;
-
-  // ========== CNPI 2020 — T2 Checklist PSI ==========
-  programmeInspectionEntretien?: boolean;
-
-  // ========== CNPI 2020 — T6 Travaux par points chauds ==========
+  // ========== TRAVAUX PAR POINTS CHAUDS ==========
   travauxPointsChauds?: string;
   permisTravauxChauds?: boolean;
   surveillanceIncendieTPC?: boolean;
+  responsableTravauxChauds?: string;
   inspectionFinaleDocumentee?: boolean;
   methodeInspectionTPC?: string;
   travauxToiture?: boolean;
 
-  // ========== CNPI 2020 — T7 Laboratoires ==========
+  // ========== LABORATOIRES ==========
   laboratoirePresent?: boolean;
   typeLaboratoire?: string[];
   gazComprimesPresents?: boolean;
@@ -55,165 +267,68 @@ export interface BuildingConfig {
   detectionGazLabo?: boolean;
   panneauxTMDLabo?: boolean;
 
-  // ========== CNPI 2020 — T11 Registres coupe-feu ==========
-  registresCoupeFeu?: boolean;
-  registresCoupeFeuNombre?: number;
-  registresCoupeFeuDerniereInspection?: string;
-  registresCoupeFeuRapport?: boolean;
-
-  // ========== CNPI 2020 — T12 Signalisation d'issue ==========
-  signalisationIssue?: boolean;
-  signalisationIssueType?: string;
-  signalisationIssueDerniereInspection?: string;
-
-  // ========== CNPI 2020 — T13 Obstruction portes d'issue ==========
-  portesIssueExposees?: boolean;
-  portesIssueMesure?: string;
-
-  // Occupation
-  multiLocataires: boolean;
-  nbLocataires?: number;
-  occupationJour: boolean;
-  occupationSoir: boolean;
-  occupationNuit: boolean;
-  personnelHandicap: boolean;
-  lieuSommeil: boolean;
-
-  // Sécurité
-  securite24h: boolean;
-  agentSecurite: boolean;
-  posteSurveillance: boolean;
-
-  // Emplacements stratégiques
-  posteCommandement?: string;
-  pointRassemblement?: string;
-  lieuAccueilTemporaire?: string;
-  salleGicleurs?: string;
-  salleElectrique?: string;
-
-  // ========== ALARME INCENDIE ==========
-  panneauAlarme: boolean;
-  panneauType: 'SIMPLE' | 'DOUBLE' | 'AUCUN';
-  panneauMarque?: string;
-  panneauModele?: string;
-  panneauAnnonciateurDistance: boolean;
-  teleSurveillance: boolean;
-  centraleSurveillance?: string;
-  telephonePompier: boolean;
-  stationManuelle: boolean;
-
-  // Détecteurs
-  detecteurFumee: boolean;
-  detecteurChaleur: boolean;
-  detecteurDebitGicleurs: boolean;
-
-  // Relais auxiliaires
-  rappelAscenseurs: boolean;
-  arretVentilation: boolean;
-  desenfumageAutomatique: boolean;
-  deverrouillagePorces: boolean;
-  fermeturePortesCoupeFeu: boolean;
-
-  // Communication
-  systemePhonicAutomatise: boolean;
-  systemePhonic: boolean;
-  messagesAutomatises: boolean;
-  radiosCommunication: boolean;
-  intercomUrgence: boolean;
-
-  // ========== GICLEURS & PROTECTION EAU ==========
-  gicleurs: boolean;
-  gicleursComplet: boolean;
-  gicleursPartiel: boolean;
-  typeGicleurs?: string;
-  salleGicleursLocalisation?: string;
-  pompeIncendie: boolean;
-  gapmUsgpm: boolean;
-  boyauIncendie: boolean;
-  priseRefoulement: boolean;
-  raccordPompier: boolean;
-  bornesFontaine: boolean;
-  vannesIsolement: boolean;
-
-  // ========== EXTINCTEURS ==========
-  extincteurPortatif: boolean;
-  typesExtincteurs?: string[];
-  systemeExctinctionSpecial?: boolean;
-  systemeExctinctionType?: string;
-  systemeHotte: boolean;
-  systemeHalogen: boolean;
-  systemeCO2: boolean;
-
-  // ========== MÉCANIQUE ==========
-  ascenseurs: boolean;
-  nbAscenseurs?: number;
-  ascenseurPompier: boolean;
-  typeAscenseur?: string;
-  salleAscenseur?: string;
-  escaliersPressurises: boolean;
-  nbEscaliers?: number;
-
-  // CVAC
-  cvac: boolean;
-  typeChautfage?: string;
-  typeRefroidissement?: string;
-  desenfumage: boolean;
-  extractionFumee: boolean;
-
-  // Électrique
-  generatrice: boolean;
-  typeGeneratrice?: string;
-  autonomieGeneratrice?: number;
-  capaciteReservoir?: number;
-  equipementsSecours?: string[];
-  salleElectriqueLocalisation?: string;
-
-  // Gaz
-  gazNaturel: boolean;
-  localisationEntreeGaz?: string;
-  propane: boolean;
-
-  // ========== DÉTECTEURS DE GAZ ==========
-  detecteurCO: boolean;
-  detecteurCOSeuil1?: number;
-  detecteurCOSeuil2?: number;
-  detecteurGazNaturel: boolean;
-  detecteurPropane: boolean;
-  detecteurAmmoniac: boolean;
-  detecteurFreon: boolean;
-  detecteurO2: boolean;
-  detecteurFM200: boolean;
-  detecteurCO2: boolean;
-
-  // ========== MATIÈRES DANGEREUSES ==========
-  matieresDangereuses: boolean;
-  diesel: boolean;
-  ammoniac: boolean;
-  batteriesLithium: boolean;
-  fm200: boolean;
-  autresMatieres?: string[];
-  trousseDeversement: boolean;
-
-  // ========== ÉQUIPEMENTS PREMIERS SOINS ==========
-  trousseSecoursPresente: boolean;
-  defibrillateur: boolean;
-  doucheOculaire: boolean;
+  // ========== PREMIERS SOINS ==========
+  equipementsSoins?: Array<{
+    type?: string;
+    lieu?: string;
+    quantite?: number | string;
+  }>;
+  trousseSecoursPresente?: boolean; // compatibilité anciens projets
+  defibrillateur?: boolean;         // compatibilité anciens projets
+  doucheOculaire?: boolean;         // compatibilité anciens projets
 
   // ========== SPÉCIFIQUE INDUSTRIEL ==========
-  espaceClos: boolean;
-  chariotsElevateurs: boolean;
-  palettiers: boolean;
-  mezzanine: boolean;
-  travailChaud: boolean;
-  procesDangereux: boolean;
-  systemeCadenassage: boolean;
+  espaceClos?: boolean;
+  espaceClosLieu?: string;
+  palettierPresent?: boolean;
+  palettierAgencement?: string;
+  palettierGicleurs?: boolean;
+  palettierAlles?: string;
+  stockagePresent?: boolean;
+  stockagePalettes?: string | number;
+  stockagePalettesCombustible?: boolean;
+  stockageEmplacement?: string;
+  stockageHauteur?: string | number;
+  stockageLargeurAllee?: string | number;
+  stockageClassification?: string;
+  mezzaninePresent?: boolean;
+  mezzanineGicle?: boolean;
+  mezzanineEncloisonnee?: boolean;
+  mezzanineLieu?: string;
+  chariotsPresent?: boolean;
+  chariotsNombre?: number;
+  chariotsType?: string;
+  chariotsEmplacementRecharge?: string;
+  batteriesLithiumPresent?: boolean;
+  batteriesLithiumLocalEspace?: boolean;
+  batteriesLithiumLocalEspaceCommentaire?: string;
+  batteriesLithiumDetection?: boolean;
+  batteriesLithiumDetectionCommentaire?: string;
+  batteriesLithiumSignalisation?: boolean;
+  batteriesLithiumSignalisationCommentaire?: string;
+  procesDangereux?: boolean;
+  procesDangereuxDetails?: Array<{
+    procedure?: string;
+    type?: string;
+    risque?: string;
+    mesures?: string;
+  }>;
+  systemeCadenassage?: boolean;
+
+  // Compatibilité anciens champs industriels
+  chariotsElevateurs?: boolean;
+  palettiers?: boolean;
+  mezzanine?: boolean;
+  travailChaud?: boolean;
 
   // ========== CERTIFICATIONS ==========
-  certBOMA: boolean;
-  certLEED: boolean;
-  certISO22301: boolean;
-  certISO31000: boolean;
-  certEnergyStar: boolean;
+  certBOMA?: boolean;
+  certBOMANiveau?: string;
+  certLEED?: boolean;
+  certLEEDNiveau?: string;
+  certISO22301?: boolean;
+  certISO31000?: boolean;
+  certEnergyStar?: boolean;
   autresCertifications?: string[];
 }
 
@@ -252,6 +367,26 @@ export interface ConfiguratorResult {
 
 @Injectable()
 export class RulesEngineService {
+
+  private isHighRise(config: BuildingConfig): boolean {
+    return config.hauteurBatiment === true ||
+      config.hauteurBatiment === 'GRANDE_HAUTEUR';
+  }
+
+  private hasNightOccupancy(config: BuildingConfig): boolean {
+    if (config.occupationNuit === true) return true;
+
+    return (config.quartsOccupation || []).some((quart) => {
+      const nom = (quart?.nomQuart || '').toLowerCase();
+      return nom.includes('nuit') || nom.includes('night');
+    });
+  }
+
+  private hasLithiumRisk(config: BuildingConfig): boolean {
+    return config.batteriesLithium === true ||
+      config.batteriesLithiumPresent === true;
+  }
+
 
   analyzeConfiguration(config: BuildingConfig): ConfiguratorResult {
     const result: ConfiguratorResult = {
@@ -544,6 +679,16 @@ export class RulesEngineService {
   private computeFrequenceExercices(config: BuildingConfig): { frequence: string; base: string } {
     const usage = (config.usagePrincipal || '').trim();
 
+    // Laboratoire hors école → 3 mois
+    // Doit être évalué ici afin que la validation T8 créée en début d'analyse
+    // reflète déjà la bonne fréquence.
+    if (config.laboratoirePresent && !usage.startsWith('A2')) {
+      return {
+        frequence: 'Tous les 3 mois',
+        base: 'Laboratoire présent hors établissement scolaire (CNPI 2020 art. 2.8.3.2 d)',
+      };
+    }
+
     // Groupe B ou lieu de sommeil → 6 mois
     if (usage.startsWith('B') || config.lieuSommeil) {
       return {
@@ -553,7 +698,7 @@ export class RulesEngineService {
     }
 
     // Grande hauteur (sauf C) → 6 mois
-    if (config.hauteurBatiment === 'GRANDE_HAUTEUR' && !usage.startsWith('C')) {
+    if (this.isHighRise(config) && !usage.startsWith('C')) {
       return {
         frequence: 'Tous les 6 mois',
         base: 'Bâtiment grande hauteur, usage non résidentiel (art. 2.8.3.2 c)',
@@ -777,8 +922,13 @@ export class RulesEngineService {
 
     if (config.generatrice) {
       result.proceduresActives.push('PROC-PANNE-COURANT');
-      const equipSecours = (config as any).equipementsSecours || (config as any).equipementsSoins || [];
-      if (!equipSecours || equipSecours.length === 0) {
+      const equipSecours =
+        config.generatriceEquipements ||
+        config.equipementsSecours ||
+        [];
+      const equipPerso = config.generatriceEquipementsPersonnalises || [];
+
+      if (equipSecours.length === 0 && equipPerso.length === 0) {
         result.validations.push({
           type: 'RECOMMANDATION',
           code: 'GENERATRICE-001',
@@ -820,7 +970,7 @@ export class RulesEngineService {
       }
     }
 
-    if (config.batteriesLithium) {
+    if (this.hasLithiumRisk(config)) {
       result.proceduresActives.push('PROC-FEU-BATTERIE-LITHIUM');
       result.validations.push({
         type: 'AVERTISSEMENT',
@@ -864,22 +1014,49 @@ export class RulesEngineService {
       });
     }
 
-    if (config.travailChaud) {
+    // Compatibilité : le configurateur actuel utilise travauxPointsChauds.
+    // L'ancien booléen travailChaud reste accepté pour les projets historiques.
+    if (
+      (config.travauxPointsChauds && config.travauxPointsChauds !== 'Jamais') ||
+      config.travailChaud === true
+    ) {
+      // applyPointsChaudsRules active déjà la procédure pour le nouveau schéma.
+      // Set() en fin d'analyse éliminera tout doublon avec les projets historiques.
       result.proceduresActives.push('PROC-TRAVAIL-CHAUD');
-      result.validations.push({
-        type: 'INFO',
-        code: 'IND-002',
-        message: 'Travaux à chaud : permis travail chaud requis. Procédure et registre activés.',
-        reference: 'CNPI 2020 art. 5.2',
-      });
     }
 
-    if (config.chariotsElevateurs) {
+    if (config.chariotsPresent || config.chariotsElevateurs) {
       result.validations.push({
         type: 'INFO',
         code: 'IND-003',
-        message: 'Chariots élévateurs : documenter zones opération et procédures recharge batteries.',
+        message: 'Chariots élévateurs : documenter les zones d’opération et les procédures de recharge.',
       });
+    }
+
+    if (config.palettierPresent && !config.palettierAgencement) {
+      result.validations.push({
+        type: 'RECOMMANDATION',
+        code: 'IND-PALETTIER-001',
+        message: 'Palettiers présents : documenter leur agencement et les conditions de protection incendie.',
+      });
+    }
+
+    if (config.stockagePresent && !config.stockageEmplacement) {
+      result.validations.push({
+        type: 'RECOMMANDATION',
+        code: 'IND-STOCKAGE-001',
+        message: 'Stockage déclaré sans emplacement documenté.',
+      });
+    }
+
+    if (this.hasLithiumRisk(config)) {
+      if (config.batteriesLithiumPresent && config.batteriesLithiumDetection === false) {
+        result.validations.push({
+          type: 'AVERTISSEMENT',
+          code: 'IND-LITHIUM-DETECTION',
+          message: 'Batteries lithium-ion déclarées sans détection dédiée. Évaluer les mesures de détection adaptées au risque.',
+        });
+      }
     }
 
     if (config.procesDangereux) {
@@ -905,7 +1082,7 @@ export class RulesEngineService {
       result.rolesRecommandes.push('ROLE-CHE');
     }
 
-    if (config.floors > 10 || config.hauteurBatiment === 'GRANDE_HAUTEUR') {
+    if (config.floors > 10 || this.isHighRise(config)) {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'OCCUP-001',
@@ -922,7 +1099,7 @@ export class RulesEngineService {
       });
     }
 
-    if (config.occupationNuit && !config.securite24h) {
+    if (this.hasNightOccupancy(config) && !config.securite24h) {
       result.validations.push({
         type: 'RECOMMANDATION',
         code: 'OCCUP-003',
@@ -987,6 +1164,32 @@ export class RulesEngineService {
         reference: 'ISO 22301',
       });
     }
+
+    if (config.certISO31000) {
+      result.validations.push({
+        type: 'INFO',
+        code: 'CERT-004',
+        message: 'ISO 31000 déclarée : tenir compte du cadre de gestion des risques de l’organisation dans l’analyse.',
+        reference: 'ISO 31000',
+      });
+    }
+
+    if (config.certEnergyStar) {
+      result.validations.push({
+        type: 'INFO',
+        code: 'CERT-005',
+        message: 'Certification ENERGY STAR déclarée : information contextuelle conservée au dossier.',
+        reference: 'ENERGY STAR',
+      });
+    }
+
+    if ((config.autresCertifications || []).length > 0) {
+      result.validations.push({
+        type: 'INFO',
+        code: 'CERT-006',
+        message: `Autres certifications déclarées : ${(config.autresCertifications || []).join(', ')}.`,
+      });
+    }
   }
 
   private applySectionRules(config: BuildingConfig, result: ConfiguratorResult) {
@@ -1023,15 +1226,25 @@ export class RulesEngineService {
 
     if (config.gicleurs) result.sectionsDocument.push('SYSTEME_GICLEURS');
     if (config.matieresDangereuses) result.sectionsDocument.push('MATIERES_DANGEREUSES');
-    if (config.detecteurCO || config.detecteurGazNaturel || config.detecteurAmmoniac)
+    if (
+      config.detecteurCO ||
+      config.detecteurGazNaturel ||
+      config.detecteurPropane ||
+      config.detecteurAmmoniac ||
+      config.detecteurFreon ||
+      config.detecteurO2 ||
+      config.detecteurFM200 ||
+      config.detecteurCO2
+    ) {
       result.sectionsDocument.push('DETECTEURS_GAZ');
+    }
     if (config.ammoniac) result.sectionsDocument.push('PROCEDURES_AMMONIAC');
     if (config.espaceClos) result.sectionsDocument.push('ESPACE_CLOS_CADENASSAGE');
-    if (config.travailChaud) result.sectionsDocument.push('PERMIS_TRAVAIL_CHAUD');
-    if (config.chariotsElevateurs || config.palettiers) result.sectionsDocument.push('ENTREPOSAGE_MANUTENTION');
+    if ((config.travauxPointsChauds && config.travauxPointsChauds !== 'Jamais') || config.travailChaud) result.sectionsDocument.push('PERMIS_TRAVAIL_CHAUD');
+    if (config.chariotsPresent || config.chariotsElevateurs || config.palettierPresent || config.palettiers || config.stockagePresent || config.mezzaninePresent || config.mezzanine) result.sectionsDocument.push('ENTREPOSAGE_MANUTENTION');
     if (config.procesDangereux) result.sectionsDocument.push('PROCEDES_DANGEREUX');
     if (config.messagesAutomatises || config.systemePhonic) result.sectionsDocument.push('MESSAGES_PHONIQUES');
-    if (config.batteriesLithium) result.sectionsDocument.push('FEU_BATTERIE_LITHIUM');
+    if (this.hasLithiumRisk(config)) result.sectionsDocument.push('FEU_BATTERIE_LITHIUM');
   }
 
   private applyValidations(config: BuildingConfig, result: ConfiguratorResult) {

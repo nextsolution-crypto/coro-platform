@@ -12,6 +12,24 @@ import { generatePcaModules } from './pca.templates';
 export class GeneratorService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Normalise les valeurs booléennes provenant du configurateur.
+   * Conserve la compatibilité avec les anciennes valeurs stringifiées.
+   */
+  private asBool(value: any): boolean {
+    if (value === true) return true;
+    if (value === false || value === null || value === undefined || value === '') return false;
+
+    if (typeof value === 'number') return value !== 0;
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return ['true', '1', 'oui', 'yes', 'y', 'o'].includes(normalized);
+    }
+
+    return Boolean(value);
+  }
+
 private async loadProceduresFromDB(
     organizationId: string,
     config: any,
@@ -90,10 +108,6 @@ private async loadProceduresFromDB(
           ),
         }));
 
-      const idsNotInAllProcs = customProcedureIds.filter((id: string) =>
-        !allProcs.find(p => p.id === id)
-      );
-
       // Procédures IA (CustomProcedure) ajoutées au projet
       const customIAProcedures = await this.prisma.customProcedure.findMany({
         where: {
@@ -155,28 +169,39 @@ private async loadProceduresFromDB(
     });
     if (!project) throw new Error('Projet introuvable');
 
+    const defaultResponsableNom = `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`;
+
     return {
       clientName: project.client.name,
       buildingName: project.building.name,
       buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
       city: project.building.city,
-      province: config.province || 'Quebec',
+      province: config.province || project.building.province || 'Quebec',
       year: project.year,
       documentType: project.documentType,
-      responsableNom: `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`,
-      responsableTitre: project.building.responsableTitre || config.responsableTitre || 'Directeur de la sécurité',
+
+      // Le configurateur est la source prioritaire pour les métadonnées du document.
+      responsableNom: config.responsableNom || defaultResponsableNom,
+      responsableTitre:
+        config.responsableTitre ||
+        project.building.responsableTitre ||
+        'Directeur de la sécurité',
       dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
       versionDocument: config.versionDocument || 'Création initiale',
-      historiqueList: config.historiqueList || [],
-      floors: config.floors || 0,
-      hauteurBatiment: config.hauteurBatiment || false,
-      multiLocataires: config.multiLocataires || false,
+      historiqueList: Array.isArray(config.historiqueList) ? config.historiqueList : [],
+
+      // Données bâtiment utilisées par plusieurs générateurs.
+      floors: config.floors ?? 0,
+      hauteurBatiment: config.hauteurBatiment ?? false,
+      multiLocataires: this.asBool(config.multiLocataires),
       companyName: project.user.companyName || 'CORO',
-      buildingType: project.building.buildingType || 'office',
-      has_sprinklers: false,
-      has_generator: false,
-      has_elevators: false,
-      has_hazardous_materials: false,
+      buildingType: config.buildingType || project.building.buildingType || 'office',
+
+      // IMPORTANT : ne plus laisser ces indicateurs à false en dur.
+      has_sprinklers: this.asBool(config.gicleurs),
+      has_generator: this.asBool(config.generatrice),
+      has_elevators: this.asBool(config.ascenseurs),
+      has_hazardous_materials: this.asBool(config.matieresDangereuses),
     };
   }
 
@@ -268,8 +293,8 @@ private async loadProceduresFromDB(
 
     const module3Result = isPsi ? null : generateModule3(ctx, config, section2_2, existingCustomRoles);
 
-    // Récupère les rôles actifs depuis Module 3
-        // Chercher les rôles actifs dans les deux structures possibles
+    // Récupère les rôles actifs depuis Module 3.
+    // Chercher les rôles actifs dans les deux structures possibles.
     const savedOrgRoles =
       existingContent?.module3?.orgRoles ||
       existingContent?.modules_fr?.find((m: any) => m.moduleNumber === 3)
@@ -346,7 +371,7 @@ private async loadProceduresFromDB(
     };
 
     // Module 8 — Registres et Annexes
-    const module8Result = generateModule8(ctx);
+    const module8Result = generateModule8(ctx, config);
 
     const existing = await this.prisma.document.findFirst({
       where: { projectId },

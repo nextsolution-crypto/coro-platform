@@ -82,6 +82,26 @@ function getSection(sections: any[], id: string) {
   return sections.find((s: any) => s.id === id);
 }
 
+function mergeLithiumAnnexeData(data?: Partial<LithiumAnnexeData> | null): LithiumAnnexeData {
+  return {
+    ...DEFAULT_LITHIUM_ANNEXE_DATA,
+    ...(data || {}),
+  };
+}
+
+/**
+ * Détecte l'ancien état initial vide de 8.10.
+ * Cela permet aux projets créés avant le raccordement du configurateur
+ * de recevoir le nouveau préremplissage sans écraser une annexe déjà modifiée.
+ */
+function isDefaultLithiumAnnexe(data?: Partial<LithiumAnnexeData> | null): boolean {
+  if (!data) return true;
+
+  const merged = mergeLithiumAnnexeData(data);
+  return (Object.keys(DEFAULT_LITHIUM_ANNEXE_DATA) as Array<keyof LithiumAnnexeData>)
+    .every(key => merged[key] === DEFAULT_LITHIUM_ANNEXE_DATA[key]);
+}
+
 // ============================================================
 // SOUS-COMPOSANTS STATIQUES
 // ============================================================
@@ -279,90 +299,155 @@ export default function Module8Section({
   useEffect(() => {
     const loadData = async () => {
       setLoadingData(true);
+
+      const sections = initialData?.sections || [];
+      const generatedS1 = ensureIds(getSection(sections, '8.1')?.entries || []) as TrainingEntry[];
+      const generatedS2 = ensureIds(getSection(sections, '8.2')?.entries || []) as PhoneticMessage[];
+      const generatedS3 = (getSection(sections, '8.3')?.data || defaultReport) as EvacuationReport;
+      const generatedS4 = ensureIds(getSection(sections, '8.4')?.entries || []) as RiskRow[];
+      const generatedS5 = ensureIds(getSection(sections, '8.5')?.entries || []) as SectorRow[];
+      const generatedS6 = getSection(sections, '8.6')?.content || '';
+      const generatedS7 = getSection(sections, '8.7')?.content || '';
+      const generatedS8 = getSection(sections, '8.8')?.content || '';
+      const generatedS9 = getSection(sections, '8.9')?.content || '';
+      const generatedS10 = mergeLithiumAnnexeData(getSection(sections, '8.10')?.data);
+      const generatedS11 = getSection(sections, '8.11') || null;
+
       try {
         const res = await api.get(`/projects/${projectId}/module8`);
         const saved = res.data?.module8;
 
-        if (saved && saved.section8_1) {
-          setSection8_1(ensureIds(saved.section8_1));
-          setSection8_2(ensureIds(saved.section8_2));
-          setSection8_3(saved.section8_3 || defaultReport);
-          setSection8_4(ensureIds(saved.section8_4));
-          setSection8_5(ensureIds(saved.section8_5));
-          setSection8_6(saved.section8_6 || '');
-          setSection8_7(saved.section8_7 || '');
-          setSection8_8(saved.section8_8 || '');
-          setSection8_9(saved.section8_9 || '');
-          setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
-          setSection8_10(saved.section8_10 || DEFAULT_LITHIUM_ANNEXE_DATA);
-          // Pour 8.11, si pas en DB, charger depuis initialData ET sauvegarder
-          if (saved.section8_11) {
-            setSection8_11(saved.section8_11);
-          } else {
-            const s11 = getSection(initialData?.sections || [], '8.11');
-            setSection8_11(s11 || null);
-            // Sauvegarder section8_11 en DB immédiatement
-            if (s11) {
-              try {
-                await api.put(`/projects/${projectId}/module8`, {
-                  ...saved,
-                  section8_11: s11,
-                });
-              } catch (err) { console.error('Sauvegarde section8_11 échouée:', err); }
+        if (saved && typeof saved === 'object') {
+          // Une valeur sauvegardée gagne toujours sur le contenu généré.
+          // Exception contrôlée : ancien 8.10 entièrement vide = ancien état automatique,
+          // donc on applique le nouveau préremplissage du configurateur.
+          const savedS10 = isDefaultLithiumAnnexe(saved.section8_10)
+            ? generatedS10
+            : mergeLithiumAnnexeData(saved.section8_10);
+
+          const resolvedS1: TrainingEntry[] = Array.isArray(saved.section8_1)
+            ? ensureIds(saved.section8_1 as Array<Omit<TrainingEntry, 'id'> & { id?: string }>)
+            : generatedS1;
+          const resolvedS2: PhoneticMessage[] = Array.isArray(saved.section8_2)
+            ? ensureIds(saved.section8_2 as Array<Omit<PhoneticMessage, 'id'> & { id?: string }>)
+            : generatedS2;
+          const resolvedS3: EvacuationReport = (saved.section8_3 ?? generatedS3) as EvacuationReport;
+          const resolvedS4: RiskRow[] = Array.isArray(saved.section8_4)
+            ? ensureIds(saved.section8_4 as Array<Omit<RiskRow, 'id'> & { id?: string }>)
+            : generatedS4;
+          const resolvedS5: SectorRow[] = Array.isArray(saved.section8_5)
+            ? ensureIds(saved.section8_5 as Array<Omit<SectorRow, 'id'> & { id?: string }>)
+            : generatedS5;
+          const resolvedS6 = saved.section8_6 ?? generatedS6;
+          const resolvedS7 = saved.section8_7 ?? generatedS7;
+          const resolvedS8 = saved.section8_8 ?? generatedS8;
+          const resolvedS9 = saved.section8_9 ?? generatedS9;
+          const resolvedS11 = saved.section8_11 ?? generatedS11;
+
+          setSection8_1(resolvedS1);
+          setSection8_2(resolvedS2);
+          setSection8_3(resolvedS3);
+          setSection8_4(resolvedS4);
+          setSection8_5(resolvedS5);
+          setSection8_6(resolvedS6);
+          setSection8_7(resolvedS7);
+          setSection8_8(resolvedS8);
+          setSection8_9(resolvedS9);
+          setSection8_10(savedS10);
+          setSection8_11(resolvedS11);
+
+          // Migration non destructive : complète uniquement les sections absentes
+          // et remplace l'ancien 8.10 vide par le préremplissage généré.
+          const needsMigration =
+            !Array.isArray(saved.section8_1) ||
+            !Array.isArray(saved.section8_2) ||
+            saved.section8_3 == null ||
+            !Array.isArray(saved.section8_4) ||
+            !Array.isArray(saved.section8_5) ||
+            saved.section8_6 == null ||
+            saved.section8_7 == null ||
+            saved.section8_8 == null ||
+            saved.section8_9 == null ||
+            isDefaultLithiumAnnexe(saved.section8_10) ||
+            (generatedS11 && saved.section8_11 == null);
+
+          if (needsMigration) {
+            try {
+              await api.put(`/projects/${projectId}/module8`, {
+                ...saved,
+                section8_1: resolvedS1,
+                section8_2: resolvedS2,
+                section8_3: resolvedS3,
+                section8_4: resolvedS4,
+                section8_5: resolvedS5,
+                section8_6: resolvedS6,
+                section8_7: resolvedS7,
+                section8_8: resolvedS8,
+                section8_9: resolvedS9,
+                section8_10: savedS10,
+                section8_11: resolvedS11,
+              });
+            } catch (err) {
+              console.error('Migration Module 8 échouée :', err);
             }
           }
         } else {
-          const sections = initialData?.sections || [];
-          const newS1 = ensureIds(getSection(sections, '8.1')?.entries || []) as TrainingEntry[];
-          const newS2 = ensureIds(getSection(sections, '8.2')?.entries || []) as PhoneticMessage[];
-          const newS3 = (getSection(sections, '8.3')?.data || defaultReport) as EvacuationReport;
-          const newS4 = ensureIds(getSection(sections, '8.4')?.entries || []) as RiskRow[];
-          const newS5 = ensureIds(getSection(sections, '8.5')?.entries || []) as SectorRow[];
-          const newS6 = getSection(sections, '8.6')?.content || '';
-          const newS7 = getSection(sections, '8.7')?.content || '';
-          const newS8 = getSection(sections, '8.8')?.content || '';
-          const newS9 = getSection(sections, '8.9')?.content || '';
-          // section8_11 sera chargée depuis le document généré
-          const s11 = getSection(sections, '8.11');
-          setSection8_11(s11 || null);
+          setSection8_1(generatedS1);
+          setSection8_2(generatedS2);
+          setSection8_3(generatedS3);
+          setSection8_4(generatedS4);
+          setSection8_5(generatedS5);
+          setSection8_6(generatedS6);
+          setSection8_7(generatedS7);
+          setSection8_8(generatedS8);
+          setSection8_9(generatedS9);
+          setSection8_10(generatedS10);
+          setSection8_11(generatedS11);
 
-          setSection8_1(newS1);
-          setSection8_2(newS2);
-          setSection8_3(newS3);
-          setSection8_4(newS4);
-          setSection8_5(newS5);
-          setSection8_6(newS6);
-          setSection8_7(newS7);
-          setSection8_8(newS8);
-          setSection8_9(newS9);
-
-          // Sauvegarder immédiatement les données initiales en DB
+          // Première ouverture : persister le snapshot généré pour que les
+          // modifications suivantes soient indépendantes d'une régénération.
           try {
             await api.put(`/projects/${projectId}/module8`, {
-              section8_1: newS1, section8_2: newS2, section8_3: newS3, section8_4: newS4,
-              section8_5: newS5, section8_6: newS6, section8_7: newS7, section8_8: newS8,
-              section8_9: newS9, section8_10: DEFAULT_LITHIUM_ANNEXE_DATA,
-              section8_11: s11 || null,
+              section8_1: generatedS1,
+              section8_2: generatedS2,
+              section8_3: generatedS3,
+              section8_4: generatedS4,
+              section8_5: generatedS5,
+              section8_6: generatedS6,
+              section8_7: generatedS7,
+              section8_8: generatedS8,
+              section8_9: generatedS9,
+              section8_10: generatedS10,
+              section8_11: generatedS11,
             });
-          } catch (err) { console.error('Sauvegarde initiale module8 échouée:', err); }
+          } catch (err) {
+            console.error('Sauvegarde initiale Module 8 échouée :', err);
+          }
         }
-      } catch {
-        const sections = initialData?.sections || [];
-        setSection8_1(ensureIds(getSection(sections, '8.1')?.entries || []));
-        setSection8_2(ensureIds(getSection(sections, '8.2')?.entries || []));
-        setSection8_3(getSection(sections, '8.3')?.data || defaultReport);
-        setSection8_4(ensureIds(getSection(sections, '8.4')?.entries || []));
-        setSection8_5(ensureIds(getSection(sections, '8.5')?.entries || []));
-        setSection8_6(getSection(sections, '8.6')?.content || '');
-        setSection8_7(getSection(sections, '8.7')?.content || '');
-        setSection8_8(getSection(sections, '8.8')?.content || '');
-        setSection8_9(getSection(sections, '8.9')?.content || '');
+      } catch (err) {
+        console.error('Chargement Module 8 échoué, utilisation des données générées :', err);
+        setSection8_1(generatedS1);
+        setSection8_2(generatedS2);
+        setSection8_3(generatedS3);
+        setSection8_4(generatedS4);
+        setSection8_5(generatedS5);
+        setSection8_6(generatedS6);
+        setSection8_7(generatedS7);
+        setSection8_8(generatedS8);
+        setSection8_9(generatedS9);
+        setSection8_10(generatedS10);
+        setSection8_11(generatedS11);
       } finally {
         setLoadingData(false);
         isFirstLoad.current = false;
       }
     };
+
     loadData();
+    // initialData correspond au snapshot du document généré. Le composant est
+    // rechargé à l'ouverture du projet; on évite une boucle si le parent recrée
+    // l'objet initialData à chaque rendu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // ============================================================
@@ -384,7 +469,7 @@ export default function Module8Section({
       setSaving(false);
     }
   }, [projectId, section8_1, section8_2, section8_3, section8_4,
-      section8_5, section8_6, section8_7, section8_8, section8_9, section8_10]);
+      section8_5, section8_6, section8_7, section8_8, section8_9, section8_10, section8_11]);
 
   useEffect(() => {
     if (isFirstLoad.current || !isDirty) return;
@@ -396,49 +481,72 @@ export default function Module8Section({
   const markDirty = () => setIsDirty(true);
 
   // ============================================================
-  // LABELS
+  // APPLICABILITÉ + LABELS
   // ============================================================
 
-  const t = isFr ? {
-    module: 'REGISTRES ET ANNEXES',
-    sections: [
-      { id: '8.1', title: 'REGISTRE DE FORMATION' },
-      { id: '8.2', title: 'EXEMPLES DE MESSAGES PHONIQUES' },
-      { id: '8.3', title: 'RAPPORT D\'ÉVACUATION' },
-      { id: '8.4', title: 'INSPECTIONS ET SURVEILLANCES DES RISQUES' },
-      { id: '8.5', title: 'REGISTRE D\'ÉVACUATION PAR SECTEURS' },
-      { id: '8.6', title: 'RAPPORT D\'INSPECTION DES ÉQUIPEMENTS DE PROTECTION INCENDIE' },
-      { id: '8.7', title: 'CADENASSAGE ET ESPACE CLOS' },
-      { id: '8.8', title: 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT' },
-      { id: '8.9', title: 'COPIE À L\'ENTREPRENEUR' },
-      { id: '8.10', title: 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION' },
-      ...(certBOMA ? [{ id: '8.11', title: 'REGISTRE D\'ANALYSE DE RISQUE — BOMA' }] : []),
-    ],
-    addRow: 'Ajouter une ligne',
-    saving: 'Sauvegarde...', saved: 'Sauvegardé', unsaved: 'Non sauvegardé',
-    loading: 'Chargement...',
-  } : {
-    module: 'RECORDS AND APPENDICES',
-    sections: [
-      { id: '8.1', title: 'TRAINING REGISTER' },
-      { id: '8.2', title: 'EXAMPLES OF PHONETIC MESSAGES' },
-      { id: '8.3', title: 'EVACUATION REPORT' },
-      { id: '8.4', title: 'RISK INSPECTIONS AND MONITORING' },
-      { id: '8.5', title: 'EVACUATION REGISTER BY SECTOR' },
-      { id: '8.6', title: 'FIRE PROTECTION EQUIPMENT INSPECTION REPORT' },
-      { id: '8.7', title: 'LOCKOUT/TAGOUT AND CONFINED SPACES' },
-      { id: '8.8', title: 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST' },
-      { id: '8.9', title: 'COPY TO CONTRACTOR' },
-      { id: '8.10', title: 'APPENDIX — LITHIUM-ION BATTERY FIRE' },
-      ...(certBOMA ? [{ id: '8.11', title: 'RISK ANALYSIS REGISTER — BOMA' }] : []),
-      { id: '8.11', title: 'RISK ANALYSIS REGISTER — BOMA' },
-    ],
-    addRow: 'Add a row',
-    saving: 'Saving...', saved: 'Saved', unsaved: 'Unsaved changes',
-    loading: 'Loading...',
+  const isSectionApplicable = (sectionId: string): boolean => {
+    const generatedSection = getSection(initialData?.sections || [], sectionId);
+
+    // Nouveau générateur : applicable=false signifie que la section ne doit
+    // pas être proposée dans l'éditeur pour ce bâtiment.
+    if (generatedSection && generatedSection.applicable === false) return false;
+    if (generatedSection && generatedSection.applicable === true) return true;
+
+    // Compatibilité avec les anciens documents ne possédant pas applicable.
+    if (sectionId === '8.11') return certBOMA;
+    return true;
   };
 
-  const currentSectionMeta = t.sections.find(s => s.id === activeSection)!;
+  const allSectionLabels = isFr ? [
+    { id: '8.1', title: 'REGISTRE DE FORMATION' },
+    { id: '8.2', title: 'EXEMPLES DE MESSAGES PHONIQUES' },
+    { id: '8.3', title: 'RAPPORT D\'ÉVACUATION' },
+    { id: '8.4', title: 'INSPECTIONS ET SURVEILLANCES DES RISQUES' },
+    { id: '8.5', title: 'REGISTRE D\'ÉVACUATION PAR SECTEURS' },
+    { id: '8.6', title: 'RAPPORT D\'INSPECTION DES ÉQUIPEMENTS DE PROTECTION INCENDIE' },
+    { id: '8.7', title: 'CADENASSAGE ET ESPACE CLOS' },
+    { id: '8.8', title: 'PERMIS DE TRAVAIL À CHAUD ET DEMANDE D\'ÉVITEMENT' },
+    { id: '8.9', title: 'COPIE À L\'ENTREPRENEUR' },
+    { id: '8.10', title: 'ANNEXE — INCENDIE DE BATTERIES LITHIUM-ION' },
+    { id: '8.11', title: 'REGISTRE D\'ANALYSE DE RISQUE — BOMA' },
+  ] : [
+    { id: '8.1', title: 'TRAINING REGISTER' },
+    { id: '8.2', title: 'EXAMPLES OF PHONETIC MESSAGES' },
+    { id: '8.3', title: 'EVACUATION REPORT' },
+    { id: '8.4', title: 'RISK INSPECTIONS AND MONITORING' },
+    { id: '8.5', title: 'EVACUATION REGISTER BY SECTOR' },
+    { id: '8.6', title: 'FIRE PROTECTION EQUIPMENT INSPECTION REPORT' },
+    { id: '8.7', title: 'LOCKOUT/TAGOUT AND CONFINED SPACES' },
+    { id: '8.8', title: 'HOT WORK PERMIT AND COMPONENT BYPASS REQUEST' },
+    { id: '8.9', title: 'COPY TO CONTRACTOR' },
+    { id: '8.10', title: 'APPENDIX — LITHIUM-ION BATTERY FIRE' },
+    { id: '8.11', title: 'RISK ANALYSIS REGISTER — BOMA' },
+  ];
+
+  const t = {
+    module: isFr ? 'REGISTRES ET ANNEXES' : 'RECORDS AND APPENDICES',
+    sections: allSectionLabels.filter(section => isSectionApplicable(section.id)),
+    addRow: isFr ? 'Ajouter une ligne' : 'Add a row',
+    saving: isFr ? 'Sauvegarde...' : 'Saving...',
+    saved: isFr ? 'Sauvegardé' : 'Saved',
+    unsaved: isFr ? 'Non sauvegardé' : 'Unsaved changes',
+    loading: isFr ? 'Chargement...' : 'Loading...',
+  };
+
+  // Si une section devenue non applicable était encore sélectionnée par le parent,
+  // on revient proprement à la première section disponible.
+  useEffect(() => {
+    if (!isSectionApplicable(activeSection)) {
+      const fallback = allSectionLabels.find(section => isSectionApplicable(section.id));
+      if (fallback) setActiveSection(fallback.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, certBOMA, initialData]);
+
+  const currentSectionMeta =
+    t.sections.find(section => section.id === activeSection) ||
+    t.sections[0] ||
+    allSectionLabels[0];
 
   // ============================================================
   // SECTION 8.1 — Registre de formation
