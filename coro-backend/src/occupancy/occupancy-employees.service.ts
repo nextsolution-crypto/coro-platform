@@ -132,6 +132,59 @@ export class OccupancyEmployeesService {
     });
   }
 
+  async updateEmployee(id: string, body: any, organizationId: string) {
+    const employee = await this.prisma.buildingEmployee.findFirst({
+      where: { id, organizationId },
+    });
+    if (!employee) throw new NotFoundException('Employé introuvable');
+
+    // Mise à jour des champs de base
+    await this.prisma.buildingEmployee.update({
+      where: { id },
+      data: {
+        firstName:         body.firstName         ?? employee.firstName,
+        lastName:          body.lastName          ?? employee.lastName,
+        poste:             body.poste             ?? employee.poste,
+        email:             body.email             ?? employee.email,
+        phone:             body.phone             ?? employee.phone,
+        isEmergencyMember: body.isEmergencyMember ?? employee.isEmergencyMember,
+      },
+    });
+
+    // Rôle d'urgence — remplacer entièrement
+    await this.prisma.employeeEmergencyRole.deleteMany({ where: { employeeId: id } });
+    if (body.isEmergencyMember && body.emergencyRole) {
+      await this.prisma.employeeEmergencyRole.create({
+        data: {
+          employeeId: id,
+          buildingId: employee.buildingId,
+          role:       body.emergencyRole,
+          assignType: body.emergencyAssignType || 'PRIMARY',
+          priority:   body.emergencyAssignType === 'ALTERNATE' ? 2 : 1,
+          zone:       body.emergencyZone || null,
+        },
+      });
+    }
+
+    // Qualifications — remplacer entièrement
+    await this.prisma.employeeQualification.deleteMany({ where: { employeeId: id } });
+    if (body.qualifications?.length > 0) {
+      for (const qual of body.qualifications) {
+        await this.prisma.employeeQualification.create({
+          data: { employeeId: id, type: qual },
+        });
+      }
+    }
+
+    return this.prisma.buildingEmployee.findUnique({
+      where: { id },
+      include: {
+        emergencyRoles: { orderBy: { priority: 'asc' } },
+        qualifications: true,
+      },
+    });
+  }
+
   async deleteEmployee(id: string, organizationId: string) {
     return this.prisma.buildingEmployee.updateMany({
       where: { id, organizationId },

@@ -2,6 +2,21 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { apiGet, apiPost, getUser } from '../../../store/auth';
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+
+const apiPut = async (path: string, body: any) => {
+  const res = await fetch(`${API}${path}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('coro_client_token')}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('Erreur mise à jour');
+  return res.json();
+};
 import PortalLayout from '../../../components/PortalLayout';
 import { UserPlus, Download, Trash2, QrCode, Shield } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -49,6 +64,36 @@ export default function EmployesPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleEdit = (emp: any) => {
+    setEditingId(emp.id);
+    setShowForm(false);
+    setForm({
+      firstName:            emp.firstName || '',
+      lastName:             emp.lastName  || '',
+      poste:                emp.poste     || '',
+      email:                emp.email     || '',
+      phone:                emp.phone     || '',
+      isEmergencyMember:    emp.isEmergencyMember || false,
+      emergencyRole:        emp.emergencyRoles?.[0]?.role        || '',
+      emergencyAssignType:  emp.emergencyRoles?.[0]?.assignType  || 'PRIMARY',
+      emergencyZone:        emp.emergencyRoles?.[0]?.zone        || '',
+      qualifications:       emp.qualifications?.map((q: any) => q.type) || [],
+    });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingId || !form.firstName.trim() || !form.lastName.trim()) return;
+    setSaving(true);
+    try {
+      await apiPut(`/occupancy/employees/${editingId}`, form);
+      setEditingId(null);
+      setForm({ ...EMPTY_FORM });
+      fetchAll();
+    } catch (err) { console.error(err); }
+    finally { setSaving(false); }
+  };
 
   useEffect(() => {
     const currentUser = getUser();
@@ -161,7 +206,111 @@ export default function EmployesPage() {
         </div>
       </header>
 
-      {/* ── Formulaire ── */}
+      {/* ── Formulaire édition ── */}
+      {editingId && (
+        <div style={{ marginBottom: 20, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 12, border: '2px solid #2980B9' }}>
+          <h3 style={{ margin: '0 0 20px', fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>✏️ Modifier l'employé</h3>
+
+          <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Identité</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+            {[
+              { key: 'firstName', label: 'Prénom *' },
+              { key: 'lastName',  label: 'Nom *' },
+              { key: 'poste',     label: 'Poste' },
+              { key: 'email',     label: 'Courriel' },
+              { key: 'phone',     label: 'Téléphone' },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>{f.label}</label>
+                <input type="text" value={(form as any)[f.key]}
+                  onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: '1px solid #F1F3F5', paddingTop: 20, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Shield size={15} color="#C0392B" />
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Organisation d'urgence</p>
+              </div>
+              <button type="button"
+                onClick={() => setForm(prev => ({ ...prev, isEmergencyMember: !prev.isEmergencyMember, emergencyRole: '', emergencyAssignType: 'PRIMARY', emergencyZone: '', qualifications: [] }))}
+                style={{ padding: '6px 14px', borderRadius: 20, border: '2px solid', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  borderColor: form.isEmergencyMember ? '#C0392B' : '#DEE2E6',
+                  backgroundColor: form.isEmergencyMember ? '#FDEDEC' : '#F8F9FA',
+                  color: form.isEmergencyMember ? '#C0392B' : '#6C757D' }}>
+                {form.isEmergencyMember ? '🛡️ Membre actif' : 'Non membre'}
+              </button>
+            </div>
+            {form.isEmergencyMember && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Rôle principal</label>
+                    <select value={form.emergencyRole} onChange={e => setForm(prev => ({ ...prev, emergencyRole: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, backgroundColor: '#FFFFFF', boxSizing: 'border-box' }}>
+                      <option value="">— Sélectionner —</option>
+                      {EMERGENCY_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Type</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[{ v: 'PRIMARY', l: 'Titulaire' }, { v: 'ALTERNATE', l: 'Substitut' }].map(opt => (
+                        <button key={opt.v} type="button" onClick={() => setForm(prev => ({ ...prev, emergencyAssignType: opt.v }))}
+                          style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '2px solid', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                            borderColor: form.emergencyAssignType === opt.v ? '#C0392B' : '#E9ECEF',
+                            backgroundColor: form.emergencyAssignType === opt.v ? '#FDEDEC' : '#FFFFFF',
+                            color: form.emergencyAssignType === opt.v ? '#C0392B' : '#6C757D' }}>
+                          {opt.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Secteur / Étage</label>
+                    <input type="text" placeholder="ex: 3e étage, Aile Est" value={form.emergencyZone}
+                      onChange={e => setForm(prev => ({ ...prev, emergencyZone: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 8, textTransform: 'uppercase' }}>Qualifications</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {QUALIFICATIONS.map(q => {
+                      const active = form.qualifications.includes(q.value);
+                      return (
+                        <button key={q.value} type="button" onClick={() => toggleQual(q.value)}
+                          style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                            borderColor: active ? '#27AE60' : '#DEE2E6',
+                            backgroundColor: active ? '#EAFAF1' : '#F8F9FA',
+                            color: active ? '#27AE60' : '#6C757D' }}>
+                          {active ? '✓ ' : ''}{q.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" onClick={handleUpdate} disabled={saving}
+              style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#2980B9', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Enregistrement...' : '💾 Sauvegarder'}
+            </button>
+            <button type="button" onClick={() => { setEditingId(null); setForm({ ...EMPTY_FORM }); }}
+              style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Formulaire ajout ── */}
       {showForm && (
         <div style={{ marginBottom: 20, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
           <h3 style={{ margin: '0 0 20px', fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>Nouvel employé</h3>
@@ -318,6 +467,10 @@ export default function EmployesPage() {
                   <button type="button" onClick={() => handleDownloadQr(emp)} title="Télécharger QR"
                     style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>
                     <Download size={14} /> QR Code
+                  </button>
+                  <button type="button" onClick={() => handleEdit(emp)} title="Modifier"
+                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #AED6F1', backgroundColor: '#EBF5FB', cursor: 'pointer', color: '#2980B9' }}>
+                    ✏️
                   </button>
                   <button type="button" onClick={() => handleDelete(emp.id)} title="Supprimer"
                     style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #FADBD8', backgroundColor: '#FDEDEC', cursor: 'pointer', color: '#C0392B' }}>

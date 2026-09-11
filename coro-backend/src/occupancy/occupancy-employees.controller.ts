@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OccupancyEmployeesService } from './occupancy-employees.service';
 
@@ -40,6 +40,12 @@ export class OccupancyEmployeesController {
   @Post('employees')
   createEmployee(@Body() body: any, @Request() req: any) {
     return this.service.createEmployee(body, req.user.organizationId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Put('employees/:id')
+  updateEmployee(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+    return this.service.updateEmployee(id, body, req.user.organizationId);
   }
 
   @UseGuards(AuthGuard('jwt'))
