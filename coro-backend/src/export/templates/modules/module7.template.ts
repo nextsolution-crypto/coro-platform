@@ -45,6 +45,10 @@ function withUnit(v: any, unit: string, fallback = '—'): string {
   return `${escapeHtml(v)}${unit}`;
 }
 
+function hasValue(v: any): boolean {
+  return v !== undefined && v !== null && v !== '';
+}
+
 function infoRow(label: string, value: string): string {
   return `
     <tr>
@@ -371,6 +375,24 @@ export function renderModule7(
         </tbody>
       </table>
 
+      ${subHeading(isFr ? 'Certifications' : 'Certifications')}
+      ${
+        config.certBOMA || config.certLEED || config.certISO22301 ||
+        config.certISO31000 || config.certEnergyStar ||
+        hasValue(config.autresCertifications)
+          ? `
+        <table><tbody>
+          ${config.certBOMA ? infoRow('BOMA BEST', hasValue(config.certBOMANiveau) ? safeVal(config.certBOMANiveau) : (isFr ? 'Certifié' : 'Certified')) : ''}
+          ${config.certLEED ? infoRow('LEED', hasValue(config.certLEEDNiveau) ? safeVal(config.certLEEDNiveau) : (isFr ? 'Certifié' : 'Certified')) : ''}
+          ${config.certISO22301 ? infoRow('ISO 22301', isFr ? 'Oui' : 'Yes') : ''}
+          ${config.certISO31000 ? infoRow('ISO 31000', isFr ? 'Oui' : 'Yes') : ''}
+          ${config.certEnergyStar ? infoRow('ENERGY STAR', isFr ? 'Oui' : 'Yes') : ''}
+          ${hasValue(config.autresCertifications) ? infoRow(isFr ? 'Autres certifications' : 'Other certifications', Array.isArray(config.autresCertifications) ? listVal(config.autresCertifications) : safeVal(config.autresCertifications)) : ''}
+        </tbody></table>
+      `
+          : `<p style="color:#ADB5BD;">${isFr ? 'Aucune certification déclarée' : 'No certification declared'}</p>`
+      }
+
       ${subHeading(
         isFr
           ? 'Cadre réglementaire applicable'
@@ -383,6 +405,10 @@ export function renderModule7(
               isFr ? 'Code de sécurité' : 'Fire Safety Code',
               'CNPI 2020 modifié Québec (Chapitre VIII)',
             )}
+            ${hasValue(config.reglementMunicipal) ? infoRow(
+              isFr ? 'Règlement municipal applicable' : 'Applicable municipal regulation',
+              safeVal(config.reglementMunicipal),
+            ) : ''}
             ${(() => {
               const ref = computeReferentielCNB(config.anneeConstruction);
               return infoRow(
@@ -630,9 +656,10 @@ export function renderModule7(
           )}
           ${infoRow(
             isFr ? 'Trousseau de clés pompier' : 'Fire department key set',
-            bool(config.trousseClesPompier, isFr),
+            bool(config.trousseClePompier ?? config.trousseClesPompier, isFr),
           )}
           ${
+            (config.trousseClePompier ?? config.trousseClesPompier) &&
             config.trousseClesPompierLieu
               ? infoRow(
                   isFr
@@ -1673,7 +1700,7 @@ export function renderModule7(
                 : ''
             }
             ${
-              config.pompeIncendie && config.gapmUsgpm
+              config.pompeIncendie && hasValue(config.gapmUsgpm)
                 ? infoRow(
                     isFr
                       ? 'Débit (GAPM/USGPM)'
@@ -2250,10 +2277,10 @@ export function renderModule7(
         ? 'Détecteur de monoxyde de carbone (CO)'
         : 'Carbon Monoxide Detector (CO)',
       present: config.detecteurCO,
-      seuil1: config.detecteurCOSeuil1
+      seuil1: hasValue(config.detecteurCOSeuil1)
         ? `${safeVal(config.detecteurCOSeuil1)} ppm`
         : undefined,
-      seuil2: config.detecteurCOSeuil2
+      seuil2: hasValue(config.detecteurCOSeuil2)
         ? `${safeVal(config.detecteurCOSeuil2)} ppm`
         : undefined,
       lieu: config.detecteurCOLieu,
@@ -2276,10 +2303,10 @@ export function renderModule7(
         ? "Détecteur d'ammoniac (NH₃)"
         : 'Ammonia Detector (NH₃)',
       present: config.detecteurAmmoniac,
-      seuil1: config.detecteurAmmoniacSeuil1
+      seuil1: hasValue(config.detecteurAmmoniacSeuil1)
         ? `${safeVal(config.detecteurAmmoniacSeuil1)} ppm`
         : undefined,
-      seuil2: config.detecteurAmmoniacSeuil2
+      seuil2: hasValue(config.detecteurAmmoniacSeuil2)
         ? `${safeVal(config.detecteurAmmoniacSeuil2)} ppm`
         : undefined,
     },

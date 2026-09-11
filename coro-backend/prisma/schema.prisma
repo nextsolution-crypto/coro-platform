@@ -166,6 +166,7 @@ model Building {
   kioskToken         BuildingKioskToken?
   employees          BuildingEmployee[]
   visitorInvitations VisitorInvitation[]
+  emergencyRoles     EmployeeEmergencyRole[]
 }
 
 model Project {
@@ -972,6 +973,32 @@ model RefreshToken {
   isRevoked Boolean  @default(false)
 }
 
+// ─── CORO SENTINELLE — Organisation d'urgence ───────────────────────────────
+
+enum EmergencyRoleType {
+  COORDINATOR
+  EPI
+  ASSEMBLY_WARDEN
+  SEARCHER
+  EXIT_WARDEN
+  PNA_ESCORT
+  FIRST_AIDER
+}
+
+enum EmergencyAssignType {
+  PRIMARY
+  ALTERNATE
+}
+
+enum QualificationType {
+  FIRST_AID_CPR
+  AED
+  FIRE_EXTINGUISHER
+  EPI_TRAINING
+  HAZMAT
+  OTHER
+}
+
 // ─── CORO SENTINELLE — Gestion des occupants ────────────────────────────────
 
 enum OccupantType {
@@ -1067,6 +1094,35 @@ model BuildingEmployee {
   updatedAt   DateTime @updatedAt
 
   occupancyRecords OccupancyRecord[] @relation("EmployeeRecords")
+  emergencyRoles   EmployeeEmergencyRole[]
+  qualifications   EmployeeQualification[]
+  isEmergencyMember Boolean @default(false)
+}
+
+model EmployeeEmergencyRole {
+  id           String              @id @default(uuid())
+  employeeId   String
+  employee     BuildingEmployee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  buildingId   String
+  building     Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  role         EmergencyRoleType
+  assignType   EmergencyAssignType @default(PRIMARY)
+  priority     Int                 @default(1)
+  zone         String?
+  validUntil   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model EmployeeQualification {
+  id           String           @id @default(uuid())
+  employeeId   String
+  employee     BuildingEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type         QualificationType
+  certifiedAt  DateTime?
+  expiresAt    DateTime?
+  notes        String?
+  createdAt    DateTime         @default(now())
 }
 
 model VisitorInvitation {

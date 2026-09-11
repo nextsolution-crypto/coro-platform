@@ -81,6 +81,22 @@ function normalizeProvince(raw: string): string {
   return raw; // valeur inconnue, laissée telle quelle (le select affichera vide)
 }
 
+function hasValue(value: any): boolean {
+  return value !== undefined && value !== null && value !== '';
+}
+
+function parseOptionalNumber(raw: string): number | '' {
+  if (raw === '') return '';
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : '';
+}
+
+function isFilled(value: any, type?: Field['type']): boolean {
+  if (type === 'boolean') return value === true || value === false;
+  if (Array.isArray(value)) return value.length > 0;
+  return hasValue(value);
+}
+
 // ── DynamicListEditor ────────────────────────────────────────
 
 function DynamicListEditor({ field, items, onChange, autoExpandIdx }: {
@@ -101,7 +117,7 @@ function DynamicListEditor({ field, items, onChange, autoExpandIdx }: {
     const item: Record<string, any> = {};
     schema.forEach(f => {
       if (f.type === 'boolean') item[f.key] = false;
-      else if (f.type === 'number') item[f.key] = 0;
+      else if (f.type === 'number') item[f.key] = '';
       else item[f.key] = '';
     });
     return item;
@@ -126,7 +142,11 @@ function DynamicListEditor({ field, items, onChange, autoExpandIdx }: {
   };
 
   const getSummary = (item: any) => {
-    const base = schema.filter(sf => item[sf.key] && item[sf.key] !== '' && item[sf.key] !== false && item[sf.key] !== 0)
+    const base = schema.filter(sf =>
+      sf.type === 'boolean'
+        ? item[sf.key] === true
+        : hasValue(item[sf.key])
+    )
       .map(sf => sf.type === 'boolean' ? (item[sf.key] ? sf.label : null) : item[sf.key])
       .filter(Boolean).join(' — ');
     return base;
@@ -221,8 +241,9 @@ function DynamicListEditor({ field, items, onChange, autoExpandIdx }: {
                   )}
 
                   {sf.type === 'number' && (
-                    <input type="number" value={item[sf.key] === 0 ? '' : item[sf.key]}
-                      onChange={e => handleUpdate(idx, sf.key, e.target.value === '' ? 0 : parseInt(e.target.value))}
+                    <input type="number"
+                      value={hasValue(item[sf.key]) ? item[sf.key] : ''}
+                      onChange={e => handleUpdate(idx, sf.key, parseOptionalNumber(e.target.value))}
                       className={inputCls} style={inputSty} />
                   )}
 
@@ -595,7 +616,7 @@ export default function ConfiguratorPage() {
           } else if (f.type === 'boolean') {
             defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : false;
           } else if (f.type === 'number') {
-            defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : 0;
+            defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : '';
           } else if (f.type === 'checkbox_group') {
             defaults[f.key] = savedConfig[f.key] !== undefined ? savedConfig[f.key] : [];
           } else {
@@ -738,7 +759,10 @@ export default function ConfiguratorPage() {
           const projectIdStr = projectId as string;
           const storageKey = `coro_config_${projectIdStr}`;
           const stored = JSON.parse(localStorage.getItem(storageKey) || '{}');
-          localStorage.setItem(storageKey, JSON.stringify({ ...stored, ...newConfig }));
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({ ...stored, ...newConfig, ...newLists }),
+          );
           
           triggerAnalysis(newConfig, newLists);
 
@@ -767,9 +791,13 @@ export default function ConfiguratorPage() {
     if (['centraleSurveillance','centraleTelephone','centraleCodeClient'].includes(field.key)) return config['teleSurveillance'] === true;
     if (['nbAscenseurs','typeAscenseur','salleAscenseur','ascenseurPompier','rappelAscenseursLieu','telephoneAscenseurs','fonctionneSecours'].includes(field.key)) return config['ascenseurs'] === true;
     if (field.key === 'ascenseurPompierLequel') return config['ascenseurPompier'] === true;
-    if (['gicleursSystemes','salleGicleurs','pompeIncendie','pompeIncendieLieu','gapmUsgpm','boyauIncendie','boyauCabinet','priseRefoulement','raccordPompier','raccordPompierLieu','bornesFontaine','bornesFontaineLieu','vannesIsolement','vannesIsolementLieu','valve2_5','valve2_5Lieu','valve1_5','valve1_5Lieu'].includes(field.key)) return config['gicleurs'] === true;
+    if (field.key === 'pompeIncendieLieu' || field.key === 'gapmUsgpm') return config['gicleurs'] === true && config['pompeIncendie'] === true;
+    if (field.key === 'raccordPompierLieu') return config['gicleurs'] === true && config['raccordPompier'] === true;
+    if (field.key === 'bornesFontaineLieu') return config['gicleurs'] === true && config['bornesFontaine'] === true;
+    if (field.key === 'vannesIsolementLieu') return config['gicleurs'] === true && config['vannesIsolement'] === true;
     if (field.key === 'valve2_5Lieu') return config['gicleurs'] === true && config['valve2_5'] === true;
     if (field.key === 'valve1_5Lieu') return config['gicleurs'] === true && config['valve1_5'] === true;
+    if (['gicleursSystemes','salleGicleurs','pompeIncendie','boyauIncendie','boyauCabinet','priseRefoulement','raccordPompier','bornesFontaine','vannesIsolement','valve2_5','valve1_5'].includes(field.key)) return config['gicleurs'] === true;
     if (field.key === 'extincteursList') return config['extincteurPortatif'] === true;
     if (field.key === 'systemeExtinctionFixeLieu') return config['systemeExtinctionFixe'] === true;
     if (field.key === 'systemePreActionLieu') return config['systemePreAction'] === true;
@@ -781,10 +809,11 @@ export default function ConfiguratorPage() {
     if (['reservoirsAuxiliairesLieu','reservoirsAuxiliairesCapacite','autonomieTotale'].includes(field.key)) return config['generatrice'] === true && config['reservoirsAuxiliaires'] === true;
     if (['generatriceEquipementsPersonnalises'].includes(field.key)) return config['generatrice'] === true;
     if (field.key === 'trousseDeversementListe') return config['trousseDeversement'] === true;
-    if (field.key === 'trousseClesPompierLieu') return config['trousseClesPompier'] === true;
+    if (field.key === 'trousseClesPompierLieu') {
+      return (config['trousseClePompier'] ?? config['trousseClesPompier']) === true;
+    }
     if (field.key === 'compacteurGicleurs') return config['compacteur'] === true;
     if (['compacteurGicleursType','compacteurVanneIsolement'].includes(field.key)) return config['compacteur'] === true && config['compacteurGicleurs'] === true;
-    if (field.key === 'pompeIncendieLieu') return config['pompeIncendie'] === true;
     if (field.key === 'gazNaturelLieu') return config['gazNaturel'] === true;
     if (field.key === 'propaneLieu') return config['propane'] === true;
     if (['detecteurCOSeuil1','detecteurCOSeuil2','detecteurCOLieu'].includes(field.key)) return config['detecteurCO'] === true;
@@ -850,10 +879,8 @@ export default function ConfiguratorPage() {
   const currentSection  = sections[activeSection];
   const visibleFields   = currentSection ? currentSection.fields.filter(isFieldVisible) : [];
   const completedFields = visibleFields.filter(f => {
-    if (f.type === 'dynamic_list')   return (lists[f.key] || []).length > 0;
-    if (f.type === 'checkbox_group') return (config[f.key] || []).length > 0;
-    if (f.type === 'boolean')        return config[f.key] === true;
-    return config[f.key] !== '' && config[f.key] !== 0;
+    if (f.type === 'dynamic_list') return (lists[f.key] || []).length > 0;
+    return isFilled(config[f.key], f.type);
   }).length;
 
   if (loading) return (
@@ -1101,8 +1128,8 @@ export default function ConfiguratorPage() {
 
                     {field.type === 'number' && (
                       <input type="number"
-                        value={config[field.key] === 0 ? '' : config[field.key]}
-                        onChange={e => updateConfig(field.key, e.target.value === '' ? 0 : parseInt(e.target.value))}
+                        value={hasValue(config[field.key]) ? config[field.key] : ''}
+                        onChange={e => updateConfig(field.key, parseOptionalNumber(e.target.value))}
                         placeholder="0" min="0"
                         className={inputCls} style={inputSty}
                         onFocus={e => e.target.style.borderColor = '#C0392B'}
