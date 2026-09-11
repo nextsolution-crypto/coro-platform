@@ -16,6 +16,10 @@ export class OccupancyEmployeesService {
     return this.prisma.buildingEmployee.findMany({
       where: { buildingId, isActive: true },
       orderBy: { lastName: 'asc' },
+      include: {
+        emergencyRoles: { orderBy: { priority: 'asc' } },
+        qualifications: true,
+      },
     });
   }
 
@@ -46,8 +50,32 @@ export class OccupancyEmployeesService {
         email: body.email,
         phone: body.phone,
         pin,
+        isEmergencyMember: body.isEmergencyMember === true,
       },
     });
+
+    // Rôle d'urgence
+    if (body.isEmergencyMember && body.emergencyRole) {
+      await this.prisma.employeeEmergencyRole.create({
+        data: {
+          employeeId: employee.id,
+          buildingId: body.buildingId,
+          role: body.emergencyRole,
+          assignType: body.emergencyAssignType || 'PRIMARY',
+          priority: body.emergencyAssignType === 'ALTERNATE' ? 2 : 1,
+          zone: body.emergencyZone || null,
+        },
+      });
+    }
+
+    // Qualifications
+    if (body.qualifications?.length > 0) {
+      for (const qual of body.qualifications) {
+        await this.prisma.employeeQualification.create({
+          data: { employeeId: employee.id, type: qual },
+        });
+      }
+    }
 
     // Envoyer le PIN par courriel si email fourni
     if (body.email) {

@@ -1,10 +1,42 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { apiGet, apiPost, apiPut, getUser } from '../../../store/auth';
+import { apiGet, apiPost, getUser } from '../../../store/auth';
 import PortalLayout from '../../../components/PortalLayout';
-import { UserPlus, Download, Trash2, QrCode } from 'lucide-react';
+import { UserPlus, Download, Trash2, QrCode, Shield } from 'lucide-react';
 import QRCode from 'qrcode';
+
+const EMERGENCY_ROLES = [
+  { value: 'COORDINATOR',      label: 'Coordonnateur' },
+  { value: 'EPI',              label: 'Équipier de première intervention' },
+  { value: 'ASSEMBLY_WARDEN',  label: 'Responsable point de rassemblement' },
+  { value: 'SEARCHER',         label: 'Chercheur' },
+  { value: 'EXIT_WARDEN',      label: 'Surveillant de sortie' },
+  { value: 'PNA_ESCORT',       label: 'Accompagnateur PNA' },
+  { value: 'FIRST_AIDER',      label: 'Secouriste' },
+];
+
+const QUALIFICATIONS = [
+  { value: 'FIRST_AID_CPR',      label: 'Premiers soins / RCR' },
+  { value: 'AED',                label: 'Défibrillateur (DEA)' },
+  { value: 'FIRE_EXTINGUISHER',  label: 'Extincteur' },
+  { value: 'EPI_TRAINING',       label: 'Formation EPI' },
+  { value: 'HAZMAT',             label: 'Matières dangereuses' },
+  { value: 'OTHER',              label: 'Autre' },
+];
+
+const ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  EMERGENCY_ROLES.map(r => [r.value, r.label])
+);
+
+const EMPTY_FORM = {
+  firstName: '', lastName: '', poste: '', email: '', phone: '',
+  isEmergencyMember: false,
+  emergencyRole: '',
+  emergencyAssignType: 'PRIMARY',
+  emergencyZone: '',
+  qualifications: [] as string[],
+};
 
 export default function EmployesPage() {
   const router = useRouter();
@@ -16,8 +48,7 @@ export default function EmployesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ firstName: '', lastName: '', poste: '', email: '', phone: '' });
-  const [kioskToken, setKioskToken] = useState('');
+  const [form, setForm] = useState({ ...EMPTY_FORM });
 
   useEffect(() => {
     const currentUser = getUser();
@@ -34,7 +65,6 @@ export default function EmployesPage() {
         apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`),
       ]);
       setEmployees(emps);
-      setKioskToken(kiosk.token);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -44,7 +74,7 @@ export default function EmployesPage() {
     setSaving(true);
     try {
       await apiPost('/occupancy/employees', { ...form, buildingId });
-      setForm({ firstName: '', lastName: '', poste: '', email: '', phone: '' });
+      setForm({ ...EMPTY_FORM });
       setShowForm(false);
       fetchAll();
     } catch (err) { console.error(err); }
@@ -66,12 +96,8 @@ export default function EmployesPage() {
     const qrUrl = `https://client.getcoro.io/kiosk/qr/${employee.qrToken}`;
     const canvas = document.createElement('canvas');
     await QRCode.toCanvas(canvas, qrUrl, { width: 400, margin: 2 });
-
-    // Ajouter le nom sous le QR
-    const ctx = canvas.getContext('2d')!;
     const newCanvas = document.createElement('canvas');
-    newCanvas.width = 400;
-    newCanvas.height = 460;
+    newCanvas.width = 400; newCanvas.height = 460;
     const newCtx = newCanvas.getContext('2d')!;
     newCtx.fillStyle = '#FFFFFF';
     newCtx.fillRect(0, 0, 400, 460);
@@ -85,11 +111,25 @@ export default function EmployesPage() {
       newCtx.fillStyle = '#6C757D';
       newCtx.fillText(employee.poste, 200, 455);
     }
-
     const link = document.createElement('a');
     link.download = `QR_${employee.lastName}_${employee.firstName}.png`;
     link.href = newCanvas.toDataURL('image/png');
     link.click();
+  };
+
+  const toggleQual = (val: string) => {
+    setForm(prev => ({
+      ...prev,
+      qualifications: prev.qualifications.includes(val)
+        ? prev.qualifications.filter(q => q !== val)
+        : [...prev.qualifications, val],
+    }));
+  };
+
+  const getEmergencyRoleInfo = (emp: any) => {
+    if (!emp.isEmergencyMember || !emp.emergencyRoles?.length) return null;
+    const r = emp.emergencyRoles[0];
+    return { label: ROLE_LABELS[r.role] || r.role, isAlt: r.assignType === 'ALTERNATE' };
   };
 
   if (loading) {
@@ -121,31 +161,113 @@ export default function EmployesPage() {
         </div>
       </header>
 
-      {/* Formulaire ajout */}
+      {/* ── Formulaire ── */}
       {showForm && (
         <div style={{ marginBottom: 20, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>Nouvel employé</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <h3 style={{ margin: '0 0 20px', fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>Nouvel employé</h3>
+
+          {/* Identité */}
+          <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Identité</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
             {[
               { key: 'firstName', label: 'Prénom *' },
-              { key: 'lastName', label: 'Nom *' },
-              { key: 'poste', label: 'Poste' },
-              { key: 'email', label: 'Courriel' },
-              { key: 'phone', label: 'Téléphone' },
+              { key: 'lastName',  label: 'Nom *' },
+              { key: 'poste',     label: 'Poste' },
+              { key: 'email',     label: 'Courriel' },
+              { key: 'phone',     label: 'Téléphone' },
             ].map(f => (
               <div key={f.key}>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>{f.label}</label>
-                <input type="text" value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                <input type="text" value={(form as any)[f.key]}
+                  onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' }} />
               </div>
             ))}
           </div>
+
+          {/* Organisation d'urgence */}
+          <div style={{ borderTop: '1px solid #F1F3F5', paddingTop: 20, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Shield size={15} color="#C0392B" />
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Organisation d'urgence</p>
+              </div>
+              <button type="button"
+                onClick={() => setForm(prev => ({ ...prev, isEmergencyMember: !prev.isEmergencyMember, emergencyRole: '', emergencyAssignType: 'PRIMARY', emergencyZone: '', qualifications: [] }))}
+                style={{ padding: '6px 14px', borderRadius: 20, border: '2px solid', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  borderColor: form.isEmergencyMember ? '#C0392B' : '#DEE2E6',
+                  backgroundColor: form.isEmergencyMember ? '#FDEDEC' : '#F8F9FA',
+                  color: form.isEmergencyMember ? '#C0392B' : '#6C757D' }}>
+                {form.isEmergencyMember ? '🛡️ Membre actif' : 'Non membre'}
+              </button>
+            </div>
+
+            {form.isEmergencyMember && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Rôle + Type + Zone */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Rôle principal</label>
+                    <select value={form.emergencyRole}
+                      onChange={e => setForm(prev => ({ ...prev, emergencyRole: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, backgroundColor: '#FFFFFF', boxSizing: 'border-box' }}>
+                      <option value="">— Sélectionner —</option>
+                      {EMERGENCY_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Type</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[{ v: 'PRIMARY', l: 'Titulaire' }, { v: 'ALTERNATE', l: 'Substitut' }].map(opt => (
+                        <button key={opt.v} type="button"
+                          onClick={() => setForm(prev => ({ ...prev, emergencyAssignType: opt.v }))}
+                          style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '2px solid', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                            borderColor: form.emergencyAssignType === opt.v ? '#C0392B' : '#E9ECEF',
+                            backgroundColor: form.emergencyAssignType === opt.v ? '#FDEDEC' : '#FFFFFF',
+                            color: form.emergencyAssignType === opt.v ? '#C0392B' : '#6C757D' }}>
+                          {opt.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Secteur / Étage</label>
+                    <input type="text" placeholder="ex: 3e étage, Aile Est"
+                      value={form.emergencyZone}
+                      onChange={e => setForm(prev => ({ ...prev, emergencyZone: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+
+                {/* Qualifications */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 8, textTransform: 'uppercase' }}>Qualifications</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {QUALIFICATIONS.map(q => {
+                      const active = form.qualifications.includes(q.value);
+                      return (
+                        <button key={q.value} type="button" onClick={() => toggleQual(q.value)}
+                          style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                            borderColor: active ? '#27AE60' : '#DEE2E6',
+                            backgroundColor: active ? '#EAFAF1' : '#F8F9FA',
+                            color: active ? '#27AE60' : '#6C757D' }}>
+                          {active ? '✓ ' : ''}{q.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" onClick={handleAdd} disabled={saving}
               style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#27AE60', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
               {saving ? 'Enregistrement...' : '✅ Enregistrer'}
             </button>
-            <button type="button" onClick={() => setShowForm(false)}
+            <button type="button" onClick={() => { setShowForm(false); setForm({ ...EMPTY_FORM }); }}
               style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Annuler
             </button>
@@ -153,7 +275,7 @@ export default function EmployesPage() {
         </div>
       )}
 
-      {/* Liste employés */}
+      {/* ── Liste employés ── */}
       <section style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #E9ECEF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>Liste des employés</h2>
@@ -165,33 +287,49 @@ export default function EmployesPage() {
             <p style={{ margin: 0, color: '#ADB5BD', fontSize: 14 }}>Aucun employé enregistré. Ajoutez-en un pour générer leur QR code.</p>
           </div>
         ) : (
-          employees.map((emp, i) => (
-            <div key={emp.id} style={{ padding: '14px 20px', borderBottom: i < employees.length - 1 ? '1px solid #F1F3F5' : 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: '#EBF5FB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, fontWeight: 800, color: '#2980B9' }}>
-                {emp.firstName.charAt(0).toUpperCase()}
+          employees.map((emp, i) => {
+            const roleInfo = getEmergencyRoleInfo(emp);
+            return (
+              <div key={emp.id} style={{ padding: '14px 20px', borderBottom: i < employees.length - 1 ? '1px solid #F1F3F5' : 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800,
+                  backgroundColor: emp.isEmergencyMember ? '#FDEDEC' : '#EBF5FB',
+                  color: emp.isEmergencyMember ? '#C0392B' : '#2980B9' }}>
+                  {emp.isEmergencyMember ? <Shield size={18} /> : emp.firstName.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>{emp.firstName} {emp.lastName}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 3 }}>
+                    <span style={{ fontSize: 12, color: '#ADB5BD' }}>
+                      {emp.poste || '—'}{emp.email ? ` · ${emp.email}` : ''}
+                    </span>
+                    {roleInfo && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#C0392B', backgroundColor: '#FDEDEC', padding: '2px 7px', borderRadius: 4 }}>
+                        {roleInfo.isAlt ? 'Sub. — ' : ''}{roleInfo.label}
+                      </span>
+                    )}
+                    {emp.qualifications?.length > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#27AE60' }}>
+                        {emp.qualifications.length} qualification{emp.qualifications.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <button type="button" onClick={() => handleDownloadQr(emp)} title="Télécharger QR"
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>
+                    <Download size={14} /> QR Code
+                  </button>
+                  <button type="button" onClick={() => handleDelete(emp.id)} title="Supprimer"
+                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #FADBD8', backgroundColor: '#FDEDEC', cursor: 'pointer', color: '#C0392B' }}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>{emp.firstName} {emp.lastName}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#ADB5BD' }}>
-                  {emp.poste || '—'}{emp.email ? ` · ${emp.email}` : ''}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button type="button" onClick={() => handleDownloadQr(emp)} title="Télécharger QR"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2C3E50' }}>
-                  <Download size={14} /> QR Code
-                </button>
-                <button type="button" onClick={() => handleDelete(emp.id)} title="Supprimer"
-                  style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #FADBD8', backgroundColor: '#FDEDEC', cursor: 'pointer', color: '#C0392B' }}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </section>
 
-      {/* Lien invitations */}
       <div style={{ marginTop: 16, textAlign: 'right' }}>
         <button type="button" onClick={() => router.push(`/sentinelle/${buildingId}/invitations`)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#C0392B', fontWeight: 600 }}>
