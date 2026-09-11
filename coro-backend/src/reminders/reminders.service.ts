@@ -132,6 +132,188 @@ export class RemindersService {
     );
   }
 
+  // ── Alertes lacunes Sentinelle ────────────────────────────────────────────
+  @Cron('*/15 * * * *') // Toutes les 15 minutes
+  async checkReadinessGaps() {
+    this.logger.log('Vérification des lacunes de résilience Sentinelle...');
+
+    const CRITICAL_ROLES = ['COORDINATOR', 'FIRST_AIDER'];
+    const ROLE_LABELS: Record<string, string> = {
+      COORDINATOR: 'Coordonnateur',
+      FIRST_AIDER: 'Secouriste',
+    };
+
+    // Tous les bâtiments ayant au moins un membre d'urgence configuré
+    const buildings = await this.prisma.building.findMany({
+      where: {
+        employees: {
+          some: { isActive: true, isEmergencyMember: true },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        organizationId: true,
+        clientId: true,
+      },
+    });
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    for (const building of buildings) {
+      try {
+        // Membres d'urgence configurés pour les rôles critiques
+        const criticalMembers = await this.prisma.buildingEmployee.findMany({
+          where: {
+            buildingId: building.id,
+            isActive: true,
+            isEmergencyMember: true,
+            emergencyRoles: { some: { role: { in: CRITICAL_ROLES as any } } },
+          },
+          include: { emergencyRoles: true },
+        });
+
+        if (criticalMembers.length === 0) continue;
+
+        // Présents aujourd'hui
+        const presentRecords = await this.prisma.occupancyRecord.findMany({
+          where: {
+            buildingId: building.id,
+            status: 'IN',
+            type: 'EMPLOYE',
+            checkedInAt: { gte: startOfDay },
+          },
+          select: { employeeId: true },
+        });
+        const presentIds = new Set(presentRecords.map(r => r.employeeId).filter(Boolean));
+
+        // Identifier les rôles critiques sans aucun membre présent
+        const gapRoles: string[] = [];
+        for (const roleType of CRITICAL_ROLES) {
+          const membersForRole = criticalMembers.filter(m =>
+            m.emergencyRoles.some(r => r.role === roleType)
+          );
+          if (membersForRole.length === 0) continue;
+          const anyPresent = membersForRole.some(m => presentIds.has(m.id));
+          if (!anyPresent) gapRoles.push(roleType);
+        }
+
+        if (gapRoles.length === 0) continue;
+
+        // Vérifier qu'on n'a pas déjà notifié dans la dernière heure
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const recentNotif = await this.prisma.notification.findFirst({
+          where: {
+            organizationId: building.organizationId,
+            type: 'LACUNE_RESILIENCE',
+            message: { contains: building.id },
+            createdAt: { gte: oneHourAgo },
+          },
+        });
+        if (recentNotif) continue;
+
+        // Trouver les ClientUsers du bâtiment
+        const clientUsers = await this.prisma.clientUser.findMany({
+          where: {
+            organizationId: building.organizationId,
+            clientId: building.clientId,
+            isActive: true,
+          },
+          select: { id: true, email: true, firstName: true, lastName: true },
+        });
+
+        if (clientUsers.length === 0) continue;
+
+        const gapLabels = gapRoles.map(r => ROLE_LABELS[r] || r).join(', ');
+        const title = `⚠️ Lacune opérationnelle — ${building.name}`;
+        const message = `Aucun ${gapLabels} présent actuellement. Bâtiment : ${building.id}`;
+
+        // Créer une notification in-app pour les ADMIN de l'organisation
+        const admins = await this.prisma.user.findMany({
+          where: {
+            organizationId: building.organizationId,
+            role: { in: ['ADMIN', 'SUPER_ADMIN'] },
+            isActive: true,
+          },
+          select: { id: true },
+        });
+
+        for (const admin of admins) {
+          await this.prisma.notification.create({
+            data: {
+              userId:         admin.id,
+              organizationId: building.organizationId,
+              type:           'LACUNE_RESILIENCE',
+              title,
+              message,
+              projectId:      null,
+            },
+          });
+        }
+
+        // Envoyer un courriel aux ClientUsers du bâtiment
+        for (const cu of clientUsers) {
+          await this.sendGapAlertEmail({
+            to:           cu.email,
+            toName:       `${cu.firstName} ${cu.lastName}`,
+            buildingName: building.name,
+            gapLabels,
+          });
+        }
+
+        this.logger.warn(`Lacune résilience détectée — ${building.name} : ${gapLabels}`);
+      } catch (e) {
+        this.logger.error(`Erreur vérification lacune bâtiment ${building.id}:`, e);
+      }
+    }
+  }
+
+  private async sendGapAlertEmail(data: {
+    to: string;
+    toName: string;
+    buildingName: string;
+    gapLabels: string;
+  }) {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY || '',
+      },
+      body: JSON.stringify({
+        sender: { name: 'CORO Sentinelle', email: 'info@getcoro.io' },
+        to: [{ email: data.to, name: data.toName }],
+        subject: `⚠️ Lacune opérationnelle — ${data.buildingName}`,
+        htmlContent: `
+          <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:#2C3E50;padding:24px;border-radius:8px 8px 0 0;">
+              <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#C0392B;">RO</span></span>
+              <span style="color:#ADB5BD;font-size:14px;margin-left:12px;">Sentinelle</span>
+            </div>
+            <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
+              <div style="background:#FEF9E7;border-left:4px solid #F39C12;padding:12px 16px;margin:0 0 20px;border-radius:4px;">
+                <p style="margin:0;color:#E67E22;font-weight:700;">⚠️ Lacune opérationnelle détectée</p>
+              </div>
+              <h2 style="color:#2C3E50;margin:0 0 8px;">${data.buildingName}</h2>
+              <p style="color:#6C757D;margin:0 0 20px;">Bonjour ${data.toName},</p>
+              <p style="color:#495057;margin:0 0 20px;">
+                Aucun <strong>${data.gapLabels}</strong> n'est actuellement enregistré comme présent dans le bâtiment.
+                Cette lacune a été détectée automatiquement par CORO Sentinelle.
+              </p>
+              <a href="https://client.getcoro.io" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:700;">
+                Voir la résilience opérationnelle →
+              </a>
+              <p style="color:#ADB5BD;font-size:12px;margin:24px 0 0;">
+                Cette alerte est générée automatiquement. Vous ne recevrez pas d'autre alerte pour ce bâtiment avant 1 heure.
+              </p>
+            </div>
+          </div>
+        `,
+      }),
+    });
+  }
+
   private async sendReminderEmail(data: {
     to: string;
     toName: string;
