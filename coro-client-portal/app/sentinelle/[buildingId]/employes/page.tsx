@@ -17,6 +17,16 @@ const apiPut = async (path: string, body: any) => {
   if (!res.ok) throw new Error('Erreur mise à jour');
   return res.json();
 };
+const clientFetch = async (path: string, method = 'POST', body?: any) => {
+  const res = await fetch(`${API}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error('Erreur réseau');
+  return res.json();
+};
+
 import PortalLayout from '../../../components/PortalLayout';
 import { UserPlus, Download, Trash2, QrCode, Shield } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -65,7 +75,56 @@ export default function EmployesPage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId]         = useState<string | null>(null);
+  const [showImport, setShowImport]       = useState(false);
+  const [csvFile, setCsvFile]             = useState<File | null>(null);
+  const [csvPreview, setCsvPreview]       = useState<string[][]>([]);
+  const [importing, setImporting]         = useState(false);
+  const [importResult, setImportResult]   = useState<any>(null);
+  const [sendEmails, setSendEmails]       = useState(true);
+
+  const downloadTemplate = () => {
+    const rows = [
+      'Prénom,Nom,Poste,Courriel,Téléphone,Membre urgence,Rôle urgence,Type,Zone,Qualifications,Consentement SMS',
+      'Martin,Gagnon,Directeur,martin@example.com,5141234567,oui,COORDINATOR,PRIMARY,Lobby,FIRST_AID_CPR|AED,oui',
+      'Julie,Tremblay,Réceptionniste,julie@example.com,5149876543,oui,EPI,PRIMARY,3e étage,FIRE_EXTINGUISHER,non',
+      'Pierre,Bouchard,Agent sécurité,pierre@example.com,,oui,ASSEMBLY_WARDEN,ALTERNATE,,AED,oui',
+      'Sophie,Martin,Comptable,sophie@example.com,,,non,,,,non',
+    ];
+    const blob = new Blob(['\ufeff' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'modele-employes-coro.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCsvFile = (file: File) => {
+    setCsvFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const sep = text.split('\n')[0]?.includes(';') ? ';' : ',';
+      const lines = text.split('\n').filter(l => l.trim()).slice(0, 6);
+      setCsvPreview(lines.map(l => l.split(sep).map(c => c.replace(/^"|"$/g, '').trim())));
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleImport = async () => {
+    if (!csvFile) return;
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const result = await clientFetch('/client-portal/employees/import-csv', 'POST', {
+          buildingId, csvContent: e.target?.result as string, sendEmails,
+        });
+        setImportResult(result);
+        if (result.created > 0) fetchAll();
+      } catch { alert('Erreur lors de l\'importation.'); }
+      finally { setImporting(false); }
+    };
+    reader.readAsText(csvFile, 'UTF-8');
+  };
 
   const handleEdit = (emp: any) => {
     setEditingId(emp.id);
@@ -201,10 +260,16 @@ export default function EmployesPage() {
             <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CORO Sentinelle</p>
             <h1 style={{ margin: 0, fontSize: 'clamp(20px, 5vw, 26px)', fontWeight: 800, color: '#2C3E50' }}>Employés enregistrés</h1>
           </div>
-          <button type="button" onClick={() => setShowForm(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            <UserPlus size={16} /> Ajouter un employé
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => { setShowImport(true); setImportResult(null); setCsvFile(null); setCsvPreview([]); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#6C757D' }}>
+              📥 Importer CSV
+            </button>
+            <button type="button" onClick={() => setShowForm(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              <UserPlus size={16} /> Ajouter un employé
+            </button>
+          </div>
         </div>
       </header>
 
@@ -508,6 +573,139 @@ export default function EmployesPage() {
           Gérer les invitations visiteurs →
         </button>
       </div>
+
+      {/* ── Modal Import CSV ── */}
+      {showImport && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E9ECEF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#2C3E50' }}>📥 Importer des employés — CSV</h2>
+              <button type="button" onClick={() => { setShowImport(false); setImportResult(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: '#ADB5BD' }}>×</button>
+            </div>
+            <div style={{ padding: 24 }}>
+              {!importResult ? (
+                <>
+                  {/* Étape 1 */}
+                  <div style={{ marginBottom: 20, padding: '14px 18px', backgroundColor: '#EBF5FB', borderRadius: 10, border: '1px solid #AED6F1' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#2980B9' }}>Étape 1 — Téléchargez le modèle</p>
+                    <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6C757D', lineHeight: 1.6 }}>
+                      Colonnes requises : <strong>Prénom, Nom</strong> · Optionnelles : Poste, Courriel, Téléphone, Membre urgence, Rôle urgence, Type, Zone, Qualifications, Consentement SMS
+                    </p>
+                    <button type="button" onClick={downloadTemplate}
+                      style={{ padding: '7px 14px', borderRadius: 6, border: '1px solid #2980B9', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#2980B9' }}>
+                      ⬇️ Télécharger le modèle CSV
+                    </button>
+                  </div>
+
+                  {/* Référence valeurs */}
+                  <div style={{ marginBottom: 16, padding: '10px 14px', backgroundColor: '#F8F9FA', borderRadius: 8, fontSize: 11, color: '#6C757D', lineHeight: 1.8 }}>
+                    <strong style={{ color: '#2C3E50' }}>Rôles :</strong> COORDINATOR · EPI · ASSEMBLY_WARDEN · SEARCHER · EXIT_WARDEN · PNA_ESCORT · FIRST_AIDER<br />
+                    <strong style={{ color: '#2C3E50' }}>Qualifications (séparées par |) :</strong> FIRST_AID_CPR · AED · FIRE_EXTINGUISHER · EPI_TRAINING · HAZMAT<br />
+                    <strong style={{ color: '#2C3E50' }}>Type :</strong> PRIMARY (titulaire) ou ALTERNATE (substitut) · <strong>Membre urgence / Consentement SMS :</strong> oui / non
+                  </div>
+
+                  {/* Upload */}
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>Étape 2 — Sélectionnez votre fichier</p>
+                    <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '28px', border: '2px dashed', borderRadius: 12, cursor: 'pointer',
+                      borderColor: csvFile ? '#27AE60' : '#DEE2E6', backgroundColor: csvFile ? '#EAFAF1' : '#F8F9FA' }}>
+                      <span style={{ fontSize: 28, marginBottom: 6 }}>{csvFile ? '✅' : '📄'}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: csvFile ? '#27AE60' : '#6C757D' }}>
+                        {csvFile ? csvFile.name : 'Cliquez ou glissez votre fichier .csv ici'}
+                      </span>
+                      {csvFile && <span style={{ fontSize: 11, color: '#ADB5BD', marginTop: 2 }}>{(csvFile.size / 1024).toFixed(1)} KB</span>}
+                      <input type="file" accept=".csv,.txt" style={{ display: 'none' }}
+                        onChange={e => e.target.files?.[0] && handleCsvFile(e.target.files[0])} />
+                    </label>
+                  </div>
+
+                  {/* Prévisualisation */}
+                  {csvPreview.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 700, color: '#2C3E50' }}>
+                        Aperçu — {csvPreview.length - 1} ligne{csvPreview.length - 1 > 1 ? 's' : ''} détectée{csvPreview.length - 1 > 1 ? 's' : ''}
+                      </p>
+                      <div style={{ overflowX: 'auto' as const, borderRadius: 8, border: '1px solid #E9ECEF' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 11 }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#2C3E50' }}>
+                              {csvPreview[0]?.map((h, i) => <th key={i} style={{ padding: '7px 10px', color: '#FFFFFF', textAlign: 'left' as const, whiteSpace: 'nowrap' as const }}>{h}</th>)}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {csvPreview.slice(1).map((row, i) => (
+                              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#F8F9FA' }}>
+                                {row.map((cell, j) => <td key={j} style={{ padding: '6px 10px', color: '#495057', borderBottom: '1px solid #F1F3F5', whiteSpace: 'nowrap' as const }}>{cell || '—'}</td>)}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Option emails */}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '11px 14px', borderRadius: 8,
+                      backgroundColor: sendEmails ? '#EAFAF1' : '#F8F9FA', border: `1px solid ${sendEmails ? '#A9DFBF' : '#E9ECEF'}` }}>
+                      <input type="checkbox" checked={sendEmails} onChange={e => setSendEmails(e.target.checked)}
+                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#27AE60' }} />
+                      <div>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: sendEmails ? '#27AE60' : '#2C3E50' }}>Envoyer les PIN par courriel</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6C757D' }}>Chaque employé ayant un courriel recevra son PIN d'accès Sentinelle.</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={handleImport} disabled={!csvFile || importing}
+                      style={{ flex: 1, padding: '13px', borderRadius: 8, border: 'none', backgroundColor: '#27AE60', color: '#FFFFFF', fontSize: 14, fontWeight: 700,
+                        cursor: !csvFile || importing ? 'not-allowed' : 'pointer', opacity: !csvFile || importing ? 0.6 : 1 }}>
+                      {importing ? '⏳ Importation en cours...' : '🚀 Lancer l\'importation'}
+                    </button>
+                    <button type="button" onClick={() => setShowImport(false)}
+                      style={{ padding: '13px 20px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      Annuler
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <span style={{ fontSize: 48 }}>{importResult.errors.length === 0 ? '✅' : importResult.created > 0 ? '⚠️' : '❌'}</span>
+                    <h3 style={{ margin: '12px 0 4px', fontSize: 20, fontWeight: 800, color: '#2C3E50' }}>Importation terminée</h3>
+                    <p style={{ margin: 0, fontSize: 14, color: '#6C757D' }}>{importResult.total} ligne{importResult.total > 1 ? 's' : ''} traitée{importResult.total > 1 ? 's' : ''}</p>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+                    {[
+                      { label: 'Créés', value: importResult.created, color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF' },
+                      { label: 'Ignorés', value: importResult.skipped, color: '#E67E22', bg: '#FEF9E7', border: '#F9E79F' },
+                      { label: 'Erreurs', value: importResult.errors.length, color: '#C0392B', bg: '#FDEDEC', border: '#F1948A' },
+                    ].map(s => (
+                      <div key={s.label} style={{ padding: '16px', borderRadius: 10, backgroundColor: s.bg, border: `1px solid ${s.border}`, textAlign: 'center' }}>
+                        <p style={{ margin: '0 0 4px', fontSize: 28, fontWeight: 900, color: s.color }}>{s.value}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: s.color, fontWeight: 600 }}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {importResult.errors.length > 0 && (
+                    <div style={{ marginBottom: 20, padding: '12px 14px', backgroundColor: '#FDF2F8', borderRadius: 8, border: '1px solid #F1948A', maxHeight: 180, overflowY: 'auto' as const }}>
+                      <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: '#C0392B' }}>Détail des erreurs :</p>
+                      {importResult.errors.map((err: string, i: number) => (
+                        <p key={i} style={{ margin: '0 0 3px', fontSize: 11, color: '#6C757D' }}>• {err}</p>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" onClick={() => { setShowImport(false); setImportResult(null); setCsvFile(null); setCsvPreview([]); }}
+                    style={{ width: '100%', padding: '13px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    Fermer
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </PortalLayout>
   );
 }

@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { ClientPortalService } from './client-portal.service';
 import { ClientJwtGuard } from './client-jwt.guard';
 import { IncidentService } from '../occupancy/incident.service';
+import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 
 @Controller('client-portal')
 @UseGuards(ClientJwtGuard)
@@ -10,6 +11,7 @@ export class ClientPortalController {
   constructor(
     private clientPortalService: ClientPortalService,
     private incidentService: IncidentService,
+    private occupancyEmployeesService: OccupancyEmployeesService,
   ) {}
 
   @Get('dashboard')
@@ -305,6 +307,16 @@ export class ClientPortalController {
   @Get('incidents/buildings/:buildingId/history')
   async getIncidentHistory(@Param('buildingId') buildingId: string, @Request() req: any) {
     return this.incidentService.getIncidentHistory(buildingId, req.clientUser.organizationId);
+  }
+
+  @Post('employees/import-csv')
+  async importEmployeesCsv(@Body() body: any, @Request() req: any) {
+    return this.occupancyEmployeesService.importEmployeesCsv(
+      body.buildingId,
+      body.csvContent,
+      req.clientUser.organizationId,
+      body.sendEmails !== false,
+    );
   }
 
   @Get('incidents/:incidentId/detail')

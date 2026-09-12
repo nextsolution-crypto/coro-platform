@@ -513,4 +513,197 @@ export class OccupancyEmployeesService {
 
     return null;
   }
+
+    // ── Import CSV ────────────────────────────────────────────────────────────
+
+  async importEmployeesCsv(buildingId: string, csvContent: string, organizationId: string, sendEmails: boolean = true) {
+    const building = await this.prisma.building.findFirst({ where: { id: buildingId, organizationId } });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+
+    const lines = csvContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length < 2) return { created: 0, skipped: 0, errors: [], total: 0 };
+
+    // Détecter le séparateur (virgule ou point-virgule)
+    const sep = lines[0].includes(';') ? ';' : ',';
+
+    // Parser une ligne CSV (gère les guillemets)
+    const parseLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') { inQuotes = !inQuotes; continue; }
+        if (char === sep && !inQuotes) { result.push(current.trim()); current = ''; continue; }
+        current += char;
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // supprimer accents
+      .replace(/[^a-z0-9]/g, '')
+    );
+
+    // Mapping flexible des colonnes
+    const col = (names: string[]): number => {
+      for (const name of names) {
+        const idx = headers.findIndex(h => h.includes(name));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
+    const COLS = {
+      firstName:       col(['prenom', 'firstname', 'first']),
+      lastName:        col(['nom', 'lastname', 'last']),
+      poste:           col(['poste', 'titre', 'position', 'title', 'role']),
+      email:           col(['email', 'courriel', 'mail']),
+      phone:           col(['telephone', 'phone', 'tel', 'cellulaire']),
+      isEmergency:     col(['urgence', 'emergency', 'membre']),
+      emergencyRole:   col(['roleurgence', 'emergencyrole', 'roleurgence']),
+      assignType:      col(['type', 'assigntype', 'titulaire']),
+      zone:            col(['zone', 'secteur', 'area']),
+      qualifications:  col(['qualification', 'certif', 'formation']),
+      smsConsent:      col(['sms', 'consentement', 'consent']),
+    };
+
+    const ROLE_MAP: Record<string, string> = {
+      'coordinateur': 'COORDINATOR', 'coordinator': 'COORDINATOR', 'coord': 'COORDINATOR',
+      'epi': 'EPI', 'equipe premiere': 'EPI', 'first response': 'EPI',
+      'rassemblement': 'ASSEMBLY_WARDEN', 'assembly': 'ASSEMBLY_WARDEN', 'warden': 'ASSEMBLY_WARDEN',
+      'chercheur': 'SEARCHER', 'searcher': 'SEARCHER',
+      'sortie': 'EXIT_WARDEN', 'exit': 'EXIT_WARDEN',
+      'pna': 'PNA_ESCORT', 'accompagnateur': 'PNA_ESCORT', 'escort': 'PNA_ESCORT',
+      'secouriste': 'FIRST_AIDER', 'first aid': 'FIRST_AIDER', 'aider': 'FIRST_AIDER',
+    };
+
+    const QUAL_MAP: Record<string, string> = {
+      'rcr': 'FIRST_AID_CPR', 'rcp': 'FIRST_AID_CPR', 'cpr': 'FIRST_AID_CPR',
+      'premiers soins': 'FIRST_AID_CPR', 'first aid': 'FIRST_AID_CPR', 'first_aid_cpr': 'FIRST_AID_CPR',
+      'dea': 'AED', 'aed': 'AED', 'defibrillateur': 'AED',
+      'extincteur': 'FIRE_EXTINGUISHER', 'extinguisher': 'FIRE_EXTINGUISHER', 'fire_extinguisher': 'FIRE_EXTINGUISHER',
+      'epi': 'EPI_TRAINING', 'epi_training': 'EPI_TRAINING',
+      'matdang': 'HAZMAT', 'hazmat': 'HAZMAT', 'matieres dangereuses': 'HAZMAT',
+    };
+
+    const isOui = (val: string) => ['oui', 'yes', 'true', '1', 'vrai', 'x'].includes(val.toLowerCase().trim());
+
+    const results = { created: 0, skipped: 0, errors: [] as string[], total: 0 };
+    const dataLines = lines.slice(1);
+    results.total = dataLines.length;
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const row = parseLine(dataLines[i]);
+      const lineNum = i + 2;
+
+      const get = (colIdx: number) => (colIdx >= 0 && colIdx < row.length ? row[colIdx]?.trim() || '' : '');
+
+      const firstName = get(COLS.firstName);
+      const lastName  = get(COLS.lastName);
+
+      if (!firstName || !lastName) {
+        results.errors.push(`Ligne ${lineNum} : Prénom et Nom requis — ignorée`);
+        results.skipped++;
+        continue;
+      }
+
+      const email = get(COLS.email);
+
+      // Vérifier doublon par email
+      if (email) {
+        const existing = await this.prisma.buildingEmployee.findFirst({
+          where: { buildingId, email, isActive: true },
+        });
+        if (existing) {
+          results.errors.push(`Ligne ${lineNum} : ${firstName} ${lastName} (${email}) — déjà existant, ignoré`);
+          results.skipped++;
+          continue;
+        }
+      }
+
+      // Générer PIN unique
+      let pin = '';
+      let unique = false;
+      while (!unique) {
+        pin = Math.floor(1000 + Math.random() * 9000).toString();
+        const existingPin = await this.prisma.buildingEmployee.findFirst({ where: { buildingId, pin, isActive: true } });
+        if (!existingPin) unique = true;
+      }
+
+      const isEmergencyRaw = get(COLS.isEmergency);
+      const isEmergencyMember = isEmergencyRaw ? isOui(isEmergencyRaw) : false;
+
+      // Parser rôle urgence
+      const emergencyRoleRaw = get(COLS.emergencyRole).toLowerCase().trim();
+      const emergencyRole = ROLE_MAP[emergencyRoleRaw] || (Object.values(ROLE_MAP).includes(emergencyRoleRaw.toUpperCase()) ? emergencyRoleRaw.toUpperCase() : null);
+
+      // Parser type (titulaire/substitut)
+      const assignTypeRaw = get(COLS.assignType).toLowerCase().trim();
+      const assignType = ['alternate', 'substitut', 'sub', '2'].includes(assignTypeRaw) ? 'ALTERNATE' : 'PRIMARY';
+
+      // Parser qualifications (séparées par | ou ,)
+      const qualRaw = get(COLS.qualifications);
+      const qualifications: string[] = [];
+      if (qualRaw) {
+        const parts = qualRaw.split(/[|,]/).map(q => q.trim().toLowerCase());
+        for (const part of parts) {
+          const mapped = QUAL_MAP[part] || (Object.values(QUAL_MAP).includes(part.toUpperCase()) ? part.toUpperCase() : null);
+          if (mapped && !qualifications.includes(mapped)) qualifications.push(mapped);
+        }
+      }
+
+      const smsConsentRaw = get(COLS.smsConsent);
+      const smsConsent = smsConsentRaw ? isOui(smsConsentRaw) : false;
+
+      try {
+        const employee = await this.prisma.buildingEmployee.create({
+          data: {
+            buildingId,
+            organizationId,
+            firstName,
+            lastName,
+            poste:            get(COLS.poste)  || null,
+            email:            email            || null,
+            phone:            get(COLS.phone)  || null,
+            pin,
+            isEmergencyMember,
+            smsConsent,
+          },
+        });
+
+        if (isEmergencyMember && emergencyRole) {
+          await this.prisma.employeeEmergencyRole.create({
+            data: {
+              employeeId: employee.id,
+              buildingId,
+              role:       emergencyRole as any,
+              assignType: assignType as any,
+              priority:   assignType === 'ALTERNATE' ? 2 : 1,
+              zone:       get(COLS.zone) || null,
+            },
+          });
+        }
+
+        for (const qual of qualifications) {
+          await this.prisma.employeeQualification.create({
+            data: { employeeId: employee.id, type: qual as any },
+          });
+        }
+
+        // Envoyer courriel PIN si email fourni et option activée
+        if (email && sendEmails) {
+          await this.sendPinEmail(employee, building).catch(() => {});
+        }
+
+        results.created++;
+      } catch (err: any) {
+        results.errors.push(`Ligne ${lineNum} : ${firstName} ${lastName} — Erreur : ${err.message}`);
+        results.skipped++;
+      }
+    }
+
+    return results;
+  }
 }
