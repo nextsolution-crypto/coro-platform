@@ -166,18 +166,28 @@ export default function PcaConfiguratorPage() {
         // Charger la config existante
         const c = configRes.data.config;
         setConfig(prev => ({
-          ...prev,
-          ...c,
-          effectiveDate: c.effectiveDate ? new Date(c.effectiveDate).toISOString().split('T')[0] : '',
-          insuranceLastReview: c.insuranceLastReview ? new Date(c.insuranceLastReview).toISOString().split('T')[0] : '',
-          nextReviewDate: c.nextReviewDate ? new Date(c.nextReviewDate).toISOString().split('T')[0] : '',
-          cellMembers: c.cellMembers || [],
-          riskScenarios: c.riskScenarios || [],
-          criticalServices: c.criticalServices || [],
-          resumptionSequence: c.resumptionSequence || [],
-          regulatoryReqs: c.regulatoryReqs || [],
-          authoritiesToNotify: c.authoritiesToNotify || [],
-        }));
+  ...prev,
+  ...c,
+  effectiveDate: c.effectiveDate
+    ? new Date(c.effectiveDate).toISOString().split('T')[0]
+    : '',
+  insuranceLastReview: c.insuranceLastReview
+    ? new Date(c.insuranceLastReview).toISOString().split('T')[0]
+    : '',
+  nextReviewDate: c.nextReviewDate
+    ? new Date(c.nextReviewDate).toISOString().split('T')[0]
+    : '',
+
+  // Tableaux — toujours normalisés pour éviter null / données invalides
+  cellMembers: Array.isArray(c.cellMembers) ? c.cellMembers : [],
+  riskScenarios: Array.isArray(c.riskScenarios) ? c.riskScenarios : [],
+  criticalServices: Array.isArray(c.criticalServices) ? c.criticalServices : [],
+  criticalITSystems: Array.isArray(c.criticalITSystems) ? c.criticalITSystems : [],
+  criticalSuppliers: Array.isArray(c.criticalSuppliers) ? c.criticalSuppliers : [],
+  resumptionSequence: Array.isArray(c.resumptionSequence) ? c.resumptionSequence : [],
+  regulatoryReqs: Array.isArray(c.regulatoryReqs) ? c.regulatoryReqs : [],
+  authoritiesToNotify: Array.isArray(c.authoritiesToNotify) ? c.authoritiesToNotify : [],
+}));
       } else {
         // Pré-remplissage depuis les fiches existantes
         const p = configRes.data.prefill;
