@@ -272,12 +272,15 @@ export class IncidentService {
     const allMembers = await this.prisma.buildingEmployee.findMany({
       where: { buildingId: body.buildingId, isActive: true, isEmergencyMember: true },
       include: { emergencyRoles: { orderBy: { priority: 'asc' } } },
+      // smsConsent inclus automatiquement via Prisma
     });
     const mobilizableTeam = allMembers
       .filter(m => presentIds.has(m.id))
       .map(m => ({
         id: m.id, firstName: m.firstName, lastName: m.lastName,
-        email: m.email, phone: m.phone,
+        email: m.email,
+        phone: m.smsConsent ? m.phone : null,  // SMS seulement si consentement
+        smsConsent: (m as any).smsConsent ?? false,
         roles: m.emergencyRoles.map(r => ({ role: r.role, assignType: r.assignType, zone: r.zone })),
       }));
 

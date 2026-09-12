@@ -51,6 +51,7 @@ const EMPTY_FORM = {
   emergencyAssignType: 'PRIMARY',
   emergencyZone: '',
   qualifications: [] as string[],
+  smsConsent: false,
 };
 
 export default function EmployesPage() {
@@ -80,6 +81,7 @@ export default function EmployesPage() {
       emergencyAssignType:  emp.emergencyRoles?.[0]?.assignType  || 'PRIMARY',
       emergencyZone:        emp.emergencyRoles?.[0]?.zone        || '',
       qualifications:       emp.qualifications?.map((q: any) => q.type) || [],
+      smsConsent:           emp.smsConsent || false,
     });
   };
 
@@ -227,6 +229,23 @@ export default function EmployesPage() {
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' }} />
               </div>
             ))}
+          </div>
+
+          {/* Consentement SMS */}
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 8, backgroundColor: form.smsConsent ? '#EAFAF1' : '#F8F9FA', border: `1px solid ${form.smsConsent ? '#A9DFBF' : '#E9ECEF'}` }}>
+              <input type="checkbox" checked={form.smsConsent}
+                onChange={e => setForm(prev => ({ ...prev, smsConsent: e.target.checked }))}
+                style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, cursor: 'pointer', accentColor: '#27AE60' }} />
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: form.smsConsent ? '#27AE60' : '#2C3E50' }}>
+                  ☐ Notifications d'urgence par SMS
+                </p>
+                <p style={{ margin: '3px 0 0', fontSize: 11, color: '#6C757D', lineHeight: 1.5 }}>
+                  L'employé a accepté de recevoir à ce numéro les alertes de sécurité, avis d'alarme, consignes d'évacuation et autres notifications d'urgence concernant ce bâtiment.
+                </p>
+              </div>
+            </label>
           </div>
 
           <div style={{ borderTop: '1px solid #F1F3F5', paddingTop: 20, marginBottom: 20 }}>

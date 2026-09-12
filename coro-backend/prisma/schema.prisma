@@ -1144,6 +1144,7 @@ model BuildingEmployee {
   emergencyRoles   EmployeeEmergencyRole[]
   qualifications   EmployeeQualification[]
   isEmergencyMember Boolean @default(false)
+  smsConsent        Boolean @default(false)
   incidentTasks    IncidentTask[]
 }
 

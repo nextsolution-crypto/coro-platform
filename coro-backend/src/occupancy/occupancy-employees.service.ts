@@ -51,6 +51,7 @@ export class OccupancyEmployeesService {
         phone: body.phone,
         pin,
         isEmergencyMember: body.isEmergencyMember === true,
+        smsConsent:        body.smsConsent === true,
       },
     });
 
@@ -148,6 +149,7 @@ export class OccupancyEmployeesService {
         email:             body.email             ?? employee.email,
         phone:             body.phone             ?? employee.phone,
         isEmergencyMember: body.isEmergencyMember ?? employee.isEmergencyMember,
+        smsConsent:        body.smsConsent        ?? employee.smsConsent,
       },
     });
 
