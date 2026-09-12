@@ -239,7 +239,7 @@ export default function EmployesPage() {
                 style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, cursor: 'pointer', accentColor: '#27AE60' }} />
               <div>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: form.smsConsent ? '#27AE60' : '#2C3E50' }}>
-                  ☐ Notifications d'urgence par SMS
+                  Consentement SMS confirmé
                 </p>
                 <p style={{ margin: '3px 0 0', fontSize: 11, color: '#6C757D', lineHeight: 1.5 }}>
                   L'employé a accepté de recevoir à ce numéro les alertes de sécurité, avis d'alarme, consignes d'évacuation et autres notifications d'urgence concernant ce bâtiment.
