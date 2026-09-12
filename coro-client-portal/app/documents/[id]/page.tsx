@@ -92,6 +92,7 @@ export default function DocumentDetailPage() {
   const [refuseComment, setRefuseComment] = useState('');
   const [refusing,        setRefusing]        = useState(false);
   const [versionHistory,  setVersionHistory]  = useState<any[]>([]);
+  const [signatureStatus, setSignatureStatus] = useState<any>(null);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -120,61 +121,83 @@ export default function DocumentDetailPage() {
   };
 
   const fetchData = async () => {
-    try {
-      const [projectRes, commentsRes, versionsRes] = await Promise.all([
-        apiGet(`/client-portal/projects/${projectId}`),
-        apiGet(`/client-portal/projects/${projectId}/comments`),
-        apiGet(`/client-portal/projects/${projectId}/versions`).catch(() => []),
-      ]);
+  try {
+    const [
+      projectRes,
+      commentsRes,
+      versionsRes,
+      signatureStatusRes,
+    ] = await Promise.all([
+      apiGet(`/client-portal/projects/${projectId}`),
+      apiGet(`/client-portal/projects/${projectId}/comments`),
+      apiGet(`/client-portal/projects/${projectId}/versions`).catch(() => []),
 
-      setProject(projectRes);
-      setComments(commentsRes || []);
-      setVersionHistory(versionsRes || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // IMPORTANT :
+      // cet endpoint vérifie uniquement la signature liée à la
+      // ProjectVersion courante.
+      apiGet(`/client-portal/projects/${projectId}/sign-status`).catch(() => ({
+        status: 'NOT_SIGNED',
+        signature: null,
+        officialPdfFr: null,
+        officialPdfEn: null,
+      })),
+    ]);
 
-  // Tant que le client a signé mais que les deux PDF officiels ne sont pas prêts,
-  // la page vérifie silencieusement leur disponibilité. Aucun écran bloquant.
-  useEffect(() => {
-    if (!user || !project) return;
-
-    const signedByCurrentUser = project.signatures?.some(
-      (signature: any) => signature.clientUser?.email === user.email
+    setProject(projectRes);
+    setComments(commentsRes || []);
+    setVersionHistory(versionsRes || []);
+    setSignatureStatus(
+      signatureStatusRes || {
+        status: 'NOT_SIGNED',
+        signature: null,
+      },
     );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    if (!signedByCurrentUser || (project.officialPdfFr && project.officialPdfEn)) {
-      return;
-    }
+  // Tant que LA VERSION COURANTE est signée mais que les PDF officiels
+// ne sont pas prêts, CORO vérifie silencieusement leur disponibilité.
+useEffect(() => {
+  if (!user || !project) return;
 
-    const interval = window.setInterval(async () => {
-      try {
-        const status = await apiGet(
-          `/client-portal/projects/${projectId}/sign-status`
+  if (signatureStatus?.status !== 'PROCESSING') {
+    return;
+  }
+
+  const interval = window.setInterval(async () => {
+    try {
+      const status = await apiGet(
+        `/client-portal/projects/${projectId}/sign-status`
+      );
+
+      setSignatureStatus(status);
+
+      if (status?.status === 'READY') {
+        window.clearInterval(interval);
+
+        await fetchData();
+
+        toast(
+          'Les PDF officiels FR et EN sont maintenant disponibles.',
+          'success'
         );
-
-        if (status?.status === 'READY') {
-          window.clearInterval(interval);
-          await fetchData();
-          toast('Les PDF officiels FR et EN sont maintenant disponibles.', 'success');
-        }
-      } catch (err) {
-        // Vérification silencieuse : la signature reste enregistrée.
-        console.error('Vérification statut PDF officiel:', err);
       }
-    }, 5000);
+    } catch (err) {
+      // Vérification silencieuse :
+      // la signature reste enregistrée même si le polling échoue.
+      console.error('Vérification statut PDF officiel:', err);
+    }
+  }, 5000);
 
-    return () => window.clearInterval(interval);
-  }, [
-    user?.email,
-    projectId,
-    project?.officialPdfFr,
-    project?.officialPdfEn,
-    project?.signatures?.length,
-  ]);
+  return () => window.clearInterval(interval);
+}, [
+  projectId,
+  signatureStatus?.status,
+]);
 
   const handleSign = async () => {
     if (!signName.trim()) return;
@@ -403,10 +426,12 @@ const handleRefuse = async () => {
     STATUS_COLORS[project.status] ||
     STATUS_COLORS.DRAFT;
 
-  const mySignature = project.signatures?.find(
-    (signature: any) =>
-      signature.clientUser?.email === user.email
-  );
+  // Signature de l'utilisateur pour la VERSION COURANTE uniquement.
+// /sign-status est désormais version-aware côté backend.
+const mySignature =
+  signatureStatus?.status === 'NOT_SIGNED'
+    ? null
+    : signatureStatus?.signature || null;
 
   const isValidated =
     project.status === 'VALIDATED' || project.status === 'EXPORTED';
