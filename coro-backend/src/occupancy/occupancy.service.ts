@@ -625,6 +625,40 @@ export class OccupancyService {
     };
   }
 
+  // ── ResilienceSnapshot ───────────────────────────────────────────────────
+
+  async saveResilienceSnapshot(buildingId: string, token: string) {
+    try {
+      const enriched = await this.getReadinessEnriched(buildingId, token);
+      const e = enriched.enriched || {};
+      await this.prisma.resilienceSnapshot.create({
+        data: {
+          buildingId,
+          organizationId: (await this.prisma.building.findUnique({ where: { id: buildingId }, select: { organizationId: true } }))!.organizationId,
+          score:          e.score          ?? enriched.readinessIndex ?? 0,
+          status:         e.status         ?? enriched.status         ?? 'CRITICAL',
+          rolesScore:     e.components?.roles?.score          ?? 0,
+          qualScore:      e.components?.qualifications?.score ?? 0,
+          plansScore:     e.components?.plans?.score          ?? 0,
+          exercisesScore: e.components?.exercises?.score      ?? 0,
+          presentMembers: enriched.presentMembers ?? 0,
+          totalMembers:   enriched.totalMembers   ?? 0,
+        },
+      });
+    } catch (err) { console.error('[ResilienceSnapshot] Erreur:', err); }
+  }
+
+  async getResilienceHistory(buildingId: string, organizationId: string, days = 90) {
+    const building = await this.prisma.building.findFirst({ where: { id: buildingId, organizationId } });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+    const since = new Date(Date.now() - days * 86400000);
+    return this.prisma.resilienceSnapshot.findMany({
+      where: { buildingId, snapshotAt: { gte: since } },
+      orderBy: { snapshotAt: 'asc' },
+      select: { score: true, status: true, rolesScore: true, qualScore: true, plansScore: true, exercisesScore: true, presentMembers: true, snapshotAt: true },
+    });
+  }
+
   // Historique public — authentifié par token kiosque
   async getHistoryPublic(buildingId: string, token: string, from: string, to: string) {
     await this.validateKioskToken(buildingId, token);

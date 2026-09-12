@@ -64,6 +64,15 @@ export class OccupancyController {
     return this.occupancyService.getReadinessEnriched(buildingId, token);
   }
 
+  @Get('buildings/:buildingId/resilience-history')
+  getResilienceHistory(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+    @Query('days') days?: string,
+  ) {
+    return this.occupancyService.getResilienceHistory(buildingId, req.user?.organizationId, days ? parseInt(days) : 90);
+  }
+
   @Get('buildings/:buildingId/history-public')
   getHistoryPublic(
     @Param('buildingId') buildingId: string,

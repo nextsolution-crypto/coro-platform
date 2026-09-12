@@ -167,7 +167,8 @@ model Building {
   employees          BuildingEmployee[]
   visitorInvitations VisitorInvitation[]
   emergencyRoles     EmployeeEmergencyRole[]
-  incidentEvents     IncidentEvent[]
+  incidentEvents        IncidentEvent[]
+  resilienceSnapshots   ResilienceSnapshot[]
 }
 
 model Project {
@@ -1237,6 +1238,26 @@ model IncidentLog {
   actor           String?
   details         String?
   isAutomatic     Boolean       @default(true)
+}
+
+model ResilienceSnapshot {
+  id             String   @id @default(uuid())
+  buildingId     String
+  building       Building @relation(fields: [buildingId], references: [id])
+  organizationId String
+  score          Int
+  status         String   // READY | REDUCED | CRITICAL
+  rolesScore     Int
+  qualScore      Int
+  plansScore     Int
+  exercisesScore Int
+  presentMembers Int
+  totalMembers   Int
+  snapshotAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([buildingId])
+  @@index([snapshotAt])
 }
 
 model VisitorInvitation {

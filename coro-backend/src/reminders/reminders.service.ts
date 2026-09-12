@@ -2,12 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { OccupancyService } from '../occupancy/occupancy.service';
 
 @Injectable()
 export class RemindersService {
   private readonly logger = new Logger(RemindersService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private occupancyService: OccupancyService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkPendingSignatures() {
@@ -90,6 +94,25 @@ export class RemindersService {
         this.logger.error(`Erreur rappel projet ${project.name}:`, e);
       }
     }
+  }
+
+  // ── Snapshot résilience — tous les jours à 23h50 ──────────────────────────
+  @Cron('50 23 * * *')
+  async saveAllResilienceSnapshots() {
+    this.logger.log('Sauvegarde des snapshots de résilience...');
+    try {
+      const buildings = await this.prisma.building.findMany({
+        where: { isActive: true },
+        include: { kioskToken: { select: { token: true } } },
+      });
+      let saved = 0;
+      for (const building of buildings) {
+        if (!building.kioskToken?.token) continue;
+        await this.occupancyService.saveResilienceSnapshot(building.id, building.kioskToken.token);
+        saved++;
+      }
+      this.logger.log(`[ResilienceSnapshot] ${saved} snapshots sauvegardés`);
+    } catch (err) { this.logger.error('[ResilienceSnapshot] Erreur CRON:', err); }
   }
 
   // ── Purge automatique registre Sentinelle ─────────────────────────────────

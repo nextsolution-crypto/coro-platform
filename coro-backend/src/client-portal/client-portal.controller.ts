@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { ClientPortalService } from './client-portal.service';
 import { ClientJwtGuard } from './client-jwt.guard';
 import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
+import { OccupancyService } from '../occupancy/occupancy.service';
 
 @Controller('client-portal')
 @UseGuards(ClientJwtGuard)
@@ -12,6 +13,7 @@ export class ClientPortalController {
     private clientPortalService: ClientPortalService,
     private incidentService: IncidentService,
     private occupancyEmployeesService: OccupancyEmployeesService,
+    private occupancyService: OccupancyService,
   ) {}
 
   @Get('dashboard')
@@ -272,6 +274,11 @@ export class ClientPortalController {
   @Get('incidents/buildings/:buildingId/active-all')
   async getActiveIncidents(@Param('buildingId') buildingId: string, @Request() req: any) {
     return this.incidentService.getActiveIncidents(buildingId, req.clientUser.organizationId);
+  }
+
+  @Get('buildings/:buildingId/resilience-history')
+  async getResilienceHistory(@Param('buildingId') buildingId: string, @Request() req: any, @Query('days') days?: string) {
+    return this.occupancyService.getResilienceHistory(buildingId, req.clientUser.organizationId, days ? parseInt(days) : 90);
   }
 
   @Put('incidents/tasks/:taskId/uncomplete')
