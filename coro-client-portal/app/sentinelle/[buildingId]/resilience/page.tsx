@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { apiGet, getUser } from '../../../store/auth';
 import PortalLayout from '../../../components/PortalLayout';
-import { Shield, AlertTriangle, CheckCircle, XCircle, RefreshCw, Users, FileText, Zap } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, XCircle, RefreshCw, Users, FileText, Zap, TrendingUp } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
@@ -56,7 +56,9 @@ export default function ResiliencePage() {
   const [loading, setLoading]   = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [kioskToken, setKioskToken] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'intel'>('overview');
+  const [activeTab, setActiveTab]     = useState<'overview' | 'roles' | 'intel' | 'trend'>('overview');
+  const [history, setHistory]         = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     const u = getUser();
@@ -69,7 +71,29 @@ export default function ResiliencePage() {
       const kiosk = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
       setKioskToken(kiosk.token);
       await fetchData(kiosk.token);
+      await fetchHistory();
     } catch (err) { console.error(err); setLoading(false); }
+  };
+
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`${API}/client-portal/buildings/${buildingId}/resilience-history?days=90`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
+      });
+      if (res.ok) setHistory(await res.json());
+    } catch { /* silencieux */ }
+    finally { setLoadingHistory(false); }
+  }, [buildingId]);
+
+  const forceSnapshot = async () => {
+    try {
+      await fetch(`${API}/client-portal/buildings/${buildingId}/resilience-snapshot`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
+      });
+      await fetchHistory();
+    } catch { /* silencieux */ }
   };
 
   const fetchData = useCallback(async (token?: string) => {
@@ -198,6 +222,7 @@ export default function ResiliencePage() {
           { key: 'overview', label: '📊 Vue générale' },
           { key: 'roles',    label: '🛡️ Couverture rôles' },
           { key: 'intel',    label: `💡 Intelligence${(data.recommendations || []).length > 0 ? ` (${data.recommendations.length})` : ''}` },
+          { key: 'trend',    label: '📈 Tendance 90 jours' },
         ] as const).map(tab => (
           <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
             style={{ padding: '8px 16px', border: 'none', borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent', backgroundColor: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === tab.key ? 700 : 500, color: activeTab === tab.key ? '#C0392B' : '#6C757D', marginBottom: -1 }}>
@@ -422,6 +447,155 @@ export default function ResiliencePage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Onglet Tendance ── */}
+      {activeTab === 'trend' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <TrendingUp size={15} color="#6C757D" /> Évolution de l'indice — 90 derniers jours
+            </h2>
+            <button type="button" onClick={forceSnapshot}
+              style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#6C757D' }}>
+              📸 Sauvegarder snapshot maintenant
+            </button>
+          </div>
+
+          {loadingHistory ? (
+            <p style={{ color: '#ADB5BD', fontSize: 13, textAlign: 'center', padding: 32 }}>Chargement...</p>
+          ) : history.length === 0 ? (
+            <div style={{ padding: 48, textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
+              <TrendingUp size={36} color="#DEE2E6" style={{ margin: '0 auto 16px' }} />
+              <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>Aucune donnée historique</p>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#ADB5BD' }}>Les snapshots sont sauvegardés automatiquement chaque nuit à 23h50.<br />Cliquez sur « Sauvegarder snapshot maintenant » pour créer le premier point de données.</p>
+              <button type="button" onClick={forceSnapshot}
+                style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                📸 Créer le premier snapshot
+              </button>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', padding: '24px 20px' }}>
+              {/* Graphique SVG inline */}
+              {(() => {
+                const W = 100; const H = 60; const PAD = 8;
+                const scores = history.map(h => h.score);
+                const minS = Math.max(0, Math.min(...scores) - 10);
+                const maxS = Math.min(100, Math.max(...scores) + 10);
+                const range = maxS - minS || 1;
+                const pts = history.map((h, i) => {
+                  const x = PAD + (i / Math.max(history.length - 1, 1)) * (W - PAD * 2);
+                  const y = H - PAD - ((h.score - minS) / range) * (H - PAD * 2);
+                  return { x, y, score: h.score, status: h.status, date: h.snapshotAt };
+                });
+                const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                const areaD = `${pathD} L ${pts[pts.length - 1].x} ${H - PAD} L ${pts[0].x} ${H - PAD} Z`;
+
+                return (
+                  <div style={{ position: 'relative' }}>
+                    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+                      {/* Lignes de grille */}
+                      {[0, 25, 50, 75, 100].map(v => {
+                        const y = H - PAD - ((v - minS) / range) * (H - PAD * 2);
+                        if (y < PAD || y > H - PAD) return null;
+                        return (
+                          <g key={v}>
+                            <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="#F1F3F5" strokeWidth="0.3" />
+                            <text x={PAD - 1} y={y + 1} fontSize="2.5" fill="#ADB5BD" textAnchor="end">{v}%</text>
+                          </g>
+                        );
+                      })}
+                      {/* Seuil cible 70% */}
+                      {(() => {
+                        const y70 = H - PAD - ((70 - minS) / range) * (H - PAD * 2);
+                        return y70 > PAD && y70 < H - PAD ? (
+                          <g>
+                            <line x1={PAD} y1={y70} x2={W - PAD} y2={y70} stroke="#27AE60" strokeWidth="0.4" strokeDasharray="1,1" />
+                            <text x={W - PAD + 1} y={y70 + 1} fontSize="2.5" fill="#27AE60">70%</text>
+                          </g>
+                        ) : null;
+                      })()}
+                      {/* Aire */}
+                      <path d={areaD} fill="url(#grad)" opacity="0.3" />
+                      <defs>
+                        <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#C0392B" stopOpacity="0.6" />
+                          <stop offset="100%" stopColor="#C0392B" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {/* Ligne */}
+                      <path d={pathD} fill="none" stroke="#C0392B" strokeWidth="0.8" strokeLinejoin="round" />
+                      {/* Points */}
+                      {pts.map((p, i) => (
+                        <g key={i}>
+                          <circle cx={p.x} cy={p.y} r="1.2"
+                            fill={p.status === 'READY' ? '#27AE60' : p.status === 'REDUCED' ? '#E67E22' : '#C0392B'}
+                            stroke="#FFFFFF" strokeWidth="0.4" />
+                        </g>
+                      ))}
+                      {/* Labels date — premier et dernier */}
+                      {pts.length > 0 && (
+                        <>
+                          <text x={pts[0].x} y={H - 1} fontSize="2.5" fill="#ADB5BD" textAnchor="middle">
+                            {new Date(pts[0].date).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })}
+                          </text>
+                          {pts.length > 1 && (
+                            <text x={pts[pts.length - 1].x} y={H - 1} fontSize="2.5" fill="#ADB5BD" textAnchor="middle">
+                              {new Date(pts[pts.length - 1].date).toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' })}
+                            </text>
+                          )}
+                        </>
+                      )}
+                    </svg>
+                  </div>
+                );
+              })()}
+
+              {/* Légende */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 16, flexWrap: 'wrap' }}>
+                {[
+                  { color: '#27AE60', label: 'Opérationnel (≥85%)' },
+                  { color: '#E67E22', label: 'Capacité réduite (60-84%)' },
+                  { color: '#C0392B', label: 'Critique (<60%)' },
+                  { color: '#27AE60', label: '── Seuil cible 70%', dashed: true },
+                ].map(l => (
+                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: l.dashed ? 16 : 10, height: l.dashed ? 0 : 10, borderRadius: l.dashed ? 0 : '50%', backgroundColor: l.dashed ? 'transparent' : l.color, borderTop: l.dashed ? `2px dashed ${l.color}` : 'none' }} />
+                    <span style={{ fontSize: 11, color: '#6C757D' }}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tableau résumé */}
+              <div style={{ marginTop: 20, borderTop: '1px solid #F1F3F5', paddingTop: 16 }}>
+                <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#2C3E50' }}>Derniers snapshots</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {history.slice(-5).reverse().map((h: any, i: number) => {
+                    const scfg = { READY: { color: '#27AE60', icon: '🟢' }, REDUCED: { color: '#E67E22', icon: '🟠' }, CRITICAL: { color: '#C0392B', icon: '🔴' } };
+                    const s = scfg[h.status as keyof typeof scfg] || scfg.CRITICAL;
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 8, backgroundColor: '#F8F9FA' }}>
+                        <span style={{ fontSize: 13 }}>{s.icon}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: s.color, minWidth: 48 }}>{h.score}%</span>
+                        <span style={{ fontSize: 12, color: '#ADB5BD', flex: 1 }}>{new Date(h.snapshotAt).toLocaleString('fr-CA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {[
+                            { label: 'Rôles', val: h.rolesScore },
+                            { label: 'Qual.', val: h.qualScore },
+                            { label: 'Plans', val: h.plansScore },
+                            { label: 'Exerc.', val: h.exercisesScore },
+                          ].map(c => (
+                            <span key={c.label} style={{ fontSize: 10, color: '#ADB5BD' }}>{c.label}: {c.val}%</span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

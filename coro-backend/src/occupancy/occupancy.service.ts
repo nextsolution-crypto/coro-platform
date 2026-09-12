@@ -625,6 +625,14 @@ export class OccupancyService {
     };
   }
 
+  async getOrCreateKioskTokenForOrg(buildingId: string, organizationId: string) {
+    const building = await this.prisma.building.findFirst({ where: { id: buildingId, organizationId } });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+    const existing = await this.prisma.buildingKioskToken.findUnique({ where: { buildingId } });
+    if (existing) return existing;
+    return this.prisma.buildingKioskToken.create({ data: { buildingId } });
+  }
+
   // ── ResilienceSnapshot ───────────────────────────────────────────────────
 
   async saveResilienceSnapshot(buildingId: string, token: string) {

@@ -283,6 +283,13 @@ export class ClientPortalController {
     return this.occupancyService.getResilienceHistory(buildingId, req.clientUser.organizationId, days ? parseInt(days) : 90);
   }
 
+  @Post('buildings/:buildingId/resilience-snapshot')
+  async forceResilienceSnapshot(@Param('buildingId') buildingId: string, @Request() req: any) {
+    const kiosk = await this.occupancyService.getOrCreateKioskTokenForOrg(buildingId, req.clientUser.organizationId);
+    await this.occupancyService.saveResilienceSnapshot(buildingId, kiosk.token);
+    return { success: true };
+  }
+
   @Get('intelligence/overview')
   async getIntelligenceOverview(@Request() req: any) {
     return this.occupancyService.getIntelligenceOverview(req.clientUser.organizationId);
