@@ -817,7 +817,7 @@ model PcaConfig {
   planName          String?
   effectiveDate     DateTime?
   scope             String?   // ORGANIZATION | BUILDING | MULTI_BUILDING
-  pcaBuildingIds    String[]
+  pcaBuildingIds    String[] @default([])
   sector            String?
   employeeCount     Int?
   operatingHours    String?
@@ -838,7 +838,7 @@ model PcaConfig {
   socialMediaMonitor    String?
 
   // Section 3 — Appréciation du risque
-  riskScenarios         Json?   // Array de { type, probability, impact }
+  riskScenarios         Json?   // Array de { id, probability, impact, existingControls?, comments? }
 
   // Section 4 — BIA
   criticalServices      Json?   // Array de { name, minServiceLevel, rto, rpo, mad, financialImpact, reputationalImpact, legalImpact, resources }
@@ -851,12 +851,15 @@ model PcaConfig {
   itRedundancy          Boolean?
   offSiteBackup         Boolean?
   backupFrequency       String?
+  criticalITSystems     Json?    // Array de { id, name, rto, rpo, degradedMode, backupSolution }
   crossTraining         Boolean?
   processDocumented     Boolean?
   tempStaffAccess       Boolean?
+  absenteeismThreshold  String?
   alternativeSuppliers  Boolean?
   safetyStock          Boolean?
   safetyStockDuration  String?
+  criticalSuppliers    Json?    // Array de { id, name, service, tolerance, preventiveMeasure, backupSolution, activationDelay, status }
   generator            Boolean?
   ups                  Boolean?
   insuranceBI          Boolean?  // Assurance interruption affaires

@@ -42,7 +42,14 @@ export function getAllPcaProcedures(): ProcedureTemplate[] {
 }
 
 export function getActivePcaProcedures(riskScenarios: any[]): ProcedureTemplate[] {
-  const scenarioIds = (riskScenarios || []).map((r: any) => r.id);
+  const safeRiskScenarios = Array.isArray(riskScenarios)
+    ? riskScenarios
+    : [];
+
+  const scenarioIds = safeRiskScenarios
+    .filter((r: any) => r && typeof r === 'object')
+    .map((r: any) => r.id)
+    .filter((id: any) => typeof id === 'string' && id.length > 0);
 
   return PCA_PROCEDURES_REGISTRY.filter(p => {
     // Toujours actives

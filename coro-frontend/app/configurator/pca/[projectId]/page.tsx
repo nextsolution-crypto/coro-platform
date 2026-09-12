@@ -203,24 +203,41 @@ export default function PcaConfiguratorPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      const payload = {
-        ...config,
-        effectiveDate: config.effectiveDate ? new Date(config.effectiveDate) : null,
-        insuranceLastReview: config.insuranceLastReview ? new Date(config.insuranceLastReview) : null,
-        nextReviewDate: config.nextReviewDate ? new Date(config.nextReviewDate) : null,
-        employeeCount: config.employeeCount ? parseInt(config.employeeCount as string) : null,
-      };
-      await api.post(`/pca/configurator/${projectId}`, payload);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
+  setSaving(true);
+
+  try {
+    const payload = {
+      ...config,
+      effectiveDate: config.effectiveDate
+        ? new Date(config.effectiveDate)
+        : null,
+      insuranceLastReview: config.insuranceLastReview
+        ? new Date(config.insuranceLastReview)
+        : null,
+      nextReviewDate: config.nextReviewDate
+        ? new Date(config.nextReviewDate)
+        : null,
+      employeeCount:
+        config.employeeCount !== '' &&
+        config.employeeCount !== null &&
+        config.employeeCount !== undefined
+          ? parseInt(String(config.employeeCount), 10)
+          : null,
+    };
+
+    await api.post(`/pca/configurator/${projectId}`, payload);
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+
+    return true;
+  } catch (err) {
+    console.error('Erreur sauvegarde PCA:', err);
+    throw err;
+  } finally {
+    setSaving(false);
+  }
+};
 
   const toggleRisk = (scenarioId: string) => {
     const existing = config.riskScenarios.find((r: any) => r.id === scenarioId);
@@ -1756,14 +1773,14 @@ export default function PcaConfiguratorPage() {
         ) : (
           <button
             onClick={async () => {
-              await handleSave();
-              try {
-                await api.post(`/generator/generate/${projectId}`);
-              } catch (err) {
-                console.error('Erreur génération PCA:', err);
-              }
-              router.push(`/projects/${projectId}`);
-            }}
+  try {
+    await handleSave();
+    await api.post(`/generator/generate/${projectId}`);
+    router.push(`/projects/${projectId}`);
+  } catch (err) {
+    console.error('Erreur finalisation PCA:', err);
+  }
+}}
             className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded text-white"
             style={{ backgroundColor: '#27AE60' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}

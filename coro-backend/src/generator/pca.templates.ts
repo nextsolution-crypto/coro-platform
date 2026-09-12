@@ -57,20 +57,56 @@ export function generatePcaModules(ctx: DocumentContext, pcaConfig: any) {
   }[id] || id);
 
   const consecLabel = (id: string) => ({
-    sinistre: 'Perte d\'accès à l\'emplacement',
-    meteo: 'Perte d\'accès à l\'emplacement / absentéisme',
-    cyber: 'Perte des systèmes TI et de communication',
-    pandemie: 'Absentéisme anormal / perte de personnel clé',
-    electrique: 'Perte de ressources essentielles',
-    fournisseur: 'Interruption d\'un fournisseur critique',
-    personnel: 'Perte de personnel clé',
-    approvisionnement: 'Interruption d\'un fournisseur critique',
-    autre: 'Autre conséquence',
-  }[id] || id);
+  sinistre: 'Perte d\'accès à l\'emplacement',
+  meteo: 'Perte d\'accès à l\'emplacement / absentéisme',
+  cyber: 'Perte des systèmes TI et de communication',
+  pandemie: 'Absentéisme anormal / perte de personnel clé',
+  electrique: 'Perte de ressources essentielles',
+  fournisseur: 'Interruption d\'un fournisseur critique',
+  personnel: 'Perte de personnel clé',
+  approvisionnement: 'Interruption d\'un fournisseur critique',
+  autre: 'Autre conséquence',
+}[id] || id);
 
-  const riskScenarios = cfg.riskScenarios || [];
-  const criticalServices = cfg.criticalServices || [];
-  const cellMembers = cfg.cellMembers || [];
+const consecLabelEN = (id: string) => ({
+  sinistre: 'Loss of access to premises',
+  meteo: 'Loss of access to premises / absenteeism',
+  cyber: 'Loss of IT and communication systems',
+  pandemie: 'Abnormal absenteeism / loss of key personnel',
+  electrique: 'Loss of essential resources',
+  fournisseur: 'Disruption of a critical supplier',
+  personnel: 'Loss of key personnel',
+  approvisionnement: 'Critical supply chain disruption',
+  autre: 'Other consequence',
+}[id] || id);
+
+  const riskScenarios = Array.isArray(cfg.riskScenarios)
+  ? cfg.riskScenarios
+  : [];
+
+const criticalServices = Array.isArray(cfg.criticalServices)
+  ? cfg.criticalServices
+  : [];
+
+const cellMembers = Array.isArray(cfg.cellMembers)
+  ? cfg.cellMembers
+  : [];
+
+const regulatoryReqs = Array.isArray(cfg.regulatoryReqs)
+  ? cfg.regulatoryReqs
+  : [];
+
+const criticalITSystems = Array.isArray(cfg.criticalITSystems)
+  ? cfg.criticalITSystems
+  : [];
+
+const criticalSuppliers = Array.isArray(cfg.criticalSuppliers)
+  ? cfg.criticalSuppliers
+  : [];
+
+const authoritiesToNotify = Array.isArray(cfg.authoritiesToNotify)
+  ? cfg.authoritiesToNotify
+  : [];
 
   // Activez les procédures PCA selon les scénarios
   const activePcaProcedures = getActivePcaProcedures(riskScenarios);
@@ -109,9 +145,15 @@ Reprise et retour à la normale | Rétablir progressivement les capacités norma
         id: 'm1_s3',
         title: 'Objectif et portée du plan',
         content: `Organisation visée : ${clientName}
-Portée : ${cfg.scope === 'ORGANIZATION' ? 'Organisation entière' : cfg.scope === 'BUILDING' ? 'Bâtiment spécifique' : 'Plusieurs bâtiments'}
+Portée : ${cfg.scope === 'ORGANIZATION'
+  ? 'Organisation entière'
+  : cfg.scope === 'BUILDING'
+    ? 'Bâtiment spécifique'
+    : cfg.scope === 'MULTI_BUILDING'
+      ? 'Plusieurs bâtiments'
+      : 'Non précisée'}
 Secteur d'activité : ${cfg.sector || 'Non précisé'}
-Nombre d'employés : ${cfg.employeeCount || 'Non précisé'}
+Nombre d'employés : ${cfg.employeeCount ?? 'Non précisé'}
 Heures d'opération : ${cfg.operatingHours || 'Non précisé'}
 Année d'émission : ${year}
 
@@ -133,7 +175,7 @@ Guide de gestion de la continuité des activités — Gouvernement du Québec | 
 ─────────────────────────────────────────────────────────────────────
 ISO 22301:2019/Amd 1:2024 — Amendement changements climatiques | Amendement normatif | Ajoute la considération des changements climatiques comme risque à évaluer lors des révisions.
 ─────────────────────────────────────────────────────────────────────
-${cfg.regulatoryReqs?.length > 0 ? cfg.regulatoryReqs.map((r: string) => `${r} | Exigence applicable | À documenter selon le secteur et les activités de l'organisation.`).join('\n─────────────────────────────────────────────────────────────────────\n') : 'Exigences légales, réglementaires et contractuelles propres à l\'organisation | Exigences applicables | À documenter selon le secteur, les activités, les clients et les territoires concernés.'}
+${regulatoryReqs.length > 0 ? regulatoryReqs.map((r: string) => `${r} | Exigence applicable | À documenter selon le secteur et les activités de l'organisation.`).join('\n─────────────────────────────────────────────────────────────────────\n') : 'Exigences légales, réglementaires et contractuelles propres à l\'organisation | Exigences applicables | À documenter selon le secteur, les activités, les clients et les territoires concernés.'}
 
 Documents connexes :
 - Plan de mesures d'urgence (PMU), lorsqu'applicable${cfg.linkedPmuId ? ' — LIEN ÉTABLI' : ''}
@@ -213,9 +255,15 @@ Recovery and return to normal | Progressively restore normal capacities and clos
         id: 'm1_s3',
         title: 'Plan objective and scope',
         content: `Organization: ${clientName}
-Scope: ${cfg.scope === 'ORGANIZATION' ? 'Entire organization' : cfg.scope === 'BUILDING' ? 'Specific building' : 'Multiple buildings'}
+Scope: ${cfg.scope === 'ORGANIZATION'
+  ? 'Entire organization'
+  : cfg.scope === 'BUILDING'
+    ? 'Specific building'
+    : cfg.scope === 'MULTI_BUILDING'
+      ? 'Multiple buildings'
+      : 'Not specified'}
 Business sector: ${cfg.sector || 'Not specified'}
-Number of employees: ${cfg.employeeCount || 'Not specified'}
+Number of employees: ${cfg.employeeCount ?? 'Not specified'}
 Operating hours: ${cfg.operatingHours || 'Not specified'}
 Year of issue: ${year}
 
@@ -286,9 +334,9 @@ Senior Management | |`,
       ).join('\n')
     : 'Opérations | À désigner | À compléter | À compléter\nTechnologies de l\'information | À désigner | À compléter | À compléter\nRessources humaines | À désigner | À compléter | À compléter\nCommunications | À désigner | À compléter | À compléter\nFinances / assurances | À désigner | À compléter | À compléter\nInstallations | À désigner | À compléter | À compléter';
 
-  const regsTable = cfg.regulatoryReqs?.length > 0
-    ? cfg.regulatoryReqs.map((r: string) => `${r} | À documenter | À compléter | À compléter`).join('\n')
-    : 'Aucune exigence réglementaire spécifique identifiée — À compléter lors de la révision annuelle';
+  const regsTable = regulatoryReqs.length > 0
+  ? regulatoryReqs.map((r: string) => `${r} | À documenter | À compléter | À compléter`).join('\n')
+  : 'Aucune exigence réglementaire spécifique identifiée — À compléter lors de la révision annuelle';
 
   const m2fr = {
     moduleNumber: 2,
@@ -316,9 +364,15 @@ PRINCIPES DE FONCTIONNEMENT DE LA CELLULE DE GESTION D'INCIDENT
         title: 'Description de l\'organisation',
         content: `Organisation : ${clientName}
 Secteur d'activité : ${cfg.sector || cfg.clientSector || 'Non précisé'}
-Nombre d'employés : ${cfg.employeeCount || cfg.clientEmployeeCount || 'Non précisé'}
+Nombre d'employés : ${cfg.employeeCount ?? cfg.clientEmployeeCount ?? 'Non précisé'}
 Heures d'opération : ${cfg.operatingHours || 'Non précisé'}
-Portée du plan : ${cfg.scope === 'ORGANIZATION' ? 'Organisation entière' : cfg.scope === 'BUILDING' ? 'Bâtiment spécifique' : 'Plusieurs bâtiments'}
+Portée du plan : ${cfg.scope === 'ORGANIZATION'
+  ? 'Organisation entière'
+  : cfg.scope === 'BUILDING'
+    ? 'Bâtiment spécifique'
+    : cfg.scope === 'MULTI_BUILDING'
+      ? 'Plusieurs bâtiments'
+      : 'Non précisée'}
 
 CONTEXTE ORGANISATIONNEL
 TYPE DE DÉPENDANCE | NATURE | INCIDENCE SUR LA CONTINUITÉ
@@ -471,7 +525,13 @@ Continuity governance connects the strategic decisions of management to the tact
 Business sector: ${cfg.sector || 'Not specified'}
 Number of employees: ${cfg.employeeCount || 'Not specified'}
 Operating hours: ${cfg.operatingHours || 'Not specified'}
-Plan scope: ${cfg.scope === 'ORGANIZATION' ? 'Entire organization' : cfg.scope === 'BUILDING' ? 'Specific building' : 'Multiple buildings'}`,
+Plan scope: ${cfg.scope === 'ORGANIZATION'
+  ? 'Entire organization'
+  : cfg.scope === 'BUILDING'
+    ? 'Specific building'
+    : cfg.scope === 'MULTI_BUILDING'
+      ? 'Multiple buildings'
+      : 'Not specified'}`,
       },
       {
         id: 'm2_s3',
@@ -522,9 +582,9 @@ Emergency conference bridge | ${cfg.emergencyBridge || 'To be defined'}`,
       {
         id: 'm2_s6',
         title: 'Regulatory and contractual requirements',
-        content: cfg.regulatoryReqs?.length > 0
-          ? `Applicable requirements:\n\n${cfg.regulatoryReqs.map((r: string) => `• ${r}`).join('\n')}`
-          : 'No specific regulatory or contractual requirements identified — To be completed during annual review.',
+        content: regulatoryReqs.length > 0
+  ? `Applicable requirements:\n\n${regulatoryReqs.map((r: string) => `• ${r}`).join('\n')}`
+  : 'No specific regulatory or contractual requirements identified — To be completed during annual review.',
       },
     ],
   };
@@ -548,12 +608,13 @@ Emergency conference bridge | ${cfg.emergencyBridge || 'To be defined'}`,
   const riskTableEN = riskScenarios.length > 0
     ? riskScenarios.map((r: any) => {
         const sc = scenarioLabelEN(r.id);
-        const prob = probLabelEN(r.probability || 'MOYENNE');
-        const imp = impactLabelEN(r.impact || 'MOYEN');
-        const niveau = riskScoreEN(r.probability || 'MOYENNE', r.impact || 'MOYEN');
-        const mesures = r.existingControls || 'To be documented';
-        const commentaires = r.comments || '—';
-        return `${sc} | ${imp} | ${prob} | ${niveau} | ${mesures} | ${commentaires}`;
+const co = consecLabelEN(r.id);
+const prob = probLabelEN(r.probability || 'MOYENNE');
+const imp = impactLabelEN(r.impact || 'MOYEN');
+const niveau = riskScoreEN(r.probability || 'MOYENNE', r.impact || 'MOYEN');
+const mesures = r.existingControls || 'To be documented';
+const commentaires = r.comments || '—';
+return `${co} | ${sc} | ${imp} | ${prob} | ${niveau} | ${mesures} | ${commentaires}`;
       }).join('\n')
     : 'No scenarios identified — To be completed in BCP configurator (Section 3)';
 
@@ -761,7 +822,7 @@ ESCALATION CRITERIA
     ? sortedServices.map((s: any, i: number) => {
         const prio = i <= 1 ? 'P1' : i <= 3 ? 'P2' : 'P3';
         const owner = s.owner || 'À désigner';
-        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/D'} | ${s.mad || 'N/D'} | ${s.rpo || 'N/D'} | ${s.financialImpact || 'N/D'} | ${prio}`;
+        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/D'} | ${s.mad || 'N/D'} | ${s.rpo || 'N/D'} | ${s.financialImpact ?? 'N/D'} | ${prio}`;
       }).join('\n')
     : 'Aucun service critique défini — À compléter dans le configurateur PCA (Section 4)';
 
@@ -769,7 +830,7 @@ ESCALATION CRITERIA
     ? sortedServices.map((s: any, i: number) => {
         const prio = i <= 1 ? 'P1' : i <= 3 ? 'P2' : 'P3';
         const owner = s.owner || 'To be designated';
-        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/A'} | ${s.mad || 'N/A'} | ${s.rpo || 'N/A'} | ${s.financialImpact || 'N/A'} | ${prio}`;
+        return `${s.name || `Service ${i + 1}`} | ${owner} | ${s.rto || 'N/A'} | ${s.mad || 'N/A'} | ${s.rpo || 'N/A'} | ${s.financialImpact ?? 'N/A'} | ${prio}`;
       }).join('\n')
     : 'No critical services defined — To be completed in BCP configurator (Section 4)';
 
@@ -813,7 +874,7 @@ Minimum service level | ${s.minServiceLevel || 'To be defined'}
 RTO | ${s.rto || 'N/A'}
 MAD / Maximum tolerance | ${s.mad || 'N/A'}
 RPO | ${s.rpo || 'N/A'}
-Estimated financial impact / day | ${s.financialImpact || 'N/A'}
+Estimated financial impact / day | ${s.financialImpact ?? 'N/A'}
 Reputational impact | ${s.reputationalImpact || 'N/A'}
 Legal impact | ${s.legalImpact ? 'Yes' : 'No'}
 Critical periods | ${s.criticalPeriods || 'Not specified'}
@@ -831,33 +892,33 @@ Energy | ${s.resourceEnergy || 'To be documented'}`;
   }).join('\n\n');
 
   // Systèmes TI critiques
-  const itSystemsFR = (cfg.criticalITSystems || []).length > 0
-    ? (cfg.criticalITSystems || []).map((s: any) =>
-        `${s.name || 'N/D'} | ${s.rto || 'N/D'} | ${s.rpo || 'N/D'} | ${s.degradedMode || 'À documenter'} | ${s.backupSolution || 'À documenter'}`
-      ).join('\n')
-    : 'À documenter — Ajouter les systèmes TI critiques dans le configurateur (Section 5)';
+  const itSystemsFR = criticalITSystems.length > 0
+  ? criticalITSystems.map((s: any) =>
+      `${s.name || 'N/D'} | ${s.rto || 'N/D'} | ${s.rpo || 'N/D'} | ${s.degradedMode || 'À documenter'} | ${s.backupSolution || 'À documenter'}`
+    ).join('\n')
+  : 'À documenter — Ajouter les systèmes TI critiques dans le configurateur (Section 5)';
 
-  const itSystemsEN = (cfg.criticalITSystems || []).length > 0
-    ? (cfg.criticalITSystems || []).map((s: any) =>
-        `${s.name || 'N/A'} | ${s.rto || 'N/A'} | ${s.rpo || 'N/A'} | ${s.degradedMode || 'To be documented'} | ${s.backupSolution || 'To be documented'}`
-      ).join('\n')
-    : 'To be documented — Add critical IT systems in configurator (Section 5)';
+const itSystemsEN = criticalITSystems.length > 0
+  ? criticalITSystems.map((s: any) =>
+      `${s.name || 'N/A'} | ${s.rto || 'N/A'} | ${s.rpo || 'N/A'} | ${s.degradedMode || 'To be documented'} | ${s.backupSolution || 'To be documented'}`
+    ).join('\n')
+  : 'To be documented — Add critical IT systems in configurator (Section 5)';
 
   // Fournisseurs critiques
   const statusLabelFR = (s: string) => s === 'PRET' ? '✅ Prêt' : s === 'PARTIEL' ? '⚠️ Partiel' : '🔴 À confirmer';
   const statusLabelEN = (s: string) => s === 'PRET' ? '✅ Ready' : s === 'PARTIEL' ? '⚠️ Partial' : '🔴 To confirm';
 
-  const criticalSuppliersFR = (cfg.criticalSuppliers || []).length > 0
-    ? (cfg.criticalSuppliers || []).map((s: any) =>
-        `${s.name || 'N/D'} | ${s.service || 'N/D'} | ${s.tolerance || 'N/D'} | ${s.preventiveMeasure || 'À documenter'} | ${s.backupSolution || 'À documenter'} | ${s.activationDelay || 'N/D'} | ${statusLabelFR(s.status || 'A_CONFIRMER')}`
-      ).join('\n')
-    : 'À documenter — Ajouter les fournisseurs critiques dans le configurateur (Section 5)';
+  const criticalSuppliersFR = criticalSuppliers.length > 0
+  ? criticalSuppliers.map((s: any) =>
+      `${s.name || 'N/D'} | ${s.service || 'N/D'} | ${s.tolerance || 'N/D'} | ${s.preventiveMeasure || 'À documenter'} | ${s.backupSolution || 'À documenter'} | ${s.activationDelay || 'N/D'} | ${statusLabelFR(s.status || 'A_CONFIRMER')}`
+    ).join('\n')
+  : 'À documenter — Ajouter les fournisseurs critiques dans le configurateur (Section 5)';
 
-  const criticalSuppliersEN = (cfg.criticalSuppliers || []).length > 0
-    ? (cfg.criticalSuppliers || []).map((s: any) =>
-        `${s.name || 'N/A'} | ${s.service || 'N/A'} | ${s.tolerance || 'N/A'} | ${s.preventiveMeasure || 'To be documented'} | ${s.backupSolution || 'To be documented'} | ${s.activationDelay || 'N/A'} | ${statusLabelEN(s.status || 'A_CONFIRMER')}`
-      ).join('\n')
-    : 'To be documented — Add critical suppliers in configurator (Section 5)';
+const criticalSuppliersEN = criticalSuppliers.length > 0
+  ? criticalSuppliers.map((s: any) =>
+      `${s.name || 'N/A'} | ${s.service || 'N/A'} | ${s.tolerance || 'N/A'} | ${s.preventiveMeasure || 'To be documented'} | ${s.backupSolution || 'To be documented'} | ${s.activationDelay || 'N/A'} | ${statusLabelEN(s.status || 'A_CONFIRMER')}`
+    ).join('\n')
+  : 'To be documented — Add critical suppliers in configurator (Section 5)';
 
   const resourcesTableFR = sortedServices.length > 0
     ? sortedServices.map((s: any) =>
@@ -1201,9 +1262,9 @@ ${procedureListEN || '• No procedures activated — Complete risk assessment (
   // ══════════════════════════════════════════════
   // MODULE 6 — COMMUNICATION DE CRISE
   // ══════════════════════════════════════════════
-  const authoritiesFR = (cfg.authoritiesToNotify || []).length > 0
-    ? cfg.authoritiesToNotify.map((a: string) => `• ${a}`).join('\n')
-    : '• À documenter selon les scénarios applicables';
+  const authoritiesFR = authoritiesToNotify.length > 0
+  ? authoritiesToNotify.map((a: string) => `• ${a}`).join('\n')
+  : '• À documenter selon les scénarios applicables';
 
   const mobilisationMatrix = `NIVEAU | COORDONNATEUR | CELLULE | EMPLOYÉS | EXTERNE
 ─────────────────────────────────────────────────────────────────────
@@ -1432,8 +1493,8 @@ ${cfg.mediaContact || 'To be documented — Define management-approved messaging
   // MODULE 7 — ACTIVATION ET PROCÉDURES DE REPRISE
   // ══════════════════════════════════════════════
   const resumptionSeq = criticalServices.length > 0
-    ? criticalServices
-        .sort((a: any, b: any) => {
+  ? [...criticalServices]
+      .sort((a: any, b: any) => {
           const order: Record<string, number> = { '1h': 1, '4h': 2, '8h': 3, '24h': 4, '48h': 5, '72h': 6, '1sem': 7, 'plus': 8 };
           return (order[a.rto] || 9) - (order[b.rto] || 9);
         })
@@ -1703,7 +1764,7 @@ PHASE 6 — RETURN TO NORMAL
         content: `PRIORITY | ACTIVITY / SERVICE | RTO | MINIMUM LEVEL | OWNER
 ─────────────────────────────────────────────────────────────────────
 ${criticalServices.length > 0
-  ? criticalServices
+  ? [...criticalServices]
       .sort((a: any, b: any) => {
         const order: Record<string, number> = { '1h': 1, '4h': 2, '8h': 3, '24h': 4, '48h': 5, '72h': 6, '1sem': 7, 'plus': 8 };
         return (order[a.rto] || 9) - (order[b.rto] || 9);
