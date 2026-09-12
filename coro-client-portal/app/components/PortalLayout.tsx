@@ -15,6 +15,7 @@ import {
   Building2,
   Bell,
   Map,
+  Shield,
 } from 'lucide-react';
 
 export default function PortalLayout({
@@ -69,6 +70,7 @@ export default function PortalLayout({
     { label: 'Bâtiments',       path: '/buildings',     icon: Building2       },
     { label: 'Carte',           path: '/map',           icon: Map             },
     { label: 'Activités',       path: '/activities',    icon: Calendar        },
+    { label: 'Intelligence',    path: '/intelligence',  icon: Shield          },
     { label: 'Notifications',   path: '/notifications', icon: Bell, badge: 0  },
     { label: 'Mon profil',      path: '/profile',       icon: User            },
   ];

@@ -281,6 +281,11 @@ export class ClientPortalController {
     return this.occupancyService.getResilienceHistory(buildingId, req.clientUser.organizationId, days ? parseInt(days) : 90);
   }
 
+  @Get('intelligence/overview')
+  async getIntelligenceOverview(@Request() req: any) {
+    return this.occupancyService.getIntelligenceOverview(req.clientUser.organizationId);
+  }
+
   @Put('incidents/tasks/:taskId/uncomplete')
   async uncompleteStep(@Param('taskId') taskId: string, @Request() req: any) {
     return this.incidentService.uncompleteStep(taskId, req.clientUser.organizationId);

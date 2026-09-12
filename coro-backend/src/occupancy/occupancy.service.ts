@@ -648,6 +648,61 @@ export class OccupancyService {
     } catch (err) { console.error('[ResilienceSnapshot] Erreur:', err); }
   }
 
+  async getIntelligenceOverview(organizationId: string) {
+    // Tous les bâtiments de l'organisation
+    const buildings = await this.prisma.building.findMany({
+      where: { organizationId, isActive: true },
+      include: { kioskToken: { select: { token: true } } },
+    });
+
+    const results: any[] = [];
+    for (const building of buildings) {
+      if (!building.kioskToken?.token) {
+        results.push({ buildingId: building.id, buildingName: building.name, score: 0, status: 'CRITICAL', recommendations: [] } as any);
+        continue;
+      }
+      try {
+        const enriched: any = await this.getReadinessEnriched(building.id, building.kioskToken.token);
+        results.push({
+          buildingId:      building.id,
+          buildingName:    building.name,
+          score:           enriched?.enriched?.score          ?? enriched?.readinessIndex ?? 0,
+          status:          enriched?.enriched?.status         ?? enriched?.status         ?? 'CRITICAL',
+          components:      enriched?.enriched?.components     ?? {},
+          recommendations: enriched?.recommendations          ?? [],
+          presentMembers:  enriched?.presentMembers           ?? 0,
+          totalMembers:    enriched?.totalMembers             ?? 0,
+        } as any);
+      } catch {
+        results.push({ buildingId: building.id, buildingName: building.name, score: 0, status: 'CRITICAL', recommendations: [] } as any);
+      }
+    }
+
+    // Agrégation globale
+    const allRecs = results.flatMap(r =>
+      (r.recommendations || []).map((rec: any) => ({ ...rec, buildingId: r.buildingId, buildingName: r.buildingName }))
+    );
+    allRecs.sort((a, b) => {
+      const order: Record<string, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+      return (order[a.type] ?? 9) - (order[b.type] ?? 9);
+    });
+
+    const avgScore = results.length > 0 ? Math.round(results.reduce((s, r) => s + r.score, 0) / results.length) : 0;
+    const criticalCount  = allRecs.filter(r => r.type === 'CRITICAL').length;
+    const warningCount   = allRecs.filter(r => r.type === 'WARNING').length;
+    const infoCount      = allRecs.filter(r => r.type === 'INFO').length;
+
+    return {
+      organizationId,
+      avgScore,
+      globalStatus:  avgScore >= 85 ? 'READY' : avgScore >= 60 ? 'REDUCED' : 'CRITICAL',
+      totalBuildings: results.length,
+      buildings:      results,
+      recommendations: allRecs,
+      summary: { criticalCount, warningCount, infoCount, total: allRecs.length },
+    };
+  }
+
   async getResilienceHistory(buildingId: string, organizationId: string, days = 90) {
     const building = await this.prisma.building.findFirst({ where: { id: buildingId, organizationId } });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
