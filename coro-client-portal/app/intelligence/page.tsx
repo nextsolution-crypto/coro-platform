@@ -33,17 +33,63 @@ const CAT_ICONS: Record<string, string> = {
 
 export default function IntelligencePage() {
   const router = useRouter();
+
+  const clientFetch = async (path: string, method = 'GET', body?: any) => {
+    const res = await fetch(`${API}${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error('Erreur réseau');
+    return res.json();
+  };
+
   const [data, setData]         = useState<any>(null);
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState<'all' | 'CRITICAL' | 'WARNING' | 'INFO'>('all');
   const [buildingFilter, setBuildingFilter] = useState<string>('all');
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [lastUpdate, setLastUpdate]   = useState<Date | null>(null);
+  const [activeTab, setActiveTab]     = useState<'recommendations' | 'actions'>('recommendations');
+  const [actions, setActions]         = useState<any[]>([]);
+  const [loadingActions, setLoadingActions] = useState(false);
+  const [showAddAction, setShowAddAction]   = useState(false);
+  const [newAction, setNewAction]     = useState({ title: '', description: '', category: 'GENERAL', priority: 'WARNING', assignedTo: '', dueDate: '', buildingId: '' });
+  const [savingAction, setSavingAction]     = useState(false);
 
   useEffect(() => {
     const u = getUser();
     if (!u) { router.replace('/login'); return; }
     fetchData();
+    fetchActions();
   }, []);
+
+  const fetchActions = async () => {
+    setLoadingActions(true);
+    try {
+      const res = await clientFetch('/client-portal/corrective-actions');
+      setActions(res || []);
+    } catch (e) { console.error(e); }
+    finally { setLoadingActions(false); }
+  };
+
+  const handleCreateAction = async () => {
+    if (!newAction.title.trim()) return;
+    setSavingAction(true);
+    try {
+      await clientFetch('/client-portal/corrective-actions', 'POST', newAction);
+      setShowAddAction(false);
+      setNewAction({ title: '', description: '', category: 'GENERAL', priority: 'WARNING', assignedTo: '', dueDate: '', buildingId: '' });
+      await fetchActions();
+    } catch (e) { console.error(e); }
+    finally { setSavingAction(false); }
+  };
+
+  const handleUpdateActionStatus = async (id: string, status: string) => {
+    try {
+      await clientFetch(`/client-portal/corrective-actions/${id}`, 'PUT', { status });
+      await fetchActions();
+    } catch (e) { console.error(e); }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -151,6 +197,24 @@ export default function IntelligencePage() {
         })}
       </div>
 
+      {/* Onglets */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid #E9ECEF', paddingBottom: 1 }}>
+        {([
+          { key: 'recommendations', label: `📋 Recommandations (${data?.summary?.total || 0})` },
+          { key: 'actions',         label: `✅ Actions correctives (${actions.filter(a => a.status !== 'CANCELLED').length})` },
+        ] as const).map(tab => (
+          <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+            style={{ padding: '8px 16px', border: 'none', borderBottom: activeTab === tab.key ? '2px solid #C0392B' : '2px solid transparent',
+              backgroundColor: 'transparent', cursor: 'pointer', fontSize: 13,
+              fontWeight: activeTab === tab.key ? 700 : 500,
+              color: activeTab === tab.key ? '#C0392B' : '#6C757D', marginBottom: -1 }}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Onglet Recommandations ── */}
+      {activeTab === 'recommendations' && <>
       {/* Filtres recommandations */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2C3E50' }}>
@@ -217,6 +281,156 @@ export default function IntelligencePage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      </>}
+
+      {/* ── Onglet Actions correctives ── */}
+      {activeTab === 'actions' && (
+        <div>
+          {/* Bouton ajouter */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button type="button" onClick={() => setShowAddAction(!showAddAction)}
+              style={{ padding: '9px 18px', borderRadius: 8, border: 'none', backgroundColor: '#2C3E50', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              + Nouvelle action
+            </button>
+          </div>
+
+          {/* Formulaire ajout */}
+          {showAddAction && (
+            <div style={{ marginBottom: 20, padding: 20, backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
+              <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>Nouvelle action corrective</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 12 }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Titre *</label>
+                  <input type="text" value={newAction.title} placeholder="Ex: Organiser un exercice d'évacuation"
+                    onChange={e => setNewAction(prev => ({ ...prev, title: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Priorité</label>
+                  <select value={newAction.priority} onChange={e => setNewAction(prev => ({ ...prev, priority: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, backgroundColor: '#FFFFFF', boxSizing: 'border-box' as const }}>
+                    <option value="CRITICAL">🔴 Critique</option>
+                    <option value="WARNING">🟠 Attention</option>
+                    <option value="INFO">🔵 Info</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Catégorie</label>
+                  <select value={newAction.category} onChange={e => setNewAction(prev => ({ ...prev, category: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, backgroundColor: '#FFFFFF', boxSizing: 'border-box' as const }}>
+                    <option value="ROLES">🛡️ Rôles</option>
+                    <option value="QUALIFICATIONS">🎓 Qualifications</option>
+                    <option value="PLANS">📄 Plans</option>
+                    <option value="EXERCISES">🔔 Exercices</option>
+                    <option value="INCIDENTS">📋 Incidents</option>
+                    <option value="GENERAL">⚙️ Général</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Bâtiment</label>
+                  <select value={newAction.buildingId} onChange={e => setNewAction(prev => ({ ...prev, buildingId: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, backgroundColor: '#FFFFFF', boxSizing: 'border-box' as const }}>
+                    <option value="">Tous</option>
+                    {(data?.buildings || []).map((b: any) => <option key={b.buildingId} value={b.buildingId}>{b.buildingName}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Responsable</label>
+                  <input type="text" value={newAction.assignedTo} placeholder="Nom du responsable"
+                    onChange={e => setNewAction(prev => ({ ...prev, assignedTo: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Échéance</label>
+                  <input type="date" value={newAction.dueDate}
+                    onChange={e => setNewAction(prev => ({ ...prev, dueDate: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, boxSizing: 'border-box' as const }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6C757D', marginBottom: 4, textTransform: 'uppercase' }}>Description</label>
+                  <textarea value={newAction.description} rows={2} placeholder="Détails de l'action à prendre..."
+                    onChange={e => setNewAction(prev => ({ ...prev, description: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #E9ECEF', fontSize: 14, resize: 'none', boxSizing: 'border-box' as const }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={handleCreateAction} disabled={savingAction || !newAction.title.trim()}
+                  style={{ padding: '10px 20px', borderRadius: 8, border: 'none', backgroundColor: '#27AE60', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingAction || !newAction.title.trim() ? 0.6 : 1 }}>
+                  {savingAction ? 'Enregistrement...' : '✅ Créer l\'action'}
+                </button>
+                <button type="button" onClick={() => setShowAddAction(false)}
+                  style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, cursor: 'pointer' }}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste actions */}
+          {loadingActions ? (
+            <p style={{ color: '#ADB5BD', fontSize: 13, textAlign: 'center', padding: 32 }}>Chargement...</p>
+          ) : actions.filter(a => a.status !== 'CANCELLED').length === 0 ? (
+            <div style={{ padding: 48, textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF' }}>
+              <CheckCircle size={36} color="#27AE60" style={{ margin: '0 auto 16px' }} />
+              <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#2C3E50' }}>Aucune action corrective</p>
+              <p style={{ margin: 0, fontSize: 14, color: '#ADB5BD' }}>Créez des actions depuis les recommandations ou manuellement.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {actions.filter(a => a.status !== 'CANCELLED').map((action: any) => {
+                const priorityCfg = REC_CONFIG[action.priority as keyof typeof REC_CONFIG] || REC_CONFIG.INFO;
+                const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+                  PLANNED:     { label: 'Planifiée',   color: '#6C757D', bg: '#F8F9FA' },
+                  IN_PROGRESS: { label: 'En cours',    color: '#2980B9', bg: '#EBF5FB' },
+                  COMPLETED:   { label: 'Complétée',   color: '#27AE60', bg: '#EAFAF1' },
+                };
+                const scfg = statusConfig[action.status] || statusConfig.PLANNED;
+                const isOverdue = action.dueDate && new Date(action.dueDate) < new Date() && action.status !== 'COMPLETED';
+
+                return (
+                  <div key={action.id} style={{ padding: '14px 18px', borderRadius: 10, backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{priorityCfg.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{action.title}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: scfg.color, backgroundColor: scfg.bg, padding: '2px 7px', borderRadius: 4 }}>{scfg.label}</span>
+                        {isOverdue && <span style={{ fontSize: 11, fontWeight: 700, color: '#C0392B', backgroundColor: '#FDEDEC', padding: '2px 7px', borderRadius: 4 }}>⚠️ En retard</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        {action.assignedTo && <span style={{ fontSize: 12, color: '#6C757D' }}>👤 {action.assignedTo}</span>}
+                        {action.dueDate && <span style={{ fontSize: 12, color: isOverdue ? '#C0392B' : '#6C757D' }}>📅 {new Date(action.dueDate).toLocaleDateString('fr-CA')}</span>}
+                        <span style={{ fontSize: 12, color: '#ADB5BD' }}>{CAT_ICONS[action.category] || '•'} {action.category}</span>
+                      </div>
+                      {action.description && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#ADB5BD' }}>{action.description}</p>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      {action.status === 'PLANNED' && (
+                        <button type="button" onClick={() => handleUpdateActionStatus(action.id, 'IN_PROGRESS')}
+                          style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #AED6F1', backgroundColor: '#EBF5FB', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#2980B9' }}>
+                          Démarrer
+                        </button>
+                      )}
+                      {action.status === 'IN_PROGRESS' && (
+                        <button type="button" onClick={() => handleUpdateActionStatus(action.id, 'COMPLETED')}
+                          style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #A9DFBF', backgroundColor: '#EAFAF1', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#27AE60' }}>
+                          ✓ Compléter
+                        </button>
+                      )}
+                      {action.status !== 'COMPLETED' && (
+                        <button type="button" onClick={() => handleUpdateActionStatus(action.id, 'CANCELLED')}
+                          style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 11, color: '#ADB5BD' }}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

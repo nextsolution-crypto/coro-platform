@@ -1263,6 +1263,26 @@ model ResilienceSnapshot {
   @@index([snapshotAt])
 }
 
+model CorrectiveAction {
+  id             String   @id @default(uuid())
+  organizationId String
+  buildingId     String?
+  incidentId     String?
+  category       String   // ROLES | QUALIFICATIONS | PLANS | EXERCISES | INCIDENTS | GENERAL
+  title          String
+  description    String?
+  status         String   @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
+  priority       String   @default("WARNING") // CRITICAL | WARNING | INFO
+  assignedTo     String?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([buildingId])
+}
+
 model VisitorInvitation {
   id            String   @id @default(uuid())
   buildingId    String

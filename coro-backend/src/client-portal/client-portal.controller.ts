@@ -5,6 +5,7 @@ import { ClientJwtGuard } from './client-jwt.guard';
 import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
+import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
 
 @Controller('client-portal')
 @UseGuards(ClientJwtGuard)
@@ -14,6 +15,7 @@ export class ClientPortalController {
     private incidentService: IncidentService,
     private occupancyEmployeesService: OccupancyEmployeesService,
     private occupancyService: OccupancyService,
+    private correctiveActionsService: CorrectiveActionsService,
   ) {}
 
   @Get('dashboard')
@@ -284,6 +286,26 @@ export class ClientPortalController {
   @Get('intelligence/overview')
   async getIntelligenceOverview(@Request() req: any) {
     return this.occupancyService.getIntelligenceOverview(req.clientUser.organizationId);
+  }
+
+  @Get('corrective-actions')
+  async getCorrectiveActions(@Request() req: any, @Query('buildingId') buildingId?: string) {
+    return this.correctiveActionsService.getAll(req.clientUser.organizationId, buildingId);
+  }
+
+  @Post('corrective-actions')
+  async createCorrectiveAction(@Body() body: any, @Request() req: any) {
+    return this.correctiveActionsService.create(body, req.clientUser.organizationId);
+  }
+
+  @Put('corrective-actions/:id')
+  async updateCorrectiveAction(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+    return this.correctiveActionsService.update(id, body, req.clientUser.organizationId);
+  }
+
+  @Put('corrective-actions/:id/delete')
+  async deleteCorrectiveAction(@Param('id') id: string, @Request() req: any) {
+    return this.correctiveActionsService.delete(id, req.clientUser.organizationId);
   }
 
   @Put('incidents/tasks/:taskId/uncomplete')

@@ -10,6 +10,7 @@ import { ExportModule } from '../export/export.module';
 import { StorageModule } from '../storage/storage.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { OccupancyModule } from '../occupancy/occupancy.module';
+import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { OccupancyModule } from '../occupancy/occupancy.module';
     }),
   ],
   controllers: [ClientPortalController, ClientAuthController],
-  providers: [ClientPortalService, ClientAuthService, EmailService],
+  providers: [ClientPortalService, ClientAuthService, EmailService, CorrectiveActionsService],
   exports: [ClientPortalService, EmailService],
 })
 export class ClientPortalModule {}
