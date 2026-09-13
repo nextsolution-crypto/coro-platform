@@ -377,43 +377,117 @@ private async loadProceduresFromDB(
   private async buildContext(projectId: string, config: any): Promise<DocumentContext> {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { client: true, building: true, user: true },
+      include: {
+        client: true,
+        building: true,
+        user: true,
+      },
     });
-    if (!project) throw new Error('Projet introuvable');
 
-    const defaultResponsableNom = `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`;
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+
+    const isPca = project.documentType === 'PCA';
+
+    const defaultResponsableNom =
+      `${project.user.firstName} ${project.user.lastName} — ${project.user.companyName || 'CORO'}`;
 
     return {
       clientName: project.client.name,
       buildingName: project.building.name,
       buildingAddress: `${project.building.address}, ${project.building.city}, ${project.building.province}`,
       city: project.building.city,
-      province: config.province || project.building.province || 'Quebec',
+      province: isPca
+  ? (project.building.province || '')
+  : (
+      config.province ||
+      project.building.province ||
+      'Quebec'
+    ),
       year: project.year,
       documentType: project.documentType,
 
-      // Le configurateur est la source prioritaire pour les métadonnées du document.
-      responsableNom: config.responsableNom || defaultResponsableNom,
-      responsableTitre:
-        config.responsableTitre ||
-        project.building.responsableTitre ||
-        'Directeur de la sécurité',
-      dateReleve: config.dateReleve || new Date().toISOString().split('T')[0],
-      versionDocument: config.versionDocument || 'Création initiale',
-      historiqueList: Array.isArray(config.historiqueList) ? config.historiqueList : [],
+      // Métadonnées générales du document.
+      //
+      // Pour un PCA, PcaConfig ne contient pas les champs historiques
+      // responsableNom / responsableTitre / dateReleve / versionDocument.
+      // On évite donc de fabriquer des valeurs propres au PMU / PSI.
+      responsableNom: isPca
+        ? defaultResponsableNom
+        : (config.responsableNom || defaultResponsableNom),
 
-      // Données bâtiment utilisées par plusieurs générateurs.
-      floors: config.floors ?? 0,
-      hauteurBatiment: config.hauteurBatiment ?? false,
-      multiLocataires: this.asBool(config.multiLocataires),
+      responsableTitre: isPca
+        ? ''
+        : (
+            config.responsableTitre ||
+            project.building.responsableTitre ||
+            'Directeur de la sécurité'
+          ),
+
+      dateReleve: isPca
+        ? (
+            config.effectiveDate
+              ? new Date(config.effectiveDate).toISOString().split('T')[0]
+              : ''
+          )
+        : (
+            config.dateReleve ||
+            new Date().toISOString().split('T')[0]
+          ),
+
+      versionDocument: isPca
+        ? ''
+        : (config.versionDocument || 'Création initiale'),
+
+      historiqueList: isPca
+        ? []
+        : (
+            Array.isArray(config.historiqueList)
+              ? config.historiqueList
+              : []
+          ),
+
+      // Ces données sont utilisées par les générateurs PMU / PSI.
+      // PcaConfig ne les recueille pas : pour un PCA on ne déduit pas
+      // artificiellement leur présence ou leur absence.
+      floors: isPca
+        ? 0
+        : (config.floors ?? 0),
+
+      hauteurBatiment: isPca
+        ? false
+        : (config.hauteurBatiment ?? false),
+
+      multiLocataires: isPca
+        ? false
+        : this.asBool(config.multiLocataires),
+
       companyName: project.user.companyName || 'CORO',
-      buildingType: config.buildingType || project.building.buildingType || 'office',
 
-      // IMPORTANT : ne plus laisser ces indicateurs à false en dur.
-      has_sprinklers: this.asBool(config.gicleurs),
-      has_generator: this.asBool(config.generatrice),
-      has_elevators: this.asBool(config.ascenseurs),
-      has_hazardous_materials: this.asBool(config.matieresDangereuses),
+      buildingType: isPca
+        ? (project.building.buildingType || '')
+        : (
+            config.buildingType ||
+            project.building.buildingType ||
+            'office'
+          ),
+
+      has_sprinklers: isPca
+        ? undefined
+        : this.asBool(config.gicleurs),
+
+      has_generator: isPca
+        ? undefined
+        : this.asBool(config.generatrice),
+
+      has_elevators: isPca
+        ? undefined
+        : this.asBool(config.ascenseurs),
+
+      has_hazardous_materials: isPca
+        ? undefined
+        : this.asBool(config.matieresDangereuses),
     };
   }
 
@@ -423,28 +497,87 @@ private async loadProceduresFromDB(
     // Une seule configuration résolue alimente toute la génération.
     // Project.configData est canonique; le body n'est qu'un fallback legacy.
     const resolvedConfig = await this.resolveGenerationConfig(
-      projectId,
-      organizationId,
-      config,
-    );
+  projectId,
+  organizationId,
+  config,
+);
 
-    const ctx = await this.buildContext(projectId, resolvedConfig);
-    const isPca = ctx.documentType === 'PCA';
-    const isPsi = ctx.documentType === 'PSI';
+const project = await this.prisma.project.findFirst({
+  where: {
+    id: projectId,
+    organizationId,
+  },
+  select: {
+    documentType: true,
+  },
+});
+
+if (!project) {
+  throw new NotFoundException('Projet introuvable');
+}
+
+let generationConfig = resolvedConfig;
+
+if (project.documentType === 'PCA') {
+  const pcaConfig = await this.prisma.pcaConfig.findUnique({
+    where: {
+      projectId,
+    },
+  });
+
+  if (!pcaConfig) {
+    throw new NotFoundException(
+      'Configuration PCA introuvable. Sauvegardez le configurateur avant de générer le document.',
+    );
+  }
+
+  generationConfig = JSON.parse(JSON.stringify(pcaConfig));
+}
+
+const ctx = await this.buildContext(projectId, generationConfig);
+const isPca = ctx.documentType === 'PCA';
+const isPsi = ctx.documentType === 'PSI';
 
     // ── Branche PCA ──
     if (isPca) {
-      const pcaConfig = await this.prisma.pcaConfig.findUnique({
-        where: { projectId },
+  const existingPcaDoc = await this.prisma.document.findFirst({
+    where: { projectId },
+    select: { content: true },
+  });
+  const existingPcaContent = (existingPcaDoc?.content as any) || {};
+
+  const pcaModules = generatePcaModules(ctx, generationConfig);
+
+  const mergePcaModules = (newModules: any[], existingModules: any[]): any[] => {
+    if (!existingModules?.length) return newModules;
+    return newModules.map((newMod: any) => {
+      const existingMod = existingModules.find(
+        (m: any) => m.moduleNumber === newMod.moduleNumber
+      );
+      if (!existingMod) return newMod;
+      const mergedSections = newMod.sections.map((newSec: any) => {
+        const existingSec = existingMod.sections?.find(
+          (s: any) => s.id === newSec.id
+        );
+        if (existingSec?.content && existingSec.content !== newSec.content) {
+          return { ...newSec, content: existingSec.content };
+        }
+        return newSec;
       });
-      const pcaModules = generatePcaModules(ctx, pcaConfig);
+      return { ...newMod, sections: mergedSections };
+    });
+  };
+
+  const mergedFr = mergePcaModules(pcaModules.fr, existingPcaContent.modules_fr || []);
+  const mergedEn = mergePcaModules(pcaModules.en, existingPcaContent.modules_en || []);
+
       const existing = await this.prisma.document.findFirst({ where: { projectId } });
       const documentData = {
         title: `PCA - ${ctx.clientName} ${ctx.year}`,
         content: {
-          modules_fr: pcaModules.fr,
-          modules_en: pcaModules.en,
-          config: resolvedConfig,
+          modules_fr: mergedFr,
+          modules_en: mergedEn,
+          config: generationConfig,
           generatedAt: new Date(),
         },
         status: 'IN_PROGRESS' as any,
