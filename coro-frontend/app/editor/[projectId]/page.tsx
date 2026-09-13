@@ -207,6 +207,23 @@ export default function EditorPage() {
     finally { setSaving(false); }
   };
 
+  const handleSaveSectionDirect = async (moduleNumber: number, sectionId: string, content: string) => {
+    if (!document) return;
+    setSaving(true);
+    try {
+      await api.put(
+        `/generator/document/${document.id}/module/${moduleNumber}/section/${sectionId}`,
+        { content, language }
+      );
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ── Formatage texte (Module 1) ───────────────────────────
 
   const formatContent = (content: string) => {
@@ -355,16 +372,8 @@ export default function EditorPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
                   onChange={(e) => {
                     section.content = e.target.value;
-                    setEditingContent(e.target.value);
                   }}
-                  onFocus={() => {
-                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
-                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
-                    setActiveModule(modIdx);
-                    setActiveSection(secIdx);
-                    setEditingContent(section.content);
-                  }}
-                  onBlur={handleSaveSection}
+                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
                 />
               </div>
             ))}
@@ -400,16 +409,8 @@ export default function EditorPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
                   onChange={(e) => {
                     section.content = e.target.value;
-                    setEditingContent(e.target.value);
                   }}
-                  onFocus={() => {
-                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
-                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
-                    setActiveModule(modIdx);
-                    setActiveSection(secIdx);
-                    setEditingContent(section.content);
-                  }}
-                  onBlur={handleSaveSection}
+                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
                 />
               </div>
             ))}
@@ -434,16 +435,8 @@ export default function EditorPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
                   onChange={(e) => {
                     section.content = e.target.value;
-                    setEditingContent(e.target.value);
                   }}
-                  onFocus={() => {
-                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
-                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
-                    setActiveModule(modIdx);
-                    setActiveSection(secIdx);
-                    setEditingContent(section.content);
-                  }}
-                  onBlur={handleSaveSection}
+                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
                 />
               </div>
             ))}
@@ -488,16 +481,8 @@ export default function EditorPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
                   onChange={(e) => {
                     section.content = e.target.value;
-                    setEditingContent(e.target.value);
                   }}
-                  onFocus={() => {
-                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
-                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
-                    setActiveModule(modIdx);
-                    setActiveSection(secIdx);
-                    setEditingContent(section.content);
-                  }}
-                  onBlur={handleSaveSection}
+                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
                 />
               </div>
             ))}
@@ -535,16 +520,8 @@ export default function EditorPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
                   onChange={(e) => {
                     section.content = e.target.value;
-                    setEditingContent(e.target.value);
                   }}
-                  onFocus={() => {
-                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
-                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
-                    setActiveModule(modIdx);
-                    setActiveSection(secIdx);
-                    setEditingContent(section.content);
-                  }}
-                  onBlur={handleSaveSection}
+                  onBlur={(e) => handleSaveSectionDirect(currentModule.moduleNumber, section.id, e.target.value)}
                 />
               </div>
             ))}
