@@ -81,7 +81,7 @@ const SPECIAL_MODULES = [4, 6, 7, 8];
 function getSpecialModuleLabel(moduleNumber: number, lang: 'fr' | 'en', docType?: string): string {
   if (docType === 'PCA') {
     const pcaLabels: Record<number, [string, string]> = {
-      4: ['Bilan d\'impact (BIA)',    'Business Impact Analysis (BIA)'],
+      4: ['Procédures PCA',           'BCP Procedures'],
       5: ['Stratégies de continuité', 'Continuity strategies'],
       6: ['Communication de crise',   'Crisis communication'],
       7: ['Activation et reprise',    'Activation and recovery'],
@@ -765,7 +765,7 @@ export default function EditorPage() {
                 })()}
 
                 {/* Modules spéciaux — bouton unique */}
-                {(mod.sections || []).length === 0 && (
+                {((mod.sections || []).length === 0 || (mod.moduleNumber === 4 && document.project.documentType === 'PCA')) && (
                   <button
                     onClick={() => handleSectionClick(modIdx, 0)}
                     className="w-full text-left px-3 py-2 rounded text-xs mb-0.5 transition-colors font-medium"
@@ -785,6 +785,7 @@ export default function EditorPage() {
                 {(mod.sections || []).map((section, secIdx) => {
                   // Cache 3.2 (Liste des membres) pour les bâtiments non industriels
                   if (mod.moduleNumber === 3 && section.id === '3.2' && isBureau) return null;
+                  if (mod.moduleNumber === 4 && document.project.documentType === 'PCA') return null;
                   const isActive = activeModule === modIdx && activeSection === secIdx;
                   return (
                     <button key={section.id}
@@ -995,7 +996,7 @@ export default function EditorPage() {
                       </div>
                     </div>
 
-                    {(mod.sections || []).length === 0 && (
+                    {((mod.sections || []).length === 0 || (mod.moduleNumber === 4 && document.project.documentType === 'PCA')) && (
                       <button
                         type="button"
                         onClick={() => {
@@ -1015,6 +1016,7 @@ export default function EditorPage() {
 
                     {(mod.sections || []).map((section, secIdx) => {
                       if (mod.moduleNumber === 3 && section.id === '3.2' && isBureau) return null;
+                  if (mod.moduleNumber === 4 && document.project.documentType === 'PCA') return null;
                       const isActive = activeModule === modIdx && activeSection === secIdx;
 
                       return (
