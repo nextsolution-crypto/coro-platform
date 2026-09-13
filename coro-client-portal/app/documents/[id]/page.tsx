@@ -211,7 +211,7 @@ useEffect(() => {
         `/client-portal/projects/${projectId}/sign`,
         {
           fullName: signName,
-          comment: signComment,
+          comment: signComment || refuseComment,
         }
       );
 
@@ -700,6 +700,15 @@ const mySignature =
                   boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 }}>
                   <div style={{
+                    backgroundColor: '#FEF9E7',
+                    padding: '10px 20px',
+                    borderBottom: '1px solid #FAD7A0',
+                  }}>
+                    <span style={{ color: '#B9770E', fontSize: 13, fontWeight: 700 }}>
+                      ⚠️ APERÇU — Document non officiel
+                    </span>
+                  </div>
+                  <div style={{
                     backgroundColor: '#2C3E50',
                     padding: '12px 20px',
                     display: 'flex',
@@ -726,9 +735,23 @@ const mySignature =
                 </div>
               )}
 
-              {/* c) Séparateur */}
+              {/* c) Zone d'observations */}
               {!mySignature && (
-                <div style={{ height: 1, backgroundColor: '#E9ECEF', margin: '20px 0' }} />
+                <div style={{ margin: '24px 0', padding: '20px', backgroundColor: '#F8F9FA', borderRadius: 12, border: '1px solid #E9ECEF' }}>
+                  <label style={{ fontSize: 14, fontWeight: 700, color: '#2C3E50', display: 'block', marginBottom: 8 }}>
+                    📝 Observations (optionnel)
+                  </label>
+                  <p style={{ fontSize: 13, color: '#6C757D', marginBottom: 12 }}>
+                    Notez vos commentaires avant de signer ou de refuser le document. En cas de refus, ces observations seront transmises à l'équipe responsable.
+                  </p>
+                  <textarea
+                    value={refuseComment}
+                    onChange={(e) => setRefuseComment(e.target.value)}
+                    placeholder="Ex: La section 3.2 doit être mise à jour avec les nouveaux contacts..."
+                    rows={4}
+                    style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid #DEE2E6', fontSize: 14, color: '#2C3E50', resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </div>
               )}
 
               {mySignature && (project?.officialPdfFr || project?.officialPdfEn) && (
