@@ -88,6 +88,8 @@ export default function DocumentDetailPage() {
   const [signComment, setSignComment] = useState('');
 
   const [downloading, setDownloading] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState('');
   const [showRefuseModal, setShowRefuseModal] = useState(false);
   const [refuseComment, setRefuseComment] = useState('');
   const [refusing,        setRefusing]        = useState(false);
@@ -611,104 +613,200 @@ const mySignature =
           {isValidated && (
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns:
-                  'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
-                gap: 10,
                 width: '100%',
                 maxWidth: 620,
                 flex: '1 1 360px',
                 minWidth: 0,
               }}
             >
-              {project?.exportedPdfFr && !mySignature && (
-                <button
-                  type="button"
-                  onClick={() => window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(project.exportedPdfFr)}&embedded=false`, '_blank')}
+              {/* a) Visualiser FR / EN */}
+              {!mySignature && (project?.exportedPdfFr || project?.exportedPdfEn) && (
+                <div
                   style={{
-                    minHeight: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                    padding: '10px 16px',
-                    borderRadius: 7,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    backgroundColor: '#FFFFFF',
-                    color: '#2980B9',
-                    border: '2px solid #2980B9',
-                    cursor: 'pointer',
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
+                    gap: 10,
                     width: '100%',
-                    minWidth: 0,
                   }}
                 >
-                  👁 Visualiser (FR)
-                </button>
+                  {project?.exportedPdfFr && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPdfViewerUrl(project.exportedPdfFr);
+                        setShowPdfViewer(true);
+                      }}
+                      style={{
+                        minHeight: 46,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        padding: '10px 16px',
+                        borderRadius: 7,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        backgroundColor: '#FFFFFF',
+                        color: '#2C3E50',
+                        border: '2px solid #DEE2E6',
+                        cursor: 'pointer',
+                        width: '100%',
+                        minWidth: 0,
+                      }}
+                    >
+                      📄 Visualiser (FR)
+                    </button>
+                  )}
+
+                  {project?.exportedPdfEn && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPdfViewerUrl(project.exportedPdfEn);
+                        setShowPdfViewer(true);
+                      }}
+                      style={{
+                        minHeight: 46,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        padding: '10px 16px',
+                        borderRadius: 7,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        backgroundColor: '#FFFFFF',
+                        color: '#2C3E50',
+                        border: '2px solid #DEE2E6',
+                        cursor: 'pointer',
+                        width: '100%',
+                        minWidth: 0,
+                      }}
+                    >
+                      📄 Visualiser (EN)
+                    </button>
+                  )}
+                </div>
               )}
 
-              {project?.officialPdfFr && mySignature && (
-                <button
-                  type="button"
-                  onClick={() => handleDownload('fr')}
-                  disabled={downloading}
-                  style={{
-                    minHeight: 46,
+              {/* b) Prévisualisation intégrée */}
+              {showPdfViewer && pdfViewerUrl && (
+                <div style={{
+                  marginTop: 24,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  border: '1px solid #E9ECEF',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{
+                    backgroundColor: '#2C3E50',
+                    padding: '12px 20px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                    padding: '10px 16px',
-                    borderRadius: 7,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    backgroundColor: '#C0392B',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    cursor: downloading ? 'not-allowed' : 'pointer',
-                    opacity: downloading ? 0.7 : 1,
-                    width: '100%',
-                    minWidth: 0,
-                  }}
-                >
-                  <Download size={16} />
-                  {downloading ? 'Téléchargement...' : 'Télécharger PDF (FR)'}
-                </button>
+                    justifyContent: 'space-between',
+                  }}>
+                    <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 600 }}>
+                      📄 Prévisualisation du document
+                    </span>
+                    <button
+                      onClick={() => setShowPdfViewer(false)}
+                      style={{ background: 'none', border: 'none', color: '#ADB5BD', cursor: 'pointer', fontSize: 20 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <iframe
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfViewerUrl)}&embedded=true`}
+                    width="100%"
+                    height="700px"
+                    style={{ display: 'block', border: 'none' }}
+                    title="Prévisualisation du document"
+                  />
+                </div>
               )}
 
-              {project?.officialPdfEn && mySignature && (
-                <button
-                  type="button"
-                  onClick={() => handleDownload('en')}
-                  disabled={downloading}
+              {/* c) Séparateur */}
+              {!mySignature && (
+                <div style={{ height: 1, backgroundColor: '#E9ECEF', margin: '20px 0' }} />
+              )}
+
+              {mySignature && (project?.officialPdfFr || project?.officialPdfEn) && (
+                <div
                   style={{
-                    minHeight: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                    padding: '10px 16px',
-                    borderRadius: 7,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    backgroundColor: '#2980B9',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    cursor: downloading ? 'not-allowed' : 'pointer',
-                    opacity: downloading ? 0.7 : 1,
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
+                    gap: 10,
                     width: '100%',
-                    minWidth: 0,
+                    marginTop: 24,
                   }}
                 >
-                  <Download size={16} />
-                  {downloading ? 'Downloading...' : 'Download PDF (EN)'}
-                </button>
+                  {project?.officialPdfFr && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownload('fr')}
+                      disabled={downloading}
+                      style={{
+                        minHeight: 46,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        padding: '10px 16px',
+                        borderRadius: 7,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        backgroundColor: '#C0392B',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        cursor: downloading ? 'not-allowed' : 'pointer',
+                        opacity: downloading ? 0.7 : 1,
+                        width: '100%',
+                        minWidth: 0,
+                      }}
+                    >
+                      <Download size={16} />
+                      {downloading ? 'Téléchargement...' : 'Télécharger PDF (FR)'}
+                    </button>
+                  )}
+
+                  {project?.officialPdfEn && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownload('en')}
+                      disabled={downloading}
+                      style={{
+                        minHeight: 46,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        padding: '10px 16px',
+                        borderRadius: 7,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        backgroundColor: '#2980B9',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        cursor: downloading ? 'not-allowed' : 'pointer',
+                        opacity: downloading ? 0.7 : 1,
+                        width: '100%',
+                        minWidth: 0,
+                      }}
+                    >
+                      <Download size={16} />
+                      {downloading ? 'Downloading...' : 'Download PDF (EN)'}
+                    </button>
+                  )}
+                </div>
               )}
 
               {mySignature && (!project?.officialPdfFr || !project?.officialPdfEn) && (
                 <div
                   style={{
                     width: '100%',
+                    marginTop: 24,
                     padding: '14px 16px',
                     borderRadius: 7,
                     backgroundColor: '#FEF9E7',
@@ -782,59 +880,68 @@ const mySignature =
                 </div>
               )}
 
+              {/* d) Refuser + e) Signer */}
               {!mySignature && (
-                <button
-                  type="button"
-                  onClick={() => setShowRefuseModal(true)}
+                <div
                   style={{
-                    minHeight: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                    padding: '10px 16px',
-                    borderRadius: 7,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    backgroundColor: '#FFFFFF',
-                    color: '#C0392B',
-                    border: '2px solid #C0392B',
-                    cursor: 'pointer',
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
+                    gap: 10,
                     width: '100%',
-                    minWidth: 0,
+                    marginTop: 24,
                   }}
                 >
-                  ✕ Refuser et commenter
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => setShowRefuseModal(true)}
+                    style={{
+                      minHeight: 46,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 7,
+                      padding: '10px 16px',
+                      borderRadius: 7,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      backgroundColor: '#FFFFFF',
+                      color: '#C0392B',
+                      border: '2px solid #C0392B',
+                      cursor: 'pointer',
+                      width: '100%',
+                      minWidth: 0,
+                    }}
+                  >
+                    ✕ Refuser et commenter
+                  </button>
 
-              {!mySignature && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowSignModal(true)
-                  }
-                  style={{
-                    minHeight: 46,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                    padding: '10px 16px',
-                    borderRadius: 7,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    backgroundColor: '#FFFFFF',
-                    color: '#8E44AD',
-                    border: '2px solid #8E44AD',
-                    cursor: 'pointer',
-                    width: '100%',
-                    minWidth: 0,
-                  }}
-                >
-                  <CheckCircle size={16} />
-                  Signer le document
-                </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowSignModal(true)
+                    }
+                    style={{
+                      minHeight: 46,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 7,
+                      padding: '10px 16px',
+                      borderRadius: 7,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      backgroundColor: '#27AE60',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                      width: '100%',
+                      minWidth: 0,
+                    }}
+                  >
+                    ✓ Signer le document
+                  </button>
+                </div>
               )}
             </div>
           )}
