@@ -340,6 +340,193 @@ const handleBackToProject = async () => {
   router.push(`/projects/${projectId}`);
 };
 
+const TIME_TO_HOURS: Record<string, number> = {
+  '1h': 1,
+  '2h': 2,
+  '4h': 4,
+  '8h': 8,
+  '24h': 24,
+  '48h': 48,
+  '72h': 72,
+  '1sem': 168,
+  '2sem': 336,
+  '1mois': 720,
+  'plus': 9999,
+};
+
+const IMPACT_LEVEL: Record<string, number> = {
+  'NEGLIGEABLE': 1,
+  'FAIBLE': 2,
+  'MODERE': 3,
+  'ELEVE': 4,
+  'CRITIQUE': 5,
+};
+
+const getBiaWarnings = (service: any) => {
+  const warnings: {
+    level: 'critical' | 'warning' | 'info';
+    message: string;
+  }[] = [];
+
+  const rtoHours = TIME_TO_HOURS[service.rto];
+  const madHours = TIME_TO_HOURS[service.mad];
+
+  // 1. RTO supérieur au MAD
+  if (
+    rtoHours &&
+    madHours &&
+    rtoHours > madHours
+  ) {
+    warnings.push({
+      level: 'critical',
+      message:
+        'Le RTO est supérieur au MAD. L’activité serait rétablie après la limite maximale d’interruption tolérable.',
+    });
+  }
+
+  // 2. Impact critique atteint avant le RTO
+  const timeImpacts = [
+    { field: 'impact4h', hours: 4, label: '4 heures' },
+    { field: 'impact24h', hours: 24, label: '24 heures' },
+    { field: 'impact72h', hours: 72, label: '72 heures' },
+    { field: 'impact7d', hours: 168, label: '7 jours' },
+  ];
+
+  const firstCriticalImpact = timeImpacts.find(
+    item => service[item.field] === 'CRITIQUE'
+  );
+
+  if (
+    firstCriticalImpact &&
+    rtoHours &&
+    rtoHours > firstCriticalImpact.hours
+  ) {
+    warnings.push({
+      level: 'critical',
+      message:
+        `Les impacts deviennent critiques après ${firstCriticalImpact.label}, mais le RTO est fixé au-delà de ce seuil.`,
+    });
+  }
+
+  // 3. Priorité faible malgré des impacts élevés ou critiques rapidement
+  const earlyHighImpact =
+    IMPACT_LEVEL[service.impact4h] >= 4 ||
+    IMPACT_LEVEL[service.impact24h] >= 5;
+
+  if (
+    earlyHighImpact &&
+    ['MOYENNE', 'FAIBLE', ''].includes(service.recoveryPriority || '')
+  ) {
+    warnings.push({
+      level: 'warning',
+      message:
+        'Les impacts deviennent élevés ou critiques rapidement, mais la priorité de reprise semble faible.',
+    });
+  }
+
+  // 4. MAD court avec priorité faible
+  if (
+    madHours &&
+    madHours <= 24 &&
+    ['MOYENNE', 'FAIBLE', ''].includes(service.recoveryPriority || '')
+  ) {
+    warnings.push({
+      level: 'warning',
+      message:
+        'Le MAD est de 24 heures ou moins. Une priorité de reprise plus élevée devrait être évaluée.',
+    });
+  }
+
+  // 5. Mode dégradé plus long que le MAD
+  const degradedHours =
+    service.degradedModeDuration === 'indefini'
+      ? null
+      : TIME_TO_HOURS[service.degradedModeDuration];
+
+  if (
+    degradedHours &&
+    madHours &&
+    degradedHours > madHours
+  ) {
+    warnings.push({
+      level: 'warning',
+      message:
+        'La durée soutenable déclarée du mode dégradé dépasse le MAD. Vérifiez la cohérence entre ces deux paramètres.',
+    });
+  }
+
+  // 6. Dépendances non documentées
+  const hasDependencies =
+    (service.internalDependencies || '').trim() ||
+    (service.externalDependencies || '').trim() ||
+    (service.singlePointsOfFailure || '').trim() ||
+    (service.recoveryPrerequisites || '').trim();
+
+  if (!hasDependencies) {
+    warnings.push({
+      level: 'info',
+      message:
+        'Aucune dépendance critique ni aucun prérequis de reprise n’est documenté pour cette activité.',
+    });
+  }
+
+  // 7. Ressources minimales non documentées
+  const hasMinimumResources =
+    (service.resourcePersonnel || '').trim() ||
+    (service.resourceIT || '').trim() ||
+    (service.resourceEquipment || '').trim() ||
+    (service.resourceSuppliers || '').trim() ||
+    (service.resourceSite || '').trim() ||
+    (service.resourceEnergy || '').trim();
+
+  if (!hasMinimumResources) {
+    warnings.push({
+      level: 'info',
+      message:
+        'Aucune ressource minimale nécessaire à la reprise n’est documentée.',
+    });
+  }
+
+    return warnings;
+};
+
+const getBiaSummary = () => {
+  let criticalCount = 0;
+  let warningCount = 0;
+  let infoCount = 0;
+  let compliantActivities = 0;
+
+  config.criticalServices.forEach((service: any) => {
+    const warnings = getBiaWarnings(service);
+
+    if (warnings.length === 0) {
+      compliantActivities += 1;
+    }
+
+    warnings.forEach(warning => {
+      if (warning.level === 'critical') {
+        criticalCount += 1;
+      }
+
+      if (warning.level === 'warning') {
+        warningCount += 1;
+      }
+
+      if (warning.level === 'info') {
+        infoCount += 1;
+      }
+    });
+  });
+
+  return {
+    totalActivities: config.criticalServices.length,
+    compliantActivities,
+    criticalCount,
+    warningCount,
+    infoCount,
+  };
+};
+
   const toggleRisk = (scenarioId: string) => {
     const existing = config.riskScenarios.find((r: any) => r.id === scenarioId);
     if (existing) {
@@ -1324,6 +1511,181 @@ const removeRegReq = (req: string) => {
               </button>
             </div>
 
+            {config.criticalServices.length > 0 && (() => {
+  const summary = getBiaSummary();
+
+  const hasCritical = summary.criticalCount > 0;
+  const hasWarnings = summary.warningCount > 0;
+
+  const statusLabel = hasCritical
+    ? 'Anomalies critiques détectées'
+    : hasWarnings
+      ? 'Points de cohérence à vérifier'
+      : 'BIA cohérent';
+
+  const statusColor = hasCritical
+    ? '#C0392B'
+    : hasWarnings
+      ? '#F39C12'
+      : '#27AE60';
+
+  const statusBackground = hasCritical
+    ? '#FDEDEC'
+    : hasWarnings
+      ? '#FEF9E7'
+      : '#EAFAF1';
+
+  const statusBorder = hasCritical
+    ? '#F1948A'
+    : hasWarnings
+      ? '#FAD7A0'
+      : '#A9DFBF';
+
+  return (
+    <div
+      className="p-4 rounded"
+      style={{
+        backgroundColor: statusBackground,
+        border: `1px solid ${statusBorder}`,
+      }}
+    >
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+        <div>
+          <p
+            className="text-sm font-semibold"
+            style={{ color: statusColor }}
+          >
+            Contrôle de cohérence du BIA — {statusLabel}
+          </p>
+
+          <p
+            className="text-xs mt-1"
+            style={{ color: '#6C757D' }}
+          >
+            Analyse automatique des objectifs de reprise, impacts,
+            priorités, dépendances et ressources minimales.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+
+          <div
+            className="px-3 py-2 rounded text-center"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #DEE2E6',
+            }}
+          >
+            <p
+              className="text-lg font-bold"
+              style={{ color: '#2C3E50' }}
+            >
+              {summary.totalActivities}
+            </p>
+
+            <p
+              className="text-xs"
+              style={{ color: '#6C757D' }}
+            >
+              Activités
+            </p>
+          </div>
+
+          <div
+            className="px-3 py-2 rounded text-center"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #A9DFBF',
+            }}
+          >
+            <p
+              className="text-lg font-bold"
+              style={{ color: '#27AE60' }}
+            >
+              {summary.compliantActivities}
+            </p>
+
+            <p
+              className="text-xs"
+              style={{ color: '#6C757D' }}
+            >
+              Sans écart
+            </p>
+          </div>
+
+          <div
+            className="px-3 py-2 rounded text-center"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #F1948A',
+            }}
+          >
+            <p
+              className="text-lg font-bold"
+              style={{ color: '#C0392B' }}
+            >
+              {summary.criticalCount}
+            </p>
+
+            <p
+              className="text-xs"
+              style={{ color: '#6C757D' }}
+            >
+              Critiques
+            </p>
+          </div>
+
+          <div
+            className="px-3 py-2 rounded text-center"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #FAD7A0',
+            }}
+          >
+            <p
+              className="text-lg font-bold"
+              style={{ color: '#F39C12' }}
+            >
+              {summary.warningCount}
+            </p>
+
+            <p
+              className="text-xs"
+              style={{ color: '#6C757D' }}
+            >
+              Avertissements
+            </p>
+          </div>
+
+          <div
+            className="px-3 py-2 rounded text-center"
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #AED6F1',
+            }}
+          >
+            <p
+              className="text-lg font-bold"
+              style={{ color: '#2980B9' }}
+            >
+              {summary.infoCount}
+            </p>
+
+            <p
+              className="text-xs"
+              style={{ color: '#6C757D' }}
+            >
+              Informations
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+})()}
+
             <div className="p-3 rounded" style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
               <p className="text-xs font-semibold mb-1" style={{ color: '#2980B9' }}>
                 ℹ️ Définitions (ISO 22301 / Guide Québec)
@@ -1741,6 +2103,89 @@ const removeRegReq = (req: string) => {
                           ))}
                         </div>
                       </div>
+
+                      {(() => {
+                        const warnings = getBiaWarnings(service);
+
+                        if (warnings.length === 0) {
+                          return (
+                            <div
+                              className="mt-5 p-3 rounded"
+                              style={{
+                                backgroundColor: '#EAFAF1',
+                                border: '1px solid #A9DFBF',
+                              }}
+                            >
+                              <p
+                                className="text-xs font-medium"
+                                style={{ color: '#1E8449' }}
+                              >
+                                ✓ Aucun écart de cohérence détecté pour cette activité.
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="mt-5 space-y-2">
+                            <p
+                              className="text-xs font-bold uppercase"
+                              style={{
+                                color: '#6C757D',
+                                letterSpacing: '0.08em',
+                              }}
+                            >
+                              Vérifications de cohérence CORO
+                            </p>
+
+                            {warnings.map((warning, warningIndex) => {
+                              const styles =
+                                warning.level === 'critical'
+                                  ? {
+                                      backgroundColor: '#FDEDEC',
+                                      border: '#F1948A',
+                                      color: '#922B21',
+                                      icon: '⛔',
+                                    }
+                                  : warning.level === 'warning'
+                                    ? {
+                                        backgroundColor: '#FEF9E7',
+                                        border: '#FAD7A0',
+                                        color: '#9A7D0A',
+                                        icon: '⚠️',
+                                      }
+                                    : {
+                                        backgroundColor: '#EBF5FB',
+                                        border: '#AED6F1',
+                                        color: '#1A5276',
+                                        icon: 'ℹ️',
+                                      };
+
+                              return (
+                                <div
+                                  key={warningIndex}
+                                  className="p-3 rounded flex items-start gap-2"
+                                  style={{
+                                    backgroundColor: styles.backgroundColor,
+                                    border: `1px solid ${styles.border}`,
+                                  }}
+                                >
+                                  <span className="text-sm flex-shrink-0">
+                                    {styles.icon}
+                                  </span>
+
+                                  <p
+                                    className="text-xs"
+                                    style={{ color: styles.color }}
+                                  >
+                                    {warning.message}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
