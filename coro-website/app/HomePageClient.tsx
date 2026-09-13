@@ -31,10 +31,10 @@ const TRANSLATIONS = {
     },
 
     hero: {
-      tag: 'Plateforme SaaS de conformité — Québec & Canada',
-      title: 'La conformité,\npensée par des\nexperts du terrain.',
+      tag: 'Plateforme de résilience opérationnelle — Québec & Canada',
+      title: 'De la conformité\nà l\'intervention —\nune seule plateforme.',
       subtitle:
-        'CORO est une plateforme SaaS canadienne de conformité opérationnelle qui génère, structure et gère vos plans de mesures d\'urgence (PMU), plans de sécurité incendie (PSI) et plans de continuité des activités (PCA) — avec la rigueur qu\'exige le terrain.',
+        'CORO centralise la production documentaire, la gestion de mandats, la présence en bâtiment et l\'intervention d\'urgence. Du PMU au bouton panique — conçu pour les professionnels québécois de la sécurité.',
       cta: 'Demander une démo',
       ctaSecondary: 'Voir la plateforme',
       trusted:
@@ -43,21 +43,20 @@ const TRANSLATIONS = {
 
     stats: [
       {
-        value: '3+',
-        label: 'Types de documents',
-        note: 'Phase 2 en cours',
+        value: '5',
+        label: 'Dimensions opérationnelles',
       },
       {
         value: '43+',
         label: 'Procédures intégrées',
       },
       {
-        value: '2',
-        label: 'Langues (FR/EN)',
+        value: '15',
+        label: 'Types d\'incidents couverts',
       },
       {
         value: '3',
-        label: 'Cadres provinciaux couverts',
+        label: 'Normes : ISO 22301 · CNPI 2020 · CNESST',
       },
     ],
 
@@ -301,6 +300,8 @@ const TRANSLATIONS = {
             'Procédures IA personnalisées',
             'Matières dangereuses REPTOX',
             'Workflow d\'approbation',
+            'CORO Sentinelle (registre d\'occupation)',
+            'Module Incident + bouton panique',
             'Gestion des mandats complète',
             'Support prioritaire',
           ],
@@ -318,6 +319,8 @@ const TRANSLATIONS = {
             'Toutes les fonctionnalités Standard',
             'Capacity planning avancé',
             'Portail client dédié',
+            'Intelligence organisationnelle multi-bâtiments',
+            'Indice CORO de résilience',
             'MFA et sécurité renforcée',
             'SLA de disponibilité',
             'Formation personnalisée',
@@ -351,13 +354,13 @@ const TRANSLATIONS = {
     cta: {
       title: 'Prêt à moderniser votre pratique ?',
       subtitle:
-        'Découvrez comment CORO peut transformer votre façon de produire et gérer vos documents de conformité.',
+        'Découvrez comment CORO peut transformer votre pratique — de la production documentaire à la gestion d\'incident en temps réel.',
       primary: 'Demander une démo',
       secondary: 'Accéder à la plateforme',
     },
 
     footer: {
-      tagline: 'La conformité, pensée par des experts du terrain.',
+      tagline: 'De la conformité à l\'intervention — une seule plateforme.',
       product: 'Produit',
       legal: 'Légal',
       contact: 'Contact',
@@ -386,10 +389,10 @@ const TRANSLATIONS = {
     },
 
     hero: {
-      tag: 'Compliance SaaS Platform — Quebec & Canada',
-      title: 'Compliance,\ndesigned by\nfield experts.',
+      tag: 'Operational Resilience Platform — Quebec & Canada',
+      title: 'From compliance\nto intervention —\none platform.',
       subtitle:
-        'CORO is a Canadian SaaS platform for operational compliance that generates, structures and manages Emergency Response Plans, Fire Safety Plans and Business Continuity Plans — with the rigor field professionals expect.',
+        'CORO centralizes document production, mandate management, building occupancy tracking and emergency response. From ERP to panic button — built for Canadian safety professionals.',
       cta: 'Request a demo',
       ctaSecondary: 'View the platform',
       trusted:
@@ -398,21 +401,20 @@ const TRANSLATIONS = {
 
     stats: [
       {
-        value: '3+',
-        label: 'Document types',
-        note: 'Phase 2 in progress',
+        value: '5',
+        label: 'Operational dimensions',
       },
       {
         value: '43+',
         label: 'Built-in procedures',
       },
       {
-        value: '2',
-        label: 'Languages (FR/EN)',
+        value: '15',
+        label: 'Incident types covered',
       },
       {
         value: '3',
-        label: 'Provincial frameworks covered',
+        label: 'Standards: ISO 22301 · NFPA · CCOHS',
       },
     ],
 
@@ -656,6 +658,8 @@ const TRANSLATIONS = {
             'Custom AI procedures',
             'REPTOX hazardous materials',
             'Approval workflow',
+            'CORO Sentinelle (occupancy registry)',
+            'Incident Module + panic button',
             'Full mandate management',
             'Priority support',
           ],
@@ -673,6 +677,8 @@ const TRANSLATIONS = {
             'All Standard features',
             'Advanced capacity planning',
             'Dedicated client portal',
+            'Multi-building organizational intelligence',
+            'CORO resilience index',
             'MFA & enhanced security',
             'Availability SLA',
             'Custom training',
@@ -706,13 +712,13 @@ const TRANSLATIONS = {
     cta: {
       title: 'Ready to modernize your practice?',
       subtitle:
-        'Discover how CORO can transform the way you create and manage your compliance documents.',
+        'Discover how CORO can transform your practice — from document production to real-time incident management.',
       primary: 'Request a demo',
       secondary: 'Access the platform',
     },
 
     footer: {
-      tagline: 'Compliance, designed by field experts.',
+      tagline: 'From compliance to intervention — one platform.',
       product: 'Product',
       legal: 'Legal',
       contact: 'Contact',
@@ -2267,7 +2273,7 @@ export default function WebAppProgress() {
                 borderRadius: 99,
               }}
             >
-              🆕 Nouveau module
+              CORO Sentinelle
             </span>
           </div>
 
@@ -2536,6 +2542,294 @@ export default function WebAppProgress() {
               }}
             >
               Découvrir Sentinelle →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── MODULE INCIDENT ── */}
+
+      <section
+        id="module-incident"
+        style={{
+          backgroundColor:
+            '#FFFFFF',
+          padding:
+            '100px 24px',
+          borderTop:
+            '1px solid #E9ECEF',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: '0 auto',
+          }}
+        >
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 16,
+            }}
+          >
+            <span
+              style={{
+                display:
+                  'inline-block',
+                fontSize: 11,
+                fontWeight: 800,
+                color:
+                  '#C0392B',
+                textTransform:
+                  'uppercase',
+                letterSpacing:
+                  '0.12em',
+                background:
+                  '#FDEDEC',
+                padding:
+                  '6px 14px',
+                borderRadius: 99,
+              }}
+            >
+              Module Incident
+            </span>
+          </div>
+
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 64,
+            }}
+          >
+            <h2
+              style={{
+                margin:
+                  '0 0 16px',
+                fontSize:
+                  'clamp(28px, 5vw, 42px)',
+                fontWeight: 900,
+                color: '#2C3E50',
+                lineHeight: 1.15,
+              }}
+            >
+              CORO{' '}
+              <span
+                style={{
+                  color:
+                    '#C0392B',
+                }}
+              >
+                Module Incident
+              </span>
+            </h2>
+
+            <p
+              style={{
+                margin: '0 auto',
+                fontSize: 18,
+                color: '#6C757D',
+                maxWidth: 600,
+                lineHeight: 1.7,
+              }}
+            >
+              {lang === 'fr'
+                ? 'Du déclenchement au rapport post-incident — un cycle complet conforme ISO 22301, CNPI 2020 et CNESST.'
+                : 'From incident trigger to post-incident report — a complete cycle compliant with ISO 22301, NFPA and CCOHS.'}
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns:
+                'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 24,
+              marginBottom: 64,
+            }}
+          >
+            {[
+              {
+                icon: '🚨',
+                title:
+                  'Déclenchement en un clic',
+                desc:
+                  '15 types d\'incidents mappés (incendie, menace active, fuite de gaz, cyberattaque, inondation...). Procédures P001-P026 activées automatiquement selon le type.',
+              },
+              {
+                icon: '📋',
+                title:
+                  'Checklist coordonnateur',
+                desc:
+                  'Tâches par rôle générées automatiquement. Cochage en temps réel depuis n\'importe quel appareil.',
+              },
+              {
+                icon: '📱',
+                title:
+                  'Bouton panique intégré',
+                desc:
+                  'Menace active avec script 911 bilingue FR/EN. Alerte simultanée sur 3 niveaux : responsable bâtiment, équipe corporative, équipe d\'urgence présente.',
+              },
+              {
+                icon: '📧',
+                title:
+                  'Notifications multi-canaux',
+                desc:
+                  'SMS et courriel simultanés aux coordonnateurs, membres de l\'équipe et occupants. Accusés de réception avec horodatage.',
+              },
+              {
+                icon: '🔄',
+                title:
+                  'Incidents multiples simultanés',
+                desc:
+                  'Gérez plusieurs incidents en parallèle dans le même bâtiment. Mode exercice intégré pour tester sans déclencher les vraies alertes.',
+              },
+              {
+                icon: '📊',
+                title:
+                  'Rapport REX automatique',
+                desc:
+                  'Formulaire post-incident ISO 22301. Ce qui a bien fonctionné, points à améliorer, recommandations, actions correctives. Export PDF 7 sections inclus.',
+              },
+            ].map((f, i) => (
+              <div
+                key={i}
+                style={{
+                  backgroundColor:
+                    '#FFFFFF',
+                  borderRadius: 12,
+                  padding:
+                    '28px 24px',
+                  border:
+                    '1px solid #E9ECEF',
+                  boxShadow:
+                    '0 2px 8px rgba(44,62,80,0.04)',
+                }}
+              >
+                <p
+                  style={{
+                    margin:
+                      '0 0 12px',
+                    fontSize: 32,
+                  }}
+                >
+                  {f.icon}
+                </p>
+
+                <h3
+                  style={{
+                    margin:
+                      '0 0 8px',
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color:
+                      '#2C3E50',
+                  }}
+                >
+                  {f.title}
+                </h3>
+
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 14,
+                    color:
+                      '#6C757D',
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              backgroundColor:
+                '#2C3E50',
+              borderRadius: 16,
+              padding:
+                '32px 40px',
+              display: 'flex',
+              alignItems:
+                'center',
+              justifyContent:
+                'space-between',
+              gap: 24,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  margin:
+                    '0 0 8px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color:
+                    '#ADB5BD',
+                  textTransform:
+                    'uppercase',
+                  letterSpacing:
+                    '0.1em',
+                }}
+              >
+                Conformité
+                réglementaire
+              </p>
+
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color:
+                    '#FFFFFF',
+                  lineHeight: 1.4,
+                }}
+              >
+                Conforme aux normes
+                en vigueur
+              </p>
+
+              <p
+                style={{
+                  margin:
+                    '8px 0 0',
+                  fontSize: 14,
+                  color:
+                    '#ADB5BD',
+                  maxWidth: 500,
+                }}
+              >
+                ISO 22301 · CNPI 2020 ·
+                CNESST · Rapport PDF 7
+                sections inclus
+              </p>
+            </div>
+
+            <a
+              href="/resilience-operationnelle"
+              style={{
+                display:
+                  'inline-block',
+                padding:
+                  '14px 28px',
+                borderRadius: 8,
+                backgroundColor:
+                  '#C0392B',
+                color:
+                  '#FFFFFF',
+                fontSize: 14,
+                fontWeight: 800,
+                textDecoration:
+                  'none',
+                whiteSpace:
+                  'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              Découvrir le Module Incident →
             </a>
           </div>
         </div>
