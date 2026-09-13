@@ -11,6 +11,7 @@ import { StorageModule } from '../storage/storage.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { OccupancyModule } from '../occupancy/occupancy.module';
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CorrectiveActionsService } from '../occupancy/corrective-actions.servic
     StorageModule,
     BookingsModule,
     OccupancyModule,
+    NotificationsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'coro-secret',
       signOptions: { expiresIn: '7d' },

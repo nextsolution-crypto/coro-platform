@@ -4,6 +4,7 @@ import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
 import { EmailService } from './email.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ClientPortalService {
@@ -13,6 +14,7 @@ export class ClientPortalService {
     private storageService: StorageService,
     private emailService: EmailService,
     private bookingsService: BookingsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
@@ -403,10 +405,10 @@ export class ClientPortalService {
 
     if (!project) throw new Error('Projet introuvable');
 
-    // Remettre en REVIEW
+    // Remettre en édition active — le client a refusé, ce n'est pas une révision interne
     await this.prisma.project.update({
       where: { id: projectId },
-      data: { status: 'REVIEW' },
+      data: { status: 'IN_PROGRESS' },
     });
 
     // Sauvegarder le commentaire — utiliser l'userId du conseiller responsable du projet
@@ -433,6 +435,20 @@ export class ClientPortalService {
       }
     } catch (e) {
       console.error('Erreur email refus:', e);
+    }
+
+    // Notifier le conseiller in-app
+    try {
+      await this.notificationsService.create({
+        userId: project.userId,
+        organizationId: project.organizationId,
+        type: 'RETOUR_REVISION',
+        title: 'Refus client — révision requise',
+        message: `Le client a refusé le document "${project.name}" et demande des corrections.`,
+        projectId: project.id,
+      });
+    } catch (e) {
+      console.error('Erreur notification refus:', e);
     }
 
     return { success: true };
