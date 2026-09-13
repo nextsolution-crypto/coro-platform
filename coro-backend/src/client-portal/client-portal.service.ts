@@ -300,6 +300,7 @@ export class ClientPortalService {
       select: {
         id: true,
         organizationId: true,
+        documentType: true,
         officialPdfFr: true,
         officialPdfEn: true,
       },
@@ -344,8 +345,8 @@ export class ClientPortalService {
     const result = await this.exportService.generatePdf(
       projectId,
       {
-        selectedModules: [1, 2, 3, 4, 6, 7, 8],
-        moduleOrder: [1, 2, 3, 4, 6, 7, 8],
+        selectedModules: project.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8],
+        moduleOrder: project.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8],
         language: 'both',
         isPreview: false,
       },
