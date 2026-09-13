@@ -66,6 +66,7 @@ export default function PcaConfiguratorPage() {
   const [project, setProject] = useState<any>(null);
   const [prefill, setPrefill] = useState<any>(null);
   const [linkedPmus, setLinkedPmus] = useState<any[]>([]);
+  const [customRegReq, setCustomRegReq] = useState('');
 
   const [config, setConfig] = useState({
     // Section 1
@@ -255,9 +256,24 @@ export default function PcaConfiguratorPage() {
       setConfig(prev => ({ ...prev, riskScenarios: prev.riskScenarios.filter((r: any) => r.id !== scenarioId) }));
     } else {
       setConfig(prev => ({
-        ...prev,
-        riskScenarios: [...prev.riskScenarios, { id: scenarioId, probability: 'MOYENNE', impact: 'MOYEN' }],
-      }));
+  ...prev,
+  riskScenarios: [
+    ...prev.riskScenarios,
+    {
+      id: scenarioId,
+      probability: 'MOYENNE',
+      impact: 'MOYEN',
+      customScenario: '',
+      consequences: '',
+      affectedActivities: '',
+      dependencies: '',
+      existingControls: '',
+      riskOwner: '',
+      treatmentActions: '',
+      comments: '',
+    },
+  ],
+}));
     }
   };
 
@@ -307,13 +323,15 @@ export default function PcaConfiguratorPage() {
     setConfig(prev => ({
       ...prev,
       cellMembers: [...prev.cellMembers, {
-        id: Date.now().toString(),
-        role: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-      }],
+  id: Date.now().toString(),
+  role: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  responsibilities: '',
+  alternate: '',
+}],
     }));
   };
 
@@ -334,13 +352,39 @@ export default function PcaConfiguratorPage() {
   };
 
   const toggleRegReq = (req: string) => {
-    setConfig(prev => ({
-      ...prev,
-      regulatoryReqs: prev.regulatoryReqs.includes(req)
-        ? prev.regulatoryReqs.filter(r => r !== req)
-        : [...prev.regulatoryReqs, req],
-    }));
-  };
+  if (req === 'Autre') return;
+
+  setConfig(prev => ({
+    ...prev,
+    regulatoryReqs: prev.regulatoryReqs.includes(req)
+      ? prev.regulatoryReqs.filter(r => r !== req)
+      : [...prev.regulatoryReqs, req],
+  }));
+};
+
+const addCustomRegReq = () => {
+  const value = customRegReq.trim();
+
+  if (!value) return;
+
+  setConfig(prev => ({
+    ...prev,
+    regulatoryReqs: prev.regulatoryReqs.includes(value)
+      ? prev.regulatoryReqs
+      : [...prev.regulatoryReqs, value],
+  }));
+
+  setCustomRegReq('');
+};
+
+const removeRegReq = (req: string) => {
+  setConfig(prev => ({
+    ...prev,
+    regulatoryReqs: prev.regulatoryReqs.filter(
+      r => r !== req
+    ),
+  }));
+};
 
   const addITSystem = () => {
     setConfig(prev => ({
@@ -578,25 +622,98 @@ export default function PcaConfiguratorPage() {
 
             {/* Exigences réglementaires */}
             <div>
-              <Label>Exigences réglementaires ou contractuelles</Label>
-              <p className="text-xs mb-3" style={{ color: '#ADB5BD' }}>
-                Sélectionnez toutes les normes et certifications applicables à votre organisation
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {REGULATORY_REQS.map(req => (
-                  <button key={req} type="button"
-                    onClick={() => toggleRegReq(req)}
-                    className="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-                    style={{
-                      backgroundColor: config.regulatoryReqs.includes(req) ? '#EBF5FB' : '#F8F9FA',
-                      color: config.regulatoryReqs.includes(req) ? '#2980B9' : '#6C757D',
-                      border: `1px solid ${config.regulatoryReqs.includes(req) ? '#AED6F1' : '#DEE2E6'}`,
-                    }}>
-                    {config.regulatoryReqs.includes(req) ? '✓ ' : ''}{req}
-                  </button>
-                ))}
-              </div>
-            </div>
+  <Label>Exigences réglementaires, normatives ou contractuelles</Label>
+  <p className="text-xs mb-3" style={{ color: '#ADB5BD' }}>
+    Identifiez les normes, exigences légales, obligations sectorielles, certifications
+    ou engagements contractuels pouvant influencer la continuité des activités.
+  </p>
+
+  <div className="flex flex-wrap gap-2">
+    {REGULATORY_REQS.filter(req => req !== 'Autre').map(req => (
+      <button
+        key={req}
+        type="button"
+        onClick={() => toggleRegReq(req)}
+        className="px-3 py-1.5 rounded text-sm font-medium transition-colors"
+        style={{
+          backgroundColor: config.regulatoryReqs.includes(req) ? '#EBF5FB' : '#F8F9FA',
+          color: config.regulatoryReqs.includes(req) ? '#2980B9' : '#6C757D',
+          border: `1px solid ${
+            config.regulatoryReqs.includes(req) ? '#AED6F1' : '#DEE2E6'
+          }`,
+        }}
+      >
+        {config.regulatoryReqs.includes(req) ? '✓ ' : ''}
+        {req}
+      </button>
+    ))}
+  </div>
+
+  <div className="mt-4">
+    <Label>Autre exigence</Label>
+
+    <div className="flex flex-col sm:flex-row gap-2">
+      <input
+        type="text"
+        value={customRegReq}
+        onChange={e => setCustomRegReq(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addCustomRegReq();
+          }
+        }}
+        placeholder="Ex: Exigence client SLA, norme sectorielle, règlement interne..."
+        className="rounded px-4 py-2.5 text-sm focus:outline-none flex-1"
+        style={inputStyle}
+        onFocus={e => e.target.style.borderColor = '#C0392B'}
+        onBlur={e => e.target.style.borderColor = '#CED4DA'}
+      />
+
+      <button
+        type="button"
+        onClick={addCustomRegReq}
+        className="px-4 py-2.5 rounded text-sm font-medium"
+        style={{
+          border: '1px solid #AED6F1',
+          color: '#2980B9',
+          backgroundColor: '#FFFFFF',
+        }}
+      >
+        + Ajouter
+      </button>
+    </div>
+  </div>
+
+  {config.regulatoryReqs.filter(req => !REGULATORY_REQS.includes(req)).length > 0 && (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {config.regulatoryReqs
+        .filter(req => !REGULATORY_REQS.includes(req))
+        .map(req => (
+          <div
+            key={req}
+            className="flex items-center gap-2 px-3 py-1.5 rounded text-sm"
+            style={{
+              backgroundColor: '#EBF5FB',
+              color: '#2980B9',
+              border: '1px solid #AED6F1',
+            }}
+          >
+            <span>{req}</span>
+
+            <button
+              type="button"
+              onClick={() => removeRegReq(req)}
+              style={{ color: '#6C757D' }}
+              title="Supprimer"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+    </div>
+  )}
+</div>
 
             {/* Infos pré-remplies */}
             {prefill && (
@@ -699,10 +816,10 @@ export default function PcaConfiguratorPage() {
                 <div className="space-y-3">
                   {config.cellMembers.map((member: any) => (
                     <div key={member.id} className="p-4 rounded" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-2">
                         <div>
                           <Label>Rôle</Label>
-                          <input type="text" value={member.role}
+                          <input type="text" value={member.role || ''}
                             onChange={e => updateCellMember(member.id, 'role', e.target.value)}
                             placeholder="Ex: Responsable TI"
                             className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
@@ -711,7 +828,7 @@ export default function PcaConfiguratorPage() {
                         </div>
                         <div>
                           <Label>Prénom</Label>
-                          <input type="text" value={member.firstName}
+                          <input type="text" value={member.firstName || ''}
                             onChange={e => updateCellMember(member.id, 'firstName', e.target.value)}
                             placeholder="Prénom"
                             className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
@@ -720,7 +837,7 @@ export default function PcaConfiguratorPage() {
                         </div>
                         <div>
                           <Label>Nom</Label>
-                          <input type="text" value={member.lastName}
+                          <input type="text" value={member.lastName || ''}
                             onChange={e => updateCellMember(member.id, 'lastName', e.target.value)}
                             placeholder="Nom"
                             className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
@@ -728,23 +845,80 @@ export default function PcaConfiguratorPage() {
                             onBlur={e => e.target.style.borderColor = '#CED4DA'} />
                         </div>
                         <div>
-                          <Label>Courriel</Label>
-                          <input type="email" value={member.email}
-                            onChange={e => updateCellMember(member.id, 'email', e.target.value)}
-                            placeholder="courriel@entreprise.ca"
-                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
-                            onFocus={e => e.target.style.borderColor = '#C0392B'}
-                            onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                        </div>
-                        <div>
-                          <Label>Téléphone</Label>
-                          <input type="text" value={member.phone}
-                            onChange={e => updateCellMember(member.id, 'phone', formatPhone(e.target.value))}
-                            placeholder="(514) 555-0000"
-                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
-                            onFocus={e => e.target.style.borderColor = '#C0392B'}
-                            onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                        </div>
+  <Label>Courriel</Label>
+  <input
+    type="email"
+    value={member.email || ''}
+    onChange={e =>
+      updateCellMember(member.id, 'email', e.target.value)
+    }
+    placeholder="courriel@entreprise.ca"
+    className="rounded px-3 py-2 text-sm focus:outline-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div>
+  <Label>Téléphone</Label>
+  <input
+    type="text"
+    value={member.phone || ''}
+    onChange={e =>
+      updateCellMember(
+        member.id,
+        'phone',
+        formatPhone(e.target.value)
+      )
+    }
+    placeholder="(514) 555-0000"
+    className="rounded px-3 py-2 text-sm focus:outline-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div>
+  <Label>Substitut / relève</Label>
+  <input
+    type="text"
+    value={member.alternate || ''}
+    onChange={e =>
+      updateCellMember(
+        member.id,
+        'alternate',
+        e.target.value
+      )
+    }
+    placeholder="Ex: Jean Côté — Directeur adjoint"
+    className="rounded px-3 py-2 text-sm focus:outline-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div className="col-span-2 sm:col-span-3">
+  <Label>Responsabilités en situation de continuité</Label>
+  <textarea
+    value={member.responsibilities || ''}
+    onChange={e =>
+      updateCellMember(
+        member.id,
+        'responsibilities',
+        e.target.value
+      )
+    }
+    rows={2}
+    placeholder="Ex: Évaluer l'état des systèmes, coordonner la relève TI, communiquer l'heure estimée de rétablissement à la cellule..."
+    className="rounded px-3 py-2 text-sm focus:outline-none resize-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
                       </div>
                       <button onClick={() => removeCellMember(member.id)}
                         className="text-xs"
@@ -791,8 +965,9 @@ export default function PcaConfiguratorPage() {
                 Appréciation du risque (ARA)
               </h3>
               <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-                Identifiez les scénarios d'interruption applicables à votre organisation et évaluez leur probabilité et impact.
-              </p>
+  Identifiez les scénarios susceptibles d'interrompre les activités, leurs conséquences,
+  les activités et dépendances exposées ainsi que les mesures de contrôle déjà en place.
+</p>
             </div>
 
             <div className="space-y-3">
@@ -818,8 +993,27 @@ export default function PcaConfiguratorPage() {
                     </div>
 
                     {isSelected && (
-                      <div className="ml-8 space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
+  <div className="ml-8 space-y-3">
+
+    {scenario.id === 'autre' && (
+      <div>
+        <Label>Description du scénario</Label>
+        <input
+          type="text"
+          value={risk.customScenario || ''}
+          onChange={e =>
+            updateRisk(scenario.id, 'customScenario', e.target.value)
+          }
+          placeholder="Ex: Indisponibilité prolongée du centre de distribution principal"
+          className="rounded px-3 py-2 text-sm focus:outline-none"
+          style={inputStyle}
+          onFocus={e => e.target.style.borderColor = '#C0392B'}
+          onBlur={e => e.target.style.borderColor = '#CED4DA'}
+        />
+      </div>
+    )}
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <Label>Probabilité</Label>
                             <select value={risk.probability}
@@ -855,29 +1049,124 @@ export default function PcaConfiguratorPage() {
                               style={{ backgroundColor: bg, border: `1px solid ${border}`, color }}>
                               Niveau de risque : {score} — {label}
                               <span className="font-normal ml-1" style={{ color: '#6C757D' }}>
-                                (Impact {p} × Probabilité {i} = {score})
+                                (Probabilité {p} × Impact {i} = {score})
                               </span>
                             </div>
                           );
                         })()}
                         <div>
-                          <Label>Mesures de contrôle existantes</Label>
-                          <input type="text" value={risk.existingControls || ''}
-                            onChange={e => updateRisk(scenario.id, 'existingControls', e.target.value)}
-                            placeholder="Ex: Détection incendie, assurance, génératrice, MFA, sauvegardes EDR..."
-                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
-                            onFocus={e => e.target.style.borderColor = '#C0392B'}
-                            onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                        </div>
-                        <div>
-                          <Label>Commentaires</Label>
-                          <input type="text" value={risk.comments || ''}
-                            onChange={e => updateRisk(scenario.id, 'comments', e.target.value)}
-                            placeholder="Ex: Dépendance forte au site principal, ERP indispensable à plusieurs activités..."
-                            className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}
-                            onFocus={e => e.target.style.borderColor = '#C0392B'}
-                            onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                        </div>
+  <Label>Conséquences possibles sur l'organisation</Label>
+  <textarea
+    value={risk.consequences || ''}
+    onChange={e =>
+      updateRisk(scenario.id, 'consequences', e.target.value)
+    }
+    rows={2}
+    placeholder="Ex: Perte d'accès au site, arrêt des opérations, perte de revenus, incapacité à servir certains clients..."
+    className="rounded px-3 py-2 text-sm focus:outline-none resize-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div>
+  <Label>Activités ou services susceptibles d'être touchés</Label>
+  <textarea
+    value={risk.affectedActivities || ''}
+    onChange={e =>
+      updateRisk(scenario.id, 'affectedActivities', e.target.value)
+    }
+    rows={2}
+    placeholder="Ex: Réception des commandes, expédition, service à la clientèle, facturation..."
+    className="rounded px-3 py-2 text-sm focus:outline-none resize-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div>
+  <Label>Dépendances ou concentrations de risque</Label>
+  <textarea
+    value={risk.dependencies || ''}
+    onChange={e =>
+      updateRisk(scenario.id, 'dependencies', e.target.value)
+    }
+    rows={2}
+    placeholder="Ex: Site unique, ERP central, fournisseur unique, personnel spécialisé, lien Internet principal..."
+    className="rounded px-3 py-2 text-sm focus:outline-none resize-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div>
+  <Label>Mesures de contrôle existantes</Label>
+  <textarea
+    value={risk.existingControls || ''}
+    onChange={e =>
+      updateRisk(scenario.id, 'existingControls', e.target.value)
+    }
+    rows={2}
+    placeholder="Ex: Détection incendie, génératrice, fournisseur secondaire, MFA, sauvegardes hors site..."
+    className="rounded px-3 py-2 text-sm focus:outline-none resize-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div>
+    <Label>Responsable du suivi du risque</Label>
+    <input
+      type="text"
+      value={risk.riskOwner || ''}
+      onChange={e =>
+        updateRisk(scenario.id, 'riskOwner', e.target.value)
+      }
+      placeholder="Ex: Directeur TI, Directrice des opérations..."
+      className="rounded px-3 py-2 text-sm focus:outline-none"
+      style={inputStyle}
+      onFocus={e => e.target.style.borderColor = '#C0392B'}
+      onBlur={e => e.target.style.borderColor = '#CED4DA'}
+    />
+  </div>
+
+  <div>
+    <Label>Mesures additionnelles à mettre en œuvre</Label>
+    <input
+      type="text"
+      value={risk.treatmentActions || ''}
+      onChange={e =>
+        updateRisk(scenario.id, 'treatmentActions', e.target.value)
+      }
+      placeholder="Ex: Contractualiser un fournisseur secondaire"
+      className="rounded px-3 py-2 text-sm focus:outline-none"
+      style={inputStyle}
+      onFocus={e => e.target.style.borderColor = '#C0392B'}
+      onBlur={e => e.target.style.borderColor = '#CED4DA'}
+    />
+  </div>
+</div>
+
+<div>
+  <Label>Commentaires complémentaires</Label>
+  <textarea
+    value={risk.comments || ''}
+    onChange={e =>
+      updateRisk(scenario.id, 'comments', e.target.value)
+    }
+    rows={2}
+    placeholder="Observations, hypothèses, contraintes ou informations complémentaires..."
+    className="rounded px-3 py-2 text-sm focus:outline-none resize-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
                       </div>
                     )}
                   </div>
