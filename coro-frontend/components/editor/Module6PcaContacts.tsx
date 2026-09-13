@@ -71,19 +71,12 @@ export default function Module6PcaContacts({ projectId, language = 'fr' }: Props
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string>('');
 
   const categories = isFr ? DEFAULT_CATEGORIES_FR : DEFAULT_CATEGORIES_EN;
 
   useEffect(() => {
     loadContacts();
   }, [projectId]);
-
-  useEffect(() => {
-    if (contacts.length > 0 && !activeCategory) {
-      setActiveCategory(contacts[0].category || categories[0]);
-    }
-  }, [contacts]);
 
   const loadContacts = async () => {
     try {
@@ -177,133 +170,120 @@ export default function Module6PcaContacts({ projectId, language = 'fr' }: Props
         </button>
       </div>
 
-      {/* Onglets catégories */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {categories.map(cat => {
-          const count = (contactsByCategory[cat] || []).length;
-          return (
-            <button key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className="flex-shrink-0 px-3 py-1.5 rounded text-xs font-medium transition-colors"
-              style={{
-                backgroundColor: activeCategory === cat ? '#2C3E50' : '#F8F9FA',
-                color: activeCategory === cat ? '#FFFFFF' : '#6C757D',
-                border: `1px solid ${activeCategory === cat ? '#2C3E50' : '#E9ECEF'}`,
-              }}>
-              {cat.length > 25 ? cat.substring(0, 25) + '...' : cat}
-              {count > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
-                  style={{
-                    backgroundColor: activeCategory === cat ? 'rgba(255,255,255,0.2)' : '#E9ECEF',
-                    color: activeCategory === cat ? '#FFFFFF' : '#6C757D',
-                  }}>
-                  {count}
+      {/* Catégories empilées */}
+      {categories.map(cat => {
+        const catContacts = contactsByCategory[cat] || [];
+        return (
+          <div key={cat} className="space-y-2">
+            <h4 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+              {cat}
+              {catContacts.length > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full text-xs font-medium"
+                  style={{ backgroundColor: '#E9ECEF', color: '#6C757D' }}>
+                  {catContacts.length}
                 </span>
               )}
-            </button>
-          );
-        })}
-      </div>
+            </h4>
 
-      {/* Tableau de contacts */}
-      {activeCategory && (
-        <div className="rounded-md overflow-hidden" style={{ border: '1px solid #E9ECEF' }}>
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr style={{ backgroundColor: '#F8F9FA' }}>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[30%]"
-                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
-                  {isFr ? 'Rôle / Fonction' : 'Role / Function'}
-                </th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[22%]"
-                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
-                  {isFr ? 'Nom' : 'Name'}
-                </th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[20%]"
-                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
-                  {isFr ? 'Téléphone' : 'Phone'}
-                </th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[22%]"
-                  style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
-                  {isFr ? 'Courriel' : 'Email'}
-                </th>
-                <th className="px-1 py-2.5 w-[6%]"
-                  style={{ borderBottom: '1px solid #E9ECEF' }} />
-              </tr>
-            </thead>
-            <tbody>
-              {(contactsByCategory[activeCategory] || []).length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm"
-                    style={{ color: '#ADB5BD' }}>
-                    {isFr ? 'Aucun contact — Cliquez sur + Ajouter pour commencer' : 'No contacts — Click + Add to start'}
-                  </td>
-                </tr>
-              ) : (
-                (contactsByCategory[activeCategory] || []).map((contact, idx) => (
-                  <tr key={contact.id}
-                    style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA'}>
-                    <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
-                      <input type="text" value={contact.role}
-                        onChange={e => updateContact(contact.id, 'role', e.target.value)}
-                        placeholder={isFr ? 'Ex: Coordonnateur PCA' : 'Ex: BCP Coordinator'}
-                        className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
-                        style={{ color: '#2C3E50' }} />
-                    </td>
-                    <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
-                      <input type="text" value={contact.name}
-                        onChange={e => updateContact(contact.id, 'name', e.target.value)}
-                        placeholder={isFr ? 'Nom complet' : 'Full name'}
-                        className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
-                        style={{ color: '#2C3E50' }} />
-                    </td>
-                    <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
-                      <input type="tel" value={contact.phone}
-                        onChange={e => updateContact(contact.id, 'phone', formatPhone(e.target.value))}
-                        placeholder="(514) 555-1234"
-                        className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
-                        style={{ color: '#2C3E50' }} />
-                    </td>
-                    <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
-                      <input type="email" value={contact.email || ''}
-                        onChange={e => updateContact(contact.id, 'email', e.target.value)}
-                        placeholder={isFr ? 'courriel@exemple.ca' : 'email@example.ca'}
-                        className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
-                        style={{ color: '#2C3E50' }} />
-                    </td>
-                    <td className="px-1 py-1 text-center" style={{ borderBottom: '1px solid #F1F3F5' }}>
-                      <button onClick={() => deleteContact(contact.id)}
-                        className="p-1 rounded transition-colors"
-                        style={{ color: '#DEE2E6' }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
-                        onMouseLeave={e => e.currentTarget.style.color = '#DEE2E6'}>
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
+            <div className="rounded-md overflow-hidden" style={{ border: '1px solid #E9ECEF' }}>
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr style={{ backgroundColor: '#F8F9FA' }}>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[30%]"
+                      style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
+                      {isFr ? 'Rôle / Fonction' : 'Role / Function'}
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[22%]"
+                      style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
+                      {isFr ? 'Nom' : 'Name'}
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[20%]"
+                      style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
+                      {isFr ? 'Téléphone' : 'Phone'}
+                    </th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide w-[22%]"
+                      style={{ color: '#6C757D', borderBottom: '1px solid #E9ECEF' }}>
+                      {isFr ? 'Courriel' : 'Email'}
+                    </th>
+                    <th className="px-1 py-2.5 w-[6%]"
+                      style={{ borderBottom: '1px solid #E9ECEF' }} />
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {catContacts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-sm"
+                        style={{ color: '#ADB5BD' }}>
+                        {isFr ? 'Aucun contact — Cliquez sur + Ajouter pour commencer' : 'No contacts — Click + Add to start'}
+                      </td>
+                    </tr>
+                  ) : (
+                    catContacts.map((contact, idx) => (
+                      <tr key={contact.id}
+                        style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA'}>
+                        <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
+                          <input type="text" value={contact.role}
+                            onChange={e => updateContact(contact.id, 'role', e.target.value)}
+                            placeholder={isFr ? 'Ex: Coordonnateur PCA' : 'Ex: BCP Coordinator'}
+                            className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
+                            style={{ color: '#2C3E50' }} />
+                        </td>
+                        <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
+                          <input type="text" value={contact.name}
+                            onChange={e => updateContact(contact.id, 'name', e.target.value)}
+                            placeholder={isFr ? 'Nom complet' : 'Full name'}
+                            className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
+                            style={{ color: '#2C3E50' }} />
+                        </td>
+                        <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
+                          <input type="tel" value={contact.phone}
+                            onChange={e => updateContact(contact.id, 'phone', formatPhone(e.target.value))}
+                            placeholder="(514) 555-1234"
+                            className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
+                            style={{ color: '#2C3E50' }} />
+                        </td>
+                        <td className="px-1 py-1" style={{ borderBottom: '1px solid #F1F3F5' }}>
+                          <input type="email" value={contact.email || ''}
+                            onChange={e => updateContact(contact.id, 'email', e.target.value)}
+                            placeholder={isFr ? 'courriel@exemple.ca' : 'email@example.ca'}
+                            className="w-full px-2 py-1 text-sm bg-transparent border-0 outline-none focus:bg-blue-50 rounded"
+                            style={{ color: '#2C3E50' }} />
+                        </td>
+                        <td className="px-1 py-1 text-center" style={{ borderBottom: '1px solid #F1F3F5' }}>
+                          <button onClick={() => deleteContact(contact.id)}
+                            className="p-1 rounded transition-colors"
+                            style={{ color: '#DEE2E6' }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#C0392B'}
+                            onMouseLeave={e => e.currentTarget.style.color = '#DEE2E6'}>
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
 
-          {/* Pied de tableau — Ajouter */}
-          <div className="px-4 py-2" style={{ borderTop: '1px solid #F1F3F5', backgroundColor: '#FAFAFA' }}>
-            <button
-              onClick={() => addContact(
-                isFr ? activeCategory : DEFAULT_CATEGORIES_FR[DEFAULT_CATEGORIES_EN.indexOf(activeCategory)] || activeCategory
-              )}
-              className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-              style={{ color: '#2980B9' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#1A5276'}
-              onMouseLeave={e => e.currentTarget.style.color = '#2980B9'}>
-              <Plus size={14} />
-              {isFr ? 'Ajouter un contact' : 'Add a contact'}
-            </button>
+              {/* Pied de tableau — Ajouter */}
+              <div className="px-4 py-2" style={{ borderTop: '1px solid #F1F3F5', backgroundColor: '#FAFAFA' }}>
+                <button
+                  onClick={() => addContact(
+                    isFr ? cat : DEFAULT_CATEGORIES_FR[DEFAULT_CATEGORIES_EN.indexOf(cat)] || cat
+                  )}
+                  className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+                  style={{ color: '#2980B9' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#1A5276'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#2980B9'}>
+                  <Plus size={14} />
+                  {isFr ? 'Ajouter un contact' : 'Add a contact'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
 
       {/* Note */}
       <div className="p-3 rounded" style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>

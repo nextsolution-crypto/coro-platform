@@ -423,7 +423,6 @@ export default function EditorPage() {
       if (document.project.documentType === 'PCA') {
         return (
           <div className="space-y-6">
-            <Module6PcaContacts projectId={projectId} language={language} />
             {currentModule.sections.filter((s: any) => s.id !== 'm6_s5').map((section: any) => (
               <div key={section.id} className="rounded-md p-6"
                 style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
@@ -440,6 +439,7 @@ export default function EditorPage() {
                 />
               </div>
             ))}
+            <Module6PcaContacts projectId={projectId} language={language} />
           </div>
         );
       }
