@@ -76,13 +76,22 @@ export class Module4Service {
     }
 
     const existingContent = (document.content as any) || {};
+
+    const updatedModule4 = {
+      ...existingContent.module4,
+      ...(dto.customProcedureIds !== undefined && {
+        customProcedureIds: dto.customProcedureIds,
+        procedureOverrides: dto.procedureOverrides || {},
+      }),
+      ...(dto.module4?.pcaContacts !== undefined && {
+        pcaContacts: dto.module4.pcaContacts,
+      }),
+      updatedAt: new Date().toISOString(),
+    };
+
     const updatedContent = {
       ...existingContent,
-      module4: {
-        customProcedureIds: dto.customProcedureIds    || [],
-        procedureOverrides: dto.procedureOverrides    || {},
-        updatedAt:          new Date().toISOString(),
-      },
+      module4: updatedModule4,
     };
 
     await this.prisma.document.update({
