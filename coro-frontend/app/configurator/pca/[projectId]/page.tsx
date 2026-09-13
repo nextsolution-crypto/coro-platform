@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
@@ -67,6 +67,9 @@ export default function PcaConfiguratorPage() {
   const [prefill, setPrefill] = useState<any>(null);
   const [linkedPmus, setLinkedPmus] = useState<any[]>([]);
   const [customRegReq, setCustomRegReq] = useState('');
+  const hasLoadedRef = useRef(false);
+  const lastSavedConfigRef = useRef('');
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [config, setConfig] = useState({
     // Section 1
@@ -166,45 +169,59 @@ export default function PcaConfiguratorPage() {
       if (configRes.data.config) {
         // Charger la config existante
         const c = configRes.data.config;
-        setConfig(prev => ({
-  ...prev,
-  ...c,
-  effectiveDate: c.effectiveDate
-    ? new Date(c.effectiveDate).toISOString().split('T')[0]
-    : '',
-  insuranceLastReview: c.insuranceLastReview
-    ? new Date(c.insuranceLastReview).toISOString().split('T')[0]
-    : '',
-  nextReviewDate: c.nextReviewDate
-    ? new Date(c.nextReviewDate).toISOString().split('T')[0]
-    : '',
+        setConfig(prev => {
+  const loadedConfig = {
+    ...prev,
+    ...c,
+    effectiveDate: c.effectiveDate
+      ? new Date(c.effectiveDate).toISOString().split('T')[0]
+      : '',
+    insuranceLastReview: c.insuranceLastReview
+      ? new Date(c.insuranceLastReview).toISOString().split('T')[0]
+      : '',
+    nextReviewDate: c.nextReviewDate
+      ? new Date(c.nextReviewDate).toISOString().split('T')[0]
+      : '',
 
-  // Tableaux — toujours normalisés pour éviter null / données invalides
-  cellMembers: Array.isArray(c.cellMembers) ? c.cellMembers : [],
-  riskScenarios: Array.isArray(c.riskScenarios) ? c.riskScenarios : [],
-  criticalServices: Array.isArray(c.criticalServices) ? c.criticalServices : [],
-  criticalITSystems: Array.isArray(c.criticalITSystems) ? c.criticalITSystems : [],
-  criticalSuppliers: Array.isArray(c.criticalSuppliers) ? c.criticalSuppliers : [],
-  resumptionSequence: Array.isArray(c.resumptionSequence) ? c.resumptionSequence : [],
-  regulatoryReqs: Array.isArray(c.regulatoryReqs) ? c.regulatoryReqs : [],
-  authoritiesToNotify: Array.isArray(c.authoritiesToNotify) ? c.authoritiesToNotify : [],
-}));
+    // Tableaux — toujours normalisés pour éviter null / données invalides
+    cellMembers: Array.isArray(c.cellMembers) ? c.cellMembers : [],
+    riskScenarios: Array.isArray(c.riskScenarios) ? c.riskScenarios : [],
+    criticalServices: Array.isArray(c.criticalServices) ? c.criticalServices : [],
+    criticalITSystems: Array.isArray(c.criticalITSystems) ? c.criticalITSystems : [],
+    criticalSuppliers: Array.isArray(c.criticalSuppliers) ? c.criticalSuppliers : [],
+    resumptionSequence: Array.isArray(c.resumptionSequence) ? c.resumptionSequence : [],
+    regulatoryReqs: Array.isArray(c.regulatoryReqs) ? c.regulatoryReqs : [],
+    authoritiesToNotify: Array.isArray(c.authoritiesToNotify) ? c.authoritiesToNotify : [],
+  };
+
+  lastSavedConfigRef.current = JSON.stringify(loadedConfig);
+  hasLoadedRef.current = true;
+
+  return loadedConfig;
+});
       } else {
         // Pré-remplissage depuis les fiches existantes
         const p = configRes.data.prefill;
-        setConfig(prev => ({
-          ...prev,
-          planName: `PCA — ${configRes.data.project.client?.name || ''} ${configRes.data.project.year}`,
-          sector: p.sector || p.clientSector || '',
-          employeeCount: p.employeeCount || p.clientEmployeeCount || '',
-          operatingHours: p.operatingHours || '',
-          regulatoryReqs: p.regulatoryReqs || [],
-          coordinatorFirstName: p.coordinatorFirstName || '',
-          coordinatorLastName: p.coordinatorLastName || '',
-          coordinatorTitle: p.coordinatorTitle || '',
-          coordinatorEmail: p.coordinatorEmail || '',
-          coordinatorPhone: p.coordinatorPhone || '',
-        }));
+        setConfig(prev => {
+  const initialConfig = {
+    ...prev,
+    planName: `PCA — ${configRes.data.project.client?.name || ''} ${configRes.data.project.year}`,
+    sector: p.sector || p.clientSector || '',
+    employeeCount: p.employeeCount || p.clientEmployeeCount || '',
+    operatingHours: p.operatingHours || '',
+    regulatoryReqs: Array.isArray(p.regulatoryReqs) ? p.regulatoryReqs : [],
+    coordinatorFirstName: p.coordinatorFirstName || '',
+    coordinatorLastName: p.coordinatorLastName || '',
+    coordinatorTitle: p.coordinatorTitle || '',
+    coordinatorEmail: p.coordinatorEmail || '',
+    coordinatorPhone: p.coordinatorPhone || '',
+  };
+
+  lastSavedConfigRef.current = JSON.stringify(initialConfig);
+  hasLoadedRef.current = true;
+
+  return initialConfig;
+});
       }
     } catch (err) {
       console.error(err);
@@ -214,6 +231,11 @@ export default function PcaConfiguratorPage() {
   };
 
   const handleSave = async () => {
+  if (autosaveTimerRef.current) {
+    clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = null;
+  }
+
   setSaving(true);
 
   try {
@@ -238,7 +260,9 @@ export default function PcaConfiguratorPage() {
 
     await api.post(`/pca/configurator/${projectId}`, payload);
 
-    setSaved(true);
+lastSavedConfigRef.current = JSON.stringify(config);
+
+setSaved(true);
     setTimeout(() => setSaved(false), 3000);
 
     return true;
@@ -248,6 +272,72 @@ export default function PcaConfiguratorPage() {
   } finally {
     setSaving(false);
   }
+};
+
+useEffect(() => {
+  if (!hasLoadedRef.current || loading) return;
+
+  const serializedConfig = JSON.stringify(config);
+
+  if (serializedConfig === lastSavedConfigRef.current) {
+    return;
+  }
+
+  if (autosaveTimerRef.current) {
+    clearTimeout(autosaveTimerRef.current);
+  }
+
+  autosaveTimerRef.current = setTimeout(async () => {
+    try {
+      await handleSave();
+    } catch (err) {
+      console.error('Erreur autosauvegarde PCA:', err);
+    }
+  }, 1500);
+
+  return () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+  };
+}, [config, loading]);
+
+const changeSection = async (nextSection: number) => {
+  if (nextSection < 1 || nextSection > 8) return;
+
+  const serializedConfig = JSON.stringify(config);
+
+  if (
+    hasLoadedRef.current &&
+    serializedConfig !== lastSavedConfigRef.current
+  ) {
+    try {
+      await handleSave();
+    } catch (err) {
+      console.error('Erreur sauvegarde avant changement de section:', err);
+      return;
+    }
+  }
+
+  setActiveSection(nextSection);
+};
+
+const handleBackToProject = async () => {
+  const serializedConfig = JSON.stringify(config);
+
+  if (
+    hasLoadedRef.current &&
+    serializedConfig !== lastSavedConfigRef.current
+  ) {
+    try {
+      await handleSave();
+    } catch (err) {
+      console.error('Erreur sauvegarde avant retour au projet:', err);
+      return;
+    }
+  }
+
+  router.push(`/projects/${projectId}`);
 };
 
   const toggleRisk = (scenarioId: string) => {
@@ -533,7 +623,7 @@ const removeRegReq = (req: string) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <button onClick={() => router.push(`/projects/${projectId}`)}
+          <button onClick={handleBackToProject}
             className="flex items-center gap-2 text-sm mb-3 transition-colors"
             style={{ color: '#6C757D' }}
             onMouseEnter={e => e.currentTarget.style.color = '#2C3E50'}
@@ -562,7 +652,7 @@ const removeRegReq = (req: string) => {
       {/* Navigation sections */}
       <div className="flex gap-1 mb-8 overflow-x-auto pb-1">
         {SECTIONS.map(s => (
-          <button key={s.id} onClick={() => setActiveSection(s.id)}
+          <button key={s.id} onClick={() => changeSection(s.id)}
             className="flex-shrink-0 px-4 py-2 rounded text-sm font-medium transition-colors"
             style={{
               backgroundColor: activeSection === s.id ? '#C0392B' : '#FFFFFF',
@@ -2283,7 +2373,7 @@ const removeRegReq = (req: string) => {
       {/* Navigation entre sections */}
       <div className="flex justify-between mt-6">
         <button
-          onClick={() => setActiveSection(prev => Math.max(1, prev - 1))}
+          onClick={() => changeSection(Math.max(1, activeSection - 1))}
           disabled={activeSection === 1}
           className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded disabled:opacity-40"
           style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
@@ -2294,7 +2384,7 @@ const removeRegReq = (req: string) => {
 
         {activeSection < 8 ? (
           <button
-            onClick={() => setActiveSection(prev => Math.min(8, prev + 1))}
+            onClick={() => changeSection(Math.min(8, activeSection + 1))}
             className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded text-white"
             style={{ backgroundColor: '#C0392B' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}

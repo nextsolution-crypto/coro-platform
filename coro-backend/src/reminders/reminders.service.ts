@@ -115,6 +115,20 @@ export class RemindersService {
     } catch (err) { this.logger.error('[ResilienceSnapshot] Erreur CRON:', err); }
   }
 
+  // ── Fermeture automatique des check-ins oubliés — toutes les heures ───────
+  @Cron('0 * * * *') // Toutes les heures
+  async closeStaleCheckins() {
+    this.logger.log('Fermeture des check-ins oubliés...');
+    // Ferme tous les records IN dont le punch remonte à avant hier 6h
+    // Couvre les shifts de nuit (18h-6h) sans les couper prématurément
+    const cutoff = new Date(Date.now() - 16 * 60 * 60 * 1000); // 16h
+    const result = await this.prisma.occupancyRecord.updateMany({
+      where: { status: 'IN', checkedInAt: { lt: cutoff } },
+      data: { status: 'OUT', checkedOutAt: new Date() },
+    });
+    this.logger.log(`${result.count} check-ins fermés automatiquement`);
+  }
+
   // ── Purge automatique registre Sentinelle ─────────────────────────────────
   @Cron('0 2 * * *') // Chaque nuit à 2h
   async purgeOldOccupancyRecords() {
