@@ -173,21 +173,17 @@ export class PcaBuilder extends BaseDocumentBuilder {
           <div class="table-wrapper">
             <table style="width: 100%; border-collapse: collapse; border: 1px solid #E9ECEF;">
               <thead>
-                <tr style="background: #F8F9FA;">
-                  <th style="padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 700;
-                    color: #6C757D; text-transform: uppercase; letter-spacing: 0.05em; width: 30%;">
+                <tr>
+                  <th style="width: 30%;">
                     ${this.isFr ? 'Rôle / Fonction' : 'Role / Function'}
                   </th>
-                  <th style="padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 700;
-                    color: #6C757D; text-transform: uppercase; letter-spacing: 0.05em; width: 22%;">
+                  <th style="width: 22%;">
                     ${this.isFr ? 'Nom' : 'Name'}
                   </th>
-                  <th style="padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 700;
-                    color: #6C757D; text-transform: uppercase; letter-spacing: 0.05em; width: 22%;">
+                  <th style="width: 22%;">
                     ${this.isFr ? 'Téléphone' : 'Phone'}
                   </th>
-                  <th style="padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 700;
-                    color: #6C757D; text-transform: uppercase; letter-spacing: 0.05em; width: 26%;">
+                  <th style="width: 26%;">
                     ${this.isFr ? 'Courriel' : 'Email'}
                   </th>
                 </tr>
