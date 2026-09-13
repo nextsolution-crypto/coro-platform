@@ -662,6 +662,12 @@ export function renderFormattedText(content: string): string {
     line.trim().slice(1, -1).split('|').map(cell => cell.trim());
 
   for (const line of lines) {
+    // Ignorer les lignes ne contenant qu'un caractère de ponctuation
+    const trimmed = line.trim();
+    if (/^[,:;.!?—\-–]+$/.test(trimmed)) continue;
+    // Ignorer les lignes vides ou quasi-vides
+    if (trimmed.length <= 1) continue;
+
     if (isTableRow(line)) {
       if (isTableSeparator(line)) continue; // ligne |---|---|---| ignorée
 
@@ -797,6 +803,30 @@ function colorizeCell(text: string, header: string, colIndex: number): string {
   // ── RTO courts = priorité élevée ──
   if (h.includes('rto') && (t === '1h' || t === '1 heure' || t === '4h' || t === '4 heures')) {
     return `<span style="font-weight:700;color:#C0392B;">${t}</span>`;
+  }
+
+  // ── Statuts fournisseurs PCA ──
+  if (t === 'PRÊT' || t === 'Prêt' || t === 'READY') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#D5F5E3;color:#1E8449;font-weight:700;font-size:10px;">${t}</span>`;
+  }
+  if (t === 'PARTIEL' || t === 'Partiel' || t === 'PARTIAL') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#FEF9E7;color:#B7770D;font-weight:700;font-size:10px;">${t}</span>`;
+  }
+  if (t === 'À CONFIRMER' || t === 'À confirmer' || t === 'REDUCED') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#FDEDEC;color:#C0392B;font-weight:700;font-size:10px;">${t}</span>`;
+  }
+  // ── Priorités PCA ──
+  if (t === 'CRITIQUE' || t === 'Critique' || t === 'CRITICAL') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#FDEDEC;color:#C0392B;font-weight:700;font-size:10px;">🔴 ${t}</span>`;
+  }
+  if (t === 'ÉLEVÉ' || t === 'Élevé' || t === 'HIGH') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#FEF9E7;color:#B7770D;font-weight:700;font-size:10px;">🟠 ${t}</span>`;
+  }
+  if (t === 'MODÉRÉ' || t === 'Modéré' || t === 'MEDIUM') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#EBF5FB;color:#1A5276;font-weight:700;font-size:10px;">🟡 ${t}</span>`;
+  }
+  if (t === 'FAIBLE' || t === 'Faible' || t === 'LOW') {
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:#EAFAF1;color:#1E8449;font-weight:700;font-size:10px;">🟢 ${t}</span>`;
   }
 
   return text;

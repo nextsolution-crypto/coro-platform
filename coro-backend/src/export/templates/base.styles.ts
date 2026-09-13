@@ -145,29 +145,40 @@ export const BASE_STYLES = `
     width: 100%;
     border-collapse: collapse;
     margin: 16px 0;
-    font-size: 10pt;
+    font-size: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   }
 
   th {
-    background-color: #F8F9FA;
-    color: #6C757D;
-    text-align: left;
-    font-size: 9pt;
-    font-weight: 600;
+    background-color: #C0392B;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    padding: 8px 10px;
-    border: 1px solid #DEE2E6;
+    letter-spacing: 0.05em;
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid #A93226;
   }
 
   td {
     padding: 6px 10px;
-    border: 1px solid #DEE2E6;
+    border: 1px solid #E9ECEF;
     color: #495057;
   }
 
   tr:nth-child(even) td {
     background-color: #F8F9FA;
+  }
+
+  /* ── Wrapper tableau (radius + ombre) ── */
+  .table-wrapper {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin: 16px 0;
   }
 
   /* ── Module 4 — Procédures ── */
