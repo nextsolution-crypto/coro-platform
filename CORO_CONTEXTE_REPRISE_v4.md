@@ -208,7 +208,7 @@ docker compose exec backend node dist/src/seed-task-lists.js
 ## CORO Sentinelle — Registre d'occupation, Résilience & Intelligence organisationnelle
 
 ### Vue d'ensemble
-Registre d'occupation intelligent pour les bâtiments, lié au portail client. Conçu pour la conformité en cas d'évacuation (CNPI, ISO 22301, Loi 25) — pas un système de pointage RH. Depuis v3, Sentinelle s'est étendu avec 4 nouveaux volets majeurs : **Module Incident**, **Résilience opérationnelle (indice CORO)**, **Intelligence organisationnelle** et **Actions correctives**.
+Registre d'occupation intelligent pour les bâtiments, lié au portail client. Conçu pour la conformité en cas d'évacuation (CNPI, ISO 22301, Loi 25) — pas un système de pointage RH. Depuis v3, Sentinelle s'est étendu avec plusieurs volets majeurs, tous déployés en production : **Module Incident**, **Bouton panique**, **Boucle REX**, **Résilience opérationnelle (indice CORO)**, **Intelligence organisationnelle** et **Actions correctives**.
 
 ### Architecture de base (inchangée depuis v3)
 - **Borne kiosque** : tablette/ordinateur fixe à l'entrée, QR code dynamique régénéré toutes les 60s
@@ -231,6 +231,15 @@ Registre d'occupation intelligent pour les bâtiments, lié au portail client. C
 - Modèles : `IncidentEvent`, `IncidentTask`, `IncidentLog` (enums `IncidentType`, `IncidentStatus`, `IncidentTaskStatus`)
 - Backend : `occupancy/incident.controller.ts` + `incident.service.ts` (13 endpoints), exposé aussi côté portail client via `client-portal.controller.ts`
 - Frontend portail client : `sentinelle/[buildingId]/incident/page.tsx` (déclenchement), `incidents/page.tsx` (historique), `incidents/[incidentId]/page.tsx` (détail + REX)
+
+### 🆕 Bouton panique — ✅ Complet et déployé en production
+- Déclenchement en 1 geste depuis le portail client (menace active), indépendant du flux Module Incident normal
+- Message bilingue FR/EN avec script d'appel intégré : *"Composez le 911 et dites : Menace active au [adresse]"* / *"Call 911 and say: Active threat at [address]"*
+- Bouton d'appel direct `tel:911` dans le courriel d'alerte
+- Notifie **3 niveaux de contacts** en cascade : 1) responsable du bâtiment, 2) contact corpo (fiche client du bâtiment), 3) membres d'urgence présents ce jour (coordonnateur en priorité, max 5, SMS uniquement si `smsConsent`)
+- Courriel HTML + SMS Brevo, adresse complète du bâtiment incluse
+- Backend : `POST /client-portal/buildings/:buildingId/panic` → `IncidentService.triggerPanic()`
+- Se journalise dans l'incident actif du bâtiment s'il y en a un
 
 ### 🆕 Boucle REX (retour d'expérience) — ✅ Déployée
 - Formulaire post-incident conforme ISO 22301 : ce qui a bien fonctionné / points à améliorer / recommandations / actions correctives
@@ -269,11 +278,20 @@ Registre d'occupation intelligent pour les bâtiments, lié au portail client. C
 ### Substitution automatique des rôles
 - Titulaire absent → substitut actif affiché en temps réel
 
-### Import CSV employés
+### Import employés multi-source (CSV) — ✅ étendu
 - Mapping flexible des colonnes, déduplication, PINs auto, envoi email en lot, modal de prévisualisation
+- Colonnes reconnues nativement en plus du format CORO : **Azure AD, Google Workspace, ADP, BambooHR**
+- Fallback `displayName` → prénom/nom (Azure AD et Google exportent souvent un seul champ nom complet)
+- Backend : `occupancy/occupancy-employees.service.ts`
 
-### Consentement SMS (LPCAP)
+### Consentement SMS (LPCAP) — ✅ confirmé déployé
 - `smsConsent` sur `BuildingEmployee`, case à cocher formulaire, SMS filtré si pas de consentement, SMS via Brevo, accusés de réception
+- Respecté également par le bouton panique (SMS envoyé uniquement aux membres consentants)
+
+### 🆕 CRON fermeture check-ins oubliés — ✅ déployé
+- Job horaire (`@Cron('0 * * * *')`) qui ferme automatiquement les check-ins restés ouverts au-delà de **16h** (cutoff calculé sur `checkedInAt`)
+- Évite les faux présents accumulés dans le registre d'occupation faute de check-out manuel
+- Backend : `reminders.service.ts`
 
 ### Conservation des données (conforme réglementation)
 - `OccupancyRecord` / `VisitorInvitation` : purge automatique après **12 mois** (CNPI + Loi 25)
@@ -505,19 +523,25 @@ Portail client : `CLIENT_MANAGER` / `CLIENT_CORPORATE` (`ClientUserRole`), accè
 
 ## Ce qui reste à faire (roadmap priorisée — mise à jour v4)
 
-1. 🆕 **Images page `/resilience-operationnelle`** (site vitrine) — visuels manquants sur la page marketing Résilience
-2. 🆕 **Bouton panique** — fonctionnalité à spécifier et implémenter (déclenchement d'urgence encore plus rapide que le Module Incident actuel)
-3. 🆕 **Import Azure AD** — synchronisation des employés/utilisateurs depuis Azure AD (alternative à l'import CSV actuel)
-4. **Plan particulier OPI** (ROPI — deadline municipale mars 2027) — toujours en attente, aucune trace dans le code au 13/09/2026
-5. **Versioning documentaire** — duplication projet pour année suivante — toujours à faire (le versioning de signature existe, pas la duplication annuelle)
-6. **Interface CRUD bibliothèque** — 🟡 partiellement fait : procédures éditables via `admin/procedures` (GET/POST/PUT), mais pas de CRUD pour rôles ni codes d'incident, pas de DELETE procédures
-7. ~~Portail client enrichi~~ — ✅ **FAIT** : dashboard complet restructuré (bâtiments hub central, grille/liste, recherche, pagination), accès documents validés, engagement tracking
-8. **Traduction automatique FR/EN** — API DeepL — toujours à faire
-9. ~~MFA renforcé~~ — ✅ **FAIT** : MFA email conseiller + client, refresh tokens rotatifs, appareils de confiance 90 jours
-10. **Application mobile** — consultation terrain — toujours à faire
-11. **Haute disponibilité** — Read Replica DigitalOcean — toujours à faire
-12. **Nettoyage dossiers PCA vides** — `pca-export/`, `pca-generator/`, `pca-procedures/` sont vides depuis leur création (23 août) ; à supprimer ou implémenter
-13. **PGC/PRA/PUE — configurateur applicatif** — actuellement seules des pages marketing "Phase 2" existent côté site vitrine ; pas de configurateur/génération comme PMU/PSI/PCA
+### Livré depuis la mise à jour précédente
+- ~~Bouton panique~~ — ✅ **FAIT** : menace active, script 911 bilingue FR/EN, 3 niveaux de contacts
+- ~~Import employés multi-source~~ — ✅ **FAIT** : CSV étendu Azure AD, Google Workspace, ADP, BambooHR
+- ~~Consentement SMS LPCAP~~ — ✅ **FAIT** (confirmé déployé)
+- ~~CRON fermeture check-ins oubliés~~ — ✅ **FAIT** : job horaire, cutoff 16h
+- ~~Portail client enrichi~~ — ✅ **FAIT** : dashboard complet restructuré (bâtiments hub central, grille/liste, recherche, pagination), accès documents validés, engagement tracking
+- ~~MFA renforcé~~ — ✅ **FAIT** : MFA email conseiller + client, refresh tokens rotatifs, appareils de confiance 90 jours
+
+### Reste à faire (roadmap priorisée)
+1. **Application mobile native** — consultation terrain
+2. **Intégration systèmes d'alarme physiques** — déclenchement d'incident depuis un système d'alarme tiers
+3. **Carte GIS pendant incident** — visualisation géographique temps réel de l'événement
+4. **Plan particulier OPI** (ROPI — deadline municipale mars 2027) — toujours en attente, aucune trace dans le code
+5. **Versioning documentaire** — duplication projet pour année suivante (le versioning de signature existe, pas la duplication annuelle)
+6. **CRUD bibliothèque complet** — actuellement partiel (procédures GET/POST/PUT via `admin/procedures`, rien pour rôles ni codes d'incident, pas de DELETE)
+7. **Traduction automatique FR/EN** — API DeepL
+8. **Haute disponibilité** — Read Replica DigitalOcean
+
+> Rappel technique non prioritaire, toujours valide : dossiers `pca-export/`, `pca-generator/`, `pca-procedures/` vides depuis leur création (23 août) ; PGC/PRA/PUE restent en pages marketing "Phase 2" sans configurateur applicatif dédié.
 
 ---
 
@@ -589,7 +613,9 @@ Portail client : `CLIENT_MANAGER` / `CLIENT_CORPORATE` (`ClientUserRole`), accè
 - **Health score portefeuille** Super Admin
 
 ### Sentinelle — enrichissements
-- Import CSV employés (mapping flexible, dédup, PINs auto, envoi email en lot)
+- **Bouton panique** : déclenchement menace active en 1 geste, script 911 bilingue FR/EN, 3 niveaux de contacts (responsable bâtiment → contact corpo → membres d'urgence présents)
+- **CRON fermeture check-ins oubliés** : job horaire, cutoff 16h
+- Import employés multi-source (CSV mapping flexible + colonnes natives Azure AD / Google Workspace / ADP / BambooHR, dédup, PINs auto, envoi email en lot)
 - Consentement SMS (LPCAP) + SMS via Brevo + accusés de réception + mode exercice
 - Substitution automatique des rôles d'urgence (titulaire absent → substitut)
 - Carte interactive bâtiments (Leaflet/OSM, geocoding)
@@ -616,8 +642,9 @@ Portail client : `CLIENT_MANAGER` / `CLIENT_CORPORATE` (`ClientUserRole`), accè
 - Le module `library` (bibliothèque procédures/rôles) n'a qu'un CRUD **partiel** (procédures seulement, pas de DELETE, rien pour rôles/codes incident) — la roadmap v3 le donnait comme entièrement à faire ; en réalité un début d'interface existe (`admin/procedures/*`).
 
 ### Roadmap mise à jour
-- 3 nouveaux items prioritaires ajoutés (remontés par Mathieu) : images de la page `/resilience-operationnelle`, bouton panique, import Azure AD
-- 2 items de clarification technique ajoutés : nettoyage des dossiers PCA vides, et clarification du statut réel PGC/PRA/PUE (configurateur applicatif manquant malgré le statut "100%" affiché historiquement)
+- 4 items marqués **FAIT** : bouton panique, import employés multi-source (Azure AD/Google/ADP/BambooHR), consentement SMS LPCAP (confirmé), CRON fermeture check-ins oubliés
+- Roadmap restante recentrée sur 8 items : application mobile native, intégration systèmes d'alarme physiques, carte GIS pendant incident, OPI, versioning documentaire, CRUD bibliothèque complet, DeepL FR/EN, haute disponibilité
+- ⚠️ Note de scan : plusieurs commits récents non couverts par cette mise à jour ciblée existent déjà sur `main` (autosauvegarde PCA, moteur de cohérence BIA + synthèse des écarts, enrichissement BIA — priorités de reprise/impacts temporels/dépendances critiques). À documenter lors du prochain scan complet.
 
 ---
 
