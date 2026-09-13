@@ -263,6 +263,11 @@ export class ClientPortalController {
 
   // ── Module Incident ──────────────────────────────────────────────────────
 
+  @Post('buildings/:buildingId/panic')
+  async triggerPanic(@Param('buildingId') buildingId: string, @Body() body: any, @Request() req: any) {
+    return this.incidentService.triggerPanic(buildingId, body, req.clientUser.organizationId);
+  }
+
   @Post('incidents/trigger')
   async triggerIncident(@Body() body: any, @Request() req: any) {
     return this.incidentService.triggerIncident(body, req.clientUser.organizationId);

@@ -27,6 +27,9 @@ export default function SentinelleDashboard() {
   const [copied, setCopied] = useState(false);
   const [activeEvacuation, setActiveEvacuation] = useState<any>(null);
   const [triggeringEvac, setTriggeringEvac] = useState(false);
+  const [panicMode, setPanicMode]           = useState(false);
+  const [panicSending, setPanicSending]     = useState(false);
+  const [panicResult, setPanicResult]       = useState<any>(null);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -112,6 +115,22 @@ export default function SentinelleDashboard() {
     } finally {
       setTriggeringEvac(false);
     }
+  };
+
+  const handlePanic = async () => {
+    if (!confirm('⚠️ BOUTON PANIQUE\n\nCeci va envoyer une alerte d\'urgence immédiate à tous les contacts du bâtiment.\n\nConfirmez-vous l\'activation ?')) return;
+    setPanicSending(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/client-portal/buildings/${buildingId}/panic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
+        body: JSON.stringify({ triggeredBy: `${user?.firstName} ${user?.lastName}`, emergencyType: 'URGENCE — ASSISTANCE REQUISE' }),
+      });
+      const result = await res.json();
+      setPanicResult(result);
+      setPanicMode(true);
+    } catch { alert('Erreur lors de l\'envoi de l\'alerte.'); }
+    finally { setPanicSending(false); }
   };
 
   if (loading) {
@@ -382,6 +401,60 @@ export default function SentinelleDashboard() {
           })
         )}
       </section>
+    {/* ── Bouton panique flottant ── */}
+      {!panicMode && (
+        <button type="button" onClick={handlePanic} disabled={panicSending}
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+            width: 64, height: 64, borderRadius: '50%',
+            backgroundColor: panicSending ? '#E74C3C' : '#C0392B',
+            color: '#FFFFFF', border: '3px solid #FFFFFF',
+            boxShadow: '0 4px 20px rgba(192,57,43,0.5)',
+            cursor: panicSending ? 'not-allowed' : 'pointer',
+            fontSize: panicSending ? 22 : 28,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: panicSending ? 'none' : 'pulse 2s infinite',
+          }}
+          title="Bouton panique — Alerte d'urgence immédiate">
+          {panicSending ? '⏳' : '🚨'}
+        </button>
+      )}
+
+      {/* ── Modal résultat panique ── */}
+      {panicMode && panicResult && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 16, maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}>
+            <div style={{ backgroundColor: '#C0392B', padding: '24px 28px', textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 48 }}>🚨</p>
+              <p style={{ margin: '8px 0 0', fontSize: 20, fontWeight: 900, color: '#FFFFFF' }}>ALERTE ENVOYÉE</p>
+            </div>
+            <div style={{ padding: '28px 28px 24px' }}>
+              <div style={{ backgroundColor: '#FDEDEC', borderRadius: 10, padding: '16px 20px', marginBottom: 20, textAlign: 'center' }}>
+                <p style={{ margin: '0 0 4px', fontSize: 28, fontWeight: 900, color: '#C0392B' }}>{panicResult.notifiedCount}</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#C0392B', fontWeight: 600 }}>contact{panicResult.notifiedCount > 1 ? 's' : ''} notifié{panicResult.notifiedCount > 1 ? 's' : ''}</p>
+              </div>
+              <p style={{ margin: '0 0 6px', fontSize: 14, color: '#2C3E50', fontWeight: 600 }}>📍 {panicResult.address}</p>
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6C757D' }}>SMS et courriels envoyés avec l'adresse du bâtiment.</p>
+
+              <a href="tel:911"
+                style={{ display: 'block', textAlign: 'center', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '16px', borderRadius: 10, textDecoration: 'none', fontSize: 20, fontWeight: 900, marginBottom: 12 }}>
+                📞 APPELER LE 911
+              </a>
+              <button type="button" onClick={() => { setPanicMode(false); setPanicResult(null); }}
+                style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 4px 20px rgba(192,57,43,0.5); transform: scale(1); }
+          50% { box-shadow: 0 4px 32px rgba(192,57,43,0.8); transform: scale(1.05); }
+        }
+      `}</style>
     </PortalLayout>
   );
 }

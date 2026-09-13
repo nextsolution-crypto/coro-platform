@@ -287,21 +287,57 @@ export default function PcaConfiguratorPage() {
   };
 
   const addCriticalService = () => {
-    setConfig(prev => ({
-      ...prev,
-      criticalServices: [...prev.criticalServices, {
+  setConfig(prev => ({
+    ...prev,
+    criticalServices: [
+      ...prev.criticalServices,
+      {
         id: Date.now().toString(),
+
+        // Identification
         name: '',
+        owner: '',
+        recoveryPriority: '',
+
+        // Objectifs de continuité
         minServiceLevel: '',
         rto: '',
         rpo: '',
         mad: '',
+
+        // Impacts
         financialImpact: '',
-        reputationalImpact: 'MOYEN',
-        legalImpact: false,
-      }],
-    }));
-  };
+        reputationalImpact: '',
+        legalImpact: null,
+
+        // Évolution des impacts dans le temps
+        impact4h: '',
+        impact24h: '',
+        impact72h: '',
+        impact7d: '',
+
+        // Dépendances
+        internalDependencies: '',
+        externalDependencies: '',
+        singlePointsOfFailure: '',
+        recoveryPrerequisites: '',
+
+        // Exploitation en mode dégradé
+        criticalPeriods: '',
+        degradedMode: '',
+        degradedModeDuration: '',
+
+        // Ressources minimales
+        resourcePersonnel: '',
+        resourceIT: '',
+        resourceEquipment: '',
+        resourceSuppliers: '',
+        resourceSite: '',
+        resourceEnergy: '',
+      },
+    ],
+  }));
+};
 
   const updateService = (id: string, field: string, value: any) => {
     setConfig(prev => ({
@@ -1185,15 +1221,16 @@ const removeRegReq = (req: string) => {
                   Bilan d'impact sur les activités (BIA)
                 </h3>
                 <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-                  Identifiez vos produits/services essentiels et définissez vos objectifs de continuité.
-                </p>
+  Identifiez les activités essentielles, évaluez l'évolution de leurs impacts dans le temps,
+  leurs dépendances et les ressources nécessaires afin de déterminer les priorités et objectifs de reprise.
+</p>
               </div>
               <button onClick={addCriticalService}
                 className="text-sm font-medium px-4 py-2 rounded text-white transition-colors flex-shrink-0"
                 style={{ backgroundColor: '#C0392B' }}
                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
                 onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
-                + Ajouter un service
+                + Ajouter une activité
               </button>
             </div>
 
@@ -1203,10 +1240,19 @@ const removeRegReq = (req: string) => {
               </p>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { term: 'RTO', def: 'Recovery Time Objective — Délai de reprise maximal acceptable' },
-                  { term: 'RPO', def: 'Recovery Point Objective — Perte de données maximale admissible' },
-                  { term: 'MAD', def: 'Maximum Allowable Downtime — Temps d\'arrêt maximal admissible' },
-                ].map(d => (
+  {
+    term: 'RTO',
+    def: 'Recovery Time Objective — Objectif de délai pour rétablir l’activité ou le service',
+  },
+  {
+    term: 'RPO',
+    def: 'Recovery Point Objective — Quantité maximale de données pouvant être perdue',
+  },
+  {
+    term: 'MAD',
+    def: 'Maximum Allowable Downtime — Durée maximale d’interruption tolérable avant que les impacts deviennent inacceptables',
+  },
+].map(d => (
                   <div key={d.term}>
                     <p className="text-xs font-bold" style={{ color: '#2980B9' }}>{d.term}</p>
                     <p className="text-xs" style={{ color: '#1A5276' }}>{d.def}</p>
@@ -1218,8 +1264,8 @@ const removeRegReq = (req: string) => {
             {config.criticalServices.length === 0 ? (
               <div className="p-8 text-center rounded" style={{ backgroundColor: '#F8F9FA', border: '1px dashed #DEE2E6' }}>
                 <p className="text-sm" style={{ color: '#ADB5BD' }}>
-                  Aucun service critique défini. Cliquez sur "Ajouter un service" pour commencer.
-                </p>
+  Aucune activité essentielle définie. Cliquez sur "Ajouter une activité" pour commencer.
+</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1227,7 +1273,7 @@ const removeRegReq = (req: string) => {
                   <div key={service.id} className="p-5 rounded" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-medium" style={{ color: '#2C3E50' }}>
-                        Service #{index + 1}
+                        Activité essentielle #{index + 1}
                       </h4>
                       <button onClick={() => removeService(service.id)}
                         className="text-xs"
@@ -1239,26 +1285,64 @@ const removeRegReq = (req: string) => {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="sm:col-span-2">
-                        <Label required>Produit ou service essentiel</Label>
-                        <input type="text" value={service.name}
-                          onChange={e => updateService(service.id, 'name', e.target.value)}
-                          placeholder="Ex: Traitement des commandes clients"
-                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
-                          onFocus={e => e.target.style.borderColor = '#C0392B'}
-                          onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <Label>Niveau de service minimum acceptable</Label>
-                        <input type="text" value={service.minServiceLevel}
-                          onChange={e => updateService(service.id, 'minServiceLevel', e.target.value)}
-                          placeholder="Ex: Traiter au moins 50% des commandes urgentes"
-                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
-                          onFocus={e => e.target.style.borderColor = '#C0392B'}
-                          onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                        <Label required>Produit, service ou activité essentielle</Label>
+<input
+  type="text"
+  value={service.name || ''}
+  onChange={e => updateService(service.id, 'name', e.target.value)}
+  placeholder="Ex: Traitement des commandes clients"
+  className="rounded px-4 py-2.5 text-sm focus:outline-none"
+  style={inputStyle}
+  onFocus={e => e.target.style.borderColor = '#C0392B'}
+  onBlur={e => e.target.style.borderColor = '#CED4DA'}
+/>
                       </div>
                       <div>
+  <Label>Responsable de l'activité</Label>
+  <input
+    type="text"
+    value={service.owner || ''}
+    onChange={e => updateService(service.id, 'owner', e.target.value)}
+    placeholder="Ex: Directrice du service à la clientèle"
+    className="rounded px-4 py-2.5 text-sm focus:outline-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+
+<div>
+  <Label>Priorité de reprise</Label>
+  <select
+    value={service.recoveryPriority || ''}
+    onChange={e => updateService(service.id, 'recoveryPriority', e.target.value)}
+    className="rounded px-4 py-2.5 text-sm focus:outline-none"
+    style={inputStyle}
+  >
+    <option value="">À déterminer...</option>
+    <option value="CRITIQUE">Critique — reprise prioritaire immédiate</option>
+    <option value="ELEVEE">Élevée — reprise prioritaire</option>
+    <option value="MOYENNE">Moyenne — reprise après les fonctions prioritaires</option>
+    <option value="FAIBLE">Faible — reprise différable</option>
+  </select>
+</div>
+
+<div className="sm:col-span-2">
+  <Label>Niveau de service minimum acceptable</Label>
+  <input
+    type="text"
+    value={service.minServiceLevel || ''}
+    onChange={e => updateService(service.id, 'minServiceLevel', e.target.value)}
+    placeholder="Ex: Traiter au moins 50% des commandes urgentes"
+    className="rounded px-4 py-2.5 text-sm focus:outline-none"
+    style={inputStyle}
+    onFocus={e => e.target.style.borderColor = '#C0392B'}
+    onBlur={e => e.target.style.borderColor = '#CED4DA'}
+  />
+</div>
+                      <div>
                         <Label>RTO (Délai de reprise max.)</Label>
-                        <select value={service.rto}
+                        <select value={service.rto || ''}
                           onChange={e => updateService(service.id, 'rto', e.target.value)}
                           className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
                           <option value="">Sélectionner...</option>
@@ -1274,7 +1358,7 @@ const removeRegReq = (req: string) => {
                       </div>
                       <div>
                         <Label>RPO (Perte de données max.)</Label>
-                        <select value={service.rpo}
+                        <select value={service.rpo || ''}
                           onChange={e => updateService(service.id, 'rpo', e.target.value)}
                           className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
                           <option value="">Sélectionner...</option>
@@ -1289,7 +1373,7 @@ const removeRegReq = (req: string) => {
                       </div>
                       <div>
                         <Label>MAD (Temps d'arrêt max.)</Label>
-                        <select value={service.mad}
+                        <select value={service.mad || ''}
                           onChange={e => updateService(service.id, 'mad', e.target.value)}
                           className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
                           <option value="">Sélectionner...</option>
@@ -1305,7 +1389,7 @@ const removeRegReq = (req: string) => {
                       </div>
                       <div>
                         <Label>Impact financier estimé / jour d'interruption</Label>
-                        <select value={service.financialImpact}
+                        <select value={service.financialImpact || ''}
                           onChange={e => updateService(service.id, 'financialImpact', e.target.value)}
                           className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
                           <option value="">Sélectionner...</option>
@@ -1318,39 +1402,187 @@ const removeRegReq = (req: string) => {
                         </select>
                       </div>
                       <div>
-                        <Label>Impact réputationnel</Label>
-                        <select value={service.reputationalImpact}
-                          onChange={e => updateService(service.id, 'reputationalImpact', e.target.value)}
-                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
-                          <option value="FAIBLE">Faible</option>
-                          <option value="MOYEN">Moyen</option>
-                          <option value="ELEVE">Élevé</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input type="checkbox" checked={service.legalImpact}
-                          onChange={e => updateService(service.id, 'legalImpact', e.target.checked)}
-                          className="w-4 h-4" id={`legal-${service.id}`} />
-                        <label htmlFor={`legal-${service.id}`} className="text-sm" style={{ color: '#2C3E50' }}>
-                          Impact légal ou réglementaire
-                        </label>
-                      </div>
+  <Label>Impact réputationnel</Label>
+  <select
+    value={service.reputationalImpact || ''}
+    onChange={e => updateService(service.id, 'reputationalImpact', e.target.value)}
+    className="rounded px-4 py-2.5 text-sm focus:outline-none"
+    style={inputStyle}
+  >
+    <option value="">À évaluer...</option>
+    <option value="FAIBLE">Faible</option>
+    <option value="MOYEN">Modéré</option>
+    <option value="ELEVE">Élevé</option>
+    <option value="CRITIQUE">Critique</option>
+  </select>
+</div>
+                      <div className="sm:col-span-2">
+  <Label>Impact légal, réglementaire ou contractuel</Label>
+
+  <div className="flex flex-wrap gap-2">
+    {[
+      { label: 'Oui', value: true },
+      { label: 'Non', value: false },
+      { label: 'À déterminer', value: null },
+    ].map(option => {
+      const isSelected = service.legalImpact === option.value;
+
+      return (
+        <button
+          key={option.label}
+          type="button"
+          onClick={() => updateService(service.id, 'legalImpact', option.value)}
+          className="px-4 py-2 rounded text-sm font-medium transition-colors"
+          style={{
+            backgroundColor: isSelected ? '#EBF5FB' : '#FFFFFF',
+            color: isSelected ? '#2980B9' : '#6C757D',
+            border: `1px solid ${isSelected ? '#AED6F1' : '#DEE2E6'}`,
+          }}
+        >
+          {option.label}
+        </button>
+      );
+    })}
+  </div>
+</div>
+
+<div
+  className="sm:col-span-2 pt-4 mt-2"
+  style={{ borderTop: '1px solid #E9ECEF' }}
+>
+  <p
+    className="text-xs font-bold uppercase mb-1"
+    style={{ color: '#ADB5BD', letterSpacing: '0.08em' }}
+  >
+    Évolution des impacts dans le temps
+  </p>
+
+  <p className="text-xs mb-3" style={{ color: '#6C757D' }}>
+    Évaluez l'importance des conséquences si l'activité demeure interrompue.
+    Cette évolution aide à déterminer la tolérance maximale et les objectifs de reprise.
+  </p>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    {[
+      { key: 'impact4h', label: 'Après 4 heures' },
+      { key: 'impact24h', label: 'Après 24 heures' },
+      { key: 'impact72h', label: 'Après 72 heures' },
+      { key: 'impact7d', label: 'Après 7 jours' },
+    ].map(item => (
+      <div key={item.key}>
+        <Label>{item.label}</Label>
+
+        <select
+          value={service[item.key] || ''}
+          onChange={e =>
+            updateService(service.id, item.key, e.target.value)
+          }
+          className="rounded px-3 py-2 text-sm focus:outline-none"
+          style={inputStyle}
+        >
+          <option value="">À évaluer...</option>
+          <option value="NEGLIGEABLE">Négligeable</option>
+          <option value="FAIBLE">Faible</option>
+          <option value="MODERE">Modéré</option>
+          <option value="ELEVE">Élevé</option>
+          <option value="CRITIQUE">Critique</option>
+        </select>
+      </div>
+    ))}
+  </div>
+</div>
+
+<div
+  className="sm:col-span-2 pt-4 mt-2"
+  style={{ borderTop: '1px solid #E9ECEF' }}
+>
+  <p
+    className="text-xs font-bold uppercase mb-1"
+    style={{ color: '#ADB5BD', letterSpacing: '0.08em' }}
+  >
+    Dépendances critiques
+  </p>
+
+  <p className="text-xs mb-3" style={{ color: '#6C757D' }}>
+    Identifiez les ressources, fonctions et conditions nécessaires au maintien
+    ou à la reprise de cette activité.
+  </p>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div>
+      <Label>Dépendances internes</Label>
+      <textarea
+        value={service.internalDependencies || ''}
+        onChange={e =>
+          updateService(service.id, 'internalDependencies', e.target.value)
+        }
+        rows={2}
+        placeholder="Ex: Finance, entrepôt, service TI, ressources humaines..."
+        className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
+        style={inputStyle}
+        onFocus={e => e.target.style.borderColor = '#C0392B'}
+        onBlur={e => e.target.style.borderColor = '#CED4DA'}
+      />
+    </div>
+
+    <div>
+      <Label>Dépendances externes</Label>
+      <textarea
+        value={service.externalDependencies || ''}
+        onChange={e =>
+          updateService(service.id, 'externalDependencies', e.target.value)
+        }
+        rows={2}
+        placeholder="Ex: Fournisseur ERP, transporteur, télécommunications, sous-traitant..."
+        className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
+        style={inputStyle}
+        onFocus={e => e.target.style.borderColor = '#C0392B'}
+        onBlur={e => e.target.style.borderColor = '#CED4DA'}
+      />
+    </div>
+
+    <div>
+      <Label>Points uniques de défaillance</Label>
+      <textarea
+        value={service.singlePointsOfFailure || ''}
+        onChange={e =>
+          updateService(service.id, 'singlePointsOfFailure', e.target.value)
+        }
+        rows={2}
+        placeholder="Ex: Une seule personne formée, site unique, lien Internet unique..."
+        className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
+        style={inputStyle}
+        onFocus={e => e.target.style.borderColor = '#C0392B'}
+        onBlur={e => e.target.style.borderColor = '#CED4DA'}
+      />
+    </div>
+
+    <div>
+      <Label>Prérequis à la reprise</Label>
+      <textarea
+        value={service.recoveryPrerequisites || ''}
+        onChange={e =>
+          updateService(service.id, 'recoveryPrerequisites', e.target.value)
+        }
+        rows={2}
+        placeholder="Ex: VPN disponible, ERP restauré, 4 employés présents, fournisseur confirmé..."
+        className="rounded px-4 py-2.5 text-sm focus:outline-none resize-none"
+        style={inputStyle}
+        onFocus={e => e.target.style.borderColor = '#C0392B'}
+        onBlur={e => e.target.style.borderColor = '#CED4DA'}
+      />
+    </div>
+  </div>
+</div>
 
                       {/* ── Champs enrichis BIA ── */}
                       <div className="sm:col-span-2 pt-3 mt-1" style={{ borderTop: '1px solid #E9ECEF' }}>
-                        <p className="text-xs font-bold uppercase mb-3" style={{ color: '#ADB5BD', letterSpacing: '0.08em' }}>
-                          Mode dégradé et ressources
-                        </p>
-                      </div>
-
-                      <div>
-                        <Label>Responsable de l'activité</Label>
-                        <input type="text" value={service.owner || ''}
-                          onChange={e => updateService(service.id, 'owner', e.target.value)}
-                          placeholder="Ex: Directrice, service à la clientèle"
-                          className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
-                          onFocus={e => e.target.style.borderColor = '#C0392B'}
-                          onBlur={e => e.target.style.borderColor = '#CED4DA'} />
+                        <p
+  className="text-xs font-bold uppercase mb-3"
+  style={{ color: '#ADB5BD', letterSpacing: '0.08em' }}
+>
+  Exploitation en mode dégradé
+</p>
                       </div>
 
                       <div>

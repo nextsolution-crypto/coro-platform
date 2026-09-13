@@ -241,6 +241,120 @@ export class IncidentService {
     return { acknowledged: true, acknowledgedAt: updated.acknowledgedAt };
   }
 
+  // ── Bouton panique ────────────────────────────────────────────────────────
+  async triggerPanic(buildingId: string, body: any, organizationId: string) {
+    const building = await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId },
+    });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+
+    const triggeredBy  = body.triggeredBy || 'Inconnu';
+    const emergencyType = body.emergencyType || 'URGENCE GÉNÉRALE';
+    const now          = new Date().toLocaleString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const address      = `${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, '');
+
+    const smsText = `🚨 URGENCE — ${emergencyType}\n${building.name}\n${address}\nDéclenché par ${triggeredBy} à ${now}\n\nAPPELEZ LE 911 IMMÉDIATEMENT`;
+
+    const htmlEmail = `
+      <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:#C0392B;padding:24px;border-radius:8px 8px 0 0;">
+          <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span>RO</span></span>
+          <span style="background:#FFFFFF;color:#C0392B;font-size:13px;font-weight:800;padding:4px 10px;border-radius:4px;margin-left:12px;">🚨 ALERTE PANIQUE</span>
+        </div>
+        <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
+          <div style="background:#FDEDEC;border-left:6px solid #C0392B;padding:16px 20px;border-radius:4px;margin-bottom:24px;">
+            <p style="margin:0;font-size:22px;font-weight:900;color:#C0392B;">🚨 ${emergencyType}</p>
+            <p style="margin:6px 0 0;font-size:15px;color:#6C757D;">${building.name}</p>
+          </div>
+          <div style="background:#F8F9FA;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+            <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">📍 <strong style="color:#2C3E50;">${address}</strong></p>
+            <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">🕐 Déclenché à <strong style="color:#2C3E50;">${now}</strong></p>
+            <p style="margin:0;font-size:14px;color:#6C757D;">👤 Par <strong style="color:#2C3E50;">${triggeredBy}</strong></p>
+          </div>
+          <a href="tel:911" style="display:block;text-align:center;background:#C0392B;color:#FFFFFF;padding:16px;border-radius:8px;text-decoration:none;font-size:20px;font-weight:900;margin-bottom:16px;">
+            📞 APPELER LE 911
+          </a>
+          <p style="color:#ADB5BD;font-size:12px;text-align:center;margin:0;">
+            Cette alerte a été envoyée automatiquement par CORO Sentinelle.<br>
+            ${building.name} · ${address}
+          </p>
+        </div>
+      </div>`;
+
+    // Contacts à notifier
+    const contacts: Array<{ email?: string; phone?: string; name: string }> = [];
+
+    // 1. Responsable du bâtiment
+    if (building.responsableEmail || building.responsablePhone) {
+      contacts.push({
+        email: building.responsableEmail || undefined,
+        phone: building.responsablePhone || undefined,
+        name:  `${building.responsableFirstName || ''} ${building.responsableLastName || ''}`.trim() || 'Responsable',
+      });
+    }
+
+    // 2. PMU — contacts d'urgence externes
+    const activePmu = await this.prisma.project.findFirst({
+      where: { buildingId, documentType: { in: ['PMU', 'PSI'] }, status: { in: ['VALIDATED', 'EXPORTED'] }, isActive: true },
+      orderBy: { updatedAt: 'desc' },
+      select: { configData: true },
+    });
+    const configData = activePmu?.configData as any;
+    if (configData?.contactsUrgence?.length > 0) {
+      for (const c of configData.contactsUrgence) {
+        if (c.email || c.telephone) {
+          contacts.push({ email: c.email, phone: c.telephone, name: c.nom || c.name || 'Contact urgence' });
+        }
+      }
+    }
+
+    // 3. Membres d'urgence présents (coordonnateur en priorité)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const presentIds = new Set(
+      (await this.prisma.occupancyRecord.findMany({
+        where: { buildingId, status: 'IN', type: 'EMPLOYE', checkedInAt: { gte: startOfDay } },
+        select: { employeeId: true },
+      })).map(r => r.employeeId).filter(Boolean)
+    );
+    const emergencyMembers = await this.prisma.buildingEmployee.findMany({
+      where: { buildingId, isActive: true, isEmergencyMember: true, id: { in: [...presentIds] as string[] } },
+      include: { emergencyRoles: true },
+      take: 5,
+    });
+    for (const m of emergencyMembers) {
+      if (m.email || m.phone) {
+        contacts.push({ email: m.email || undefined, phone: m.smsConsent && m.phone ? m.phone : undefined, name: `${m.firstName} ${m.lastName}` });
+      }
+    }
+
+    // Envoyer à tous les contacts (dédupliqués par email)
+    const sentEmails = new Set<string>();
+    let notifiedCount = 0;
+    for (const contact of contacts) {
+      if (contact.email && !sentEmails.has(contact.email)) {
+        sentEmails.add(contact.email);
+        await this.sendEmail({ to: contact.email, toName: contact.name, subject: `🚨 ALERTE PANIQUE — ${building.name}`, html: htmlEmail });
+        notifiedCount++;
+      }
+      if (contact.phone) {
+        await this.sendSms(contact.phone, smsText);
+      }
+    }
+
+    // Log dans l'incident actif si existant
+    const activeIncident = await this.prisma.incidentEvent.findFirst({
+      where: { buildingId, organizationId, isActive: true },
+    });
+    if (activeIncident) {
+      await this.prisma.incidentLog.create({
+        data: { incidentEventId: activeIncident.id, action: `🚨 BOUTON PANIQUE activé par ${triggeredBy}`, isAutomatic: false },
+      });
+    }
+
+    return { success: true, notifiedCount, address, contacts: contacts.length };
+  }
+
   // ── Déclencher un incident ────────────────────────────────────────────────
   async triggerIncident(body: any, organizationId: string) {
     const building = await this.prisma.building.findFirst({ where: { id: body.buildingId, organizationId } });
