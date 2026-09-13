@@ -8,21 +8,38 @@ export class PcaConfiguratorController {
   constructor(private readonly pcaConfiguratorService: PcaConfiguratorService) {}
 
   @Get(':projectId')
-  async getConfig(@Param('projectId') projectId: string) {
-    return this.pcaConfiguratorService.getConfig(projectId);
+  async getConfig(
+    @Param('projectId') projectId: string,
+    @Request() req: any,
+  ) {
+    return this.pcaConfiguratorService.getConfig(
+      projectId,
+      req.user.organizationId,
+    );
   }
 
   @Post(':projectId')
   async saveConfig(
     @Param('projectId') projectId: string,
     @Body() data: any,
+    @Request() req: any,
   ) {
-    return this.pcaConfiguratorService.saveConfig(projectId, data);
+    return this.pcaConfiguratorService.saveConfig(
+      projectId,
+      req.user.organizationId,
+      data,
+    );
   }
 
   @Get(':projectId/linked-pmu')
-  async getLinkedPmu(@Param('projectId') projectId: string) {
-    return this.pcaConfiguratorService.getLinkedPmu(projectId);
+  async getLinkedPmu(
+    @Param('projectId') projectId: string,
+    @Request() req: any,
+  ) {
+    return this.pcaConfiguratorService.getLinkedPmu(
+      projectId,
+      req.user.organizationId,
+    );
   }
 
   @Get(':projectId/procedures')

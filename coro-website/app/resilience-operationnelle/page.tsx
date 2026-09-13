@@ -70,17 +70,17 @@ export default async function ResilienceOperationnellePage({
       sentinelle: {
         kicker: 'Fondation — CORO Sentinelle',
         title: 'Savoir qui est présent est la première condition de toute résilience',
-        text: 'CORO Sentinelle établit en temps réel la liste exacte des occupants dans le bâtiment grâce au pointage QR code et PIN. Cette donnée devient immédiatement exploitable pour calculer la capacité d\'intervention réelle — pas celle inscrite sur un organigramme théorique.',
+        text: 'CORO Sentinelle transforme chaque entrée et sortie en donnée opérationnelle. Le registre indique en temps réel combien d’employés, visiteurs et contracteurs sont présents, qui se trouve réellement sur place et quelles ressources peuvent être mobilisées si une urgence survient.',
         bullets: [
-          'Pointage en 5 secondes — QR code borne + PIN personnel',
-          'Détection automatique entrée / sortie',
-          'Employés, visiteurs et contracteurs',
-          'Mode hors ligne — synchronisation dès le retour de connexion',
-          'Conservation 12 mois (Loi 25) · Évacuations 36 mois (ISO 22301)',
-          'Rapport PDF d\'évacuation conforme CNPI 2020',
-        ],
-        image: '/images/solutions/resilience/coro-sentinelle-kiosk.webp',
-        alt: 'Borne kiosque CORO Sentinelle — pointage QR et PIN',
+  'Registre d’occupation mis à jour en temps réel',
+  'Employés, visiteurs et contracteurs distingués automatiquement',
+  'Pointage rapide par QR code + PIN personnel',
+  'Entrées et sorties horodatées',
+  'Recherche et filtrage des occupants présents',
+  'Déclenchement d’un incident directement depuis le registre',
+],
+        image: '/alert/coro-module-incident-types.webp',
+        alt: 'CORO Sentinelle — registre d’occupation en temps réel des employés, visiteurs et contracteurs',
       },
       readiness: {
         kicker: 'Indice CORO de résilience',
@@ -111,21 +111,28 @@ export default async function ResilienceOperationnellePage({
         alt: 'Organisation d\'urgence dynamique CORO — substitution automatique des rôles',
       },
       incident: {
-        kicker: 'Module Incident',
-        title: 'Déclenchement. Procédure. Mobilisation. Rapport. En une seule plateforme.',
-        text: 'Lorsqu\'un incident survient, CORO ne cherche pas dans une liste théorique de 14 membres. Il interroge Sentinelle : qui est physiquement présent maintenant ? La procédure correspondante s\'affiche immédiatement pour le coordonnateur. Les membres reçoivent un SMS et un courriel avec lien d\'accusé de réception. Les occupants sont notifiés selon la phase.',
-        bullets: [
-          '15 types d\'incidents mappés aux procédures CORO (P001–P026)',
-          'Checklist coordonnateur extraite automatiquement de la procédure active',
-          'SMS + courriel simultanés — membres mobilisés en secondes',
-          'Lien d\'accusé de réception — confirmation visible sur l\'écran du coordonnateur',
-          'Incidents multiples simultanés supportés',
-          'Journal chronologique automatique horodaté',
-          'Mode exercice — occupants non notifiés, préfixe [EXERCICE]',
-        ],
-        image: '/images/solutions/resilience/coro-module-incident.webp',
-        alt: 'Module Incident CORO — checklist coordonnateur et mobilisation temps réel',
-      },
+  kicker: 'Module Incident',
+  title: 'Déclencher. Notifier. Mobiliser. Agir.',
+  text: 'Lorsqu’un incident survient, CORO transforme immédiatement la présence réelle dans le bâtiment en capacité d’intervention. Le système identifie les ressources disponibles, déclenche le scénario approprié, notifie les contacts désignés et transmet les informations essentielles pour agir sans délai.',
+  bullets: [
+    '15 types d’incidents reliés aux procédures CORO (P001–P026)',
+    'Identification des membres réellement présents au moment du déclenchement',
+    'SMS + courriel envoyés simultanément aux contacts désignés',
+    'Confirmation immédiate des notifications envoyées',
+    'Adresse du bâtiment transmise automatiquement dans l’alerte',
+    'Consigne prête à communiquer au 911 selon le type d’incident',
+    'Journal chronologique automatique et horodaté',
+    'Mode exercice distinct des incidents réels',
+  ],
+  alertImage: '/alert/coro-alerte-envoyee.webp',
+  alertAlt: 'CORO — confirmation d’une alerte d’urgence envoyée aux contacts désignés',
+  emailImage: '/alert/coro-alerte-panique-courriel.webp',
+  emailAlt: 'CORO — courriel d’alerte panique avec type d’incident, adresse et consigne pour le 911',
+  alertCaption: 'Notification confirmée',
+  alertDescription: 'CORO confirme les canaux utilisés, les contacts avisés et l’heure d’envoi.',
+  emailCaption: 'Une alerte directement exploitable',
+  emailDescription: 'Le destinataire reçoit le type d’incident, le bâtiment, l’adresse et la consigne à transmettre aux services d’urgence.',
+},
       report: {
         kicker: 'Historique & Rapports',
         title: 'Chaque incident génère un rapport conforme prêt pour inspection',
@@ -195,17 +202,17 @@ export default async function ResilienceOperationnellePage({
       sentinelle: {
         kicker: 'Foundation — CORO Sentinel',
         title: 'Knowing who is present is the first condition of any resilience',
-        text: 'CORO Sentinel establishes in real time the exact list of occupants in the building through QR code and PIN check-in. This data immediately feeds the calculation of actual response capacity — not the one written on a theoretical org chart.',
+        text: 'CORO Sentinel turns every entry and exit into operational data. The register shows in real time how many employees, visitors and contractors are present, who is actually on site and which resources can be mobilized if an emergency occurs.',
         bullets: [
-          '5-second check-in — kiosk QR code + personal PIN',
-          'Automatic entry / exit detection',
-          'Employees, visitors and contractors',
-          'Offline mode — sync on connection return',
-          '12-month retention (Law 25) · Evacuations 36 months (ISO 22301)',
-          'Evacuation PDF report compliant with NFPA 2020',
-        ],
-        image: '/images/solutions/resilience/coro-sentinelle-kiosk.webp',
-        alt: 'CORO Sentinel kiosk — QR and PIN check-in',
+  'Occupancy register updated in real time',
+  'Employees, visitors and contractors automatically distinguished',
+  'Fast QR code + personal PIN check-in',
+  'Timestamped entries and exits',
+  'Search and filtering of occupants currently on site',
+  'Incident activation directly from the occupancy register',
+],
+        image: '/alert/coro-module-incident-types.webp',
+        alt: 'CORO Sentinel — real-time occupancy register for employees, visitors and contractors',
       },
       readiness: {
         kicker: 'CORO Resilience Index',
@@ -236,21 +243,28 @@ export default async function ResilienceOperationnellePage({
         alt: 'CORO dynamic emergency organization — automatic role substitution',
       },
       incident: {
-        kicker: 'Incident Module',
-        title: 'Activation. Procedure. Mobilization. Report. In one platform.',
-        text: 'When an incident occurs, CORO does not look through a theoretical list of 14 members. It queries Sentinel: who is physically present right now? The corresponding procedure immediately appears for the coordinator. Members receive simultaneous SMS and email with acknowledgement link. Occupants are notified according to the phase.',
-        bullets: [
-          '15 incident types mapped to CORO procedures (P001–P026)',
-          'Coordinator checklist extracted automatically from the active procedure',
-          'Simultaneous SMS + email — members mobilized in seconds',
-          'Acknowledgement link — confirmation visible on coordinator screen',
-          'Multiple simultaneous incidents supported',
-          'Automatic timestamped chronological log',
-          'Exercise mode — occupants not notified, [EXERCISE] prefix',
-        ],
-        image: '/images/solutions/resilience/coro-module-incident.webp',
-        alt: 'CORO Incident Module — coordinator checklist and real-time mobilization',
-      },
+  kicker: 'Incident Module',
+  title: 'Activate. Notify. Mobilize. Respond.',
+  text: 'When an incident occurs, CORO immediately turns real-time building presence into response capability. The system identifies available resources, activates the appropriate scenario, notifies designated contacts and delivers the critical information required to act without delay.',
+  bullets: [
+    '15 incident types linked to CORO procedures (P001–P026)',
+    'Identification of members actually present when the incident is activated',
+    'Simultaneous SMS + email notification to designated contacts',
+    'Immediate confirmation of notifications sent',
+    'Building address automatically included in the alert',
+    '911-ready instruction adapted to the incident type',
+    'Automatic timestamped chronological log',
+    'Exercise mode clearly separated from real incidents',
+  ],
+  alertImage: '/alert/coro-alerte-envoyee.webp',
+  alertAlt: 'CORO — confirmation that an emergency alert was sent to designated contacts',
+  emailImage: '/alert/coro-alerte-panique-courriel.webp',
+  emailAlt: 'CORO — panic alert email with incident type, building address and 911 instructions',
+  alertCaption: 'Notification confirmed',
+  alertDescription: 'CORO confirms the communication channels used, contacts notified and time of transmission.',
+  emailCaption: 'An immediately actionable alert',
+  emailDescription: 'The recipient receives the incident type, building, address and information to communicate to emergency services.',
+},
       report: {
         kicker: 'History & Reports',
         title: 'Every incident generates a compliant report ready for inspection',
@@ -385,6 +399,61 @@ export default async function ResilienceOperationnellePage({
         .res-dark .res-list li, .res-dark2 .res-list li { color: rgba(255,255,255,.85); }
         .res-shot { display: block; width: 100%; border-radius: 16px; border: 1px solid #e1e7eb; box-shadow: 0 24px 60px rgba(28,45,58,.12); }
         .res-dark .res-shot, .res-dark2 .res-shot { border-color: rgba(255,255,255,.12); box-shadow: 0 30px 70px rgba(0,0,0,.3); }
+        .res-incident-visuals {
+  display: grid;
+  gap: 18px;
+}
+
+.res-incident-card {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  box-shadow: 0 26px 60px rgba(0,0,0,.28);
+}
+
+.res-incident-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.res-incident-card-body {
+  padding: 18px 20px 20px;
+}
+
+.res-incident-card-body strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.res-incident-card-body p {
+  margin: 0;
+  color: rgba(255,255,255,.67);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.res-incident-email {
+  width: 72%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 980px) {
+  .res-incident-email {
+    width: 60%;
+  }
+}
+
+@media (max-width: 700px) {
+  .res-incident-email {
+    width: 82%;
+  }
+}
         .res-components { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 28px; }
         .res-component { padding: 18px 20px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); }
         .res-component-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
@@ -546,17 +615,51 @@ export default async function ResilienceOperationnellePage({
       </section>
 
       {/* MODULE INCIDENT */}
-      <section className="res-section res-dark2">
-        <div className="res-container res-grid-rev">
-          <div><img className="res-shot" src={d.incident.image} alt={d.incident.alt} loading="lazy" /></div>
-          <div className="res-copy">
-            <span className="res-kicker">{d.incident.kicker}</span>
-            <h2>{d.incident.title}</h2>
-            <p>{d.incident.text}</p>
-            <ul className="res-list">{d.incident.bullets.map(b => <li key={b}>{b}</li>)}</ul>
-          </div>
+<section className="res-section res-dark2">
+  <div className="res-container res-grid-rev">
+
+    <div className="res-incident-visuals">
+
+      <div className="res-incident-card">
+        <img
+          src={d.incident.alertImage}
+          alt={d.incident.alertAlt}
+          loading="lazy"
+        />
+        <div className="res-incident-card-body">
+          <strong>{d.incident.alertCaption}</strong>
+          <p>{d.incident.alertDescription}</p>
         </div>
-      </section>
+      </div>
+
+      <div className="res-incident-card res-incident-email">
+        <img
+          src={d.incident.emailImage}
+          alt={d.incident.emailAlt}
+          loading="lazy"
+        />
+        <div className="res-incident-card-body">
+          <strong>{d.incident.emailCaption}</strong>
+          <p>{d.incident.emailDescription}</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div className="res-copy">
+      <span className="res-kicker">{d.incident.kicker}</span>
+      <h2>{d.incident.title}</h2>
+      <p>{d.incident.text}</p>
+
+      <ul className="res-list">
+        {d.incident.bullets.map(b => (
+          <li key={b}>{b}</li>
+        ))}
+      </ul>
+    </div>
+
+  </div>
+</section>
 
       {/* RAPPORT */}
       <section className="res-cycle">

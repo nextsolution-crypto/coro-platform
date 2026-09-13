@@ -855,6 +855,164 @@ export default function WebAppProgress() {
     );
   };
 
+  const sentinelleFeatures =
+    lang === 'fr'
+      ? [
+          {
+            icon: '📋',
+            title: 'Registre en temps réel',
+            desc:
+              'Suivez qui est présent dans votre bâtiment à tout moment — employés, visiteurs et contracteurs. Le comptage se met à jour automatiquement.',
+          },
+          {
+            icon: '📷',
+            title: 'Pointage par QR code et PIN',
+            desc:
+              'Chaque employé reçoit un code PIN personnel. Il suffit de scanner le QR de la borne avec son téléphone et d’entrer son PIN. Entrée enregistrée en quelques secondes.',
+          },
+          {
+            icon: '🚨',
+            title: 'Mode évacuation instantané',
+            desc:
+              'En cas d’alarme, déclenchez le mode évacuation. Un instantané des occupants présents est créé afin de suivre les personnes évacuées, manquantes ou à vérifier.',
+          },
+          {
+            icon: '📧',
+            title: 'Gestion des visiteurs',
+            desc:
+              'Enregistrez et suivez les visiteurs présents sur le site afin qu’ils soient intégrés au registre d’occupation et aux opérations d’évacuation.',
+          },
+          {
+            icon: '📊',
+            title: 'Historique et rapports',
+            desc:
+              'Conservez une traçabilité des présences et des évacuations et générez les rapports nécessaires à vos suivis opérationnels.',
+          },
+          {
+            icon: '📱',
+            title: 'Accessible sur tous les appareils',
+            desc:
+              'CORO Sentinelle fonctionne sur tablette, téléphone ou ordinateur afin que l’information reste disponible partout dans le bâtiment.',
+          },
+        ]
+      : [
+          {
+            icon: '📋',
+            title: 'Real-time occupancy register',
+            desc:
+              'Know who is present in your building at any time — employees, visitors and contractors. Occupancy totals update automatically.',
+          },
+          {
+            icon: '📷',
+            title: 'QR code and PIN check-in',
+            desc:
+              'Each employee receives a personal PIN. They scan the kiosk QR code with their phone and enter their PIN to record their presence in seconds.',
+          },
+          {
+            icon: '🚨',
+            title: 'Instant evacuation mode',
+            desc:
+              'When an alarm occurs, activate evacuation mode. A snapshot of everyone currently on site is created to track evacuated, missing and unconfirmed occupants.',
+          },
+          {
+            icon: '📧',
+            title: 'Visitor management',
+            desc:
+              'Register and track visitors currently on site so they are included in the occupancy register and evacuation operations.',
+          },
+          {
+            icon: '📊',
+            title: 'History and reports',
+            desc:
+              'Maintain traceability of occupancy and evacuation activity and generate reports for operational follow-up.',
+          },
+          {
+            icon: '📱',
+            title: 'Available on every device',
+            desc:
+              'CORO Sentinel works on tablets, phones and computers so critical occupancy information remains accessible throughout the building.',
+          },
+        ];
+
+  const incidentFeatures =
+    lang === 'fr'
+      ? [
+          {
+            icon: '🚨',
+            title: 'Déclenchement en un clic',
+            desc:
+              '15 types d’incidents sont reliés aux procédures CORO. Le scénario pertinent est activé immédiatement selon la situation.',
+          },
+          {
+            icon: '📋',
+            title: 'Procédure coordonnateur',
+            desc:
+              'Les actions à réaliser sont structurées selon le type d’incident afin d’accompagner le coordonnateur pendant l’intervention.',
+          },
+          {
+            icon: '📱',
+            title: 'Bouton panique intégré',
+            desc:
+              'Déclenchement immédiat d’une alerte critique avec bâtiment, adresse, type d’incident et consigne à transmettre au 911.',
+          },
+          {
+            icon: '📧',
+            title: 'Notifications multi-canaux',
+            desc:
+              'Courriel et SMS aux contacts désignés, confirmation de l’envoi et journalisation horodatée de la diffusion.',
+          },
+          {
+            icon: '🔄',
+            title: 'Incidents multiples et exercices',
+            desc:
+              'Gérez plusieurs incidents indépendamment et utilisez le mode exercice pour tester votre organisation sans confondre simulation et événement réel.',
+          },
+          {
+            icon: '📊',
+            title: 'Rapport et retour d’expérience',
+            desc:
+              'Documentez la chronologie, les actions réalisées, les ressources mobilisées, les constats et les actions correctives pour améliorer la prochaine réponse.',
+          },
+        ]
+      : [
+          {
+            icon: '🚨',
+            title: 'One-click activation',
+            desc:
+              '15 incident types are linked to CORO procedures. The appropriate response scenario is activated immediately based on the situation.',
+          },
+          {
+            icon: '📋',
+            title: 'Coordinator procedure',
+            desc:
+              'Response actions are structured according to the incident type to guide the coordinator throughout the intervention.',
+          },
+          {
+            icon: '📱',
+            title: 'Integrated panic button',
+            desc:
+              'Immediate activation of a critical alert with building, address, incident type and information to relay to 911.',
+          },
+          {
+            icon: '📧',
+            title: 'Multi-channel notifications',
+            desc:
+              'Email and SMS to designated contacts, delivery confirmation and timestamped notification logging.',
+          },
+          {
+            icon: '🔄',
+            title: 'Multiple incidents and drills',
+            desc:
+              'Manage multiple incidents independently and use exercise mode to test your organization without confusing a simulation with a real event.',
+          },
+          {
+            icon: '📊',
+            title: 'Report and lessons learned',
+            desc:
+              'Document the timeline, actions performed, resources mobilized, observations and corrective actions to improve the next response.',
+          },
+        ];
+
   return (
     <div
       style={{
@@ -862,10 +1020,7 @@ export default function WebAppProgress() {
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
-      {/* ───────────────────────────── */}
       {/* RESPONSIVE CSS */}
-      {/* ───────────────────────────── */}
-
       <style jsx global>{`
         .solutions-grid {
           display: grid;
@@ -893,6 +1048,42 @@ export default function WebAppProgress() {
           font-size: 24px;
         }
 
+        .incident-showcase {
+          display: grid;
+          grid-template-columns:
+            minmax(0, 1.35fr)
+            minmax(260px, 0.65fr);
+          gap: 28px;
+          align-items: center;
+          margin-bottom: 64px;
+        }
+
+        .incident-showcase-card {
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid #e9ecef;
+          background: #ffffff;
+          box-shadow:
+            0 20px 55px
+            rgba(44, 62, 80, 0.12);
+        }
+
+        .incident-showcase-email {
+          max-width: 420px;
+          width: 100%;
+          justify-self: center;
+        }
+
+        .incident-showcase img {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+
+        .incident-showcase-copy {
+          padding: 22px 24px 24px;
+        }
+
         @media (max-width: 900px) {
           .solutions-grid {
             grid-template-columns: repeat(
@@ -911,6 +1102,14 @@ export default function WebAppProgress() {
             grid-column: 1 / -1;
             width: calc(50% - 14px);
             justify-self: center;
+          }
+
+          .incident-showcase {
+            grid-template-columns: 1fr;
+          }
+
+          .incident-showcase-email {
+            max-width: 520px;
           }
         }
 
@@ -935,11 +1134,23 @@ export default function WebAppProgress() {
           .solution-card-title {
             font-size: 21px;
           }
+
+          .incident-showcase {
+            gap: 20px;
+            margin-bottom: 48px;
+          }
+
+          .incident-showcase-email {
+            max-width: 100%;
+          }
+
+          .incident-showcase-copy {
+            padding: 18px 20px 20px;
+          }
         }
       `}</style>
 
-      {/* ── NAVIGATION ── */}
-
+      {/* NAVIGATION */}
       <nav
         style={{
           position: 'fixed',
@@ -1335,8 +1546,7 @@ export default function WebAppProgress() {
         )}
       </nav>
 
-      {/* ── HERO ── */}
-
+      {/* HERO */}
       <section
         style={{
           minHeight: '100vh',
@@ -1494,8 +1704,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── SOLUTIONS / 5 PILIERS CORO ── */}
-
+      {/* SOLUTIONS */}
       <section
         id="solutions"
         style={{
@@ -1546,8 +1755,6 @@ export default function WebAppProgress() {
               {t.solutions.subtitle}
             </p>
           </div>
-
-          {/* 2 cartes + 3 cartes */}
 
           <div className="solutions-grid">
             {t.solutions.items.map(
@@ -1626,8 +1833,6 @@ export default function WebAppProgress() {
                       }
                     }}
                   >
-                    {/* IMAGE */}
-
                     <div
                       style={{
                         position:
@@ -1667,8 +1872,6 @@ export default function WebAppProgress() {
                         }}
                       />
                     </div>
-
-                    {/* CONTENU */}
 
                     <div
                       className="solution-card-content"
@@ -1773,8 +1976,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── STATS ── */}
-
+      {/* STATS */}
       <section
         style={{
           backgroundColor:
@@ -1826,28 +2028,6 @@ export default function WebAppProgress() {
                   >
                     {stat.label}
                   </p>
-
-                  {(stat as any)
-                    .note && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color:
-                          '#E67E22',
-                        marginTop: 4,
-                        textTransform:
-                          'uppercase',
-                        letterSpacing:
-                          '0.06em',
-                      }}
-                    >
-                      {
-                        (stat as any)
-                          .note
-                      }
-                    </p>
-                  )}
                 </div>
               )
             )}
@@ -1855,8 +2035,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── APERÇU PLATEFORME ── */}
-
+      {/* APERÇU PLATEFORME */}
       <section
         style={{
           backgroundColor:
@@ -2053,7 +2232,6 @@ export default function WebAppProgress() {
                             '#FF5F57',
                         }}
                       />
-
                       <div
                         style={{
                           width: 12,
@@ -2064,7 +2242,6 @@ export default function WebAppProgress() {
                             '#FFBD2E',
                         }}
                       />
-
                       <div
                         style={{
                           width: 12,
@@ -2112,8 +2289,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
-
+      {/* FEATURES */}
       <section
         id="features"
         style={{
@@ -2229,8 +2405,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── SENTINELLE ── */}
-
+      {/* SENTINELLE */}
       <section
         id="sentinelle"
         style={{
@@ -2310,17 +2485,13 @@ export default function WebAppProgress() {
                 margin: '0 auto',
                 fontSize: 18,
                 color: '#6C757D',
-                maxWidth: 600,
+                maxWidth: 680,
                 lineHeight: 1.7,
               }}
             >
-              Un registre
-              d&apos;occupation
-              intelligent pour vos
-              bâtiments. Gérez les
-              entrées et sorties, et
-              soyez prêt en cas
-              d&apos;évacuation.
+              {lang === 'fr'
+                ? 'Sachez qui est réellement présent dans votre bâtiment — employés, visiteurs et contracteurs — et transformez cette information en donnée opérationnelle immédiatement exploitable.'
+                : 'Know who is actually present in your building — employees, visitors and contractors — and turn that information into immediately actionable operational data.'}
             </p>
           </div>
 
@@ -2329,13 +2500,22 @@ export default function WebAppProgress() {
               marginBottom: 64,
               borderRadius: 16,
               overflow: 'hidden',
+              border:
+                '1px solid #E9ECEF',
+              backgroundColor:
+                '#FFFFFF',
               boxShadow:
                 '0 20px 60px rgba(44,62,80,0.15)',
             }}
           >
             <img
-              src="/sentinelle-illustration.webp"
-              alt="CORO Sentinelle — Registre d'occupation intelligent"
+              src="/alert/coro-module-incident-types.webp"
+              alt={
+                lang === 'fr'
+                  ? "CORO Sentinelle — registre d'occupation en temps réel avec employés, visiteurs et contracteurs"
+                  : 'CORO Sentinel — real-time occupancy register with employees, visitors and contractors'
+              }
+              loading="lazy"
               style={{
                 width: '100%',
                 display: 'block',
@@ -2352,100 +2532,59 @@ export default function WebAppProgress() {
               marginBottom: 64,
             }}
           >
-            {[
-              {
-                icon: '📋',
-                title:
-                  'Registre en temps réel',
-                desc:
-                  'Suivez qui est présent dans votre bâtiment à tout moment — employés, visiteurs et contracteurs. Le comptage se met à jour automatiquement.',
-              },
-              {
-                icon: '📷',
-                title:
-                  'Pointage par QR code et PIN',
-                desc:
-                  'Chaque employé reçoit un code PIN personnel. Il suffit de scanner le QR de la borne avec son téléphone et d\'entrer son PIN. Entrée enregistrée en 5 secondes.',
-              },
-              {
-                icon: '🚨',
-                title:
-                  'Mode évacuation instantané',
-                desc:
-                  'En cas d\'alarme, déclenchez le mode évacuation. Un snapshot figé de tous les occupants est créé immédiatement. Le warden coche les présences sur son téléphone.',
-              },
-              {
-                icon: '📧',
-                title:
-                  'Invitations visiteurs par courriel',
-                desc:
-                  'Invitez un visiteur depuis le portail. Il reçoit un courriel avec son QR code personnel, valide uniquement le jour de sa visite.',
-              },
-              {
-                icon: '📊',
-                title:
-                  'Historique et rapports',
-                desc:
-                  'Accédez à l\'historique complet des présences sur 12 mois. Exportez en CSV ou générez un rapport PDF d\'évacuation conforme ISO 22301.',
-              },
-              {
-                icon: '📱',
-                title:
-                  'Application web progressive',
-                desc:
-                  'Fonctionne sur tablette, téléphone ou ordinateur. Installable en un clic. Mode hors ligne intégré — les enregistrements se synchronisent dès le retour de la connexion.',
-              },
-            ].map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  backgroundColor:
-                    '#FFFFFF',
-                  borderRadius: 12,
-                  padding:
-                    '28px 24px',
-                  border:
-                    '1px solid #E9ECEF',
-                  boxShadow:
-                    '0 2px 8px rgba(44,62,80,0.04)',
-                }}
-              >
-                <p
+            {sentinelleFeatures.map(
+              (f, i) => (
+                <div
+                  key={i}
                   style={{
-                    margin:
-                      '0 0 12px',
-                    fontSize: 32,
+                    backgroundColor:
+                      '#FFFFFF',
+                    borderRadius: 12,
+                    padding:
+                      '28px 24px',
+                    border:
+                      '1px solid #E9ECEF',
+                    boxShadow:
+                      '0 2px 8px rgba(44,62,80,0.04)',
                   }}
                 >
-                  {f.icon}
-                </p>
+                  <p
+                    style={{
+                      margin:
+                        '0 0 12px',
+                      fontSize: 32,
+                    }}
+                  >
+                    {f.icon}
+                  </p>
 
-                <h3
-                  style={{
-                    margin:
-                      '0 0 8px',
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color:
-                      '#2C3E50',
-                  }}
-                >
-                  {f.title}
-                </h3>
+                  <h3
+                    style={{
+                      margin:
+                        '0 0 8px',
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color:
+                        '#2C3E50',
+                    }}
+                  >
+                    {f.title}
+                  </h3>
 
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    color:
-                      '#6C757D',
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {f.desc}
-                </p>
-              </div>
-            ))}
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      color:
+                        '#6C757D',
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {f.desc}
+                  </p>
+                </div>
+              )
+            )}
           </div>
 
           <div
@@ -2479,8 +2618,9 @@ export default function WebAppProgress() {
                     '0.1em',
                 }}
               >
-                Conformité
-                réglementaire
+                {lang === 'fr'
+                  ? 'Présence & résilience'
+                  : 'Occupancy & resilience'}
               </p>
 
               <p
@@ -2493,9 +2633,9 @@ export default function WebAppProgress() {
                   lineHeight: 1.4,
                 }}
               >
-                Conçu pour les
-                exigences
-                québécoises
+                {lang === 'fr'
+                  ? 'La présence réelle devient une donnée d’intervention'
+                  : 'Real-time presence becomes response data'}
               </p>
 
               <p
@@ -2505,23 +2645,22 @@ export default function WebAppProgress() {
                   fontSize: 14,
                   color:
                     '#ADB5BD',
-                  maxWidth: 500,
+                  maxWidth: 560,
+                  lineHeight: 1.6,
                 }}
               >
-                Conservation des
-                registres 12 mois ·
-                Évacuations
-                archivées 36 mois
-                (ISO 22301) ·
-                Conforme Loi 25 ·
-                Code national de
-                prévention des
-                incendies
+                {lang === 'fr'
+                  ? 'CORO relie le registre d’occupation, l’organisation d’urgence et le Module Incident afin de savoir qui peut réellement être mobilisé au moment où une situation survient.'
+                  : 'CORO connects the occupancy register, emergency organization and Incident Module so you know who can actually be mobilized when an event occurs.'}
               </p>
             </div>
 
             <a
-              href="/sentinelle"
+              href={
+                lang === 'fr'
+                  ? '/sentinelle'
+                  : '/sentinelle?lang=en'
+              }
               style={{
                 display:
                   'inline-block',
@@ -2541,14 +2680,15 @@ export default function WebAppProgress() {
                 flexShrink: 0,
               }}
             >
-              Découvrir Sentinelle →
+              {lang === 'fr'
+                ? 'Découvrir Sentinelle →'
+                : 'Discover Sentinel →'}
             </a>
           </div>
         </div>
       </section>
 
-      {/* ── MODULE INCIDENT ── */}
-
+      {/* MODULE INCIDENT */}
       <section
         id="module-incident"
         style={{
@@ -2591,7 +2731,9 @@ export default function WebAppProgress() {
                 borderRadius: 99,
               }}
             >
-              Module Incident
+              {lang === 'fr'
+                ? 'Module Incident'
+                : 'Incident Module'}
             </span>
           </div>
 
@@ -2619,7 +2761,9 @@ export default function WebAppProgress() {
                     '#C0392B',
                 }}
               >
-                Module Incident
+                {lang === 'fr'
+                  ? 'Module Incident'
+                  : 'Incident Module'}
               </span>
             </h2>
 
@@ -2628,16 +2772,144 @@ export default function WebAppProgress() {
                 margin: '0 auto',
                 fontSize: 18,
                 color: '#6C757D',
-                maxWidth: 600,
+                maxWidth: 720,
                 lineHeight: 1.7,
               }}
             >
               {lang === 'fr'
-                ? 'Du déclenchement au rapport post-incident — un cycle complet conforme ISO 22301, CNPI 2020 et CNESST.'
-                : 'From incident trigger to post-incident report — a complete cycle compliant with ISO 22301, NFPA and CCOHS.'}
+                ? 'De la présence réelle au déclenchement, de la notification à la mobilisation — CORO transforme un incident en réponse structurée et traçable.'
+                : 'From real-time presence to activation, from notification to mobilization — CORO turns an incident into a structured and traceable response.'}
             </p>
           </div>
 
+          {/* PREUVES VISUELLES INCIDENT */}
+          <div className="incident-showcase">
+            <div className="incident-showcase-card">
+              <img
+                src="/alert/coro-alerte-envoyee.webp"
+                alt={
+                  lang === 'fr'
+                    ? "CORO — confirmation d'une alerte d'urgence envoyée aux contacts désignés"
+                    : 'CORO — confirmation that an emergency alert was sent to designated contacts'
+                }
+                loading="lazy"
+              />
+
+              <div className="incident-showcase-copy">
+                <p
+                  style={{
+                    margin:
+                      '0 0 6px',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color:
+                      '#C0392B',
+                    textTransform:
+                      'uppercase',
+                    letterSpacing:
+                      '0.08em',
+                  }}
+                >
+                  {lang === 'fr'
+                    ? 'Notification confirmée'
+                    : 'Notification confirmed'}
+                </p>
+
+                <h3
+                  style={{
+                    margin:
+                      '0 0 8px',
+                    color:
+                      '#2C3E50',
+                    fontSize: 18,
+                    fontWeight: 800,
+                  }}
+                >
+                  {lang === 'fr'
+                    ? 'Sachez immédiatement qui a été avisé'
+                    : 'Immediately know who was notified'}
+                </h3>
+
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    lineHeight: 1.65,
+                    color:
+                      '#6C757D',
+                  }}
+                >
+                  {lang === 'fr'
+                    ? "CORO confirme les canaux utilisés, les contacts avisés et l'heure d'envoi afin que le gestionnaire sache immédiatement que l'alerte a été transmise."
+                    : 'CORO confirms the channels used, the contacts notified and the transmission time so the manager immediately knows the alert was delivered.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="incident-showcase-card incident-showcase-email">
+              <img
+                src="/alert/coro-alerte-panique-courriel.webp"
+                alt={
+                  lang === 'fr'
+                    ? "CORO — courriel d'alerte panique avec type d'incident, adresse et consigne pour le 911"
+                    : 'CORO — panic alert email with incident type, address and 911 instructions'
+                }
+                loading="lazy"
+              />
+
+              <div className="incident-showcase-copy">
+                <p
+                  style={{
+                    margin:
+                      '0 0 6px',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color:
+                      '#C0392B',
+                    textTransform:
+                      'uppercase',
+                    letterSpacing:
+                      '0.08em',
+                  }}
+                >
+                  {lang === 'fr'
+                    ? 'Une alerte exploitable'
+                    : 'An actionable alert'}
+                </p>
+
+                <h3
+                  style={{
+                    margin:
+                      '0 0 8px',
+                    color:
+                      '#2C3E50',
+                    fontSize: 18,
+                    fontWeight: 800,
+                  }}
+                >
+                  {lang === 'fr'
+                    ? 'Les bonnes informations, au bon moment'
+                    : 'The right information at the right time'}
+                </h3>
+
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    lineHeight: 1.65,
+                    color:
+                      '#6C757D',
+                  }}
+                >
+                  {lang === 'fr'
+                    ? "Le destinataire reçoit le type d'incident, le bâtiment, l'adresse et l'information essentielle à transmettre aux services d'urgence."
+                    : 'The recipient receives the incident type, building, address and the essential information to relay to emergency services.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* FONCTIONNALITÉS INCIDENT */}
           <div
             style={{
               display: 'grid',
@@ -2647,100 +2919,59 @@ export default function WebAppProgress() {
               marginBottom: 64,
             }}
           >
-            {[
-              {
-                icon: '🚨',
-                title:
-                  'Déclenchement en un clic',
-                desc:
-                  '15 types d\'incidents mappés (incendie, menace active, fuite de gaz, cyberattaque, inondation...). Procédures P001-P026 activées automatiquement selon le type.',
-              },
-              {
-                icon: '📋',
-                title:
-                  'Checklist coordonnateur',
-                desc:
-                  'Tâches par rôle générées automatiquement. Cochage en temps réel depuis n\'importe quel appareil.',
-              },
-              {
-                icon: '📱',
-                title:
-                  'Bouton panique intégré',
-                desc:
-                  'Menace active avec script 911 bilingue FR/EN. Alerte simultanée sur 3 niveaux : responsable bâtiment, équipe corporative, équipe d\'urgence présente.',
-              },
-              {
-                icon: '📧',
-                title:
-                  'Notifications multi-canaux',
-                desc:
-                  'SMS et courriel simultanés aux coordonnateurs, membres de l\'équipe et occupants. Accusés de réception avec horodatage.',
-              },
-              {
-                icon: '🔄',
-                title:
-                  'Incidents multiples simultanés',
-                desc:
-                  'Gérez plusieurs incidents en parallèle dans le même bâtiment. Mode exercice intégré pour tester sans déclencher les vraies alertes.',
-              },
-              {
-                icon: '📊',
-                title:
-                  'Rapport REX automatique',
-                desc:
-                  'Formulaire post-incident ISO 22301. Ce qui a bien fonctionné, points à améliorer, recommandations, actions correctives. Export PDF 7 sections inclus.',
-              },
-            ].map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  backgroundColor:
-                    '#FFFFFF',
-                  borderRadius: 12,
-                  padding:
-                    '28px 24px',
-                  border:
-                    '1px solid #E9ECEF',
-                  boxShadow:
-                    '0 2px 8px rgba(44,62,80,0.04)',
-                }}
-              >
-                <p
+            {incidentFeatures.map(
+              (f, i) => (
+                <div
+                  key={i}
                   style={{
-                    margin:
-                      '0 0 12px',
-                    fontSize: 32,
+                    backgroundColor:
+                      '#FFFFFF',
+                    borderRadius: 12,
+                    padding:
+                      '28px 24px',
+                    border:
+                      '1px solid #E9ECEF',
+                    boxShadow:
+                      '0 2px 8px rgba(44,62,80,0.04)',
                   }}
                 >
-                  {f.icon}
-                </p>
+                  <p
+                    style={{
+                      margin:
+                        '0 0 12px',
+                      fontSize: 32,
+                    }}
+                  >
+                    {f.icon}
+                  </p>
 
-                <h3
-                  style={{
-                    margin:
-                      '0 0 8px',
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color:
-                      '#2C3E50',
-                  }}
-                >
-                  {f.title}
-                </h3>
+                  <h3
+                    style={{
+                      margin:
+                        '0 0 8px',
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color:
+                        '#2C3E50',
+                    }}
+                  >
+                    {f.title}
+                  </h3>
 
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    color:
-                      '#6C757D',
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {f.desc}
-                </p>
-              </div>
-            ))}
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 14,
+                      color:
+                        '#6C757D',
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {f.desc}
+                  </p>
+                </div>
+              )
+            )}
           </div>
 
           <div
@@ -2774,8 +3005,9 @@ export default function WebAppProgress() {
                     '0.1em',
                 }}
               >
-                Conformité
-                réglementaire
+                {lang === 'fr'
+                  ? 'Résilience opérationnelle'
+                  : 'Operational resilience'}
               </p>
 
               <p
@@ -2788,8 +3020,9 @@ export default function WebAppProgress() {
                   lineHeight: 1.4,
                 }}
               >
-                Conforme aux normes
-                en vigueur
+                {lang === 'fr'
+                  ? 'Du signal initial au retour d’expérience'
+                  : 'From initial signal to lessons learned'}
               </p>
 
               <p
@@ -2799,17 +3032,22 @@ export default function WebAppProgress() {
                   fontSize: 14,
                   color:
                     '#ADB5BD',
-                  maxWidth: 500,
+                  maxWidth: 560,
+                  lineHeight: 1.6,
                 }}
               >
-                ISO 22301 · CNPI 2020 ·
-                CNESST · Rapport PDF 7
-                sections inclus
+                {lang === 'fr'
+                  ? 'Déclenchement · Mobilisation · Notifications · Journal chronologique · Rapport · Retour d’expérience'
+                  : 'Activation · Mobilization · Notifications · Timeline · Report · Lessons learned'}
               </p>
             </div>
 
             <a
-              href="/resilience-operationnelle"
+              href={
+                lang === 'fr'
+                  ? '/resilience-operationnelle'
+                  : '/resilience-operationnelle?lang=en'
+              }
               style={{
                 display:
                   'inline-block',
@@ -2829,14 +3067,15 @@ export default function WebAppProgress() {
                 flexShrink: 0,
               }}
             >
-              Découvrir le Module Incident →
+              {lang === 'fr'
+                ? 'Découvrir le Module Incident →'
+                : 'Discover the Incident Module →'}
             </a>
           </div>
         </div>
       </section>
 
-      {/* ── DOCUMENTS ── */}
-
+      {/* DOCUMENTS */}
       <section
         id="documents"
         style={{
@@ -2932,6 +3171,10 @@ export default function WebAppProgress() {
                                           'DRP'
                                         ? 'plan-reprise-activites-pra'
                                         : 'plan-urgence-environnementale-pue'
+                  }${
+                    lang === 'en'
+                      ? '?lang=en'
+                      : ''
                   }`}
                   key={i}
                   style={{
@@ -3067,8 +3310,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── SECTORS ── */}
-
+      {/* SECTORS */}
       <section
         style={{
           backgroundColor:
@@ -3247,8 +3489,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-
+      {/* HOW IT WORKS */}
       <section
         id="how-it-works"
         style={{
@@ -3392,8 +3633,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── PRICING ── */}
-
+      {/* PRICING */}
       <section
         id="pricing"
         style={{
@@ -3669,8 +3909,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── SECURITY ── */}
-
+      {/* SECURITY */}
       <section
         id="security"
         style={{
@@ -4051,8 +4290,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── DEMO ── */}
-
+      {/* DEMO */}
       <section
         id="demo"
         style={{
@@ -4135,8 +4373,7 @@ export default function WebAppProgress() {
         </div>
       </section>
 
-      {/* ── CTA FINAL ── */}
-
+      {/* CTA FINAL */}
       <section
         style={{
           background:

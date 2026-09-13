@@ -62,6 +62,8 @@ export default function PcaConfiguratorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+  const [finalizationError, setFinalizationError] = useState('');
   const [activeSection, setActiveSection] = useState(1);
   const [project, setProject] = useState<any>(null);
   const [prefill, setPrefill] = useState<any>(null);
@@ -70,6 +72,7 @@ export default function PcaConfiguratorPage() {
   const hasLoadedRef = useRef(false);
   const lastSavedConfigRef = useRef('');
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const [config, setConfig] = useState({
     // Section 1
@@ -102,32 +105,32 @@ export default function PcaConfiguratorPage() {
     criticalServices: [] as any[],
 
     // Section 5
-    teleworkPossible: '',
-    alternativeSite: false,
+        teleworkPossible: '',
+    alternativeSite: null as boolean | null,
     alternativeSiteAddress: '',
-    sharingAgreement: false,
-    itRedundancy: false,
-    offSiteBackup: false,
+    sharingAgreement: null as boolean | null,
+    itRedundancy: null as boolean | null,
+    offSiteBackup: null as boolean | null,
     backupFrequency: '',
     criticalITSystems: [] as any[],
-    crossTraining: false,
-    processDocumented: false,
-    tempStaffAccess: false,
+    crossTraining: null as boolean | null,
+    processDocumented: null as boolean | null,
+    tempStaffAccess: null as boolean | null,
     absenteeismThreshold: '',
-    alternativeSuppliers: false,
-    safetyStock: false,
+    alternativeSuppliers: null as boolean | null,
+    safetyStock: null as boolean | null,
     safetyStockDuration: '',
     criticalSuppliers: [] as any[],
-    generator: false,
-    ups: false,
-    insuranceBI: false,
-    insuranceProperty: false,
-    insuranceCyber: false,
+    generator: null as boolean | null,
+    ups: null as boolean | null,
+    insuranceBI: null as boolean | null,
+    insuranceProperty: null as boolean | null,
+    insuranceCyber: null as boolean | null,
     insuranceLastReview: '',
 
     // Section 6
     internalChannel: '',
-    massAlertSystem: false,
+    massAlertSystem: null as boolean | null,
     externalChannel: '',
     priorityClients: '',
     authoritiesToNotify: [] as string[],
@@ -138,7 +141,6 @@ export default function PcaConfiguratorPage() {
     coordinationLocation: '',
     emergencyBridge: '',
     linkedPmuId: '',
-    resumptionSequence: [] as any[],
 
     // Section 8
     exerciseFormative: 'Annuel',
@@ -169,10 +171,15 @@ export default function PcaConfiguratorPage() {
       if (configRes.data.config) {
         // Charger la config existante
         const c = configRes.data.config;
+        const {
+          resumptionSequence: _legacyResumptionSequence,
+          ...storedConfig
+        } = c;
+
         setConfig(prev => {
   const loadedConfig = {
     ...prev,
-    ...c,
+    ...storedConfig,
     effectiveDate: c.effectiveDate
       ? new Date(c.effectiveDate).toISOString().split('T')[0]
       : '',
@@ -189,7 +196,6 @@ export default function PcaConfiguratorPage() {
     criticalServices: Array.isArray(c.criticalServices) ? c.criticalServices : [],
     criticalITSystems: Array.isArray(c.criticalITSystems) ? c.criticalITSystems : [],
     criticalSuppliers: Array.isArray(c.criticalSuppliers) ? c.criticalSuppliers : [],
-    resumptionSequence: Array.isArray(c.resumptionSequence) ? c.resumptionSequence : [],
     regulatoryReqs: Array.isArray(c.regulatoryReqs) ? c.regulatoryReqs : [],
     authoritiesToNotify: Array.isArray(c.authoritiesToNotify) ? c.authoritiesToNotify : [],
   };
@@ -236,33 +242,50 @@ export default function PcaConfiguratorPage() {
     autosaveTimerRef.current = null;
   }
 
+  const configSnapshot = config;
+  const serializedSnapshot = JSON.stringify(configSnapshot);
+
+  const payload = {
+    ...configSnapshot,
+
+    effectiveDate: configSnapshot.effectiveDate
+      ? new Date(configSnapshot.effectiveDate)
+      : null,
+
+    insuranceLastReview: configSnapshot.insuranceLastReview
+      ? new Date(configSnapshot.insuranceLastReview)
+      : null,
+
+    nextReviewDate: configSnapshot.nextReviewDate
+      ? new Date(configSnapshot.nextReviewDate)
+      : null,
+
+    employeeCount:
+      configSnapshot.employeeCount !== '' &&
+      configSnapshot.employeeCount !== null &&
+      configSnapshot.employeeCount !== undefined
+        ? parseInt(String(configSnapshot.employeeCount), 10)
+        : null,
+  };
+
   setSaving(true);
 
+  const saveOperation = saveQueueRef.current
+    .catch(() => undefined)
+    .then(async () => {
+      await api.post(`/pca/configurator/${projectId}`, payload);
+      lastSavedConfigRef.current = serializedSnapshot;
+    });
+
+  saveQueueRef.current = saveOperation.then(
+    () => undefined,
+    () => undefined,
+  );
+
   try {
-    const payload = {
-      ...config,
-      effectiveDate: config.effectiveDate
-        ? new Date(config.effectiveDate)
-        : null,
-      insuranceLastReview: config.insuranceLastReview
-        ? new Date(config.insuranceLastReview)
-        : null,
-      nextReviewDate: config.nextReviewDate
-        ? new Date(config.nextReviewDate)
-        : null,
-      employeeCount:
-        config.employeeCount !== '' &&
-        config.employeeCount !== null &&
-        config.employeeCount !== undefined
-          ? parseInt(String(config.employeeCount), 10)
-          : null,
-    };
+    await saveOperation;
 
-    await api.post(`/pca/configurator/${projectId}`, payload);
-
-lastSavedConfigRef.current = JSON.stringify(config);
-
-setSaved(true);
+    setSaved(true);
     setTimeout(() => setSaved(false), 3000);
 
     return true;
@@ -538,8 +561,8 @@ const getBiaSummary = () => {
     ...prev.riskScenarios,
     {
       id: scenarioId,
-      probability: 'MOYENNE',
-      impact: 'MOYEN',
+      probability: '',
+      impact: '',
       customScenario: '',
       consequences: '',
       affectedActivities: '',
@@ -774,28 +797,100 @@ const removeRegReq = (req: string) => {
     setConfig(prev => ({ ...prev, [field]: formatPhone(value) }));
   };
 
-  const BoolField = ({ label, field, hint }: { label: string; field: string; hint?: string }) => (
-    <div className="flex items-start justify-between gap-4 py-3" style={{ borderBottom: '1px solid #F1F3F5' }}>
-      <div>
-        <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{label}</p>
-        {hint && <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{hint}</p>}
+  const BoolField = ({
+    label,
+    field,
+    hint,
+  }: {
+    label: string;
+    field: string;
+    hint?: string;
+  }) => {
+    const options = [
+      {
+        label: 'Oui',
+        value: true,
+        backgroundColor: '#EAFAF1',
+        color: '#27AE60',
+        borderColor: '#A9DFBF',
+      },
+      {
+        label: 'Non',
+        value: false,
+        backgroundColor: '#FDEDEC',
+        color: '#C0392B',
+        borderColor: '#F1948A',
+      },
+      {
+        label: 'À déterminer',
+        value: null,
+        backgroundColor: '#F8F9FA',
+        color: '#6C757D',
+        borderColor: '#CED4DA',
+      },
+    ];
+
+    return (
+      <div
+        className="flex items-start justify-between gap-4 py-3"
+        style={{ borderBottom: '1px solid #F1F3F5' }}
+      >
+        <div>
+          <p
+            className="text-sm font-medium"
+            style={{ color: '#2C3E50' }}
+          >
+            {label}
+          </p>
+
+          {hint && (
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: '#ADB5BD' }}
+            >
+              {hint}
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-shrink-0">
+          {options.map(option => {
+            const isSelected =
+              (config as any)[field] === option.value;
+
+            return (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() =>
+                  setConfig(prev => ({
+                    ...prev,
+                    [field]: option.value,
+                  }))
+                }
+                className="px-4 py-1.5 rounded text-sm font-medium transition-colors"
+                style={{
+                  backgroundColor: isSelected
+                    ? option.backgroundColor
+                    : '#FFFFFF',
+                  color: isSelected
+                    ? option.color
+                    : '#6C757D',
+                  border: `1px solid ${
+                    isSelected
+                      ? option.borderColor
+                      : '#DEE2E6'
+                  }`,
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="flex gap-2 flex-shrink-0">
-        {['Oui', 'Non'].map(opt => (
-          <button key={opt} type="button"
-            onClick={() => setConfig(prev => ({ ...prev, [field]: opt === 'Oui' }))}
-            className="px-4 py-1.5 rounded text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: (config as any)[field] === (opt === 'Oui') ? (opt === 'Oui' ? '#EAFAF1' : '#FDEDEC') : '#F8F9FA',
-              color: (config as any)[field] === (opt === 'Oui') ? (opt === 'Oui' ? '#27AE60' : '#C0392B') : '#6C757D',
-              border: `1px solid ${(config as any)[field] === (opt === 'Oui') ? (opt === 'Oui' ? '#A9DFBF' : '#F1948A') : '#DEE2E6'}`,
-            }}>
-            {opt}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) return (
     <AppLayout>
@@ -1329,44 +1424,116 @@ const removeRegReq = (req: string) => {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <Label>Probabilité</Label>
-                            <select value={risk.probability}
-                              onChange={e => updateRisk(scenario.id, 'probability', e.target.value)}
-                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
-                              <option value="FAIBLE">1 — Faible (peu probable)</option>
-                              <option value="MOYENNE">2 — Moyenne (probable)</option>
-                              <option value="ELEVEE">3 — Élevée (très probable)</option>
-                            </select>
+                            <select
+  value={risk.probability || ''}
+  onChange={e => updateRisk(scenario.id, 'probability', e.target.value)}
+  className="rounded px-3 py-2 text-sm focus:outline-none"
+  style={inputStyle}
+>
+  <option value="">À évaluer...</option>
+  <option value="FAIBLE">1 — Faible (peu probable)</option>
+  <option value="MOYENNE">2 — Moyenne (probable)</option>
+  <option value="ELEVEE">3 — Élevée (très probable)</option>
+</select>
                           </div>
                           <div>
                             <Label>Impact sur les activités</Label>
-                            <select value={risk.impact}
-                              onChange={e => updateRisk(scenario.id, 'impact', e.target.value)}
-                              className="rounded px-3 py-2 text-sm focus:outline-none" style={inputStyle}>
-                              <option value="FAIBLE">1 — Faible (effets limités)</option>
-                              <option value="MOYEN">2 — Modéré (activités ralenties)</option>
-                              <option value="ELEVE">3 — Sévère (activités inopérantes)</option>
-                            </select>
+                            <select
+  value={risk.impact || ''}
+  onChange={e => updateRisk(scenario.id, 'impact', e.target.value)}
+  className="rounded px-3 py-2 text-sm focus:outline-none"
+  style={inputStyle}
+>
+  <option value="">À évaluer...</option>
+  <option value="FAIBLE">1 — Faible (effets limités)</option>
+  <option value="MOYEN">2 — Modéré (activités ralenties)</option>
+  <option value="ELEVE">3 — Sévère (activités inopérantes)</option>
+</select>
                           </div>
                         </div>
                         {/* Niveau de risque calculé */}
-                        {(() => {
-                          const p = risk.probability === 'ELEVEE' ? 3 : risk.probability === 'MOYENNE' ? 2 : 1;
-                          const i = risk.impact === 'ELEVE' ? 3 : risk.impact === 'MOYEN' ? 2 : 1;
-                          const score = p * i;
-                          const label = score >= 6 ? 'ÉLEVÉ' : score >= 3 ? 'MOYEN' : 'FAIBLE';
-                          const color = score >= 6 ? '#C0392B' : score >= 3 ? '#F39C12' : '#27AE60';
-                          const bg = score >= 6 ? '#FDEDEC' : score >= 3 ? '#FEF9E7' : '#EAFAF1';
-                          const border = score >= 6 ? '#F1948A' : score >= 3 ? '#FAD7A0' : '#A9DFBF';
-                          return (
-                            <div className="flex items-center gap-2 px-3 py-2 rounded text-xs font-bold"
-                              style={{ backgroundColor: bg, border: `1px solid ${border}`, color }}>
-                              Niveau de risque : {score} — {label}
-                              <span className="font-normal ml-1" style={{ color: '#6C757D' }}>
-                                (Probabilité {p} × Impact {i} = {score})
-                              </span>
-                            </div>
-                          );
-                        })()}
+{(() => {
+  if (!risk.probability || !risk.impact) {
+    return (
+      <div
+        className="flex items-center gap-2 px-3 py-2 rounded text-xs font-bold"
+        style={{
+          backgroundColor: '#F8F9FA',
+          border: '1px solid #DEE2E6',
+          color: '#6C757D',
+        }}
+      >
+        Niveau de risque : À déterminer
+        <span className="font-normal ml-1">
+          — renseignez la probabilité et l'impact
+        </span>
+      </div>
+    );
+  }
+
+  const p =
+    risk.probability === 'ELEVEE'
+      ? 3
+      : risk.probability === 'MOYENNE'
+        ? 2
+        : 1;
+
+  const i =
+    risk.impact === 'ELEVE'
+      ? 3
+      : risk.impact === 'MOYEN'
+        ? 2
+        : 1;
+
+  const score = p * i;
+  const label =
+    score >= 6
+      ? 'ÉLEVÉ'
+      : score >= 3
+        ? 'MOYEN'
+        : 'FAIBLE';
+
+  const color =
+    score >= 6
+      ? '#C0392B'
+      : score >= 3
+        ? '#F39C12'
+        : '#27AE60';
+
+  const bg =
+    score >= 6
+      ? '#FDEDEC'
+      : score >= 3
+        ? '#FEF9E7'
+        : '#EAFAF1';
+
+  const border =
+    score >= 6
+      ? '#F1948A'
+      : score >= 3
+        ? '#FAD7A0'
+        : '#A9DFBF';
+
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2 rounded text-xs font-bold"
+      style={{
+        backgroundColor: bg,
+        border: `1px solid ${border}`,
+        color,
+      }}
+    >
+      Niveau de risque : {score} — {label}
+
+      <span
+        className="font-normal ml-1"
+        style={{ color: '#6C757D' }}
+      >
+        (Probabilité {p} × Impact {i} = {score})
+      </span>
+    </div>
+  );
+})()}
                         <div>
   <Label>Conséquences possibles sur l'organisation</Label>
   <textarea
@@ -2837,22 +3004,70 @@ const removeRegReq = (req: string) => {
             Section suivante <ChevronRight size={16} />
           </button>
         ) : (
-          <button
-            onClick={async () => {
-  try {
-    await handleSave();
-    await api.post(`/generator/generate/${projectId}`);
-    router.push(`/projects/${projectId}`);
-  } catch (err) {
-    console.error('Erreur finalisation PCA:', err);
-  }
-}}
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded text-white"
-            style={{ backgroundColor: '#27AE60' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1E8449'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#27AE60'}>
-            <Save size={16} /> Terminer la configuration
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              type="button"
+              disabled={finalizing || saving}
+              onClick={async () => {
+                if (finalizing) return;
+
+                setFinalizing(true);
+                setFinalizationError('');
+
+                try {
+                  // Sauvegarder la toute dernière version de la configuration.
+                  // handleSave attend également les sauvegardes précédentes
+                  // grâce à la file saveQueueRef.
+                  await handleSave();
+
+                  // Générer le document.
+                  // Axios rejettera automatiquement la promesse si le backend
+                  // répond avec un statut HTTP d'erreur.
+                  await api.post(`/generator/generate/${projectId}`);
+
+                  // Ne revenir au projet qu'après confirmation du backend.
+                  router.push(`/projects/${projectId}`);
+                } catch (err) {
+                  console.error('Erreur finalisation PCA:', err);
+
+                  setFinalizationError(
+                    'La configuration a été conservée, mais le PCA n’a pas pu être généré. Veuillez réessayer.'
+                  );
+
+                  setFinalizing(false);
+                }
+              }}
+              className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: finalizing ? '#7DCEA0' : '#27AE60',
+              }}
+              onMouseEnter={e => {
+                if (!finalizing && !saving) {
+                  e.currentTarget.style.backgroundColor = '#1E8449';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!finalizing && !saving) {
+                  e.currentTarget.style.backgroundColor = '#27AE60';
+                }
+              }}
+            >
+              <Save size={16} />
+
+              {finalizing
+                ? 'Génération du PCA...'
+                : 'Terminer la configuration'}
+            </button>
+
+            {finalizationError && (
+              <p
+                className="text-xs text-right max-w-md"
+                style={{ color: '#C0392B' }}
+              >
+                {finalizationError}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </AppLayout>
