@@ -90,9 +90,9 @@ export default async function PortailClientPage({
       tag: 'Portail client',
 
       heroEyebrow: 'L’expérience client CORO',
-      title: 'La conformité de vos clients ne s’arrête pas à la livraison du PDF.',
+      title: 'De la conformité documentaire à la résilience opérationnelle — tout dans un seul portail.',
       intro:
-        'CORO offre à vos clients un véritable espace de gestion de leur conformité : bâtiments, documents, activités, approbations, signatures, commentaires et historique des versions sont centralisés dans un portail sécurisé.',
+        'CORO offre à vos clients un espace unifié : documents de conformité, suivi de bâtiments, indice de résilience opérationnelle, intelligence multi-sites, gestion d’incidents et actions correctives — accessibles depuis un portail sécurisé.',
 
       heroImage:
         '/images/solutions/portail-client/coro-portail-client-tableau-de-bord.webp',
@@ -112,18 +112,18 @@ export default async function PortailClientPage({
         },
         {
           number: '02',
-          title: 'Portefeuille immobilier',
-          text: 'Tous les bâtiments du client regroupés au même endroit.',
+          title: 'Résilience en temps réel',
+          text: 'Indice CORO, rôles d’urgence actifs, lacunes détectées automatiquement.',
         },
         {
           number: '03',
-          title: 'Traçabilité',
-          text: 'Versions, approbations, signatures et commentaires conservés.',
+          title: 'Intelligence multi-sites',
+          text: 'Vue agrégée de tous les bâtiments avec recommandations proactives.',
         },
         {
           number: '04',
-          title: 'Activités',
-          text: 'Révisions, formations, exercices et interventions planifiées.',
+          title: 'Gestion d’incidents',
+          text: 'Déclenchement, suivi, REX et actions correctives depuis le portail.',
         },
       ],
 
@@ -157,6 +157,8 @@ export default async function PortailClientPage({
           'Accès direct aux documents',
           'Accès à Coro Sentinelle lorsque le service est activé',
           'Vision multisite pour les organisations',
+          'Indice de résilience 🟢🟠🔴 par bâtiment',
+          'Accès au Module Incident lorsque le service est activé',
         ],
         image:
           '/images/solutions/portail-client/coro-portail-client-batiments.webp',
@@ -251,8 +253,8 @@ export default async function PortailClientPage({
         kicker: 'Un écosystème qui évolue',
         title: 'Du document à l’exploitation du bâtiment',
         text:
-          'Le portail peut également devenir le point d’accès aux autres services CORO associés au bâtiment. Avec Coro Sentinelle, les organisations peuvent notamment gérer leur registre d’occupation et disposer d’outils opérationnels utiles lors d’une évacuation.',
-        cta: 'Découvrir Coro Sentinelle',
+          'Le portail intègre l’ensemble de l’écosystème opérationnel CORO. Avec Sentinelle, les organisations gèrent leur registre d’occupation et leurs évacuations. Avec le Module Incident, elles déclenchent les procédures d’urgence, notifient les occupants par SMS, suivent les actions correctives et produisent le rapport REX conforme ISO 22301.',
+        cta: 'Découvrir la résilience opérationnelle',
       },
 
       faqTitle: 'Questions fréquentes',
@@ -282,20 +284,28 @@ export default async function PortailClientPage({
           q: 'Le portail est-il accessible sur mobile ?',
           a: 'Oui. Le portail client est conçu pour s’adapter aux ordinateurs, tablettes et appareils mobiles.',
         },
+        {
+          q: 'Le portail donne-t-il accès à l’indice de résilience du bâtiment ?',
+          a: 'Oui. L’indice CORO de résilience opérationnelle est visible directement dans le portail client. Il combine quatre composantes pondérées : rôles d’urgence couverts, qualifications actives, plans approuvés et exercices réalisés. Un badge 🟢🟠🔴 indique l’état de chaque bâtiment en temps réel.',
+        },
+        {
+          q: 'Le client peut-il voir les incidents et les rapports REX ?',
+          a: 'Oui. L’historique des incidents déclenchés, les checklists complétées, les accusés de réception et les rapports post-incident (REX) conformes ISO 22301 sont accessibles depuis le portail client lorsque le Module Incident est activé.',
+        },
       ],
 
       finalTitle: 'Transformez la livraison d’un document en véritable expérience client.',
       finalText:
-        'Avec CORO, vos clients ne reçoivent plus simplement un PDF. Ils disposent d’un espace structuré pour suivre leurs bâtiments, leur documentation, leurs activités et l’évolution de leur conformité.',
+        'Avec CORO, vos clients disposent d’un espace unifié — documents, résilience, incidents et intelligence organisationnelle — conçu pour accompagner chaque bâtiment au quotidien.',
     },
 
     en: {
       tag: 'Client Portal',
 
       heroEyebrow: 'The CORO client experience',
-      title: 'Your clients’ compliance does not stop when the PDF is delivered.',
+      title: 'From document compliance to operational resilience — everything in one portal.',
       intro:
-        'CORO gives your clients a true compliance management space where buildings, documents, activities, approvals, signatures, comments and version history are centralized in one secure portal.',
+        'CORO gives your clients a unified space: compliance documents, building monitoring, operational resilience index, multi-site intelligence, incident management and corrective actions — all accessible from one secure portal.',
 
       heroImage:
         '/images/solutions/portail-client/coro-portail-client-tableau-de-bord.webp',
@@ -315,18 +325,18 @@ export default async function PortailClientPage({
         },
         {
           number: '02',
-          title: 'Building portfolio',
-          text: 'All client buildings centralized in one place.',
+          title: 'Real-time resilience',
+          text: 'CORO index, active emergency roles, gaps detected automatically.',
         },
         {
           number: '03',
-          title: 'Traceability',
-          text: 'Versions, approvals, signatures and comments retained.',
+          title: 'Multi-site intelligence',
+          text: 'Aggregated view of all buildings with proactive recommendations.',
         },
         {
           number: '04',
-          title: 'Activities',
-          text: 'Reviews, training, drills and scheduled interventions.',
+          title: 'Incident management',
+          text: 'Trigger, monitor, REX and corrective actions from the portal.',
         },
       ],
 
@@ -360,6 +370,8 @@ export default async function PortailClientPage({
           'Direct access to documents',
           'Access to Coro Sentinel when activated',
           'Multi-site organization view',
+          'Resilience index 🟢🟠🔴 per building',
+          'Access to the Incident Module when the service is activated',
         ],
         image:
           '/images/solutions/portail-client/coro-portail-client-batiments.webp',
@@ -454,8 +466,8 @@ export default async function PortailClientPage({
         kicker: 'A growing ecosystem',
         title: 'From documentation to building operations',
         text:
-          'The client portal can also become an access point to other CORO services associated with the building. With Coro Sentinel, organizations can manage occupancy records and access operational tools useful during an evacuation.',
-        cta: 'Discover Coro Sentinel',
+          'The portal integrates the complete CORO operational ecosystem. With Sentinel, organizations manage occupancy records and evacuations. With the Incident Module, they trigger emergency procedures, notify occupants by SMS, track corrective actions and produce ISO 22301-compliant post-incident reports.',
+        cta: 'Discover operational resilience',
       },
 
       faqTitle: 'Frequently asked questions',
@@ -485,11 +497,19 @@ export default async function PortailClientPage({
           q: 'Is the portal mobile-friendly?',
           a: 'Yes. The client portal is designed to adapt to desktop computers, tablets and mobile devices.',
         },
+        {
+          q: 'Does the portal provide access to the building resilience index?',
+          a: 'Yes. The CORO operational resilience index is visible directly in the client portal. It combines four weighted components: emergency roles covered, active qualifications, approved plans and completed drills. A 🟢🟠🔴 badge shows each building’s status in real time.',
+        },
+        {
+          q: 'Can clients view incidents and post-incident reports?',
+          a: 'Yes. The history of triggered incidents, completed checklists, acknowledgments and ISO 22301-compliant post-incident reports are accessible from the client portal when the Incident Module is activated.',
+        },
       ],
 
       finalTitle: 'Turn document delivery into a true client experience.',
       finalText:
-        'With CORO, your clients receive more than a PDF. They gain a structured environment for tracking buildings, documentation, activities and the evolution of their compliance.',
+        'With CORO, your clients gain a unified space — documents, resilience, incidents and organizational intelligence — built to support every building every day.',
     },
   };
 
@@ -1609,8 +1629,8 @@ export default async function PortailClientPage({
             <a
               href={
                 lang === 'fr'
-                  ? '/coro-sentinelle'
-                  : '/coro-sentinelle?lang=en'
+                  ? '/resilience-operationnelle'
+                  : '/resilience-operationnelle?lang=en'
               }
               className="portal-btn portal-btn-primary"
             >
