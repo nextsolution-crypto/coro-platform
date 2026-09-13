@@ -298,18 +298,24 @@ export class IncidentService {
       });
     }
 
-    // 2. PMU — contacts d'urgence externes
-    const activePmu = await this.prisma.project.findFirst({
-      where: { buildingId, documentType: { in: ['PMU', 'PSI'] }, status: { in: ['VALIDATED', 'EXPORTED'] }, isActive: true },
-      orderBy: { updatedAt: 'desc' },
-      select: { configData: true },
+    // 2. Contact corpo — depuis la fiche client du bâtiment
+    const buildingWithClient = await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId },
+      include: {
+        client: {
+          select: { name: true, contactEmail: true, contactPhone: true, contactFirstName: true, contactLastName: true, email: true, phone: true },
+        },
+      },
     });
-    const configData = activePmu?.configData as any;
-    if (configData?.contactsUrgence?.length > 0) {
-      for (const c of configData.contactsUrgence) {
-        if (c.email || c.telephone) {
-          contacts.push({ email: c.email, phone: c.telephone, name: c.nom || c.name || 'Contact urgence' });
-        }
+    const client = buildingWithClient?.client;
+    if (client) {
+      // Contact principal du client
+      if (client.contactEmail || client.email) {
+        contacts.push({
+          email: client.contactEmail || client.email || undefined,
+          phone: client.contactPhone || client.phone || undefined,
+          name:  `${client.contactFirstName || ''} ${client.contactLastName || ''}`.trim() || client.name || 'Contact corpo',
+        });
       }
     }
 
