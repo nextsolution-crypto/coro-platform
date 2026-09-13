@@ -353,7 +353,17 @@ export default function EditorPage() {
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
-                  onChange={(e) => { section.content = e.target.value; }}
+                  onChange={(e) => {
+                    section.content = e.target.value;
+                    setEditingContent(e.target.value);
+                  }}
+                  onFocus={() => {
+                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
+                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
+                    setActiveModule(modIdx);
+                    setActiveSection(secIdx);
+                    setEditingContent(section.content);
+                  }}
                   onBlur={handleSaveSection}
                 />
               </div>
@@ -388,7 +398,17 @@ export default function EditorPage() {
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
-                  onChange={(e) => { section.content = e.target.value; }}
+                  onChange={(e) => {
+                    section.content = e.target.value;
+                    setEditingContent(e.target.value);
+                  }}
+                  onFocus={() => {
+                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
+                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
+                    setActiveModule(modIdx);
+                    setActiveSection(secIdx);
+                    setEditingContent(section.content);
+                  }}
                   onBlur={handleSaveSection}
                 />
               </div>
@@ -412,7 +432,17 @@ export default function EditorPage() {
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
-                  onChange={(e) => { section.content = e.target.value; }}
+                  onChange={(e) => {
+                    section.content = e.target.value;
+                    setEditingContent(e.target.value);
+                  }}
+                  onFocus={() => {
+                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
+                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
+                    setActiveModule(modIdx);
+                    setActiveSection(secIdx);
+                    setEditingContent(section.content);
+                  }}
                   onBlur={handleSaveSection}
                 />
               </div>
@@ -456,7 +486,17 @@ export default function EditorPage() {
                   rows={8}
                   className="w-full rounded px-4 py-2.5 text-sm focus:outline-none resize-y"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
-                  onChange={(e) => { section.content = e.target.value; }}
+                  onChange={(e) => {
+                    section.content = e.target.value;
+                    setEditingContent(e.target.value);
+                  }}
+                  onFocus={() => {
+                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
+                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
+                    setActiveModule(modIdx);
+                    setActiveSection(secIdx);
+                    setEditingContent(section.content);
+                  }}
                   onBlur={handleSaveSection}
                 />
               </div>
@@ -495,6 +535,14 @@ export default function EditorPage() {
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', lineHeight: 1.7 }}
                   onChange={(e) => {
                     section.content = e.target.value;
+                    setEditingContent(e.target.value);
+                  }}
+                  onFocus={() => {
+                    const modIdx = getModules().findIndex((m: any) => m.moduleNumber === currentModule.moduleNumber);
+                    const secIdx = currentModule.sections.findIndex((s: any) => s.id === section.id);
+                    setActiveModule(modIdx);
+                    setActiveSection(secIdx);
+                    setEditingContent(section.content);
                   }}
                   onBlur={handleSaveSection}
                 />
