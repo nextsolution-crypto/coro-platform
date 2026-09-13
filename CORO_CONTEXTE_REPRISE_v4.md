@@ -219,7 +219,7 @@ Registre d'occupation intelligent pour les bâtiments, lié au portail client. C
 ### Modèles DB Prisma (registre de base)
 - `OccupancyRecord`, `EvacuationEvent`, `EvacuationCheckIn`, `BuildingKioskToken`, `BuildingEmployee`, `VisitorInvitation`
 
-### 🆕 Module Incident (déclenchement d'urgence complet)
+### 🆕 Module Incident (déclenchement d'urgence complet) — ✅ Complet et déployé en production
 - Déclenchement d'un incident réel (15 types mappés : alarme incendie, fuite de gaz, menace active, urgence médicale, matières dangereuses, batterie lithium, inondation, etc.)
 - Import direct de la procédure CORO liée (`procedureCode`, `procedureSnapshot` — étapes ROLE-CU figées au déclenchement)
 - Checklist coordonnateur cochable, incidents multiples simultanés, point de rassemblement récupéré du configData PMU
@@ -227,13 +227,19 @@ Registre d'occupation intelligent pour les bâtiments, lié au portail client. C
 - Courriels équipe + occupants automatiques (Brevo)
 - Mode exercice (`isExercise`) distinct des incidents réels
 - Journal temps réel (`IncidentLog`) — actions automatiques et manuelles horodatées
-- REX (retour d'expérience) ISO 22301 : ce qui a bien fonctionné / points à améliorer / recommandations / actions correctives
 - Export rapport PDF conforme CNPI/CNESST
 - Modèles : `IncidentEvent`, `IncidentTask`, `IncidentLog` (enums `IncidentType`, `IncidentStatus`, `IncidentTaskStatus`)
 - Backend : `occupancy/incident.controller.ts` + `incident.service.ts` (13 endpoints), exposé aussi côté portail client via `client-portal.controller.ts`
 - Frontend portail client : `sentinelle/[buildingId]/incident/page.tsx` (déclenchement), `incidents/page.tsx` (historique), `incidents/[incidentId]/page.tsx` (détail + REX)
 
-### 🆕 Résilience opérationnelle — Indice CORO
+### 🆕 Boucle REX (retour d'expérience) — ✅ Déployée
+- Formulaire post-incident conforme ISO 22301 : ce qui a bien fonctionné / points à améliorer / recommandations / actions correctives
+- Rapport PDF **7 sections** conforme CNPI/CNESST, généré depuis le détail incident
+- Champs dédiés sur `IncidentEvent` : `rexWentWell`, `rexToImprove`, `rexRecommendations`, `rexCorrectiveActions`, `rexCompletedAt`
+- Endpoint : `PUT /incidents/:incidentId/rex`
+- Frontend portail client : intégrée à `sentinelle/[buildingId]/incidents/[incidentId]/page.tsx`
+
+### 🆕 Résilience opérationnelle — Indice CORO — ✅ Déployée
 - Indice composite pondéré sur 4 composantes : rôles d'urgence pourvus, qualifications à jour, plans/procédures à jour, exercices réalisés
 - Statuts : READY / REDUCED / CRITICAL
 - `ResilienceSnapshot` — photo quotidienne (score global + 4 sous-scores + membres présents/total), CRON quotidien à 23h50
@@ -241,9 +247,12 @@ Registre d'occupation intelligent pour les bâtiments, lié au portail client. C
 - Backend : endpoints `resilience-history`, `readiness`, `readiness-enriched` dans `occupancy.controller.ts`, plus `resilience-history`/`resilience-snapshot` côté `client-portal.controller.ts`
 - Frontend portail client : `sentinelle/[buildingId]/resilience/page.tsx` (onglet Tendance inclus), + widget dashboard
 
-### 🆕 Intelligence organisationnelle
+### 🆕 Intelligence organisationnelle — ✅ Déployée
+- Page dédiée `/intelligence` sur le portail client, avec lien navigation
 - Vue agrégée multi-bâtiments (au-delà du bâtiment unique) pour les organisations avec plusieurs sites
-- Recommandations proactives basées sur les lacunes détectées (CNPI, ISO 22301, CNESST)
+- Recommandations proactives à 3 niveaux **CRITIQUE / ATTENTION / INFO**, basées sur les lacunes détectées (CNPI, ISO 22301, CNESST)
+- Graphique de tendance 90 jours (réutilise l'historique `ResilienceSnapshot`)
+- Actions correctives intégrées directement dans la vue (création/suivi sans changer de page)
 - Filtres criticité/bâtiment
 - Backend : `GET /client-portal/intelligence/overview`
 - Frontend portail client : `app/intelligence/page.tsx` + lien navigation
@@ -496,16 +505,19 @@ Portail client : `CLIENT_MANAGER` / `CLIENT_CORPORATE` (`ClientUserRole`), accè
 
 ## Ce qui reste à faire (roadmap priorisée — mise à jour v4)
 
-1. **Plan particulier OPI** (ROPI — deadline municipale mars 2027) — toujours en attente, aucune trace dans le code au 13/09/2026
-2. **Versioning documentaire** — duplication projet pour année suivante — toujours à faire (le versioning de signature existe, pas la duplication annuelle)
-3. **Interface CRUD bibliothèque** — 🟡 partiellement fait : procédures éditables via `admin/procedures` (GET/POST/PUT), mais pas de CRUD pour rôles ni codes d'incident, pas de DELETE procédures
-4. ~~Portail client enrichi~~ — ✅ **FAIT** : dashboard complet restructuré (bâtiments hub central, grille/liste, recherche, pagination), accès documents validés, engagement tracking
-5. **Traduction automatique FR/EN** — API DeepL — toujours à faire
-6. ~~MFA renforcé~~ — ✅ **FAIT** : MFA email conseiller + client, refresh tokens rotatifs, appareils de confiance 90 jours
-7. **Application mobile** — consultation terrain — toujours à faire
-8. **Haute disponibilité** — Read Replica DigitalOcean — toujours à faire
-9. 🆕 **Nettoyage dossiers PCA vides** — `pca-export/`, `pca-generator/`, `pca-procedures/` sont vides depuis leur création (23 août) ; à supprimer ou implémenter
-10. 🆕 **PGC/PRA/PUE — configurateur applicatif** — actuellement seules des pages marketing "Phase 2" existent côté site vitrine ; pas de configurateur/génération comme PMU/PSI/PCA
+1. 🆕 **Images page `/resilience-operationnelle`** (site vitrine) — visuels manquants sur la page marketing Résilience
+2. 🆕 **Bouton panique** — fonctionnalité à spécifier et implémenter (déclenchement d'urgence encore plus rapide que le Module Incident actuel)
+3. 🆕 **Import Azure AD** — synchronisation des employés/utilisateurs depuis Azure AD (alternative à l'import CSV actuel)
+4. **Plan particulier OPI** (ROPI — deadline municipale mars 2027) — toujours en attente, aucune trace dans le code au 13/09/2026
+5. **Versioning documentaire** — duplication projet pour année suivante — toujours à faire (le versioning de signature existe, pas la duplication annuelle)
+6. **Interface CRUD bibliothèque** — 🟡 partiellement fait : procédures éditables via `admin/procedures` (GET/POST/PUT), mais pas de CRUD pour rôles ni codes d'incident, pas de DELETE procédures
+7. ~~Portail client enrichi~~ — ✅ **FAIT** : dashboard complet restructuré (bâtiments hub central, grille/liste, recherche, pagination), accès documents validés, engagement tracking
+8. **Traduction automatique FR/EN** — API DeepL — toujours à faire
+9. ~~MFA renforcé~~ — ✅ **FAIT** : MFA email conseiller + client, refresh tokens rotatifs, appareils de confiance 90 jours
+10. **Application mobile** — consultation terrain — toujours à faire
+11. **Haute disponibilité** — Read Replica DigitalOcean — toujours à faire
+12. **Nettoyage dossiers PCA vides** — `pca-export/`, `pca-generator/`, `pca-procedures/` sont vides depuis leur création (23 août) ; à supprimer ou implémenter
+13. **PGC/PRA/PUE — configurateur applicatif** — actuellement seules des pages marketing "Phase 2" existent côté site vitrine ; pas de configurateur/génération comme PMU/PSI/PCA
 
 ---
 
@@ -604,7 +616,8 @@ Portail client : `CLIENT_MANAGER` / `CLIENT_CORPORATE` (`ClientUserRole`), accè
 - Le module `library` (bibliothèque procédures/rôles) n'a qu'un CRUD **partiel** (procédures seulement, pas de DELETE, rien pour rôles/codes incident) — la roadmap v3 le donnait comme entièrement à faire ; en réalité un début d'interface existe (`admin/procedures/*`).
 
 ### Roadmap mise à jour
-- 2 nouveaux items ajoutés : nettoyage des dossiers PCA vides, et clarification du statut réel PGC/PRA/PUE (configurateur applicatif manquant malgré le statut "100%" affiché historiquement)
+- 3 nouveaux items prioritaires ajoutés (remontés par Mathieu) : images de la page `/resilience-operationnelle`, bouton panique, import Azure AD
+- 2 items de clarification technique ajoutés : nettoyage des dossiers PCA vides, et clarification du statut réel PGC/PRA/PUE (configurateur applicatif manquant malgré le statut "100%" affiché historiquement)
 
 ---
 

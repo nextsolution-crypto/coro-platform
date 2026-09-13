@@ -36,11 +36,11 @@ Contexte complet et détaillé : `CORO_CONTEXTE_REPRISE_v4.md` (racine). Ce fich
 
 **Modules applicatifs livrés** : approbation documentaire, notifications in-app, délais mandats + alertes, générateur procédures IA, REPTOX (88 substances), portefeuille mandats, capacity planning, toasts globaux, health score portefeuille, bookings/réservations, espace fichiers projet collaboratif, chat IA "Sophie" (site vitrine), tracking engagement client, MFA (conseiller + client) + refresh tokens + trusted devices + magic links.
 
-**CORO Sentinelle (registre d'occupation)** — cœur : borne kiosque QR dynamique, pointage PIN, mode évacuation. Étendu récemment avec 4 volets majeurs :
-- **Module Incident** : déclenchement, tâches par rôle avec accusé de réception, REX ISO 22301, export PDF CNPI/CNESST.
-- **Résilience opérationnelle / indice CORO** : score pondéré 4 composantes, snapshot quotidien, tendance 90 jours.
-- **Intelligence organisationnelle** : vue agrégée multi-bâtiments, recommandations proactives.
-- **Actions correctives** : CRUD, statuts, priorités, filtres.
+**CORO Sentinelle (registre d'occupation)** — cœur : borne kiosque QR dynamique, pointage PIN, mode évacuation. Étendu avec 4 volets majeurs, **tous complets et déployés en production** :
+- **Module Incident ✅** : 15 types d'incident, déclenchement avec tâches par rôle, SMS Brevo, accusés de réception, mode exercice, incidents multiples simultanés.
+- **Boucle REX ✅** : formulaire post-incident (ISO 22301), rapport PDF 7 sections conforme CNPI/CNESST.
+- **Résilience opérationnelle / indice CORO ✅** : score pondéré 4 composantes, snapshot quotidien, tendance 90 jours.
+- **Intelligence organisationnelle ✅** : page `/intelligence` portail client, recommandations CRITIQUE/ATTENTION/INFO, vue multi-bâtiments, graphique tendance 90j, actions correctives intégrées.
 - Plus : import CSV employés, consentement SMS (LPCAP), substitution automatique des rôles, carte interactive bâtiments.
 
 **Backend actif** (`app.module.ts`) : ~35 modules NestJS. Point d'entrée central du portail client = `client-portal.controller.ts` (~39 endpoints, y compris Sentinelle/Résilience/Intelligence/Actions correctives).
@@ -81,11 +81,14 @@ Contexte complet et détaillé : `CORO_CONTEXTE_REPRISE_v4.md` (racine). Ce fich
 
 ## 6. Prochaines priorités
 
-1. **Clarifier PGC/PRA/PUE** — confirmer avec Mathieu s'ils doivent avoir un configurateur applicatif complet comme PMU/PSI/PCA, ou rester en pages "Phase 2".
-2. **Nettoyer les dossiers PCA vides** (`pca-export/`, `pca-generator/`, `pca-procedures/`) — supprimer ou implémenter.
-3. **Plan particulier OPI (ROPI)** — deadline municipale mars 2027, aucune trace au code encore.
-4. **Versioning documentaire** — duplication de projet pour l'année suivante (pas encore fait, seul le versioning de signature existe).
-5. **CRUD bibliothèque complet** — actuellement partiel (procédures GET/POST/PUT seulement, rien pour rôles/codes incident, pas de DELETE).
-6. **Traduction automatique FR/EN** (API DeepL).
-7. **Application mobile** de consultation terrain.
-8. **Haute disponibilité** — Read Replica DigitalOcean.
+1. **Images page `/resilience-operationnelle`** (site vitrine) — visuels manquants.
+2. **Bouton panique** — à spécifier et implémenter.
+3. **Import Azure AD** — synchronisation employés/utilisateurs depuis Azure AD.
+4. **Clarifier PGC/PRA/PUE** — confirmer avec Mathieu s'ils doivent avoir un configurateur applicatif complet comme PMU/PSI/PCA, ou rester en pages "Phase 2".
+5. **Nettoyer les dossiers PCA vides** (`pca-export/`, `pca-generator/`, `pca-procedures/`) — supprimer ou implémenter.
+6. **Plan particulier OPI (ROPI)** — deadline municipale mars 2027, aucune trace au code encore.
+7. **Versioning documentaire** — duplication de projet pour l'année suivante (pas encore fait, seul le versioning de signature existe).
+8. **CRUD bibliothèque complet** — actuellement partiel (procédures GET/POST/PUT seulement, rien pour rôles/codes incident, pas de DELETE).
+9. **Traduction automatique FR/EN** (API DeepL).
+10. **Application mobile** de consultation terrain.
+11. **Haute disponibilité** — Read Replica DigitalOcean.
