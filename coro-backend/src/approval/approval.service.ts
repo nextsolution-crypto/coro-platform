@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../client-portal/email.service';
+import { ExportService } from '../export/export.service';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class ApprovalService {
@@ -9,6 +11,8 @@ export class ApprovalService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private emailService: EmailService,
+    private exportService: ExportService,
+    private storageService: StorageService,
   ) {}
 
   // ── Soumettre pour approbation ───────────────────────────
@@ -140,6 +144,35 @@ export class ApprovalService {
         officialPdfFr: null,
         officialPdfEn: null,
       },
+    });
+
+    // 3bis. Génération automatique du PDF d'aperçu (exportedPdf*) en fire-and-forget.
+    // N'invalide jamais l'approbation déjà enregistrée en base si elle échoue.
+    void this.exportService.generatePdf(project.id, {
+      selectedModules: project.documentType === 'PCA'
+        ? [1, 2, 3, 4, 5, 6, 7, 8]
+        : [1, 2, 3, 4, 6, 7, 8],
+      moduleOrder: project.documentType === 'PCA'
+        ? [1, 2, 3, 4, 5, 6, 7, 8]
+        : [1, 2, 3, 4, 6, 7, 8],
+      language: 'both',
+      isPreview: false,
+    }, organizationId).then(async (pdfResult) => {
+      const timestamp = Date.now();
+      const [exportedPdfFr, exportedPdfEn] = await Promise.all([
+        pdfResult.fr
+          ? this.storageService.uploadFile(pdfResult.fr, `${project.id}-${timestamp}-FR.pdf`, 'documents', 'application/pdf')
+          : Promise.resolve(null),
+        pdfResult.en
+          ? this.storageService.uploadFile(pdfResult.en, `${project.id}-${timestamp}-EN.pdf`, 'documents', 'application/pdf')
+          : Promise.resolve(null),
+      ]);
+      await this.prisma.project.update({
+        where: { id: project.id },
+        data: { exportedPdfFr, exportedPdfEn },
+      });
+    }).catch((err) => {
+      console.error('Erreur génération PDF après approbation:', err);
     });
 
     // 4. Notifications / emails secondaires.
