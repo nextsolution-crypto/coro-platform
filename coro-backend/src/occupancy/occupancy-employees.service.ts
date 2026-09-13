@@ -556,11 +556,13 @@ export class OccupancyEmployeesService {
     };
 
     const COLS = {
-      firstName:       col(['prenom', 'firstname', 'first']),
-      lastName:        col(['nom', 'lastname', 'last']),
-      poste:           col(['poste', 'titre', 'position', 'title', 'role']),
-      email:           col(['email', 'courriel', 'mail']),
-      phone:           col(['telephone', 'phone', 'tel', 'cellulaire']),
+      // Colonnes CORO natif + Azure AD + Google Workspace + ADP + BambooHR
+      firstName:       col(['prenom', 'firstname', 'first', 'givenname', 'given name', 'givenname', 'prénom', 'forename']),
+      lastName:        col(['nom', 'lastname', 'last', 'surname', 'familyname', 'family name', 'sn']),
+      displayName:     col(['displayname', 'display name', 'fullname', 'full name', 'name', 'nom complet']),
+      poste:           col(['poste', 'titre', 'position', 'title', 'jobtitle', 'job title', 'fonction', 'department']),
+      email:           col(['email', 'courriel', 'mail', 'userprincipalname', 'user principal name', 'emailaddress', 'email address', 'work email']),
+      phone:           col(['telephone', 'phone', 'tel', 'cellulaire', 'mobilephone', 'mobile phone', 'mobile', 'cell', 'businessphones', 'work phone', 'phonenum']),
       isEmergency:     col(['urgence', 'emergency', 'membre']),
       emergencyRole:   col(['roleurgence', 'emergencyrole', 'roleurgence']),
       assignType:      col(['type', 'assigntype', 'titulaire']),
@@ -600,8 +602,20 @@ export class OccupancyEmployeesService {
 
       const get = (colIdx: number) => (colIdx >= 0 && colIdx < row.length ? row[colIdx]?.trim() || '' : '');
 
-      const firstName = get(COLS.firstName);
-      const lastName  = get(COLS.lastName);
+      let firstName = get(COLS.firstName);
+      let lastName  = get(COLS.lastName);
+
+      // Fallback displayName — Azure AD et Google exportent souvent "John Doe" dans une seule colonne
+      if ((!firstName || !lastName) && COLS.displayName >= 0) {
+        const displayName = get(COLS.displayName).trim();
+        if (displayName) {
+          const parts = displayName.split(' ');
+          if (parts.length >= 2) {
+            firstName = firstName || parts[0];
+            lastName  = lastName  || parts.slice(1).join(' ');
+          }
+        }
+      }
 
       if (!firstName || !lastName) {
         results.errors.push(`Ligne ${lineNum} : Prénom et Nom requis — ignorée`);
