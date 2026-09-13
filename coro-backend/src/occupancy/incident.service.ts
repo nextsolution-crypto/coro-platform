@@ -253,7 +253,7 @@ export class IncidentService {
     const now          = new Date().toLocaleString('fr-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const address      = `${building.address || ''}, ${building.city || ''}, ${building.province || ''}`.trim().replace(/^,|,$/g, '');
 
-    const smsText = `🚨 URGENCE — ${emergencyType}\n${building.name}\n${address}\nDéclenché par ${triggeredBy} à ${now}\n\nAPPELEZ LE 911 IMMÉDIATEMENT`;
+    const smsText = `🚨 ALERTE SÉCURITÉ — MENACE ACTIVE\n${building.name}\n${address}\nDéclenché par ${triggeredBy} à ${now}\n\nCOMPOSEZ LE 911 ET DITES :\n"Menace active au ${address}"\n\nSECURITY ALERT — ACTIVE THREAT\nCall 911 and say: "Active threat at ${address}"`;
 
     const htmlEmail = `
       <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
@@ -263,13 +263,18 @@ export class IncidentService {
         </div>
         <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
           <div style="background:#FDEDEC;border-left:6px solid #C0392B;padding:16px 20px;border-radius:4px;margin-bottom:24px;">
-            <p style="margin:0;font-size:22px;font-weight:900;color:#C0392B;">🚨 ${emergencyType}</p>
+            <p style="margin:0;font-size:22px;font-weight:900;color:#C0392B;">🚨 MENACE ACTIVE — ACTIVE THREAT</p>
             <p style="margin:6px 0 0;font-size:15px;color:#6C757D;">${building.name}</p>
           </div>
           <div style="background:#F8F9FA;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
             <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">📍 <strong style="color:#2C3E50;">${address}</strong></p>
             <p style="margin:0 0 8px;font-size:14px;color:#6C757D;">🕐 Déclenché à <strong style="color:#2C3E50;">${now}</strong></p>
             <p style="margin:0;font-size:14px;color:#6C757D;">👤 Par <strong style="color:#2C3E50;">${triggeredBy}</strong></p>
+          </div>
+          <div style="background:#1A1A1A;border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:800;color:#FFFFFF;text-transform:uppercase;letter-spacing:0.1em;">📞 Composez le 911 et dites :</p>
+            <p style="margin:0 0 10px;font-size:16px;font-weight:700;color:#FFD700;">"Menace active au ${address}"</p>
+            <p style="margin:0;font-size:12px;color:#ADB5BD;">Call 911 and say: "Active threat at ${address}"</p>
           </div>
           <a href="tel:911" style="display:block;text-align:center;background:#C0392B;color:#FFFFFF;padding:16px;border-radius:8px;text-decoration:none;font-size:20px;font-weight:900;margin-bottom:16px;">
             📞 APPELER LE 911
