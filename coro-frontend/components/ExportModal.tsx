@@ -50,7 +50,7 @@ export default function ExportModal({
   const PSI_EXCLUDED_MODULES = [3]; // Pas d'organigramme dans un PSI
 
   const availableModules = ALL_MODULES.filter((m) => {
-    if (m.num === 6 && !hasPlans) return false;
+    if (documentType !== 'PCA' && m.num === 6 && !hasPlans) return false;
     if (documentType !== 'PCA' && documentType === 'PSI' && PSI_EXCLUDED_MODULES.includes(m.num)) return false;
     return true;
   });
