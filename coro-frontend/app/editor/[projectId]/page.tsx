@@ -78,7 +78,17 @@ interface Document {
 
 const SPECIAL_MODULES = [4, 6, 7, 8];
 
-function getSpecialModuleLabel(moduleNumber: number, lang: 'fr' | 'en'): string {
+function getSpecialModuleLabel(moduleNumber: number, lang: 'fr' | 'en', docType?: string): string {
+  if (docType === 'PCA') {
+    const pcaLabels: Record<number, [string, string]> = {
+      4: ['Bilan d\'impact (BIA)',    'Business Impact Analysis (BIA)'],
+      5: ['Stratégies de continuité', 'Continuity strategies'],
+      6: ['Communication de crise',   'Crisis communication'],
+      7: ['Activation et reprise',    'Activation and recovery'],
+      8: ['Exercices et maintien',    'Drills and maintenance'],
+    };
+    return pcaLabels[moduleNumber]?.[lang === 'fr' ? 0 : 1] ?? '';
+  }
   const labels: Record<number, [string, string]> = {
     4: ['Voir les procédures',   'View procedures'],
     6: ['Plans techniques',      'Technical plans'],
@@ -273,6 +283,17 @@ export default function EditorPage() {
   const isReadOnly = ['REVIEW', 'VALIDATED'].includes(document.project.status || '');
 
   const getModuleCompletion = (mod: Module): 'complete' | 'partial' | 'empty' => {
+    if (document?.project?.documentType === 'PCA') {
+      // Pour PCA, complétion basée sur la présence de contenu texte dans les sections
+      const sections = mod.sections || [];
+      const filled = sections.filter((s: any) => {
+        const text = s.content || s.text || '';
+        return typeof text === 'string' && text.trim().length > 10;
+      });
+      if (filled.length === 0) return 'empty';
+      if (filled.length < sections.length) return 'partial';
+      return 'complete';
+    }
     const n = mod.moduleNumber;
     if (n === 1) return 'complete';
     if (n === 2) {
@@ -756,7 +777,7 @@ export default function EditorPage() {
                     onMouseEnter={e => { if (activeModule !== modIdx) e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
                     onMouseLeave={e => { if (activeModule !== modIdx) e.currentTarget.style.backgroundColor = 'transparent'; }}
                   >
-                    {getSpecialModuleLabel(mod.moduleNumber, language)}
+                    {getSpecialModuleLabel(mod.moduleNumber, language, document.project.documentType)}
                   </button>
                 )}
 
@@ -988,7 +1009,7 @@ export default function EditorPage() {
                           border: activeModule === modIdx ? '1px solid #F1948A' : '1px solid transparent',
                         }}
                       >
-                        {getSpecialModuleLabel(mod.moduleNumber, language)}
+                        {getSpecialModuleLabel(mod.moduleNumber, language, document.project.documentType)}
                       </button>
                     )}
 

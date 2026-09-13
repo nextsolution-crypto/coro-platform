@@ -17,7 +17,18 @@ interface ModuleOption {
   label: string;
 }
 
-const ALL_MODULES: ModuleOption[] = [
+const getPcaModules = (): ModuleOption[] => [
+  { num: 1, label: 'M1 — Introduction et politique de continuité' },
+  { num: 2, label: 'M2 — Contexte organisationnel et gouvernance' },
+  { num: 3, label: 'M3 — Appréciation du risque (ARA)' },
+  { num: 4, label: 'M4 — Bilan d\'impact sur les activités (BIA)' },
+  { num: 5, label: 'M5 — Stratégies de continuité' },
+  { num: 6, label: 'M6 — Communication de crise' },
+  { num: 7, label: 'M7 — Activation et procédures de reprise' },
+  { num: 8, label: 'M8 — Exercices, registres et maintien' },
+];
+
+const getPmuModules = (): ModuleOption[] => [
   { num: 1, label: 'M1 — Introduction' },
   { num: 2, label: 'M2 — Liste téléphonique' },
   { num: 3, label: 'M3 — Rôles et responsabilités' },
@@ -35,11 +46,12 @@ export default function ExportModal({
   onClose,
 }: ExportModalProps) {
   // Liste filtrée selon le type de document
+  const ALL_MODULES = documentType === 'PCA' ? getPcaModules() : getPmuModules();
   const PSI_EXCLUDED_MODULES = [3]; // Pas d'organigramme dans un PSI
 
   const availableModules = ALL_MODULES.filter((m) => {
     if (m.num === 6 && !hasPlans) return false;
-    if (documentType === 'PSI' && PSI_EXCLUDED_MODULES.includes(m.num)) return false;
+    if (documentType !== 'PCA' && documentType === 'PSI' && PSI_EXCLUDED_MODULES.includes(m.num)) return false;
     return true;
   });
 
