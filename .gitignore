@@ -39,3 +39,9 @@ coverage
 # Temp
 *.tmp
 check.js
+
+# Rapports générés (régénérables via scan-features.js / scan-pdf-coverage.js)
+architecture.txt
+coro-features-scan.txt
+coro-features-scan-frontend.txt
+coro-pdf-coverage.txt

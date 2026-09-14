@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.next
+dist
+.git
+.gitignore
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.env
+coverage
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+README.md
