@@ -1,6 +1,12 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class OrganizationsService {
@@ -28,78 +34,231 @@ export class OrganizationsService {
   }
 
     async createWithAdmin(data: {
-    organizationName: string;
-    licenseType: string;
-    province?: string;
-    adminEmail: string;
-    adminPassword: string;
-    adminFirstName: string;
-    adminLastName: string;
-    adminTitle?: string;
-    additionalMembers?: { firstName: string; lastName: string; email: string; role: string }[];
-  }) {
-    const organization = await this.prisma.organization.create({
+  organizationName: string;
+  licenseType: string;
+  province?: string;
+  adminEmail: string;
+  adminPassword: string;
+  adminFirstName: string;
+  adminLastName: string;
+  adminTitle?: string;
+  referralCode?: string;
+referralSource?: 'LINK' | 'CODE' | 'EMAIL' | 'MANUAL' | 'ADMIN';
+referralFirstTouchAt?: string;
+additionalMembers?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+  }[];
+}) {
+  // Code de recommandation propre à la nouvelle organisation
+  const newOrganizationReferralCode = await this.generateUniqueReferralCode();
+
+  // Organisation ayant recommandé CORO, si un code a été fourni
+  let referrerOrganization: {
+    id: string;
+    referralCode: string | null;
+  } | null = null;
+
+  let referralFirstTouchAt: Date | null = null;
+let referralExpiresAt: Date | null = null;
+
+if (data.referralCode) {
+  const normalizedReferralCode = data.referralCode.trim().toUpperCase();
+
+  referrerOrganization = await this.prisma.organization.findUnique({
+    where: {
+      referralCode: normalizedReferralCode,
+    },
+    select: {
+      id: true,
+      referralCode: true,
+    },
+  });
+
+  if (!referrerOrganization) {
+    throw new NotFoundException('Code de recommandation invalide.');
+  }
+
+  // Utiliser la vraie date du premier contact si elle a été transmise.
+  if (data.referralFirstTouchAt) {
+    const parsedFirstTouchAt = new Date(data.referralFirstTouchAt);
+
+    if (Number.isNaN(parsedFirstTouchAt.getTime())) {
+      throw new BadRequestException(
+        'Date de premier contact de recommandation invalide.',
+      );
+    }
+
+    referralFirstTouchAt = parsedFirstTouchAt;
+  } else {
+    // Compatibilité avec les créations manuelles/admin sans cookie web.
+    referralFirstTouchAt = new Date();
+  }
+
+  referralExpiresAt = new Date(referralFirstTouchAt);
+  referralExpiresAt.setDate(referralExpiresAt.getDate() + 90);
+
+  if (referralExpiresAt.getTime() < Date.now()) {
+    throw new BadRequestException(
+      'La période d’attribution de cette recommandation est expirée.',
+    );
+  }
+}
+
+// Préparer les mots de passe AVANT la transaction
+  // afin de ne pas garder une transaction PostgreSQL ouverte pendant bcrypt.
+  const hashedAdminPassword = await bcrypt.hash(data.adminPassword, 10);
+
+  const preparedMembers = await Promise.all(
+    (data.additionalMembers ?? []).map(async (member) => {
+      const password = this.generateTempPassword();
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      return {
+        ...member,
+        password,
+        hashedPassword,
+      };
+    }),
+  );
+
+  // Toutes les écritures critiques sont effectuées dans une seule transaction.
+  const result = await this.prisma.$transaction(async (tx) => {
+    const organization = await tx.organization.create({
       data: {
         name: data.organizationName,
         licenseType: data.licenseType,
         isInternal: false,
+        referralCode: newOrganizationReferralCode,
       },
     });
 
+    // Enregistrer la recommandation si l'organisation a été référée
+if (
+  referrerOrganization?.referralCode &&
+  referralFirstTouchAt &&
+  referralExpiresAt
+) {
+  await tx.referral.create({
+    data: {
+      referrerOrganizationId: referrerOrganization.id,
+      referredOrganizationId: organization.id,
+      referralCode: referrerOrganization.referralCode,
+      source: data.referralSource ?? 'CODE',
+      status: 'REGISTERED',
+      firstTouchAt: referralFirstTouchAt,
+      expiresAt: referralExpiresAt,
+      registeredAt: new Date(),
+      prospectCompanyName: data.organizationName,
+      prospectFirstName: data.adminFirstName,
+      prospectLastName: data.adminLastName,
+      prospectEmail: data.adminEmail,
+    },
+  });
+}
+
     // Créer l'administrateur principal
-    const hashedPassword = await bcrypt.hash(data.adminPassword, 10);
-    const adminUser = await this.prisma.user.create({
+    const adminUser = await tx.user.create({
       data: {
         email: data.adminEmail,
-        password: hashedPassword,
+        password: hashedAdminPassword,
         firstName: data.adminFirstName,
         lastName: data.adminLastName,
         role: 'ADMIN',
         organizationId: organization.id,
+        title: data.adminTitle,
+        province: data.province,
       },
-    });
-
-    // Envoyer courriel d'invitation à l'admin
-    await this.sendInvitationEmail({
-      email: data.adminEmail,
-      firstName: data.adminFirstName,
-      lastName: data.adminLastName,
-      organizationName: data.organizationName,
-      password: data.adminPassword,
-      role: 'ADMIN',
     });
 
     // Créer les membres additionnels
     const createdMembers: { id: string; email: string }[] = [];
-    if (data.additionalMembers && data.additionalMembers.length > 0) {
-      for (const member of data.additionalMembers) {
-        const memberPassword = this.generateTempPassword();
-        const memberHashedPassword = await bcrypt.hash(memberPassword, 10);
-        const memberUser = await this.prisma.user.create({
-          data: {
-            email: member.email,
-            password: memberHashedPassword,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            role: member.role as any,
-            organizationId: organization.id,
-          },
-        });
-        // Envoyer courriel d'invitation au membre
-        await this.sendInvitationEmail({
+
+    for (const member of preparedMembers) {
+      const memberUser = await tx.user.create({
+        data: {
           email: member.email,
+          password: member.hashedPassword,
           firstName: member.firstName,
           lastName: member.lastName,
-          organizationName: data.organizationName,
-          password: memberPassword,
-          role: member.role,
-        });
-        createdMembers.push({ id: memberUser.id, email: memberUser.email });
-      }
+          role: member.role as any,
+          organizationId: organization.id,
+        },
+      });
+
+      createdMembers.push({
+        id: memberUser.id,
+        email: memberUser.email,
+      });
     }
 
-    return { organization, adminUser: { id: adminUser.id, email: adminUser.email }, membersCreated: createdMembers.length };
+    return {
+      organization,
+      adminUser,
+      createdMembers,
+    };
+  });
+
+  // Les courriels sont envoyés APRÈS le commit.
+  // Un problème Brevo ne doit jamais annuler les écritures en base.
+  await this.sendInvitationEmail({
+    email: data.adminEmail,
+    firstName: data.adminFirstName,
+    lastName: data.adminLastName,
+    organizationName: data.organizationName,
+    password: data.adminPassword,
+    role: 'ADMIN',
+  });
+
+  for (const member of preparedMembers) {
+    await this.sendInvitationEmail({
+      email: member.email,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      organizationName: data.organizationName,
+      password: member.password,
+      role: member.role,
+    });
   }
+
+  return {
+    organization: result.organization,
+    adminUser: {
+      id: result.adminUser.id,
+      email: result.adminUser.email,
+    },
+    membersCreated: result.createdMembers.length,
+  };
+}
+
+private async generateUniqueReferralCode(): Promise<string> {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    let suffix = '';
+
+    for (let i = 0; i < 6; i++) {
+      suffix += chars[randomInt(0, chars.length)];
+    }
+
+    const referralCode = `CR-${suffix}`;
+
+    const existing = await this.prisma.organization.findUnique({
+      where: { referralCode },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return referralCode;
+    }
+  }
+
+  throw new Error(
+    'Impossible de générer un code de recommandation unique après plusieurs tentatives.',
+  );
+}
 
   private generateTempPassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';

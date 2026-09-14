@@ -2,6 +2,24 @@
 
 import { useState } from 'react';
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const prefix = `${name}=`;
+
+  const cookie = document.cookie
+    .split('; ')
+    .find(item => item.startsWith(prefix));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.substring(prefix.length));
+}
+
 export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
   const [form, setForm] = useState({
     firstName: '',
@@ -65,27 +83,60 @@ privacyLink: 'Privacy Policy',
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus('sending');
-    try {
-      const res = await fetch('https://formspree.io/f/xnpadzyq', {
+  e.preventDefault();
+  setStatus('sending');
+
+  try {
+    const referralCode =
+      getCookie('coro_referral_code');
+
+    const referralFirstTouchAt =
+      getCookie('coro_referral_first_touch');
+
+    const res = await fetch(
+      'https://formspree.io/f/xnpadzyq',
+      {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify({
           ...form,
+
+          referralCode:
+            referralCode ?? '',
+
+          referralFirstTouchAt:
+            referralFirstTouchAt ?? '',
+
+          referralSource:
+            referralCode ? 'LINK' : '',
+
           _subject: `Demande de démo CORO — ${form.organization}`,
         }),
-      });
-      if (res.ok) {
-        setStatus('success');
-        setForm({ firstName: '', lastName: '', email: '', organization: '', phone: '', buildingType: '', message: '' });
-      } else {
-        setStatus('error');
       }
-    } catch {
+    );
+
+    if (res.ok) {
+      setStatus('success');
+
+      setForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        organization: '',
+        phone: '',
+        buildingType: '',
+        message: '',
+      });
+    } else {
       setStatus('error');
     }
-  };
+  } catch {
+    setStatus('error');
+  }
+};
 
   if (status === 'success') {
     return (

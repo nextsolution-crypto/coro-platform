@@ -11,16 +11,18 @@ datasource db {
 }
 
 model Organization {
-  id          String   @id @default(uuid())
-  name        String
-  isInternal  Boolean  @default(false)
-  licenseType String   @default("ESSAI_GRATUIT")
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  isInternal     Boolean  @default(false)
+  licenseType    String   @default("ESSAI_GRATUIT")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  // Programme de recommandation CORO
+  referralCode   String?  @unique
   // Champs PCA
-  sector      String?  // Secteur d'activité
-  employeeCount Int?   // Nombre d'employés
+  sector         String? // Secteur d'activité
+  employeeCount  Int? // Nombre d'employés
   operatingHours String? // Heures d'opération
 
   users              User[]
@@ -31,69 +33,74 @@ model Organization {
   feedbacks          Feedback[]
   projectTemplates   ProjectTemplate[]
   auditLogs          AuditLog[]
-  customProcedures CustomProcedure[]
-  clientUsers    ClientUser[]
-  module1Template OrganizationModule1Template?
-  bookings Booking[]
-  files ProjectFile[]
+  customProcedures   CustomProcedure[]
+  clientUsers        ClientUser[]
+  module1Template    OrganizationModule1Template?
+  bookings           Booking[]
+  files              ProjectFile[]
+  // Programme de recommandation
+  referralsSent      Referral[]                   @relation("ReferralReferrer")
+  referralReceived   Referral?                    @relation("ReferralReferred")
+  referralCredits    ReferralCredit[]             @relation("ReferralCreditOrganization")
 }
 
 model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  password       String
-  firstName      String
-  lastName       String
-  role           UserRole @default(OPERATOR)
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  companyName        String?
-  companyLogo        String?
-  companyLogoB64     String?
-  companyLogoFullB64 String?
-  companyPhone       String?
-  companyEmail       String?
-  companyAddress     String?
-  companyWebsite     String?
-  companyTagline     String?
-  companyLicense     String?
-  title              String?
-  phoneDirect        String?
-  phoneMobile        String?
-  certification      String?
-  province           String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  observationsCreated  ReviewObservation[] @relation("observationCreator")
-  observationsTreated  ReviewObservation[] @relation("observationTreater")
-  approvedProjects   Project[] @relation("approvedProjects")
-  notifications        Notification[]
+  id                  String              @id @default(uuid())
+  email               String              @unique
+  password            String
+  firstName           String
+  lastName            String
+  role                UserRole            @default(OPERATOR)
+  organizationId      String
+  organization        Organization        @relation(fields: [organizationId], references: [id])
+  companyName         String?
+  companyLogo         String?
+  companyLogoB64      String?
+  companyLogoFullB64  String?
+  companyPhone        String?
+  companyEmail        String?
+  companyAddress      String?
+  companyWebsite      String?
+  companyTagline      String?
+  companyLicense      String?
+  title               String?
+  phoneDirect         String?
+  phoneMobile         String?
+  certification       String?
+  province            String?
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  observationsCreated ReviewObservation[] @relation("observationCreator")
+  observationsTreated ReviewObservation[] @relation("observationTreater")
+  approvedProjects    Project[]           @relation("approvedProjects")
+  notifications       Notification[]
 
-  projects            Project[]
-  feedbacks           Feedback[]
-  lastEditedProjects  Project[]             @relation("lastEditedProjects")
-  submittedProjects   Project[]             @relation("submittedProjects")
-  createdTemplates    ProjectTemplate[]     @relation("createdTemplates")
-  auditLogs           AuditLog[]
-  taskAssignees       ProjectTaskAssignee[]
-  timeEntries         TaskTimeEntry[]
-  projectComments     ProjectComment[]
-  ownedMandates   ProjectMandate[] @relation("mandateOwner")
-  assignedTasks   ProjectTask[]    @relation("taskAssignee")
-  horaireBase    Float    @default(40)
-  timelogEntries  TimelogEntry[]
-  customProcedures CustomProcedure[]
-  refreshTokens RefreshToken[]
-  trustedDevices TrustedDevice[]
+  projects           Project[]
+  feedbacks          Feedback[]
+  lastEditedProjects Project[]             @relation("lastEditedProjects")
+  submittedProjects  Project[]             @relation("submittedProjects")
+  createdTemplates   ProjectTemplate[]     @relation("createdTemplates")
+  auditLogs          AuditLog[]
+  taskAssignees      ProjectTaskAssignee[]
+  timeEntries        TaskTimeEntry[]
+  projectComments    ProjectComment[]
+  ownedMandates      ProjectMandate[]      @relation("mandateOwner")
+  assignedTasks      ProjectTask[]         @relation("taskAssignee")
+  horaireBase        Float                 @default(40)
+  timelogEntries     TimelogEntry[]
+  customProcedures   CustomProcedure[]
+  refreshTokens      RefreshToken[]
+  trustedDevices     TrustedDevice[]
 
-  resetToken        String?
-  resetTokenExpiry  DateTime?
-  mfaCode        String?
-  mfaCodeExpiry  DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  mfaCode          String?
+  mfaCodeExpiry    DateTime?
 
-  bookings Booking[]
-  uploadedFiles ProjectFile[] @relation("FileUploader")
+  bookings         Booking[]
+  uploadedFiles    ProjectFile[] @relation("FileUploader")
+  referralsCreated Referral[]    @relation("ReferralCreator")
 }
 
 enum UserRole {
@@ -103,95 +110,95 @@ enum UserRole {
 }
 
 model Client {
-  id             String   @id @default(uuid())
-  name           String
-  contactFirstName  String?
-  contactLastName   String?
-  contactEmail      String?
-  contactPhone      String?
-  email          String?
-  phone          String?
-  address        String?
-  city           String?
-  province       String?
-  logoUrl        String?
-  logoBase64     String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  name                   String
+  contactFirstName       String?
+  contactLastName        String?
+  contactEmail           String?
+  contactPhone           String?
+  email                  String?
+  phone                  String?
+  address                String?
+  city                   String?
+  province               String?
+  logoUrl                String?
+  logoBase64             String?
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
   // Champs PCA
   regulatoryRequirements String[] // ISO 22301, BOMA, AMF, etc.
-  sector         String?  // Secteur d'activité
-  employeeCount  Int?     // Nombre d'employés
-  operatingHours String?  // Heures d'opération
+  sector                 String? // Secteur d'activité
+  employeeCount          Int? // Nombre d'employés
+  operatingHours         String? // Heures d'opération
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  buildings Building[]
-  projects  Project[]
-  clientUsers    ClientUser[]
+  buildings   Building[]
+  projects    Project[]
+  clientUsers ClientUser[]
 }
 
 model Building {
-  id             String   @id @default(uuid())
-  name           String
-  address        String
-  city           String
-  province       String
-  postalCode     String?
-  floors         Int?
-  units          Int?
-  buildingType   String?
-  photoBase64    String?
+  id                   String   @id @default(uuid())
+  name                 String
+  address              String
+  city                 String
+  province             String
+  postalCode           String?
+  floors               Int?
+  units                Int?
+  buildingType         String?
+  photoBase64          String?
   responsableFirstName String?
   responsableLastName  String?
   responsableTitre     String?
   responsableEmail     String?
   responsablePhone     String?
-  latitude       Float?
-  longitude      Float?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  latitude             Float?
+  longitude            Float?
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  clientId String
-  client   Client   @relation(fields: [clientId], references: [id])
-  projects           Project[]
-  occupancyRecords   OccupancyRecord[]
-  evacuationEvents   EvacuationEvent[]
-  kioskToken         BuildingKioskToken?
-  employees          BuildingEmployee[]
-  visitorInvitations VisitorInvitation[]
-  emergencyRoles     EmployeeEmergencyRole[]
-  incidentEvents        IncidentEvent[]
-  resilienceSnapshots   ResilienceSnapshot[]
+  clientId            String
+  client              Client                  @relation(fields: [clientId], references: [id])
+  projects            Project[]
+  occupancyRecords    OccupancyRecord[]
+  evacuationEvents    EvacuationEvent[]
+  kioskToken          BuildingKioskToken?
+  employees           BuildingEmployee[]
+  visitorInvitations  VisitorInvitation[]
+  emergencyRoles      EmployeeEmergencyRole[]
+  incidentEvents      IncidentEvent[]
+  resilienceSnapshots ResilienceSnapshot[]
 }
 
 model Project {
-  id           String        @id @default(uuid())
+  id           String              @id @default(uuid())
   name         String
   documentType DocumentType
-  status       ProjectStatus @default(DRAFT)
+  status       ProjectStatus       @default(DRAFT)
   year         Int
-  progress     Int           @default(0)
+  progress     Int                 @default(0)
   configData   Json?
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  observations   ReviewObservation[]
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  observations ReviewObservation[]
 
   lastEditedById String?
-  lastEditedBy   User?  @relation("lastEditedProjects", fields: [lastEditedById], references: [id])
+  lastEditedBy   User?     @relation("lastEditedProjects", fields: [lastEditedById], references: [id])
   submittedById  String?
   submittedAt    DateTime?
-  submittedBy    User?  @relation("submittedProjects", fields: [submittedById], references: [id])
+  submittedBy    User?     @relation("submittedProjects", fields: [submittedById], references: [id])
   approvedById   String?
   approvedAt     DateTime?
-  approvedBy     User?  @relation("approvedProjects", fields: [approvedById], references: [id])
+  approvedBy     User?     @relation("approvedProjects", fields: [approvedById], references: [id])
   exportedPdfFr  String?
   exportedPdfEn  String?
   officialPdfFr  String?
@@ -221,11 +228,11 @@ model Project {
 
   projectTaskLists ProjectTaskList[]
   customProcedures CustomProcedure[]
-  signatures     DocumentSignature[]
-  engagements DocumentEngagement[]
-  bookings Booking[]
-  files ProjectFile[]
-  pcaConfig    PcaConfig?
+  signatures       DocumentSignature[]
+  engagements      DocumentEngagement[]
+  bookings         Booking[]
+  files            ProjectFile[]
+  pcaConfig        PcaConfig?
 }
 
 model RevisionHistory {
@@ -491,9 +498,9 @@ model ProjectActivity {
   organizationId String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  isRecurring    Boolean  @default(false)
-  sourceMandate  Boolean  @default(false)
-  dureeHeures    Float?   // Durée réelle ou estimée en heures
+  isRecurring    Boolean   @default(false)
+  sourceMandate  Boolean   @default(false)
+  dureeHeures    Float? // Durée réelle ou estimée en heures
 }
 
 model TaskList {
@@ -513,17 +520,17 @@ model TaskList {
 }
 
 model TaskTemplate {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   taskListId     String?
   taskList       TaskList? @relation(fields: [taskListId], references: [id])
   categoryName   String
   taskTitle      String
   documentTypes  String[]
-  order          Int      @default(0)
-  isActive       Boolean  @default(true)
+  order          Int       @default(0)
+  isActive       Boolean   @default(true)
   organizationId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   projectTasks ProjectTask[]
 }
@@ -543,23 +550,23 @@ model ProjectTaskList {
 }
 
 model ProjectTask {
-  id             String        @id @default(uuid())
-  projectId      String
-  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  templateId     String?
-  template       TaskTemplate? @relation(fields: [templateId], references: [id])
+  id                String           @id @default(uuid())
+  projectId         String
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  templateId        String?
+  template          TaskTemplate?    @relation(fields: [templateId], references: [id])
   projectTaskListId String?
   projectTaskList   ProjectTaskList? @relation(fields: [projectTaskListId], references: [id])
-  categoryName   String
-  taskTitle      String
-  status         String        @default("a_faire")
-  dueDate        DateTime?
-  order          Int           @default(0)
-  organizationId String
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  assigneeId     String?
-  assignee       User?    @relation("taskAssignee", fields: [assigneeId], references: [id])
+  categoryName      String
+  taskTitle         String
+  status            String           @default("a_faire")
+  dueDate           DateTime?
+  order             Int              @default(0)
+  organizationId    String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  assigneeId        String?
+  assignee          User?            @relation("taskAssignee", fields: [assigneeId], references: [id])
 
   timeEntries TaskTimeEntry[]
   assignees   ProjectTaskAssignee[]
@@ -591,9 +598,9 @@ model TaskTimeEntry {
 }
 
 model ProjectMandate {
-  id              String   @id @default(uuid())
-  projectId       String   @unique
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid())
+  projectId       String    @unique
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   description     String?
   montantVendu    Float?
   tauxHoraire     Float?
@@ -601,15 +608,15 @@ model ProjectMandate {
   lienDrive       String?
   organizationId  String
   ownerId         String?
-  owner           User?    @relation("mandateOwner", fields: [ownerId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  typeMandat     String?
-  dateDebutDelai DateTime?
-  dateLimite     DateTime?
-  delaiJours     Int?
-  alerteActive   Boolean   @default(true)
-  typeDelai      String?
+  owner           User?     @relation("mandateOwner", fields: [ownerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  typeMandat      String?
+  dateDebutDelai  DateTime?
+  dateLimite      DateTime?
+  delaiJours      Int?
+  alerteActive    Boolean   @default(true)
+  typeDelai       String?
 }
 
 model ProjectComment {
@@ -653,16 +660,16 @@ model TimelogCategory {
 
 model DangerousSubstance {
   id            String   @id @default(cuid())
-  unNumber      String   // Ex: "1202"
-  nameFR        String   // Ex: "Diesel"
-  nameEN        String   // Ex: "Diesel fuel"
-  casNumber     String?  // Ex: "68334-30-5"
-  tmdClass      String   // Ex: "3"
-  tmdClassLabel String   // Ex: "Liquides inflammables"
-  packingGroup  String?  // Ex: "III"
-  simdutClass   String?  // Ex: "B3"
-  simdutLabel   String?  // Ex: "Liquide combustible"
-  placardCode   String   // Ex: "3" (pour le placard SVG)
+  unNumber      String // Ex: "1202"
+  nameFR        String // Ex: "Diesel"
+  nameEN        String // Ex: "Diesel fuel"
+  casNumber     String? // Ex: "68334-30-5"
+  tmdClass      String // Ex: "3"
+  tmdClassLabel String // Ex: "Liquides inflammables"
+  packingGroup  String? // Ex: "III"
+  simdutClass   String? // Ex: "B3"
+  simdutLabel   String? // Ex: "Liquide combustible"
+  placardCode   String // Ex: "3" (pour le placard SVG)
   keywords      String[] // Ex: ["diesel", "carburant", "mazout"]
   isCommon      Boolean  @default(false) // substances fréquentes en industrie QC
   createdAt     DateTime @default(now())
@@ -673,18 +680,18 @@ model DangerousSubstance {
 
 model CustomProcedure {
   id             String   @id @default(cuid())
-  organizationId String?  // null = procédure globale CORO (super admin seulement)
-  projectId      String?  // null = disponible pour tous les projets de l'org
-  code           String   // Ex: "CP001"
+  organizationId String? // null = procédure globale CORO (super admin seulement)
+  projectId      String? // null = disponible pour tous les projets de l'org
+  code           String // Ex: "CP001"
   titleFR        String
   titleEN        String
   objective      String?
   color          String   @default("#2C3E50")
   status         String   @default("DRAFT") // DRAFT | ACTIVE | ARCHIVED
-  content        Json     // Structure complète de la procédure
-  sourceText     String?  // Texte original saisi par l'utilisateur
+  content        Json // Structure complète de la procédure
+  sourceText     String? // Texte original saisi par l'utilisateur
   sourceType     String   @default("MANUAL") // MANUAL | AI_TEXT | AI_IMPORT
-  sourceFileName String?  // Nom du fichier importé (PDF/Word)
+  sourceFileName String? // Nom du fichier importé (PDF/Word)
   isGlobal       Boolean  @default(false) // true = procédure CORO globale (organizationId peut être null)
   isPublished    Boolean  @default(false) // Disponible pour autres projets de l'org
   rolesDetected  String[] // Rôles détectés par l'IA
@@ -692,9 +699,9 @@ model CustomProcedure {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  project        Project?     @relation(fields: [projectId], references: [id])
-  createdBy      User         @relation(fields: [createdById], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  project      Project?      @relation(fields: [projectId], references: [id])
+  createdBy    User          @relation(fields: [createdById], references: [id])
 
   @@index([organizationId])
   @@index([projectId])
@@ -730,24 +737,24 @@ model Notification {
 }
 
 model ClientUser {
-  id             String   @id @default(uuid())
-  email          String   @unique
+  id             String                @id @default(uuid())
+  email          String                @unique
   password       String
   firstName      String
   lastName       String
-  role           ClientUserRole @default(CLIENT_MANAGER)
+  role           ClientUserRole        @default(CLIENT_MANAGER)
   buildingIds    String[]
-  isActive       Boolean  @default(true)
+  isActive       Boolean               @default(true)
   clientId       String
-  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client         Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   signatures     DocumentSignature[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  magicLinks MagicLink[]
-  engagements DocumentEngagement[]
-  bookings Booking[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  magicLinks     MagicLink[]
+  engagements    DocumentEngagement[]
+  bookings       Booking[]
   mfaCode        String?
   mfaCodeExpiry  DateTime?
   uploadedFiles  ProjectFile[]         @relation("ClientFileUploader")
@@ -755,22 +762,22 @@ model ClientUser {
 }
 
 model DocumentSignature {
-  id               String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  projectId        String
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   projectVersionId String?
   projectVersion   ProjectVersion? @relation(fields: [projectVersionId], references: [id], onDelete: SetNull)
 
-  clientUserId     String
-  clientUser       ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  clientUserId String
+  clientUser   ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
 
-  fullName         String
-  email            String
-  signedAt         DateTime @default(now())
-  ipAddress        String?
-  comment          String?
+  fullName  String
+  email     String
+  signedAt  DateTime @default(now())
+  ipAddress String?
+  comment   String?
 
   @@index([projectId])
   @@index([projectVersionId])
@@ -782,202 +789,202 @@ enum ClientUserRole {
 }
 
 model BlogPost {
-  id              String    @id @default(cuid())
-  slug            String    @unique
-  titleFr         String
-  titleEn         String
-  excerptFr       String?
-  excerptEn       String?
-  contentFr       String    @db.Text
-  contentEn       String    @db.Text
-  coverImage      String?   @db.Text
-  category        String?
-  tags            String[]
-  authorName      String    @default("Équipe CORO")
-  authorTitle     String    @default("Experts en conformité")
-  seoTitleFr      String?
-  seoTitleEn      String?
-  seoDescFr       String?
-  seoDescEn       String?
-  isPublished     Boolean   @default(false)
-  publishedAt     DateTime?
-  scheduledAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  titleFr     String
+  titleEn     String
+  excerptFr   String?
+  excerptEn   String?
+  contentFr   String    @db.Text
+  contentEn   String    @db.Text
+  coverImage  String?   @db.Text
+  category    String?
+  tags        String[]
+  authorName  String    @default("Équipe CORO")
+  authorTitle String    @default("Experts en conformité")
+  seoTitleFr  String?
+  seoTitleEn  String?
+  seoDescFr   String?
+  seoDescEn   String?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model PcaConfig {
-  id            String   @id @default(uuid())
-  projectId     String   @unique
-  project       Project  @relation(fields: [projectId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(uuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Section 1 — Informations générales
-  planName          String?
-  effectiveDate     DateTime?
-  scope             String?   // ORGANIZATION | BUILDING | MULTI_BUILDING
-  pcaBuildingIds    String[] @default([])
-  sector            String?
-  employeeCount     Int?
-  operatingHours    String?
-  regulatoryReqs    String[]
+  planName       String?
+  effectiveDate  DateTime?
+  scope          String? // ORGANIZATION | BUILDING | MULTI_BUILDING
+  pcaBuildingIds String[]  @default([])
+  sector         String?
+  employeeCount  Int?
+  operatingHours String?
+  regulatoryReqs String[]
 
   // Section 2 — Gouvernance
-  coordinatorFirstName  String?
-  coordinatorLastName   String?
-  coordinatorTitle      String?
-  coordinatorEmail      String?
-  coordinatorPhone      String?
-  substituteFirstName   String?
-  substituteLastName    String?
-  substituteEmail       String?
-  substitutePhone       String?
-  cellMembers           Json?   // Array de { role, firstName, lastName, email, phone }
-  spokesperson          String?
-  socialMediaMonitor    String?
+  coordinatorFirstName String?
+  coordinatorLastName  String?
+  coordinatorTitle     String?
+  coordinatorEmail     String?
+  coordinatorPhone     String?
+  substituteFirstName  String?
+  substituteLastName   String?
+  substituteEmail      String?
+  substitutePhone      String?
+  cellMembers          Json? // Array de { role, firstName, lastName, email, phone }
+  spokesperson         String?
+  socialMediaMonitor   String?
 
   // Section 3 — Appréciation du risque
-  riskScenarios         Json?   // Array de { id, probability, impact, existingControls?, comments? }
+  riskScenarios Json? // Array de { id, probability, impact, existingControls?, comments? }
 
   // Section 4 — BIA
-  criticalServices      Json?   // Array de { name, minServiceLevel, rto, rpo, mad, financialImpact, reputationalImpact, legalImpact, resources }
+  criticalServices Json? // Array de { name, minServiceLevel, rto, rpo, mad, financialImpact, reputationalImpact, legalImpact, resources }
 
   // Section 5 — Stratégies de continuité
-  teleworkPossible      String?  // YES | NO | PARTIAL
-  alternativeSite       Boolean?
+  teleworkPossible       String? // YES | NO | PARTIAL
+  alternativeSite        Boolean?
   alternativeSiteAddress String?
-  sharingAgreement      Boolean?
-  itRedundancy          Boolean?
-  offSiteBackup         Boolean?
-  backupFrequency       String?
-  criticalITSystems     Json?    // Array de { id, name, rto, rpo, degradedMode, backupSolution }
-  crossTraining         Boolean?
-  processDocumented     Boolean?
-  tempStaffAccess       Boolean?
-  absenteeismThreshold  String?
-  alternativeSuppliers  Boolean?
-  safetyStock          Boolean?
-  safetyStockDuration  String?
-  criticalSuppliers    Json?    // Array de { id, name, service, tolerance, preventiveMeasure, backupSolution, activationDelay, status }
-  generator            Boolean?
-  ups                  Boolean?
-  insuranceBI          Boolean?  // Assurance interruption affaires
-  insuranceProperty    Boolean?
-  insuranceCyber       Boolean?
-  insuranceLastReview  DateTime?
+  sharingAgreement       Boolean?
+  itRedundancy           Boolean?
+  offSiteBackup          Boolean?
+  backupFrequency        String?
+  criticalITSystems      Json? // Array de { id, name, rto, rpo, degradedMode, backupSolution }
+  crossTraining          Boolean?
+  processDocumented      Boolean?
+  tempStaffAccess        Boolean?
+  absenteeismThreshold   String?
+  alternativeSuppliers   Boolean?
+  safetyStock            Boolean?
+  safetyStockDuration    String?
+  criticalSuppliers      Json? // Array de { id, name, service, tolerance, preventiveMeasure, backupSolution, activationDelay, status }
+  generator              Boolean?
+  ups                    Boolean?
+  insuranceBI            Boolean? // Assurance interruption affaires
+  insuranceProperty      Boolean?
+  insuranceCyber         Boolean?
+  insuranceLastReview    DateTime?
 
   // Section 6 — Communication de crise
-  internalChannel       String?
-  massAlertSystem       Boolean?
-  externalChannel       String?
-  priorityClients       String?
-  authoritiesToNotify   String[]
-  mediaContact          String?
+  internalChannel     String?
+  massAlertSystem     Boolean?
+  externalChannel     String?
+  priorityClients     String?
+  authoritiesToNotify String[]
+  mediaContact        String?
 
   // Section 7 — Activation et reprise
-  activationCriteria    String?
-  coordinationLocation  String?
-  emergencyBridge       String?
-  linkedPmuId           String?
-  resumptionSequence    Json?    // Array de { activity, priority, responsible }
+  activationCriteria   String?
+  coordinationLocation String?
+  emergencyBridge      String?
+  linkedPmuId          String?
+  resumptionSequence   Json? // Array de { activity, priority, responsible }
 
   // Section 8 — Exercices et maintien
-  exerciseFormative     String?  // Fréquence
-  exerciseTable         String?
-  exerciseSimulation    String?
-  exerciseIT            String?
-  planOwner             String?
-  reviewFrequency       String?
-  nextReviewDate        DateTime?
+  exerciseFormative  String? // Fréquence
+  exerciseTable      String?
+  exerciseSimulation String?
+  exerciseIT         String?
+  planOwner          String?
+  reviewFrequency    String?
+  nextReviewDate     DateTime?
 }
 
 model OrganizationModule1Template {
-  id             String   @id @default(uuid())
-  organizationId String   @unique
+  id             String       @id @default(uuid())
+  organizationId String       @unique
   organization   Organization @relation(fields: [organizationId], references: [id])
-  sections       Json     // Array de { id, title, content, order }
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  sections       Json // Array de { id, title, content, order }
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model MagicLink {
-  id        String   @id @default(uuid())
-  token     String   @unique
+  id        String     @id @default(uuid())
+  token     String     @unique
   userId    String
   user      ClientUser @relation(fields: [userId], references: [id])
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
 }
 
 model DocumentEngagement {
-  id          String   @id @default(uuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id])
+  id           String     @id @default(uuid())
+  projectId    String
+  project      Project    @relation(fields: [projectId], references: [id])
   clientUserId String
-  clientUser  ClientUser @relation(fields: [clientUserId], references: [id])
-  event       String   // 'opened', 'viewed', 'downloaded'
-  device      String?  // 'mobile', 'desktop', 'tablet'
-  duration    Int?     // secondes passées sur le document
-  createdAt   DateTime @default(now())
+  clientUser   ClientUser @relation(fields: [clientUserId], references: [id])
+  event        String // 'opened', 'viewed', 'downloaded'
+  device       String? // 'mobile', 'desktop', 'tablet'
+  duration     Int? // secondes passées sur le document
+  createdAt    DateTime   @default(now())
 }
 
 model Booking {
-  id              String   @id @default(uuid())
-  projectId       String
-  project         Project  @relation(fields: [projectId], references: [id])
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  clientUserId    String
-  clientUser      ClientUser @relation(fields: [clientUserId], references: [id])
-  assignedUserId  String
-  assignedUser    User     @relation(fields: [assignedUserId], references: [id])
-  activityType    String   // 'exercice', 'formation', 'visite', 'revision', 'autre'
-  requestedDate   DateTime
-  duration        Int      // en minutes
-  participants    Int?
-  comment         String?
-  status          String   @default("DEMANDEE") // DEMANDEE, CONFIRMEE, REPORTEE, REASSIGNEE, REFUSEE, COMPLETEE, ANNULEE
-  refuseReason    String?
-  reportedDate    DateTime?
-  outlookEventId  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  notifications   BookingNotification[]
+  id             String                @id @default(uuid())
+  projectId      String
+  project        Project               @relation(fields: [projectId], references: [id])
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  clientUserId   String
+  clientUser     ClientUser            @relation(fields: [clientUserId], references: [id])
+  assignedUserId String
+  assignedUser   User                  @relation(fields: [assignedUserId], references: [id])
+  activityType   String // 'exercice', 'formation', 'visite', 'revision', 'autre'
+  requestedDate  DateTime
+  duration       Int // en minutes
+  participants   Int?
+  comment        String?
+  status         String                @default("DEMANDEE") // DEMANDEE, CONFIRMEE, REPORTEE, REASSIGNEE, REFUSEE, COMPLETEE, ANNULEE
+  refuseReason   String?
+  reportedDate   DateTime?
+  outlookEventId String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  notifications  BookingNotification[]
 }
 
 model BookingNotification {
   id        String   @id @default(uuid())
   bookingId String
   booking   Booking  @relation(fields: [bookingId], references: [id])
-  type      String   // 'confirmation', 'rappel', 'annulation', 'reassignation'
+  type      String // 'confirmation', 'rappel', 'annulation', 'reassignation'
   sentAt    DateTime @default(now())
 }
 
 model ProjectFile {
-  id           String   @id @default(uuid())
-  projectId    String
-  project      Project  @relation(fields: [projectId], references: [id])
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id])
-  name         String
-  category     String   // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
-  size         Int
-  mimeType     String
-  storageKey   String
-  url          String
-  version      Int      @default(1)
-  parentId     String?
-  parent       ProjectFile? @relation("FileVersions", fields: [parentId], references: [id])
-  versions     ProjectFile[] @relation("FileVersions")
-  uploadedById String?
-  uploadedBy   User?    @relation("FileUploader", fields: [uploadedById], references: [id])
+  id                 String        @id @default(uuid())
+  projectId          String
+  project            Project       @relation(fields: [projectId], references: [id])
+  organizationId     String
+  organization       Organization  @relation(fields: [organizationId], references: [id])
+  name               String
+  category           String // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
+  size               Int
+  mimeType           String
+  storageKey         String
+  url                String
+  version            Int           @default(1)
+  parentId           String?
+  parent             ProjectFile?  @relation("FileVersions", fields: [parentId], references: [id])
+  versions           ProjectFile[] @relation("FileVersions")
+  uploadedById       String?
+  uploadedBy         User?         @relation("FileUploader", fields: [uploadedById], references: [id])
   uploadedByClientId String?
-  uploadedByClient ClientUser? @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
-  visibility   String   @default("shared") // 'shared', 'internal'
-  status       String   @default("en_revision") // 'en_revision', 'valide'
-  createdAt    DateTime @default(now())
+  uploadedByClient   ClientUser?   @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
+  visibility         String        @default("shared") // 'shared', 'internal'
+  status             String        @default("en_revision") // 'en_revision', 'valide'
+  createdAt          DateTime      @default(now())
 }
 
 model RefreshToken {
@@ -993,21 +1000,21 @@ model RefreshToken {
 // ─── CORO SENTINELLE — Module Incident ──────────────────────────────────────
 
 enum IncidentType {
-  SMOKE_DISCOVERY      // P002 — Découverte de fumée
-  FIRE_ALERT           // P003 — Alerte incendie (double signal)
-  FIRE_ALARM           // P004 — Alarme incendie générale
-  GAS_LEAK             // P005 — Fuite de gaz
-  ACTIVE_THREAT        // P011 — Menace active / confinement
-  MEDICAL              // P013 — Urgence médicale
-  TOXIC_GAS            // P014 — Gaz toxique
-  SUSPICIOUS_PACKAGE   // P015 — Colis suspect
-  POWER_OUTAGE         // P016 — Coupure de courant
-  HAZMAT               // P018 — Matières dangereuses
-  BOMB_THREAT          // P019 — Alerte à la bombe
-  LITHIUM_BATTERY      // P026 — Batterie lithium
-  FLOODING             // P024 — Inondations
-  VIOLENT_WINDS        // P022 — Vents violents
-  OTHER                // P001 — Directives générales
+  SMOKE_DISCOVERY // P002 — Découverte de fumée
+  FIRE_ALERT // P003 — Alerte incendie (double signal)
+  FIRE_ALARM // P004 — Alarme incendie générale
+  GAS_LEAK // P005 — Fuite de gaz
+  ACTIVE_THREAT // P011 — Menace active / confinement
+  MEDICAL // P013 — Urgence médicale
+  TOXIC_GAS // P014 — Gaz toxique
+  SUSPICIOUS_PACKAGE // P015 — Colis suspect
+  POWER_OUTAGE // P016 — Coupure de courant
+  HAZMAT // P018 — Matières dangereuses
+  BOMB_THREAT // P019 — Alerte à la bombe
+  LITHIUM_BATTERY // P026 — Batterie lithium
+  FLOODING // P024 — Inondations
+  VIOLENT_WINDS // P022 — Vents violents
+  OTHER // P001 — Directives générales
 }
 
 enum IncidentStatus {
@@ -1063,6 +1070,40 @@ enum OccupancyStatus {
   OUT
 }
 
+// ─── CORO — Programme de recommandation ────────────────────────────────────
+
+enum ReferralStatus {
+  PENDING // Recommandation enregistrée, prospect non inscrit
+  REGISTERED // Prospect inscrit / organisation créée
+  QUALIFIED // Prospect considéré admissible
+  CONVERTED // Est devenu client payant
+  REWARDED // Récompense accordée au parrain
+  REJECTED // Recommandation non admissible
+  CANCELLED // Recommandation annulée
+}
+
+enum ReferralSource {
+  LINK // Lien ?ref=
+  CODE // Code saisi manuellement
+  EMAIL // Invitation envoyée par CORO
+  MANUAL // Ajout manuel par un utilisateur
+  ADMIN // Attribution par administrateur CORO
+}
+
+enum ReferralCreditType {
+  REFERRAL_REWARD
+  MANUAL_ADJUSTMENT
+  REDEMPTION
+  REVERSAL
+}
+
+enum ReferralCreditStatus {
+  PENDING
+  APPROVED
+  APPLIED
+  CANCELLED
+}
+
 model OccupancyRecord {
   id             String          @id @default(uuid())
   buildingId     String
@@ -1084,24 +1125,24 @@ model OccupancyRecord {
   createdAt      DateTime        @default(now())
 
   evacuationCheckins EvacuationCheckIn[]
-  employee           BuildingEmployee? @relation("EmployeeRecords", fields: [employeeId], references: [id])
+  employee           BuildingEmployee?   @relation("EmployeeRecords", fields: [employeeId], references: [id])
   employeeId         String?
 }
 
 model EvacuationEvent {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   buildingId     String
-  building       Building @relation(fields: [buildingId], references: [id])
-  triggeredAt    DateTime @default(now())
+  building       Building  @relation(fields: [buildingId], references: [id])
+  triggeredAt    DateTime  @default(now())
   triggeredBy    String?
-  totalPresent   Int      @default(0)
+  totalPresent   Int       @default(0)
   snapshot       Json
-  status         String   @default("ACTIVE")
+  status         String    @default("ACTIVE")
   resolvedAt     DateTime?
   notes          String?
   organizationId String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   checkins EvacuationCheckIn[]
 }
@@ -1129,107 +1170,107 @@ model BuildingKioskToken {
 }
 
 model BuildingEmployee {
-  id          String   @id @default(uuid())
-  buildingId  String
-  building    Building @relation(fields: [buildingId], references: [id])
-  firstName   String
-  lastName    String
-  poste       String?
-  email       String?
-  phone       String?
-  qrToken     String   @unique @default(uuid())
-  pin         String?
-  isActive    Boolean  @default(true)
+  id             String   @id @default(uuid())
+  buildingId     String
+  building       Building @relation(fields: [buildingId], references: [id])
+  firstName      String
+  lastName       String
+  poste          String?
+  email          String?
+  phone          String?
+  qrToken        String   @unique @default(uuid())
+  pin            String?
+  isActive       Boolean  @default(true)
   organizationId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  occupancyRecords OccupancyRecord[] @relation("EmployeeRecords")
-  emergencyRoles   EmployeeEmergencyRole[]
-  qualifications   EmployeeQualification[]
-  isEmergencyMember Boolean @default(false)
-  smsConsent        Boolean @default(false)
-  incidentTasks    IncidentTask[]
+  occupancyRecords  OccupancyRecord[]       @relation("EmployeeRecords")
+  emergencyRoles    EmployeeEmergencyRole[]
+  qualifications    EmployeeQualification[]
+  isEmergencyMember Boolean                 @default(false)
+  smsConsent        Boolean                 @default(false)
+  incidentTasks     IncidentTask[]
 }
 
 model EmployeeEmergencyRole {
-  id           String              @id @default(uuid())
-  employeeId   String
-  employee     BuildingEmployee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  buildingId   String
-  building     Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  role         EmergencyRoleType
-  assignType   EmergencyAssignType @default(PRIMARY)
-  priority     Int                 @default(1)
-  zone         String?
-  validUntil   DateTime?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id         String              @id @default(uuid())
+  employeeId String
+  employee   BuildingEmployee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  buildingId String
+  building   Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  role       EmergencyRoleType
+  assignType EmergencyAssignType @default(PRIMARY)
+  priority   Int                 @default(1)
+  zone       String?
+  validUntil DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 }
 
 model EmployeeQualification {
-  id           String           @id @default(uuid())
-  employeeId   String
-  employee     BuildingEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  type         QualificationType
-  certifiedAt  DateTime?
-  expiresAt    DateTime?
-  notes        String?
-  createdAt    DateTime         @default(now())
+  id          String            @id @default(uuid())
+  employeeId  String
+  employee    BuildingEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type        QualificationType
+  certifiedAt DateTime?
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime          @default(now())
 }
 
 model IncidentEvent {
-  id               String         @id @default(uuid())
-  buildingId       String
-  building         Building       @relation(fields: [buildingId], references: [id])
-  organizationId   String
-  type             IncidentType
-  status           IncidentStatus @default(ACTIVE)
-  triggeredAt      DateTime       @default(now())
-  triggeredBy      String         // Nom de la personne qui a déclenché
-  description      String?
-  occupantsSnapshot  Json          // Snapshot des occupants au moment du déclenchement
-  teamSnapshot       Json          // Snapshot de l'équipe mobilisable au moment du déclenchement
-  procedureCode      String?       // Code de la procédure liée (ex: P003)
-  procedureSnapshot  Json?         // Étapes ROLE-CU capturées au déclenchement
-  assemblyPoint      String?       // Point de rassemblement récupéré du configData PMU
-  containedAt        DateTime?
-  resolvedAt       DateTime?
-  closingNotes     String?
-  rexWentWell      String?        // Ce qui a bien fonctionné
-  rexToImprove     String?        // Points à améliorer
-  rexRecommendations String?      // Recommandations
-  rexCorrectiveActions String?    // Actions correctives
-  rexCompletedAt   DateTime?      // Date de finalisation du REX
-  isActive         Boolean        @default(true)
-  isExercise       Boolean        @default(false)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                   String         @id @default(uuid())
+  buildingId           String
+  building             Building       @relation(fields: [buildingId], references: [id])
+  organizationId       String
+  type                 IncidentType
+  status               IncidentStatus @default(ACTIVE)
+  triggeredAt          DateTime       @default(now())
+  triggeredBy          String // Nom de la personne qui a déclenché
+  description          String?
+  occupantsSnapshot    Json // Snapshot des occupants au moment du déclenchement
+  teamSnapshot         Json // Snapshot de l'équipe mobilisable au moment du déclenchement
+  procedureCode        String? // Code de la procédure liée (ex: P003)
+  procedureSnapshot    Json? // Étapes ROLE-CU capturées au déclenchement
+  assemblyPoint        String? // Point de rassemblement récupéré du configData PMU
+  containedAt          DateTime?
+  resolvedAt           DateTime?
+  closingNotes         String?
+  rexWentWell          String? // Ce qui a bien fonctionné
+  rexToImprove         String? // Points à améliorer
+  rexRecommendations   String? // Recommandations
+  rexCorrectiveActions String? // Actions correctives
+  rexCompletedAt       DateTime? // Date de finalisation du REX
+  isActive             Boolean        @default(true)
+  isExercise           Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
 
-  tasks  IncidentTask[]
-  logs   IncidentLog[]
+  tasks IncidentTask[]
+  logs  IncidentLog[]
 }
 
 model IncidentTask {
-  id               String             @id @default(uuid())
-  incidentEventId  String
-  incidentEvent    IncidentEvent      @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
-  employeeId       String?
-  employee         BuildingEmployee?  @relation(fields: [employeeId], references: [id])
-  role             EmergencyRoleType
-  title            String
-  description      String?
-  stepId           String?           // ID de l'étape dans la procédure CORO
-  stepText         String?           // Texte complet de l'étape (pour affichage offline)
-  stepOrder        Int               @default(0)
-  isCoordinatorStep Boolean          @default(false)
-  status           IncidentTaskStatus @default(PENDING)
-  ackToken         String?        @unique
-  notifiedAt       DateTime?
-  acknowledgedAt   DateTime?
-  completedAt      DateTime?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  id                String             @id @default(uuid())
+  incidentEventId   String
+  incidentEvent     IncidentEvent      @relation(fields: [incidentEventId], references: [id], onDelete: Cascade)
+  employeeId        String?
+  employee          BuildingEmployee?  @relation(fields: [employeeId], references: [id])
+  role              EmergencyRoleType
+  title             String
+  description       String?
+  stepId            String? // ID de l'étape dans la procédure CORO
+  stepText          String? // Texte complet de l'étape (pour affichage offline)
+  stepOrder         Int                @default(0)
+  isCoordinatorStep Boolean            @default(false)
+  status            IncidentTaskStatus @default(PENDING)
+  ackToken          String?            @unique
+  notifiedAt        DateTime?
+  acknowledgedAt    DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 model IncidentLog {
@@ -1249,7 +1290,7 @@ model ResilienceSnapshot {
   building       Building @relation(fields: [buildingId], references: [id])
   organizationId String
   score          Int
-  status         String   // READY | REDUCED | CRITICAL
+  status         String // READY | REDUCED | CRITICAL
   rolesScore     Int
   qualScore      Int
   plansScore     Int
@@ -1264,42 +1305,42 @@ model ResilienceSnapshot {
 }
 
 model CorrectiveAction {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
   organizationId String
   buildingId     String?
   incidentId     String?
-  category       String   // ROLES | QUALIFICATIONS | PLANS | EXERCISES | INCIDENTS | GENERAL
+  category       String // ROLES | QUALIFICATIONS | PLANS | EXERCISES | INCIDENTS | GENERAL
   title          String
   description    String?
-  status         String   @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
-  priority       String   @default("WARNING") // CRITICAL | WARNING | INFO
+  status         String    @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
+  priority       String    @default("WARNING") // CRITICAL | WARNING | INFO
   assignedTo     String?
   dueDate        DateTime?
   completedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([organizationId])
   @@index([buildingId])
 }
 
 model VisitorInvitation {
-  id            String   @id @default(uuid())
-  buildingId    String
-  building      Building @relation(fields: [buildingId], references: [id])
-  firstName     String
-  lastName      String
-  email         String
-  company       String?
-  reason        String?
-  hostName      String?
-  visitDate     DateTime
-  qrToken       String   @unique @default(uuid())
-  status        String   @default("PENDING") // PENDING | USED | EXPIRED
-  invitedById   String
+  id             String   @id @default(uuid())
+  buildingId     String
+  building       Building @relation(fields: [buildingId], references: [id])
+  firstName      String
+  lastName       String
+  email          String
+  company        String?
+  reason         String?
+  hostName       String?
+  visitDate      DateTime
+  qrToken        String   @unique @default(uuid())
+  status         String   @default("PENDING") // PENDING | USED | EXPIRED
+  invitedById    String
   organizationId String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model TrustedDevice {
@@ -1318,4 +1359,108 @@ model ClientTrustedDevice {
   user      ClientUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime   @default(now())
+}
+
+model Referral {
+  id String @id @default(uuid())
+
+  // Organisation qui recommande CORO
+  referrerOrganizationId String
+  referrerOrganization   Organization @relation("ReferralReferrer", fields: [referrerOrganizationId], references: [id])
+
+  // Organisation recommandée, une fois le compte créé
+  referredOrganizationId String?       @unique
+  referredOrganization   Organization? @relation("ReferralReferred", fields: [referredOrganizationId], references: [id])
+
+  // Utilisateur à l'origine de la recommandation
+  createdByUserId String?
+  createdByUser   User?   @relation("ReferralCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  // Code utilisé au moment de la recommandation
+  referralCode String
+
+  // Informations prospect
+  prospectCompanyName String?
+  prospectFirstName   String?
+  prospectLastName    String?
+  prospectEmail       String?
+  prospectPhone       String?
+
+  // Origine
+  source ReferralSource @default(LINK)
+
+  // Cycle de vie
+  status ReferralStatus @default(PENDING)
+
+  // Attribution
+  firstTouchAt DateTime  @default(now())
+  expiresAt    DateTime?
+
+  registeredAt DateTime?
+  qualifiedAt  DateTime?
+  convertedAt  DateTime?
+  rewardedAt   DateTime?
+  rejectedAt   DateTime?
+  cancelledAt  DateTime?
+
+  // Valeur commerciale au moment de la conversion
+  conversionValueCents Int?
+  currency             String @default("CAD")
+
+  // Récompense prévue
+  rewardAmountCents Int @default(25000)
+
+  // Administration
+  adminNotes      String?
+  rejectionReason String?
+
+  // Informations complémentaires
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  credits ReferralCredit[]
+
+  @@index([referrerOrganizationId])
+  @@index([createdByUserId])
+  @@index([prospectEmail])
+  @@index([referralCode])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ReferralCredit {
+  id String @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation("ReferralCreditOrganization", fields: [organizationId], references: [id])
+
+  referralId String?
+  referral   Referral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
+
+  type   ReferralCreditType
+  status ReferralCreditStatus @default(PENDING)
+
+  // Montant signé en cents
+  // +25000 = crédit de 250 $
+  // -25000 = utilisation ou annulation de 250 $
+  amountCents Int
+
+  currency String @default("CAD")
+
+  description String?
+  adminNotes  String?
+
+  approvedAt DateTime?
+  appliedAt  DateTime?
+  expiresAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([referralId])
+  @@index([status])
+  @@index([createdAt])
 }

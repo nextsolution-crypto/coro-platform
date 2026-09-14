@@ -49,8 +49,25 @@ export default function OrganizationsAdminPage() {
   const [created, setCreated] = useState(false);
   const [error, setError] = useState('');
 
-  const [orgForm, setOrgForm] = useState({ name: '', licenseType: 'ESSAI_GRATUIT', province: 'Quebec' });
-  const [adminForm, setAdminForm] = useState({ firstName: '', lastName: '', email: '', title: 'Administrateur CORO', password: generatePassword() });
+  const [orgForm, setOrgForm] = useState({
+  name: '',
+  licenseType: 'ESSAI_GRATUIT',
+  province: 'Quebec',
+});
+
+const [referralForm, setReferralForm] = useState({
+  referralCode: '',
+  referralFirstTouchAt: '',
+  referralSource: 'LINK',
+});
+
+const [adminForm, setAdminForm] = useState({
+  firstName: '',
+  lastName: '',
+  email: '',
+  title: 'Administrateur CORO',
+  password: generatePassword(),
+});
   const [members, setMembers] = useState<Member[]>([]);
   const [newMember, setNewMember] = useState<Member>({ firstName: '', lastName: '', email: '', role: 'ADVISOR' });
 
@@ -87,8 +104,25 @@ export default function OrganizationsAdminPage() {
     setStep(1);
     setCreated(false);
     setError('');
-    setOrgForm({ name: '', licenseType: 'ESSAI_GRATUIT', province: 'Quebec' });
-    setAdminForm({ firstName: '', lastName: '', email: '', title: 'Administrateur CORO', password: generatePassword() });
+    setOrgForm({
+  name: '',
+  licenseType: 'ESSAI_GRATUIT',
+  province: 'Quebec',
+});
+
+setReferralForm({
+  referralCode: '',
+  referralFirstTouchAt: '',
+  referralSource: 'LINK',
+});
+
+setAdminForm({
+  firstName: '',
+  lastName: '',
+  email: '',
+  title: 'Administrateur CORO',
+  password: generatePassword(),
+});
     setMembers([]);
     setNewMember({ firstName: '', lastName: '', email: '', role: 'ADVISOR' });
     setShowWizard(true);
@@ -115,7 +149,22 @@ export default function OrganizationsAdminPage() {
         adminFirstName: adminForm.firstName,
         adminLastName: adminForm.lastName,
         adminTitle: adminForm.title,
-        additionalMembers: members,
+
+referralCode:
+  referralForm.referralCode.trim() || undefined,
+
+referralFirstTouchAt:
+  referralForm.referralCode.trim() &&
+  referralForm.referralFirstTouchAt.trim()
+    ? referralForm.referralFirstTouchAt.trim()
+    : undefined,
+
+referralSource:
+  referralForm.referralCode.trim()
+    ? referralForm.referralSource
+    : undefined,
+
+additionalMembers: members,
       });
       setCreated(true);
       fetchData();
@@ -241,35 +290,216 @@ export default function OrganizationsAdminPage() {
               )}
 
               {/* ÉTAPE 1 — Organisation */}
-              {step === 1 && !created && (
-                <div className="space-y-4">
-                  <p className="text-sm" style={{ color: '#6C757D' }}>Informations de base de la nouvelle organisation cliente.</p>
-                  <div>
-                    <Label required>Nom de l'organisation</Label>
-                    <input type="text" value={orgForm.name} onChange={e => setOrgForm({ ...orgForm, name: e.target.value })}
-                      placeholder="Ex: Firme Sécurité GardaWorld" className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#C0392B'} onBlur={e => e.target.style.borderColor = '#CED4DA'} />
-                  </div>
-                  <div>
-                    <Label required>Niveau de licence</Label>
-                    <select value={orgForm.licenseType} onChange={e => setOrgForm({ ...orgForm, licenseType: e.target.value })}
-                      className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
-                      <option value="ESSAI_GRATUIT">Essai gratuit</option>
-                      <option value="STANDARD">Standard</option>
-                      <option value="ENTREPRISE">Entreprise</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label>Province principale</Label>
-                    <select value={orgForm.province} onChange={e => setOrgForm({ ...orgForm, province: e.target.value })}
-                      className="rounded px-4 py-2.5 text-sm focus:outline-none" style={inputStyle}>
-                      <option value="Quebec">Québec</option>
-                      <option value="Ontario">Ontario</option>
-                      <option value="Alberta">Alberta</option>
-                    </select>
-                  </div>
-                </div>
-              )}
+{step === 1 && !created && (
+  <div className="space-y-4">
+    <p
+      className="text-sm"
+      style={{ color: '#6C757D' }}
+    >
+      Informations de base de la nouvelle organisation cliente.
+    </p>
+
+    <div>
+      <Label required>Nom de l'organisation</Label>
+
+      <input
+        type="text"
+        value={orgForm.name}
+        onChange={e =>
+          setOrgForm({
+            ...orgForm,
+            name: e.target.value,
+          })
+        }
+        placeholder="Ex: Firme Sécurité GardaWorld"
+        className="rounded px-4 py-2.5 text-sm focus:outline-none"
+        style={inputStyle}
+        onFocus={e =>
+          e.target.style.borderColor = '#C0392B'
+        }
+        onBlur={e =>
+          e.target.style.borderColor = '#CED4DA'
+        }
+      />
+    </div>
+
+    <div>
+      <Label required>Niveau de licence</Label>
+
+      <select
+        value={orgForm.licenseType}
+        onChange={e =>
+          setOrgForm({
+            ...orgForm,
+            licenseType: e.target.value,
+          })
+        }
+        className="rounded px-4 py-2.5 text-sm focus:outline-none"
+        style={inputStyle}
+      >
+        <option value="ESSAI_GRATUIT">
+          Essai gratuit
+        </option>
+
+        <option value="STANDARD">
+          Standard
+        </option>
+
+        <option value="ENTREPRISE">
+          Entreprise
+        </option>
+      </select>
+    </div>
+
+    <div>
+      <Label>Province principale</Label>
+
+      <select
+        value={orgForm.province}
+        onChange={e =>
+          setOrgForm({
+            ...orgForm,
+            province: e.target.value,
+          })
+        }
+        className="rounded px-4 py-2.5 text-sm focus:outline-none"
+        style={inputStyle}
+      >
+        <option value="Quebec">
+          Québec
+        </option>
+
+        <option value="Ontario">
+          Ontario
+        </option>
+
+        <option value="Alberta">
+          Alberta
+        </option>
+      </select>
+    </div>
+
+    {/* Programme de recommandation */}
+    <div
+      className="rounded-md p-4"
+      style={{
+        backgroundColor: '#F8F9FA',
+        border: '1px solid #E9ECEF',
+      }}
+    >
+      <p
+        className="text-xs font-semibold uppercase tracking-wide mb-3"
+        style={{ color: '#6C757D' }}
+      >
+        Programme de recommandation
+      </p>
+
+      <p
+        className="text-xs mb-4"
+        style={{ color: '#ADB5BD' }}
+      >
+        Optionnel — utilisez les informations reçues avec la demande de démonstration lorsqu'un prospect provient d'une recommandation CORO.
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <Label>Code de recommandation</Label>
+
+          <input
+            type="text"
+            value={referralForm.referralCode}
+            onChange={e =>
+              setReferralForm({
+                ...referralForm,
+                referralCode: e.target.value.toUpperCase(),
+              })
+            }
+            placeholder="Ex: CR-QKHDAC"
+            className="rounded px-4 py-2.5 text-sm focus:outline-none font-mono"
+            style={inputStyle}
+            onFocus={e =>
+              e.target.style.borderColor = '#C0392B'
+            }
+            onBlur={e =>
+              e.target.style.borderColor = '#CED4DA'
+            }
+          />
+        </div>
+
+        {referralForm.referralCode && (
+          <>
+            <div>
+              <Label>Date du premier contact</Label>
+
+              <input
+                type="text"
+                value={referralForm.referralFirstTouchAt}
+                onChange={e =>
+                  setReferralForm({
+                    ...referralForm,
+                    referralFirstTouchAt: e.target.value,
+                  })
+                }
+                placeholder="2026-09-14T20:14:38.123Z"
+                className="rounded px-4 py-2.5 text-sm focus:outline-none font-mono"
+                style={inputStyle}
+                onFocus={e =>
+                  e.target.style.borderColor = '#C0392B'
+                }
+                onBlur={e =>
+                  e.target.style.borderColor = '#CED4DA'
+                }
+              />
+
+              <p
+                className="text-xs mt-1"
+                style={{ color: '#ADB5BD' }}
+              >
+                Copier la valeur « referralFirstTouchAt » reçue dans la demande de démo.
+              </p>
+            </div>
+
+            <div>
+              <Label>Source de la recommandation</Label>
+
+              <select
+                value={referralForm.referralSource}
+                onChange={e =>
+                  setReferralForm({
+                    ...referralForm,
+                    referralSource: e.target.value,
+                  })
+                }
+                className="rounded px-4 py-2.5 text-sm focus:outline-none"
+                style={inputStyle}
+              >
+                <option value="LINK">
+                  Lien de recommandation
+                </option>
+
+                <option value="CODE">
+                  Code communiqué
+                </option>
+
+                <option value="EMAIL">
+                  Courriel
+                </option>
+
+                <option value="MANUAL">
+                  Saisie manuelle
+                </option>
+
+                <option value="ADMIN">
+                  Attribution administrative
+                </option>
+              </select>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
               {/* ÉTAPE 2 — Administrateur */}
               {step === 2 && !created && (
@@ -375,41 +605,187 @@ export default function OrganizationsAdminPage() {
               )}
 
               {/* ÉTAPE 4 — Récapitulatif */}
-              {step === 4 && !created && (
-                <div className="space-y-4">
-                  <p className="text-sm" style={{ color: '#6C757D' }}>Vérifiez les informations avant de créer l'organisation et d'envoyer les invitations.</p>
+{step === 4 && !created && (
+  <div className="space-y-4">
+    <p
+      className="text-sm"
+      style={{ color: '#6C757D' }}
+    >
+      Vérifiez les informations avant de créer l'organisation et d'envoyer les invitations.
+    </p>
 
-                  <div className="rounded-md p-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                    <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>Organisation</p>
-                    <p className="font-semibold" style={{ color: '#2C3E50' }}>{orgForm.name}</p>
-                    <p className="text-sm mt-1" style={{ color: '#6C757D' }}>{licenseLabels[orgForm.licenseType]} · {orgForm.province}</p>
-                  </div>
+    {/* Organisation */}
+    <div
+      className="rounded-md p-4"
+      style={{
+        backgroundColor: '#F8F9FA',
+        border: '1px solid #E9ECEF',
+      }}
+    >
+      <p
+        className="text-xs font-semibold uppercase tracking-wide mb-3"
+        style={{ color: '#ADB5BD' }}
+      >
+        Organisation
+      </p>
 
-                  <div className="rounded-md p-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                    <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>Administrateur principal</p>
-                    <p className="font-semibold" style={{ color: '#2C3E50' }}>{adminForm.firstName} {adminForm.lastName}</p>
-                    <p className="text-sm mt-1" style={{ color: '#6C757D' }}>{adminForm.email} · {adminForm.title}</p>
-                    <p className="text-xs mt-1 font-mono" style={{ color: '#ADB5BD' }}>Mot de passe : {adminForm.password}</p>
-                  </div>
+      <p
+        className="font-semibold"
+        style={{ color: '#2C3E50' }}
+      >
+        {orgForm.name}
+      </p>
 
-                  {members.length > 0 && (
-                    <div className="rounded-md p-4" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
-                      <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>{members.length} membre{members.length > 1 ? 's' : ''} additionnel{members.length > 1 ? 's' : ''}</p>
-                      {members.map((m, i) => (
-                        <p key={i} className="text-sm" style={{ color: '#2C3E50' }}>
-                          {m.firstName} {m.lastName} <span style={{ color: '#ADB5BD' }}>— {m.email}</span>
-                        </p>
-                      ))}
-                    </div>
-                  )}
+      <p
+        className="text-sm mt-1"
+        style={{ color: '#6C757D' }}
+      >
+        {licenseLabels[orgForm.licenseType]} · {orgForm.province}
+      </p>
+    </div>
 
-                  <div className="rounded-md p-3" style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
-                    <p className="text-sm" style={{ color: '#1A5276' }}>
-                      📧 Un courriel d'invitation sera envoyé automatiquement à <strong>{1 + members.length} personne{members.length > 0 ? 's' : ''}</strong> avec leurs identifiants de connexion.
-                    </p>
-                  </div>
-                </div>
-              )}
+    {/* Recommandation CORO */}
+    {referralForm.referralCode && (
+      <div
+        className="rounded-md p-4"
+        style={{
+          backgroundColor: '#EAFAF1',
+          border: '1px solid #A9DFBF',
+        }}
+      >
+        <p
+          className="text-xs font-semibold uppercase tracking-wide mb-3"
+          style={{ color: '#27AE60' }}
+        >
+          Recommandation CORO
+        </p>
+
+        <p
+          className="font-semibold font-mono"
+          style={{ color: '#2C3E50' }}
+        >
+          {referralForm.referralCode}
+        </p>
+
+        <p
+          className="text-sm mt-1"
+          style={{ color: '#6C757D' }}
+        >
+          Source : {
+            referralForm.referralSource === 'LINK'
+              ? 'Lien de recommandation'
+              : referralForm.referralSource === 'CODE'
+              ? 'Code communiqué'
+              : referralForm.referralSource === 'EMAIL'
+              ? 'Courriel'
+              : referralForm.referralSource === 'MANUAL'
+              ? 'Saisie manuelle'
+              : 'Attribution administrative'
+          }
+        </p>
+
+        {referralForm.referralFirstTouchAt && (
+          <p
+            className="text-xs mt-1"
+            style={{ color: '#ADB5BD' }}
+          >
+            Premier contact : {referralForm.referralFirstTouchAt}
+          </p>
+        )}
+      </div>
+    )}
+
+    {/* Administrateur principal */}
+    <div
+      className="rounded-md p-4"
+      style={{
+        backgroundColor: '#F8F9FA',
+        border: '1px solid #E9ECEF',
+      }}
+    >
+      <p
+        className="text-xs font-semibold uppercase tracking-wide mb-3"
+        style={{ color: '#ADB5BD' }}
+      >
+        Administrateur principal
+      </p>
+
+      <p
+        className="font-semibold"
+        style={{ color: '#2C3E50' }}
+      >
+        {adminForm.firstName} {adminForm.lastName}
+      </p>
+
+      <p
+        className="text-sm mt-1"
+        style={{ color: '#6C757D' }}
+      >
+        {adminForm.email} · {adminForm.title}
+      </p>
+
+      <p
+        className="text-xs mt-1 font-mono"
+        style={{ color: '#ADB5BD' }}
+      >
+        Mot de passe : {adminForm.password}
+      </p>
+    </div>
+
+    {/* Membres additionnels */}
+    {members.length > 0 && (
+      <div
+        className="rounded-md p-4"
+        style={{
+          backgroundColor: '#F8F9FA',
+          border: '1px solid #E9ECEF',
+        }}
+      >
+        <p
+          className="text-xs font-semibold uppercase tracking-wide mb-3"
+          style={{ color: '#ADB5BD' }}
+        >
+          {members.length} membre{members.length > 1 ? 's' : ''} additionnel
+          {members.length > 1 ? 's' : ''}
+        </p>
+
+        {members.map((m, i) => (
+          <p
+            key={i}
+            className="text-sm"
+            style={{ color: '#2C3E50' }}
+          >
+            {m.firstName} {m.lastName}{' '}
+            <span style={{ color: '#ADB5BD' }}>
+              — {m.email}
+            </span>
+          </p>
+        ))}
+      </div>
+    )}
+
+    {/* Information invitations */}
+    <div
+      className="rounded-md p-3"
+      style={{
+        backgroundColor: '#EBF5FB',
+        border: '1px solid #AED6F1',
+      }}
+    >
+      <p
+        className="text-sm"
+        style={{ color: '#1A5276' }}
+      >
+        📧 Un courriel d'invitation sera envoyé automatiquement à{' '}
+        <strong>
+          {1 + members.length} personne
+          {members.length > 0 ? 's' : ''}
+        </strong>{' '}
+        avec leurs identifiants de connexion.
+      </p>
+    </div>
+  </div>
+)}
 
               {/* SUCCÈS */}
               {created && (

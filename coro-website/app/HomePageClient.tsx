@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import DemoForm from './DemoForm';
 
+const REFERRAL_COOKIE_CODE = 'coro_referral_code';
+const REFERRAL_COOKIE_FIRST_TOUCH = 'coro_referral_first_touch';
+const REFERRAL_COOKIE_MAX_AGE = 60 * 60 * 24 * 90; // 90 jours
+
 const TRANSLATIONS = {
   fr: {
     nav: {
@@ -773,6 +777,51 @@ const getIcon = (
   }
 };
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const prefix = `${name}=`;
+
+  const cookie = document.cookie
+    .split('; ')
+    .find(item => item.startsWith(prefix));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.substring(prefix.length));
+}
+
+function setReferralCookie(name: string, value: string) {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const isCoroDomain =
+    window.location.hostname === 'getcoro.io' ||
+    window.location.hostname.endsWith('.getcoro.io');
+
+  const domain = isCoroDomain
+    ? '; Domain=.getcoro.io'
+    : '';
+
+  const secure =
+    window.location.protocol === 'https:'
+      ? '; Secure'
+      : '';
+
+  document.cookie =
+    `${name}=${encodeURIComponent(value)}` +
+    `; Path=/` +
+    `; Max-Age=${REFERRAL_COOKIE_MAX_AGE}` +
+    `; SameSite=Lax` +
+    domain +
+    secure;
+}
+
 export default function WebAppProgress() {
   const [lang, setLang] = useState<'fr' | 'en'>('fr');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -803,29 +852,57 @@ export default function WebAppProgress() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(
-      window.location.search
-    );
+  const params = new URLSearchParams(
+    window.location.search
+  );
 
-    if (params.get('lang') === 'en') {
-      setLang('en');
+  if (params.get('lang') === 'en') {
+    setLang('en');
+  }
+
+  // Programme de recommandation CORO
+  // Attribution first-touch conservée pendant 90 jours.
+  const referralParam = params
+    .get('ref')
+    ?.trim()
+    .toUpperCase();
+
+  const isValidReferralCode =
+    referralParam &&
+    /^CR-[A-HJ-NP-Z2-9]{6}$/.test(referralParam);
+
+  if (isValidReferralCode) {
+    const existingReferralCode =
+      getCookie(REFERRAL_COOKIE_CODE);
+
+    if (!existingReferralCode) {
+      setReferralCookie(
+        REFERRAL_COOKIE_CODE,
+        referralParam
+      );
+
+      setReferralCookie(
+        REFERRAL_COOKIE_FIRST_TOUCH,
+        new Date().toISOString()
+      );
     }
+  }
 
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+  const handleScroll = () => {
+    setScrolled(window.scrollY > 20);
+  };
 
-    window.addEventListener(
+  window.addEventListener(
+    'scroll',
+    handleScroll
+  );
+
+  return () =>
+    window.removeEventListener(
       'scroll',
       handleScroll
     );
-
-    return () =>
-      window.removeEventListener(
-        'scroll',
-        handleScroll
-      );
-  }, []);
+}, []);
 
   const toggleLanguage = () => {
     const nextLang =

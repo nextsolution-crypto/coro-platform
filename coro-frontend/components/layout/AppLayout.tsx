@@ -46,6 +46,7 @@ const ADMIN_GROUP = {
   items: [
     { label: 'Réservations',         path: '/bookings',                     icon: '📅' },
     { label: 'Équipe',               path: '/settings/users',               icon: '👤' },
+    { label: 'Recommandations',      path: '/referrals',                    icon: '🎁' },
     { label: 'Portefeuille mandats', path: '/admin/mandates',               icon: '📁' },
     { label: 'Capacity Planning',    path: '/admin/capacity',               icon: '⚡' },
     { label: 'Rendement équipe',      path: '/dashboard/rendement',          icon: '📊' },
@@ -58,8 +59,9 @@ const ADMIN_GROUP = {
 const SUPER_ADMIN_GROUP = {
   label: 'Super Admin',
   items: [
-    { label: 'Organisations',   path: '/admin/organizations',  icon: '🏢' },
-    { label: 'Carte globale',   path: '/admin/map',            icon: '🌍' },
+    { label: 'Organisations',    path: '/admin/organizations', icon: 'ðŸ¢' },
+    { label: 'Recommandations', path: '/admin/referrals',     icon: '🎁' },
+    { label: 'Carte globale',    path: '/admin/map',           icon: 'ðŸŒ' },
     { label: 'Health Score',    path: '/admin/health',         icon: '🏥' },
     { label: 'Tous les projets', path: '/admin/projects',      icon: '📁' },
     { label: 'Procédures',      path: '/admin/procedures',     icon: '📋' },
