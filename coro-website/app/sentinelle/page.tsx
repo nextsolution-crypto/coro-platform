@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { CheckCircle } from 'lucide-react';
 
 const SITE_URL = 'https://getcoro.io';
 
@@ -20,7 +21,128 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SentinellePage() {
+export default async function SentinellePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  const { lang: langParam } = await searchParams;
+  const isEnglish = langParam === 'en';
+
+  const pricingPlans = isEnglish
+    ? [
+        {
+          name: 'Essential',
+          price: '$149',
+          period: '/month',
+          badge: 'Available now',
+          color: '#2C3E50',
+          highlight: false,
+          features: [
+            'Real-time occupancy registry',
+            'QR code + PIN check-in',
+            'Instant evacuation mode',
+            'Visitor invitations',
+            '12-month history',
+            'ISO 22301 evacuation PDF report',
+            'Progressive web app (PWA)',
+          ],
+          cta: 'Request a demo',
+        },
+        {
+          name: 'Resilience',
+          price: 'From $249',
+          period: '/month',
+          badge: 'Most popular',
+          color: '#C0392B',
+          highlight: true,
+          features: [
+            'Everything in Essential, plus:',
+            'CORO resilience index (4 components)',
+            'Real-time emergency roles',
+            'Automatic role substitution',
+            'Multi-building organizational intelligence',
+            'Corrective actions with tracking',
+            '90-day trend chart',
+          ],
+          cta: 'Request a quote',
+        },
+        {
+          name: 'Intervention',
+          price: 'Custom',
+          period: '',
+          badge: 'Full resilience',
+          color: '#2C3E50',
+          highlight: false,
+          features: [
+            'Everything in Resilience, plus:',
+            'Incident Module (15 incident types)',
+            'Bilingual FR/EN panic button',
+            'SMS + email to coordinators and occupants',
+            'Checkable coordinator checklist',
+            'ISO 22301 post-incident REX report',
+            'NFPA 2020 / CCOHS compliance',
+          ],
+          cta: 'Talk to our team',
+        },
+      ]
+    : [
+        {
+          name: 'Essentiel',
+          price: '149 $',
+          period: '/mois',
+          badge: 'Disponible maintenant',
+          color: '#2C3E50',
+          highlight: false,
+          features: [
+            'Registre d\'occupation temps réel',
+            'Pointage QR code + PIN',
+            'Mode évacuation instantané',
+            'Invitations visiteurs',
+            'Historique 12 mois',
+            'Rapport PDF évacuation ISO 22301',
+            'Application web progressive (PWA)',
+          ],
+          cta: 'Demander une démo',
+        },
+        {
+          name: 'Résilience',
+          price: 'À partir de 249 $',
+          period: '/mois',
+          badge: 'Le plus populaire',
+          color: '#C0392B',
+          highlight: true,
+          features: [
+            'Tout Essentiel, plus :',
+            'Indice CORO de résilience (4 composantes)',
+            'Rôles d\'urgence en temps réel',
+            'Substitution automatique des rôles',
+            'Intelligence organisationnelle multi-bâtiments',
+            'Actions correctives avec suivi',
+            'Graphique tendance 90 jours',
+          ],
+          cta: 'Demander une soumission',
+        },
+        {
+          name: 'Intervention',
+          price: 'Sur mesure',
+          period: '',
+          badge: 'Résilience complète',
+          color: '#2C3E50',
+          highlight: false,
+          features: [
+            'Tout Résilience, plus :',
+            'Module Incident (15 types de sinistres)',
+            'Bouton panique bilingue FR/EN',
+            'SMS + courriel coordonnateurs et occupants',
+            'Checklist coordonnateur cochable',
+            'Rapport REX post-incident ISO 22301',
+            'Conformité CNPI 2020 / CNESST',
+          ],
+          cta: 'Parler à notre équipe',
+        },
+      ];
+
   return (
     <>
       <style>{`
@@ -463,6 +585,145 @@ export default function SentinellePage() {
                 Sentinelle ajoute une dimension essentielle :{' '}
                 <span className="cs-gradient-text">connecter la planification à la réalité du terrain.</span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TARIFICATION */}
+        <section
+          style={{
+            backgroundColor: '#FFFFFF',
+            padding: '100px 24px',
+          }}
+        >
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 64 }}>
+              <h2
+                style={{
+                  fontSize: 'clamp(28px, 4vw, 42px)',
+                  fontWeight: 800,
+                  color: '#2C3E50',
+                  lineHeight: 1.2,
+                  marginBottom: 16,
+                }}
+              >
+                {isEnglish ? 'Sentinel Pricing' : 'Tarifs Sentinelle'}
+              </h2>
+              <p style={{ fontSize: 18, color: '#6C757D' }}>
+                {isEnglish
+                  ? 'Per building, per month. No long-term contract.'
+                  : 'Par bâtiment, par mois. Aucun contrat à long terme.'}
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: 24,
+                alignItems: 'start',
+              }}
+            >
+              {pricingPlans.map((plan, i) => (
+                <div
+                  key={i}
+                  style={{
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    border: plan.highlight ? `2px solid ${plan.color}` : '1px solid #E9ECEF',
+                    boxShadow: plan.highlight ? '0 16px 48px rgba(192,57,43,0.15)' : 'none',
+                    transform: plan.highlight ? 'scale(1.02)' : 'scale(1)',
+                    position: 'relative',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                >
+                  {plan.highlight && (
+                    <div
+                      style={{
+                        backgroundColor: plan.color,
+                        padding: '8px 16px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}>
+                        ⭐ {plan.badge}
+                      </span>
+                    </div>
+                  )}
+
+                  {!plan.highlight && (
+                    <div
+                      style={{
+                        backgroundColor: '#F8F9FA',
+                        padding: '8px 16px',
+                        textAlign: 'center',
+                        borderBottom: '1px solid #E9ECEF',
+                      }}
+                    >
+                      <span style={{ color: '#6C757D', fontSize: 13, fontWeight: 700 }}>
+                        {plan.badge}
+                      </span>
+                    </div>
+                  )}
+
+                  <div style={{ padding: 40 }}>
+                    <h3 style={{ fontSize: 28, fontWeight: 800, color: '#2C3E50', marginBottom: 8 }}>
+                      {plan.name}
+                    </h3>
+
+                    <div style={{ marginBottom: 32 }}>
+                      <span style={{ fontSize: 42, fontWeight: 900, color: plan.color }}>
+                        {plan.price}
+                      </span>
+                      {plan.period && (
+                        <span style={{ fontSize: 16, color: '#6C757D', marginLeft: 4 }}>
+                          {plan.period}
+                        </span>
+                      )}
+                    </div>
+
+                    <ul
+                      style={{
+                        listStyle: 'none',
+                        marginBottom: 32,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                        padding: 0,
+                      }}
+                    >
+                      {plan.features.map((feature, fi) => (
+                        <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                          <CheckCircle
+                            size={18}
+                            color={plan.color}
+                            style={{ flexShrink: 0, marginTop: 1 }}
+                          />
+                          <span style={{ fontSize: 15, color: '#495057' }}>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <a
+                      href="#demo"
+                      style={{
+                        display: 'block',
+                        textAlign: 'center',
+                        padding: '14px 24px',
+                        borderRadius: 8,
+                        fontSize: 15,
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        backgroundColor: plan.highlight ? plan.color : 'transparent',
+                        color: plan.highlight ? '#FFFFFF' : plan.color,
+                        border: `2px solid ${plan.color}`,
+                      }}
+                    >
+                      {plan.cta}
+                    </a>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
