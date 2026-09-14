@@ -169,6 +169,13 @@ export default async function SentinellePage({
         }
         .cs-page *, .cs-page *::before, .cs-page *::after { box-sizing: border-box; }
         .cs-container { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+        .cs-nav { background: #2c3e50; padding: 0 24px; }
+        .cs-nav-inner { max-width: 1200px; height: 64px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+        .cs-logo { color: white; font-weight: 900; font-size: 24px; letter-spacing: -1px; text-decoration: none; }
+        .cs-logo span { color: #c0392b; }
+        .cs-nav-links { display: flex; gap: 16px; align-items: center; }
+        .cs-nav-link { color: rgba(255,255,255,.72); font-size: 14px; text-decoration: none; }
+        .cs-lang { border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
         .cs-section { padding: 100px 0; }
         .cs-section--soft { background: var(--cs-bg-soft); }
         .cs-eyebrow {
@@ -292,6 +299,17 @@ export default async function SentinellePage({
       `}</style>
 
       <main className="cs-page">
+
+        {/* NAV */}
+        <nav className="cs-nav">
+          <div className="cs-nav-inner">
+            <a href={isEnglish ? '/?lang=en' : '/'} className="cs-logo">CO<span>RO</span></a>
+            <div className="cs-nav-links">
+              <a href={isEnglish ? '/?lang=en' : '/'} className="cs-nav-link">{isEnglish ? '← Home' : '← Accueil'}</a>
+              <a href={isEnglish ? '/sentinelle' : '/sentinelle?lang=en'} className="cs-nav-link cs-lang">{isEnglish ? 'FR' : 'EN'}</a>
+            </div>
+          </div>
+        </nav>
 
         {/* HERO */}
         <section className="cs-hero">
