@@ -154,10 +154,11 @@ export default function Footer() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
                 { id: 'about', label: lang === 'fr' ? 'À propos' : 'About us', href: lang === 'fr' ? '/about' : '/about?lang=en', soon: false },
-                { id: 'security', label: lang === 'fr' ? 'Sécurité' : 'Security', href: lang === 'fr' ? '/security' : '/security?lang=en', soon: false },
-                { id: 'blog', label: lang === 'fr' ? 'Blogue' : 'Blog', href: '/blog', soon: false },
-                { id: 'partners', label: lang === 'fr' ? 'Partenaires' : 'Partners', href: '/partners', soon: true },
-                { id: 'contact', label: lang === 'fr' ? 'Nous contacter' : 'Contact us', href: '/#demo', soon: false },
+{ id: 'security', label: lang === 'fr' ? 'Sécurité' : 'Security', href: lang === 'fr' ? '/security' : '/security?lang=en', soon: false },
+{ id: 'referral', label: lang === 'fr' ? 'Programme de recommandation' : 'Referral Program', href: lang === 'fr' ? '/programme-recommandation' : '/programme-recommandation?lang=en', soon: false },
+{ id: 'blog', label: lang === 'fr' ? 'Blogue' : 'Blog', href: '/blog', soon: false },
+{ id: 'partners', label: lang === 'fr' ? 'Partenaires' : 'Partners', href: '/partners', soon: true },
+{ id: 'contact', label: lang === 'fr' ? 'Nous contacter' : 'Contact us', href: '/#demo', soon: false },
               ].map(link => (
                 <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <a href={link.href}
