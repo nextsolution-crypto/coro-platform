@@ -9,7 +9,33 @@ env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
 jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        app: [coro-backend, coro-frontend, coro-client-portal, coro-website]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.app }}
+        run: npm ci
+
+      - name: Type check
+        working-directory: ${{ matrix.app }}
+        run: npx tsc --noEmit
+
   build-and-push:
+    needs: typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
