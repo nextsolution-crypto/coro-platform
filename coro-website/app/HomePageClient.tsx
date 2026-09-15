@@ -2696,10 +2696,11 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-demo-value-item {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
-  padding: 15px;
+  min-height: 120px;
+  padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.035);
@@ -2707,10 +2708,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-demo-value-icon {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 52px;
+  height: 52px;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.07);
   color: #ffffff;
 }
@@ -2721,32 +2722,32 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-demo-value-item strong {
-  margin-bottom: 3px;
+  margin-bottom: 5px;
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 850;
 }
 
 .coro-demo-value-item span {
   color: rgba(255, 255, 255, 0.48);
-  font-size: 9px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .coro-demo-continuum {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 32px;
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 8px;
+  gap: 10px;
+  margin-top: 36px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .coro-demo-continuum svg {
   flex: 0 0 auto;
-  color: #ef8b81;
+  color: #f07a6f;
 }
 
 
@@ -4336,7 +4337,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   top: 25px;
   right: 27px;
   color: #dfe4e7;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.08em;
 }
@@ -4346,10 +4347,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-dimension-icon {
-  width: 47px;
-  height: 47px;
-  margin-bottom: 25px;
-  border-radius: 13px;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 28px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4364,9 +4365,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-dimension-card h3 {
   max-width: 390px;
-  margin: 0 0 13px;
+  margin: 0 0 16px;
   color: #2c3e50;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 850;
   line-height: 1.3;
 }
@@ -4375,8 +4376,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   max-width: 500px;
   margin: 0;
   color: #7a858d;
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.75;
 }
 
 .coro-dimension-card.primary h3,
@@ -4405,12 +4406,12 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-dimension-tags span {
-  padding: 6px 9px;
+  padding: 8px 12px;
   border-radius: 6px;
   background: #f3f5f6;
   color: #657078;
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 850;
 }
 
 .coro-dimension-card.resilience .coro-dimension-tags span {
@@ -7442,7 +7443,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         <div className="coro-dimension-number">01</div>
 
         <div className="coro-dimension-icon">
-          <FileText size={23} />
+          <FileText size={28} />
         </div>
 
         <h3>
@@ -7470,7 +7471,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         <div className="coro-dimension-number">02</div>
 
         <div className="coro-dimension-icon">
-          <Briefcase size={23} />
+          <Briefcase size={28} />
         </div>
 
         <h3>
@@ -7491,7 +7492,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         <div className="coro-dimension-number">03</div>
 
         <div className="coro-dimension-icon">
-          <BarChart3 size={23} />
+          <BarChart3 size={28} />
         </div>
 
         <h3>
@@ -7522,7 +7523,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         <div className="coro-dimension-number">04</div>
 
         <div className="coro-dimension-icon">
-          <Users size={23} />
+          <Users size={28} />
         </div>
 
         <h3>
@@ -7555,7 +7556,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         <div className="coro-dimension-number">05</div>
 
         <div className="coro-dimension-icon">
-          <ShieldCheck size={23} />
+          <ShieldCheck size={28} />
         </div>
 
         <h3>
@@ -8757,7 +8758,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             <div className="coro-demo-value">
               {[
                 {
-                  icon: <FileText size={19} />,
+                  icon: <FileText size={28} />,
                   title:
                     lang === 'fr'
                       ? 'Vos documents'
@@ -8768,7 +8769,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
                       : 'Plans, procedures and structured data.',
                 },
                 {
-                  icon: <Building2 size={19} />,
+                  icon: <Building2 size={28} />,
                   title:
                     lang === 'fr'
                       ? 'Votre environnement'
@@ -8779,7 +8780,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
                       : 'Buildings, sites, hazards and resources.',
                 },
                 {
-                  icon: <Users size={19} />,
+                  icon: <Users size={28} />,
                   title:
                     lang === 'fr'
                       ? 'Vos équipes'
@@ -8790,7 +8791,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
                       : 'Responsibilities, presence and mobilization.',
                 },
                 {
-                  icon: <Zap size={19} />,
+                  icon: <Zap size={28} />,
                   title:
                     lang === 'fr'
                       ? 'Vos opérations'
@@ -8845,14 +8846,14 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                gap: 10,
                 marginTop: 24,
                 color: 'rgba(255,255,255,0.5)',
-                fontSize: 13,
+                fontSize: 15,
               }}
             >
               <CheckCircle
-                size={15}
+                size={20}
                 color="#65D69A"
               />
 
