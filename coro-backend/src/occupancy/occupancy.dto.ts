@@ -1,30 +1,32 @@
+import { IsIn, IsOptional, IsString } from 'class-validator';
+
 export class CheckInDto {
-  buildingId: string;
-  type: 'EMPLOYE' | 'VISITEUR' | 'CONTRACTEUR';
-  firstName: string;
-  lastName: string;
-  company?: string;
-  email?: string;
-  phone?: string;
-  reason?: string;
-  hostName?: string;
-  floor?: string;
-  kioskToken: string;
+  @IsString() buildingId: string;
+  @IsIn(['EMPLOYE', 'VISITEUR', 'CONTRACTEUR']) type: 'EMPLOYE' | 'VISITEUR' | 'CONTRACTEUR';
+  @IsString() firstName: string;
+  @IsString() lastName: string;
+  @IsString() @IsOptional() company?: string;
+  @IsString() @IsOptional() email?: string;
+  @IsString() @IsOptional() phone?: string;
+  @IsString() @IsOptional() reason?: string;
+  @IsString() @IsOptional() hostName?: string;
+  @IsString() @IsOptional() floor?: string;
+  @IsString() kioskToken: string;
 }
 
 export class CheckOutDto {
-  recordId: string;
-  kioskToken: string;
+  @IsString() recordId: string;
+  @IsString() kioskToken: string;
 }
 
 export class TriggerEvacuationDto {
-  buildingId: string;
-  triggeredBy?: string;
-  notes?: string;
+  @IsString() buildingId: string;
+  @IsString() @IsOptional() triggeredBy?: string;
+  @IsString() @IsOptional() notes?: string;
 }
 
 export class AccountForOccupantDto {
-  evacuationEventId: string;
-  occupantRecordId: string;
-  checkedBy?: string;
+  @IsString() evacuationEventId: string;
+  @IsString() occupantRecordId: string;
+  @IsString() @IsOptional() checkedBy?: string;
 }
