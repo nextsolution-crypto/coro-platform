@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Briefcase,
   ChevronDown,
+  Award,
 } from 'lucide-react';
 import DemoForm from './DemoForm';
 
@@ -45,7 +46,7 @@ const TRANSLATIONS = {
   cta: 'Demander une démo',
   ctaSecondary: 'Découvrir la plateforme',
   trusted:
-    'Conçue au Québec · Données hébergées au Canada · Français / English',
+    'Conçue au Québec par des praticiens du terrain · Données hébergées au Canada · Français / English',
 },
 
     stats: [
@@ -403,7 +404,7 @@ const TRANSLATIONS = {
   cta: 'Request a demo',
   ctaSecondary: 'Explore the platform',
   trusted:
-    'Built in Quebec · Data hosted in Canada · English / Français',
+    'Built in Quebec by field practitioners · Data hosted in Canada · English / Français',
 },
 
     stats: [
@@ -2234,6 +2235,68 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   transform: translateY(-1px);
 }
 
+.coro-founder-teaser {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 40px auto 0;
+  padding: 20px 28px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(192,57,43,0.25), transparent 45%),
+    #1a252f;
+  color: #ffffff;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.coro-founder-teaser:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+.coro-founder-teaser-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(192, 57, 43, 0.4);
+  border-radius: 999px;
+  background: rgba(192, 57, 43, 0.15);
+  color: #f5c6c0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.coro-founder-teaser-text {
+  flex: 1;
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.coro-founder-teaser-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coro-founder-teaser-link svg {
+  transition: transform 0.2s ease;
+}
+
+.coro-founder-teaser:hover .coro-founder-teaser-link svg {
+  transform: translateX(3px);
+}
+
 
 /* ===== CORO TRUST & SECURITY ===== */
 
@@ -2559,6 +2622,12 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
   .coro-commercial-side {
     padding: 18px;
+  }
+
+  .coro-founder-teaser {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
   }
 
   .coro-trust-header h2 {
@@ -8385,6 +8454,27 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             </a>
           </div>
         </div>
+
+        <a
+          href={lang === 'fr' ? '/pricing#fondateur' : '/pricing?lang=en#fondateur'}
+          className="coro-founder-teaser"
+        >
+          <span className="coro-founder-teaser-badge">
+            <Award size={16} />
+            {lang === 'fr' ? 'PROGRAMME FONDATEUR' : 'FOUNDING PARTNER PROGRAM'}
+          </span>
+
+          <span className="coro-founder-teaser-text">
+            {lang === 'fr'
+              ? 'Les premières organisations à rejoindre CORO façonnent la plateforme avec nous — et en gardent les avantages.'
+              : 'The first organizations to join CORO help shape the platform with us — and keep the benefits.'}
+          </span>
+
+          <span className="coro-founder-teaser-link">
+            {lang === 'fr' ? 'En savoir plus' : 'Learn more'}
+            <ArrowRight size={15} />
+          </span>
+        </a>
       </section>
 
       {/* TRUST & SECURITY */}

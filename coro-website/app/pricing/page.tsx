@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Lock,
+  Award,
 } from 'lucide-react';
 import DemoForm from '../DemoForm';
 
@@ -47,12 +48,24 @@ const CONTENT = {
       primaryCta: 'Demander une démo',
       secondaryCta: 'Voir les facteurs de configuration',
       reassurance: 'Réponse sous 24 heures',
+      expertise: 'Conçu par des praticiens de la sécurité incendie et des mesures d\'urgence',
     },
 
-    ctaBanner: {
-      eyebrow: 'PARLONS DE VOTRE CONFIGURATION',
-      title: 'Chaque organisation est différente. Voyons ensemble la configuration CORO qui correspond à la vôtre.',
-      cta: 'Demander une démo',
+    founderProgram: {
+      ribbon: 'PROGRAMME FONDATEUR',
+      sealLabel: 'FONDATEUR',
+      title: 'Devenez l\'une des premières organisations à faire confiance à CORO.',
+      subtitle:
+        'Les organisations qui rejoignent CORO maintenant façonnent la plateforme avec nous — et en gardent les avantages.',
+      benefits: [
+        'Tarif fondateur préservé à long terme',
+        'Influence directe sur les priorités de développement',
+        'Accompagnement prioritaire à la mise en place',
+        'Reconnaissance comme partenaire fondateur de CORO',
+      ],
+      cta: 'Devenir partenaire fondateur',
+      footnote:
+        'Nombre de places limité — les conditions fondateur ne seront pas offertes indéfiniment.',
     },
 
     plans: {
@@ -297,12 +310,24 @@ const CONTENT = {
       primaryCta: 'Request a demo',
       secondaryCta: 'See the configuration factors',
       reassurance: 'Response within 24 hours',
+      expertise: 'Built by fire safety and emergency measures practitioners',
     },
 
-    ctaBanner: {
-      eyebrow: "LET'S TALK CONFIGURATION",
-      title: "Every organization is different. Let's find the CORO configuration that fits yours.",
-      cta: 'Request a demo',
+    founderProgram: {
+      ribbon: 'FOUNDING PARTNER PROGRAM',
+      sealLabel: 'FOUNDER',
+      title: 'Become one of the first organizations to trust CORO.',
+      subtitle:
+        'Organizations that join CORO now help shape the platform with us — and keep the benefits.',
+      benefits: [
+        'Founder pricing preserved long-term',
+        'Direct influence on development priorities',
+        'Priority support during setup',
+        'Recognition as a CORO founding partner',
+      ],
+      cta: 'Become a founding partner',
+      footnote:
+        'Limited number of spots — founder terms will not be offered indefinitely.',
     },
 
     plans: {
@@ -728,6 +753,8 @@ export default async function PricingPage({
           <div className="pricing-hero-reassurance">
             <CheckCircle2 size={14} />
             {d.hero.reassurance}
+            <span className="pricing-hero-reassurance-sep">·</span>
+            {d.hero.expertise}
           </div>
         </div>
       </section>
@@ -834,19 +861,44 @@ export default async function PricingPage({
         </div>
       </section>
 
-      {/* CTA BANNER */}
-      <section className="pricing-cta-banner">
+      {/* FOUNDER PROGRAM */}
+      <section id="fondateur" className="pricing-cta-banner">
         <div className="pricing-cta-glow" />
-        <div className="pricing-container pricing-cta-inner">
-          <div>
-            <span className="pricing-cta-eyebrow">{d.ctaBanner.eyebrow}</span>
-            <p>{d.ctaBanner.title}</p>
+        <div className="pricing-container pricing-founder-inner">
+          <div className="pricing-founder-copy">
+            <span className="pricing-founder-ribbon">{d.founderProgram.ribbon}</span>
+
+            <h2>{d.founderProgram.title}</h2>
+            <p className="pricing-founder-subtitle">{d.founderProgram.subtitle}</p>
+
+            <div className="pricing-founder-benefits">
+              {d.founderProgram.benefits.map(item => (
+                <div className="pricing-founder-benefit" key={item}>
+                  <CheckCircle2 size={17} />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pricing-founder-actions">
+              <a href="#demo" className="pricing-btn pricing-btn-primary">
+                {d.founderProgram.cta}
+                <ArrowRight size={16} />
+              </a>
+
+              <span className="pricing-founder-footnote">{d.founderProgram.footnote}</span>
+            </div>
           </div>
 
-          <a href="#demo" className="pricing-btn pricing-btn-primary">
-            {d.ctaBanner.cta}
-            <ArrowRight size={16} />
-          </a>
+          <div className="pricing-founder-seal-wrap">
+            <div className="pricing-founder-seal">
+              <div className="pricing-founder-seal-ring">
+                <Award size={34} />
+                <strong>{d.founderProgram.sealLabel}</strong>
+                <span>CORO</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1094,12 +1146,14 @@ export default async function PricingPage({
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-wrap: wrap;
           gap: 7px;
           margin-top: 22px;
           color: rgba(255,255,255,.5);
           font-size: 13px;
         }
         .pricing-hero-reassurance svg { color: #65D69A; flex-shrink: 0; }
+        .pricing-hero-reassurance-sep { color: rgba(255,255,255,.25); }
 
         /* CTA BANNER */
         .pricing-cta-banner {
@@ -1120,32 +1174,118 @@ export default async function PricingPage({
           background: radial-gradient(circle, rgba(192,57,43,.14) 0%, transparent 70%);
           pointer-events: none;
         }
-        .pricing-cta-inner {
+        /* FOUNDER PROGRAM */
+        .pricing-founder-inner {
           position: relative;
-          display: flex;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 220px;
           align-items: center;
-          justify-content: space-between;
-          gap: 40px;
-          flex-wrap: wrap;
+          gap: 56px;
         }
-        .pricing-cta-eyebrow {
-          display: block;
-          margin-bottom: 10px;
+        .pricing-founder-ribbon {
+          display: inline-block;
+          margin-bottom: 18px;
+          padding: 7px 14px;
+          border: 1px solid rgba(192,57,43,.4);
+          border-radius: 999px;
+          background: rgba(192,57,43,.15);
           color: #F5C6C0;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 900;
           letter-spacing: .1em;
         }
-        .pricing-cta-inner p {
-          margin: 0;
-          max-width: 620px;
+        .pricing-founder-copy h2 {
+          margin: 0 0 14px;
+          max-width: 640px;
           color: #FFFFFF;
-          font-size: clamp(20px, 2.6vw, 27px);
-          font-weight: 800;
-          line-height: 1.35;
+          font-size: clamp(26px, 3.4vw, 36px);
+          font-weight: 900;
+          line-height: 1.2;
+          letter-spacing: -.02em;
         }
-        .pricing-cta-inner .pricing-btn {
-          flex-shrink: 0;
+        .pricing-founder-subtitle {
+          margin: 0 0 28px;
+          max-width: 560px;
+          color: rgba(255,255,255,.65);
+          font-size: 16px;
+          line-height: 1.7;
+        }
+        .pricing-founder-benefits {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px 28px;
+          margin-bottom: 32px;
+        }
+        .pricing-founder-benefit {
+          display: grid;
+          grid-template-columns: 17px minmax(0, 1fr);
+          gap: 10px;
+          align-items: start;
+          color: rgba(255,255,255,.88);
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        .pricing-founder-benefit svg {
+          margin-top: 1px;
+          color: #65D69A;
+        }
+        .pricing-founder-actions {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-wrap: wrap;
+        }
+        .pricing-founder-footnote {
+          color: rgba(255,255,255,.42);
+          font-size: 12.5px;
+          line-height: 1.5;
+          max-width: 260px;
+        }
+        .pricing-founder-seal-wrap {
+          display: flex;
+          justify-content: center;
+        }
+        .pricing-founder-seal {
+          width: 190px;
+          height: 190px;
+          border-radius: 50%;
+          border: 1.5px dashed rgba(255,255,255,.28);
+          display: grid;
+          place-items: center;
+          animation: pricing-founder-spin 40s linear infinite;
+        }
+        .pricing-founder-seal-ring {
+          width: 152px;
+          height: 152px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 30% 20%, rgba(192,57,43,.35), rgba(44,62,80,.9));
+          border: 1px solid rgba(255,255,255,.18);
+          box-shadow: 0 20px 45px rgba(0,0,0,.35);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          color: #FFFFFF;
+          animation: pricing-founder-spin-reverse 40s linear infinite;
+        }
+        .pricing-founder-seal-ring strong {
+          font-size: 13px;
+          font-weight: 900;
+          letter-spacing: .08em;
+        }
+        .pricing-founder-seal-ring span {
+          font-size: 10px;
+          color: rgba(255,255,255,.55);
+          letter-spacing: .06em;
+        }
+        @keyframes pricing-founder-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pricing-founder-spin-reverse {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(-360deg); }
         }
 
         /* SECTIONS */
@@ -1557,6 +1697,13 @@ export default async function PricingPage({
           .pricing-deployment-grid { grid-template-columns: repeat(2, 1fr); }
           .pricing-capability-card { flex-basis: calc(50% - 9px); }
           .pricing-demo-inner { grid-template-columns: 1fr; gap: 44px; }
+          .pricing-founder-inner {
+            grid-template-columns: 1fr;
+            text-align: left;
+          }
+          .pricing-founder-seal-wrap {
+            display: none;
+          }
         }
 
         @media (max-width: 760px) {
@@ -1569,10 +1716,8 @@ export default async function PricingPage({
           .pricing-plan-card-featured {
             order: -1;
           }
-          .pricing-cta-inner {
-            flex-direction: column;
-            align-items: flex-start;
-            text-align: left;
+          .pricing-founder-benefits {
+            grid-template-columns: 1fr;
           }
         }
 
