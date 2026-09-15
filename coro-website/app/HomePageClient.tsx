@@ -1520,7 +1520,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-document-info span {
   overflow: hidden;
   color: #7b858c;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1589,7 +1589,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-document-capability span {
   color: rgba(255, 255, 255, 0.6);
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -2117,7 +2117,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-environments-foundation strong {
   color: #536068;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.55;
 }
@@ -2264,7 +2264,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   line-height: 1.75;
 }
 
-.coro-trust-grid {
+.coro-trust-main-grid {
   display: grid;
   grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1fr);
   gap: 24px;
@@ -2397,7 +2397,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-trust-control p {
   margin: 0;
   color: #78838a;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -2433,7 +2433,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   max-width: 720px;
   margin: 0;
   color: #7a858c;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -2482,7 +2482,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-trust-provider p {
   margin: 0;
   color: #858f95;
-  font-size: 10px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -2512,12 +2512,12 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-trust-technical strong {
   margin-bottom: 3px;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .coro-trust-technical span {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 9px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -2535,7 +2535,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 @media (max-width: 900px) {
   .coro-commercial-bridge,
   .coro-trust-header,
-  .coro-trust-grid {
+  .coro-trust-main-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3921,7 +3921,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-incident-step p {
   margin: 0;
   color: #7e888f;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -6210,6 +6210,376 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   </div>
 </section>
 
+{/* EVACUATION — TEMPS RÉEL */}
+<section
+  id="evacuation"
+  style={{
+    backgroundColor: '#FFFFFF',
+    padding: '120px 24px',
+    borderTop: '1px solid #EDF0F2',
+  }}
+>
+  <div
+    className="coro-feature-split"
+    style={{
+      maxWidth: 1200,
+      margin: '0 auto',
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 0.9fr) minmax(500px, 1.1fr)',
+      gap: 80,
+      alignItems: 'center',
+    }}
+  >
+    {/* CONTEXTE TERRAIN */}
+    <div>
+      <div
+        style={{
+          position: 'relative',
+          minHeight: 560,
+          borderRadius: 22,
+          overflow: 'hidden',
+          backgroundImage:
+            "linear-gradient(180deg, rgba(24,43,58,0.08) 0%, rgba(24,43,58,0.82) 100%), url('/images/homepage/evacuation.webp')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          boxShadow: '0 24px 60px rgba(44,62,80,0.14)',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 22,
+            left: 22,
+            padding: '8px 12px',
+            borderRadius: 999,
+            backgroundColor: 'rgba(255,255,255,0.94)',
+            color: '#2C3E50',
+            fontSize: 10,
+            fontWeight: 900,
+            letterSpacing: '0.08em',
+          }}
+        >
+          {lang === 'fr'
+            ? 'APERÇU · DONNÉES DE DÉMONSTRATION'
+            : 'PREVIEW · DEMO DATA'}
+        </div>
+
+        <div
+          style={{
+            position: 'absolute',
+            left: 28,
+            right: 28,
+            bottom: 28,
+            color: '#FFFFFF',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: '0.1em',
+              color: '#F3A099',
+              marginBottom: 8,
+            }}
+          >
+            {lang === 'fr'
+              ? 'ÉVACUATION EN COURS'
+              : 'EVACUATION IN PROGRESS'}
+          </div>
+
+          <div
+            style={{
+              fontSize: 25,
+              fontWeight: 850,
+              lineHeight: 1.25,
+            }}
+          >
+            {lang === 'fr'
+              ? 'Tour Prémont · Point de rassemblement A'
+              : 'Tour Prémont · Assembly point A'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* INTERFACE OPÉRATIONNELLE */}
+    <div>
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          color: '#C0392B',
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: '0.09em',
+          marginBottom: 18,
+        }}
+      >
+        <span>03</span>
+        <span>
+          {lang === 'fr'
+            ? 'ÉVACUATION · TEMPS RÉEL'
+            : 'EVACUATION · REAL TIME'}
+        </span>
+      </div>
+
+      <h2
+        style={{
+          margin: 0,
+          color: '#2C3E50',
+          fontSize: 'clamp(34px, 4vw, 52px)',
+          lineHeight: 1.08,
+          letterSpacing: '-0.035em',
+          fontWeight: 900,
+          maxWidth: 650,
+        }}
+      >
+        {lang === 'fr'
+          ? 'Savoir qui est sorti. Identifier immédiatement qui manque.'
+          : 'Know who made it out. Identify immediately who is missing.'}
+      </h2>
+
+      <p
+        style={{
+          margin: '24px 0 34px',
+          color: '#6C757D',
+          fontSize: 18,
+          lineHeight: 1.7,
+          maxWidth: 650,
+        }}
+      >
+        {lang === 'fr'
+          ? "Lors d’une évacuation, CORO transforme le registre de présence en portrait opérationnel : personnes présentes au déclenchement, statut d’évacuation, point de rassemblement et personnes à confirmer."
+          : 'During an evacuation, CORO turns the occupancy register into an operational picture: people present when the event began, evacuation status, assembly point and people still to be confirmed.'}
+      </p>
+
+      {/* SNAPSHOT */}
+      <div
+        style={{
+          border: '1px solid #E1E6E9',
+          borderRadius: 18,
+          backgroundColor: '#FAFBFB',
+          overflow: 'hidden',
+          boxShadow: '0 16px 40px rgba(44,62,80,0.08)',
+        }}
+      >
+        <div
+          style={{
+            padding: '18px 20px',
+            borderBottom: '1px solid #E7EBED',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: '#2C3E50',
+                fontWeight: 850,
+                fontSize: 15,
+              }}
+            >
+              {lang === 'fr'
+                ? 'Situation d’évacuation'
+                : 'Evacuation status'}
+            </div>
+
+            <div
+              style={{
+                color: '#7B8790',
+                fontSize: 12,
+                marginTop: 3,
+              }}
+            >
+              {lang === 'fr'
+                ? 'Tour Prémont'
+                : 'Tour Prémont'}
+            </div>
+          </div>
+
+          <span
+            style={{
+              padding: '6px 10px',
+              borderRadius: 999,
+              backgroundColor: '#FFF0EE',
+              color: '#C0392B',
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: '0.07em',
+            }}
+          >
+            {lang === 'fr' ? 'EN COURS' : 'ACTIVE'}
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            borderBottom: '1px solid #E7EBED',
+          }}
+        >
+          {[
+            {
+              value: '127',
+              fr: 'Présents',
+              en: 'Present',
+            },
+            {
+              value: '118',
+              fr: 'Évacués',
+              en: 'Evacuated',
+            },
+            {
+              value: '6',
+              fr: 'À confirmer',
+              en: 'To confirm',
+            },
+            {
+              value: '3',
+              fr: 'Manquants',
+              en: 'Missing',
+            },
+          ].map((item, index) => (
+            <div
+              key={item.fr}
+              style={{
+                padding: '20px 10px',
+                textAlign: 'center',
+                borderRight:
+                  index < 3
+                    ? '1px solid #E7EBED'
+                    : 'none',
+              }}
+            >
+              <div
+                style={{
+                  color:
+                    index === 3
+                      ? '#C0392B'
+                      : '#2C3E50',
+                  fontSize: 25,
+                  fontWeight: 900,
+                }}
+              >
+                {item.value}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 4,
+                  color: '#7B8790',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {lang === 'fr'
+                  ? item.fr
+                  : item.en}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: 20 }}>
+          <div
+            style={{
+              color: '#7B8790',
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: '0.08em',
+              marginBottom: 12,
+            }}
+          >
+            {lang === 'fr'
+              ? 'POINT DE RASSEMBLEMENT A'
+              : 'ASSEMBLY POINT A'}
+          </div>
+
+          {[
+            {
+              name: 'Martin Gagnon',
+              fr: 'ÉVACUÉ',
+              en: 'EVACUATED',
+              status: 'ok',
+            },
+            {
+              name: 'Sophie Leblanc',
+              fr: 'ÉVACUÉE',
+              en: 'EVACUATED',
+              status: 'ok',
+            },
+            {
+              name: 'Jean-Pierre Roy',
+              fr: 'À CONFIRMER',
+              en: 'TO CONFIRM',
+              status: 'warning',
+            },
+          ].map((person) => (
+            <div
+              key={person.name}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 14,
+                padding: '11px 0',
+                borderTop: '1px solid #EDF0F2',
+              }}
+            >
+              <span
+                style={{
+                  color: '#2C3E50',
+                  fontSize: 13,
+                  fontWeight: 750,
+                }}
+              >
+                {person.name}
+              </span>
+
+              <span
+                style={{
+                  color:
+                    person.status === 'ok'
+                      ? '#27885B'
+                      : '#C47B16',
+                  fontSize: 10,
+                  fontWeight: 900,
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {lang === 'fr'
+                  ? person.fr
+                  : person.en}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 25,
+          color: '#7B8790',
+          fontSize: 11,
+          fontWeight: 900,
+          letterSpacing: '0.065em',
+          lineHeight: 1.6,
+        }}
+      >
+        {lang === 'fr'
+          ? 'PRÉSENCE → ÉVACUATION → RASSEMBLEMENT → VÉRIFICATION'
+          : 'PRESENCE → EVACUATION → ASSEMBLY → VERIFICATION'}
+      </div>
+    </div>
+  </div>
+</section>
+
 {/* OPERATIONAL BRIDGE */}
 <section
   style={{
@@ -6253,6 +6623,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     </h2>
   </div>
 </section>
+
+
 
 {/* INCIDENT — DE L'ÉVÉNEMENT À L'ACTION */}
 <section
@@ -8006,7 +8378,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             </p>
           </div>
 
-          <div className="coro-trust-grid">
+          <div className="coro-trust-main-grid">
             <div className="coro-trust-primary">
               <div className="coro-trust-primary-top">
                 <div className="coro-trust-shield">
