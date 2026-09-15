@@ -27,6 +27,7 @@ export default function KioskPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [currentTime, setCurrentTime] = useState('');
   const [scannerStarted, setScannerStarted] = useState(false);
+  const [activeIncident, setActiveIncident] = useState<{ publicAccessToken: string; type: string } | null>(null);
 
   const handleQrScan = async (qrToken: string) => {
     if (!buildingId || loading) return;
@@ -153,6 +154,20 @@ export default function KioskPage() {
     return () => clearTimeout(timeout);
   }, [screen]);
 
+  // Vérifier périodiquement s'il y a un incident actif — bascule l'affichage de la borne
+  useEffect(() => {
+    if (!token) return;
+    const checkIncident = () => {
+      fetch(`${API_URL}/occupancy/kiosk/${token}/active-incident`)
+        .then(r => r.json())
+        .then(d => setActiveIncident(d?.active ? { publicAccessToken: d.publicAccessToken, type: d.type } : null))
+        .catch(() => {});
+    };
+    checkIncident();
+    const interval = setInterval(checkIncident, 15000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   const resetToHome = () => {
     setScreen('home');
     setSelectedType('');
@@ -239,6 +254,29 @@ export default function KioskPage() {
 
   // ── ÉCRAN ACCUEIL ──
   if (screen === 'home') {
+    if (activeIncident) {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#C0392B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 900, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            🚨 Incident en cours
+          </p>
+          <p style={{ margin: '0 0 28px', fontSize: 22, fontWeight: 800, color: '#FFF0EE', textAlign: 'center' }}>
+            Fiche d'intervention disponible
+          </p>
+          <div style={{ padding: 20, borderRadius: 16, backgroundColor: '#FFFFFF' }}>
+            <IncidentQrDisplay token={activeIncident.publicAccessToken} />
+          </div>
+          <p style={{ margin: '20px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.75)', textAlign: 'center', maxWidth: 340 }}>
+            Scannez pour accéder aux informations critiques du bâtiment (accès, matières dangereuses, points de rassemblement, contacts).
+          </p>
+          <button type="button" onClick={() => setScreen('checkin-type')}
+            style={{ marginTop: 32, padding: '14px 24px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            Enregistrer ma présence
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#2C3E50', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none' }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
@@ -525,6 +563,36 @@ function KioskQrDisplay({ kioskToken }: { kioskToken: string }) {
       style={{ width: 180, height: 180, borderRadius: 12, display: 'block', margin: '0 auto' }}
     />
   );
+}
+
+function IncidentQrDisplay({ token }: { token: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const QRCode = (await import('qrcode')).default;
+        const url = await QRCode.toDataURL(`${window.location.origin}/intervention/${token}`, {
+          width: 220,
+          margin: 1,
+          color: { dark: '#C0392B', light: '#FFFFFF' },
+        });
+        if (!cancelled) setQrDataUrl(url);
+      } catch (err) {
+        console.error('[CORO Incident QR]', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
+
+  if (!qrDataUrl) return (
+    <div style={{ width: 220, height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#ADB5BD', fontSize: 12 }}>Chargement...</p>
+    </div>
+  );
+
+  return <img src={qrDataUrl} alt="QR fiche d'intervention" style={{ width: 220, height: 220, display: 'block' }} />;
 }
 
 function KioskInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {

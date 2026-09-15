@@ -72,6 +72,66 @@ function normalizePhone(phone: string | null | undefined): string | null {
 const PORTAL_URL = process.env.CLIENT_PORTAL_URL || 'https://client.getcoro.io';
 const API_URL    = process.env.API_URL            || 'https://api.getcoro.io/api';
 
+// ── Fiche d'intervention — construction du snapshot au déclenchement ────────
+function buildInterventionSheet(building: any, configData: any, contactsModule2: any) {
+  const cfg = configData || {};
+  return {
+    building: {
+      name: building.name,
+      address: building.address,
+      city: building.city,
+      province: building.province,
+      buildingType: cfg.buildingType || null,
+      responsable: {
+        name: `${building.responsableFirstName || ''} ${building.responsableLastName || ''}`.trim() || null,
+        phone: building.responsablePhone || null,
+        email: building.responsableEmail || null,
+      },
+    },
+    acces: {
+      posteCommandement: cfg.posteCommandement || null,
+      boiteClePompier: cfg.boiteClePompier || null,
+      trousseClesPompierLieu: cfg.trousseClesPompier ? cfg.trousseClesPompierLieu || null : null,
+      raccordPompierLieu: cfg.raccordPompier ? cfg.raccordPompierLieu || null : null,
+      bornesFontaineLieu: cfg.bornesFontaine ? cfg.bornesFontaineLieu || null : null,
+      vannesIsolementLieu: cfg.vannesIsolement ? cfg.vannesIsolementLieu || null : null,
+      ascenseurPompier: cfg.ascenseurPompier ? cfg.ascenseurPompierLequel || null : null,
+    },
+    protectionIncendie: {
+      panneauAlarme: !!cfg.panneauAlarme,
+      panneauLocalisation: cfg.panneauLocalisation || null,
+      gicleurs: !!cfg.gicleurs,
+      salleGicleurs: cfg.salleGicleurs || null,
+      pompeIncendie: !!cfg.pompeIncendie,
+      pompeIncendieLieu: cfg.pompeIncendieLieu || null,
+      extincteurPortatif: !!cfg.extincteurPortatif,
+    },
+    matieresDangereuses: {
+      presentes: !!cfg.matieresDangereuses,
+      liste: Array.isArray(cfg.matieresList) ? cfg.matieresList : [],
+      ammoniac: !!cfg.ammoniac,
+      batteriesLithium: !!cfg.batteriesLithium,
+    },
+    utilites: {
+      vanneGazNaturel: cfg.vannesArretGazNaturel || null,
+      vanneEauDomestique: cfg.vannesArretEauDomestique || null,
+      vanneSalleElectrique: cfg.vannesArretSalleElectrique || null,
+    },
+    rassemblement: {
+      principal: cfg.pointRassemblement || null,
+      secondaire: cfg.pointRassemblement2 || null,
+      lieuAccueilTemporaire: cfg.lieuAccueilTemporaire || null,
+    },
+    personnesAssistance: cfg.personnelHandicap ? {
+      present: true,
+      typesLimitations: Array.isArray(cfg.ppnaeTypesLimitations) ? cfg.ppnaeTypesLimitations : [],
+      mesuresPrevues: Array.isArray(cfg.ppnaeMesures) ? cfg.ppnaeMesures : [],
+      avertissement: 'Donnée déclarative issue du PMU — peut être incomplète. Vérifier sur place.',
+    } : { present: false },
+    contacts: contactsModule2 || null,
+  };
+}
+
 @Injectable()
 export class IncidentService {
   constructor(private prisma: PrismaService) {}
@@ -379,10 +439,23 @@ export class IncidentService {
     const activePmu = await this.prisma.project.findFirst({
       where: { buildingId: body.buildingId, documentType: { in: ['PMU', 'PSI'] }, status: { in: ['VALIDATED', 'EXPORTED'] }, isActive: true },
       orderBy: { updatedAt: 'desc' },
-      select: { configData: true },
+      select: { id: true, configData: true },
     });
     const configData    = activePmu?.configData as any;
     const assemblyPoint = configData?.pointRassemblement || null;
+
+    // Contacts d'urgence (Module 2 — stockés dans Document.content, pas configData)
+    let contactsModule2: any = null;
+    if (activePmu?.id) {
+      const pmuDocument = await this.prisma.document.findFirst({
+        where: { projectId: activePmu.id },
+        select: { content: true },
+      });
+      contactsModule2 = (pmuDocument?.content as any)?.module2 || null;
+    }
+
+    const interventionSheet = buildInterventionSheet(building, configData, contactsModule2);
+    const publicAccessToken = randomUUID();
 
     // Snapshots
     const presentRecords = await this.prisma.occupancyRecord.findMany({
@@ -425,6 +498,8 @@ export class IncidentService {
         procedureCode,
         procedureSnapshot: coordSteps       as any,
         assemblyPoint,
+        interventionSheet: interventionSheet as any,
+        publicAccessToken,
         isExercise,
         isActive: true,
       },
@@ -515,6 +590,16 @@ export class IncidentService {
     return incidents[0] || null;
   }
 
+  // Version sans organizationId — pour la borne kiosque (aucune authentification).
+  // Ne retourne que le strict nécessaire pour afficher le QR, rien de sensible.
+  async getActiveIncidentPublic(buildingId: string) {
+    return this.prisma.incidentEvent.findFirst({
+      where: { buildingId, isActive: true, status: { in: ['ACTIVE', 'CONTAINED'] } },
+      orderBy: { triggeredAt: 'desc' },
+      select: { publicAccessToken: true, type: true },
+    });
+  }
+
   // ── Étapes coordonnateur ──────────────────────────────────────────────────
   async completeStep(taskId: string, organizationId: string) {
     const task = await this.prisma.incidentTask.findFirst({ where: { id: taskId, incidentEvent: { organizationId } } });
@@ -532,6 +617,67 @@ export class IncidentService {
 
   async acknowledgeTask(taskId: string, organizationId: string) { return this.completeStep(taskId, organizationId); }
   async completeTask(taskId: string, organizationId: string)    { return this.completeStep(taskId, organizationId); }
+
+  // ── Fiche d'intervention — accès public temporaire (QR) ──────────────────
+  async getInterventionSheetByToken(token: string) {
+    const incident = await this.prisma.incidentEvent.findUnique({ where: { publicAccessToken: token } });
+    if (!incident || !incident.isActive) {
+      throw new NotFoundException('Lien invalide ou expiré — l\'incident n\'est plus actif.');
+    }
+
+    const building = await this.prisma.building.findUnique({ where: { id: incident.buildingId } });
+
+    await this.prisma.incidentEvent.update({
+      where: { id: incident.id },
+      data: { publicAccessCount: { increment: 1 }, publicAccessLastAt: new Date() },
+    });
+
+    return {
+      incidentType: incident.type,
+      triggeredAt: incident.triggeredAt,
+      assemblyPoint: incident.assemblyPoint,
+      sheet: incident.interventionSheet,
+      team: incident.teamSnapshot,
+      building: building ? { name: building.name, address: building.address, city: building.city } : null,
+    };
+  }
+
+  async sendInterventionAccessByEmail(incidentId: string, emails: string[], organizationId: string) {
+    const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
+    if (!incident) throw new NotFoundException('Incident introuvable');
+    if (!incident.publicAccessToken) throw new NotFoundException('Aucun accès public disponible pour cet incident');
+    if (!incident.isActive) throw new NotFoundException('Cet incident n\'est plus actif — le lien ne serait plus valide');
+
+    const validEmails = (emails || []).map(e => (e || '').trim()).filter(Boolean);
+    if (validEmails.length === 0) throw new NotFoundException('Aucune adresse courriel fournie');
+
+    const building = await this.prisma.building.findUnique({ where: { id: incident.buildingId } });
+    const link = `${PORTAL_URL}/intervention/${incident.publicAccessToken}`;
+    const label = INCIDENT_LABELS[incident.type] || 'Incident';
+
+    const html = `
+      <div style="font-family:-apple-system,sans-serif;max-width:540px;margin:0 auto;">
+        <div style="background:#C0392B;padding:24px;border-radius:8px 8px 0 0;">
+          <span style="color:#FFFFFF;font-size:28px;font-weight:900;">CO<span style="color:#FFF">RO</span></span>
+        </div>
+        <div style="background:#FFFFFF;padding:32px;border:1px solid #E9ECEF;border-radius:0 0 8px 8px;">
+          <p style="font-size:18px;font-weight:800;color:#C0392B;margin:0 0 8px;">🚨 ${label}</p>
+          <p style="font-size:14px;color:#6C757D;margin:0 0 24px;">${building?.name || ''}</p>
+          <a href="${link}" style="display:inline-block;background:#2C3E50;color:#FFFFFF;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:15px;">Consulter la fiche d'intervention</a>
+          <p style="margin:16px 0 0;font-size:11px;color:#ADB5BD;">Ce lien reste actif tant que l'incident n'est pas résolu.</p>
+        </div>
+      </div>`;
+
+    for (const email of validEmails) {
+      await this.sendEmail({ to: email, toName: '', subject: `🚨 Fiche d'intervention — ${label} · ${building?.name || ''}`, html });
+    }
+
+    await this.prisma.incidentLog.create({
+      data: { incidentEventId: incidentId, action: `Fiche d'intervention envoyée par courriel à ${validEmails.length} destinataire(s)`, isAutomatic: false },
+    });
+
+    return { success: true, sentCount: validEmails.length };
+  }
 
   // ── Journal ───────────────────────────────────────────────────────────────
   async addLog(incidentId: string, body: any, organizationId: string) {

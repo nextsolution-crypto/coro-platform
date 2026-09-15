@@ -1234,6 +1234,10 @@ model IncidentEvent {
   procedureCode        String? // Code de la procédure liée (ex: P003)
   procedureSnapshot    Json? // Étapes ROLE-CU capturées au déclenchement
   assemblyPoint        String? // Point de rassemblement récupéré du configData PMU
+  interventionSheet    Json? // Fiche d'intervention figée au déclenchement (accès QR temporaire)
+  publicAccessToken    String?   @unique // Jeton d'accès public à la fiche — valide tant que isActive
+  publicAccessCount    Int       @default(0) // Nombre de consultations de la fiche via le lien public
+  publicAccessLastAt   DateTime? // Dernière consultation de la fiche via le lien public
   containedAt          DateTime?
   resolvedAt           DateTime?
   closingNotes         String?

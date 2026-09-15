@@ -58,6 +58,11 @@ export class IncidentController {
     return this.service.resolveIncident(incidentId, body, req.user.organizationId);
   }
 
+  @Post(':incidentId/send-access')
+  sendAccess(@Param('incidentId') incidentId: string, @Body() body: { emails: string[] }, @Request() req: any) {
+    return this.service.sendInterventionAccessByEmail(incidentId, body.emails, req.user.organizationId);
+  }
+
   @Get('buildings/:buildingId/history')
   history(@Param('buildingId') buildingId: string, @Request() req: any) {
     return this.service.getIncidentHistory(buildingId, req.user.organizationId);

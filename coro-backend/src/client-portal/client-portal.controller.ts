@@ -350,6 +350,11 @@ export class ClientPortalController {
     return this.incidentService.resolveIncident(incidentId, body, req.clientUser.organizationId);
   }
 
+  @Post('incidents/:incidentId/send-access')
+  async sendInterventionAccess(@Param('incidentId') incidentId: string, @Body() body: { emails: string[] }, @Request() req: any) {
+    return this.incidentService.sendInterventionAccessByEmail(incidentId, body.emails, req.clientUser.organizationId);
+  }
+
   @Get('incidents/buildings/:buildingId/history')
   async getIncidentHistory(@Param('buildingId') buildingId: string, @Request() req: any) {
     return this.incidentService.getIncidentHistory(buildingId, req.clientUser.organizationId);

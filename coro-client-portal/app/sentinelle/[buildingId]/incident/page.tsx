@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { apiGet, getUser } from '../../../store/auth';
 import PortalLayout from '../../../components/PortalLayout';
-import { AlertTriangle, FileText, RefreshCw, Shield, CheckSquare, Square, Plus } from 'lucide-react';
+import { AlertTriangle, FileText, RefreshCw, Shield, CheckSquare, Square, Plus, QrCode, Copy, Mail, Check } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
@@ -44,6 +44,36 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   RESOLVED:  { label: 'RÉSOLU',         color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF' },
 };
 
+function IncidentAccessQr({ token }: { token: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const QRCode = (await import('qrcode')).default;
+        const url = await QRCode.toDataURL(`${window.location.origin}/intervention/${token}`, {
+          width: 140,
+          margin: 1,
+          color: { dark: '#2C3E50', light: '#FFFFFF' },
+        });
+        if (!cancelled) setQrDataUrl(url);
+      } catch (err) {
+        console.error('[CORO Incident Access QR]', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
+
+  if (!qrDataUrl) return (
+    <div style={{ width: 140, height: 140, borderRadius: 8, backgroundColor: '#F1F3F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#ADB5BD', fontSize: 11 }}>...</p>
+    </div>
+  );
+
+  return <img src={qrDataUrl} alt="QR fiche d'intervention" style={{ width: 140, height: 140, borderRadius: 8, border: '1px solid #E9ECEF', display: 'block' }} />;
+}
+
 export default function IncidentPage() {
   const router = useRouter();
   const params = useParams();
@@ -61,6 +91,11 @@ export default function IncidentPage() {
   const [description, setDescription]    = useState('');
   const [showTrigger, setShowTrigger]     = useState(false);
   const [isExercise, setIsExercise]       = useState(false);
+  const [showAccessPanel, setShowAccessPanel] = useState<string | null>(null);
+  const [accessEmails, setAccessEmails]   = useState<Record<string, string>>({});
+  const [sendingAccess, setSendingAccess] = useState<string | null>(null);
+  const [accessSent, setAccessSent]       = useState<string | null>(null);
+  const [linkCopied, setLinkCopied]       = useState<string | null>(null);
 
   useEffect(() => {
     const u = getUser();
@@ -146,6 +181,30 @@ export default function IncidentPage() {
       setShowResolve(null);
       await fetchIncidents();
     } catch { console.error('Erreur resolve'); }
+  };
+
+  const getInterventionLink = (token: string) => `${window.location.origin}/intervention/${token}`;
+
+  const handleCopyLink = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(getInterventionLink(token));
+      setLinkCopied(token);
+      setTimeout(() => setLinkCopied(null), 2000);
+    } catch { console.error('Erreur copie du lien'); }
+  };
+
+  const handleSendAccess = async (incidentId: string) => {
+    const raw = accessEmails[incidentId] || '';
+    const emails = raw.split(/[,;\s]+/).map(e => e.trim()).filter(Boolean);
+    if (emails.length === 0) return;
+    setSendingAccess(incidentId);
+    try {
+      await clientFetch(`/client-portal/incidents/${incidentId}/send-access`, 'POST', { emails });
+      setAccessSent(incidentId);
+      setAccessEmails(prev => ({ ...prev, [incidentId]: '' }));
+      setTimeout(() => setAccessSent(null), 3000);
+    } catch { alert('Erreur lors de l\'envoi.'); }
+    finally { setSendingAccess(null); }
   };
 
   if (loading) return (
@@ -270,6 +329,12 @@ export default function IncidentPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
+                {incident.publicAccessToken && incident.status !== 'RESOLVED' && (
+                  <button type="button" onClick={() => setShowAccessPanel(showAccessPanel === incident.id ? null : incident.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 6, border: '1px solid #2C3E50', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#2C3E50' }}>
+                    <QrCode size={13} /> Fiche d'intervention
+                  </button>
+                )}
                 {incident.status === 'ACTIVE' && (
                   <button type="button" onClick={() => handleContain(incident.id)}
                     style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #F9E79F', backgroundColor: '#FEF9E7', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#E67E22' }}>
@@ -284,6 +349,37 @@ export default function IncidentPage() {
                 )}
               </div>
             </div>
+
+            {/* Fiche d'intervention — QR + envoi par courriel */}
+            {showAccessPanel === incident.id && incident.publicAccessToken && (
+              <div style={{ padding: '18px 20px', backgroundColor: '#F8F9FA', borderBottom: '1px solid #E9ECEF', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <IncidentAccessQr token={incident.publicAccessToken} />
+                </div>
+                <div style={{ flex: 1, minWidth: 240 }}>
+                  <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6C757D', lineHeight: 1.5 }}>
+                    Ce lien donne accès à la fiche d'intervention du bâtiment (sans compte). Il reste valide tant que l'incident n'est pas résolu.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                    <button type="button" onClick={() => handleCopyLink(incident.publicAccessToken)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6, border: '1px solid #E9ECEF', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#2C3E50' }}>
+                      {linkCopied === incident.publicAccessToken ? <><Check size={13} color="#27AE60" /> Copié</> : <><Copy size={13} /> Copier le lien</>}
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="text" placeholder="courriel1@exemple.com, courriel2@exemple.com"
+                      value={accessEmails[incident.id] || ''}
+                      onChange={e => setAccessEmails(prev => ({ ...prev, [incident.id]: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && handleSendAccess(incident.id)}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #E9ECEF', fontSize: 13, outline: 'none' }} />
+                    <button type="button" onClick={() => handleSendAccess(incident.id)} disabled={sendingAccess === incident.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6, border: 'none', backgroundColor: accessSent === incident.id ? '#27AE60' : '#2C3E50', color: '#FFFFFF', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                      {accessSent === incident.id ? <><Check size={13} /> Envoyé</> : <><Mail size={13} /> {sendingAccess === incident.id ? 'Envoi...' : 'Envoyer'}</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Formulaire résolution */}
             {showResolve === incident.id && (

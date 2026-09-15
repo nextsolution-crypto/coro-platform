@@ -3,13 +3,37 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OccupancyService } from './occupancy.service';
+import { IncidentService } from './incident.service';
 import {
   CheckInDto, CheckOutDto, TriggerEvacuationDto, AccountForOccupantDto
 } from './occupancy.dto';
 
 @Controller('occupancy')
 export class OccupancyController {
-  constructor(private readonly occupancyService: OccupancyService) {}
+  constructor(
+    private readonly occupancyService: OccupancyService,
+    private readonly incidentService: IncidentService,
+  ) {}
+
+  // Fiche d'intervention — accès public temporaire par QR (aucune authentification,
+  // valide tant que l'incident lié est actif)
+  @Get('intervention-access/:token')
+  getInterventionAccess(@Param('token') token: string) {
+    return this.incidentService.getInterventionSheetByToken(token);
+  }
+
+  // Incident actif d'un bâtiment — pour affichage du QR sur la borne kiosque (public)
+  @Get('kiosk/:kioskToken/active-incident')
+  async getActiveIncidentForKiosk(@Param('kioskToken') kioskToken: string) {
+    try {
+      const resolved = await this.occupancyService.resolveBuildingFromToken(kioskToken);
+      const incident = await this.incidentService.getActiveIncidentPublic(resolved.buildingId);
+      if (!incident) return { active: false };
+      return { active: true, publicAccessToken: incident.publicAccessToken, type: incident.type };
+    } catch {
+      return { active: false };
+    }
+  }
 
   // ── Routes PUBLIQUES (borne kiosque — token dans le body) ─────────────────
 
