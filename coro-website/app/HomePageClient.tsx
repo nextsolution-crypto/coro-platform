@@ -3094,66 +3094,6 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     0 16px 42px rgba(44, 62, 80, 0.12);
 }
 
-.coro-continuum-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 18px;
-  position: relative;
-  margin-top: 54px;
-}
-
-.coro-continuum-card {
-  position: relative;
-  padding: 30px 26px;
-  border-radius: 18px;
-  border: 1px solid #e2e7eb;
-  background: #ffffff;
-  min-height: 280px;
-  box-shadow:
-    0 1px 3px rgba(44, 62, 80, 0.04),
-    0 6px 18px rgba(44, 62, 80, 0.07);
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.coro-continuum-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 18px 45px rgba(44, 62, 80, 0.09);
-}
-
-.coro-continuum-arrow {
-  position: absolute;
-  top: 50%;
-  right: -17px;
-  z-index: 3;
-  width: 32px;
-  height: 32px;
-  transform: translateY(-50%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  font-size: 16px;
-}
-
-.coro-continuum-engine {
-  margin-top: 28px;
-  padding: 24px 28px;
-  border-radius: 16px;
-  background: #2c3e50;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-}
-
 @media (max-width: 900px) {
   .coro-hero-grid {
     grid-template-columns: 1fr;
@@ -3179,13 +3119,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     grid-column: 1 / -1;
   }
 
-  .coro-problem-grid,
-  .coro-continuum-grid {
+  .coro-problem-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .coro-continuum-arrow {
-    display: none;
   }
 }
 
@@ -3212,18 +3147,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     grid-template-columns: 1fr;
   }
 
-  .coro-problem-grid,
-  .coro-continuum-grid {
+  .coro-problem-grid {
     grid-template-columns: 1fr;
-  }
-
-  .coro-continuum-card {
-    min-height: 0;
-  }
-
-  .coro-continuum-engine {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 
@@ -5696,165 +5621,22 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
       </p>
     </div>
 
-    <div className="coro-continuum-grid">
-      {[
-        {
-          num: '01',
-          title: lang === 'fr' ? 'PRÉPARER' : 'PREPARE',
-          headline:
-            lang === 'fr'
-              ? 'Construire la préparation'
-              : 'Build readiness',
-          items:
-            lang === 'fr'
-              ? ['Plans', 'Risques', 'Procédures', 'Rôles', 'Équipements']
-              : ['Plans', 'Hazards', 'Procedures', 'Roles', 'Equipment'],
-        },
-        {
-          num: '02',
-          title: lang === 'fr' ? 'SURVEILLER' : 'MONITOR',
-          headline:
-            lang === 'fr'
-              ? 'Connaître la situation réelle'
-              : 'Know the real situation',
-          items:
-            lang === 'fr'
-              ? ['Présence', 'Qualifications', 'Exercices', 'Disponibilité']
-              : ['Occupancy', 'Qualifications', 'Drills', 'Availability'],
-        },
-        {
-          num: '03',
-          title: lang === 'fr' ? 'INTERVENIR' : 'RESPOND',
-          headline:
-            lang === 'fr'
-              ? 'Transformer le plan en action'
-              : 'Turn the plan into action',
-          items:
-            lang === 'fr'
-              ? ['Incident', 'Mobilisation', 'Notifications', "Services d'urgence"]
-              : ['Incident', 'Mobilization', 'Notifications', 'Emergency services'],
-        },
-        {
-          num: '04',
-          title: lang === 'fr' ? 'AMÉLIORER' : 'IMPROVE',
-          headline:
-            lang === 'fr'
-              ? 'Apprendre et corriger'
-              : 'Learn and improve',
-          items:
-            lang === 'fr'
-              ? ['Rapport', 'REX', 'Actions correctives', 'Mise à jour']
-              : ['Report', 'Lessons learned', 'Corrective actions', 'Updates'],
-        },
-      ].map((phase, i, arr) => (
-        <div
-          key={phase.num}
-          className="coro-continuum-card"
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.10)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          <p
-            style={{
-              margin: '0 0 18px',
-              color: '#F07A6F',
-              fontSize: 12,
-              fontWeight: 900,
-              letterSpacing: '0.1em',
-            }}
-          >
-            {phase.num} · {phase.title}
-          </p>
-
-          <h3
-            style={{
-              margin: '0 0 22px',
-              color: '#FFFFFF',
-              fontSize: 20,
-              fontWeight: 850,
-              lineHeight: 1.35,
-            }}
-          >
-            {phase.headline}
-          </h3>
-
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            {phase.items.map(item => (
-              <div
-                key={item}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  color: 'rgba(255,255,255,0.82)',
-                  fontSize: 14,
-                }}
-              >
-                <CheckCircle
-                  size={15}
-                  color="#65D69A"
-                />
-                {item}
-              </div>
-            ))}
-          </div>
-
-          {i < arr.length - 1 && (
-            <div className="coro-continuum-arrow">
-              →
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-
-    <div className="coro-continuum-engine">
-      <div>
-        <p
-          style={{
-            margin: '0 0 5px',
-            color: '#FFFFFF',
-            fontSize: 17,
-            fontWeight: 850,
-          }}
-        >
-          CORO
-        </p>
-
-        <p
-          style={{
-            margin: 0,
-            color: 'rgba(255,255,255,0.56)',
-            fontSize: 13,
-          }}
-        >
-          {lang === 'fr'
-            ? 'Sentinelle alimente la connaissance opérationnelle en temps réel.'
-            : 'Sentinel feeds real-time operational awareness.'}
-        </p>
-      </div>
-
-      <p
+    <div style={{
+      marginTop: 54,
+      borderRadius: 20,
+      overflow: 'hidden',
+      boxShadow: '0 30px 80px rgba(0,0,0,0.25)',
+    }}>
+      <img
+        src="/images/homepage/continuum-coro.webp"
+        alt="Le continuum CORO de résilience organisationnelle"
         style={{
-          margin: 0,
-          color: '#FFFFFF',
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.075em',
+          width: '100%',
+          height: 'auto',
+          display: 'block',
         }}
-      >
-        {lang === 'fr'
-          ? 'DONNÉES → DÉCISIONS → ACTIONS → AMÉLIORATION'
-          : 'DATA → DECISIONS → ACTIONS → IMPROVEMENT'}
-      </p>
+        loading="lazy"
+      />
     </div>
   </div>
 </section>
