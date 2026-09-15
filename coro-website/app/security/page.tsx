@@ -723,7 +723,10 @@ export default async function SecurityPage({ searchParams }: PageProps) {
             <a href={homeLink('#how-it-works')} className="security-nav-link">
               {t.nav.howItWorks}
             </a>
-            <a href={homeLink('#pricing')} className="security-nav-link">
+            <a
+              href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
+              className="security-nav-link"
+            >
               {t.nav.pricing}
             </a>
           </nav>
@@ -755,7 +758,7 @@ export default async function SecurityPage({ searchParams }: PageProps) {
                 <a href={homeLink('#features')}>{t.nav.features}</a>
                 <a href={homeLink('#documents')}>{t.nav.documents}</a>
                 <a href={homeLink('#how-it-works')}>{t.nav.howItWorks}</a>
-                <a href={homeLink('#pricing')}>{t.nav.pricing}</a>
+                <a href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}>{t.nav.pricing}</a>
                 <a href={lang === 'fr' ? '/about' : '/about?lang=en'}>
                   {lang === 'fr' ? 'À propos' : 'About'}
                 </a>

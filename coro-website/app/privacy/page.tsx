@@ -363,7 +363,10 @@ export default async function PrivacyPage({ searchParams }: PageProps) {
             <a href={homeSection('#how-it-works')} className="legal-nav-link">
               {lang === 'fr' ? 'Comment ça fonctionne' : 'How it works'}
             </a>
-            <a href={homeSection('#pricing')} className="legal-nav-link">
+            <a
+              href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
+              className="legal-nav-link"
+            >
               {lang === 'fr' ? 'Tarifs' : 'Pricing'}
             </a>
           </nav>
@@ -396,7 +399,7 @@ export default async function PrivacyPage({ searchParams }: PageProps) {
                 <a href={homeSection('#how-it-works')}>
                   {lang === 'fr' ? 'Comment ça fonctionne' : 'How it works'}
                 </a>
-                <a href={homeSection('#pricing')}>
+                <a href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}>
                   {lang === 'fr' ? 'Tarifs' : 'Pricing'}
                 </a>
                 <a href={aboutHref}>

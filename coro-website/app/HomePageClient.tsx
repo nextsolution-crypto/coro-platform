@@ -4715,7 +4715,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         {lang === 'fr' ? 'Documents' : 'Documents'}
       </a>
 
-      <a href="#pricing" className="coro-nav-main-link">
+      <a
+        href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
+        className="coro-nav-main-link"
+      >
         {lang === 'fr' ? 'Tarification' : 'Pricing'}
       </a>
     </div>
@@ -4867,7 +4870,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         </a>
 
         <a
-          href="#pricing"
+          href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
           onClick={() => setMenuOpen(false)}
         >
           {lang === 'fr' ? 'Tarification' : 'Pricing'}

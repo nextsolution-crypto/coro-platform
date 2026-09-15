@@ -577,7 +577,10 @@ export default async function AboutPage({ searchParams }: PageProps) {
   image: `${SITE_URL}/og-coro.jpg`,
   offers: {
     '@type': 'Offer',
-    url: `${SITE_URL}/#pricing`,
+    url:
+      lang === 'en'
+        ? `${SITE_URL}/pricing?lang=en`
+        : `${SITE_URL}/pricing`,
     availability: 'https://schema.org/OnlineOnly',
   },
 };
@@ -668,7 +671,10 @@ export default async function AboutPage({ searchParams }: PageProps) {
             <a href={homeLink('#how-it-works')} className="about-nav-link">
               {t.nav.howItWorks}
             </a>
-            <a href={homeLink('#pricing')} className="about-nav-link">
+            <a
+              href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
+              className="about-nav-link"
+            >
               {t.nav.pricing}
             </a>
           </div>
@@ -710,7 +716,7 @@ export default async function AboutPage({ searchParams }: PageProps) {
     {t.nav.howItWorks}
   </a>
 
-  <a href={homeLink('#pricing')}>
+  <a href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}>
     {t.nav.pricing}
   </a>
 

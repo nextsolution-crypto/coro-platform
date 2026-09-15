@@ -119,7 +119,7 @@ export default function Footer() {
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
                 {t.footer.links.features}
               </a>
-              <a href="/#pricing"
+              <a href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
                 style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
