@@ -3074,6 +3074,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid #e9ecef;
   border-radius: 16px;
   background: #ffffff;
+  box-shadow:
+    0 1px 3px rgba(44, 62, 80, 0.04),
+    0 6px 18px rgba(44, 62, 80, 0.06);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease,
@@ -3083,7 +3086,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-problem-card:hover {
   transform: translateY(-4px);
   border-color: #d9dee3;
-  box-shadow: 0 16px 42px rgba(44, 62, 80, 0.08);
+  box-shadow:
+    0 4px 8px rgba(44, 62, 80, 0.06),
+    0 16px 42px rgba(44, 62, 80, 0.12);
 }
 
 .coro-continuum-grid {
@@ -3101,6 +3106,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid #e2e7eb;
   background: #ffffff;
   min-height: 280px;
+  box-shadow:
+    0 1px 3px rgba(44, 62, 80, 0.04),
+    0 6px 18px rgba(44, 62, 80, 0.07);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
@@ -3133,6 +3141,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   padding: 24px 28px;
   border-radius: 16px;
   background: #2c3e50;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -4137,6 +4146,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid #e5e9ec;
   border-radius: 14px;
   background: #fff;
+  box-shadow:
+    0 1px 3px rgba(44, 62, 80, 0.04),
+    0 4px 14px rgba(44, 62, 80, 0.06);
 }
 
 .coro-rex-step > span {
@@ -4278,6 +4290,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid #e3e8ec;
   border-radius: 18px;
   background: #ffffff;
+  box-shadow:
+    0 2px 6px rgba(44, 62, 80, 0.05),
+    0 10px 28px rgba(44, 62, 80, 0.07);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease,
@@ -5178,8 +5193,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
               style={{
                 margin: 0,
                 color: '#FFFFFF',
-                fontSize: 24,
+                fontSize: 36,
                 fontWeight: 900,
+                letterSpacing: '-1px',
+                lineHeight: 1,
               }}
             >
               127
@@ -5251,8 +5268,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
               style={{
                 margin: 0,
                 color: '#FFFFFF',
-                fontSize: 24,
+                fontSize: 32,
                 fontWeight: 900,
+                letterSpacing: '-0.5px',
+                lineHeight: 1,
               }}
             >
               3 / 4
@@ -5532,15 +5551,32 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   id="continuum"
   style={{
     background:
-      'linear-gradient(180deg, #F8F9FA 0%, #F3F5F7 100%)',
+      'linear-gradient(160deg, #1A2B38 0%, #243C4F 60%, #1C2F3D 100%)',
     padding: '115px 24px',
-    borderTop: '1px solid #EEF1F3',
+    borderTop: 'none',
+    position: 'relative',
+    overflow: 'hidden',
   }}
 >
   <div
     style={{
+      position: 'absolute',
+      top: -200,
+      right: -150,
+      width: 500,
+      height: 500,
+      borderRadius: '50%',
+      background:
+        'radial-gradient(circle, rgba(192,57,43,0.12) 0%, transparent 70%)',
+      pointerEvents: 'none',
+    }}
+  />
+
+  <div
+    style={{
       maxWidth: 1200,
       margin: '0 auto',
+      position: 'relative',
     }}
   >
     <div
@@ -5550,17 +5586,26 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         margin: '0 auto',
       }}
     >
-      <span className="section-tag">
+      <span
+        style={{
+          display: 'inline-block',
+          marginBottom: 16,
+          color: '#F07A6F',
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: '0.1em',
+        }}
+      >
         {lang === 'fr'
-          ? 'Le continuum CORO'
-          : 'The CORO continuum'}
+          ? 'LE CONTINUUM CORO'
+          : 'THE CORO CONTINUUM'}
       </span>
 
       <h2
         style={{
           fontSize: 'clamp(32px, 4.5vw, 48px)',
           fontWeight: 900,
-          color: '#2C3E50',
+          color: '#FFFFFF',
           lineHeight: 1.15,
           letterSpacing: '-1.3px',
           marginBottom: 18,
@@ -5575,7 +5620,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         style={{
           margin: '0 auto',
           maxWidth: 760,
-          color: '#6C757D',
+          color: 'rgba(255,255,255,0.65)',
           fontSize: 18,
           lineHeight: 1.75,
         }}
@@ -5640,11 +5685,16 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         <div
           key={phase.num}
           className="coro-continuum-card"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.10)',
+            backdropFilter: 'blur(8px)',
+          }}
         >
           <p
             style={{
               margin: '0 0 18px',
-              color: '#C0392B',
+              color: '#F07A6F',
               fontSize: 12,
               fontWeight: 900,
               letterSpacing: '0.1em',
@@ -5656,7 +5706,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           <h3
             style={{
               margin: '0 0 22px',
-              color: '#2C3E50',
+              color: '#FFFFFF',
               fontSize: 20,
               fontWeight: 850,
               lineHeight: 1.35,
@@ -5679,13 +5729,13 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
                   display: 'flex',
                   alignItems: 'center',
                   gap: 9,
-                  color: '#6C757D',
+                  color: 'rgba(255,255,255,0.82)',
                   fontSize: 14,
                 }}
               >
                 <CheckCircle
                   size={15}
-                  color="#C0392B"
+                  color="#65D69A"
                 />
                 {item}
               </div>
