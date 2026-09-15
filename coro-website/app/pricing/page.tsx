@@ -42,7 +42,7 @@ const CONTENT = {
       eyebrow: 'TARIFICATION',
       title: 'Une tarification qui s\'adapte à votre organisation.',
       text:
-        'La configuration commerciale de CORO dépend de votre réalité opérationnelle : le nombre de sites et de bâtiments, le nombre d\'utilisateurs, les capacités CORO activées et le niveau d\'accompagnement souhaité. Nous établissons cette configuration avec vous, plutôt que de l\'imposer par un forfait générique.',
+        'CORO s\'adapte à votre réalité opérationnelle : le nombre de sites et de bâtiments, le nombre d\'utilisateurs, les capacités activées et le niveau d\'accompagnement souhaité. Nous construisons cette configuration avec vous.',
       primaryCta: 'Demander une démo',
       secondaryCta: 'Voir les facteurs de configuration',
     },
@@ -51,7 +51,7 @@ const CONTENT = {
       tag: 'CE QUI INFLUENCE VOTRE CONFIGURATION',
       title: 'Quatre facteurs déterminent votre configuration CORO.',
       intro:
-        'Aucun prix n\'est fixé à l\'avance — ces éléments nous permettent de proposer une configuration adaptée à votre organisation.',
+        'La tarification CORO est établie à partir de ces quatre dimensions, afin de refléter fidèlement la réalité de votre organisation.',
       items: [
         {
           icon: <Building2 size={22} />,
@@ -75,7 +75,7 @@ const CONTENT = {
           icon: <Briefcase size={22} />,
           title: 'Accompagnement',
           text:
-            'Le niveau de configuration assistée, de formation et de support continu souhaité influence l\'accompagnement prévu avec votre équipe CORO.',
+            'Le niveau de configuration assistée, de formation et de support continu souhaité oriente l\'accompagnement prévu avec CORO.',
         },
       ],
     },
@@ -102,7 +102,7 @@ const CONTENT = {
           icon: <BarChart3 size={20} />,
           title: 'Performance & objectifs',
           text:
-            'Suivez les heures, le rendement des mandats et la capacité de production pour mieux planifier vos ressources.',
+            'Suivez les objectifs, indicateurs et niveaux de performance pour mesurer les progrès et orienter les actions d\'amélioration.',
         },
         {
           icon: <Building2 size={20} />,
@@ -114,7 +114,7 @@ const CONTENT = {
           icon: <ShieldCheck size={20} />,
           title: 'Résilience & Intervention',
           text:
-            'Présence en temps réel, indice CORO, module Incident et boucle REX pour relier la préparation à l\'intervention.',
+            'Reliez préparation et intervention grâce à l\'Indice CORO, la présence en temps réel, la mobilisation des équipes, la gestion des incidents, l\'information destinée aux secours, les exercices et le retour d\'expérience.',
         },
       ],
     },
@@ -184,8 +184,12 @@ const CONTENT = {
       title: 'Questions fréquentes sur la tarification',
       items: [
         {
-          q: 'Est-ce que nos capacités CORO peuvent évoluer avec le temps?',
-          a: 'Oui. Votre configuration peut être ajustée à mesure que vos besoins évoluent — nouveaux sites, nouveaux utilisateurs ou capacités additionnelles — en discussion avec votre équipe CORO.',
+          q: 'Pourquoi les prix ne sont-ils pas affichés directement?',
+          a: 'CORO peut couvrir des réalités très différentes d\'une organisation à l\'autre. La tarification dépend de votre environnement, des capacités activées, du nombre d\'utilisateurs et du niveau d\'accompagnement souhaité — nous l\'établissons avec vous lors de l\'évaluation de vos besoins.',
+        },
+        {
+          q: 'Pouvons-nous faire évoluer notre configuration CORO avec le temps?',
+          a: 'Oui. Votre configuration peut être ajustée à mesure que vos besoins évoluent — nouveaux sites, nouveaux utilisateurs ou capacités additionnelles — en discussion avec CORO.',
         },
         {
           q: 'CORO peut-il gérer plusieurs sites ou bâtiments?',
@@ -197,11 +201,11 @@ const CONTENT = {
         },
         {
           q: 'La formation et l\'accompagnement sont-ils inclus?',
-          a: 'Le niveau d\'accompagnement — configuration assistée, formation, support continu — fait partie des éléments discutés avec votre équipe CORO lors de l\'évaluation de votre environnement.',
+          a: 'Le niveau d\'accompagnement — configuration assistée, formation, support continu — fait partie des éléments abordés lors de l\'évaluation de vos besoins.',
         },
         {
           q: 'Où sont hébergées nos données?',
-          a: 'Les données sont hébergées au Canada, sur une infrastructure DigitalOcean (Toronto). Les détails techniques applicables à votre organisation peuvent être précisés avec votre équipe CORO.',
+          a: 'Les données sont hébergées au Canada, sur une infrastructure DigitalOcean à Toronto. Les caractéristiques techniques et les mesures de sécurité applicables peuvent être précisées lors de l\'évaluation de vos besoins.',
         },
       ],
     },
@@ -232,7 +236,7 @@ const CONTENT = {
       eyebrow: 'PRICING',
       title: 'Pricing that adapts to your organization.',
       text:
-        'CORO\'s commercial configuration depends on your operational reality: the number of sites and buildings, the number of users, the CORO capabilities you activate and the level of support you need. We build this configuration with you, rather than imposing a generic package.',
+        'CORO adapts to your operational reality: the number of sites and buildings, the number of users, the capabilities you activate and the level of support you need. We build this configuration together with you.',
       primaryCta: 'Request a demo',
       secondaryCta: 'See the configuration factors',
     },
@@ -241,7 +245,7 @@ const CONTENT = {
       tag: 'WHAT SHAPES YOUR CONFIGURATION',
       title: 'Four factors determine your CORO configuration.',
       intro:
-        'No price is set in advance — these elements let us propose a configuration adapted to your organization.',
+        'CORO pricing is built around these four dimensions, so it accurately reflects your organization.',
       items: [
         {
           icon: <Building2 size={22} />,
@@ -265,7 +269,7 @@ const CONTENT = {
           icon: <Briefcase size={22} />,
           title: 'Support',
           text:
-            'The desired level of guided configuration, training and ongoing support shapes the accompaniment planned with your CORO team.',
+            'The desired level of guided configuration, training and ongoing support shapes the accompaniment provided by CORO.',
         },
       ],
     },
@@ -292,7 +296,7 @@ const CONTENT = {
           icon: <BarChart3 size={20} />,
           title: 'Performance & objectives',
           text:
-            'Track hours, engagement performance and production capacity to better plan your resources.',
+            'Track objectives, indicators and performance levels to measure progress and guide improvement actions.',
         },
         {
           icon: <Building2 size={20} />,
@@ -304,7 +308,7 @@ const CONTENT = {
           icon: <ShieldCheck size={20} />,
           title: 'Resilience & Response',
           text:
-            'Real-time occupancy, the CORO index, the Incident module and the lessons-learned loop connect preparedness to response.',
+            'Connect preparedness and response through the CORO index, real-time occupancy, team mobilization, incident management, information for first responders, drills and lessons learned.',
         },
       ],
     },
@@ -374,8 +378,12 @@ const CONTENT = {
       title: 'Frequently asked questions about pricing',
       items: [
         {
-          q: 'Can our CORO capabilities evolve over time?',
-          a: 'Yes. Your configuration can be adjusted as your needs evolve — new sites, new users or additional capabilities — in discussion with your CORO team.',
+          q: 'Why aren\'t prices shown directly?',
+          a: 'CORO can cover very different realities from one organization to another. Pricing depends on your environment, the capabilities you activate, the number of users and the level of support you need — we work it out with you during the assessment of your needs.',
+        },
+        {
+          q: 'Can we evolve our CORO configuration over time?',
+          a: 'Yes. Your configuration can be adjusted as your needs evolve — new sites, new users or additional capabilities — in discussion with CORO.',
         },
         {
           q: 'Can CORO manage multiple sites or buildings?',
@@ -387,11 +395,11 @@ const CONTENT = {
         },
         {
           q: 'Is training and support included?',
-          a: 'The level of support — guided configuration, training, ongoing assistance — is one of the elements discussed with your CORO team during the assessment of your environment.',
+          a: 'The level of support — guided configuration, training, ongoing assistance — is one of the elements discussed when assessing your needs.',
         },
         {
           q: 'Where is our data hosted?',
-          a: 'Data is hosted in Canada, on DigitalOcean infrastructure (Toronto). Technical details applicable to your organization can be clarified with your CORO team.',
+          a: 'Data is hosted in Canada, on DigitalOcean infrastructure in Toronto. Technical characteristics and applicable security measures can be clarified when assessing your needs.',
         },
       ],
     },
@@ -929,9 +937,11 @@ export default async function PricingPage({
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 20px;
+          max-width: 1100px;
+          margin: 0 auto;
         }
         .pricing-factor-card {
-          padding: 30px 26px;
+          padding: 32px 28px;
           border: 1px solid #E9ECEF;
           border-radius: 16px;
           background: #FFFFFF;
@@ -960,24 +970,28 @@ export default async function PricingPage({
         .pricing-factor-card p {
           margin: 0;
           color: #6C757D;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.65;
         }
 
         /* CAPABILITIES */
         .pricing-capabilities-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 18px;
+          max-width: 1100px;
+          margin: 0 auto;
         }
         .pricing-capability-card {
           display: grid;
           grid-template-columns: 44px minmax(0, 1fr);
           gap: 16px;
-          padding: 26px;
+          padding: 28px;
           border: 1px solid #E9ECEF;
           border-radius: 14px;
           background: #FFFFFF;
+          flex: 0 1 calc(33.333% - 12px);
         }
         .pricing-capability-icon {
           display: grid;
@@ -998,7 +1012,7 @@ export default async function PricingPage({
         .pricing-capability-card p {
           margin: 0;
           color: #6C757D;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.65;
         }
 
@@ -1007,6 +1021,8 @@ export default async function PricingPage({
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 24px;
+          max-width: 1100px;
+          margin: 0 auto;
         }
         .pricing-perspective-card {
           padding: 36px;
@@ -1042,7 +1058,7 @@ export default async function PricingPage({
         .pricing-perspective-intro {
           margin: 0 0 22px;
           color: #6C757D;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.65;
         }
         .pricing-perspective-card-dark .pricing-perspective-intro {
@@ -1071,10 +1087,12 @@ export default async function PricingPage({
         .pricing-deployment-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 18px;
+          gap: 20px;
+          max-width: 1100px;
+          margin: 0 auto;
         }
         .pricing-deployment-step {
-          padding: 26px;
+          padding: 30px 26px;
           border: 1px solid #E5E9EC;
           border-radius: 14px;
           background: #FFFFFF;
@@ -1096,7 +1114,7 @@ export default async function PricingPage({
         .pricing-deployment-step p {
           margin: 0;
           color: #6C757D;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.6;
         }
 
@@ -1104,12 +1122,12 @@ export default async function PricingPage({
         .pricing-faq-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
-          max-width: 1000px;
+          gap: 18px;
+          max-width: 1100px;
           margin: 0 auto;
         }
         .pricing-faq-item {
-          padding: 26px;
+          padding: 28px;
           border-radius: 13px;
           border: 1px solid #E4E9EC;
           background: #FFFFFF;
@@ -1176,11 +1194,12 @@ export default async function PricingPage({
         @media (max-width: 980px) {
           .pricing-factors-grid { grid-template-columns: repeat(2, 1fr); }
           .pricing-deployment-grid { grid-template-columns: repeat(2, 1fr); }
+          .pricing-capability-card { flex-basis: calc(50% - 9px); }
           .pricing-demo-inner { grid-template-columns: 1fr; gap: 44px; }
         }
 
         @media (max-width: 760px) {
-          .pricing-capabilities-grid,
+          .pricing-capability-card { flex-basis: 100%; }
           .pricing-perspectives-grid,
           .pricing-faq-grid {
             grid-template-columns: 1fr;
