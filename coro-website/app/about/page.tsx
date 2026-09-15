@@ -609,7 +609,7 @@ export default async function AboutPage({ searchParams }: PageProps) {
   return (
     <div
       style={{
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#2C3E50',
         backgroundColor: '#FFFFFF',
       }}

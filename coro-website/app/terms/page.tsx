@@ -374,7 +374,7 @@ export default async function TermsPage({ searchParams }: PageProps) {
     lang === 'fr' ? `/${anchor}` : `/?lang=en${anchor}`;
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
+    <div style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
       <header
         style={{
           backgroundColor: '#1A252F',

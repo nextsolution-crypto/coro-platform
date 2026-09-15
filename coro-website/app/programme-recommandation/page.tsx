@@ -369,7 +369,7 @@ export default async function ReferralProgramPage({
     <main
       style={{
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         backgroundColor: '#FFFFFF',
         color: '#2C3E50',
       }}

@@ -346,7 +346,7 @@ export default async function ResilienceOperationnellePage({
     <div className="res-page">
       <style>{`
         * { box-sizing: border-box; }
-        .res-page { min-height: 100vh; background: #f7f9fb; color: #243746; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .res-page { min-height: 100vh; background: #f7f9fb; color: #243746; font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .res-container { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
         .res-nav { background: #2c3e50; padding: 0 24px; }
         .res-nav-inner { max-width: 1200px; height: 64px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }

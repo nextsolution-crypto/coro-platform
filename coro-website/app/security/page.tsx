@@ -674,7 +674,7 @@ export default async function SecurityPage({ searchParams }: PageProps) {
     <div
       style={{
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#2C3E50',
         backgroundColor: '#FFFFFF',
       }}

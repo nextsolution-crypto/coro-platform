@@ -593,7 +593,7 @@ export default async function PortailClientPage({
           min-height: 100vh;
           background: #f7f9fb;
           color: #243746;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         .portal-container {

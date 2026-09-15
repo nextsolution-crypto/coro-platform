@@ -495,7 +495,7 @@ export default async function BlogPostPage({
     <div
       style={{
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
 
         backgroundColor:
           '#F8F9FA',

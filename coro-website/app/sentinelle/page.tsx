@@ -163,7 +163,7 @@ export default async function SentinellePage({
           padding: 0;
           background: var(--cs-bg);
           color: var(--cs-text);
-          font-family: Arial, Helvetica, sans-serif;
+          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
           line-height: 1.65;
           overflow-x: hidden;
         }

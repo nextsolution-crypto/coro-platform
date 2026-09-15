@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import {
   Building2,
+  MapPin,
   Users,
   Zap,
   Briefcase,
@@ -51,6 +52,55 @@ const CONTENT = {
     ctaBanner: {
       eyebrow: 'PARLONS DE VOTRE CONFIGURATION',
       title: 'Chaque organisation est différente. Voyons ensemble la configuration CORO qui correspond à la vôtre.',
+      cta: 'Demander une démo',
+    },
+
+    plans: {
+      tag: 'CONFIGURATIONS TYPES',
+      title: 'Trois profils courants, à titre indicatif.',
+      intro:
+        'Ces profils illustrent des combinaisons fréquentes de capacités CORO. Votre configuration réelle peut les combiner ou s\'en écarter selon votre réalité.',
+      disclaimer:
+        'Aucun de ces profils n\'est un forfait fixe — nous établissons votre configuration avec vous lors de l\'évaluation de vos besoins.',
+      items: [
+        {
+          icon: <Building2 size={26} />,
+          name: 'Bâtiment unique',
+          desc: 'Pour une organisation qui gère un seul bâtiment et veut structurer sa préparation.',
+          includes: [
+            'Production documentaire (PMU, PSI, PCA)',
+            'Présence en temps réel avec Sentinelle',
+            'Indice CORO et suivi de préparation',
+            'Accompagnement de base',
+          ],
+          featured: false,
+        },
+        {
+          icon: <MapPin size={26} />,
+          name: 'Organisation multi-sites',
+          badge: 'CONFIGURATION LA PLUS COURANTE',
+          desc: 'Pour une organisation qui gère plusieurs bâtiments et veut une vue consolidée de sa résilience.',
+          includes: [
+            'Toutes les capacités documentaires',
+            'Gestion de projets et mandats multi-bâtiments',
+            'Résilience & Intervention complète',
+            'Accompagnement dédié à la configuration',
+          ],
+          featured: true,
+        },
+        {
+          icon: <Briefcase size={26} />,
+          name: 'Firmes & professionnels',
+          desc: 'Pour les firmes conseil et professionnels qui accompagnent plusieurs organisations clientes.',
+          includes: [
+            'Portails dédiés par client',
+            'Mandats, livrables et échéances centralisés',
+            'Configuration adaptée au nombre de clients',
+            'Accompagnement multi-organisations',
+          ],
+          featured: false,
+        },
+      ],
       cta: 'Demander une démo',
     },
 
@@ -252,6 +302,55 @@ const CONTENT = {
     ctaBanner: {
       eyebrow: "LET'S TALK CONFIGURATION",
       title: "Every organization is different. Let's find the CORO configuration that fits yours.",
+      cta: 'Request a demo',
+    },
+
+    plans: {
+      tag: 'TYPICAL CONFIGURATIONS',
+      title: 'Three common profiles, for illustration.',
+      intro:
+        'These profiles illustrate frequent combinations of CORO capabilities. Your actual configuration can combine or depart from them depending on your reality.',
+      disclaimer:
+        'None of these profiles is a fixed package — we build your configuration with you during the assessment of your needs.',
+      items: [
+        {
+          icon: <Building2 size={26} />,
+          name: 'Single building',
+          desc: 'For an organization that manages one building and wants to structure its readiness.',
+          includes: [
+            'Document production (ERP, FSP, BCP)',
+            'Real-time occupancy with Sentinel',
+            'CORO index and readiness tracking',
+            'Basic support',
+          ],
+          featured: false,
+        },
+        {
+          icon: <MapPin size={26} />,
+          name: 'Multi-site organization',
+          badge: 'MOST COMMON CONFIGURATION',
+          desc: 'For an organization that manages several buildings and wants a consolidated view of its resilience.',
+          includes: [
+            'All document capabilities',
+            'Project and engagement management across buildings',
+            'Full Resilience & Response',
+            'Dedicated configuration support',
+          ],
+          featured: true,
+        },
+        {
+          icon: <Briefcase size={26} />,
+          name: 'Firms & professionals',
+          desc: 'For consulting firms and professionals who support multiple client organizations.',
+          includes: [
+            'Dedicated portals per client',
+            'Centralized engagements, deliverables and deadlines',
+            'Configuration adapted to the number of clients',
+            'Multi-organization support',
+          ],
+          featured: false,
+        },
+      ],
       cta: 'Request a demo',
     },
 
@@ -633,6 +732,63 @@ export default async function PricingPage({
         </div>
       </section>
 
+      {/* PLANS */}
+      <section className="pricing-section">
+        <div className="pricing-container">
+          <div className="pricing-center">
+            <span className="pricing-kicker">{d.plans.tag}</span>
+            <h2>{d.plans.title}</h2>
+            <p>{d.plans.intro}</p>
+          </div>
+
+          <div className="pricing-plans-grid">
+            {d.plans.items.map(item => (
+              <div
+                key={item.name}
+                className={
+                  item.featured
+                    ? 'pricing-plan-card pricing-plan-card-featured'
+                    : 'pricing-plan-card'
+                }
+              >
+                {item.badge && (
+                  <span className="pricing-plan-badge">{item.badge}</span>
+                )}
+
+                <div className="pricing-plan-icon">{item.icon}</div>
+                <h3 className="pricing-plan-name">{item.name}</h3>
+                <p className="pricing-plan-desc">{item.desc}</p>
+
+                <div className="pricing-plan-divider" />
+
+                <div className="pricing-plan-includes">
+                  {item.includes.map(line => (
+                    <div className="pricing-plan-item" key={line}>
+                      <CheckCircle2 size={16} />
+                      <span>{line}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <a
+                  href={demoHref}
+                  className={
+                    item.featured
+                      ? 'pricing-btn pricing-btn-primary pricing-plan-cta'
+                      : 'pricing-btn pricing-btn-outline pricing-plan-cta pricing-plan-cta-light'
+                  }
+                >
+                  {d.plans.cta}
+                  <ArrowRight size={15} />
+                </a>
+              </div>
+            ))}
+          </div>
+
+          <p className="pricing-plans-disclaimer">{d.plans.disclaimer}</p>
+        </div>
+      </section>
+
       {/* FACTORS */}
       <section id="factors" className="pricing-section">
         <div className="pricing-container">
@@ -811,7 +967,7 @@ export default async function PricingPage({
           min-height: 100vh;
           background: #FFFFFF;
           color: #2C3E50;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, sans-serif;
+          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, sans-serif;
         }
 
         .pricing-container {
@@ -1023,6 +1179,114 @@ export default async function PricingPage({
           color: #6C757D;
           font-size: 16px;
           line-height: 1.75;
+        }
+
+        /* PLANS */
+        .pricing-plans-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+          max-width: 1100px;
+          margin: 0 auto;
+          align-items: start;
+        }
+        .pricing-plan-card {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          padding: 36px 32px 32px;
+          border: 1px solid #E9ECEF;
+          border-radius: 18px;
+          background: #FFFFFF;
+          box-shadow: 0 1px 3px rgba(44,62,80,.04), 0 6px 18px rgba(44,62,80,.06);
+        }
+        .pricing-plan-card-featured {
+          border: 2px solid #C0392B;
+          box-shadow: 0 20px 50px rgba(192,57,43,.14);
+        }
+        .pricing-plan-badge {
+          position: absolute;
+          top: -13px;
+          left: 32px;
+          padding: 6px 12px;
+          border-radius: 999px;
+          background: #C0392B;
+          color: #FFFFFF;
+          font-size: 10px;
+          font-weight: 850;
+          letter-spacing: .06em;
+          text-transform: uppercase;
+        }
+        .pricing-plan-icon {
+          display: grid;
+          place-items: center;
+          width: 52px;
+          height: 52px;
+          margin-bottom: 20px;
+          border-radius: 13px;
+          background: #FDEDEC;
+          color: #C0392B;
+        }
+        .pricing-plan-card-featured .pricing-plan-icon {
+          background: #C0392B;
+          color: #FFFFFF;
+        }
+        .pricing-plan-name {
+          margin: 0 0 8px;
+          color: #2C3E50;
+          font-size: 21px;
+          font-weight: 850;
+        }
+        .pricing-plan-desc {
+          margin: 0;
+          color: #6C757D;
+          font-size: 14px;
+          line-height: 1.6;
+          min-height: 44px;
+        }
+        .pricing-plan-divider {
+          margin: 24px 0;
+          height: 1px;
+          background: #EDF0F2;
+        }
+        .pricing-plan-includes {
+          display: flex;
+          flex-direction: column;
+          gap: 13px;
+          margin-bottom: 28px;
+          flex: 1;
+        }
+        .pricing-plan-item {
+          display: grid;
+          grid-template-columns: 16px minmax(0, 1fr);
+          gap: 10px;
+          align-items: start;
+          color: #495057;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        .pricing-plan-item svg {
+          margin-top: 1px;
+          color: #48A97A;
+        }
+        .pricing-plan-cta {
+          width: 100%;
+        }
+        .pricing-plan-cta-light {
+          color: #2C3E50;
+          border: 1px solid #DDE2E6;
+          background: transparent;
+        }
+        .pricing-plan-cta-light:hover {
+          background: #F8F9FA;
+        }
+        .pricing-plans-disclaimer {
+          max-width: 620px;
+          margin: 36px auto 0;
+          color: #9AA2A8;
+          font-size: 13px;
+          line-height: 1.6;
+          text-align: center;
         }
 
         /* FACTORS */
@@ -1298,8 +1562,12 @@ export default async function PricingPage({
         @media (max-width: 760px) {
           .pricing-capability-card { flex-basis: 100%; }
           .pricing-perspectives-grid,
-          .pricing-faq-grid {
+          .pricing-faq-grid,
+          .pricing-plans-grid {
             grid-template-columns: 1fr;
+          }
+          .pricing-plan-card-featured {
+            order: -1;
           }
           .pricing-cta-inner {
             flex-direction: column;

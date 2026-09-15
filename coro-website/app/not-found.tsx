@@ -16,7 +16,7 @@ export default function NotFound() {
         position: 'relative',
         overflow: 'hidden',
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
       {/* Décor subtil */}

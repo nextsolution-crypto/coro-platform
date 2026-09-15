@@ -1083,7 +1083,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     <div
       style={{
         fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
       {/* RESPONSIVE CSS */}
@@ -1620,17 +1620,17 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 10px;
-  border: 1px solid #e1e5e8;
+  padding: 7px 12px;
+  border: 1px solid #DDE2E6;
   border-radius: 7px;
-  background: #ffffff;
-  color: #778188;
-  font-size: 10px;
+  background: #EEF1F3;
+  color: #2C3E50;
+  font-size: 11px;
 }
 
 .coro-phase2-document b {
   color: #2c3e50;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -2068,13 +2068,13 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-environment-signals span {
-  padding: 6px 9px;
-  border: 1px solid #e3e7ea;
-  border-radius: 6px;
-  background: #f8f9fa;
-  color: #68737a;
-  font-size: 9px;
-  font-weight: 800;
+  padding: 7px 12px;
+  border: 1px solid #DDE2E6;
+  border-radius: 7px;
+  background: #EEF1F3;
+  color: #2C3E50;
+  font-size: 11px;
+  font-weight: 850;
   letter-spacing: 0.04em;
 }
 
@@ -2446,13 +2446,13 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-trust-framework-tags span {
-  padding: 7px 10px;
-  border: 1px solid #dfe4e7;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #58646b;
-  font-size: 9px;
-  font-weight: 800;
+  padding: 7px 12px;
+  border: 1px solid #DDE2E6;
+  border-radius: 7px;
+  background: #EEF1F3;
+  color: #2C3E50;
+  font-size: 11px;
+  font-weight: 850;
 }
 
 .coro-trust-provider {
@@ -4225,6 +4225,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-dimension-card {
   position: relative;
+  display: block;
   grid-column: span 2;
   min-height: 275px;
   padding: 30px;
@@ -4232,6 +4233,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid #e3e8ec;
   border-radius: 18px;
   background: #ffffff;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
   box-shadow:
     0 2px 6px rgba(44, 62, 80, 0.05),
     0 10px 28px rgba(44, 62, 80, 0.07);
@@ -4331,10 +4335,11 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-dimension-tags span {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #f3f5f6;
-  color: #657078;
+  padding: 7px 12px;
+  border-radius: 7px;
+  background: #EEF1F3;
+  color: #2C3E50;
+  border: 1px solid #DDE2E6;
   font-size: 11px;
   font-weight: 850;
 }
@@ -4342,6 +4347,57 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-dimension-card.resilience .coro-dimension-tags span {
   background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.74);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.coro-dimension-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 22px;
+  color: #C0392B;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.coro-dimension-link svg {
+  transition: transform 0.2s ease;
+}
+
+.coro-dimension-card:hover .coro-dimension-link svg {
+  transform: translateX(3px);
+}
+
+.coro-dimension-card.resilience .coro-dimension-link {
+  color: #F07A6F;
+}
+
+.coro-section-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  padding: 13px 22px;
+  border-radius: 8px;
+  background: #2c3e50;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.coro-section-cta:hover {
+  background: #1a252f;
+  transform: translateY(-2px);
+}
+
+.coro-section-cta svg {
+  transition: transform 0.2s ease;
+}
+
+.coro-section-cta:hover svg {
+  transform: translateX(3px);
 }
 
 @media (max-width: 900px) {
@@ -6110,6 +6166,14 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           </span>
         </div>
       ))}
+
+      <a
+        href={lang === 'fr' ? '/sentinelle' : '/sentinelle?lang=en'}
+        className="coro-section-cta"
+      >
+        {lang === 'fr' ? 'Découvrir Sentinelle' : 'Discover Sentinel'}
+        <ArrowRight size={16} />
+      </a>
     </div>
   </div>
 </section>
@@ -6587,6 +6651,14 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           ? "CORO relie l’événement aux procédures, aux personnes disponibles, aux communications et au suivi de l’intervention dans un même environnement."
           : 'CORO connects the event to procedures, available people, communications and response tracking in one environment.'}
       </p>
+
+      <a
+        href={lang === 'fr' ? '/resilience-operationnelle' : '/resilience-operationnelle?lang=en'}
+        className="coro-section-cta"
+      >
+        {lang === 'fr' ? 'Découvrir la résilience opérationnelle' : 'Discover operational resilience'}
+        <ArrowRight size={16} />
+      </a>
     </div>
 
     <div className="coro-incident-flow">
@@ -7221,7 +7293,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     <div className="coro-dimensions-grid">
 
       {/* 01 */}
-      <div className="coro-dimension-card primary">
+      <a
+        href={lang === 'fr' ? '/gestion-documentaire' : '/gestion-documentaire?lang=en'}
+        className="coro-dimension-card primary"
+      >
         <div className="coro-dimension-number">01</div>
 
         <div className="coro-dimension-icon">
@@ -7246,10 +7321,18 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           <span>PCA</span>
           <span>43+ procédures</span>
         </div>
-      </div>
+
+        <span className="coro-dimension-link">
+          {lang === 'fr' ? 'En savoir plus' : 'Learn more'}
+          <ArrowRight size={14} />
+        </span>
+      </a>
 
       {/* 02 */}
-      <div className="coro-dimension-card">
+      <a
+        href={lang === 'fr' ? '/gestion-de-projets' : '/gestion-de-projets?lang=en'}
+        className="coro-dimension-card"
+      >
         <div className="coro-dimension-number">02</div>
 
         <div className="coro-dimension-icon">
@@ -7267,10 +7350,18 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             ? 'Centralisez bâtiments, projets, activités, responsabilités, échéances et suivi des heures.'
             : 'Centralize buildings, projects, activities, responsibilities, deadlines and time tracking.'}
         </p>
-      </div>
+
+        <span className="coro-dimension-link">
+          {lang === 'fr' ? 'En savoir plus' : 'Learn more'}
+          <ArrowRight size={14} />
+        </span>
+      </a>
 
       {/* 03 */}
-      <div className="coro-dimension-card">
+      <a
+        href={lang === 'fr' ? '/performance-objectifs' : '/performance-objectifs?lang=en'}
+        className="coro-dimension-card"
+      >
         <div className="coro-dimension-number">03</div>
 
         <div className="coro-dimension-icon">
@@ -7298,10 +7389,18 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           </span>
           <span>Capacity</span>
         </div>
-      </div>
+
+        <span className="coro-dimension-link">
+          {lang === 'fr' ? 'En savoir plus' : 'Learn more'}
+          <ArrowRight size={14} />
+        </span>
+      </a>
 
       {/* 04 */}
-      <div className="coro-dimension-card">
+      <a
+        href={lang === 'fr' ? '/portail-client' : '/portail-client?lang=en'}
+        className="coro-dimension-card"
+      >
         <div className="coro-dimension-number">04</div>
 
         <div className="coro-dimension-icon">
@@ -7331,10 +7430,18 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             {lang === 'fr' ? 'Activités' : 'Activities'}
           </span>
         </div>
-      </div>
+
+        <span className="coro-dimension-link">
+          {lang === 'fr' ? 'En savoir plus' : 'Learn more'}
+          <ArrowRight size={14} />
+        </span>
+      </a>
 
       {/* 05 */}
-      <div className="coro-dimension-card resilience">
+      <a
+        href={lang === 'fr' ? '/resilience-operationnelle' : '/resilience-operationnelle?lang=en'}
+        className="coro-dimension-card resilience"
+      >
         <div className="coro-dimension-number">05</div>
 
         <div className="coro-dimension-icon">
@@ -7359,7 +7466,12 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           <span>Incident</span>
           <span>REX</span>
         </div>
-      </div>
+
+        <span className="coro-dimension-link">
+          {lang === 'fr' ? 'En savoir plus' : 'Learn more'}
+          <ArrowRight size={14} />
+        </span>
+      </a>
 
     </div>
   </div>

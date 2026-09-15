@@ -143,7 +143,7 @@ export default function ChatWidget() {
             zIndex: 9997,
             cursor: 'pointer',
             maxWidth: 240,
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           }}
         >
           <button
@@ -200,7 +200,7 @@ export default function ChatWidget() {
           flexDirection: 'column',
           zIndex: 9998,
           overflow: 'hidden',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}>
 
           {/* Header */}
