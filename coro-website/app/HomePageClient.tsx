@@ -4255,6 +4255,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     padding-left: 22px;
     padding-right: 22px;
   }
+
+  .coro-evacuation-visual {
+    min-height: 340px !important;
+  }
 }
 
 /* ===== CORO PLATFORM DIMENSIONS ===== */
@@ -6233,6 +6237,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     {/* CONTEXTE TERRAIN */}
     <div>
       <div
+        className="coro-evacuation-visual"
         style={{
           position: 'relative',
           minHeight: 560,
@@ -6316,7 +6321,6 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           marginBottom: 18,
         }}
       >
-        <span>03</span>
         <span>
           {lang === 'fr'
             ? 'ÉVACUATION · TEMPS RÉEL'
