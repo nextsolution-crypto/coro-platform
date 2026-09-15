@@ -1192,7 +1192,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-product-proof-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.7fr);
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 0.6fr);
   align-items: center;
   gap: 48px;
 }
@@ -1386,7 +1386,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.7fr);
   gap: 72px;
   align-items: end;
-  margin-bottom: 54px;
+  margin-bottom: 36px;
 }
 
 .coro-documents-header h2 {
@@ -1518,12 +1518,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-document-info span {
-  overflow: hidden;
   color: #7b858c;
   font-size: 14px;
   line-height: 1.5;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .coro-document-arrow {
@@ -1599,8 +1596,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   justify-content: space-between;
   gap: 32px;
   margin-top: 28px;
-  padding: 24px 30px;
+  padding: 24px 30px 24px 27px;
   border: 1px solid #e6eaed;
+  border-left: 3px solid #c0392b;
   border-radius: 14px;
   background: #f8f9fa;
 }
@@ -1680,7 +1678,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   }
 
   .coro-documents-phase2 {
-    padding: 21px 20px;
+    padding: 21px 20px 21px 23px;
   }
 
   .coro-phase2-documents {
@@ -2374,6 +2372,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid #e3e7ea;
   border-radius: 14px;
   background: #ffffff;
+  box-shadow:
+    0 1px 3px rgba(44, 62, 80, 0.04),
+    0 6px 18px rgba(44, 62, 80, 0.06);
 }
 
 .coro-trust-control-icon {
@@ -2463,6 +2464,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   padding: 20px 30px;
   border: 1px solid #e8ecef;
   border-radius: 12px;
+  background: #ffffff;
 }
 
 .coro-trust-provider-label {
@@ -2939,7 +2941,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   width: 100%;
   max-width: 500px;
   justify-self: end;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 22px;
   padding: 26px;
   background:
@@ -2951,8 +2953,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 40px 100px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 .coro-hero-building-head {
@@ -3004,7 +3006,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 }
 
 .coro-index-number strong {
-  font-size: 64px;
+  font-size: 86px;
   line-height: 0.95;
   letter-spacing: -4px;
   color: #ffffff;
@@ -3094,6 +3096,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 .coro-continuum-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
   gap: 18px;
   position: relative;
   margin-top: 54px;
@@ -3131,7 +3134,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #2c3e50;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: #ffffff;
   font-size: 16px;
 }
@@ -3633,6 +3637,12 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   box-shadow: 0 28px 70px rgba(44, 62, 80, 0.1);
 }
 
+.coro-sentinel-panel {
+  box-shadow:
+    0 20px 55px rgba(44, 62, 80, 0.1),
+    0 4px 14px rgba(44, 62, 80, 0.06);
+}
+
 .coro-panel-top {
   display: flex;
   align-items: flex-start;
@@ -3699,9 +3709,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-score-circle strong {
   color: #2c3e50;
-  font-size: 39px;
+  font-size: 53px;
   font-weight: 900;
-  letter-spacing: -2px;
+  letter-spacing: -2.5px;
 }
 
 .coro-score-circle span {
@@ -3939,11 +3949,13 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   top: 18px;
   left: 46px;
   right: 10px;
-  height: 1px;
-  background: #dce1e4;
+  height: 2px;
+  background: #c3cbd1;
 }
 
 .coro-incident-demo {
+  max-width: 860px;
+  margin: 0 auto;
   overflow: hidden;
   border: 1px solid #e2e7ea;
   border-radius: 20px;
@@ -4024,7 +4036,9 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 20px;
   background: #fff;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.28);
+  box-shadow:
+    0 40px 100px rgba(0,0,0,0.35),
+    0 8px 24px rgba(0,0,0,0.18);
 }
 
 .coro-response-card-head {
@@ -4137,42 +4151,43 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 14px;
+  padding-top: 6px;
 }
 
 .coro-rex-step {
   position: relative;
-  min-height: 120px;
-  padding: 22px 18px;
-  border: 1px solid #e5e9ec;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow:
-    0 1px 3px rgba(44, 62, 80, 0.04),
-    0 4px 14px rgba(44, 62, 80, 0.06);
+  padding-right: 18px;
 }
 
-.coro-rex-step > span {
-  display: block;
-  margin-bottom: 17px;
-  color: #c0392b;
-  font-size: 10px;
+.coro-rex-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #2c3e50;
+  color: #fff;
+  font-size: 12px;
   font-weight: 900;
 }
 
 .coro-rex-step > strong {
+  display: block;
   color: #2c3e50;
-  font-size: 13px;
+  font-size: 13.5px;
+  font-weight: 800;
   line-height: 1.4;
 }
 
-.coro-rex-arrow {
+.coro-rex-line {
   position: absolute;
-  top: 50%;
-  right: -22px;
-  z-index: 2;
-  transform: translateY(-50%);
-  color: #aab1b6;
-  font-size: 17px;
+  top: 17px;
+  left: 40px;
+  right: 6px;
+  height: 2px;
+  background: #c3cbd1;
 }
 
 @media (max-width: 900px) {
@@ -4201,7 +4216,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     top: 39px;
     left: 18px;
     right: auto;
-    width: 1px;
+    width: 2px;
     height: calc(100% - 20px);
   }
 
@@ -4211,9 +4226,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
   .coro-rex-flow {
     grid-template-columns: repeat(3, 1fr);
+    row-gap: 28px;
   }
 
-  .coro-rex-arrow {
+  .coro-rex-line {
     display: none;
   }
 }
@@ -4307,7 +4323,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
 .coro-dimension-card.primary,
 .coro-dimension-card.resilience {
-  grid-column: span 4;
+  grid-column: span 6;
 }
 
 .coro-dimension-card.resilience {
@@ -4363,6 +4379,16 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   line-height: 1.7;
 }
 
+.coro-dimension-card.primary h3,
+.coro-dimension-card.resilience h3 {
+  max-width: 640px;
+}
+
+.coro-dimension-card.primary p,
+.coro-dimension-card.resilience p {
+  max-width: 700px;
+}
+
 .coro-dimension-card.resilience h3 {
   color: #ffffff;
 }
@@ -4397,12 +4423,11 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .coro-dimension-card,
-  .coro-dimension-card.primary,
-  .coro-dimension-card.resilience {
+  .coro-dimension-card {
     grid-column: span 1;
   }
 
+  .coro-dimension-card.primary,
   .coro-dimension-card.resilience {
     grid-column: span 2;
   }
@@ -5378,8 +5403,8 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 {/* PROBLÈME — DOCUMENTÉ ≠ PRÊT */}
 <section
   style={{
-    backgroundColor: '#FFFFFF',
-    padding: '120px 24px 110px',
+    backgroundColor: '#F6F8F9',
+    padding: '80px 24px 72px',
   }}
 >
   <div
@@ -5435,6 +5460,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
       {[
         {
           num: '01',
+          icon: <FileText size={22} />,
           tag: lang === 'fr' ? 'DOCUMENTS' : 'DOCUMENTS',
           title:
             lang === 'fr'
@@ -5447,6 +5473,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         },
         {
           num: '02',
+          icon: <Users size={22} />,
           tag: lang === 'fr' ? 'PERSONNES' : 'PEOPLE',
           title:
             lang === 'fr'
@@ -5459,6 +5486,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         },
         {
           num: '03',
+          icon: <ShieldCheck size={22} />,
           tag: lang === 'fr' ? 'CAPACITÉS' : 'CAPABILITIES',
           title:
             lang === 'fr'
@@ -5471,6 +5499,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         },
         {
           num: '04',
+          icon: <Zap size={22} />,
           tag: lang === 'fr' ? 'INTERVENTION' : 'RESPONSE',
           title:
             lang === 'fr'
@@ -5486,6 +5515,22 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           key={item.num}
           className="coro-problem-card"
         >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 46,
+              height: 46,
+              marginBottom: 18,
+              borderRadius: 11,
+              backgroundColor: '#FDEDEC',
+              color: '#C0392B',
+            }}
+          >
+            {item.icon}
+          </div>
+
           <p
             style={{
               margin: '0 0 22px',
@@ -5526,10 +5571,21 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 
     <div
       style={{
-        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 20,
+        justifyContent: 'center',
         marginTop: 52,
       }}
     >
+      <div
+        style={{
+          width: 40,
+          height: 1,
+          background: '#C0392B',
+        }}
+      />
+
       <p
         style={{
           margin: 0,
@@ -5542,6 +5598,14 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           ? 'CORO connecte ces quatre réalités.'
           : 'CORO connects these four realities.'}
       </p>
+
+      <div
+        style={{
+          width: 40,
+          height: 1,
+          background: '#C0392B',
+        }}
+      />
     </div>
   </div>
 </section>
@@ -5552,7 +5616,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   style={{
     background:
       'linear-gradient(160deg, #1A2B38 0%, #243C4F 60%, #1C2F3D 100%)',
-    padding: '115px 24px',
+    padding: '80px 24px',
     borderTop: 'none',
     position: 'relative',
     overflow: 'hidden',
@@ -5799,7 +5863,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   id="indice-coro"
   style={{
     backgroundColor: '#FFFFFF',
-    padding: '120px 24px',
+    padding: '80px 24px',
   }}
 >
   <div
@@ -6035,7 +6099,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   id="sentinelle"
   style={{
     backgroundColor: '#F6F8F9',
-    padding: '120px 24px',
+    padding: '80px 24px',
     borderTop: '1px solid #EDF0F2',
   }}
 >
@@ -6272,7 +6336,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   id="evacuation"
   style={{
     backgroundColor: '#FFFFFF',
-    padding: '120px 24px',
+    padding: '80px 24px',
     borderTop: '1px solid #EDF0F2',
   }}
 >
@@ -6293,7 +6357,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         className="coro-evacuation-visual"
         style={{
           position: 'relative',
-          minHeight: 560,
+          minHeight: 640,
           borderRadius: 22,
           overflow: 'hidden',
           backgroundImage:
@@ -6622,7 +6686,11 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
       <div
         style={{
           marginTop: 25,
-          color: '#7B8790',
+          display: 'inline-block',
+          padding: '10px 18px',
+          borderRadius: 8,
+          backgroundColor: '#2C3E50',
+          color: '#FFFFFF',
           fontSize: 11,
           fontWeight: 900,
           letterSpacing: '0.065em',
@@ -6641,7 +6709,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 <section
   style={{
     backgroundColor: '#2C3E50',
-    padding: '55px 24px',
+    padding: '40px 24px',
   }}
 >
   <div
@@ -6688,7 +6756,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   id="module-incident"
   style={{
     backgroundColor: '#FFFFFF',
-    padding: '120px 24px',
+    padding: '80px 24px',
   }}
 >
   <div
@@ -6700,7 +6768,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     <div
       style={{
         maxWidth: 800,
-        marginBottom: 60,
+        marginBottom: 40,
       }}
     >
       <span className="section-tag">
@@ -6910,7 +6978,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
-    padding: '115px 24px',
+    padding: '80px 24px',
     overflow: 'hidden',
   }}
 >
@@ -7120,7 +7188,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 <section
   style={{
     backgroundColor: '#FFFFFF',
-    padding: '120px 24px',
+    padding: '80px 24px',
   }}
 >
   <div
@@ -7174,7 +7242,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     <div
       style={{
         position: 'relative',
-        height: 280,
+        height: 350,
         marginBottom: 46,
         borderRadius: 18,
         overflow: 'hidden',
@@ -7264,16 +7332,19 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
               ? 'Plans actualisés'
               : 'Updated plans',
         },
-      ].map((item, i) => (
+      ].map((item, i, arr) => (
         <div
           key={item.num}
           className="coro-rex-step"
         >
-          <span>{item.num}</span>
+          <div className="coro-rex-step-number">
+            {item.num}
+          </div>
+
           <strong>{item.title}</strong>
 
-          {i < 5 && (
-            <div className="coro-rex-arrow">→</div>
+          {i < arr.length - 1 && (
+            <span className="coro-rex-line" />
           )}
         </div>
       ))}
@@ -7282,17 +7353,17 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     <div
       style={{
         marginTop: 42,
-        padding: '28px 34px',
+        padding: '40px 34px',
         borderRadius: 16,
-        backgroundColor: '#F7F8F9',
-        border: '1px solid #E8ECEF',
+        backgroundColor: '#2C3E50',
+        border: '1px solid rgba(255,255,255,0.1)',
         textAlign: 'center',
       }}
     >
       <p
         style={{
           margin: 0,
-          color: '#2C3E50',
+          color: '#FFFFFF',
           fontSize: 18,
           fontWeight: 800,
           lineHeight: 1.55,
@@ -7313,7 +7384,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   id="plateforme"
   style={{
     backgroundColor: '#F6F8F9',
-    padding: '120px 24px',
+    padding: '80px 24px',
     borderTop: '1px solid #EDF0F2',
   }}
 >
@@ -7326,7 +7397,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     <div
       style={{
         maxWidth: 820,
-        marginBottom: 60,
+        marginBottom: 40,
       }}
     >
       <span className="section-tag">
@@ -7434,6 +7505,16 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             ? 'Transformez les opérations en indicateurs exploitables pour mieux piloter capacité, budgets et objectifs.'
             : 'Turn operations into actionable indicators to better manage capacity, budgets and objectives.'}
         </p>
+
+        <div className="coro-dimension-tags">
+          <span>
+            {lang === 'fr' ? 'Heures' : 'Hours'}
+          </span>
+          <span>
+            {lang === 'fr' ? 'Budgets' : 'Budgets'}
+          </span>
+          <span>Capacity</span>
+        </div>
       </div>
 
       {/* 04 */}
@@ -7455,6 +7536,18 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             ? 'Donnez à chaque client un accès structuré à ses bâtiments, documents, activités et informations opérationnelles.'
             : 'Give each client structured access to their buildings, documents, activities and operational information.'}
         </p>
+
+        <div className="coro-dimension-tags">
+          <span>
+            {lang === 'fr' ? 'Bâtiments' : 'Buildings'}
+          </span>
+          <span>
+            {lang === 'fr' ? 'Documents' : 'Documents'}
+          </span>
+          <span>
+            {lang === 'fr' ? 'Activités' : 'Activities'}
+          </span>
+        </div>
       </div>
 
       {/* 05 */}
@@ -7493,7 +7586,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
 <section
   style={{
     backgroundColor: '#FFFFFF',
-    padding: '120px 24px',
+    padding: '80px 24px',
   }}
 >
   <div
@@ -7706,7 +7799,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         id="documents"
         style={{
           backgroundColor: '#FFFFFF',
-          padding: '110px 24px',
+          padding: '72px 24px',
         }}
       >
         <div
@@ -7916,7 +8009,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         id="solutions"
         style={{
           backgroundColor: '#F8F9FA',
-          padding: '110px 24px',
+          padding: '72px 24px',
           borderTop: '1px solid #E9ECEF',
         }}
       >
@@ -8129,7 +8222,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         id="environments"
         style={{
           backgroundColor: '#FFFFFF',
-          padding: '110px 24px',
+          padding: '72px 24px',
         }}
       >
         <div
@@ -8404,7 +8497,7 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
         id="security"
         style={{
           backgroundColor: '#FFFFFF',
-          padding: '110px 24px',
+          padding: '72px 24px',
         }}
       >
         <div
@@ -8747,6 +8840,26 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
                 {lang === 'fr' ? 'AMÉLIORATION' : 'IMPROVEMENT'}
               </span>
             </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 24,
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: 13,
+              }}
+            >
+              <CheckCircle
+                size={15}
+                color="#65D69A"
+              />
+
+              {lang === 'fr'
+                ? 'Nous répondons habituellement dans les 24 heures.'
+                : 'We typically respond within 24 hours.'}
+            </div>
           </div>
 
           {/* RIGHT — DEMO FORM */}
@@ -8779,16 +8892,6 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
             </p>
 
             <DemoForm lang={lang} />
-
-            <div className="coro-demo-form-note">
-              <Lock size={13} />
-
-              <span>
-                {lang === 'fr'
-                  ? 'Vos informations sont utilisées pour traiter votre demande et communiquer avec vous au sujet de CORO.'
-                  : 'Your information is used to process your request and communicate with you about CORO.'}
-              </span>
-            </div>
           </div>
         </div>
 

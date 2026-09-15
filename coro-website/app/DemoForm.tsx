@@ -47,7 +47,7 @@ export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
       success: '✅ Demande envoyée ! Nous vous contacterons dans les 24 heures.',
       error: '❌ Une erreur est survenue. Veuillez réessayer ou écrire à info@getcoro.io',
 privacy:
-  'Les renseignements transmis sont recueillis afin de traiter votre demande de démonstration et de communiquer avec vous à ce sujet. Ils peuvent être traités par nos fournisseurs de services techniques nécessaires au fonctionnement du formulaire. Consultez notre Politique de confidentialité pour en savoir plus sur vos droits et la gestion de vos renseignements personnels.',
+  'Vos informations sont utilisées uniquement pour traiter votre demande.',
 privacyLink: 'Politique de confidentialité',
     },
     en: {
@@ -64,7 +64,7 @@ privacyLink: 'Politique de confidentialité',
       success: '✅ Request sent! We\'ll contact you within 24 hours.',
       error: '❌ An error occurred. Please try again or email info@getcoro.io',
 privacy:
-  'The information you submit is collected to process your demo request and communicate with you about it. It may be processed by technical service providers required to operate the form. Please review our Privacy Policy for more information about your rights and how we handle personal information.',
+  'Your information is used only to process your request.',
 privacyLink: 'Privacy Policy',
     },
   }[lang];
@@ -297,7 +297,7 @@ privacyLink: 'Privacy Policy',
   <a
     href={lang === 'fr' ? '/privacy' : '/privacy?lang=en'}
     style={{
-      color: '#C0392B',
+      color: '#495057',
       fontWeight: 600,
       textDecoration: 'underline',
     }}
