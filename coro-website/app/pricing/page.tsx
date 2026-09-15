@@ -45,6 +45,13 @@ const CONTENT = {
         'CORO s\'adapte à votre réalité opérationnelle : le nombre de sites et de bâtiments, le nombre d\'utilisateurs, les capacités activées et le niveau d\'accompagnement souhaité. Nous construisons cette configuration avec vous.',
       primaryCta: 'Demander une démo',
       secondaryCta: 'Voir les facteurs de configuration',
+      reassurance: 'Réponse sous 24 heures',
+    },
+
+    ctaBanner: {
+      eyebrow: 'PARLONS DE VOTRE CONFIGURATION',
+      title: 'Chaque organisation est différente. Voyons ensemble la configuration CORO qui correspond à la vôtre.',
+      cta: 'Demander une démo',
     },
 
     factors: {
@@ -239,6 +246,13 @@ const CONTENT = {
         'CORO adapts to your operational reality: the number of sites and buildings, the number of users, the capabilities you activate and the level of support you need. We build this configuration together with you.',
       primaryCta: 'Request a demo',
       secondaryCta: 'See the configuration factors',
+      reassurance: 'Response within 24 hours',
+    },
+
+    ctaBanner: {
+      eyebrow: "LET'S TALK CONFIGURATION",
+      title: "Every organization is different. Let's find the CORO configuration that fits yours.",
+      cta: 'Request a demo',
     },
 
     factors: {
@@ -611,6 +625,11 @@ export default async function PricingPage({
               {d.hero.secondaryCta}
             </a>
           </div>
+
+          <div className="pricing-hero-reassurance">
+            <CheckCircle2 size={14} />
+            {d.hero.reassurance}
+          </div>
         </div>
       </section>
 
@@ -656,6 +675,22 @@ export default async function PricingPage({
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* CTA BANNER */}
+      <section className="pricing-cta-banner">
+        <div className="pricing-cta-glow" />
+        <div className="pricing-container pricing-cta-inner">
+          <div>
+            <span className="pricing-cta-eyebrow">{d.ctaBanner.eyebrow}</span>
+            <p>{d.ctaBanner.title}</p>
+          </div>
+
+          <a href="#demo" className="pricing-btn pricing-btn-primary">
+            {d.ctaBanner.cta}
+            <ArrowRight size={16} />
+          </a>
         </div>
       </section>
 
@@ -899,6 +934,64 @@ export default async function PricingPage({
         }
         .pricing-btn-outline:hover { background: rgba(255,255,255,.1); }
 
+        .pricing-hero-reassurance {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          margin-top: 22px;
+          color: rgba(255,255,255,.5);
+          font-size: 13px;
+        }
+        .pricing-hero-reassurance svg { color: #65D69A; flex-shrink: 0; }
+
+        /* CTA BANNER */
+        .pricing-cta-banner {
+          position: relative;
+          overflow: hidden;
+          padding: 64px 0;
+          background:
+            radial-gradient(circle at 12% 30%, rgba(192,57,43,.18), transparent 32%),
+            linear-gradient(135deg, #1A252F 0%, #2C3E50 100%);
+        }
+        .pricing-cta-glow {
+          position: absolute;
+          top: -160px;
+          right: -120px;
+          width: 420px;
+          height: 420px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(192,57,43,.14) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .pricing-cta-inner {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 40px;
+          flex-wrap: wrap;
+        }
+        .pricing-cta-eyebrow {
+          display: block;
+          margin-bottom: 10px;
+          color: #F5C6C0;
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: .1em;
+        }
+        .pricing-cta-inner p {
+          margin: 0;
+          max-width: 620px;
+          color: #FFFFFF;
+          font-size: clamp(20px, 2.6vw, 27px);
+          font-weight: 800;
+          line-height: 1.35;
+        }
+        .pricing-cta-inner .pricing-btn {
+          flex-shrink: 0;
+        }
+
         /* SECTIONS */
         .pricing-section { padding: 100px 0; background: #FFFFFF; }
         .pricing-section-alt { background: #F8F9FA; }
@@ -945,11 +1038,12 @@ export default async function PricingPage({
           border: 1px solid #E9ECEF;
           border-radius: 16px;
           background: #FFFFFF;
+          box-shadow: 0 1px 3px rgba(44,62,80,.04), 0 6px 18px rgba(44,62,80,.06);
           transition: transform .25s ease, box-shadow .25s ease;
         }
         .pricing-factor-card:hover {
           transform: translateY(-3px);
-          box-shadow: 0 16px 42px rgba(44,62,80,.08);
+          box-shadow: 0 16px 42px rgba(44,62,80,.1);
         }
         .pricing-factor-icon {
           display: grid;
@@ -991,6 +1085,7 @@ export default async function PricingPage({
           border: 1px solid #E9ECEF;
           border-radius: 14px;
           background: #FFFFFF;
+          box-shadow: 0 1px 3px rgba(44,62,80,.04), 0 6px 18px rgba(44,62,80,.06);
           flex: 0 1 calc(33.333% - 12px);
         }
         .pricing-capability-icon {
@@ -1096,6 +1191,7 @@ export default async function PricingPage({
           border: 1px solid #E5E9EC;
           border-radius: 14px;
           background: #FFFFFF;
+          box-shadow: 0 1px 3px rgba(44,62,80,.04), 0 6px 18px rgba(44,62,80,.06);
         }
         .pricing-deployment-num {
           display: block;
@@ -1131,6 +1227,7 @@ export default async function PricingPage({
           border-radius: 13px;
           border: 1px solid #E4E9EC;
           background: #FFFFFF;
+          box-shadow: 0 1px 3px rgba(44,62,80,.04), 0 4px 14px rgba(44,62,80,.06);
         }
         .pricing-faq-item h3 {
           margin: 0 0 10px;
@@ -1204,6 +1301,11 @@ export default async function PricingPage({
           .pricing-faq-grid {
             grid-template-columns: 1fr;
           }
+          .pricing-cta-inner {
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+          }
         }
 
         @media (max-width: 560px) {
@@ -1213,6 +1315,7 @@ export default async function PricingPage({
           }
           .pricing-section { padding: 68px 0; }
           .pricing-hero { padding: 68px 0 60px; }
+          .pricing-cta-banner { padding: 48px 0; }
           .pricing-btn { width: 100%; }
           .pricing-actions { flex-direction: column; }
         }
