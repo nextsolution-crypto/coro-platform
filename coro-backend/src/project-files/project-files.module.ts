@@ -4,6 +4,7 @@ import { ProjectFilesController } from './project-files.controller';
 import { ProjectFilesClientController } from './project-files-client.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { StorageModule } from '../storage/storage.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { JwtModule } from '@nestjs/jwt';
 
@@ -11,6 +12,7 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [
     PrismaModule,
     StorageModule,
+    NotificationsModule,
     MulterModule.register({ limits: { fileSize: 50 * 1024 * 1024 } }),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'coro-secret',

@@ -11,6 +11,10 @@ import {
   MessageSquare,
   ArrowLeft,
   Clock,
+  HelpCircle,
+  Eye,
+  PenLine,
+  UploadCloud,
 } from 'lucide-react';
 
 const API_URL =
@@ -91,6 +95,7 @@ export default function DocumentDetailPage() {
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [pdfViewerUrl, setPdfViewerUrl] = useState('');
   const [showRefuseModal, setShowRefuseModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [refuseComment, setRefuseComment] = useState('');
   const [refusing,        setRefusing]        = useState(false);
   const [versionHistory,  setVersionHistory]  = useState<any[]>([]);
@@ -441,15 +446,30 @@ const mySignature =
   return (
     <PortalLayout>
       {/* Retour */}
-      <button
-        type="button"
-        onClick={() => router.push(`/files/${projectId}`)}
-        style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 8, padding: '6px 14px', background: '#F8F9FA', border: '1px solid #E9ECEF', cursor: 'pointer', color: '#2C3E50', fontSize: 14, borderRadius: 7, fontWeight: 600 }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
-        onMouseLeave={e => e.currentTarget.style.borderColor = '#E9ECEF'}
-      >
-        📁 Espace de fichiers
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => router.push(`/files/${projectId}`)}
+          style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: '#F8F9FA', border: '1px solid #E9ECEF', cursor: 'pointer', color: '#2C3E50', fontSize: 14, borderRadius: 7, fontWeight: 600 }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#C0392B'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = '#E9ECEF'}
+        >
+          📁 Espace de fichiers
+        </button>
+
+        {!mySignature && (
+          <button
+            type="button"
+            onClick={() => setShowHelpModal(true)}
+            style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: '#EBF5FB', border: '1px solid #AED6F1', cursor: 'pointer', color: '#2980B9', fontSize: 14, borderRadius: 7, fontWeight: 600 }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#2980B9'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = '#AED6F1'}
+          >
+            <HelpCircle size={16} />
+            Besoin d&apos;aide ?
+          </button>
+        )}
+      </div>
 
       <button
         type="button"
@@ -718,15 +738,27 @@ const mySignature =
                     <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 600 }}>
                       📄 Prévisualisation du document
                     </span>
-                    <button
-                      onClick={() => setShowPdfViewer(false)}
-                      style={{ background: 'none', border: 'none', color: '#ADB5BD', cursor: 'pointer', fontSize: 20 }}
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <a
+                        href={pdfViewerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#ADB5BD', fontSize: 13, textDecoration: 'none' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = '#ADB5BD'; }}
+                      >
+                        Ouvrir dans un nouvel onglet ↗
+                      </a>
+                      <button
+                        onClick={() => setShowPdfViewer(false)}
+                        style={{ background: 'none', border: 'none', color: '#ADB5BD', cursor: 'pointer', fontSize: 20 }}
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                   <iframe
-                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfViewerUrl)}&embedded=true`}
+                    src={pdfViewerUrl}
                     width="100%"
                     height="700px"
                     style={{ display: 'block', border: 'none' }}
@@ -751,6 +783,17 @@ const mySignature =
                     rows={4}
                     style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid #DEE2E6', fontSize: 14, color: '#2C3E50', resize: 'vertical', fontFamily: 'inherit' }}
                   />
+                  <p style={{ fontSize: 13, color: '#6C757D', margin: '10px 0 0' }}>
+                    Besoin d&apos;annoter directement le PDF (surlignage, commentaires) ? Téléchargez-le puis déposez-le annoté dans l&apos;{' '}
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/files/${projectId}`)}
+                      style={{ background: 'none', border: 'none', padding: 0, color: '#2980B9', fontSize: 13, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                      espace de fichiers 📁
+                    </button>
+                    .
+                  </p>
                 </div>
               )}
 
@@ -1684,7 +1727,118 @@ const mySignature =
         </section>
       </div>
 
-{showRefuseModal && (
+{showHelpModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: 16,
+            overflowY: 'auto',
+          }}
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 540,
+              maxHeight: 'calc(100dvh - 32px)',
+              overflowY: 'auto',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              padding: 'clamp(20px, 6vw, 36px)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+              margin: 'auto 0',
+            }}
+          >
+            <h3 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#2C3E50', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <HelpCircle size={22} color="#2980B9" />
+              Comment ça fonctionne ?
+            </h3>
+            <p style={{ margin: '0 0 24px', fontSize: 14, lineHeight: 1.6, color: '#6C757D' }}>
+              Trois étapes simples pour traiter ce document — pas besoin de contacter qui que ce soit.
+            </p>
+
+            {/* Étape 1 */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+              <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', backgroundColor: '#EBF5FB', color: '#2980B9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Eye size={18} />
+              </div>
+              <div>
+                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>1. Consultez le document</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: '#6C757D' }}>
+                  Cliquez sur « Visualiser (FR) » ou « Visualiser (EN) » plus haut pour lire le document au complet avant de vous engager.
+                </p>
+              </div>
+            </div>
+
+            {/* Étape 2 */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+              <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', backgroundColor: '#EAFAF1', color: '#27AE60', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PenLine size={18} />
+              </div>
+              <div>
+                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>2. Si tout est conforme</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: '#6C757D' }}>
+                  Cliquez sur « ✓ Signer le document ». C&apos;est terminé — le document devient officiel.
+                </p>
+              </div>
+            </div>
+
+            {/* Étape 3 */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 24 }}>
+              <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: '50%', backgroundColor: '#FDEDEC', color: '#C0392B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UploadCloud size={18} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: '#2C3E50' }}>3. Si des corrections sont nécessaires</p>
+                <p style={{ margin: '0 0 10px', fontSize: 13, lineHeight: 1.6, color: '#6C757D' }}>
+                  Deux façons de le signaler, au choix — les deux avertissent automatiquement votre conseiller :
+                </p>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: '#6C757D' }}>
+                  <li>Écrivez vos observations dans la zone de texte, puis cliquez « ✕ Refuser et commenter ».</li>
+                  <li>Ou téléchargez le PDF, annotez-le directement dans votre lecteur habituel (surlignage, commentaires), puis déposez-le dans l&apos;« Espace de fichiers » — sans avoir à refuser le document.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ padding: '14px 16px', borderRadius: 8, backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF', marginBottom: 20 }}>
+              <p style={{ margin: 0, fontSize: 13, color: '#6C757D', lineHeight: 1.6 }}>
+                Toujours bloqué ? Écrivez-nous à{' '}
+                <a href="mailto:info@getcoro.io" style={{ color: '#2980B9', fontWeight: 600 }}>info@getcoro.io</a>.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowHelpModal(false)}
+              style={{
+                width: '100%',
+                minHeight: 46,
+                padding: '12px',
+                borderRadius: 7,
+                backgroundColor: '#2C3E50',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showRefuseModal && (
         <div
           role="dialog"
           aria-modal="true"

@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ProjectFilesService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async uploadFile(data: {
@@ -74,6 +76,24 @@ export class ProjectFilesService {
         uploadedByClient: { select: { firstName: true, lastName: true } },
       },
     });
+
+    // Le conseiller responsable du projet n'a aucun autre moyen d'apprendre
+    // qu'un client a redéposé un fichier (annotation) — sans ceci, il faut
+    // tomber dessus par hasard en retournant sur le projet.
+    if (data.uploadedByClientId) {
+      const clientName = file.uploadedByClient
+        ? `${file.uploadedByClient.firstName} ${file.uploadedByClient.lastName}`
+        : 'Un client';
+
+      await this.notificationsService.create({
+        userId: project.userId,
+        organizationId: data.organizationId,
+        type: 'FICHIER_CLIENT',
+        title: 'Fichier déposé par le client',
+        message: `${clientName} a déposé un fichier ("${data.name}") dans l'espace de fichiers du projet "${project.name}".`,
+        projectId: project.id,
+      });
+    }
 
     return file;
   }

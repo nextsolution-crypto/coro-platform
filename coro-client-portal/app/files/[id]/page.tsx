@@ -218,13 +218,8 @@ export default function ProjectFilesClientPage() {
   };
 
   const handleView = (file: any) => {
-    const viewerUrl =
-      `https://docs.google.com/viewer?url=${
-        encodeURIComponent(file.url)
-      }&embedded=false`;
-
     window.open(
-      viewerUrl,
+      file.url,
       '_blank',
       'noopener,noreferrer'
     );
