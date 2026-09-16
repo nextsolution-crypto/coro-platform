@@ -25,23 +25,26 @@ model Organization {
   employeeCount  Int? // Nombre d'employés
   operatingHours String? // Heures d'opération
 
-  users              User[]
-  clients            Client[]
-  buildings          Building[]
-  projects           Project[]
-  procedureOverrides ProcedureOverride[]
-  feedbacks          Feedback[]
-  projectTemplates   ProjectTemplate[]
-  auditLogs          AuditLog[]
-  customProcedures   CustomProcedure[]
-  clientUsers        ClientUser[]
-  module1Template    OrganizationModule1Template?
-  bookings           Booking[]
-  files              ProjectFile[]
+  users                  User[]
+  clients                Client[]
+  buildings              Building[]
+  projects               Project[]
+  procedureOverrides     ProcedureOverride[]
+  feedbacks              Feedback[]
+  projectTemplates       ProjectTemplate[]
+  auditLogs              AuditLog[]
+  customProcedures       CustomProcedure[]
+  clientUsers            ClientUser[]
+  module1Template        OrganizationModule1Template?
+  bookings               Booking[]
+  files                  ProjectFile[]
+  exerciseReports        ExerciseReport[]
+  complianceRequirements ComplianceRequirement[]
+  complianceEvidence     ComplianceEvidence[]
   // Programme de recommandation
-  referralsSent      Referral[]                   @relation("ReferralReferrer")
-  referralReceived   Referral?                    @relation("ReferralReferred")
-  referralCredits    ReferralCredit[]             @relation("ReferralCreditOrganization")
+  referralsSent          Referral[]                   @relation("ReferralReferrer")
+  referralReceived       Referral?                    @relation("ReferralReferred")
+  referralCredits        ReferralCredit[]             @relation("ReferralCreditOrganization")
 }
 
 model User {
@@ -98,9 +101,18 @@ model User {
   mfaCode          String?
   mfaCodeExpiry    DateTime?
 
-  bookings         Booking[]
-  uploadedFiles    ProjectFile[] @relation("FileUploader")
-  referralsCreated Referral[]    @relation("ReferralCreator")
+  bookings                         Booking[]
+  uploadedFiles                    ProjectFile[]            @relation("FileUploader")
+  referralsCreated                 Referral[]               @relation("ReferralCreator")
+  exerciseReportsCreated           ExerciseReport[]         @relation("ExerciseReportCreator")
+  exerciseReportsFinalized         ExerciseReport[]         @relation("ExerciseReportFinalizer")
+  exerciseReportVersions           ExerciseReportVersion[]
+  exerciseReportImportsReviewed    ExerciseReportImport[]   @relation("ExerciseReportImportReviewer")
+  exerciseParticipantsValidated    ExerciseParticipant[]    @relation("ExerciseParticipantValidator")
+  exerciseTimelineValidated        ExerciseTimelineEntry[]  @relation("ExerciseTimelineValidator")
+  exerciseFindingsValidated        ExerciseFinding[]        @relation("ExerciseFindingValidator")
+  exerciseRecommendationsValidated ExerciseRecommendation[] @relation("ExerciseRecommendationValidator")
+  exerciseActionItemsValidated     ExerciseActionItem[]     @relation("ExerciseActionItemValidator")
 }
 
 enum UserRole {
@@ -135,9 +147,10 @@ model Client {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  buildings   Building[]
-  projects    Project[]
-  clientUsers ClientUser[]
+  buildings       Building[]
+  projects        Project[]
+  clientUsers     ClientUser[]
+  exerciseReports ExerciseReport[]
 }
 
 model Building {
@@ -165,18 +178,22 @@ model Building {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  clientId            String
-  client              Client                  @relation(fields: [clientId], references: [id])
-  projects            Project[]
-  occupancyRecords    OccupancyRecord[]
-  evacuationEvents    EvacuationEvent[]
-  kioskToken          BuildingKioskToken?
-  alarmToken          BuildingAlarmToken?
-  employees           BuildingEmployee[]
-  visitorInvitations  VisitorInvitation[]
-  emergencyRoles      EmployeeEmergencyRole[]
-  incidentEvents      IncidentEvent[]
-  resilienceSnapshots ResilienceSnapshot[]
+  clientId             String
+  client               Client                  @relation(fields: [clientId], references: [id])
+  projects             Project[]
+  occupancyRecords     OccupancyRecord[]
+  evacuationEvents     EvacuationEvent[]
+  kioskToken           BuildingKioskToken?
+  alarmToken           BuildingAlarmToken?
+  employees            BuildingEmployee[]
+  visitorInvitations   VisitorInvitation[]
+  emergencyRoles       EmployeeEmergencyRole[]
+  incidentEvents       IncidentEvent[]
+  resilienceSnapshots  ResilienceSnapshot[]
+  exerciseReports      ExerciseReport[]
+  buildingRequirements BuildingRequirement[]
+  complianceEvidence   ComplianceEvidence[]
+  correctiveActions    CorrectiveAction[]
 }
 
 model Project {
@@ -234,6 +251,7 @@ model Project {
   bookings         Booking[]
   files            ProjectFile[]
   pcaConfig        PcaConfig?
+  exerciseReports  ExerciseReport[]
 }
 
 model RevisionHistory {
@@ -481,27 +499,30 @@ model AuditLog {
 }
 
 model ProjectActivity {
-  id             String    @id @default(uuid())
+  id             String          @id @default(uuid())
   projectId      String
-  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   type           String
   label          String
   duration       String
-  mode           String    @default("presentiel")
+  mode           String          @default("presentiel")
   customLabel    String?
   customDuration String?
   scheduledDate  DateTime?
-  status         String    @default("a_faire")
+  status         String          @default("a_faire")
   reportedDate   DateTime?
   assigneeEmail  String?
   clientEmail    String?
   notes          String?
   organizationId String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  isRecurring    Boolean   @default(false)
-  sourceMandate  Boolean   @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  isRecurring    Boolean         @default(false)
+  sourceMandate  Boolean         @default(false)
   dureeHeures    Float? // Durée réelle ou estimée en heures
+  bookingId      String?         @unique
+  booking        Booking?        @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  exerciseReport ExerciseReport?
 }
 
 model TaskList {
@@ -932,27 +953,29 @@ model DocumentEngagement {
 }
 
 model Booking {
-  id             String                @id @default(uuid())
-  projectId      String
-  project        Project               @relation(fields: [projectId], references: [id])
-  organizationId String
-  organization   Organization          @relation(fields: [organizationId], references: [id])
-  clientUserId   String
-  clientUser     ClientUser            @relation(fields: [clientUserId], references: [id])
-  assignedUserId String
-  assignedUser   User                  @relation(fields: [assignedUserId], references: [id])
-  activityType   String // 'exercice', 'formation', 'visite', 'revision', 'autre'
-  requestedDate  DateTime
-  duration       Int // en minutes
-  participants   Int?
-  comment        String?
-  status         String                @default("DEMANDEE") // DEMANDEE, CONFIRMEE, REPORTEE, REASSIGNEE, REFUSEE, COMPLETEE, ANNULEE
-  refuseReason   String?
-  reportedDate   DateTime?
-  outlookEventId String?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  notifications  BookingNotification[]
+  id              String                @id @default(uuid())
+  projectId       String
+  project         Project               @relation(fields: [projectId], references: [id])
+  organizationId  String
+  organization    Organization          @relation(fields: [organizationId], references: [id])
+  clientUserId    String
+  clientUser      ClientUser            @relation(fields: [clientUserId], references: [id])
+  assignedUserId  String
+  assignedUser    User                  @relation(fields: [assignedUserId], references: [id])
+  activityType    String // 'exercice', 'formation', 'visite', 'revision', 'autre'
+  requestedDate   DateTime
+  duration        Int // en minutes
+  participants    Int?
+  comment         String?
+  status          String                @default("DEMANDEE") // DEMANDEE, CONFIRMEE, REPORTEE, REASSIGNEE, REFUSEE, COMPLETEE, ANNULEE
+  refuseReason    String?
+  reportedDate    DateTime?
+  outlookEventId  String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  notifications   BookingNotification[]
+  activity        ProjectActivity?
+  exerciseReports ExerciseReport[]
 }
 
 model BookingNotification {
@@ -964,28 +987,29 @@ model BookingNotification {
 }
 
 model ProjectFile {
-  id                 String        @id @default(uuid())
-  projectId          String
-  project            Project       @relation(fields: [projectId], references: [id])
-  organizationId     String
-  organization       Organization  @relation(fields: [organizationId], references: [id])
-  name               String
-  category           String // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
-  size               Int
-  mimeType           String
-  storageKey         String
-  url                String
-  version            Int           @default(1)
-  parentId           String?
-  parent             ProjectFile?  @relation("FileVersions", fields: [parentId], references: [id])
-  versions           ProjectFile[] @relation("FileVersions")
-  uploadedById       String?
-  uploadedBy         User?         @relation("FileUploader", fields: [uploadedById], references: [id])
-  uploadedByClientId String?
-  uploadedByClient   ClientUser?   @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
-  visibility         String        @default("shared") // 'shared', 'internal'
-  status             String        @default("en_revision") // 'en_revision', 'valide'
-  createdAt          DateTime      @default(now())
+  id                     String          @id @default(uuid())
+  projectId              String
+  project                Project         @relation(fields: [projectId], references: [id])
+  organizationId         String
+  organization           Organization    @relation(fields: [organizationId], references: [id])
+  name                   String
+  category               String // 'plans_evacuation', 'plans_operation', 'plans_implantation', 'documents_reference', 'fichiers_client', 'autre'
+  size                   Int
+  mimeType               String
+  storageKey             String
+  url                    String
+  version                Int             @default(1)
+  parentId               String?
+  parent                 ProjectFile?    @relation("FileVersions", fields: [parentId], references: [id])
+  versions               ProjectFile[]   @relation("FileVersions")
+  uploadedById           String?
+  uploadedBy             User?           @relation("FileUploader", fields: [uploadedById], references: [id])
+  uploadedByClientId     String?
+  uploadedByClient       ClientUser?     @relation("ClientFileUploader", fields: [uploadedByClientId], references: [id])
+  visibility             String          @default("shared") // 'shared', 'internal'
+  status                 String          @default("en_revision") // 'en_revision', 'valide'
+  createdAt              DateTime        @default(now())
+  officialExerciseReport ExerciseReport? @relation("ExerciseReportOfficialFile")
 }
 
 model RefreshToken {
@@ -1147,7 +1171,8 @@ model EvacuationEvent {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  checkins EvacuationCheckIn[]
+  checkins        EvacuationCheckIn[]
+  exerciseReports ExerciseReport[]
 }
 
 model EvacuationCheckIn {
@@ -1251,8 +1276,8 @@ model IncidentEvent {
   procedureSnapshot    Json? // Étapes ROLE-CU capturées au déclenchement
   assemblyPoint        String? // Point de rassemblement récupéré du configData PMU
   interventionSheet    Json? // Fiche d'intervention figée au déclenchement (accès QR temporaire)
-  publicAccessToken    String?   @unique // Jeton d'accès public à la fiche — valide tant que isActive
-  publicAccessCount    Int       @default(0) // Nombre de consultations de la fiche via le lien public
+  publicAccessToken    String?        @unique // Jeton d'accès public à la fiche — valide tant que isActive
+  publicAccessCount    Int            @default(0) // Nombre de consultations de la fiche via le lien public
   publicAccessLastAt   DateTime? // Dernière consultation de la fiche via le lien public
   containedAt          DateTime?
   resolvedAt           DateTime?
@@ -1267,8 +1292,10 @@ model IncidentEvent {
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
 
-  tasks IncidentTask[]
-  logs  IncidentLog[]
+  tasks             IncidentTask[]
+  logs              IncidentLog[]
+  exerciseReports   ExerciseReport[]
+  correctiveActions CorrectiveAction[]
 }
 
 model IncidentTask {
@@ -1324,6 +1351,386 @@ model ResilienceSnapshot {
   @@index([snapshotAt])
 }
 
+enum ExerciseReportStatus {
+  DRAFT
+  FINALIZING
+  PUBLISHED
+  PUBLICATION_FAILED
+  ARCHIVED
+}
+
+enum ExerciseReportType {
+  TABLETOP
+  EVACUATION
+}
+
+enum ExerciseDataSource {
+  CORO
+  SENTINELLE
+  REX
+  DOCX_EXTRACTED
+  AI_INFERRED
+  MANUAL
+}
+
+enum ExerciseFindingType {
+  POSITIVE
+  GAP
+}
+
+enum ExerciseTimelineEntryType {
+  INPUT
+  RESPONSE
+}
+
+model ExerciseReport {
+  id                String               @id @default(uuid())
+  organizationId    String
+  organization      Organization         @relation(fields: [organizationId], references: [id])
+  projectId         String
+  project           Project              @relation(fields: [projectId], references: [id])
+  activityId        String               @unique
+  activity          ProjectActivity      @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  clientId          String
+  client            Client               @relation(fields: [clientId], references: [id])
+  buildingId        String
+  building          Building             @relation(fields: [buildingId], references: [id])
+  bookingId         String?
+  booking           Booking?             @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  incidentEventId   String?
+  incidentEvent     IncidentEvent?       @relation(fields: [incidentEventId], references: [id], onDelete: SetNull)
+  evacuationEventId String?
+  evacuationEvent   EvacuationEvent?     @relation(fields: [evacuationEventId], references: [id], onDelete: SetNull)
+  officialFileId    String?              @unique
+  officialFile      ProjectFile?         @relation("ExerciseReportOfficialFile", fields: [officialFileId], references: [id], onDelete: SetNull)
+  type              ExerciseReportType
+  status            ExerciseReportStatus @default(DRAFT)
+  activityLabel     String
+  scheduledAt       DateTime?
+  occurredAt        DateTime?
+  startedAt         DateTime?
+  durationMinutes   Int?
+  zones             String[]
+  mandateName       String?
+  providerName      String?
+  adviserName       String?
+  buildingName      String
+  buildingAddress   String
+  level             String?
+  difficulty        String?
+  scenario          String?
+  positiveIntro     String?
+  globalRating      String?
+  summaryTitle      String?
+  conclusion        String?
+  preparedBy        String?
+  recipient         String?
+  conclusionDate    DateTime?
+  fieldProvenance   Json?
+  createdById       String
+  createdBy         User                 @relation("ExerciseReportCreator", fields: [createdById], references: [id])
+  finalizedById     String?
+  finalizedBy       User?                @relation("ExerciseReportFinalizer", fields: [finalizedById], references: [id])
+  finalizedAt       DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  participants       ExerciseParticipant[]
+  timelineEntries    ExerciseTimelineEntry[]
+  findings           ExerciseFinding[]
+  recommendations    ExerciseRecommendation[]
+  actionItems        ExerciseActionItem[]
+  versions           ExerciseReportVersion[]
+  imports            ExerciseReportImport[]
+  correctiveActions  CorrectiveAction[]
+  complianceEvidence ComplianceEvidence[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([buildingId])
+  @@index([bookingId])
+  @@index([incidentEventId])
+  @@index([evacuationEventId])
+  @@index([status])
+}
+
+model ExerciseParticipant {
+  id              String             @id @default(uuid())
+  key             String
+  reportId        String
+  report          ExerciseReport     @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  name            String
+  status          String?
+  simulatedRole   String?
+  teamFunction    String?
+  observations    String?
+  order           Int                @default(0)
+  source          ExerciseDataSource @default(MANUAL)
+  confidence      Float?
+  sourceRef       String?
+  validatedById   String?
+  validatedBy     User?              @relation("ExerciseParticipantValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedAt     DateTime?
+  isHumanModified Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([reportId, key])
+  @@index([reportId])
+}
+
+model ExerciseTimelineEntry {
+  id              String                    @id @default(uuid())
+  key             String
+  reportId        String
+  report          ExerciseReport            @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  occurredAt      DateTime?
+  type            ExerciseTimelineEntryType
+  event           String
+  description     String?
+  order           Int                       @default(0)
+  source          ExerciseDataSource        @default(MANUAL)
+  confidence      Float?
+  sourceRef       String?
+  validatedById   String?
+  validatedBy     User?                     @relation("ExerciseTimelineValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedAt     DateTime?
+  isHumanModified Boolean                   @default(false)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@unique([reportId, key])
+  @@index([reportId])
+}
+
+model ExerciseFinding {
+  id              String              @id @default(uuid())
+  key             String
+  reportId        String
+  report          ExerciseReport      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  type            ExerciseFindingType
+  title           String?
+  description     String
+  priority        String?
+  impact          String?
+  order           Int                 @default(0)
+  source          ExerciseDataSource  @default(MANUAL)
+  confidence      Float?
+  sourceRef       String?
+  validatedById   String?
+  validatedBy     User?               @relation("ExerciseFindingValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedAt     DateTime?
+  isHumanModified Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  recommendations   ExerciseRecommendation[]
+  actionItems       ExerciseActionItem[]
+  correctiveActions CorrectiveAction[]
+
+  @@unique([reportId, key])
+  @@index([reportId])
+}
+
+model ExerciseRecommendation {
+  id              String             @id @default(uuid())
+  key             String
+  reportId        String
+  report          ExerciseReport     @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  findingId       String
+  finding         ExerciseFinding    @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  text            String
+  priority        String?
+  order           Int                @default(0)
+  source          ExerciseDataSource @default(MANUAL)
+  confidence      Float?
+  sourceRef       String?
+  validatedById   String?
+  validatedBy     User?              @relation("ExerciseRecommendationValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedAt     DateTime?
+  isHumanModified Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  actionItems       ExerciseActionItem[]
+  correctiveActions CorrectiveAction[]
+
+  @@unique([reportId, key])
+  @@index([reportId])
+  @@index([findingId])
+}
+
+model ExerciseActionItem {
+  id               String                  @id @default(uuid())
+  key              String
+  reportId         String
+  report           ExerciseReport          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  findingId        String?
+  finding          ExerciseFinding?        @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  recommendationId String?
+  recommendation   ExerciseRecommendation? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+  correctiveAction CorrectiveAction?
+  title            String
+  description      String?
+  assignedTo       String?
+  dueDate          DateTime?
+  priority         String?
+  order            Int                     @default(0)
+  source           ExerciseDataSource      @default(MANUAL)
+  confidence       Float?
+  sourceRef        String?
+  validatedById    String?
+  validatedBy      User?                   @relation("ExerciseActionItemValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedAt      DateTime?
+  isHumanModified  Boolean                 @default(false)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@unique([reportId, key])
+  @@index([reportId])
+  @@index([findingId])
+  @@index([recommendationId])
+}
+
+model ExerciseReportVersion {
+  id            String         @id @default(uuid())
+  reportId      String
+  report        ExerciseReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  versionNumber Int
+  snapshot      Json
+  createdById   String
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  createdAt     DateTime       @default(now())
+
+  @@unique([reportId, versionNumber])
+  @@index([reportId])
+}
+
+enum ExerciseReportImportStatus {
+  PENDING
+  EXTRACTED
+  ANALYZED
+  REVIEWED
+  FAILED
+}
+
+model ExerciseReportImport {
+  id             String                     @id @default(uuid())
+  reportId       String
+  report         ExerciseReport             @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  fileName       String
+  storageKey     String?
+  extractedText  String?
+  structuredData Json?
+  status         ExerciseReportImportStatus @default(PENDING)
+  schemaVersion  String?
+  errorMessage   String?
+  reviewedById   String?
+  reviewedBy     User?                      @relation("ExerciseReportImportReviewer", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@index([reportId])
+}
+
+enum ComplianceRequirementType {
+  EXERCISE
+  TRAINING
+  DOCUMENT
+  QUALIFICATION
+  OTHER
+}
+
+enum ComplianceRequirementScope {
+  GLOBAL
+  ORGANIZATION
+}
+
+enum ComplianceEvidenceSourceType {
+  EXERCISE_REPORT
+  TRAINING_RECORD
+  PROJECT_DOCUMENT
+  EMPLOYEE_QUALIFICATION
+  MANUAL
+}
+
+enum ComplianceEvidenceStatus {
+  PENDING
+  VALID
+  EXPIRED
+  REVOKED
+}
+
+model ComplianceRequirement {
+  id                  String                     @id @default(uuid())
+  scope               ComplianceRequirementScope
+  scopeKey            String
+  organizationId      String?
+  organization        Organization?              @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code                String
+  name                String
+  description         String?
+  type                ComplianceRequirementType
+  defaultValidityDays Int?
+  isActive            Boolean                    @default(true)
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  buildingRequirements BuildingRequirement[]
+  evidence             ComplianceEvidence[]
+
+  @@unique([scopeKey, code])
+  @@index([type])
+}
+
+model BuildingRequirement {
+  id             String                @id @default(uuid())
+  buildingId     String
+  building       Building              @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  requirementId  String
+  requirement    ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  isRequired     Boolean               @default(true)
+  validityDays   Int?
+  effectiveFrom  DateTime?
+  effectiveUntil DateTime?
+  configuration  Json?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@unique([buildingId, requirementId])
+  @@index([requirementId])
+}
+
+model ComplianceEvidence {
+  id               String                       @id @default(uuid())
+  organizationId   String
+  organization     Organization                 @relation(fields: [organizationId], references: [id])
+  buildingId       String
+  building         Building                     @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  requirementId    String
+  requirement      ComplianceRequirement        @relation(fields: [requirementId], references: [id])
+  sourceType       ComplianceEvidenceSourceType
+  sourceRecordId   String
+  sourceVersion    String?
+  sourceHash       String?
+  exerciseReportId String?
+  exerciseReport   ExerciseReport?              @relation(fields: [exerciseReportId], references: [id], onDelete: SetNull)
+  occurredAt       DateTime
+  expiresAt        DateTime?
+  status           ComplianceEvidenceStatus     @default(PENDING)
+  metadata         Json?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  @@unique([requirementId, sourceType, sourceRecordId])
+  @@index([organizationId])
+  @@index([buildingId])
+  @@index([requirementId])
+  @@index([exerciseReportId])
+}
+
 model CorrectiveAction {
   id             String    @id @default(uuid())
   organizationId String
@@ -1340,8 +1747,21 @@ model CorrectiveAction {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  building               Building?               @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  incident               IncidentEvent?          @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  exerciseReport         ExerciseReport?         @relation(fields: [exerciseReportId], references: [id], onDelete: SetNull)
+  exerciseReportId       String?
+  sourceFinding          ExerciseFinding?        @relation(fields: [sourceFindingId], references: [id], onDelete: SetNull)
+  sourceFindingId        String?
+  sourceRecommendation   ExerciseRecommendation? @relation(fields: [sourceRecommendationId], references: [id], onDelete: SetNull)
+  sourceRecommendationId String?
+  exerciseActionItemId   String?                 @unique
+  actionItem             ExerciseActionItem?     @relation(fields: [exerciseActionItemId], references: [id], onDelete: SetNull)
+
   @@index([organizationId])
   @@index([buildingId])
+  @@index([incidentId])
+  @@index([exerciseReportId])
 }
 
 model VisitorInvitation {
