@@ -29,7 +29,7 @@ export class OccupancyController {
       const resolved = await this.occupancyService.resolveBuildingFromToken(kioskToken);
       const incident = await this.incidentService.getActiveIncidentPublic(resolved.buildingId);
       if (!incident) return { active: false };
-      return { active: true, publicAccessToken: incident.publicAccessToken, type: incident.type };
+      return { active: true, publicAccessToken: incident.publicAccessToken, type: incident.type, status: incident.status };
     } catch {
       return { active: false };
     }
@@ -139,6 +139,29 @@ export class OccupancyController {
     return this.occupancyService.regenerateKioskToken(
       buildingId, req.user.organizationId
     );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('buildings/:buildingId/alarm-token')
+  getAlarmToken(@Param('buildingId') buildingId: string, @Request() req) {
+    return this.occupancyService.getOrCreateAlarmToken(
+      buildingId, req.user.organizationId
+    );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('buildings/:buildingId/alarm-token/regenerate')
+  regenerateAlarmToken(@Param('buildingId') buildingId: string, @Request() req) {
+    return this.occupancyService.regenerateAlarmToken(
+      buildingId, req.user.organizationId
+    );
+  }
+
+  // Pont panneau d'alarme incendie (PAI) — appelé par le dispositif IoT du
+  // bâtiment, authentifié par le jeton dans l'URL (aucun compte utilisateur).
+  @Post('alarm-trigger/:token')
+  triggerFromAlarmPanel(@Param('token') token: string) {
+    return this.incidentService.triggerFromAlarmPanel(token);
   }
 
   @UseGuards(AuthGuard('jwt'))

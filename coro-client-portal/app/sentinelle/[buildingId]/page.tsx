@@ -5,8 +5,10 @@ import { apiGet, apiPost, getUser } from '../../store/auth';
 import PortalLayout from '../../components/PortalLayout';
 import {
   Users, UserCheck, UserX, Clock, AlertTriangle,
-  RefreshCw, QrCode, Shield, ChevronRight, Copy
+  RefreshCw, QrCode, Shield, ChevronRight, Copy, Radio
 } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   EMPLOYE:     { label: 'Employé',     color: '#2980B9', bg: '#EBF5FB' },
@@ -22,9 +24,13 @@ export default function SentinelleDashboard() {
   const [user, setUser] = useState<any>(null);
   const [occupancy, setOccupancy] = useState<any>(null);
   const [kioskToken, setKioskToken] = useState<string | null>(null);
+  const [alarmToken, setAlarmToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [alarmCopied, setAlarmCopied] = useState(false);
+  const [regeneratingAlarm, setRegeneratingAlarm] = useState(false);
+  const [showAlarmToken, setShowAlarmToken] = useState(false);
   const [activeEvacuation, setActiveEvacuation] = useState<any>(null);
   const [triggeringEvac, setTriggeringEvac] = useState(false);
   const [panicMode, setPanicMode]           = useState(false);
@@ -49,6 +55,7 @@ export default function SentinelleDashboard() {
       await Promise.all([
         fetchOccupancyWithToken(token),
         fetchActiveEvacuation(),
+        fetchAlarmToken(),
       ]);
     } catch (err) {
       console.error(err);
@@ -74,6 +81,30 @@ export default function SentinelleDashboard() {
       const res = await apiGet(`/occupancy/buildings/${buildingId}/evacuation/active`);
       setActiveEvacuation(res);
     } catch (err) { setActiveEvacuation(null); }
+  };
+
+  const fetchAlarmToken = async () => {
+    try {
+      const res = await apiGet(`/occupancy/buildings/${buildingId}/alarm-token`);
+      setAlarmToken(res.token);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCopyAlarmUrl = () => {
+    if (!alarmToken) return;
+    navigator.clipboard.writeText(`${API_URL}/occupancy/alarm-trigger/${alarmToken}`);
+    setAlarmCopied(true);
+    setTimeout(() => setAlarmCopied(false), 2000);
+  };
+
+  const handleRegenerateAlarmToken = async () => {
+    if (!confirm("Régénérer le jeton du pont panneau d'alarme ?\n\nL'ancienne adresse cessera de fonctionner immédiatement — le dispositif installé devra être reconfiguré avec la nouvelle.")) return;
+    setRegeneratingAlarm(true);
+    try {
+      const res = await apiPost(`/occupancy/buildings/${buildingId}/alarm-token/regenerate`, {});
+      setAlarmToken(res.token);
+    } catch { alert('Erreur lors de la régénération.'); }
+    finally { setRegeneratingAlarm(false); }
   };
 
   // Rafraîchissement automatique toutes les 30 secondes
@@ -329,6 +360,79 @@ export default function SentinelleDashboard() {
           </button>
         </div>
       )}
+
+      {/* ── Pont panneau d'alarme incendie ── */}
+      <div style={{
+        marginBottom: 20, padding: '14px 18px',
+        backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF',
+        borderRadius: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <Radio size={18} color="#6C757D" style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#ADB5BD', textTransform: 'uppercase' }}>
+              Pont panneau d&apos;alarme incendie
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6C757D' }}>
+              Adresse à configurer dans le dispositif IoT relié au panneau — un signal déclenche une pré-alerte automatique.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAlarmToken(!showAlarmToken)}
+            style={{
+              padding: '7px 12px', borderRadius: 6,
+              border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA',
+              cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#6C757D', flexShrink: 0,
+            }}
+          >
+            {showAlarmToken ? 'Masquer' : 'Afficher'}
+          </button>
+        </div>
+
+        {showAlarmToken && alarmToken && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #F1F3F5' }}>
+            <p style={{
+              margin: '0 0 10px', fontSize: 12, color: '#2C3E50',
+              fontFamily: 'monospace', backgroundColor: '#F8F9FA',
+              padding: '10px 12px', borderRadius: 6, wordBreak: 'break-all',
+            }}>
+              POST {API_URL}/occupancy/alarm-trigger/{alarmToken}
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleCopyAlarmUrl}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 6,
+                  border: '1px solid #E9ECEF', backgroundColor: alarmCopied ? '#EAFAF1' : '#F8F9FA',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  color: alarmCopied ? '#27AE60' : '#6C757D',
+                }}
+              >
+                <Copy size={12} />
+                {alarmCopied ? 'Copié !' : 'Copier'}
+              </button>
+              <button
+                type="button"
+                onClick={handleRegenerateAlarmToken}
+                disabled={regeneratingAlarm}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 6,
+                  border: '1px solid #F1948A', backgroundColor: '#FDEDEC',
+                  cursor: regeneratingAlarm ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600,
+                  color: '#C0392B', opacity: regeneratingAlarm ? 0.6 : 1,
+                }}
+              >
+                <RefreshCw size={12} className={regeneratingAlarm ? 'animate-spin' : ''} />
+                {regeneratingAlarm ? 'Régénération...' : 'Régénérer'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Liste des occupants ── */}
       <section style={{ backgroundColor: '#FFFFFF', borderRadius: 12, border: '1px solid #E9ECEF', overflow: 'hidden' }}>

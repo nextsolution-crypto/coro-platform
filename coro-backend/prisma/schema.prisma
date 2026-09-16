@@ -171,6 +171,7 @@ model Building {
   occupancyRecords    OccupancyRecord[]
   evacuationEvents    EvacuationEvent[]
   kioskToken          BuildingKioskToken?
+  alarmToken          BuildingAlarmToken?
   employees           BuildingEmployee[]
   visitorInvitations  VisitorInvitation[]
   emergencyRoles      EmployeeEmergencyRole[]
@@ -1018,9 +1019,11 @@ enum IncidentType {
 }
 
 enum IncidentStatus {
+  PRE_ALERT
   ACTIVE
   CONTAINED
   RESOLVED
+  CANCELLED
 }
 
 enum IncidentTaskStatus {
@@ -1160,6 +1163,19 @@ model EvacuationCheckIn {
 }
 
 model BuildingKioskToken {
+  id         String   @id @default(uuid())
+  buildingId String   @unique
+  building   Building @relation(fields: [buildingId], references: [id])
+  token      String   @unique @default(uuid())
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Jeton dédié au pont IoT relié au panneau d'alarme incendie (PAI) du bâtiment.
+// Distinct du BuildingKioskToken par principe de moindre privilège : la fuite
+// d'un des deux jetons ne compromet pas l'autre usage.
+model BuildingAlarmToken {
   id         String   @id @default(uuid())
   buildingId String   @unique
   building   Building @relation(fields: [buildingId], references: [id])

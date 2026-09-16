@@ -52,6 +52,38 @@ export class OccupancyService {
     });
   }
 
+  // Obtenir ou créer le jeton du pont panneau d'alarme incendie (PAI)
+  async getOrCreateAlarmToken(buildingId: string, organizationId: string) {
+    const building = await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId },
+    });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+
+    const existing = await this.prisma.buildingAlarmToken.findUnique({
+      where: { buildingId },
+    });
+    if (existing) return existing;
+
+    return this.prisma.buildingAlarmToken.create({
+      data: { buildingId },
+    });
+  }
+
+  // Régénérer le jeton du pont panneau d'alarme (sécurité)
+  async regenerateAlarmToken(buildingId: string, organizationId: string) {
+    const building = await this.prisma.building.findFirst({
+      where: { id: buildingId, organizationId },
+    });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+
+    const { randomUUID } = await import('crypto');
+    return this.prisma.buildingAlarmToken.upsert({
+      where: { buildingId },
+      update: { token: randomUUID(), updatedAt: new Date() },
+      create: { buildingId, token: randomUUID() },
+    });
+  }
+
   // Check-in d'un occupant
   async checkIn(body: any) {
     const buildingId = body.buildingId;

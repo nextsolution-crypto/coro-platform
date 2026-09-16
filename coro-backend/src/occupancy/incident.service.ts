@@ -47,6 +47,10 @@ const INCIDENT_LABELS: Record<string, string> = {
   FLOODING: 'Inondations', VIOLENT_WINDS: 'Vents violents', OTHER: 'Incident général',
 };
 
+// Fenêtre de confirmation avant qu'une pré-alerte (panneau d'alarme incendie)
+// n'escalade automatiquement en incident actif avec notifications envoyées.
+const ALARM_ESCALATION_WINDOW_MS = 45_000;
+
 const OCCUPANT_MESSAGES: Record<string, { alert: string; alarm: string }> = {
   FIRE_ALERT:      { alert: 'Une investigation est en cours. Restez en place, préparez-vous à évacuer.', alarm: 'Évacuez immédiatement le bâtiment.' },
   FIRE_ALARM:      { alert: 'Évacuez immédiatement le bâtiment.', alarm: 'Évacuez immédiatement le bâtiment.' },
@@ -427,10 +431,20 @@ export class IncidentService {
   }
 
   // ── Déclencher un incident ────────────────────────────────────────────────
-  async triggerIncident(body: any, organizationId: string) {
+  // opts.status/'PRE_ALERT' + deferNotifications=true : utilisé par le pont
+  // panneau d'alarme (triggerFromAlarmPanel) — l'incident et ses tâches sont
+  // créés tout de suite (snapshot fidèle au moment du signal) mais les
+  // notifications de masse attendent la confirmation ou l'escalade automatique.
+  async triggerIncident(
+    body: any,
+    organizationId: string,
+    opts?: { status?: 'ACTIVE' | 'PRE_ALERT'; deferNotifications?: boolean },
+  ) {
     const building = await this.prisma.building.findFirst({ where: { id: body.buildingId, organizationId } });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
 
+    const status = opts?.status || 'ACTIVE';
+    const deferNotifications = opts?.deferNotifications ?? false;
     const isExercise = body.isExercise === true;
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -491,6 +505,7 @@ export class IncidentService {
         buildingId:        body.buildingId,
         organizationId,
         type:              body.type,
+        status:            status as any,
         triggeredBy:       body.triggeredBy,
         description:       body.description || null,
         occupantsSnapshot: presentRecords   as any,
@@ -523,16 +538,55 @@ export class IncidentService {
       });
     }
 
-    const incidentLabel  = INCIDENT_LABELS[body.type] || 'Incident';
-    const occupantMsgCfg = OCCUPANT_MESSAGES[body.type] || OCCUPANT_MESSAGES.OTHER;
+    const incidentLabel = INCIDENT_LABELS[body.type] || 'Incident';
 
-    // Notifications — seulement si pas exercice pour les occupants
-    const coordinator = mobilizableTeam.find(m => m.roles.some(r => r.role === 'COORDINATOR'));
+    if (!deferNotifications) {
+      await this.dispatchIncidentNotifications(incident, building, mobilizableTeam, coordSteps, assemblyPoint, isExercise, body.type, presentIds);
+
+      await this.prisma.incidentLog.create({
+        data: {
+          incidentEventId: incident.id,
+          action:  `${isExercise ? '[EXERCICE] ' : ''}Incident déclenché — ${incidentLabel}`,
+          details: `${presentRecords.length} occupants · ${mobilizableTeam.length} membres mobilisés · Procédure ${procedureCode}${isExercise ? ' · MODE EXERCICE' : ''}`,
+          isAutomatic: true,
+        },
+      });
+    } else {
+      await this.prisma.incidentLog.create({
+        data: {
+          incidentEventId: incident.id,
+          action:  `Pré-alerte — ${incidentLabel} détectée par le panneau d'alarme`,
+          details: `En attente de confirmation (${Math.round(ALARM_ESCALATION_WINDOW_MS / 1000)}s) — ${presentRecords.length} occupants · ${mobilizableTeam.length} membres mobilisables · Procédure ${procedureCode}`,
+          isAutomatic: true,
+        },
+      });
+    }
+
+    return { incident, coordinatorStepsCount: coordSteps.length, notifiedCount: mobilizableTeam.length, isExercise };
+  }
+
+  // ── Envoi des notifications (coordonnateur, équipe, occupants) ────────────
+  // Extrait de triggerIncident pour être réutilisé par la résolution d'une
+  // pré-alerte (confirmation humaine ou escalade automatique après délai).
+  private async dispatchIncidentNotifications(
+    incident: any,
+    building: any,
+    mobilizableTeam: any[],
+    coordSteps: any[],
+    assemblyPoint: string | null,
+    isExercise: boolean,
+    incidentType: string,
+    presentIds: Set<string | null>,
+  ) {
+    const incidentLabel  = INCIDENT_LABELS[incidentType] || 'Incident';
+    const occupantMsgCfg = OCCUPANT_MESSAGES[incidentType] || OCCUPANT_MESSAGES.OTHER;
+
+    const coordinator = mobilizableTeam.find(m => m.roles.some((r: any) => r.role === 'COORDINATOR'));
     if (coordinator?.email) {
       await this.notifyCoordinator(coordinator, incident, incidentLabel, building, assemblyPoint, coordSteps, isExercise);
     }
 
-    const otherMembers = mobilizableTeam.filter(m => !m.roles.some(r => r.role === 'COORDINATOR') && m.email);
+    const otherMembers = mobilizableTeam.filter(m => !m.roles.some((r: any) => r.role === 'COORDINATOR') && m.email);
     for (const member of otherMembers) {
       // Créer tâche membre avec ackToken unique
       const memberTask = await this.prisma.incidentTask.create({
@@ -560,18 +614,122 @@ export class IncidentService {
         await this.notifyOccupant(email, incidentLabel, building, occupantMsgCfg.alert, assemblyPoint);
       }
     }
+  }
 
-    // Log
-    await this.prisma.incidentLog.create({
-      data: {
-        incidentEventId: incident.id,
-        action:  `${isExercise ? '[EXERCICE] ' : ''}Incident déclenché — ${incidentLabel}`,
-        details: `${presentRecords.length} occupants · ${mobilizableTeam.length} membres mobilisés · Procédure ${procedureCode}${isExercise ? ' · MODE EXERCICE' : ''}`,
-        isAutomatic: true,
+  // ── Pont panneau d'alarme incendie (PAI) — déclenchement sans authentification,
+  // sécurisé par le jeton dédié au bâtiment ─────────────────────────────────
+  async triggerFromAlarmPanel(token: string) {
+    const alarmToken = await this.prisma.buildingAlarmToken.findUnique({ where: { token } });
+    if (!alarmToken || !alarmToken.isActive) throw new NotFoundException('Jeton invalide ou désactivé');
+
+    const building = await this.prisma.building.findUnique({ where: { id: alarmToken.buildingId } });
+    if (!building) throw new NotFoundException('Bâtiment introuvable');
+
+    // Anti-rebond : un signal qui se répète pendant qu'une pré-alerte/incident
+    // est déjà en cours (ex. contact du PAI maintenu fermé) ne recrée pas un
+    // nouvel incident — il est simplement journalisé sur celui déjà ouvert.
+    const existing = await this.prisma.incidentEvent.findFirst({
+      where: { buildingId: building.id, isActive: true, status: { in: ['PRE_ALERT', 'ACTIVE', 'CONTAINED'] } },
+    });
+    if (existing) {
+      await this.prisma.incidentLog.create({
+        data: { incidentEventId: existing.id, action: "Nouveau signal reçu du panneau d'alarme (incident déjà en cours)", isAutomatic: true },
+      });
+      return { deduplicated: true, incidentId: existing.id, status: existing.status };
+    }
+
+    const result = await this.triggerIncident(
+      {
+        buildingId:  building.id,
+        type:        'FIRE_ALARM',
+        triggeredBy: "Panneau d'alarme incendie (automatique)",
+        isExercise:  false,
       },
+      building.organizationId,
+      { status: 'PRE_ALERT', deferNotifications: true },
+    );
+
+    this.scheduleAutoEscalation(result.incident.id);
+    return result;
+  }
+
+  private scheduleAutoEscalation(incidentId: string) {
+    setTimeout(() => {
+      this.resolvePreAlert(incidentId, 'AUTO_ESCALATED').catch(err =>
+        console.error('[IncidentService] Erreur escalade automatique de pré-alerte:', err),
+      );
+    }, ALARM_ESCALATION_WINDOW_MS);
+  }
+
+  // ── Résolution d'une pré-alerte — confirmation, annulation ou expiration ──
+  // Le updateMany conditionné sur status:'PRE_ALERT' agit comme verrou
+  // atomique : si confirmation, annulation et minuterie se chevauchent, seul
+  // le premier appel obtient claimed:true — les autres sont des no-op.
+  private async resolvePreAlert(incidentId: string, outcome: 'CONFIRMED' | 'CANCELLED' | 'AUTO_ESCALATED') {
+    const claimed = await this.prisma.incidentEvent.updateMany({
+      where: { id: incidentId, status: 'PRE_ALERT' },
+      data: outcome === 'CANCELLED'
+        ? { status: 'CANCELLED', isActive: false, resolvedAt: new Date() }
+        : { status: 'ACTIVE' },
+    });
+    if (claimed.count === 0) return { claimed: false };
+
+    const incident = await this.prisma.incidentEvent.findUnique({ where: { id: incidentId } });
+    if (!incident) return { claimed: false };
+
+    if (outcome !== 'CANCELLED') {
+      const building = await this.prisma.building.findUnique({ where: { id: incident.buildingId } });
+      if (building) {
+        const mobilizableTeam = (incident.teamSnapshot as any[]) || [];
+        const coordSteps      = (incident.procedureSnapshot as any[]) || [];
+        const presentIds = new Set(
+          ((incident.occupantsSnapshot as any[]) || [])
+            .filter((r: any) => r.type === 'EMPLOYE')
+            .map((r: any) => r.employeeId),
+        );
+        await this.dispatchIncidentNotifications(
+          incident, building, mobilizableTeam, coordSteps,
+          incident.assemblyPoint, incident.isExercise, incident.type, presentIds,
+        );
+      }
+    }
+
+    const logAction =
+      outcome === 'AUTO_ESCALATED' ? "Pré-alerte — délai écoulé, escalade automatique, notifications envoyées"
+      : outcome === 'CONFIRMED'    ? 'Pré-alerte confirmée — notifications envoyées'
+      :                              'Pré-alerte annulée — aucune notification envoyée';
+
+    await this.prisma.incidentLog.create({
+      data: { incidentEventId: incident.id, action: logAction, isAutomatic: outcome !== 'CONFIRMED' },
     });
 
-    return { incident, coordinatorStepsCount: coordSteps.length, notifiedCount: mobilizableTeam.length, isExercise };
+    return { claimed: true, incident };
+  }
+
+  async confirmPreAlert(incidentId: string, organizationId: string, confirmedBy: string) {
+    const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
+    if (!incident) throw new NotFoundException('Incident introuvable');
+
+    const result = await this.resolvePreAlert(incidentId, 'CONFIRMED');
+    if (!result.claimed) throw new NotFoundException('Cette pré-alerte a déjà été traitée');
+
+    await this.prisma.incidentLog.create({
+      data: { incidentEventId: incidentId, action: `Confirmé par ${confirmedBy}`, isAutomatic: false },
+    });
+    return { confirmed: true };
+  }
+
+  async cancelPreAlert(incidentId: string, organizationId: string, cancelledBy: string) {
+    const incident = await this.prisma.incidentEvent.findFirst({ where: { id: incidentId, organizationId } });
+    if (!incident) throw new NotFoundException('Incident introuvable');
+
+    const result = await this.resolvePreAlert(incidentId, 'CANCELLED');
+    if (!result.claimed) throw new NotFoundException('Cette pré-alerte a déjà été traitée');
+
+    await this.prisma.incidentLog.create({
+      data: { incidentEventId: incidentId, action: `Annulé par ${cancelledBy}`, isAutomatic: false },
+    });
+    return { cancelled: true };
   }
 
   // ── Incidents actifs ──────────────────────────────────────────────────────
@@ -579,7 +737,7 @@ export class IncidentService {
     const building = await this.prisma.building.findFirst({ where: { id: buildingId, organizationId } });
     if (!building) throw new NotFoundException('Bâtiment introuvable');
     return this.prisma.incidentEvent.findMany({
-      where: { buildingId, isActive: true, status: { in: ['ACTIVE', 'CONTAINED'] }, organizationId },
+      where: { buildingId, isActive: true, status: { in: ['PRE_ALERT', 'ACTIVE', 'CONTAINED'] }, organizationId },
       orderBy: { triggeredAt: 'desc' },
       include: { tasks: { orderBy: { stepOrder: 'asc' } }, logs: { orderBy: { timestamp: 'asc' } } },
     });
@@ -591,12 +749,14 @@ export class IncidentService {
   }
 
   // Version sans organizationId — pour la borne kiosque (aucune authentification).
-  // Ne retourne que le strict nécessaire pour afficher le QR, rien de sensible.
+  // Ne retourne que le strict nécessaire pour afficher le QR ou l'écran de
+  // pré-alerte, rien de sensible. Inclut PRE_ALERT pour que la borne puisse
+  // proposer confirmer/annuler pendant la fenêtre de confirmation.
   async getActiveIncidentPublic(buildingId: string) {
     return this.prisma.incidentEvent.findFirst({
-      where: { buildingId, isActive: true, status: { in: ['ACTIVE', 'CONTAINED'] } },
+      where: { buildingId, isActive: true, status: { in: ['PRE_ALERT', 'ACTIVE', 'CONTAINED'] } },
       orderBy: { triggeredAt: 'desc' },
-      select: { publicAccessToken: true, type: true },
+      select: { id: true, publicAccessToken: true, type: true, status: true },
     });
   }
 

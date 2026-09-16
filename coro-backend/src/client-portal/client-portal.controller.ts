@@ -340,6 +340,16 @@ export class ClientPortalController {
     return this.incidentService.addLog(incidentId, body, req.clientUser.organizationId);
   }
 
+  @Put('incidents/:incidentId/confirm-pre-alert')
+  async confirmIncidentPreAlert(@Param('incidentId') incidentId: string, @Request() req: any) {
+    return this.incidentService.confirmPreAlert(incidentId, req.clientUser.organizationId, req.clientUser.email);
+  }
+
+  @Put('incidents/:incidentId/cancel-pre-alert')
+  async cancelIncidentPreAlert(@Param('incidentId') incidentId: string, @Request() req: any) {
+    return this.incidentService.cancelPreAlert(incidentId, req.clientUser.organizationId, req.clientUser.email);
+  }
+
   @Put('incidents/:incidentId/contain')
   async containIncident(@Param('incidentId') incidentId: string, @Request() req: any) {
     return this.incidentService.containIncident(incidentId, req.clientUser.organizationId);

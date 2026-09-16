@@ -39,10 +39,34 @@ const INCIDENT_TYPES = [
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  PRE_ALERT: { label: 'PRÉ-ALERTE',     color: '#B9770E', bg: '#FEF9E7', border: '#F9E79F' },
   ACTIVE:    { label: 'EN COURS',       color: '#C0392B', bg: '#FDEDEC', border: '#F1948A' },
   CONTAINED: { label: 'CONTENU',        color: '#E67E22', bg: '#FEF9E7', border: '#F9E79F' },
   RESOLVED:  { label: 'RÉSOLU',         color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF' },
+  CANCELLED: { label: 'ANNULÉ',         color: '#6C757D', bg: '#F8F9FA', border: '#DEE2E6' },
 };
+
+// Doit correspondre à ALARM_ESCALATION_WINDOW_MS côté backend (incident.service.ts)
+const ALARM_ESCALATION_WINDOW_SECONDS = 45;
+
+function PreAlertCountdown({ triggeredAt }: { triggeredAt: string }) {
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    const compute = () => {
+      const elapsed = (Date.now() - new Date(triggeredAt).getTime()) / 1000;
+      setRemaining(Math.max(0, Math.round(ALARM_ESCALATION_WINDOW_SECONDS - elapsed)));
+    };
+    compute();
+    const interval = setInterval(compute, 1000);
+    return () => clearInterval(interval);
+  }, [triggeredAt]);
+
+  if (remaining <= 0) {
+    return <span>Escalade automatique en cours…</span>;
+  }
+  return <span>Escalade automatique dans {remaining}s si aucune action</span>;
+}
 
 function IncidentAccessQr({ token }: { token: string }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -96,6 +120,7 @@ export default function IncidentPage() {
   const [sendingAccess, setSendingAccess] = useState<string | null>(null);
   const [accessSent, setAccessSent]       = useState<string | null>(null);
   const [linkCopied, setLinkCopied]       = useState<string | null>(null);
+  const [resolvingPreAlert, setResolvingPreAlert] = useState<string | null>(null);
 
   useEffect(() => {
     const u = getUser();
@@ -114,9 +139,13 @@ export default function IncidentPage() {
 
   useEffect(() => {
     if (incidents.length === 0) return;
-    const interval = setInterval(fetchIncidents, 15000);
+    // Poll plus fréquemment pendant une pré-alerte, pour refléter rapidement
+    // une confirmation/annulation faite par un autre coordonnateur, ou
+    // l'escalade automatique côté serveur.
+    const hasPreAlert = incidents.some(i => i.status === 'PRE_ALERT');
+    const interval = setInterval(fetchIncidents, hasPreAlert ? 5000 : 15000);
     return () => clearInterval(interval);
-  }, [incidents.length, fetchIncidents]);
+  }, [incidents, fetchIncidents]);
 
   const handleTrigger = async () => {
     if (!confirm(`Déclencher : ${INCIDENT_TYPES.find(t => t.value === selectedType)?.label} ?\n\nLe coordonnateur et l'équipe d'urgence seront notifiés immédiatement.`)) return;
@@ -164,6 +193,25 @@ export default function IncidentPage() {
       }));
     } catch { console.error('Erreur log'); }
     finally { setAddingLog(null); }
+  };
+
+  const handleConfirmPreAlert = async (incidentId: string) => {
+    setResolvingPreAlert(incidentId);
+    try {
+      await clientFetch(`/client-portal/incidents/${incidentId}/confirm-pre-alert`, 'PUT');
+      await fetchIncidents();
+    } catch { alert('Erreur — cette pré-alerte a peut-être déjà été traitée.'); }
+    finally { setResolvingPreAlert(null); }
+  };
+
+  const handleCancelPreAlert = async (incidentId: string) => {
+    if (!confirm("Annuler cette pré-alerte ?\n\nAucune notification ne sera envoyée — à utiliser si c'est un test ou un faux déclenchement du panneau d'alarme.")) return;
+    setResolvingPreAlert(incidentId);
+    try {
+      await clientFetch(`/client-portal/incidents/${incidentId}/cancel-pre-alert`, 'PUT');
+      await fetchIncidents();
+    } catch { alert('Erreur — cette pré-alerte a peut-être déjà été traitée.'); }
+    finally { setResolvingPreAlert(null); }
   };
 
   const handleContain = async (incidentId: string) => {
@@ -329,7 +377,7 @@ export default function IncidentPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                {incident.publicAccessToken && incident.status !== 'RESOLVED' && (
+                {incident.publicAccessToken && incident.status !== 'RESOLVED' && incident.status !== 'PRE_ALERT' && (
                   <button type="button" onClick={() => setShowAccessPanel(showAccessPanel === incident.id ? null : incident.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 6, border: '1px solid #2C3E50', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#2C3E50' }}>
                     <QrCode size={13} /> Fiche d'intervention
@@ -341,7 +389,7 @@ export default function IncidentPage() {
                     Contenir
                   </button>
                 )}
-                {incident.status !== 'RESOLVED' && (
+                {incident.status !== 'RESOLVED' && incident.status !== 'PRE_ALERT' && incident.status !== 'CANCELLED' && (
                   <button type="button" onClick={() => setShowResolve(showResolve === incident.id ? null : incident.id)}
                     style={{ padding: '7px 12px', borderRadius: 6, border: 'none', backgroundColor: '#27AE60', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#FFFFFF' }}>
                     ✅ Résoudre
@@ -349,6 +397,29 @@ export default function IncidentPage() {
                 )}
               </div>
             </div>
+
+            {/* Bandeau pré-alerte — signal du panneau d'alarme en attente de confirmation */}
+            {incident.status === 'PRE_ALERT' && (
+              <div style={{ padding: '16px 20px', backgroundColor: '#FEF9E7', borderBottom: '2px solid #F9E79F' }}>
+                <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#B9770E' }}>
+                  🔔 Signal reçu du panneau d'alarme — pas encore confirmé
+                </p>
+                <p style={{ margin: '0 0 14px', fontSize: 12, color: '#8A6119' }}>
+                  Les notifications (SMS/courriel à l'équipe d'urgence et aux occupants) n'ont pas encore été envoyées.
+                  {' '}<PreAlertCountdown triggeredAt={incident.triggeredAt} />
+                </p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => handleConfirmPreAlert(incident.id)} disabled={resolvingPreAlert === incident.id}
+                    style={{ padding: '9px 16px', borderRadius: 6, border: 'none', backgroundColor: '#C0392B', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: resolvingPreAlert === incident.id ? 'not-allowed' : 'pointer', opacity: resolvingPreAlert === incident.id ? 0.7 : 1 }}>
+                    🚨 Confirmer — envoyer les notifications maintenant
+                  </button>
+                  <button type="button" onClick={() => handleCancelPreAlert(incident.id)} disabled={resolvingPreAlert === incident.id}
+                    style={{ padding: '9px 16px', borderRadius: 6, border: '1px solid #DEE2E6', backgroundColor: '#FFFFFF', color: '#6C757D', fontSize: 13, fontWeight: 700, cursor: resolvingPreAlert === incident.id ? 'not-allowed' : 'pointer' }}>
+                    Annuler (faux déclenchement)
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Fiche d'intervention — QR + envoi par courriel */}
             {showAccessPanel === incident.id && incident.publicAccessToken && (

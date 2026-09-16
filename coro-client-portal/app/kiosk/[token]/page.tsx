@@ -27,7 +27,7 @@ export default function KioskPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [currentTime, setCurrentTime] = useState('');
   const [scannerStarted, setScannerStarted] = useState(false);
-  const [activeIncident, setActiveIncident] = useState<{ publicAccessToken: string; type: string } | null>(null);
+  const [activeIncident, setActiveIncident] = useState<{ publicAccessToken: string; type: string; status: string } | null>(null);
 
   const handleQrScan = async (qrToken: string) => {
     if (!buildingId || loading) return;
@@ -154,18 +154,29 @@ export default function KioskPage() {
     return () => clearTimeout(timeout);
   }, [screen]);
 
-  // Vérifier périodiquement s'il y a un incident actif — bascule l'affichage de la borne
+  // Vérifier périodiquement s'il y a un incident actif — bascule l'affichage de la borne.
+  // Poll plus fréquemment pendant une pré-alerte pour refléter rapidement la
+  // confirmation/annulation par un coordonnateur ou l'escalade automatique.
   useEffect(() => {
     if (!token) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
     const checkIncident = () => {
       fetch(`${API_URL}/occupancy/kiosk/${token}/active-incident`)
         .then(r => r.json())
-        .then(d => setActiveIncident(d?.active ? { publicAccessToken: d.publicAccessToken, type: d.type } : null))
-        .catch(() => {});
+        .then(d => {
+          if (cancelled) return;
+          const next = d?.active ? { publicAccessToken: d.publicAccessToken, type: d.type, status: d.status } : null;
+          setActiveIncident(next);
+          timer = setTimeout(checkIncident, next?.status === 'PRE_ALERT' ? 5000 : 15000);
+        })
+        .catch(() => {
+          if (!cancelled) timer = setTimeout(checkIncident, 15000);
+        });
     };
     checkIncident();
-    const interval = setInterval(checkIncident, 15000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [token]);
 
   const resetToHome = () => {
@@ -254,6 +265,25 @@ export default function KioskPage() {
 
   // ── ÉCRAN ACCUEIL ──
   if (screen === 'home') {
+    if (activeIncident?.status === 'PRE_ALERT') {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#B9770E', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 900, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            🔔 Signal du panneau d'alarme
+          </p>
+          <p style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 800, color: '#FFF8E8', maxWidth: 380 }}>
+            En attente de confirmation par un coordonnateur
+          </p>
+          <p style={{ margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.85)', maxWidth: 340 }}>
+            Si aucune action n'est prise, l'alerte sera automatiquement confirmée et l'équipe d'urgence sera notifiée.
+          </p>
+          <button type="button" onClick={() => setScreen('checkin-type')}
+            style={{ marginTop: 32, padding: '14px 24px', borderRadius: 10, border: '2px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            Enregistrer ma présence
+          </button>
+        </div>
+      );
+    }
     if (activeIncident) {
       return (
         <div style={{ minHeight: '100vh', backgroundColor: '#C0392B', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, userSelect: 'none' }}>
