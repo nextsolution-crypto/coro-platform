@@ -19,6 +19,7 @@ import {
   Briefcase,
   ChevronDown,
   Award,
+  Play,
 } from 'lucide-react';
 import DemoForm from './DemoForm';
 
@@ -45,6 +46,8 @@ const TRANSLATIONS = {
     'CORO relie vos plans, vos bâtiments, vos équipes et vos opérations d\'urgence pour transformer la conformité en préparation opérationnelle mesurable — jusqu\'à l\'intervention.',
   cta: 'Demander une démo',
   ctaSecondary: 'Découvrir la plateforme',
+  watchDemo: 'Voir la plateforme en action',
+  watchDemoDuration: '6 min',
   trusted:
     'Conçue au Québec par des praticiens du terrain · Données hébergées au Canada · Français / English',
 },
@@ -403,6 +406,8 @@ const TRANSLATIONS = {
     'CORO connects your plans, buildings, teams and emergency operations to turn compliance into measurable operational readiness — all the way through response.',
   cta: 'Request a demo',
   ctaSecondary: 'Explore the platform',
+  watchDemo: 'See the platform in action',
+  watchDemoDuration: '6 min',
   trusted:
     'Built in Quebec by field practitioners · Data hosted in Canada · English / Français',
 },
@@ -828,6 +833,7 @@ function setReferralCookie(name: string, value: string) {
 
 export default function WebAppProgress() {
   const [lang, setLang] = useState<'fr' | 'en'>('fr');
+  const [showDemoVideo, setShowDemoVideo] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 const [platformMenuOpen, setPlatformMenuOpen] = useState(false);
 const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
@@ -3003,6 +3009,10 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   align-items: center;
 }
 
+.coro-hero-watch-demo:hover span:first-child {
+  background-color: rgba(255,255,255,0.22) !important;
+}
+
 .coro-hero-copy {
   max-width: 690px;
 }
@@ -5135,6 +5145,57 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   {t.hero.ctaSecondary}
 </a>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowDemoVideo(true)}
+          className="animate-fade-in-up delay-3 coro-hero-watch-demo"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            marginTop: 22,
+            padding: 0,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              flexShrink: 0,
+            }}
+          >
+            <Play size={13} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
+          </span>
+          <span
+            style={{
+              fontSize: 14.5,
+              fontWeight: 700,
+              color: '#FFFFFF',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {t.hero.watchDemo}
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.5)',
+            }}
+          >
+            · {t.hero.watchDemoDuration}
+          </span>
+        </button>
 
         <p
           className="animate-fade-in-up delay-4"
@@ -8894,6 +8955,77 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           </strong>
         </div>
       </section>
+
+      {/* MODAL — DÉMO VIDÉO */}
+      {showDemoVideo && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={lang === 'fr' ? 'Vidéo de démonstration CORO' : 'CORO demo video'}
+          onClick={() => setShowDemoVideo(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2000,
+            backgroundColor: 'rgba(9,18,27,0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 1040,
+              position: 'relative',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowDemoVideo(false)}
+              aria-label={lang === 'fr' ? 'Fermer' : 'Close'}
+              style={{
+                position: 'absolute',
+                top: -44,
+                right: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <X size={20} />
+              {lang === 'fr' ? 'Fermer' : 'Close'}
+            </button>
+
+            <div
+              style={{
+                borderRadius: 12,
+                overflow: 'hidden',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+                lineHeight: 0,
+              }}
+            >
+              <video
+                controls
+                autoPlay
+                playsInline
+                poster="/videos/Video_home_page_CORO_poster.jpg"
+                style={{ width: '100%', display: 'block', backgroundColor: '#000000' }}
+              >
+                <source src="/videos/Video_home_page_CORO.mp4" type="video/mp4" />
+              </video>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
