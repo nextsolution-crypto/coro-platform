@@ -157,16 +157,22 @@ export default function Footer() {
 { id: 'security', label: lang === 'fr' ? 'Sécurité' : 'Security', href: lang === 'fr' ? '/security' : '/security?lang=en', soon: false },
 { id: 'referral', label: lang === 'fr' ? 'Programme de recommandation' : 'Referral Program', href: lang === 'fr' ? '/programme-recommandation' : '/programme-recommandation?lang=en', soon: false },
 { id: 'blog', label: lang === 'fr' ? 'Blogue' : 'Blog', href: '/blog', soon: false },
-{ id: 'partners', label: lang === 'fr' ? 'Partenaires' : 'Partners', href: '/partners', soon: true },
-{ id: 'contact', label: lang === 'fr' ? 'Nous contacter' : 'Contact us', href: '/#demo', soon: false },
+{ id: 'partners', label: lang === 'fr' ? 'Partenaires' : 'Partners', href: lang === 'fr' ? '/partners' : '/partners?lang=en', soon: false },
+{ id: 'contact', label: lang === 'fr' ? 'Nous contacter' : 'Contact us', href: lang === 'fr' ? '/contact' : '/contact?lang=en', soon: false },
               ].map(link => (
                 <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <a href={link.href}
-                    style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
-                    {link.label}
-                  </a>
+                  {link.soon ? (
+                    <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14 }}>
+                      {link.label}
+                    </span>
+                  ) : (
+                    <a href={link.href}
+                      style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                      {link.label}
+                    </a>
+                  )}
                   {link.soon && (
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#F39C12', backgroundColor: 'rgba(243,156,18,0.15)', border: '1px solid rgba(243,156,18,0.3)', padding: '1px 6px', borderRadius: 4 }}>
                       {lang === 'fr' ? 'Bientôt' : 'Soon'}

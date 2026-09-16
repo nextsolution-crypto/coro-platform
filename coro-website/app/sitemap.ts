@@ -232,9 +232,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 
     /*
-     * Privacy et Terms sont laissées en FR uniquement
-     * tant qu'on n'a pas vérifié qu'elles disposent
-     * d'une vraie version anglaise.
+     * Privacy et Terms disposent d'une vraie version
+     * anglaise (CONTENT.en dans chaque page) — déclarées
+     * ici en FR + EN avec alternates, comme les autres
+     * pages bilingues.
      */
 
     {
@@ -248,6 +249,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       priority:
         0.3,
+
+      alternates: {
+        languages: {
+          'fr-CA':
+            frUrl('/privacy'),
+
+          'en-CA':
+            enUrl('/privacy'),
+        },
+      },
+    },
+
+
+    {
+      url:
+        enUrl('/privacy'),
+
+      lastModified,
+
+      changeFrequency:
+        'yearly',
+
+      priority:
+        0.3,
+
+      alternates: {
+        languages: {
+          'fr-CA':
+            frUrl('/privacy'),
+
+          'en-CA':
+            enUrl('/privacy'),
+        },
+      },
     },
 
 
@@ -262,6 +297,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       priority:
         0.3,
+
+      alternates: {
+        languages: {
+          'fr-CA':
+            frUrl('/terms'),
+
+          'en-CA':
+            enUrl('/terms'),
+        },
+      },
+    },
+
+
+    {
+      url:
+        enUrl('/terms'),
+
+      lastModified,
+
+      changeFrequency:
+        'yearly',
+
+      priority:
+        0.3,
+
+      alternates: {
+        languages: {
+          'fr-CA':
+            frUrl('/terms'),
+
+          'en-CA':
+            enUrl('/terms'),
+        },
+      },
     },
 
 
@@ -270,6 +339,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ═══════════════════════════════════════ */
 
     ...[
+      {
+        path:
+          '/pricing',
+
+        priority:
+          0.9,
+      },
+
+      {
+        path:
+          '/sentinelle',
+
+        priority:
+          0.9,
+      },
+
       {
         path:
           '/gestion-documentaire',
@@ -288,6 +373,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       {
         path:
+          '/resilience-operationnelle',
+
+        priority:
+          0.8,
+      },
+
+      {
+        path:
           '/performance-objectifs',
 
         priority:
@@ -300,6 +393,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
         priority:
           0.8,
+      },
+
+      {
+        path:
+          '/programme-recommandation',
+
+        priority:
+          0.6,
+      },
+
+      {
+        path:
+          '/contact',
+
+        priority:
+          0.6,
+      },
+
+      {
+        path:
+          '/partners',
+
+        priority:
+          0.7,
       },
     ].flatMap((page) => {
 
