@@ -533,6 +533,64 @@
   width: min(100%, 560px);
   margin: 20px auto 0;
 }
+.channelSelector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.channelSelector button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #aec1b7;
+  border-radius: 6px;
+  background: #fff;
+  color: #365247;
+  cursor: pointer;
+  font-weight: 750;
+}
+.channelSelector button[aria-pressed="true"] {
+  border-color: #176b4d;
+  background: #eaf3ee;
+  color: #176b4d;
+}
+.profileSection {
+  width: min(100%, 560px);
+  margin: 20px auto 0;
+}
+.profileSection > h1 {
+  color: #1f3029;
+  font-size: clamp(28px, 7vw, 40px);
+  line-height: 1.15;
+}
+.profileRows {
+  margin-top: 28px;
+  border-top: 1px solid #dfe7e2;
+}
+.profileRows > div {
+  padding: 20px 0;
+  border-bottom: 1px solid #dfe7e2;
+}
+.profileRows h2 {
+  margin-bottom: 8px;
+  color: #52675d;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+.profileRows p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #273d34;
+  line-height: 1.6;
+}
+.profileSuccess {
+  color: #176b4d !important;
+  font-weight: 750;
+}
 .locationSection h1 {
   margin-top: 18px;
   color: #1f3029;

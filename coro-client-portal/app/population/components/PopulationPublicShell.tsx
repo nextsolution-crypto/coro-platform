@@ -22,7 +22,8 @@ import {
   type PublicPopulationProgram,
 } from "../lib/publicPopulationApi";
 import PopulationRegistration from "./PopulationRegistration";
-import { readPopulationWorkflowSession } from "../lib/populationSession";
+import PopulationAccess from "./PopulationAccess";
+import { clearPopulationWorkflowSession, readPopulationWorkflowSession } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
 
 type Language = "fr" | "en";
@@ -154,7 +155,7 @@ export default function PopulationPublicShell({
     const workflow = readPopulationWorkflowSession(publicSlug);
     if (!workflow) return;
     setLanguage(workflow.preferredLanguage === "EN" ? "en" : "fr");
-    setView("register");
+    setView(workflow.state === "AUTHENTICATED" ? "access" : "register");
   }, [publicSlug]);
   const languages = (
     <div
@@ -236,6 +237,11 @@ export default function PopulationPublicShell({
       ? program.privacyTextEN || program.privacyTextFR
       : program.privacyTextFR;
   const website = safeWebsite(program.websiteUrl);
+  const openAccess = () => {
+    const workflow = readPopulationWorkflowSession(publicSlug);
+    if (workflow?.state === "PENDING") clearPopulationWorkflowSession(publicSlug);
+    setView("access");
+  };
   const header = (
     <header className={styles.header}>
       <div className={styles.bar}>
@@ -258,37 +264,27 @@ export default function PopulationPublicShell({
           program={program}
           language={language}
           onBack={() => setView("home")}
-          onAccess={() => setView("access")}
+          onAccess={openAccess}
         />
         <footer className={styles.footer}>
           <div className={styles.footerInner}>{t.powered}</div>
         </footer>
       </div>
     );
-  if (view !== "home")
+  if (view === "access")
     return (
       <div className={styles.page}>
         {header}
-        <main
-          className={styles.state}
-          style={{ minHeight: "calc(100dvh - 64px)" }}
-        >
-          <div className={styles.stateContent}>
-            <div className={styles.stateIcon}>
-              <LogIn size={25} />
-            </div>
-            <h1>{t.nextAccess}</h1>
-            <p>{t.nextMessage}</p>
-            <button
-              className={styles.retry}
-              type="button"
-              onClick={() => setView("home")}
-            >
-              <ArrowLeft size={17} />
-              {t.back}
-            </button>
-          </div>
-        </main>
+        <PopulationAccess
+          publicSlug={publicSlug}
+          program={program}
+          language={language}
+          onLanguageChange={setLanguage}
+          onBack={() => setView("home")}
+        />
+        <footer className={styles.footer}>
+          <div className={styles.footerInner}>{t.powered}</div>
+        </footer>
       </div>
     );
   return (
@@ -349,7 +345,7 @@ export default function PopulationPublicShell({
             <button
               className={`${styles.button} ${styles.secondary}`}
               type="button"
-              onClick={() => setView("access")}
+              onClick={openAccess}
             >
               <LogIn size={18} />
               {t.access}

@@ -50,6 +50,15 @@ export function configurePopulationLocationSession(
   return updated;
 }
 
+export function updateAuthenticatedPopulationLanguage(
+  session: AuthenticatedPopulationWorkflowSession,
+  preferredLanguage: PopulationPreferredLanguage,
+) {
+  const updated = { ...session, preferredLanguage };
+  writePopulationWorkflowSession(updated);
+  return updated;
+}
+
 export function savePopulationWorkflowSession(
   publicSlug: string,
   result: RegisterPopulationSubscriberResult,
@@ -94,16 +103,36 @@ export function authenticatePopulationWorkflowSession(
   accessToken: string,
   accessTokenExpiresInSeconds: number,
 ) {
-  const authenticated: AuthenticatedPopulationWorkflowSession = {
-    version: 1,
+  return saveAuthenticatedPopulationWorkflowSession({
     publicSlug: session.publicSlug,
     subscriberId: session.subscriberId,
     preferredLanguage: session.preferredLanguage,
-    state: "AUTHENTICATED",
     accessToken,
+    accessTokenExpiresInSeconds,
+  });
+}
+
+export function saveAuthenticatedPopulationWorkflowSession(data: {
+  publicSlug: string;
+  subscriberId: string;
+  preferredLanguage: PopulationPreferredLanguage;
+  accessToken: string;
+  accessTokenExpiresInSeconds: number;
+  locationConfigured?: boolean;
+  locationResolvedAt?: string | null;
+}) {
+  const authenticated: AuthenticatedPopulationWorkflowSession = {
+    version: 1,
+    publicSlug: data.publicSlug,
+    subscriberId: data.subscriberId,
+    preferredLanguage: data.preferredLanguage,
+    state: "AUTHENTICATED",
+    accessToken: data.accessToken,
     accessTokenExpiresAt: new Date(
-      Date.now() + accessTokenExpiresInSeconds * 1000,
+      Date.now() + data.accessTokenExpiresInSeconds * 1000,
     ).toISOString(),
+    locationConfigured: data.locationConfigured,
+    locationResolvedAt: data.locationResolvedAt,
   };
   writePopulationWorkflowSession(authenticated);
   return authenticated;

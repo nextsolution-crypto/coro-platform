@@ -62,6 +62,34 @@ export type ResendPopulationVerificationResult = {
   deliveryStatus: "SENT" | "FAILED";
 };
 
+export type RequestPopulationAccessResult = {
+  accepted: true;
+  message: string;
+  accessRequestToken: string;
+  expiresAt: string;
+};
+
+export type VerifyPopulationAccessResult = {
+  verified: true;
+  subscriberId: string;
+  accessToken: string;
+  accessTokenExpiresInSeconds: number;
+};
+
+export type PopulationSubscriberProfile = {
+  id: string;
+  status: "PENDING_VERIFICATION" | "ACTIVE" | "UNSUBSCRIBED";
+  preferredLanguage: PopulationPreferredLanguage;
+  channels: {
+    sms: { available: boolean; enabled: boolean; destination: string | null };
+    email: { available: boolean; enabled: boolean; destination: string | null };
+  };
+  verifiedAt: string | null;
+  unsubscribedAt: string | null;
+  locationConfigured: boolean;
+  locationResolvedAt: string | null;
+};
+
 export type PublicPopulationErrorReason =
   | "INVALID_CODE"
   | "EXPIRED_CODE"
@@ -117,6 +145,7 @@ function classifyPublicError(message: unknown): PublicPopulationErrorReason | un
   if (message.includes("nombre maximal de tentatives")) return "TOO_MANY_ATTEMPTS";
   if (message.includes("Aucune vérification active")) return "NO_ACTIVE_CODE";
   if (message.includes("déjà vérifié")) return "ALREADY_VERIFIED";
+  if (message.includes("n’est pas en attente de vérification")) return "ALREADY_VERIFIED";
   if (message.includes("attendre avant de demander")) return "RESEND_COOLDOWN";
   if (message.includes("Trop de codes de vérification")) return "TOO_MANY_CODES";
   if (message.includes("Adresse invalide")) return "INVALID_ADDRESS";
@@ -199,6 +228,49 @@ export function resendPopulationVerification(
   return publicRequest<ResendPopulationVerificationResult>(
     `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/resend-verification`,
     { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function requestPopulationAccess(
+  publicSlug: string,
+  input: { channel: "SMS" | "EMAIL"; destination: string },
+) {
+  return publicRequest<RequestPopulationAccessResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/access/request`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function verifyPopulationAccess(
+  publicSlug: string,
+  input: { accessRequestToken: string; code: string },
+) {
+  return publicRequest<VerifyPopulationAccessResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/access/verify`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function getPopulationSubscriberProfile(
+  publicSlug: string,
+  subscriberId: string,
+  accessToken: string,
+) {
+  return publicRequest<PopulationSubscriberProfile>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/profile`,
+    { method: "POST", body: JSON.stringify({ accessToken }) },
+  );
+}
+
+export function updatePopulationSubscriberLanguage(
+  publicSlug: string,
+  subscriberId: string,
+  accessToken: string,
+  preferredLanguage: PopulationPreferredLanguage,
+) {
+  return publicRequest<{ updated: boolean; preferredLanguage: PopulationPreferredLanguage }>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/preferences`,
+    { method: "POST", body: JSON.stringify({ accessToken, preferredLanguage }) },
   );
 }
 

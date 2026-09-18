@@ -38,6 +38,9 @@ const text = {
     invalid: "Le code est invalide. Vérifiez les 6 chiffres et réessayez.",
     attempts: "Ce code ne peut plus être utilisé. Demandez-en un nouveau.",
     used: "Ce code n’est plus actif. Demandez-en un nouveau.",
+    alreadyConfirmed: "Votre inscription semble déjà confirmée.",
+    accessRegistration: "Accéder à mon inscription",
+    transitionFailed: "Votre inscription a été confirmée, mais cet écran n’a pas pu être actualisé. Accédez à votre inscription pour continuer.",
     cooldown: "Veuillez attendre avant de demander un nouveau code.",
     tooMany: "Trop de codes ont été demandés. Réessayez plus tard.",
     unavailable: "Ce programme n’est plus disponible.",
@@ -69,6 +72,9 @@ const text = {
     invalid: "The code is invalid. Check all 6 digits and try again.",
     attempts: "This code can no longer be used. Request a new one.",
     used: "This code is no longer active. Request a new one.",
+    alreadyConfirmed: "Your registration appears to be already confirmed.",
+    accessRegistration: "Access my subscription",
+    transitionFailed: "Your registration was confirmed, but this screen could not be updated. Access your subscription to continue.",
     cooldown: "Please wait before requesting a new code.",
     tooMany: "Too many codes have been requested. Try again later.",
     unavailable: "This program is no longer available.",
@@ -116,6 +122,7 @@ export default function PopulationVerification({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [forcedExpired, setForcedExpired] = useState(false);
+  const [alreadyConfirmed, setAlreadyConfirmed] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(
     workflow.state === "PENDING"
       ? initialCooldown(workflow.verification.expiresAt)
@@ -217,19 +224,12 @@ export default function PopulationVerification({
     setVerifying(true);
     setError(null);
     setNotice(null);
+    let result;
     try {
-      const result = await verifyPopulationSubscriber(
+      result = await verifyPopulationSubscriber(
         workflow.publicSlug,
         workflow.subscriberId,
         { channel: workflow.verification.channel, code },
-      );
-      setCode("");
-      onWorkflowChange(
-        authenticatePopulationWorkflowSession(
-          workflow,
-          result.accessToken,
-          result.accessTokenExpiresInSeconds,
-        ),
       );
     } catch (caught: unknown) {
       const apiError = caught instanceof PublicPopulationApiError ? caught : null;
@@ -246,7 +246,8 @@ export default function PopulationVerification({
         setCode("");
         setForcedExpired(true);
       } else if (apiError?.reason === "NO_ACTIVE_CODE" || apiError?.reason === "ALREADY_VERIFIED") {
-        setError(t.used);
+        setError(apiError.reason === "ALREADY_VERIFIED" ? t.alreadyConfirmed : t.used);
+        setAlreadyConfirmed(apiError.reason === "ALREADY_VERIFIED");
         setCode("");
         setForcedExpired(true);
       } else if (apiError?.status === 404) {
@@ -255,10 +256,28 @@ export default function PopulationVerification({
         setError(t.network);
       }
       focusError();
-    } finally {
       verifyInFlight.current = false;
       setVerifying(false);
+      return;
     }
+
+    setCode("");
+    try {
+      const authenticated = authenticatePopulationWorkflowSession(
+        workflow,
+        result.accessToken,
+        result.accessTokenExpiresInSeconds,
+      );
+      onWorkflowChange(authenticated);
+    } catch {
+      clearPopulationWorkflowSession(workflow.publicSlug);
+      setAlreadyConfirmed(true);
+      setForcedExpired(true);
+      setError(t.transitionFailed);
+      focusError();
+    }
+    verifyInFlight.current = false;
+    setVerifying(false);
   };
 
   const resend = async () => {
@@ -278,10 +297,12 @@ export default function PopulationVerification({
         result.verificationExpiresAt,
         result.deliveryStatus,
       );
-      onWorkflowChange(updated);
       setCode("");
       setForcedExpired(false);
-      setCooldownUntil(Date.now() + 60 * 1000);
+      setAlreadyConfirmed(false);
+      setNow(Date.now());
+      setCooldownUntil(initialCooldown(result.verificationExpiresAt));
+      onWorkflowChange(updated);
       if (result.deliveryStatus === "SENT") setNotice(t.resent);
       else setError(t.deliveryFailed);
       window.requestAnimationFrame(() => codeRef.current?.focus());
@@ -330,13 +351,22 @@ export default function PopulationVerification({
             {verifying ? t.verifying : t.verify}<ArrowRight size={17} />
           </button>
         </form>
-        <div className={styles.resendBlock}>
-          <p>{t.noCode}</p>
-          <button className={styles.resendButton} type="button" onClick={resend} disabled={resending || cooldownLeft > 0}>
-            <RefreshCw size={16} />
-            {resending ? t.resending : cooldownLeft > 0 ? `${t.resendIn} ${formatDuration(cooldownLeft)}` : t.resend}
-          </button>
-        </div>
+        {alreadyConfirmed ? (
+          <div className={styles.resendBlock}>
+            <button className={styles.resendButton} type="button" onClick={onAccess}>
+              <ArrowRight size={16} />
+              {t.accessRegistration}
+            </button>
+          </div>
+        ) : (
+          <div className={styles.resendBlock}>
+            <p>{t.noCode}</p>
+            <button className={styles.resendButton} type="button" onClick={resend} disabled={resending || cooldownLeft > 0}>
+              <RefreshCw size={16} />
+              {resending ? t.resending : cooldownLeft > 0 ? `${t.resendIn} ${formatDuration(cooldownLeft)}` : t.resend}
+            </button>
+          </div>
+        )}
       </section>
     </main>
   );
