@@ -38,6 +38,13 @@ type PopulationStatus = {
     | 'ACTIVE'
     | 'SUSPENDED'
     | 'ARCHIVED';
+  deliveryMode: 'SANDBOX' | 'LIVE';
+  governanceMode: 'STANDARD' | 'DUAL_CONTROL';
+  populationPermissions: Array<
+    | 'POPULATION_PREPARE'
+    | 'POPULATION_APPROVE'
+    | 'POPULATION_SEND'
+  >;
 };
 
 type PopulationProgram = {
@@ -63,6 +70,8 @@ type PopulationProgram = {
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  deliveryMode: 'SANDBOX' | 'LIVE';
+  governanceMode: 'STANDARD' | 'DUAL_CONTROL';
 };
 
 type PopulationConfiguration = {
@@ -172,6 +181,7 @@ type CreatedPopulationAlert = {
   approvedByType?: string | null;
   approvedById?: string | null;
   recipientsFrozenAt?: string | null;
+  deliveryModeSnapshot?: 'SANDBOX' | 'LIVE' | null;
   sendingAt?: string | null;
   activatedAt?: string | null;
   endedAt?: string | null;
@@ -188,6 +198,7 @@ type FrozenPopulationDelivery = {
   sentAt: string | null;
   deliveredAt: string | null;
   failedAt: string | null;
+  suppressionReason?: 'SYNTHETIC_RECIPIENT' | 'SANDBOX_MODE' | null;
 };
 
 type PopulationIncident = {
@@ -209,7 +220,8 @@ type PopulationIncidentAlertDelivery = {
     | 'SENT'
     | 'DELIVERED'
     | 'FAILED'
-    | 'CANCELLED';
+    | 'CANCELLED'
+    | 'SUPPRESSED';
   language: string;
   queuedAt: string | null;
   sentAt: string | null;
@@ -244,11 +256,16 @@ type PopulationFreezeResult = {
   status: string;
   approvedAt: string | null;
   recipientsFrozenAt: string;
+  deliveryMode: 'SANDBOX' | 'LIVE';
   targeting: {
     subscriberCount: number;
     deliveryCount: number;
     smsDeliveryCount: number;
     emailDeliveryCount: number;
+    deliverableCount: number;
+    deliverableSmsCount: number;
+    deliverableEmailCount: number;
+    suppressedCount: number;
   };
   deliveries: FrozenPopulationDelivery[];
 };
@@ -2869,6 +2886,9 @@ export default function PopulationPage() {
                 freezeConfirmationOpen={freezeConfirmationOpen}
                 freezeResult={freezeResult}
                 sendConfirmationOpen={sendConfirmationOpen}
+                deliveryMode={freezeResult?.deliveryMode ?? status.deliveryMode}
+                permissions={status.populationPermissions}
+                scenarioName={selectedScenario?.nameFR ?? 'Scénario non précisé'}
                 onChange={updateAlertField}
                 onSave={savePopulationAlertDraft}
                 onReady={markPopulationAlertReady}
@@ -4848,6 +4868,9 @@ function AlertDraftWorkspace({
   freezeConfirmationOpen,
   freezeResult,
   sendConfirmationOpen,
+  deliveryMode,
+  permissions,
+  scenarioName,
   onChange,
   onSave,
   onReady,
@@ -4866,6 +4889,9 @@ function AlertDraftWorkspace({
   freezeConfirmationOpen: boolean;
   freezeResult: PopulationFreezeResult | null;
   sendConfirmationOpen: boolean;
+  deliveryMode: 'SANDBOX' | 'LIVE';
+  permissions: PopulationStatus['populationPermissions'];
+  scenarioName: string;
   onChange: <K extends keyof PopulationAlertDraftForm>(
     field: K,
     value: PopulationAlertDraftForm[K],
@@ -4887,6 +4913,9 @@ function AlertDraftWorkspace({
   const recipientsFrozen = Boolean(
     alert.recipientsFrozenAt || freezeResult?.recipientsFrozenAt,
   );
+  const canPrepare = permissions.includes('POPULATION_PREPARE');
+  const canApprove = permissions.includes('POPULATION_APPROVE');
+  const canSend = permissions.includes('POPULATION_SEND');
 
   const diffusionStarted =
     alert.status === 'SENDING' ||
@@ -4895,6 +4924,25 @@ function AlertDraftWorkspace({
 
   return (
     <div>
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 14,
+          border: '1px solid #CBD5E1',
+          borderRadius: 8,
+          backgroundColor: deliveryMode === 'LIVE' ? '#FFF4F2' : '#F4F8FB',
+          color: '#2C3E50',
+          fontSize: 11,
+          lineHeight: 1.5,
+        }}
+      >
+        <strong>MODE {deliveryMode}</strong>
+        <div>
+          {deliveryMode === 'LIVE'
+            ? 'Diffusion réelle — les communications admissibles seront transmises aux destinataires.'
+            : 'Simulation — aucune communication externe ne sera transmise.'}
+        </div>
+      </div>
       <StepTitle
         eyebrow="06 · Contrôle"
         title={
@@ -5020,7 +5068,7 @@ function AlertDraftWorkspace({
           >
             <WorkflowButton
               title="Enregistrer les modifications"
-              disabled={loading}
+              disabled={loading || !canPrepare}
               onClick={onSave}
             />
 
@@ -5028,6 +5076,7 @@ function AlertDraftWorkspace({
               title="Passer à READY"
               disabled={
                 loading ||
+                !canPrepare ||
                 !form.titleFR.trim() ||
                 !form.messageFR.trim()
               }
@@ -5184,7 +5233,7 @@ function AlertDraftWorkspace({
                   ? 'Approbation...'
                   : 'Approuver l’alerte'
               }
-              disabled={loading}
+              disabled={loading || !canApprove}
               onClick={onApprove}
               danger
             />
@@ -5267,7 +5316,7 @@ function AlertDraftWorkspace({
             >
               <WorkflowButton
                 title="Préparer le roster de diffusion"
-                disabled={loading}
+                disabled={loading || !canSend}
                 onClick={onRequestFreeze}
                 primary
               />
@@ -5317,7 +5366,7 @@ function AlertDraftWorkspace({
               >
                 <WorkflowButton
                   title="Annuler"
-                  disabled={loading}
+                  disabled={loading || !canSend}
                   onClick={onCancelFreeze}
                 />
 
@@ -5450,18 +5499,23 @@ function AlertDraftWorkspace({
               />
 
               <FrozenMetric
-                label="Communications"
-                value={freezeResult.targeting.deliveryCount}
+                label="Délivrables"
+                value={freezeResult.targeting.deliverableCount}
               />
 
               <FrozenMetric
                 label="SMS"
-                value={freezeResult.targeting.smsDeliveryCount}
+                value={freezeResult.targeting.deliverableSmsCount}
               />
 
               <FrozenMetric
                 label="Courriels"
-                value={freezeResult.targeting.emailDeliveryCount}
+                value={freezeResult.targeting.deliverableEmailCount}
+              />
+
+              <FrozenMetric
+                label="Supprimés / démo"
+                value={freezeResult.targeting.suppressedCount}
               />
             </div>
 
@@ -5484,6 +5538,17 @@ function AlertDraftWorkspace({
               >
                 {alert.titleFR}
               </strong>
+
+              <p
+                style={{
+                  margin: '0 0 8px',
+                  color: '#6C757D',
+                  fontSize: 9,
+                }}
+              >
+                Scénario : {scenarioName} · Type : {alert.type} · Mode :{' '}
+                {deliveryMode}
+              </p>
 
               <p
                 style={{
@@ -5525,8 +5590,12 @@ function AlertDraftWorkspace({
                 }}
               >
                 <WorkflowButton
-                  title="Passer à la diffusion"
-                  disabled={loading}
+                  title={
+                    deliveryMode === 'LIVE'
+                      ? 'Préparer la diffusion'
+                      : 'Préparer la simulation'
+                  }
+                  disabled={loading || !canSend}
                   onClick={onRequestSend}
                   danger
                 />
@@ -5549,7 +5618,9 @@ function AlertDraftWorkspace({
                     fontSize: 11,
                   }}
                 >
-                  Confirmer la diffusion ?
+                  {deliveryMode === 'LIVE'
+                    ? 'Confirmer la diffusion LIVE ?'
+                    : 'Confirmer la simulation ?'}
                 </strong>
 
                 <p
@@ -5574,36 +5645,50 @@ function AlertDraftWorkspace({
                   </strong>.
                   <br />
                   <br />
-                  Cette action enverra réellement{' '}
+                  {deliveryMode === 'LIVE'
+                    ? 'Cette action transmettra réellement '
+                    : 'Cette simulation traitera '}
                   <strong>
-                    {freezeResult.targeting.deliveryCount.toLocaleString(
+                    {freezeResult.targeting.deliverableCount.toLocaleString(
                       'fr-CA',
                     )}
                   </strong>{' '}
                   communication
-                  {freezeResult.targeting.deliveryCount > 1 ? 's' : ''} aux
+                  {freezeResult.targeting.deliverableCount > 1 ? 's' : ''} aux
                   destinataires du roster figé, dont{' '}
                   <strong>
-                    {freezeResult.targeting.smsDeliveryCount.toLocaleString(
+                    {freezeResult.targeting.deliverableSmsCount.toLocaleString(
                       'fr-CA',
                     )}{' '}
                     SMS
                   </strong>{' '}
                   et{' '}
                   <strong>
-                    {freezeResult.targeting.emailDeliveryCount.toLocaleString(
+                    {freezeResult.targeting.deliverableEmailCount.toLocaleString(
                       'fr-CA',
                     )}{' '}
                     courriel
-                    {freezeResult.targeting.emailDeliveryCount > 1
+                    {freezeResult.targeting.deliverableEmailCount > 1
                       ? 's'
                       : ''}
                   </strong>.
                   <br />
                   <br />
-                  Cette confirmation déclenche la diffusion. Elle ne pourra
-                  pas être annulée pour les communications déjà transmises
-                  au fournisseur.
+                  <strong>
+                    {freezeResult.targeting.suppressedCount.toLocaleString(
+                      'fr-CA',
+                    )}
+                  </strong>{' '}
+                  communication(s) supprimée(s) ne seront jamais transmises.
+                  {deliveryMode === 'LIVE' && (
+                    <>
+                      <br />
+                      <br />
+                      Cette confirmation déclenche la diffusion réelle. Elle
+                      ne pourra pas être annulée pour les communications déjà
+                      transmises au fournisseur.
+                    </>
+                  )}
                 </p>
 
                 <div
@@ -5624,9 +5709,11 @@ function AlertDraftWorkspace({
                     title={
                       loading
                         ? 'Diffusion...'
-                        : 'Confirmer et diffuser'
+                        : deliveryMode === 'LIVE'
+                          ? 'DIFFUSER L’ALERTE'
+                          : 'SIMULER LA DIFFUSION'
                     }
-                    disabled={loading}
+                    disabled={loading || !canSend}
                     onClick={onConfirmSend}
                     danger
                   />
@@ -5692,6 +5779,7 @@ function PopulationDiffusionResult({
   const isActive = alert.status === 'ACTIVE';
   const isSending = alert.status === 'SENDING';
   const isFailed = alert.status === 'FAILED';
+  const isSandbox = alert.deliveryModeSnapshot === 'SANDBOX';
 
   return (
     <div
@@ -5744,7 +5832,9 @@ function PopulationDiffusionResult({
             }}
           >
             {isActive
-              ? 'Diffusion déclenchée'
+              ? isSandbox
+                ? 'Simulation terminée'
+                : 'Diffusion déclenchée'
               : isSending
                 ? 'Diffusion en cours'
                 : 'Diffusion en échec'}
@@ -5759,13 +5849,15 @@ function PopulationDiffusionResult({
             }}
           >
             {isActive
-              ? 'Au moins une communication a été acceptée par le fournisseur ou confirmée livrée.'
+              ? isSandbox
+                ? 'Simulation terminée — aucune communication externe n’a été transmise.'
+                : 'Au moins une communication a été acceptée par le fournisseur ou confirmée livrée.'
               : isSending
                 ? 'CORO traite actuellement les communications du roster figé.'
                 : 'Aucune communication n’a été acceptée ou confirmée livrée et aucun traitement n’est encore en attente.'}
           </p>
 
-          {isActive && (
+          {isActive && !isSandbox && (
             <div
               style={{
                 marginTop: 10,

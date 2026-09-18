@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PopulationAlertType } from '@prisma/client';
+import { PopulationAlertType, PopulationPermission } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
@@ -27,6 +27,29 @@ export class ClientPortalService {
     private notificationsService: NotificationsService,
     private populationService: PopulationService,
   ) {}
+
+  private async assertPopulationPermission(
+    actor: { sub?: string; organizationId: string },
+    permission: PopulationPermission,
+  ) {
+    if (!actor.sub) {
+      throw new ForbiddenException('Identite utilisateur requise');
+    }
+
+    const authorized = await this.prisma.clientUser.findFirst({
+      where: {
+        id: actor.sub,
+        organizationId: actor.organizationId,
+        isActive: true,
+        populationPermissions: { has: permission },
+      },
+      select: { id: true },
+    });
+
+    if (!authorized) {
+      throw new ForbiddenException('Permission Population requise');
+    }
+  }
 
     /**
    * Vérifie qu'un utilisateur du portail client peut accéder à un bâtiment.
@@ -89,6 +112,7 @@ export class ClientPortalService {
   async getPopulationStatus(
     buildingId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -105,6 +129,8 @@ export class ClientPortalService {
         populationProgram: {
           select: {
             status: true,
+            deliveryMode: true,
+            governanceMode: true,
           },
         },
       },
@@ -116,6 +142,9 @@ export class ClientPortalService {
         rueStatus: 'NOT_ASSESSED' as const,
         populationEnabled: false,
         programStatus: 'NOT_CONFIGURED' as const,
+        deliveryMode: 'SANDBOX' as const,
+        governanceMode: 'STANDARD' as const,
+        populationPermissions: [],
       };
     }
 
@@ -127,6 +156,14 @@ export class ClientPortalService {
       populationEnabled: profile.populationEnabled,
       programStatus:
         profile.populationProgram?.status ?? ('NOT_CONFIGURED' as const),
+      deliveryMode: profile.populationProgram?.deliveryMode ?? ('SANDBOX' as const),
+      governanceMode: profile.populationProgram?.governanceMode ?? ('STANDARD' as const),
+      populationPermissions: actor.sub
+        ? (await this.prisma.clientUser.findUnique({
+            where: { id: actor.sub },
+            select: { populationPermissions: true },
+          }))?.populationPermissions ?? []
+        : [],
     };
   }
 
@@ -277,6 +314,7 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     if (!actor.sub) {
       throw new ForbiddenException(
@@ -335,6 +373,7 @@ export class ClientPortalService {
     alertId: string,
     dto: UpdatePopulationAlertDraftDto,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -342,6 +381,7 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     return this.populationService.updateAlertDraft(
       buildingId,
@@ -354,6 +394,7 @@ export class ClientPortalService {
     buildingId: string,
     alertId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -361,6 +402,7 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     return this.populationService.refreshAlertDraftTargeting(
       buildingId,
@@ -372,6 +414,7 @@ export class ClientPortalService {
     buildingId: string,
     alertId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -379,10 +422,12 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     return this.populationService.markAlertDraftReady(
       buildingId,
       alertId,
+      { type: 'CLIENT_USER', id: actor.sub! },
     );
   }
 
@@ -398,6 +443,7 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_APPROVE);
 
     if (!actor.sub) {
       throw new ForbiddenException(
@@ -419,6 +465,7 @@ export class ClientPortalService {
     buildingId: string,
     alertId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -426,10 +473,12 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_SEND);
 
     return this.populationService.freezeAlertRecipients(
       buildingId,
       alertId,
+      { type: 'CLIENT_USER', id: actor.sub! },
     );
   }
 
@@ -447,6 +496,7 @@ export class ClientPortalService {
     buildingId: string,
     alertId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -454,10 +504,12 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_SEND);
 
     return this.populationService.sendAlert(
       buildingId,
       alertId,
+      { type: 'CLIENT_USER', id: actor.sub! },
     );
   }
 
@@ -481,6 +533,7 @@ export class ClientPortalService {
       buildingId,
       actor,
     );
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     if (!actor.sub) {
       throw new ForbiddenException(
@@ -527,6 +580,7 @@ export class ClientPortalService {
       buildingId,
       actor,
     );
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     if (!actor.sub) {
       throw new ForbiddenException(
@@ -585,6 +639,7 @@ export class ClientPortalService {
     buildingId: string,
     alertId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -595,10 +650,12 @@ export class ClientPortalService {
       buildingId,
       actor,
     );
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     return this.populationService.endAlert(
       buildingId,
       alertId,
+      { type: 'CLIENT_USER', id: actor.sub! },
     );
   }
 
@@ -610,6 +667,7 @@ export class ClientPortalService {
     buildingId: string,
     alertId: string,
     actor: {
+      sub?: string;
       clientId: string;
       organizationId: string;
       role: string;
@@ -620,10 +678,12 @@ export class ClientPortalService {
       buildingId,
       actor,
     );
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     return this.populationService.cancelAlert(
       buildingId,
       alertId,
+      { type: 'CLIENT_USER', id: actor.sub! },
     );
   }
 

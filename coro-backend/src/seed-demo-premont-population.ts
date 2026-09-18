@@ -138,6 +138,7 @@ async function seed() {
       const data = {
         programId: program.id,
         status: PopulationSubscriberStatus.ACTIVE,
+        isSynthetic: true,
         preferredLanguage: PopulationPreferredLanguage.FR,
         firstName: demo.firstName,
         lastName: demo.lastName,

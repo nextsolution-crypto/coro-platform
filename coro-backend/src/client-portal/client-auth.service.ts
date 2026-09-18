@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -18,22 +23,32 @@ export class ClientAuthService {
       include: { client: true, organization: true },
     });
     if (!clientUser || !clientUser.isActive) {
-      this.logger.warn(`[CLIENT-AUTH] Tentative de connexion échouée — courriel inconnu ou inactif : ${email}`);
+      this.logger.warn(
+        `[CLIENT-AUTH] Tentative de connexion échouée — courriel inconnu ou inactif : ${email}`,
+      );
       throw new UnauthorizedException('Email ou mot de passe invalide.');
     }
     const valid = await bcrypt.compare(password, clientUser.password);
     if (!valid) {
-      this.logger.warn(`[CLIENT-AUTH] Tentative de connexion échouée — mot de passe incorrect : ${email}`);
+      this.logger.warn(
+        `[CLIENT-AUTH] Tentative de connexion échouée — mot de passe incorrect : ${email}`,
+      );
       throw new UnauthorizedException('Email ou mot de passe invalide.');
     }
 
     // Vérifier si un token de confiance valide existe (skip MFA 90 jours)
     if (trustedToken) {
       const trusted = await this.prisma.clientTrustedDevice.findFirst({
-        where: { token: trustedToken, userId: clientUser.id, expiresAt: { gt: new Date() } },
+        where: {
+          token: trustedToken,
+          userId: clientUser.id,
+          expiresAt: { gt: new Date() },
+        },
       });
       if (trusted) {
-        this.logger.log(`[CLIENT-AUTH] Token de confiance valide — skip MFA : ${email}`);
+        this.logger.log(
+          `[CLIENT-AUTH] Token de confiance valide — skip MFA : ${email}`,
+        );
         const token = this.jwt.sign({
           sub: clientUser.id,
           email: clientUser.email,
@@ -41,6 +56,7 @@ export class ClientAuthService {
           clientId: clientUser.clientId,
           organizationId: clientUser.organizationId,
           buildingIds: clientUser.buildingIds,
+          populationPermissions: clientUser.populationPermissions,
           type: 'CLIENT',
         });
         return {
@@ -54,12 +70,15 @@ export class ClientAuthService {
             clientId: clientUser.clientId,
             clientName: clientUser.client.name,
             organizationId: clientUser.organizationId,
+            populationPermissions: clientUser.populationPermissions,
           },
         };
       }
     }
 
-    this.logger.log(`[CLIENT-AUTH] Identifiants valides — envoi code MFA : ${email}`);
+    this.logger.log(
+      `[CLIENT-AUTH] Identifiants valides — envoi code MFA : ${email}`,
+    );
 
     // Générer code MFA 6 chiffres
     const mfaCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -72,10 +91,18 @@ export class ClientAuthService {
 
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY || '',
+      },
       body: JSON.stringify({
         sender: { name: 'CORO', email: 'info@getcoro.io' },
-        to: [{ email: clientUser.email, name: `${clientUser.firstName} ${clientUser.lastName}` }],
+        to: [
+          {
+            email: clientUser.email,
+            name: `${clientUser.firstName} ${clientUser.lastName}`,
+          },
+        ],
         subject: `${mfaCode} — Votre code de connexion CORO`,
         htmlContent: `
           <div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;">
@@ -106,9 +133,14 @@ export class ClientAuthService {
     if (!clientUser) throw new UnauthorizedException('Identifiants invalides.');
 
     const userData = clientUser as any;
-    if (!userData.mfaCode || !userData.mfaCodeExpiry) throw new UnauthorizedException('Aucun code MFA en attente.');
-    if (new Date() > userData.mfaCodeExpiry) throw new UnauthorizedException('Code MFA expiré. Veuillez vous reconnecter.');
-    if (userData.mfaCode !== code) throw new UnauthorizedException('Code MFA invalide.');
+    if (!userData.mfaCode || !userData.mfaCodeExpiry)
+      throw new UnauthorizedException('Aucun code MFA en attente.');
+    if (new Date() > userData.mfaCodeExpiry)
+      throw new UnauthorizedException(
+        'Code MFA expiré. Veuillez vous reconnecter.',
+      );
+    if (userData.mfaCode !== code)
+      throw new UnauthorizedException('Code MFA invalide.');
 
     await this.prisma.clientUser.update({
       where: { id: clientUser.id },
@@ -132,6 +164,7 @@ export class ClientAuthService {
       clientId: clientUser.clientId,
       organizationId: clientUser.organizationId,
       buildingIds: clientUser.buildingIds,
+      populationPermissions: clientUser.populationPermissions,
       type: 'CLIENT',
     });
 
@@ -147,6 +180,7 @@ export class ClientAuthService {
         clientId: clientUser.clientId,
         clientName: clientUser.client?.name,
         organizationId: clientUser.organizationId,
+        populationPermissions: clientUser.populationPermissions,
       },
     };
   }
@@ -160,7 +194,8 @@ export class ClientAuthService {
     organizationId: string;
     temporaryPassword?: string;
   }) {
-    const password = data.temporaryPassword || Math.random().toString(36).slice(-10) + 'A1!';
+    const password =
+      data.temporaryPassword || Math.random().toString(36).slice(-10) + 'A1!';
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const existing = await this.prisma.clientUser.findUnique({
@@ -187,11 +222,26 @@ export class ClientAuthService {
   }
 
   private validatePasswordStrength(password: string): void {
-    if (password.length < 8) throw new BadRequestException('Le mot de passe doit contenir au moins 8 caractères.');
-    if (!/[A-Z]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins une majuscule.');
-    if (!/[a-z]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins une minuscule.');
-    if (!/[0-9]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins un chiffre.');
-    if (!/[^A-Za-z0-9]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins un caractère spécial.');
+    if (password.length < 8)
+      throw new BadRequestException(
+        'Le mot de passe doit contenir au moins 8 caractères.',
+      );
+    if (!/[A-Z]/.test(password))
+      throw new BadRequestException(
+        'Le mot de passe doit contenir au moins une majuscule.',
+      );
+    if (!/[a-z]/.test(password))
+      throw new BadRequestException(
+        'Le mot de passe doit contenir au moins une minuscule.',
+      );
+    if (!/[0-9]/.test(password))
+      throw new BadRequestException(
+        'Le mot de passe doit contenir au moins un chiffre.',
+      );
+    if (!/[^A-Za-z0-9]/.test(password))
+      throw new BadRequestException(
+        'Le mot de passe doit contenir au moins un caractère spécial.',
+      );
   }
 
   async changePassword(clientUserId: string, newPassword: string) {
@@ -203,7 +253,7 @@ export class ClientAuthService {
     });
   }
 
-    async generateMagicLink(clientUserId: string): Promise<string> {
+  async generateMagicLink(clientUserId: string): Promise<string> {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72h
 
@@ -226,7 +276,8 @@ export class ClientAuthService {
 
     if (!magicLink) throw new UnauthorizedException('Lien invalide.');
     if (magicLink.usedAt) throw new UnauthorizedException('Lien déjà utilisé.');
-    if (magicLink.expiresAt < new Date()) throw new UnauthorizedException('Lien expiré.');
+    if (magicLink.expiresAt < new Date())
+      throw new UnauthorizedException('Lien expiré.');
 
     // Marquer comme utilisé
     await this.prisma.magicLink.update({
@@ -243,6 +294,7 @@ export class ClientAuthService {
       clientId: clientUser.clientId,
       organizationId: clientUser.organizationId,
       buildingIds: clientUser.buildingIds,
+      populationPermissions: clientUser.populationPermissions,
       type: 'CLIENT',
     });
 
@@ -257,6 +309,7 @@ export class ClientAuthService {
         clientId: clientUser.clientId,
         clientName: clientUser.client?.name,
         organizationId: clientUser.organizationId,
+        populationPermissions: clientUser.populationPermissions,
       },
     };
   }

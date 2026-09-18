@@ -1,7 +1,4 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 /**
  * ClientPortalService dépend d'ExportService, lequel charge Puppeteer.
@@ -19,6 +16,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
   let service: InstanceType<typeof ClientPortalService>;
 
   const prisma = {
+    clientUser: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+    },
     building: {
       findFirst: jest.fn(),
     },
@@ -27,7 +28,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
     },
   };
 
-    const populationService = {
+  const populationService = {
     getProgramConfiguration: jest.fn(),
     configureProgram: jest.fn(),
     markReady: jest.fn(),
@@ -53,6 +54,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prisma.clientUser.findFirst.mockResolvedValue({ id: 'client-user-1' });
+    prisma.clientUser.findUnique.mockResolvedValue({
+      populationPermissions: [],
+    });
 
     service = new ClientPortalService(
       prisma as any,
@@ -167,6 +172,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
         rueStatus: 'NOT_ASSESSED',
         populationEnabled: false,
         programStatus: 'NOT_CONFIGURED',
+        deliveryMode: 'SANDBOX',
+        governanceMode: 'STANDARD',
+        populationPermissions: [],
       });
     });
 
@@ -184,6 +192,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
         rueStatus: 'CONFIRMED_SUBJECT',
         populationEnabled: false,
         programStatus: 'NOT_CONFIGURED',
+        deliveryMode: 'SANDBOX',
+        governanceMode: 'STANDARD',
+        populationPermissions: [],
       });
     });
 
@@ -203,6 +214,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
         rueStatus: 'CONFIRMED_SUBJECT',
         populationEnabled: true,
         programStatus: 'ACTIVE',
+        deliveryMode: 'SANDBOX',
+        governanceMode: 'STANDARD',
+        populationPermissions: [],
       });
     });
 
@@ -247,13 +261,13 @@ describe('ClientPortalService - Sentinelle Population', () => {
         program: null,
       });
 
-      expect(
-        populationService.getProgramConfiguration,
-      ).toHaveBeenCalledTimes(1);
+      expect(populationService.getProgramConfiguration).toHaveBeenCalledTimes(
+        1,
+      );
 
-      expect(
-        populationService.getProgramConfiguration,
-      ).toHaveBeenCalledWith('building-1');
+      expect(populationService.getProgramConfiguration).toHaveBeenCalledWith(
+        'building-1',
+      );
     });
 
     it('ne délègue jamais au PopulationService lorsque l’accès bâtiment est refusé', async () => {
@@ -263,12 +277,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
         service.getPopulationConfiguration('building-1', actor),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationService.getProgramConfiguration,
-      ).not.toHaveBeenCalled();
+      expect(populationService.getProgramConfiguration).not.toHaveBeenCalled();
     });
   });
-    describe('Population command delegation', () => {
+  describe('Population command delegation', () => {
     const actor = {
       clientId: 'client-1',
       organizationId: 'org-1',
@@ -416,9 +428,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         }
 
         expect(
-          populationService[
-            populationMethod as keyof typeof populationService
-          ],
+          populationService[populationMethod as keyof typeof populationService],
         ).not.toHaveBeenCalled();
       },
     );
@@ -457,16 +467,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
         zones: [],
       };
 
-      populationService.getScenarioPopulationPreview.mockResolvedValue(
-        preview,
-      );
+      populationService.getScenarioPopulationPreview.mockResolvedValue(preview);
 
       await expect(
-        service.getPopulationScenarioPreview(
-          'building-1',
-          'scenario-1',
-          actor,
-        ),
+        service.getPopulationScenarioPreview('building-1', 'scenario-1', actor),
       ).resolves.toEqual(preview);
 
       expect(prisma.building.findFirst).toHaveBeenCalledWith({
@@ -486,10 +490,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
 
       expect(
         populationService.getScenarioPopulationPreview,
-      ).toHaveBeenCalledWith(
-        'building-1',
-        'scenario-1',
-      );
+      ).toHaveBeenCalledWith('building-1', 'scenario-1');
     });
 
     it('ne délègue jamais le preview lorsque le bâtiment est hors périmètre', async () => {
@@ -515,11 +516,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
       });
 
       await expect(
-        service.getPopulationScenarioPreview(
-          'building-2',
-          'scenario-1',
-          actor,
-        ),
+        service.getPopulationScenarioPreview('building-2', 'scenario-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       expect(
@@ -556,10 +553,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
 
     it('valide le périmètre du bâtiment avant de déléguer la lecture des scénarios', async () => {
       await expect(
-        service.getPopulationScenarios(
-          'building-1',
-          actor,
-        ),
+        service.getPopulationScenarios('building-1', actor),
       ).resolves.toEqual({
         scenarios: [
           {
@@ -570,9 +564,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         ],
       });
 
-      expect(
-        prisma.building.findFirst,
-      ).toHaveBeenCalledWith({
+      expect(prisma.building.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'building-1',
           organizationId: 'org-1',
@@ -583,24 +575,19 @@ describe('ClientPortalService - Sentinelle Population', () => {
         },
       });
 
-      expect(
-        populationService.getAvailableScenarios,
-      ).toHaveBeenCalledWith('building-1');
+      expect(populationService.getAvailableScenarios).toHaveBeenCalledWith(
+        'building-1',
+      );
     });
 
     it('ne délègue jamais lorsque le bâtiment est introuvable', async () => {
       prisma.building.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.getPopulationScenarios(
-          'building-1',
-          actor,
-        ),
+        service.getPopulationScenarios('building-1', actor),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationService.getAvailableScenarios,
-      ).not.toHaveBeenCalled();
+      expect(populationService.getAvailableScenarios).not.toHaveBeenCalled();
     });
 
     it('respecte les restrictions buildingIds du CLIENT_MANAGER', async () => {
@@ -610,15 +597,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       });
 
       await expect(
-        service.getPopulationScenarios(
-          'building-2',
-          actor,
-        ),
+        service.getPopulationScenarios('building-2', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.getAvailableScenarios,
-      ).not.toHaveBeenCalled();
+      expect(populationService.getAvailableScenarios).not.toHaveBeenCalled();
     });
   });
 
@@ -656,19 +638,13 @@ describe('ClientPortalService - Sentinelle Population', () => {
 
     it('délègue la création après validation du bâtiment et impose l’identité issue du JWT', async () => {
       await expect(
-        service.createPopulationAlertDraft(
-          'building-1',
-          dto,
-          actor,
-        ),
+        service.createPopulationAlertDraft('building-1', dto, actor),
       ).resolves.toEqual({
         id: 'alert-1',
         status: 'DRAFT',
       });
 
-      expect(
-        prisma.building.findFirst,
-      ).toHaveBeenCalledWith({
+      expect(prisma.building.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'building-1',
           organizationId: 'org-1',
@@ -679,9 +655,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         },
       });
 
-      expect(
-        populationService.createAlertDraft,
-      ).toHaveBeenCalledWith(
+      expect(populationService.createAlertDraft).toHaveBeenCalledWith(
         'building-1',
         dto,
         {
@@ -695,16 +669,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       prisma.building.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.createPopulationAlertDraft(
-          'building-forbidden',
-          dto,
-          actor,
-        ),
+        service.createPopulationAlertDraft('building-forbidden', dto, actor),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationService.createAlertDraft,
-      ).not.toHaveBeenCalled();
+      expect(populationService.createAlertDraft).not.toHaveBeenCalled();
     });
 
     it('respecte buildingIds avant toute création de brouillon', async () => {
@@ -714,16 +682,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       });
 
       await expect(
-        service.createPopulationAlertDraft(
-          'building-2',
-          dto,
-          actor,
-        ),
+        service.createPopulationAlertDraft('building-2', dto, actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.createAlertDraft,
-      ).not.toHaveBeenCalled();
+      expect(populationService.createAlertDraft).not.toHaveBeenCalled();
     });
 
     it('refuse la création si le JWT client ne contient pas d’identité utilisateur', async () => {
@@ -735,16 +697,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       };
 
       await expect(
-        service.createPopulationAlertDraft(
-          'building-1',
-          dto,
-          actorWithoutSub,
-        ),
+        service.createPopulationAlertDraft('building-1', dto, actorWithoutSub),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.createAlertDraft,
-      ).not.toHaveBeenCalled();
+      expect(populationService.createAlertDraft).not.toHaveBeenCalled();
     });
   });
 
@@ -770,15 +726,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
         status: 'DRAFT',
       });
 
-      await service.getPopulationAlert(
-        'building-1',
-        'alert-1',
-        actor,
-      );
+      await service.getPopulationAlert('building-1', 'alert-1', actor);
 
-      expect(
-        populationService.getAlert,
-      ).toHaveBeenCalledWith(
+      expect(populationService.getAlert).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
       );
@@ -796,9 +746,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         actor,
       );
 
-      expect(
-        populationService.updateAlertDraft,
-      ).toHaveBeenCalledWith(
+      expect(populationService.updateAlertDraft).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
         dto,
@@ -812,26 +760,19 @@ describe('ClientPortalService - Sentinelle Population', () => {
         actor,
       );
 
-      expect(
-        populationService.refreshAlertDraftTargeting,
-      ).toHaveBeenCalledWith(
+      expect(populationService.refreshAlertDraftTargeting).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
       );
     });
 
     it('délègue le passage à READY après validation du bâtiment', async () => {
-      await service.markPopulationAlertReady(
-        'building-1',
-        'alert-1',
-        actor,
-      );
+      await service.markPopulationAlertReady('building-1', 'alert-1', actor);
 
-      expect(
-        populationService.markAlertDraftReady,
-      ).toHaveBeenCalledWith(
+      expect(populationService.markAlertDraftReady).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
       );
     });
 
@@ -839,11 +780,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
       prisma.building.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.getPopulationAlert(
-          'building-forbidden',
-          'alert-1',
-          actor,
-        ),
+        service.getPopulationAlert('building-forbidden', 'alert-1', actor),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       await expect(
@@ -873,21 +810,15 @@ describe('ClientPortalService - Sentinelle Population', () => {
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationService.getAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.getAlert).not.toHaveBeenCalled();
 
-      expect(
-        populationService.updateAlertDraft,
-      ).not.toHaveBeenCalled();
+      expect(populationService.updateAlertDraft).not.toHaveBeenCalled();
 
       expect(
         populationService.refreshAlertDraftTargeting,
       ).not.toHaveBeenCalled();
 
-      expect(
-        populationService.markAlertDraftReady,
-      ).not.toHaveBeenCalled();
+      expect(populationService.markAlertDraftReady).not.toHaveBeenCalled();
     });
   });
 
@@ -915,15 +846,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
     });
 
     it('délègue l’approbation avec l’identité issue du JWT', async () => {
-      await service.approvePopulationAlert(
-        'building-1',
-        'alert-1',
-        actor,
-      );
+      await service.approvePopulationAlert('building-1', 'alert-1', actor);
 
-      expect(
-        populationService.approveAlert,
-      ).toHaveBeenCalledWith(
+      expect(populationService.approveAlert).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
         {
@@ -937,16 +862,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       prisma.building.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.approvePopulationAlert(
-          'building-forbidden',
-          'alert-1',
-          actor,
-        ),
+        service.approvePopulationAlert('building-forbidden', 'alert-1', actor),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationService.approveAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.approveAlert).not.toHaveBeenCalled();
     });
 
     it('respecte buildingIds avant toute approbation', async () => {
@@ -956,16 +875,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       });
 
       await expect(
-        service.approvePopulationAlert(
-          'building-2',
-          'alert-1',
-          actor,
-        ),
+        service.approvePopulationAlert('building-2', 'alert-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.approveAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.approveAlert).not.toHaveBeenCalled();
     });
 
     it('refuse l’approbation lorsque le JWT ne contient pas l’identité utilisateur', async () => {
@@ -984,9 +897,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         ),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.approveAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.approveAlert).not.toHaveBeenCalled();
     });
   });
 
@@ -1025,11 +936,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
         actor,
       );
 
-      expect(
-        populationService.freezeAlertRecipients,
-      ).toHaveBeenCalledWith(
+      expect(populationService.freezeAlertRecipients).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
       );
     });
 
@@ -1044,9 +954,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationService.freezeAlertRecipients,
-      ).not.toHaveBeenCalled();
+      expect(populationService.freezeAlertRecipients).not.toHaveBeenCalled();
     });
 
     it('respecte la restriction buildingIds du CLIENT_MANAGER', async () => {
@@ -1056,19 +964,13 @@ describe('ClientPortalService - Sentinelle Population', () => {
       });
 
       await expect(
-        service.freezePopulationAlertRecipients(
-          'building-2',
-          'alert-1',
-          actor,
-        ),
+        service.freezePopulationAlertRecipients('building-2', 'alert-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.freezeAlertRecipients,
-      ).not.toHaveBeenCalled();
+      expect(populationService.freezeAlertRecipients).not.toHaveBeenCalled();
     });
   });
-    describe('sendPopulationAlert', () => {
+  describe('sendPopulationAlert', () => {
     const actor = {
       sub: 'client-user-1',
       clientId: 'client-1',
@@ -1096,16 +998,12 @@ describe('ClientPortalService - Sentinelle Population', () => {
         actor,
       );
 
-      expect(assertBuildingAccessSpy).toHaveBeenCalledWith(
-        'building-1',
-        actor,
-      );
+      expect(assertBuildingAccessSpy).toHaveBeenCalledWith('building-1', actor);
 
-      expect(
-        populationService.sendAlert,
-      ).toHaveBeenCalledWith(
+      expect(populationService.sendAlert).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
       );
 
       expect(result).toEqual({
@@ -1118,47 +1016,29 @@ describe('ClientPortalService - Sentinelle Population', () => {
       jest
         .spyOn(service, 'assertBuildingAccess')
         .mockRejectedValue(
-          new ForbiddenException(
-            'Accès refusé à ce bâtiment',
-          ),
+          new ForbiddenException('Accès refusé à ce bâtiment'),
         );
 
       await expect(
-        service.sendPopulationAlert(
-          'building-1',
-          'alert-1',
-          actor,
-        ),
+        service.sendPopulationAlert('building-1', 'alert-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      expect(
-        populationService.sendAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.sendAlert).not.toHaveBeenCalled();
     });
 
     it('propage les erreurs métier de PopulationService sans les masquer', async () => {
-      jest
-        .spyOn(service, 'assertBuildingAccess')
-        .mockResolvedValue({
-          id: 'building-1',
-          clientId: 'client-1',
-        } as any);
+      jest.spyOn(service, 'assertBuildingAccess').mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      } as any);
 
       populationService.sendAlert.mockRejectedValue(
-        new Error(
-          'Les destinataires doivent être figés avant l’envoi',
-        ),
+        new Error('Les destinataires doivent être figés avant l’envoi'),
       );
 
       await expect(
-        service.sendPopulationAlert(
-          'building-1',
-          'alert-1',
-          actor,
-        ),
-      ).rejects.toThrow(
-        'Les destinataires doivent être figés avant l’envoi',
-      );
+        service.sendPopulationAlert('building-1', 'alert-1', actor),
+      ).rejects.toThrow('Les destinataires doivent être figés avant l’envoi');
     });
   });
 
@@ -1195,18 +1075,14 @@ describe('ClientPortalService - Sentinelle Population', () => {
         status: 'DRAFT',
       } as any);
 
-      const result =
-        await service.createPopulationIncidentUpdateDraft(
-          'building-1',
-          'incident-1',
-          followUpDto,
-          actor,
-        );
-
-      expect(assertBuildingAccessSpy).toHaveBeenCalledWith(
+      const result = await service.createPopulationIncidentUpdateDraft(
         'building-1',
+        'incident-1',
+        followUpDto,
         actor,
       );
+
+      expect(assertBuildingAccessSpy).toHaveBeenCalledWith('building-1', actor);
 
       expect(
         populationService.createIncidentFollowUpDraft,
@@ -1237,20 +1113,16 @@ describe('ClientPortalService - Sentinelle Population', () => {
     });
 
     it('crée un brouillon ALL_CLEAR distinct dans le même incident', async () => {
-      jest
-        .spyOn(service, 'assertBuildingAccess')
-        .mockResolvedValue({
-          id: 'building-1',
-          clientId: 'client-1',
-        } as any);
+      jest.spyOn(service, 'assertBuildingAccess').mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      } as any);
 
       const dto = {
         sourceAlertId: 'alert-update-1',
         titleFR: 'Fin de l’alerte',
-        messageFR:
-          'La situation d’urgence est maintenant maîtrisée.',
-        instructionFR:
-          'Vous pouvez reprendre vos activités normales.',
+        messageFR: 'La situation d’urgence est maintenant maîtrisée.',
+        instructionFR: 'Vous pouvez reprendre vos activités normales.',
       };
 
       populationService.createIncidentFollowUpDraft.mockResolvedValue({
@@ -1276,11 +1148,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
         {
           titleFR: 'Fin de l’alerte',
           titleEN: undefined,
-          messageFR:
-            'La situation d’urgence est maintenant maîtrisée.',
+          messageFR: 'La situation d’urgence est maintenant maîtrisée.',
           messageEN: undefined,
-          instructionFR:
-            'Vous pouvez reprendre vos activités normales.',
+          instructionFR: 'Vous pouvez reprendre vos activités normales.',
           instructionEN: undefined,
         },
         {
@@ -1291,12 +1161,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
     });
 
     it('refuse UPDATE et ALL_CLEAR lorsque l’identité utilisateur est absente', async () => {
-      jest
-        .spyOn(service, 'assertBuildingAccess')
-        .mockResolvedValue({
-          id: 'building-1',
-          clientId: 'client-1',
-        } as any);
+      jest.spyOn(service, 'assertBuildingAccess').mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      } as any);
 
       const actorWithoutSub = {
         clientId: 'client-1',
@@ -1349,21 +1217,15 @@ describe('ClientPortalService - Sentinelle Population', () => {
         },
       ] as any);
 
-      const result =
-        await service.getPopulationIncidentAlertHistory(
-          'building-1',
-          'incident-1',
-          actor,
-        );
-
-      expect(assertBuildingAccessSpy).toHaveBeenCalledWith(
+      const result = await service.getPopulationIncidentAlertHistory(
         'building-1',
+        'incident-1',
         actor,
       );
 
-      expect(
-        populationService.getIncidentAlertHistory,
-      ).toHaveBeenCalledWith(
+      expect(assertBuildingAccessSpy).toHaveBeenCalledWith('building-1', actor);
+
+      expect(populationService.getIncidentAlertHistory).toHaveBeenCalledWith(
         'building-1',
         'incident-1',
       );
@@ -1390,16 +1252,12 @@ describe('ClientPortalService - Sentinelle Population', () => {
         actor,
       );
 
-      expect(assertBuildingAccessSpy).toHaveBeenCalledWith(
-        'building-1',
-        actor,
-      );
+      expect(assertBuildingAccessSpy).toHaveBeenCalledWith('building-1', actor);
 
-      expect(
-        populationService.endAlert,
-      ).toHaveBeenCalledWith(
+      expect(populationService.endAlert).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
       );
 
       expect(result).toEqual({
@@ -1427,16 +1285,12 @@ describe('ClientPortalService - Sentinelle Population', () => {
         actor,
       );
 
-      expect(assertBuildingAccessSpy).toHaveBeenCalledWith(
-        'building-1',
-        actor,
-      );
+      expect(assertBuildingAccessSpy).toHaveBeenCalledWith('building-1', actor);
 
-      expect(
-        populationService.cancelAlert,
-      ).toHaveBeenCalledWith(
+      expect(populationService.cancelAlert).toHaveBeenCalledWith(
         'building-1',
         'alert-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
       );
 
       expect(result).toEqual({
@@ -1449,9 +1303,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
       jest
         .spyOn(service, 'assertBuildingAccess')
         .mockRejectedValue(
-          new ForbiddenException(
-            'Accès refusé à ce bâtiment',
-          ),
+          new ForbiddenException('Accès refusé à ce bâtiment'),
         );
 
       await expect(
@@ -1481,36 +1333,59 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       await expect(
-        service.endPopulationAlert(
-          'building-forbidden',
-          'alert-1',
-          actor,
-        ),
+        service.endPopulationAlert('building-forbidden', 'alert-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       await expect(
-        service.cancelPopulationAlert(
-          'building-forbidden',
-          'alert-1',
-          actor,
-        ),
+        service.cancelPopulationAlert('building-forbidden', 'alert-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       expect(
         populationService.createIncidentFollowUpDraft,
       ).not.toHaveBeenCalled();
 
-      expect(
-        populationService.getIncidentAlertHistory,
-      ).not.toHaveBeenCalled();
+      expect(populationService.getIncidentAlertHistory).not.toHaveBeenCalled();
 
-      expect(
-        populationService.endAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.endAlert).not.toHaveBeenCalled();
 
-      expect(
-        populationService.cancelAlert,
-      ).not.toHaveBeenCalled();
+      expect(populationService.cancelAlert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Population permissions', () => {
+    const actor = {
+      sub: 'client-user-1',
+      clientId: 'client-1',
+      organizationId: 'org-1',
+      role: 'CLIENT_CORPORATE',
+      buildingIds: ['building-1'],
+    };
+
+    it('refuse sans permission meme pour un role Client Portal existant', async () => {
+      prisma.building.findFirst.mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      });
+      prisma.clientUser.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createPopulationAlertDraft('building-1', {} as any, actor),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(populationService.createAlertDraft).not.toHaveBeenCalled();
+    });
+
+    it('autorise une permission explicite independamment du role', async () => {
+      prisma.building.findFirst.mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      });
+      prisma.clientUser.findFirst.mockResolvedValue({ id: actor.sub });
+      populationService.createAlertDraft.mockResolvedValue({ id: 'alert-1' });
+
+      await expect(
+        service.createPopulationAlertDraft('building-1', {} as any, actor),
+      ).resolves.toEqual({ id: 'alert-1' });
     });
   });
 });

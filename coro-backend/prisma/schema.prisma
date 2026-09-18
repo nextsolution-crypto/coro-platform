@@ -771,6 +771,7 @@ model ClientUser {
   firstName      String
   lastName       String
   role           ClientUserRole        @default(CLIENT_MANAGER)
+  populationPermissions PopulationPermission[] @default([])
   buildingIds    String[]
   isActive       Boolean               @default(true)
   clientId       String
@@ -1140,6 +1141,8 @@ model PopulationProgram {
   rueFacilityProfile   RueFacilityProfile @relation(fields: [rueFacilityProfileId], references: [id], onDelete: Restrict)
 
   status PopulationProgramStatus @default(NOT_CONFIGURED)
+  deliveryMode   PopulationDeliveryMode   @default(SANDBOX)
+  governanceMode PopulationGovernanceMode @default(STANDARD)
 
   // ── Portail public ──────────────────────────────────────────────────────
 
@@ -1202,6 +1205,7 @@ model PopulationSubscriber {
   program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
 
   status PopulationSubscriberStatus @default(PENDING_VERIFICATION)
+  isSynthetic Boolean @default(false)
 
   // Langue utilisée pour les communications d'urgence.
   preferredLanguage PopulationPreferredLanguage @default(FR)
@@ -1349,10 +1353,27 @@ model PopulationAlert {
   approvedById   String?
   approvedAt     DateTime?
 
+  readyByType CoroActorType?
+  readyById   String?
+  readyAt     DateTime?
+
+  frozenByType CoroActorType?
+  frozenById   String?
+
+  sentByType CoroActorType?
+  sentById   String?
+
+  cancelledByType CoroActorType?
+  cancelledById   String?
+
+  endedByType CoroActorType?
+  endedById   String?
+
   // ── Cycle de vie ───────────────────────────────────────────────────────
 
   scheduledAt        DateTime?
   recipientsFrozenAt DateTime?
+  deliveryModeSnapshot PopulationDeliveryMode?
   sendingAt          DateTime?
   activatedAt        DateTime?
   endedAt            DateTime?
@@ -1437,6 +1458,7 @@ model PopulationAlertDelivery {
 
   channel PopulationAlertChannel
   status  PopulationDeliveryStatus @default(QUEUED)
+  suppressionReason PopulationDeliverySuppressionReason?
 
   // Langue réellement utilisée pour cette transmission.
   language PopulationPreferredLanguage
@@ -1577,6 +1599,28 @@ enum PopulationDeliveryStatus {
   DELIVERED
   FAILED
   CANCELLED
+  SUPPRESSED
+}
+
+enum PopulationDeliverySuppressionReason {
+  SYNTHETIC_RECIPIENT
+  SANDBOX_MODE
+}
+
+enum PopulationDeliveryMode {
+  SANDBOX
+  LIVE
+}
+
+enum PopulationGovernanceMode {
+  STANDARD
+  DUAL_CONTROL
+}
+
+enum PopulationPermission {
+  POPULATION_PREPARE
+  POPULATION_APPROVE
+  POPULATION_SEND
 }
 
 enum RueScenarioType {

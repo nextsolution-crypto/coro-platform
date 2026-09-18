@@ -14,6 +14,8 @@ import {
   RueAssessmentStatus,
   PopulationAlertChannel,
   PopulationDeliveryStatus,
+  PopulationDeliveryMode,
+  PopulationGovernanceMode,
   Prisma,
 } from '@prisma/client';
 import { PopulationService } from './population.service';
@@ -3035,6 +3037,8 @@ const readiness = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        deliveryMode: PopulationDeliveryMode.LIVE,
+        governanceMode: PopulationGovernanceMode.STANDARD as PopulationGovernanceMode,
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -5750,6 +5754,7 @@ const readiness = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        governanceMode: PopulationGovernanceMode.STANDARD as PopulationGovernanceMode,
       },
     };
 
@@ -5759,6 +5764,9 @@ const readiness = {
       emergencyScenarioId: 'scenario-1',
       type: PopulationAlertType.EMERGENCY,
       status: PopulationAlertStatus.READY,
+      deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+      createdByType: 'CLIENT_USER',
+      createdById: 'client-user-1',
 
       titleFR: 'Alerte ammoniac',
       messageFR: 'Un rejet accidentel est en cours.',
@@ -5798,6 +5806,20 @@ const readiness = {
           '2026-09-17T16:00:00.000Z',
         ),
       });
+      prisma.populationAlert.updateMany.mockResolvedValue({ count: 1 });
+      activeProfile.populationProgram.governanceMode = PopulationGovernanceMode.STANDARD;
+    });
+
+    it('applique la separation des approbateurs en DUAL_CONTROL', async () => {
+      activeProfile.populationProgram.governanceMode = PopulationGovernanceMode.DUAL_CONTROL;
+
+      await expect(service.approveAlert('building-1', 'alert-1', actor))
+        .rejects.toBeInstanceOf(BadRequestException);
+
+      await expect(service.approveAlert('building-1', 'alert-1', {
+        type: 'CLIENT_USER',
+        id: 'client-user-2',
+      })).resolves.toEqual(expect.objectContaining({ approvedById: 'client-user-2' }));
     });
 
     it('enregistre l’approbation humaine d’une alerte READY', async () => {
@@ -5808,22 +5830,17 @@ const readiness = {
       );
 
       expect(
-        prisma.populationAlert.update,
+        prisma.populationAlert.updateMany,
       ).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
+          status: PopulationAlertStatus.READY,
+          approvedAt: null,
         },
         data: {
           approvedByType: 'CLIENT_USER',
           approvedById: 'client-user-1',
           approvedAt: expect.any(Date),
-        },
-        include: {
-          zones: {
-            orderBy: {
-              zoneCodeSnapshot: 'asc',
-            },
-          },
         },
       });
 
@@ -5862,7 +5879,7 @@ const readiness = {
       expect(result).toEqual(approvedAlert);
 
       expect(
-        prisma.populationAlert.update,
+        prisma.populationAlert.updateMany,
       ).not.toHaveBeenCalled();
 
       /*
@@ -5964,6 +5981,8 @@ const readiness = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        deliveryMode: PopulationDeliveryMode.LIVE as PopulationDeliveryMode,
+        governanceMode: PopulationGovernanceMode.STANDARD,
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -6026,6 +6045,7 @@ const readiness = {
     };
 
     beforeEach(() => {
+      activeProfile.populationProgram.deliveryMode = PopulationDeliveryMode.LIVE;
       prisma.rueFacilityProfile.findUnique.mockResolvedValue(
         activeProfile,
       );
@@ -6056,6 +6076,58 @@ const readiness = {
 
       populationGeospatialService.isPointInsideImpactZone
         .mockReturnValue(false);
+    });
+
+    it.each([
+      {
+        label: 'SANDBOX avec citoyen reel',
+        mode: PopulationDeliveryMode.SANDBOX,
+        isSynthetic: false,
+        status: PopulationDeliveryStatus.SUPPRESSED,
+        reason: 'SANDBOX_MODE',
+      },
+      {
+        label: 'LIVE avec citoyen synthetique',
+        mode: PopulationDeliveryMode.LIVE,
+        isSynthetic: true,
+        status: PopulationDeliveryStatus.SUPPRESSED,
+        reason: 'SYNTHETIC_RECIPIENT',
+      },
+      {
+        label: 'LIVE avec citoyen reel',
+        mode: PopulationDeliveryMode.LIVE,
+        isSynthetic: false,
+        status: PopulationDeliveryStatus.QUEUED,
+        reason: null,
+      },
+    ])('$label materialise le statut attendu', async ({ mode, isSynthetic, status, reason }) => {
+      activeProfile.populationProgram.deliveryMode = mode;
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-security',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: '+15145550199',
+          email: null,
+          smsEnabled: true,
+          emailEnabled: false,
+          latitude: 45.5,
+          longitude: -73.5,
+          isSynthetic,
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
+
+      await service.freezeAlertRecipients('building-1', 'alert-1');
+
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
+        data: expect.arrayContaining([
+          expect.objectContaining({ status, suppressionReason: reason }),
+        ]),
+        skipDuplicates: true,
+      });
+      if (status === PopulationDeliveryStatus.SUPPRESSED) {
+        expect(readiness.assertAlertChannelReady).not.toHaveBeenCalled();
+      }
     });
 
     it('refuse de figer les destinataires avant approbation humaine', async () => {
@@ -6531,8 +6603,12 @@ const readiness = {
         deliveryCount: 0,
         smsDeliveryCount: 0,
         emailDeliveryCount: 0,
+        deliverableCount: 0,
+        deliverableSmsCount: 0,
+        deliverableEmailCount: 0,
+        suppressedCount: 0,
       });
-        });
+    });
 
     it('enregistre le freeze même lorsqu’il n’existe aucun destinataire', async () => {
       prisma.populationSubscriber.findMany.mockResolvedValue(
@@ -6549,7 +6625,7 @@ const readiness = {
           'alert-1',
         );
 
-              expect(
+      expect(
         prisma.$transaction,
       ).toHaveBeenCalledTimes(1);
 
@@ -6564,6 +6640,7 @@ const readiness = {
         },
         data: {
           recipientsFrozenAt: expect.any(Date),
+          deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
         },
       });
 
@@ -6580,6 +6657,10 @@ const readiness = {
         deliveryCount: 0,
         smsDeliveryCount: 0,
         emailDeliveryCount: 0,
+        deliverableCount: 0,
+        deliverableSmsCount: 0,
+        deliverableEmailCount: 0,
+        suppressedCount: 0,
       });
     });
 
@@ -6644,6 +6725,10 @@ const readiness = {
         deliveryCount: 1,
         smsDeliveryCount: 1,
         emailDeliveryCount: 0,
+        deliverableCount: 1,
+        deliverableSmsCount: 1,
+        deliverableEmailCount: 0,
+        suppressedCount: 0,
       });
     });
 
@@ -6806,6 +6891,7 @@ const readiness = {
         },
         data: {
           recipientsFrozenAt: expect.any(Date),
+          deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
         },
       });
 
@@ -6817,7 +6903,12 @@ const readiness = {
   describe('sendAlert', () => {
     it('rejects an unavailable transport before claiming the alert', async () => {
       prisma.populationAlertDelivery.findMany.mockResolvedValueOnce([
-        { channel: PopulationAlertChannel.EMAIL },
+        {
+          channel: PopulationAlertChannel.EMAIL,
+          destinationSnapshot: 'citoyen@example.com',
+          suppressionReason: null,
+          subscriber: { isSynthetic: false },
+        },
       ]);
       readiness.assertAlertChannelReady.mockImplementationOnce(() => {
         throw new ServiceUnavailableException('Transport indisponible');
@@ -6841,6 +6932,8 @@ const readiness = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        deliveryMode: PopulationDeliveryMode.LIVE,
+        governanceMode: PopulationGovernanceMode.STANDARD,
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -6850,6 +6943,9 @@ const readiness = {
       id: 'alert-send-1',
       programId: 'program-1',
       status: PopulationAlertStatus.READY,
+      deliveryModeSnapshot: PopulationDeliveryMode.LIVE as PopulationDeliveryMode,
+      createdByType: 'CLIENT_USER',
+      createdById: 'client-user-1',
 
       titleFR: 'Alerte ammoniac',
       titleEN: 'Ammonia alert',
@@ -6868,6 +6964,7 @@ const readiness = {
     };
 
     beforeEach(() => {
+      readyAlert.deliveryModeSnapshot = PopulationDeliveryMode.LIVE;
       prisma.rueFacilityProfile.findUnique.mockResolvedValue(
         activeProfile,
       );
@@ -6887,6 +6984,10 @@ const readiness = {
       prisma.populationAlertDelivery.findMany.mockResolvedValue([
         {
           id: 'delivery-send-1',
+          channel: PopulationAlertChannel.SMS,
+          destinationSnapshot: '+15145550101',
+          suppressionReason: null,
+          subscriber: { isSynthetic: false },
         },
       ]);
 
@@ -6898,6 +6999,24 @@ const readiness = {
           },
         },
       ] as any);
+    });
+
+    it('termine une diffusion SANDBOX sans appel fournisseur', async () => {
+      readyAlert.deliveryModeSnapshot = PopulationDeliveryMode.SANDBOX;
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([]);
+
+      await service.sendAlert('building-1', 'alert-send-1', {
+        type: 'CLIENT_USER',
+        id: 'client-user-1',
+      });
+
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: PopulationAlertStatus.ACTIVE }),
+        }),
+      );
     });
 
     it('claim atomiquement l’alerte READY avant de diffuser le roster', async () => {
@@ -7116,9 +7235,16 @@ const readiness = {
       expect(
         prisma.populationAlertDelivery.findMany,
       ).toHaveBeenCalledWith({
-        where: { alertId: 'alert-send-1' },
-        select: { channel: true },
-        distinct: ['channel'],
+        where: {
+          alertId: 'alert-send-1',
+          status: PopulationDeliveryStatus.QUEUED,
+        },
+        select: {
+          channel: true,
+          destinationSnapshot: true,
+          suppressionReason: true,
+          subscriber: { select: { isSynthetic: true } },
+        },
       });
     });
   });
@@ -7142,6 +7268,7 @@ const readiness = {
       id: 'alert-1',
       programId: 'program-1',
       status: PopulationAlertStatus.SENDING,
+      deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
       approvedByType: 'CLIENT_USER',
       approvedById: 'client-user-1',
       approvedAt: new Date(
@@ -7369,6 +7496,8 @@ const readiness = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        deliveryMode: PopulationDeliveryMode.LIVE,
+        governanceMode: PopulationGovernanceMode.STANDARD,
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -7378,6 +7507,7 @@ const readiness = {
       id: 'alert-1',
       programId: 'program-1',
       status: PopulationAlertStatus.SENDING,
+      deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
       titleFR: 'Alerte ammoniac',
       titleEN: 'Ammonia alert',
       approvedByType: 'CLIENT_USER',
@@ -7397,6 +7527,8 @@ const readiness = {
       messageSnapshot:
         'Mettez-vous immédiatement à l’abri.',
       destinationSnapshot: '+15145550101',
+      suppressionReason: null,
+      subscriber: { isSynthetic: false },
     };
 
     beforeEach(() => {
