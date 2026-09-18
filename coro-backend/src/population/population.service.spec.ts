@@ -46,6 +46,7 @@ describe('PopulationService', () => {
     create: jest.fn(),
     findFirst: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     count: jest.fn(),
   },
   populationConsentEvent: {
@@ -2369,7 +2370,7 @@ const populationDeliveryService = {
       ).not.toHaveBeenCalled();
     });
 
-    it('est idempotent lorsque l’abonné est déjà ACTIVE', async () => {
+    it('refuse d’émettre un token lorsque l’abonné est déjà ACTIVE', async () => {
       prisma.populationSubscriber.findFirst.mockResolvedValue({
         ...pendingSubscriber,
         status: PopulationSubscriberStatus.ACTIVE,
@@ -2377,21 +2378,16 @@ const populationDeliveryService = {
         smsEnabled: true,
       });
 
-      const result = await service.verifySubscriber(
-        'sobeys-boucherville',
-        'subscriber-1',
-        {
-          channel: PopulationVerificationChannel.SMS,
-          code: validCode,
-        },
-      );
-
-      expect(result).toEqual({
-        verified: true,
-        status: PopulationSubscriberStatus.ACTIVE,
-        accessToken: expect.any(String),
-        accessTokenExpiresInSeconds: 1800,
-      });
+      await expect(
+        service.verifySubscriber(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(
         prisma.populationVerification.findFirst,
@@ -2542,22 +2538,17 @@ const populationDeliveryService = {
       });
     });
 
-    it('ne revérifie pas un canal SMS déjà actif', async () => {
-      const result = await service.verifySubscriber(
-        'sobeys-boucherville',
-        'subscriber-1',
-        {
-          channel: PopulationVerificationChannel.SMS,
-          code: '000000',
-        },
-      );
-
-      expect(result).toEqual({
-        verified: true,
-        status: PopulationSubscriberStatus.ACTIVE,
-        accessToken: expect.any(String),
-        accessTokenExpiresInSeconds: 1800,
-      });
+    it('refuse un code arbitraire pour un canal SMS déjà actif', async () => {
+      await expect(
+        service.verifySubscriber(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: '000000',
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(
         prisma.populationVerification.findFirst,
@@ -2566,6 +2557,329 @@ const populationDeliveryService = {
       expect(
         prisma.populationConsentEvent.create,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('requestSubscriberAccess', () => {
+    const genericResponse = {
+      accepted: true,
+      message:
+        'Si les informations fournies sont admissibles, un code d’accès sera transmis.',
+    };
+
+    beforeEach(() => {
+      prisma.populationProgram.findUnique.mockResolvedValue({
+        id: 'program-1',
+        status: PopulationProgramStatus.ACTIVE,
+        smsEnabled: true,
+        emailEnabled: true,
+        rueFacilityProfile: {
+          assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
+          populationEnabled: true,
+        },
+      });
+      prisma.populationSubscriber.findFirst.mockResolvedValue({
+        id: 'subscriber-1',
+        phone: '+14505551234',
+        email: 'citoyen@example.com',
+        smsEnabled: true,
+        emailEnabled: true,
+      });
+      prisma.populationVerification.findFirst.mockResolvedValue(null);
+      prisma.populationVerification.count.mockResolvedValue(0);
+      prisma.populationVerification.create.mockResolvedValue({
+        id: 'access-verification-1',
+      });
+      populationDeliveryService.sendSms.mockResolvedValue({
+        provider: 'BREVO',
+        providerMessageId: 'message-1',
+      });
+    });
+
+    it('crée et transmet un OTP d’accès sans le conserver en clair', async () => {
+      const result = await service.requestSubscriberAccess(
+        'sobeys-boucherville',
+        'subscriber-1',
+        { channel: PopulationVerificationChannel.SMS },
+      );
+
+      expect(result).toEqual(genericResponse);
+      expect(prisma.populationVerification.create).toHaveBeenCalledWith({
+        data: {
+          subscriberId: 'subscriber-1',
+          channel: PopulationVerificationChannel.SMS,
+          codeHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+          expiresAt: expect.any(Date),
+          maxAttempts: 5,
+        },
+      });
+
+      const persisted =
+        prisma.populationVerification.create.mock.calls[0][0].data;
+      const transmittedCode =
+        populationDeliveryService.sendSms.mock.calls[0][1].match(/\d{6}/)?.[0];
+
+      expect(transmittedCode).toBeDefined();
+      expect(JSON.stringify(persisted)).not.toContain(transmittedCode);
+    });
+
+    it('retourne exactement le même contrat pour un identifiant inconnu', async () => {
+      prisma.populationSubscriber.findFirst.mockResolvedValue(null);
+
+      const result = await service.requestSubscriberAccess(
+        'sobeys-boucherville',
+        'subscriber-inconnu',
+        { channel: PopulationVerificationChannel.SMS },
+      );
+
+      expect(result).toEqual(genericResponse);
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+    });
+
+    it('ne révèle pas qu’un canal demandé est indisponible', async () => {
+      prisma.populationSubscriber.findFirst.mockResolvedValue({
+        id: 'subscriber-1',
+        phone: null,
+        email: 'citoyen@example.com',
+        smsEnabled: false,
+        emailEnabled: true,
+      });
+
+      const result = await service.requestSubscriberAccess(
+        'sobeys-boucherville',
+        'subscriber-1',
+        { channel: PopulationVerificationChannel.SMS },
+      );
+
+      expect(result).toEqual(genericResponse);
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+    });
+
+    it('conserve la réponse générique lorsque le transport échoue', async () => {
+      populationDeliveryService.sendSms.mockRejectedValue(
+        new PopulationProviderError('BREVO_ERROR', 'indisponible'),
+      );
+
+      await expect(
+        service.requestSubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          { channel: PopulationVerificationChannel.SMS },
+        ),
+      ).resolves.toEqual(genericResponse);
+    });
+  });
+
+  describe('verifySubscriberAccess', () => {
+    const validCode = '246810';
+    const hashCode = (code: string) =>
+      require('crypto')
+        .createHmac(
+          'sha256',
+          'test-population-otp-secret-not-for-production',
+        )
+        .update(code)
+        .digest('hex');
+    const activeSubscriber = {
+      id: 'subscriber-1',
+      programId: 'program-1',
+      status: PopulationSubscriberStatus.ACTIVE,
+      preferredLanguage: PopulationPreferredLanguage.FR,
+      phone: '+14505551234',
+      email: null,
+      smsEnabled: true,
+      emailEnabled: false,
+      verifiedAt: new Date('2026-09-17T12:00:00Z'),
+      unsubscribedAt: null,
+    };
+    const accessVerification = {
+      id: 'access-verification-1',
+      subscriberId: 'subscriber-1',
+      channel: PopulationVerificationChannel.SMS,
+      codeHash: hashCode(validCode),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      attemptCount: 0,
+      maxAttempts: 5,
+      verifiedAt: null,
+      createdAt: new Date(),
+    };
+
+    beforeEach(() => {
+      prisma.populationProgram.findUnique.mockResolvedValue({
+        id: 'program-1',
+      });
+      prisma.populationSubscriber.findFirst.mockResolvedValue(
+        activeSubscriber,
+      );
+      prisma.populationVerification.findFirst.mockResolvedValue(
+        accessVerification,
+      );
+      prisma.populationVerification.update.mockResolvedValue({
+        ...accessVerification,
+        verifiedAt: new Date(),
+      });
+      prisma.populationVerification.updateMany.mockResolvedValue({
+        count: 1,
+      });
+    });
+
+    it('consomme un OTP valide, émet un token court et autorise profile', async () => {
+      const access = await service.verifySubscriberAccess(
+        'sobeys-boucherville',
+        'subscriber-1',
+        {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        },
+      );
+
+      expect(access).toEqual({
+        verified: true,
+        accessToken: expect.any(String),
+        accessTokenExpiresInSeconds: 1800,
+      });
+      expect(prisma.populationVerification.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'access-verification-1',
+          verifiedAt: null,
+          attemptCount: { lt: 5 },
+        },
+        data: { verifiedAt: expect.any(Date) },
+      });
+
+      const profile = await service.getSubscriberProfile(
+        'sobeys-boucherville',
+        'subscriber-1',
+        { accessToken: access.accessToken },
+      );
+      expect(profile.id).toBe('subscriber-1');
+    });
+
+    it('refuse un OTP déjà consommé par une requête concurrente', async () => {
+      prisma.populationVerification.updateMany.mockResolvedValue({
+        count: 0,
+      });
+
+      await expect(
+        service.verifySubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('refuse un code invalide et incrémente les tentatives', async () => {
+      await expect(
+        service.verifySubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: '999999',
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.populationVerification.update).toHaveBeenCalledWith({
+        where: { id: 'access-verification-1' },
+        data: { attemptCount: { increment: 1 } },
+      });
+    });
+
+    it('refuse lorsqu’aucun OTP valide n’existe', async () => {
+      prisma.populationVerification.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.verifySubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('refuse un OTP expiré', async () => {
+      prisma.populationVerification.findFirst.mockResolvedValue({
+        ...accessVerification,
+        expiresAt: new Date(Date.now() - 1000),
+      });
+
+      await expect(
+        service.verifySubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('refuse un OTP ayant atteint le maximum de tentatives', async () => {
+      prisma.populationVerification.findFirst.mockResolvedValue({
+        ...accessVerification,
+        attemptCount: 5,
+      });
+
+      await expect(
+        service.verifySubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('ne peut pas utiliser l’OTP d’un autre subscriber', async () => {
+      prisma.populationVerification.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.verifySubscriberAccess(
+          'sobeys-boucherville',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.populationVerification.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ subscriberId: 'subscriber-1' }),
+        }),
+      );
+    });
+
+    it('ne peut pas utiliser l’OTP d’un autre programme', async () => {
+      prisma.populationProgram.findUnique.mockResolvedValue({
+        id: 'program-2',
+      });
+      prisma.populationSubscriber.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.verifySubscriberAccess(
+          'autre-programme',
+          'subscriber-1',
+          {
+            channel: PopulationVerificationChannel.SMS,
+            code: validCode,
+          },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.populationVerification.findFirst).not.toHaveBeenCalled();
     });
   });
 

@@ -5,6 +5,7 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { PopulationService } from './population.service';
 import { RegisterPopulationSubscriberDto } from './dto/register-population-subscriber.dto';
 import { VerifyPopulationSubscriberDto } from './dto/verify-population-subscriber.dto';
@@ -38,12 +39,50 @@ export class PopulationPublicController {
   }
 
   @Post(':publicSlug/subscribers/:subscriberId/resend-verification')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
   async resendVerification(
     @Param('publicSlug') publicSlug: string,
     @Param('subscriberId') subscriberId: string,
     @Body() dto: ResendPopulationVerificationDto,
   ) {
     return this.populationService.resendVerification(
+      publicSlug,
+      subscriberId,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/request-access')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
+  async requestSubscriberAccess(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: ResendPopulationVerificationDto,
+  ) {
+    return this.populationService.requestSubscriberAccess(
+      publicSlug,
+      subscriberId,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/verify-access')
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    long: { ttl: 3600000, limit: 30 },
+  })
+  async verifySubscriberAccess(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: VerifyPopulationSubscriberDto,
+  ) {
+    return this.populationService.verifySubscriberAccess(
       publicSlug,
       subscriberId,
       dto,
@@ -90,6 +129,10 @@ export class PopulationPublicController {
   }
 
   @Post(':publicSlug/subscribers/:subscriberId/verify')
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    long: { ttl: 3600000, limit: 30 },
+  })
   async verifySubscriber(
     @Param('publicSlug') publicSlug: string,
     @Param('subscriberId') subscriberId: string,

@@ -739,6 +739,14 @@ export class PopulationService {
     return timingSafeEqual(submittedHash, storedHash);
   }
 
+  private accessRequestResponse() {
+    return {
+      accepted: true,
+      message:
+        'Si les informations fournies sont admissibles, un code d’accès sera transmis.',
+    };
+  }
+
   /**
    * Inscrit un citoyen à un programme Sentinelle Population.
    *
@@ -1054,6 +1062,220 @@ export class PopulationService {
     };
   }
 
+  async requestSubscriberAccess(
+    publicSlug: string,
+    subscriberId: string,
+    dto: ResendPopulationVerificationDto,
+  ) {
+    const genericResponse = this.accessRequestResponse();
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: {
+        id: true,
+        status: true,
+        smsEnabled: true,
+        emailEnabled: true,
+        rueFacilityProfile: {
+          select: {
+            assessmentStatus: true,
+            populationEnabled: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !program ||
+      program.status !== PopulationProgramStatus.ACTIVE ||
+      program.rueFacilityProfile.assessmentStatus !==
+        RueAssessmentStatus.CONFIRMED_SUBJECT ||
+      !program.rueFacilityProfile.populationEnabled
+    ) {
+      return genericResponse;
+    }
+
+    const subscriber =
+      await this.prisma.populationSubscriber.findFirst({
+        where: {
+          id: subscriberId,
+          programId: program.id,
+          status: PopulationSubscriberStatus.ACTIVE,
+        },
+        select: {
+          id: true,
+          phone: true,
+          email: true,
+          smsEnabled: true,
+          emailEnabled: true,
+        },
+      });
+
+    const destination =
+      dto.channel === PopulationVerificationChannel.SMS
+        ? subscriber?.smsEnabled && program.smsEnabled
+          ? subscriber.phone
+          : null
+        : subscriber?.emailEnabled && program.emailEnabled
+          ? subscriber.email
+          : null;
+
+    if (!subscriber || !destination) {
+      return genericResponse;
+    }
+
+    const latestVerification =
+      await this.prisma.populationVerification.findFirst({
+        where: {
+          subscriberId: subscriber.id,
+          channel: dto.channel,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+    const now = new Date();
+
+    if (
+      latestVerification &&
+      now.getTime() - latestVerification.createdAt.getTime() < 60 * 1000
+    ) {
+      return genericResponse;
+    }
+
+    const recentVerificationCount =
+      await this.prisma.populationVerification.count({
+        where: {
+          subscriberId: subscriber.id,
+          channel: dto.channel,
+          createdAt: {
+            gte: new Date(now.getTime() - 60 * 60 * 1000),
+          },
+        },
+      });
+
+    if (recentVerificationCount >= 5) {
+      return genericResponse;
+    }
+
+    const verificationCode = this.generateVerificationCode();
+    await this.prisma.populationVerification.create({
+      data: {
+        subscriberId: subscriber.id,
+        channel: dto.channel,
+        codeHash: this.hashVerificationCode(verificationCode),
+        expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
+        maxAttempts: 5,
+      },
+    });
+
+    try {
+      if (dto.channel === PopulationVerificationChannel.SMS) {
+        await this.populationDeliveryService.sendSms(
+          destination,
+          `Votre code d’accès CORO est ${verificationCode}. Il expire dans 10 minutes.`,
+        );
+      } else {
+        await this.populationDeliveryService.sendEmail({
+          destination,
+          subject: 'Votre code d’accès CORO',
+          html: `<p>Votre code d’accès CORO est <strong>${verificationCode}</strong>.</p><p>Il expire dans 10 minutes.</p>`,
+        });
+      }
+    } catch {
+      // La réponse reste identique afin de ne pas révéler l'état du compte.
+    }
+
+    return genericResponse;
+  }
+
+  async verifySubscriberAccess(
+    publicSlug: string,
+    subscriberId: string,
+    dto: VerifyPopulationSubscriberDto,
+  ) {
+    const invalidAccess = () =>
+      new BadRequestException('Code d’accès invalide ou expiré');
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: { id: true },
+    });
+
+    if (!program) {
+      throw invalidAccess();
+    }
+
+    const subscriber =
+      await this.prisma.populationSubscriber.findFirst({
+        where: {
+          id: subscriberId,
+          programId: program.id,
+          status: PopulationSubscriberStatus.ACTIVE,
+        },
+        select: {
+          id: true,
+          smsEnabled: true,
+          emailEnabled: true,
+        },
+      });
+
+    const channelEnabled =
+      dto.channel === PopulationVerificationChannel.SMS
+        ? subscriber?.smsEnabled
+        : subscriber?.emailEnabled;
+
+    if (!subscriber || !channelEnabled) {
+      throw invalidAccess();
+    }
+
+    const verification =
+      await this.prisma.populationVerification.findFirst({
+        where: {
+          subscriberId: subscriber.id,
+          channel: dto.channel,
+          verifiedAt: null,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+    if (
+      !verification ||
+      verification.expiresAt.getTime() <= Date.now() ||
+      verification.attemptCount >= verification.maxAttempts
+    ) {
+      throw invalidAccess();
+    }
+
+    if (!this.verificationCodeMatches(dto.code, verification.codeHash)) {
+      await this.prisma.populationVerification.update({
+        where: { id: verification.id },
+        data: { attemptCount: { increment: 1 } },
+      });
+      throw invalidAccess();
+    }
+
+    const consumed =
+      await this.prisma.populationVerification.updateMany({
+        where: {
+          id: verification.id,
+          verifiedAt: null,
+          attemptCount: { lt: verification.maxAttempts },
+        },
+        data: { verifiedAt: new Date() },
+      });
+
+    if (consumed.count !== 1) {
+      throw invalidAccess();
+    }
+
+    return {
+      verified: true,
+      accessToken: this.createSubscriberAccessToken(
+        subscriber.id,
+        program.id,
+      ),
+      accessTokenExpiresInSeconds: 30 * 60,
+    };
+  }
+
   /**
    * Vérifie le code OTP d'un abonnement public.
    */
@@ -1128,15 +1350,9 @@ export class PopulationService {
           subscriber.emailEnabled));
 
     if (isAlreadyVerifiedChannel) {
-      return {
-        verified: true,
-        status: subscriber.status,
-        accessToken: this.createSubscriberAccessToken(
-          subscriber.id,
-          program.id,
-        ),
-        accessTokenExpiresInSeconds: 30 * 60,
-      };
+      throw new BadRequestException(
+        'Ce canal est déjà vérifié; demandez un nouveau code d’accès',
+      );
     }
 
     if (
