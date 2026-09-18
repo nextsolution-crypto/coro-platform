@@ -2579,6 +2579,8 @@ const populationDeliveryService = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        smsEnabled: true,
+        emailEnabled: true,
       },
     };
 
@@ -2620,6 +2622,8 @@ const populationDeliveryService = {
         id: 'subscriber-1',
         latitude: 45.50,
         longitude: -73.50,
+        phone: '+15145550101',
+        email: 'subscriber-1@example.com',
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -2627,6 +2631,8 @@ const populationDeliveryService = {
         id: 'subscriber-2',
         latitude: 45.51,
         longitude: -73.51,
+        phone: '+15145550102',
+        email: null,
         smsEnabled: true,
         emailEnabled: false,
       },
@@ -2634,6 +2640,8 @@ const populationDeliveryService = {
         id: 'subscriber-3',
         latitude: 45.52,
         longitude: -73.52,
+        phone: null,
+        email: 'subscriber-3@example.com',
         smsEnabled: false,
         emailEnabled: true,
       },
@@ -2641,6 +2649,8 @@ const populationDeliveryService = {
         id: 'subscriber-4',
         latitude: null,
         longitude: null,
+        phone: '+15145550104',
+        email: 'subscriber-4@example.com',
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -2757,6 +2767,101 @@ const populationDeliveryService = {
       expect(result.population.uniqueTargetCount).toBe(2);
     });
 
+    it('valide le scenario DEMO 3 actifs, 2 geolocalises, 1 non localise et 1 cible', async () => {
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue({
+        ...scenario,
+        impactZones: [scenario.impactZones[1]],
+      });
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'demo-subscriber-a',
+          latitude: 45.56821528326056,
+          longitude: -73.40845800055679,
+          phone: '+12025550111',
+          email: 'demo-a@example.invalid',
+          smsEnabled: true,
+          emailEnabled: true,
+        },
+        {
+          id: 'demo-subscriber-b',
+          latitude: 45.58521528326056,
+          longitude: -73.40845800055679,
+          phone: '+12025550112',
+          email: 'demo-b@example.invalid',
+          smsEnabled: true,
+          emailEnabled: true,
+        },
+        {
+          id: 'demo-subscriber-c',
+          latitude: null,
+          longitude: null,
+          phone: '+12025550113',
+          email: 'demo-c@example.invalid',
+          smsEnabled: true,
+          emailEnabled: true,
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone
+        .mockImplementation(({ latitude }: { latitude: number }) =>
+          latitude === 45.56821528326056,
+        );
+
+      const result = await service.getScenarioPopulationPreview(
+        'building-1',
+        'scenario-1',
+      );
+
+      expect(result.population).toEqual({
+        activeSubscriberCount: 3,
+        geolocatedSubscriberCount: 2,
+        unlocatedSubscriberCount: 1,
+        uniqueTargetCount: 1,
+        uniqueSmsTargetCount: 1,
+        uniqueEmailTargetCount: 1,
+      });
+
+      const serialized = JSON.stringify(result);
+      expect(serialized).not.toContain('demo-subscriber-a');
+      expect(serialized).not.toContain('+12025550111');
+      expect(serialized).not.toContain('demo-a@example.invalid');
+      expect(serialized).not.toContain('45.56821528326056');
+    });
+
+    it('ne compte pas un canal sans destination ou desactive au niveau du programme', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        ...activeProfile,
+        populationProgram: {
+          ...activeProfile.populationProgram,
+          emailEnabled: false,
+        },
+      });
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-without-destinations',
+          latitude: 45.50,
+          longitude: -73.50,
+          phone: null,
+          email: 'present-but-program-disabled@example.invalid',
+          smsEnabled: true,
+          emailEnabled: true,
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone
+        .mockReturnValue(true);
+
+      const result = await service.getScenarioPopulationPreview(
+        'building-1',
+        'scenario-1',
+      );
+
+      expect(result.population.uniqueTargetCount).toBe(1);
+      expect(result.population.uniqueSmsTargetCount).toBe(0);
+      expect(result.population.uniqueEmailTargetCount).toBe(0);
+      expect(result.zones.every(zone => zone.targetCount === 1)).toBe(true);
+      expect(result.zones.every(zone => zone.smsTargetCount === 0)).toBe(true);
+      expect(result.zones.every(zone => zone.emailTargetCount === 0)).toBe(true);
+    });
+
     it('ne transmet au moteur spatial que les abonnés géolocalisés', async () => {
       await service.getScenarioPopulationPreview(
         'building-1',
@@ -2853,6 +2958,8 @@ const populationDeliveryService = {
           id: true,
           latitude: true,
           longitude: true,
+          phone: true,
+          email: true,
           smsEnabled: true,
           emailEnabled: true,
         },
@@ -3091,6 +3198,8 @@ const populationDeliveryService = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        smsEnabled: true,
+        emailEnabled: true,
       },
     };
 
@@ -3142,6 +3251,8 @@ const populationDeliveryService = {
         id: 'subscriber-1',
         latitude: 45.5,
         longitude: -73.5,
+        phone: '+15145550101',
+        email: 'subscriber-1@example.com',
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -3149,6 +3260,8 @@ const populationDeliveryService = {
         id: 'subscriber-2',
         latitude: 45.51,
         longitude: -73.51,
+        phone: '+15145550102',
+        email: null,
         smsEnabled: true,
         emailEnabled: false,
       },
@@ -3156,6 +3269,8 @@ const populationDeliveryService = {
         id: 'subscriber-3',
         latitude: 45.52,
         longitude: -73.52,
+        phone: null,
+        email: 'subscriber-3@example.com',
         smsEnabled: false,
         emailEnabled: true,
       },
@@ -3163,6 +3278,8 @@ const populationDeliveryService = {
         id: 'subscriber-unlocated',
         latitude: null,
         longitude: null,
+        phone: '+15145550104',
+        email: 'subscriber-4@example.com',
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -4753,6 +4870,8 @@ const populationDeliveryService = {
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
+        smsEnabled: true,
+        emailEnabled: true,
       },
     };
 
@@ -4816,6 +4935,8 @@ const populationDeliveryService = {
           id: 'subscriber-1',
           latitude: 45.5,
           longitude: -73.5,
+          phone: '+15145550101',
+          email: 'subscriber-1@example.com',
           smsEnabled: true,
           emailEnabled: true,
         },

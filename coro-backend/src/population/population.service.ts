@@ -45,6 +45,24 @@ export class PopulationService {
     private readonly populationDeliveryService: PopulationDeliveryService,
   ) {}
 
+  private canReceiveSms(
+    program: { smsEnabled: boolean },
+    subscriber: { smsEnabled: boolean; phone: string | null },
+  ) {
+    return Boolean(
+      subscriber.smsEnabled && program.smsEnabled && subscriber.phone,
+    );
+  }
+
+  private canReceiveEmail(
+    program: { emailEnabled: boolean },
+    subscriber: { emailEnabled: boolean; email: string | null },
+  ) {
+    return Boolean(
+      subscriber.emailEnabled && program.emailEnabled && subscriber.email,
+    );
+  }
+
   /**
    * Charge le profil RUE d'un bâtiment.
    *
@@ -1496,6 +1514,8 @@ export class PopulationService {
           id: true,
           latitude: true,
           longitude: true,
+          phone: true,
+          email: true,
           smsEnabled: true,
           emailEnabled: true,
         },
@@ -1545,12 +1565,12 @@ export class PopulationService {
         targetCount += 1;
         uniqueTargetIds.add(subscriber.id);
 
-        if (subscriber.smsEnabled) {
+        if (this.canReceiveSms(program, subscriber)) {
           smsTargetCount += 1;
           uniqueSmsTargetIds.add(subscriber.id);
         }
 
-        if (subscriber.emailEnabled) {
+        if (this.canReceiveEmail(program, subscriber)) {
           emailTargetCount += 1;
           uniqueEmailTargetIds.add(subscriber.id);
         }
@@ -3317,11 +3337,7 @@ export class PopulationService {
         ? alert.messageEN!.trim()
         : alert.messageFR.trim();
 
-    if (
-      subscriber.smsEnabled &&
-      program.smsEnabled &&
-      subscriber.phone
-    ) {
+    if (this.canReceiveSms(program, subscriber)) {
       deliveries.push({
         idempotencyKey:
           `${alert.id}:${subscriber.id}:SMS`,
@@ -3333,15 +3349,11 @@ export class PopulationService {
         language,
         messageSnapshot,
         destinationSnapshot:
-          subscriber.phone,
+          subscriber.phone!,
       });
     }
 
-    if (
-      subscriber.emailEnabled &&
-      program.emailEnabled &&
-      subscriber.email
-    ) {
+    if (this.canReceiveEmail(program, subscriber)) {
       deliveries.push({
         idempotencyKey:
           `${alert.id}:${subscriber.id}:EMAIL`,
@@ -3354,7 +3366,7 @@ export class PopulationService {
         language,
         messageSnapshot,
         destinationSnapshot:
-          subscriber.email,
+          subscriber.email!,
       });
     }
   }
