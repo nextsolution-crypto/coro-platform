@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
@@ -19,7 +20,7 @@ describe('PopulationService location resolution', () => {
   const prisma = {
     populationProgram: { findUnique: jest.fn() },
     rueFacilityProfile: { findUnique: jest.fn() },
-    populationSubscriber: { findFirst: jest.fn() },
+    populationSubscriber: { findFirst: jest.fn(), updateMany: jest.fn() },
   };
   const geocoding = { geocode: jest.fn() };
   let service: PopulationService;
@@ -91,6 +92,7 @@ describe('PopulationService location resolution', () => {
       id: 'subscriber-1',
       status: PopulationSubscriberStatus.ACTIVE,
     });
+    prisma.populationSubscriber.updateMany.mockResolvedValue({ count: 1 });
     geocoding.geocode.mockResolvedValue({
       latitude: 45.508,
       longitude: -73.561,
@@ -257,5 +259,114 @@ describe('PopulationService location resolution', () => {
     await expect(
       service.resolveSubscriberLocation('slug', 'subscriber-1', dto()),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  describe('confirmation', () => {
+    const confirm = (token = resolutionToken()) =>
+      service.confirmSubscriberLocation('slug', 'subscriber-1', {
+        accessToken: accessToken(),
+        resolutionToken: token,
+      });
+
+    it('atomically persists only coordinates carried by the token', async () => {
+      const issuedAt = Date.now() - 10;
+      const result = await confirm(
+        resolutionToken({ iat: issuedAt, exp: issuedAt + 600_000 }),
+      );
+
+      expect(prisma.populationSubscriber.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'subscriber-1',
+          programId: 'program-1',
+          status: PopulationSubscriberStatus.ACTIVE,
+          OR: [
+            { locationResolvedAt: null },
+            { locationResolvedAt: { lt: new Date(issuedAt) } },
+          ],
+        },
+        data: {
+          latitude: 45.508,
+          longitude: -73.561,
+          locationSource: 'GEOCODED_ADDRESS',
+          locationResolvedAt: new Date(issuedAt),
+        },
+      });
+      expect(result).toEqual({
+        confirmed: true,
+        locationConfigured: true,
+        resolvedAt: new Date(issuedAt).toISOString(),
+      });
+      expect(JSON.stringify(result)).not.toMatch(
+        /latitude|longitude|address|postalCode|provider|coordinates|geometry|raw/,
+      );
+    });
+
+    it('returns success when the same resolution was already persisted', async () => {
+      const issuedAt = Date.now() - 10;
+      prisma.populationSubscriber.updateMany.mockResolvedValue({ count: 0 });
+      prisma.populationSubscriber.findFirst
+        .mockResolvedValueOnce({ id: 'subscriber-1' })
+        .mockResolvedValueOnce({
+          latitude: 45.508,
+          longitude: -73.561,
+          locationResolvedAt: new Date(issuedAt),
+        });
+
+      await expect(
+        confirm(resolutionToken({ iat: issuedAt, exp: issuedAt + 600_000 })),
+      ).resolves.toMatchObject({ confirmed: true });
+    });
+
+    it('returns 409 and never overwrites a newer location', async () => {
+      const issuedAt = Date.now() - 1000;
+      prisma.populationSubscriber.updateMany.mockResolvedValue({ count: 0 });
+      prisma.populationSubscriber.findFirst
+        .mockResolvedValueOnce({ id: 'subscriber-1' })
+        .mockResolvedValueOnce({
+          latitude: 46,
+          longitude: -72,
+          locationResolvedAt: new Date(issuedAt + 500),
+        });
+
+      await expect(
+        confirm(resolutionToken({ iat: issuedAt, exp: issuedAt + 600_000 })),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.populationSubscriber.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('requires both token types and an ACTIVE subscriber', async () => {
+      await expect(
+        service.confirmSubscriberLocation('slug', 'subscriber-1', {
+          accessToken: resolutionToken(),
+          resolutionToken: accessToken(),
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      prisma.populationSubscriber.findFirst.mockResolvedValue(null);
+      await expect(confirm()).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.populationSubscriber.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a program that is not operational', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        id: 'profile-1',
+        buildingId: 'building-1',
+        assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
+        populationEnabled: true,
+        populationProgram: {
+          id: 'program-1',
+          status: PopulationProgramStatus.SUSPENDED,
+        },
+      });
+      await expect(confirm()).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.populationSubscriber.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 503 when the location secret is unavailable', async () => {
+      delete process.env.POPULATION_LOCATION_TOKEN_SECRET;
+      await expect(confirm()).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(prisma.populationSubscriber.updateMany).not.toHaveBeenCalled();
+    });
   });
 });

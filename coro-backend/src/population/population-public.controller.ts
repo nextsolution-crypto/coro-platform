@@ -15,6 +15,7 @@ import { UnsubscribePopulationSubscriberDto } from './dto/unsubscribe-population
 import { PopulationAccessDto } from './dto/population-access.dto';
 import { UpdatePopulationPreferencesDto } from './dto/update-population-preferences.dto';
 import { ResolvePopulationLocationDto } from './dto/resolve-population-location.dto';
+import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.dto';
 
 @Controller('population/public')
 export class PopulationPublicController {
@@ -99,13 +100,40 @@ export class PopulationPublicController {
   async resolveSubscriberLocation(
     @Param('publicSlug') publicSlug: string,
     @Param('subscriberId') subscriberId: string,
-    @Body(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    })) dto: ResolvePopulationLocationDto,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    )
+    dto: ResolvePopulationLocationDto,
   ) {
     return this.populationService.resolveSubscriberLocation(
+      publicSlug,
+      subscriberId,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/location/confirm')
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    long: { ttl: 3600000, limit: 30 },
+  })
+  async confirmSubscriberLocation(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    )
+    dto: ConfirmPopulationLocationDto,
+  ) {
+    return this.populationService.confirmSubscriberLocation(
       publicSlug,
       subscriberId,
       dto,

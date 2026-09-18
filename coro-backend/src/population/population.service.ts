@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -45,6 +46,7 @@ import {
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { GeocodingError } from '../geocoding/geocoding.errors';
 import { ResolvePopulationLocationDto } from './dto/resolve-population-location.dto';
+import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.dto';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE =
   'POPULATION_LOCATION_RESOLUTION';
@@ -823,11 +825,12 @@ export class PopulationService {
       throw invalidToken();
     }
 
+    const key = this.getPopulationLocationTokenKey();
     let payload: Partial<PopulationLocationResolutionPayload>;
     try {
       const decipher = createDecipheriv(
         'aes-256-gcm',
-        this.getPopulationLocationTokenKey(),
+        key,
         iv,
       );
       decipher.setAAD(POPULATION_LOCATION_TOKEN_AAD);
@@ -847,7 +850,13 @@ export class PopulationService {
       payload.programId !== expectedProgramId ||
       !Number.isFinite(payload.latitude) ||
       !Number.isFinite(payload.longitude) ||
+      payload.latitude! < -90 ||
+      payload.latitude! > 90 ||
+      payload.longitude! < -180 ||
+      payload.longitude! > 180 ||
       typeof payload.iat !== 'number' ||
+      !Number.isFinite(payload.iat) ||
+      payload.iat > Date.now() ||
       typeof payload.exp !== 'number' ||
       payload.exp <= Date.now() ||
       typeof payload.jti !== 'string' ||
@@ -4617,6 +4626,89 @@ export class PopulationService {
     };
   }
 
+  async confirmSubscriberLocation(
+    publicSlug: string,
+    subscriberId: string,
+    dto: ConfirmPopulationLocationDto,
+  ) {
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: {
+        id: true,
+        rueFacilityProfile: { select: { buildingId: true } },
+      },
+    });
+    if (!program) {
+      throw new NotFoundException('Programme Sentinelle Population introuvable');
+    }
+
+    this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
+    const operationalProfile = await this.assertPopulationOperational(
+      program.rueFacilityProfile.buildingId,
+    );
+    if (operationalProfile.populationProgram?.id !== program.id) {
+      throw new BadRequestException('Le programme Sentinelle Population n’est pas actif');
+    }
+
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+    if (!subscriber) throw new BadRequestException('Accès citoyen invalide');
+
+    const resolution = this.verifyLocationResolutionToken(
+      dto.resolutionToken,
+      subscriberId,
+      program.id,
+    );
+    const resolvedAt = new Date(resolution.iat);
+    const updated = await this.prisma.populationSubscriber.updateMany({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+        OR: [
+          { locationResolvedAt: null },
+          { locationResolvedAt: { lt: resolvedAt } },
+        ],
+      },
+      data: {
+        latitude: resolution.latitude,
+        longitude: resolution.longitude,
+        locationSource: 'GEOCODED_ADDRESS',
+        locationResolvedAt: resolvedAt,
+      },
+    });
+
+    if (updated.count === 0) {
+      const current = await this.prisma.populationSubscriber.findFirst({
+        where: {
+          id: subscriberId,
+          programId: program.id,
+          status: PopulationSubscriberStatus.ACTIVE,
+        },
+        select: { latitude: true, longitude: true, locationResolvedAt: true },
+      });
+      const idempotent =
+        current?.locationResolvedAt?.getTime() === resolution.iat &&
+        current.latitude === resolution.latitude &&
+        current.longitude === resolution.longitude;
+      if (!idempotent) {
+        throw new ConflictException('Cette confirmation de localisation est obsolète');
+      }
+    }
+
+    return {
+      confirmed: true,
+      locationConfigured: true,
+      resolvedAt: resolvedAt.toISOString(),
+    };
+  }
+
   /**
    * Retourne le profil minimal d'un citoyen authentifié.
    *
@@ -4666,6 +4758,9 @@ export class PopulationService {
           emailEnabled: true,
           verifiedAt: true,
           unsubscribedAt: true,
+          latitude: true,
+          longitude: true,
+          locationResolvedAt: true,
         },
       });
 
@@ -4721,6 +4816,9 @@ export class PopulationService {
 
       verifiedAt: subscriber.verifiedAt,
       unsubscribedAt: subscriber.unsubscribedAt,
+      locationConfigured:
+        subscriber.latitude != null && subscriber.longitude != null,
+      locationResolvedAt: subscriber.locationResolvedAt,
     };
   }
 

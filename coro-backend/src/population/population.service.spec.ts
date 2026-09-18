@@ -3086,7 +3086,7 @@ const geocodingService = {
       expect(result.population.uniqueTargetCount).toBe(2);
     });
 
-    it('valide le scenario DEMO 3 actifs, 2 geolocalises, 1 non localise et 1 cible', async () => {
+    it('compte un abonne ACTIVE apres confirmation de sa localisation', async () => {
       prisma.rueEmergencyScenario.findFirst.mockResolvedValue({
         ...scenario,
         impactZones: [scenario.impactZones[1]],
@@ -3096,6 +3096,8 @@ const geocodingService = {
           id: 'demo-subscriber-a',
           latitude: 45.56821528326056,
           longitude: -73.40845800055679,
+          locationSource: 'GEOCODED_ADDRESS',
+          locationResolvedAt: new Date('2026-09-18T12:00:00Z'),
           phone: '+12025550111',
           email: 'demo-a@example.invalid',
           smsEnabled: true,
@@ -7645,6 +7647,9 @@ const geocodingService = {
         emailEnabled: true,
         verifiedAt: new Date('2026-09-17T12:00:00Z'),
         unsubscribedAt: null,
+        latitude: 45.508,
+        longitude: -73.561,
+        locationResolvedAt: new Date('2026-09-18T12:00:00Z'),
       });
     });
 
@@ -7675,7 +7680,12 @@ const geocodingService = {
         },
         verifiedAt: new Date('2026-09-17T12:00:00Z'),
         unsubscribedAt: null,
+        locationConfigured: true,
+        locationResolvedAt: new Date('2026-09-18T12:00:00Z'),
       });
+      expect(JSON.stringify(result)).not.toMatch(
+        /latitude|longitude|coordinates|geometry|provider|raw|addressLine|postalCode/,
+      );
     });
 
     it('ne retourne pas de destination pour un canal absent', async () => {
@@ -7689,6 +7699,9 @@ const geocodingService = {
         emailEnabled: true,
         verifiedAt: new Date('2026-09-17T12:00:00Z'),
         unsubscribedAt: null,
+        latitude: null,
+        longitude: null,
+        locationResolvedAt: null,
       });
 
       const result = await service.getSubscriberProfile(
