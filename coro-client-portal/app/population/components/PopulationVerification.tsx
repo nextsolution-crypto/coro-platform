@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, MapPin, RefreshCw } from "lucide-react";
+import { ArrowRight, CheckCircle2, MapPin, RefreshCw } from "lucide-react";
 import {
   PublicPopulationApiError,
   resendPopulationVerification,
@@ -15,6 +15,7 @@ import {
   type PopulationWorkflowSession,
 } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
+import PopulationLocation from "./PopulationLocation";
 
 type Language = "fr" | "en";
 
@@ -46,8 +47,8 @@ const text = {
     optional: "La localisation est facultative. Elle sert uniquement au ciblage géographique des alertes.",
     configure: "Configurer mon secteur d’alerte",
     later: "Plus tard",
-    locationTitle: "Configuration du secteur d’alerte",
-    locationPlaceholder: "Cette étape sera disponible dans le prochain lot.",
+    deferred: "Votre inscription est active. Vous pourrez configurer votre secteur d’alerte plus tard.",
+    finish: "Terminer",
   },
   en: {
     title: "Verify your registration",
@@ -76,8 +77,8 @@ const text = {
     optional: "Location is optional. It is used only for geographic alert targeting.",
     configure: "Configure my alert area",
     later: "Later",
-    locationTitle: "Alert area configuration",
-    locationPlaceholder: "This step will be available in the next release.",
+    deferred: "Your registration is active. You can configure your alert area later.",
+    finish: "Finish",
   },
 } as const;
 
@@ -97,11 +98,13 @@ export default function PopulationVerification({
   language,
   onWorkflowChange,
   onBack,
+  onAccess,
 }: {
   workflow: PopulationWorkflowSession;
   language: Language;
   onWorkflowChange: (workflow: PopulationWorkflowSession) => void;
   onBack: () => void;
+  onAccess: () => void;
 }) {
   const t = text[language];
   const [code, setCode] = useState("");
@@ -116,7 +119,8 @@ export default function PopulationVerification({
       ? initialCooldown(workflow.verification.expiresAt)
       : Date.now(),
   );
-  const [locationPlaceholder, setLocationPlaceholder] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [deferred, setDeferred] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const verifyInFlight = useRef(false);
@@ -143,25 +147,41 @@ export default function PopulationVerification({
   }, [onBack, workflow]);
 
   if (workflow.state === "AUTHENTICATED") {
+    if (locationOpen || workflow.locationConfigured) {
+      return (
+        <PopulationLocation
+          workflow={workflow}
+          language={language}
+          onWorkflowChange={onWorkflowChange}
+          onCancel={() => setLocationOpen(false)}
+          onDefer={() => {
+            setLocationOpen(false);
+            setDeferred(true);
+          }}
+          onFinish={onBack}
+          onSessionExpired={onAccess}
+        />
+      );
+    }
     return (
       <main className={styles.formMain}>
         <section className={styles.confirmation}>
           <span className={styles.confirmationIcon}>
-            {locationPlaceholder ? <MapPin size={27} /> : <CheckCircle2 size={27} />}
+            <CheckCircle2 size={27} />
           </span>
-          <h1>{locationPlaceholder ? t.locationTitle : t.confirmed}</h1>
-          <p>{locationPlaceholder ? t.locationPlaceholder : t.confirmedText}</p>
-          {!locationPlaceholder && <p className={styles.optionalNotice}>{t.optional}</p>}
-          {locationPlaceholder ? (
-            <button className={styles.backButton} type="button" onClick={() => setLocationPlaceholder(false)}>
-              <ArrowLeft size={17} />{t.back}
+          <h1>{t.confirmed}</h1>
+          <p>{deferred ? t.deferred : t.confirmedText}</p>
+          {!deferred && <p className={styles.optionalNotice}>{t.optional}</p>}
+          {deferred ? (
+            <button className={`${styles.button} ${styles.primary}`} type="button" onClick={onBack}>
+              {t.finish}
             </button>
           ) : (
             <div className={styles.postVerificationActions}>
-              <button className={`${styles.button} ${styles.primary}`} type="button" onClick={() => setLocationPlaceholder(true)}>
+              <button className={`${styles.button} ${styles.primary}`} type="button" onClick={() => setLocationOpen(true)}>
                 <MapPin size={18} />{t.configure}<ArrowRight size={17} />
               </button>
-              <button className={`${styles.button} ${styles.secondary}`} type="button" onClick={onBack}>
+              <button className={`${styles.button} ${styles.secondary}`} type="button" onClick={() => setDeferred(true)}>
                 {t.later}
               </button>
             </div>

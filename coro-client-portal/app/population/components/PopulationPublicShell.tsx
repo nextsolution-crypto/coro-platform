@@ -258,6 +258,7 @@ export default function PopulationPublicShell({
           program={program}
           language={language}
           onBack={() => setView("home")}
+          onAccess={() => setView("access")}
         />
         <footer className={styles.footer}>
           <div className={styles.footerInner}>{t.powered}</div>

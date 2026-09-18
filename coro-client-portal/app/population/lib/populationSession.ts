@@ -24,6 +24,8 @@ export type AuthenticatedPopulationWorkflowSession = PopulationWorkflowSessionBa
   state: "AUTHENTICATED";
   accessToken: string;
   accessTokenExpiresAt: string;
+  locationConfigured?: boolean;
+  locationResolvedAt?: string | null;
 };
 
 export type PopulationWorkflowSession =
@@ -32,6 +34,19 @@ export type PopulationWorkflowSession =
 
 function sessionKey(publicSlug: string) {
   return `${SESSION_PREFIX}:${publicSlug}`;
+}
+
+export function configurePopulationLocationSession(
+  session: AuthenticatedPopulationWorkflowSession,
+  resolvedAt: string,
+) {
+  const updated: AuthenticatedPopulationWorkflowSession = {
+    ...session,
+    locationConfigured: true,
+    locationResolvedAt: resolvedAt,
+  };
+  writePopulationWorkflowSession(updated);
+  return updated;
 }
 
 export function savePopulationWorkflowSession(

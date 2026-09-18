@@ -67,7 +67,36 @@ export type PublicPopulationErrorReason =
   | "NO_ACTIVE_CODE"
   | "ALREADY_VERIFIED"
   | "RESEND_COOLDOWN"
-  | "TOO_MANY_CODES";
+  | "TOO_MANY_CODES"
+  | "INVALID_ADDRESS"
+  | "ADDRESS_NOT_FOUND"
+  | "AMBIGUOUS_ADDRESS"
+  | "LOCATION_UNAVAILABLE"
+  | "ACCESS_INVALID"
+  | "RESOLUTION_INVALID"
+  | "RESOLUTION_STALE";
+
+export type CanadianProvinceCode =
+  | "AB" | "BC" | "MB" | "NB" | "NL" | "NS" | "NT"
+  | "NU" | "ON" | "PE" | "QC" | "SK" | "YT";
+
+export type ResolvePopulationLocationResult = {
+  location: {
+    addressLine?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    country: "CA";
+  };
+  resolutionToken: string;
+  expiresAt: string;
+};
+
+export type ConfirmPopulationLocationResult = {
+  confirmed: true;
+  locationConfigured: true;
+  resolvedAt: string;
+};
 
 export class PublicPopulationApiError extends Error {
   constructor(
@@ -88,6 +117,13 @@ function classifyPublicError(message: unknown): PublicPopulationErrorReason | un
   if (message.includes("déjà vérifié")) return "ALREADY_VERIFIED";
   if (message.includes("attendre avant de demander")) return "RESEND_COOLDOWN";
   if (message.includes("Trop de codes de vérification")) return "TOO_MANY_CODES";
+  if (message.includes("Adresse invalide")) return "INVALID_ADDRESS";
+  if (message.includes("Adresse introuvable")) return "ADDRESS_NOT_FOUND";
+  if (message.includes("Adresse ambiguë")) return "AMBIGUOUS_ADDRESS";
+  if (message.includes("Résolution de localisation temporairement indisponible")) return "LOCATION_UNAVAILABLE";
+  if (message.includes("Jeton d’accès invalide") || message.includes("Accès citoyen invalide")) return "ACCESS_INVALID";
+  if (message.includes("Jeton de résolution de localisation invalide")) return "RESOLUTION_INVALID";
+  if (message.includes("confirmation de localisation est obsolète")) return "RESOLUTION_STALE";
   return undefined;
 }
 
@@ -160,6 +196,34 @@ export function resendPopulationVerification(
 ) {
   return publicRequest<ResendPopulationVerificationResult>(
     `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/resend-verification`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function resolvePopulationLocation(
+  publicSlug: string,
+  subscriberId: string,
+  input: {
+    accessToken: string;
+    addressLine: string;
+    city: string;
+    province: CanadianProvinceCode;
+    postalCode?: string;
+  },
+) {
+  return publicRequest<ResolvePopulationLocationResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/location/resolve`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function confirmPopulationLocation(
+  publicSlug: string,
+  subscriberId: string,
+  input: { accessToken: string; resolutionToken: string },
+) {
+  return publicRequest<ConfirmPopulationLocationResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/location/confirm`,
     { method: "POST", body: JSON.stringify(input) },
   );
 }

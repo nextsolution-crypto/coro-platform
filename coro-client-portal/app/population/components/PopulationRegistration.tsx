@@ -95,11 +95,13 @@ export default function PopulationRegistration({
   program,
   language,
   onBack,
+  onAccess,
 }: {
   publicSlug: string;
   program: PublicPopulationProgram;
   language: Language;
   onBack: () => void;
+  onAccess: () => void;
 }) {
   const t = copy[language];
   const [phone, setPhone] = useState("");
@@ -135,6 +137,7 @@ export default function PopulationRegistration({
         language={language}
         onWorkflowChange={setWorkflow}
         onBack={onBack}
+        onAccess={onAccess}
       />
     );
   }
