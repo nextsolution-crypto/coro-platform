@@ -5,7 +5,10 @@ import { PopulationGeospatialService } from './population-geospatial.service';
 import { PopulationDeliveryService } from './population-delivery.service';
 import { GeocodingModule } from '../geocoding/geocoding.module';
 import { PopulationReadinessController } from './population-readiness.controller';
-import { PopulationReadinessService } from './population-readiness.service';
+import {
+  POPULATION_ENVIRONMENT,
+  PopulationReadinessService,
+} from './population-readiness.service';
 
 @Module({
   imports: [GeocodingModule],
@@ -14,6 +17,10 @@ import { PopulationReadinessService } from './population-readiness.service';
   PopulationService,
   PopulationGeospatialService,
   PopulationDeliveryService,
+  {
+    provide: POPULATION_ENVIRONMENT,
+    useFactory: () => process.env,
+  },
   PopulationReadinessService,
 ],
   exports: [PopulationService, PopulationReadinessService],

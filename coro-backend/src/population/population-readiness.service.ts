@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   PopulationAlertChannel,
   PopulationVerificationChannel,
@@ -11,6 +15,8 @@ export type CapabilityStatus =
   | 'NOT_VALIDATED';
 
 type Environment = NodeJS.ProcessEnv;
+
+export const POPULATION_ENVIRONMENT = Symbol('POPULATION_ENVIRONMENT');
 
 const HMAC_SECRET_MIN_LENGTH = 32;
 const AES_SECRET_NAMES = [
@@ -25,7 +31,10 @@ const POPULATION_SECRET_NAMES = [
 
 @Injectable()
 export class PopulationReadinessService {
-  constructor(private readonly env: Environment = process.env) {}
+  constructor(
+    @Inject(POPULATION_ENVIRONMENT)
+    private readonly env: Environment,
+  ) {}
 
   getReadiness() {
     const secrets = this.secretStatuses();
