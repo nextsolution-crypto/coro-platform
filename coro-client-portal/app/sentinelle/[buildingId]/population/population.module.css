@@ -1,0 +1,149 @@
+.page {
+  width: min(94vw, 1960px);
+  margin-inline: 50%;
+  transform: translateX(-50%);
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.commandGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(300px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.mapCard,
+.controlCenter {
+  min-width: 0;
+}
+
+.controlCenter {
+  width: 100%;
+  max-width: 430px;
+  justify-self: end;
+}
+
+@media (min-width: 1600px) {
+  .page {
+    width: min(96vw, 1960px);
+  }
+
+  .commandGrid {
+    gap: 20px;
+  }
+
+  .mapCard :global(.coro-population-map) {
+    height: 520px !important;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .page {
+    width: min(95vw, 1540px);
+  }
+
+  .commandGrid {
+    grid-template-columns: minmax(0, 2.4fr) minmax(300px, 1fr);
+  }
+
+  .mapCard :global(.coro-population-map) {
+    height: 470px !important;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .page {
+    width: 100%;
+    margin-inline: 0;
+    transform: none;
+  }
+
+  .statusGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .commandGrid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+  }
+
+  .controlCenter {
+    max-width: 360px;
+  }
+}
+
+@media (min-width: 700px) and (max-width: 899px) {
+  .page {
+    width: 100%;
+    margin-inline: 0;
+    transform: none;
+  }
+
+  .statusGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commandGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .controlCenter {
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 699px) {
+  .page {
+    width: 100%;
+    margin-inline: 0;
+    transform: none;
+  }
+
+  .header,
+  .situation,
+  .scenarios,
+  .incidentRegistry,
+  .communicationChain {
+    overflow-wrap: anywhere;
+  }
+
+  .statusGrid,
+  .commandGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .controlCenter {
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .mapCard :global(.coro-population-map) {
+    height: 360px !important;
+  }
+
+  .controlCenter button,
+  .incidentRegistry button {
+    max-width: 100%;
+  }
+
+  .communicationChain > div {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .statusGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .statusGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

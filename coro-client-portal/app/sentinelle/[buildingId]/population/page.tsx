@@ -20,6 +20,7 @@ import {
 import { apiGet, apiPost, apiPut, getUser } from '../../../store/auth';
 import PortalLayout from '../../../components/PortalLayout';
 import PopulationOperationalMap from './PopulationOperationalMap';
+import styles from './population.module.css';
 
 type PopulationStatus = {
   eligible: boolean;
@@ -1319,8 +1320,9 @@ export default function PopulationPage() {
 
   return (
     <PortalLayout>
+      <div className={styles.page}>
       {/* Header */}
-      <header style={{ marginBottom: 24 }}>
+      <header className={styles.header} style={{ marginBottom: 24 }}>
         <button
           type="button"
           onClick={() => router.push(`/sentinelle/${buildingId}`)}
@@ -1432,6 +1434,7 @@ export default function PopulationPage() {
 
       {/* Bandeau de commandement */}
       <section
+        className={styles.situation}
         style={{
           position: 'relative',
           overflow: 'hidden',
@@ -1504,11 +1507,8 @@ export default function PopulationPage() {
 
       {/* État système */}
       <section
+        className={styles.statusGrid}
         style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(190px, 100%), 1fr))',
-          gap: 12,
           marginBottom: 18,
         }}
       >
@@ -1555,6 +1555,7 @@ export default function PopulationPage() {
 
       {/* Scénarios RUE */}
       <section
+        className={styles.scenarios}
         style={{
           marginBottom: 18,
           padding: '18px 20px',
@@ -1790,16 +1791,14 @@ export default function PopulationPage() {
 
       {/* Poste de commandement */}
       <section
+        className={styles.commandGrid}
         style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'minmax(min(500px, 100%), 1.7fr) minmax(min(260px, 100%), 0.8fr)',
-          gap: 14,
           marginBottom: 18,
         }}
       >
         {/* Carte */}
         <div
+          className={styles.mapCard}
           style={{
             minHeight: 330,
             overflow: 'hidden',
@@ -1925,6 +1924,7 @@ export default function PopulationPage() {
 
         {/* Actions */}
         <div
+          className={styles.controlCenter}
           style={{
             padding: 18,
             backgroundColor: '#FFFFFF',
@@ -2269,6 +2269,7 @@ export default function PopulationPage() {
 
       {isActive && (
         <section
+          className={styles.incidentRegistry}
           style={{
             marginBottom: 18,
             padding: 18,
@@ -3316,6 +3317,7 @@ export default function PopulationPage() {
 
       {/* ChaÃ®ne opÃ©rationnelle */}
       <section
+        className={styles.communicationChain}
         style={{
           padding: '18px 20px',
           backgroundColor: '#FFFFFF',
@@ -3408,6 +3410,7 @@ export default function PopulationPage() {
           </p>
         </div>
       </section>
+      </div>
     </PortalLayout>
   );
 }

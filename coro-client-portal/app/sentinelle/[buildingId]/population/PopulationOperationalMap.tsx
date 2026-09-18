@@ -427,6 +427,35 @@ export default function PopulationOperationalMap({
     };
   }, [building, zones]);
 
+  useEffect(() => {
+    const container = mapContainerRef.current;
+
+    if (!container || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    let animationFrame: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+
+      animationFrame = window.requestAnimationFrame(() => {
+        mapInstanceRef.current?.invalidateSize({ pan: false });
+      });
+    });
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [mapError]);
+
   const mappedZoneCount = zones.filter(
     (zone) =>
       isSupportedGeometry(zone.geometry) ||
