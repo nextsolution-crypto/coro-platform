@@ -1857,63 +1857,70 @@ export default function PopulationPage() {
             <Map size={18} color="#167D6A" />
           </div>
 
-          <div
-            style={{
-              minHeight: 265,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-              background:
-                'radial-gradient(circle at center, #F4F8F7 0%, #EEF3F2 55%, #E8EFED 100%)',
-            }}
-          >
+          {preview ? (
+            <PopulationOperationalMap
+              building={preview.building}
+              zones={preview.zones}
+            />
+          ) : (
             <div
               style={{
-                maxWidth: 330,
-                textAlign: 'center',
+                minHeight: 265,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 24,
+                background:
+                  'radial-gradient(circle at center, #F4F8F7 0%, #EEF3F2 55%, #E8EFED 100%)',
               }}
             >
               <div
                 style={{
-                  width: 54,
-                  height: 54,
-                  margin: '0 auto 13px',
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 6px 20px rgba(44,62,80,0.08)',
+                  maxWidth: 330,
+                  textAlign: 'center',
                 }}
               >
-                <Map size={23} color="#167D6A" />
+                <div
+                  style={{
+                    width: 54,
+                    height: 54,
+                    margin: '0 auto 13px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 6px 20px rgba(44,62,80,0.08)',
+                  }}
+                >
+                  <Map size={23} color="#167D6A" />
+                </div>
+
+                <p
+                  style={{
+                    margin: '0 0 5px',
+                    color: '#2C3E50',
+                    fontSize: 14,
+                    fontWeight: 800,
+                  }}
+                >
+                  Carte opérationnelle
+                </p>
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: '#6C757D',
+                    fontSize: 12,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  Sélectionnez un scénario et calculez la population ciblée
+                  pour afficher les zones d&apos;impact sur la carte.
+                </p>
               </div>
-
-              <p
-                style={{
-                  margin: '0 0 5px',
-                  color: '#2C3E50',
-                  fontSize: 14,
-                  fontWeight: 800,
-                }}
-              >
-                Carte opérationnelle
-              </p>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: '#6C757D',
-                  fontSize: 12,
-                  lineHeight: 1.55,
-                }}
-              >
-                La prochaine étape branchera ici les zones d&apos;impact du
-                scénario et les données agrégées de population.
-              </p>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Actions */}
