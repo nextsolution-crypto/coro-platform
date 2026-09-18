@@ -29,6 +29,10 @@ describe('Population access recovery', () => {
     },
   };
   const delivery = { sendSms: jest.fn(), sendEmail: jest.fn() };
+  const readiness = {
+    assertAccessRecoveryReady: jest.fn(),
+    assertVerificationChannelReady: jest.fn(),
+  };
   let service: PopulationService;
 
   const program = {
@@ -105,6 +109,7 @@ describe('Population access recovery', () => {
       {} as any,
       delivery as any,
       {} as any,
+      readiness as any,
     );
   });
 
@@ -113,6 +118,18 @@ describe('Population access recovery', () => {
       channel: PopulationVerificationChannel.SMS,
       destination: '  +14505551234  ',
     });
+
+  it('refuses recovery before persistence when configuration is unavailable', async () => {
+    readiness.assertAccessRecoveryReady.mockImplementationOnce(() => {
+      throw new ServiceUnavailableException('Récupération indisponible');
+    });
+
+    await expect(requestSms()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+    expect(delivery.sendSms).not.toHaveBeenCalled();
+  });
 
   it('creates and sends an OTP for exactly one ACTIVE SMS subscriber', async () => {
     const result = await requestSms();

@@ -51,6 +51,7 @@ import { RequestPopulationAccessByDestinationDto } from './dto/request-populatio
 import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access-request.dto';
 import { SelectPopulationLocationDto } from './dto/select-population-location.dto';
 import type { GeocodingResult } from '../geocoding/geocoding.types';
+import { PopulationReadinessService } from './population-readiness.service';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE =
   'POPULATION_LOCATION_RESOLUTION';
@@ -116,6 +117,7 @@ export class PopulationService {
     private readonly populationGeospatialService: PopulationGeospatialService,
     private readonly populationDeliveryService: PopulationDeliveryService,
     private readonly geocodingService: GeocodingService,
+    private readonly readiness: PopulationReadinessService,
   ) {}
 
   private canReceiveSms(
@@ -1313,6 +1315,8 @@ export class PopulationService {
         ? PopulationVerificationChannel.SMS
         : PopulationVerificationChannel.EMAIL;
 
+    this.readiness.assertVerificationChannelReady(verificationChannel);
+
     const verificationCode = this.generateVerificationCode();
 
     const verificationExpiresAt = new Date(
@@ -1390,6 +1394,7 @@ export class PopulationService {
     subscriberId: string,
     dto: ResendPopulationVerificationDto,
   ) {
+    this.readiness.assertVerificationChannelReady(dto.channel);
     const program =
       await this.prisma.populationProgram.findUnique({
         where: {
@@ -1561,6 +1566,8 @@ export class PopulationService {
     subscriberId: string,
     dto: ResendPopulationVerificationDto,
   ) {
+    this.readiness.assertAccessRecoveryReady();
+    this.readiness.assertVerificationChannelReady(dto.channel);
     const genericResponse = this.accessRequestResponse();
     const program = await this.prisma.populationProgram.findUnique({
       where: { publicSlug },
@@ -1677,6 +1684,8 @@ export class PopulationService {
     publicSlug: string,
     dto: RequestPopulationAccessByDestinationDto,
   ) {
+    this.readiness.assertAccessRecoveryReady();
+    this.readiness.assertVerificationChannelReady(dto.channel);
     const key = this.getPopulationAccessRequestTokenKey();
     const now = Date.now();
     const verificationCode = this.generateVerificationCode();
@@ -1805,6 +1814,7 @@ export class PopulationService {
     publicSlug: string,
     dto: VerifyPopulationAccessRequestDto,
   ) {
+    this.readiness.assertAccessRecoveryReady();
     const invalid = () =>
       new BadRequestException('Code d’accès invalide ou expiré');
     const payload = this.verifyPopulationAccessRequestToken(
@@ -1876,6 +1886,8 @@ export class PopulationService {
     subscriberId: string,
     dto: VerifyPopulationSubscriberDto,
   ) {
+    this.readiness.assertAccessReady();
+    this.readiness.assertOtpReady();
     const invalidAccess = () =>
       new BadRequestException('Code d’accès invalide ou expiré');
     const program = await this.prisma.populationProgram.findUnique({
@@ -1968,6 +1980,9 @@ export class PopulationService {
     subscriberId: string,
     dto: VerifyPopulationSubscriberDto,
   ) {
+    // Must run before a valid OTP can irreversibly activate the subscriber.
+    this.readiness.assertAccessReady();
+    this.readiness.assertOtpReady();
     const program =
       await this.prisma.populationProgram.findUnique({
         where: {
@@ -4271,6 +4286,10 @@ export class PopulationService {
     }
   }
 
+  for (const channel of new Set(deliveries.map(delivery => delivery.channel))) {
+    this.readiness.assertAlertChannelReady(channel);
+  }
+
   const recipientsFrozenAt = new Date();
 
   /*
@@ -4519,6 +4538,19 @@ export class PopulationService {
       throw new BadRequestException(
         'Aucun destinataire figé pour cette alerte',
       );
+    }
+
+    const frozenChannels =
+      await this.prisma.populationAlertDelivery.findMany({
+        where: {
+          alertId: alert.id,
+        },
+        select: { channel: true },
+        distinct: ['channel'],
+      });
+
+    for (const delivery of frozenChannels) {
+      this.readiness.assertAlertChannelReady(delivery.channel);
     }
 
     const sendingAt = new Date();
@@ -5061,6 +5093,9 @@ export class PopulationService {
     subscriberId: string,
     dto: ResolvePopulationLocationDto,
   ) {
+    this.readiness.assertAccessReady();
+    this.readiness.assertLocationTokenReady();
+    this.readiness.assertGeocodingReady();
     const program = await this.prisma.populationProgram.findUnique({
       where: { publicSlug },
       select: {
@@ -5169,6 +5204,8 @@ export class PopulationService {
     subscriberId: string,
     dto: SelectPopulationLocationDto,
   ) {
+    this.readiness.assertAccessReady();
+    this.readiness.assertLocationTokenReady();
     const program = await this.prisma.populationProgram.findUnique({
       where: { publicSlug },
       select: {
@@ -5231,6 +5268,8 @@ export class PopulationService {
     subscriberId: string,
     dto: ConfirmPopulationLocationDto,
   ) {
+    this.readiness.assertAccessReady();
+    this.readiness.assertLocationTokenReady();
     const program = await this.prisma.populationProgram.findUnique({
       where: { publicSlug },
       select: {

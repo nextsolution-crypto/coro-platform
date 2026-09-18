@@ -4,15 +4,18 @@ import { PopulationService } from './population.service';
 import { PopulationGeospatialService } from './population-geospatial.service';
 import { PopulationDeliveryService } from './population-delivery.service';
 import { GeocodingModule } from '../geocoding/geocoding.module';
+import { PopulationReadinessController } from './population-readiness.controller';
+import { PopulationReadinessService } from './population-readiness.service';
 
 @Module({
   imports: [GeocodingModule],
-  controllers: [PopulationPublicController],
+  controllers: [PopulationPublicController, PopulationReadinessController],
   providers: [
   PopulationService,
   PopulationGeospatialService,
   PopulationDeliveryService,
+  PopulationReadinessService,
 ],
-  exports: [PopulationService],
+  exports: [PopulationService, PopulationReadinessService],
 })
 export class PopulationModule {}

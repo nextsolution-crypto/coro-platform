@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   PopulationAlertStatus,
@@ -98,6 +99,16 @@ const geocodingService = {
   geocode: jest.fn(),
 };
 
+const readiness = {
+  assertOtpReady: jest.fn(),
+  assertAccessReady: jest.fn(),
+  assertAccessRecoveryReady: jest.fn(),
+  assertLocationTokenReady: jest.fn(),
+  assertGeocodingReady: jest.fn(),
+  assertVerificationChannelReady: jest.fn(),
+  assertAlertChannelReady: jest.fn(),
+};
+
   beforeEach(() => {
   jest.clearAllMocks();
 
@@ -129,7 +140,25 @@ const geocodingService = {
       populationGeospatialService as any,
       populationDeliveryService as any,
       geocodingService as any,
+      readiness as any,
     );
+  });
+
+  it('keeps a PENDING subscriber unchanged when the access secret is unavailable', async () => {
+    readiness.assertAccessReady.mockImplementationOnce(() => {
+      throw new ServiceUnavailableException('Accès citoyen Population indisponible');
+    });
+
+    await expect(
+      service.verifySubscriber('program-slug', 'subscriber-pending', {
+        channel: PopulationVerificationChannel.EMAIL,
+        code: '123456',
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(prisma.populationProgram.findUnique).not.toHaveBeenCalled();
+    expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
+    expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
   });
 
   describe('getRueFacilityProfile', () => {
@@ -1737,6 +1766,23 @@ const geocodingService = {
   });
 
   describe('registerSubscriber', () => {
+    it('rejects before creation when OTP delivery is unavailable', async () => {
+      readiness.assertVerificationChannelReady.mockImplementationOnce(() => {
+        throw new ServiceUnavailableException('Transport indisponible');
+      });
+
+      await expect(
+        service.registerSubscriber('sobeys-boucherville', {
+          email: 'citizen@example.com',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+    });
+
     const activePublicProgram = {
       id: 'program-1',
       status: PopulationProgramStatus.ACTIVE,
@@ -6769,6 +6815,23 @@ const geocodingService = {
     });
 
   describe('sendAlert', () => {
+    it('rejects an unavailable transport before claiming the alert', async () => {
+      prisma.populationAlertDelivery.findMany.mockResolvedValueOnce([
+        { channel: PopulationAlertChannel.EMAIL },
+      ]);
+      readiness.assertAlertChannelReady.mockImplementationOnce(() => {
+        throw new ServiceUnavailableException('Transport indisponible');
+      });
+
+      await expect(
+        service.sendAlert('building-1', 'alert-send-1'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+    });
+
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
@@ -7052,7 +7115,11 @@ const geocodingService = {
 
       expect(
         prisma.populationAlertDelivery.findMany,
-      ).not.toHaveBeenCalled();
+      ).toHaveBeenCalledWith({
+        where: { alertId: 'alert-send-1' },
+        select: { channel: true },
+        distinct: ['channel'],
+      });
     });
   });
 

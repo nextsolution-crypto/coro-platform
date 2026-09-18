@@ -25,6 +25,11 @@ describe('PopulationService location resolution', () => {
     populationSubscriber: { findFirst: jest.fn(), updateMany: jest.fn() },
   };
   const geocoding = { geocodeCandidates: jest.fn() };
+  const readiness = {
+    assertAccessReady: jest.fn(),
+    assertLocationTokenReady: jest.fn(),
+    assertGeocodingReady: jest.fn(),
+  };
   let service: PopulationService;
   const accessToken = (
     subscriberId = 'subscriber-1',
@@ -139,6 +144,7 @@ describe('PopulationService location resolution', () => {
       {} as any,
       {} as any,
       geocoding as any,
+      readiness as any,
     );
   });
 
