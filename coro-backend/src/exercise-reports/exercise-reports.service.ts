@@ -13,7 +13,9 @@ import {
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { CreateExerciseReportDto } from './dto/create-exercise-report.dto';
+import { CompatibleExerciseSourcesDto } from './dto/compatible-exercise-sources.dto';
 import {
   ExerciseActionItemDto,
   ExerciseFindingDto,
@@ -40,10 +42,21 @@ const reportInclude = {
   client: { select: { id: true, name: true } },
 } satisfies Prisma.ExerciseReportInclude;
 
-interface AuthenticatedUser {
-  userId: string;
-  organizationId: string;
-}
+const activityContextInclude = {
+  booking: true,
+  project: {
+    include: {
+      organization: true,
+      client: true,
+      building: true,
+      user: true,
+    },
+  },
+} satisfies Prisma.ProjectActivityInclude;
+
+type ActivityContext = Prisma.ProjectActivityGetPayload<{
+  include: typeof activityContextInclude;
+}>;
 
 interface ScalarProvenance {
   origin?: string;
@@ -70,40 +83,27 @@ export class ExerciseReportsService {
   async createFromActivity(
     activityId: string,
     dto: CreateExerciseReportDto,
-    user: AuthenticatedUser,
+    user: AdviserActor,
   ) {
-    const existing = await this.prisma.exerciseReport.findFirst({
-      where: { activityId, organizationId: user.organizationId },
-      include: reportInclude,
-    });
-    if (existing) return existing;
     if (dto.incidentEventId && dto.evacuationEventId) {
       throw new BadRequestException(
         "CORO ne peut pas prouver que l'incident et l'evacuation appartiennent au meme exercice; liez une seule source operationnelle.",
       );
     }
 
-    const activity = await this.prisma.projectActivity.findFirst({
-      where: { id: activityId, organizationId: user.organizationId },
-      include: {
-        booking: true,
-        project: {
-          include: {
-            organization: true,
-            client: true,
-            building: true,
-            user: true,
-          },
-        },
-      },
+    const activity = await this.getAccessibleActivity(activityId, user);
+    const existing = await this.prisma.exerciseReport.findFirst({
+      where: { activityId, organizationId: user.organizationId },
+      include: reportInclude,
     });
-    if (!activity) throw new NotFoundException('Activite introuvable');
-    const reportType = ELIGIBLE_ACTIVITY_TYPES.get(activity.type);
-    if (!reportType) {
+    if (existing) return existing;
+    const eligibility = this.draftEligibility(activity.type);
+    if (!eligibility.canCreateDraft || !eligibility.reportType) {
       throw new BadRequestException(
         'Un rapport est disponible uniquement pour un exercice de table ou evacuation.',
       );
     }
+    const reportType = eligibility.reportType;
 
     const bookingId = dto.bookingId ?? activity.bookingId;
     const booking = bookingId
@@ -125,9 +125,7 @@ export class ExerciseReportsService {
       ? await this.prisma.incidentEvent.findFirst({
           where: {
             id: dto.incidentEventId,
-            organizationId: user.organizationId,
-            buildingId: activity.project.buildingId,
-            isExercise: true,
+            ...this.compatibleIncidentWhere(activity, user.organizationId),
           },
           include: { logs: { orderBy: { timestamp: 'asc' } } },
         })
@@ -142,8 +140,7 @@ export class ExerciseReportsService {
       ? await this.prisma.evacuationEvent.findFirst({
           where: {
             id: dto.evacuationEventId,
-            organizationId: user.organizationId,
-            buildingId: activity.project.buildingId,
+            ...this.compatibleEvacuationWhere(activity, user.organizationId),
           },
         })
       : null;
@@ -278,9 +275,117 @@ export class ExerciseReportsService {
     }
   }
 
-  async getDraft(id: string, organizationId: string) {
+  async getCompatibleSources(
+    activityId: string,
+    user: AdviserActor,
+  ): Promise<CompatibleExerciseSourcesDto> {
+    const activity = await this.getAccessibleActivity(activityId, user);
+    const eligibility = this.draftEligibility(activity.type);
+    if (!eligibility.canCreateDraft || !eligibility.reportType) {
+      throw new BadRequestException(
+        'Un rapport est disponible uniquement pour un exercice de table ou evacuation.',
+      );
+    }
+    const [incidents, evacuations] = await Promise.all([
+      this.prisma.incidentEvent.findMany({
+        where: this.compatibleIncidentWhere(activity, user.organizationId),
+        orderBy: { triggeredAt: 'desc' },
+        take: 100,
+        select: {
+          id: true,
+          type: true,
+          status: true,
+          triggeredAt: true,
+          resolvedAt: true,
+          rexWentWell: true,
+          rexToImprove: true,
+          rexRecommendations: true,
+          rexCorrectiveActions: true,
+        },
+      }),
+      this.prisma.evacuationEvent.findMany({
+        where: this.compatibleEvacuationWhere(activity, user.organizationId),
+        orderBy: { triggeredAt: 'desc' },
+        take: 100,
+        select: {
+          id: true,
+          status: true,
+          triggeredAt: true,
+          resolvedAt: true,
+        },
+      }),
+    ]);
+    return {
+      activityId: activity.id,
+      canCreateDraft: eligibility.canCreateDraft,
+      reportType: eligibility.reportType,
+      selectionMode: 'SINGLE_OPERATIONAL_SOURCE',
+      incidents: incidents.map((incident) => ({
+        id: incident.id,
+        type: incident.type,
+        status: incident.status,
+        triggeredAt: incident.triggeredAt,
+        resolvedAt: incident.resolvedAt,
+        hasRex: Boolean(
+          incident.rexWentWell ||
+          incident.rexToImprove ||
+          incident.rexRecommendations ||
+          incident.rexCorrectiveActions,
+        ),
+      })),
+      evacuations,
+    };
+  }
+
+  private async getAccessibleActivity(
+    activityId: string,
+    user: AdviserActor,
+  ): Promise<ActivityContext> {
+    const activity = await this.prisma.projectActivity.findFirst({
+      where: {
+        id: activityId,
+        organizationId: user.organizationId,
+        project: { is: projectAccessWhere(user) },
+      },
+      include: activityContextInclude,
+    });
+    if (!activity) throw new NotFoundException('Activite introuvable');
+    return activity;
+  }
+
+  private compatibleIncidentWhere(
+    activity: ActivityContext,
+    organizationId: string,
+  ): Prisma.IncidentEventWhereInput {
+    return {
+      organizationId,
+      buildingId: activity.project.buildingId,
+      isExercise: true,
+    };
+  }
+
+  private compatibleEvacuationWhere(
+    activity: ActivityContext,
+    organizationId: string,
+  ): Prisma.EvacuationEventWhereInput {
+    return { organizationId, buildingId: activity.project.buildingId };
+  }
+
+  private draftEligibility(activityType: string): {
+    canCreateDraft: boolean;
+    reportType: ExerciseReportType | null;
+  } {
+    const reportType = ELIGIBLE_ACTIVITY_TYPES.get(activityType) || null;
+    return { canCreateDraft: reportType !== null, reportType };
+  }
+
+  async getDraft(id: string, user: AdviserActor) {
     const report = await this.prisma.exerciseReport.findFirst({
-      where: { id, organizationId },
+      where: {
+        id,
+        organizationId: user.organizationId,
+        project: { is: projectAccessWhere(user) },
+      },
       include: reportInclude,
     });
     if (!report) throw new NotFoundException('Rapport exercice introuvable');
@@ -290,13 +395,17 @@ export class ExerciseReportsService {
   async updateDraft(
     id: string,
     dto: UpdateExerciseReportDto,
-    user: AuthenticatedUser,
+    user: AdviserActor,
   ) {
     this.assertUniqueKeys(dto);
     return this.prisma.$transaction(
       async (tx) => {
         const report = await tx.exerciseReport.findFirst({
-          where: { id, organizationId: user.organizationId },
+          where: {
+            id,
+            organizationId: user.organizationId,
+            project: { is: projectAccessWhere(user) },
+          },
           include: {
             participants: true,
             timelineEntries: true,

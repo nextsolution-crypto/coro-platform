@@ -12,6 +12,7 @@ import { BookingsModule } from '../bookings/bookings.module';
 import { OccupancyModule } from '../occupancy/occupancy.module';
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PopulationModule } from '../population/population.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     BookingsModule,
     OccupancyModule,
     NotificationsModule,
+    PopulationModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'coro-secret',
       signOptions: { expiresIn: '7d' },

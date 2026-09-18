@@ -1,19 +1,92 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 export const ACTIVITY_CATALOG = [
-  { type: 'creation_document',        label: 'Création ou mise à jour de document (PMU/PSI/PUE/PGC...)', duration: 'Variable', mode: 'presentiel', order: 1 },
-  { type: 'formation_equipe_urgence', label: 'Formation pour équipe d\'urgence', duration: '2h30 – 3h00', mode: 'presentiel', order: 2 },
-  { type: 'formation_equipe_urgence_exercice', label: 'Formation pour équipe d\'urgence + exercice simulé', duration: '3h00 – 3h30', mode: 'presentiel', order: 3 },
-  { type: 'formation_travail_chaud',  label: 'Formation travail à chaud', duration: '2h00', mode: 'presentiel', order: 4 },
-  { type: 'formation_coordonnateur',  label: 'Formation aux coordonnateurs d\'urgence', duration: '2h00', mode: 'presentiel', order: 5 },
-  { type: 'formation_epi',            label: 'Formation équipe de première intervention (EPI)', duration: '2h00', mode: 'presentiel', order: 6 },
-  { type: 'formation_communication',  label: 'Formation communication d\'urgence', duration: '2h00', mode: 'presentiel', order: 7 },
-  { type: 'formation_comportement',   label: 'Formation comportement et attitude en situation d\'urgence', duration: '2h00', mode: 'presentiel', order: 8 },
-  { type: 'formation_locataires',     label: 'Formation aux locataires', duration: '1h00', mode: 'teams', order: 9 },
-  { type: 'exercice_table',           label: 'Exercice de table', duration: '2h00', mode: 'teams', order: 10 },
-  { type: 'exercice_evacuation',      label: 'Exercice d\'évacuation annuel', duration: '3h00', mode: 'presentiel', order: 11 },
-  { type: 'autre',                    label: 'Autre', duration: '', mode: 'presentiel', order: 12 },
+  {
+    type: 'creation_document',
+    label: 'Création ou mise à jour de document (PMU/PSI/PUE/PGC...)',
+    duration: 'Variable',
+    mode: 'presentiel',
+    order: 1,
+  },
+  {
+    type: 'formation_equipe_urgence',
+    label: "Formation pour équipe d'urgence",
+    duration: '2h30 – 3h00',
+    mode: 'presentiel',
+    order: 2,
+  },
+  {
+    type: 'formation_equipe_urgence_exercice',
+    label: "Formation pour équipe d'urgence + exercice simulé",
+    duration: '3h00 – 3h30',
+    mode: 'presentiel',
+    order: 3,
+  },
+  {
+    type: 'formation_travail_chaud',
+    label: 'Formation travail à chaud',
+    duration: '2h00',
+    mode: 'presentiel',
+    order: 4,
+  },
+  {
+    type: 'formation_coordonnateur',
+    label: "Formation aux coordonnateurs d'urgence",
+    duration: '2h00',
+    mode: 'presentiel',
+    order: 5,
+  },
+  {
+    type: 'formation_epi',
+    label: 'Formation équipe de première intervention (EPI)',
+    duration: '2h00',
+    mode: 'presentiel',
+    order: 6,
+  },
+  {
+    type: 'formation_communication',
+    label: "Formation communication d'urgence",
+    duration: '2h00',
+    mode: 'presentiel',
+    order: 7,
+  },
+  {
+    type: 'formation_comportement',
+    label: "Formation comportement et attitude en situation d'urgence",
+    duration: '2h00',
+    mode: 'presentiel',
+    order: 8,
+  },
+  {
+    type: 'formation_locataires',
+    label: 'Formation aux locataires',
+    duration: '1h00',
+    mode: 'teams',
+    order: 9,
+  },
+  {
+    type: 'exercice_table',
+    label: 'Exercice de table',
+    duration: '2h00',
+    mode: 'teams',
+    order: 10,
+  },
+  {
+    type: 'exercice_evacuation',
+    label: "Exercice d'évacuation annuel",
+    duration: '3h00',
+    mode: 'presentiel',
+    order: 11,
+  },
+  {
+    type: 'autre',
+    label: 'Autre',
+    duration: '',
+    mode: 'presentiel',
+    order: 12,
+  },
 ];
 
 @Injectable()
@@ -35,11 +108,18 @@ export class ActivitiesService {
   }
 
   // Récupérer les activités d'un projet
-  async getActivities(projectId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async getActivities(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.projectActivity.findMany({
-      where: { projectId, organizationId },
+      where: { projectId, organizationId: actor.organizationId },
       orderBy: [{ scheduledDate: 'asc' }],
+      include: {
+        exerciseReport: { select: { id: true, status: true } },
+      },
     });
   }
 
@@ -78,7 +158,8 @@ export class ActivitiesService {
       updateData.reportedDate = new Date(dto.reportedDate);
       updateData.scheduledDate = new Date(dto.reportedDate);
     }
-    if (dto.scheduledDate) updateData.scheduledDate = new Date(dto.scheduledDate);
+    if (dto.scheduledDate)
+      updateData.scheduledDate = new Date(dto.scheduledDate);
 
     return this.prisma.projectActivity.update({
       where: { id: activityId },
@@ -103,9 +184,13 @@ export class ActivitiesService {
     });
 
     const duplicated = await Promise.all(
-      activities.map(a => {
+      activities.map((a) => {
         const newDate = a.scheduledDate
-          ? new Date(new Date(a.scheduledDate).setFullYear(new Date(a.scheduledDate).getFullYear() + 1))
+          ? new Date(
+              new Date(a.scheduledDate).setFullYear(
+                new Date(a.scheduledDate).getFullYear() + 1,
+              ),
+            )
           : null;
         return this.prisma.projectActivity.create({
           data: {
@@ -126,7 +211,7 @@ export class ActivitiesService {
             sourceMandate: a.sourceMandate,
           },
         });
-      })
+      }),
     );
     return duplicated;
   }
@@ -135,9 +220,14 @@ export class ActivitiesService {
   generateIcs(activity: any): string {
     const now = new Date();
     const formatDate = (d: Date) =>
-      d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      d
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace(/\.\d{3}/, '');
 
-    const start = activity.scheduledDate ? new Date(activity.scheduledDate) : now;
+    const start = activity.scheduledDate
+      ? new Date(activity.scheduledDate)
+      : now;
     // Durée en minutes selon le label
     const durationMinutes = this.parseDurationMinutes(activity.duration);
     const end = new Date(start.getTime() + durationMinutes * 60000);
@@ -146,9 +236,15 @@ export class ActivitiesService {
 
     const title = activity.customLabel || activity.label;
     const attendees = [
-      activity.assigneeEmail ? `ATTENDEE;RSVP=TRUE:mailto:${activity.assigneeEmail}` : '',
-      activity.clientEmail ? `ATTENDEE;RSVP=TRUE:mailto:${activity.clientEmail}` : '',
-    ].filter(Boolean).join('\r\n');
+      activity.assigneeEmail
+        ? `ATTENDEE;RSVP=TRUE:mailto:${activity.assigneeEmail}`
+        : '',
+      activity.clientEmail
+        ? `ATTENDEE;RSVP=TRUE:mailto:${activity.clientEmail}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\r\n');
 
     return [
       'BEGIN:VCALENDAR',
@@ -171,7 +267,9 @@ export class ActivitiesService {
       'END:VALARM',
       'END:VEVENT',
       'END:VCALENDAR',
-    ].filter(Boolean).join('\r\n');
+    ]
+      .filter(Boolean)
+      .join('\r\n');
   }
 
   private parseDurationMinutes(duration: string): number {
@@ -196,11 +294,14 @@ export class ActivitiesService {
     });
 
     const total = projects.reduce((sum, p) => sum + p.activities.length, 0);
-    const done = projects.reduce((sum, p) =>
-      sum + p.activities.filter(a => a.status === 'termine').length, 0);
+    const done = projects.reduce(
+      (sum, p) =>
+        sum + p.activities.filter((a) => a.status === 'termine').length,
+      0,
+    );
 
     return {
-      projects: projects.map(p => ({
+      projects: projects.map((p) => ({
         projectId: p.id,
         projectName: p.name,
         buildingName: p.building.name,
@@ -214,34 +315,43 @@ export class ActivitiesService {
       },
     };
   }
-  async generateFromMandate(projectId: string, organizationId: string, services: { type: string; isRecurring: boolean }[]) {
+  async generateFromMandate(
+    projectId: string,
+    organizationId: string,
+    services: { type: string; isRecurring: boolean }[],
+  ) {
     await this.assertOwnership(projectId, organizationId);
 
     // Correspondance type d'activité → nom de liste de tâches
     const TASK_LIST_MAP: Record<string, string> = {
-      'creation_document':                    'Production documentaire',
-      'exercice_table':                       'Exercice d\'évacuation',
-      'exercice_evacuation':                  'Exercice d\'évacuation',
-      'formation_equipe_urgence':             'Formation mesures d\'urgence',
-      'formation_equipe_urgence_exercice':    'Formation mesures d\'urgence',
-      'formation_travail_chaud':              'Formation mesures d\'urgence',
-      'formation_coordonnateur':              'Formation mesures d\'urgence',
-      'formation_epi':                        'Formation mesures d\'urgence',
-      'formation_communication':              'Formation mesures d\'urgence',
-      'formation_comportement':               'Formation mesures d\'urgence',
-      'formation_locataires':                 'Formation mesures d\'urgence',
+      creation_document: 'Production documentaire',
+      exercice_table: "Exercice d'évacuation",
+      exercice_evacuation: "Exercice d'évacuation",
+      formation_equipe_urgence: "Formation mesures d'urgence",
+      formation_equipe_urgence_exercice: "Formation mesures d'urgence",
+      formation_travail_chaud: "Formation mesures d'urgence",
+      formation_coordonnateur: "Formation mesures d'urgence",
+      formation_epi: "Formation mesures d'urgence",
+      formation_communication: "Formation mesures d'urgence",
+      formation_comportement: "Formation mesures d'urgence",
+      formation_locataires: "Formation mesures d'urgence",
     };
 
     const results: any[] = [];
     const importedListNames = new Set<string>();
 
     for (const service of services) {
-      const catalog = ACTIVITY_CATALOG.find(a => a.type === service.type);
+      const catalog = ACTIVITY_CATALOG.find((a) => a.type === service.type);
       if (!catalog) continue;
 
       // Vérifier si une activité de ce type existe déjà
       const existing = await this.prisma.projectActivity.findFirst({
-        where: { projectId, organizationId, type: service.type, sourceMandate: true },
+        where: {
+          projectId,
+          organizationId,
+          type: service.type,
+          sourceMandate: true,
+        },
       });
 
       if (existing) {
@@ -283,9 +393,10 @@ export class ActivitiesService {
 
         if (taskList) {
           // Vérifier si cette liste est déjà importée dans le projet
-          const existingProjectList = await this.prisma.projectTaskList.findFirst({
-            where: { projectId, taskListId: taskList.id },
-          });
+          const existingProjectList =
+            await this.prisma.projectTaskList.findFirst({
+              where: { projectId, taskListId: taskList.id },
+            });
 
           if (!existingProjectList) {
             // Créer l'instance de la liste dans le projet
@@ -300,7 +411,7 @@ export class ActivitiesService {
 
             // Créer une copie de chaque tâche
             await this.prisma.projectTask.createMany({
-              data: taskList.templates.map(t => ({
+              data: taskList.templates.map((t) => ({
                 projectId,
                 projectTaskListId: projectTaskList.id,
                 templateId: t.id,
@@ -321,7 +432,7 @@ export class ActivitiesService {
     }
 
     // Supprimer les activités sourceMandate qui ne sont plus cochées
-    const selectedTypes = services.map(s => s.type);
+    const selectedTypes = services.map((s) => s.type);
     await this.prisma.projectActivity.deleteMany({
       where: {
         projectId,
@@ -356,7 +467,7 @@ export class ActivitiesService {
       orderBy: { scheduledDate: 'asc' },
     });
 
-    return activities.map(a => ({
+    return activities.map((a) => ({
       id: a.id,
       projectId: a.projectId,
       projectName: a.project.name,
@@ -365,7 +476,8 @@ export class ActivitiesService {
       label: a.customLabel || a.label,
       scheduledDate: a.scheduledDate,
       monthsAgo: Math.floor(
-        (new Date().getTime() - new Date(a.scheduledDate!).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+        (new Date().getTime() - new Date(a.scheduledDate!).getTime()) /
+          (1000 * 60 * 60 * 24 * 30.44),
       ),
     }));
   }

@@ -194,6 +194,12 @@ model Building {
   buildingRequirements BuildingRequirement[]
   complianceEvidence   ComplianceEvidence[]
   correctiveActions    CorrectiveAction[]
+
+  // CORO RUE / PUE / Sentinelle Population
+  // Profil réglementaire et opérationnel de l'installation.
+  // Cette relation reste optionnelle : un bâtiment standard n'a pas
+  // automatiquement de profil RUE.
+  rueFacilityProfile RueFacilityProfile?
 }
 
 model Project {
@@ -1022,6 +1028,1036 @@ model RefreshToken {
   isRevoked Boolean  @default(false)
 }
 
+// ─── CORO — Urgences environnementales (RUE / futur PUE) ───────────────────
+//
+// Socle commun destiné à être utilisé par :
+// - le futur configurateur PUE;
+// - Sentinelle Population;
+// - la fiche d'intervention des premiers répondants.
+//
+// IMPORTANT : la présence d'un profil ne constitue pas, à elle seule,
+// une détermination juridique automatique de l'assujettissement au RUE.
+
+enum RueAssessmentStatus {
+  NOT_ASSESSED
+  ASSESSMENT_IN_PROGRESS
+  CONFIRMED_SUBJECT
+  CONFIRMED_NOT_SUBJECT
+  EXEMPT
+}
+
+enum RueDataSource {
+  MANUAL
+  PUE_CONFIGURATOR
+  IMPORT
+  GOVERNMENT_REFERENCE
+  INCIDENT
+}
+
+// Type d'acteur ayant réalisé une action traçable dans CORO.
+// L'identifiant associé peut référer un User, un ClientUser,
+// ou être absent lorsqu'il s'agit d'une action système.
+enum CoroActorType {
+  USER
+  CLIENT_USER
+  SYSTEM
+}
+
+model RueFacilityProfile {
+  id String @id @default(uuid())
+
+  // Une installation ne possède qu'un seul profil RUE opérationnel.
+  buildingId String   @unique
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+
+  // État de l'évaluation réglementaire.
+  // CORO ne doit pas déduire qu'un site est juridiquement assujetti
+  // simplement parce qu'il s'agit d'un bâtiment industriel.
+  assessmentStatus RueAssessmentStatus @default(NOT_ASSESSED)
+
+  // Provenance de l'état actuellement enregistré.
+  assessmentSource RueDataSource @default(MANUAL)
+
+  // Traçabilité de la détermination.
+  assessedAt      DateTime?
+  assessedByType  CoroActorType?
+  assessedById    String?
+  assessmentNotes String?
+
+  // Référence réglementaire/documentaire utilisée lors de l'évaluation.
+  // Ex. version du RUE, analyse externe ou référence au futur PUE.
+  assessmentReference String?
+
+  // Activation fonctionnelle.
+  // Un site peut être confirmé assujetti sans que Sentinelle Population
+  // soit encore configuré ou activé.
+  populationEnabled Boolean @default(false)
+
+  // Préparation du futur configurateur PUE.
+  // Permet de rattacher le profil au projet PUE qui l'exploite sans faire
+  // du document PUE le propriétaire des données opérationnelles.
+  pueProjectId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Substances réglementées réellement présentes ou prévues sur ce site.
+  substances RueFacilitySubstance[]
+
+  // Scénarios d'urgence environnementale propres à cette installation.
+  emergencyScenarios RueEmergencyScenario[]
+
+  // Éléments humains, bâtis, naturels et infrastructurels présents
+  // dans les environs susceptibles d'être touchés.
+  surroundingAssets RueSurroundingAsset[]
+
+  // Autorités locales, services d'urgence et organismes externes
+  // concernés par la planification ou l'intervention.
+  localAuthorities RueLocalAuthority[]
+
+  // Programme opérationnel Sentinelle Population associé au profil.
+  populationProgram PopulationProgram?
+
+  @@index([assessmentStatus])
+  @@index([populationEnabled])
+  @@index([pueProjectId])
+}
+
+// ─── CORO SENTINELLE POPULATION ─────────────────────────────────────────────
+//
+// Couche opérationnelle de communication avec la population.
+// Les données réglementaires RUE/PUE restent dans RueFacilityProfile
+// et ses modèles associés.
+
+model PopulationProgram {
+  id String @id @default(uuid())
+
+  // Un seul programme opérationnel par profil RUE.
+  // Le bâtiment propriétaire du programme est déterminé par
+  // RueFacilityProfile.buildingId afin d'éviter toute incohérence
+  // entre le programme Population et son installation.
+  rueFacilityProfileId String             @unique
+  rueFacilityProfile   RueFacilityProfile @relation(fields: [rueFacilityProfileId], references: [id], onDelete: Restrict)
+
+  status PopulationProgramStatus @default(NOT_CONFIGURED)
+
+  // ── Portail public ──────────────────────────────────────────────────────
+
+  // Identifiant public stable et lisible.
+  // Exemple : sobeys-boucherville
+  publicSlug String @unique
+
+  nameFR String
+  nameEN String?
+
+  descriptionFR String?
+  descriptionEN String?
+
+  // Coordonnées publiques de l'organisation responsable du programme.
+  publicPhone String?
+  publicEmail String?
+  websiteUrl  String?
+
+  // ── Inscription publique ────────────────────────────────────────────────
+
+  registrationEnabled Boolean @default(false)
+
+  // Canaux pouvant être proposés aux citoyens.
+  smsEnabled   Boolean @default(true)
+  emailEnabled Boolean @default(true)
+
+  // ── Information relative à la vie privée ───────────────────────────────
+
+  privacyTextFR String?
+  privacyTextEN String?
+
+  consentTextFR String?
+  consentTextEN String?
+
+  // Version permettant de savoir quel texte était applicable
+  // lorsqu'un consentement a été recueilli.
+  consentVersion String?
+
+  // ── Exploitation ────────────────────────────────────────────────────────
+
+  activatedAt DateTime?
+  suspendedAt DateTime?
+  archivedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscribers   PopulationSubscriber[]
+  consentEvents PopulationConsentEvent[]
+  alerts        PopulationAlert[]
+
+  @@index([status])
+  @@index([registrationEnabled])
+}
+
+model PopulationSubscriber {
+  id String @id @default(uuid())
+
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  status PopulationSubscriberStatus @default(PENDING_VERIFICATION)
+
+  // Langue utilisée pour les communications d'urgence.
+  preferredLanguage PopulationPreferredLanguage @default(FR)
+
+  // ── Coordonnées minimales ──────────────────────────────────────────────
+
+  // Le nom n'est pas nécessaire au ciblage géographique ni à l'envoi
+  // d'une alerte. Il reste donc facultatif.
+  firstName String?
+  lastName  String?
+
+  phone String?
+  email String?
+
+  smsEnabled   Boolean @default(false)
+  emailEnabled Boolean @default(false)
+
+  // ── Position opérationnelle ────────────────────────────────────────────
+  //
+  // L'adresse saisie lors de l'inscription peut servir au géocodage.
+  // L'objectif est de ne pas conserver l'adresse résidentielle complète
+  // lorsque la position obtenue suffit au ciblage des zones d'impact.
+
+  latitude  Float?
+  longitude Float?
+
+  // Permet de savoir comment la position a été obtenue sans conserver
+  // nécessairement l'adresse source.
+  locationSource String?
+
+  locationResolvedAt DateTime?
+
+  // ── Cycle de vie ───────────────────────────────────────────────────────
+
+  verifiedAt     DateTime?
+  unsubscribedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  consentEvents   PopulationConsentEvent[]
+  verifications   PopulationVerification[]
+  alertDeliveries PopulationAlertDelivery[]
+
+  @@index([programId])
+  @@index([status])
+  @@index([programId, status])
+  @@index([phone])
+  @@index([email])
+}
+
+model PopulationConsentEvent {
+  id        String            @id @default(uuid())
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  // Référence vers l'abonné lorsqu'il existe encore.
+  // La suppression ultérieure des renseignements personnels de l'abonné
+  // ne doit pas supprimer automatiquement la preuve historique de consentement.
+  subscriberId String?
+  subscriber   PopulationSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+
+  type PopulationConsentEventType
+
+  // Version du texte présenté au moment de l'événement.
+  consentVersion String
+
+  // Canaux auxquels le consentement s'appliquait.
+  smsEnabled   Boolean
+  emailEnabled Boolean
+
+  // Source de l'action.
+  // Ex. PUBLIC_PORTAL, CLIENT_PORTAL, IMPORT.
+  source String?
+
+  occurredAt DateTime @default(now())
+
+  @@index([programId])
+  @@index([subscriberId])
+  @@index([type])
+  @@index([occurredAt])
+}
+
+model PopulationVerification {
+  id String @id @default(uuid())
+
+  subscriberId String
+  subscriber   PopulationSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  channel PopulationVerificationChannel
+
+  // Le code OTP n'est jamais conservé en clair.
+  codeHash String
+
+  expiresAt DateTime
+
+  attemptCount Int @default(0)
+  maxAttempts  Int @default(5)
+
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([subscriberId])
+  @@index([expiresAt])
+}
+
+model PopulationAlert {
+  id String @id @default(uuid())
+
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  // Une alerte publique peut être rattachée à un incident CORO existant.
+  // Elle peut également exister sans incident réel dans le cas d'un test.
+  incidentEventId String?
+  incidentEvent   IncidentEvent? @relation(fields: [incidentEventId], references: [id], onDelete: SetNull)
+
+  // Scénario RUE/PUE ayant servi de contexte à l'alerte.
+  // Facultatif notamment pour certains tests ou messages indépendants.
+  // La suppression ultérieure du scénario ne détruit pas l'alerte.
+  emergencyScenarioId String?
+  emergencyScenario   RueEmergencyScenario? @relation(fields: [emergencyScenarioId], references: [id], onDelete: SetNull)
+
+  type   PopulationAlertType
+  status PopulationAlertStatus @default(DRAFT)
+
+  // ── Message diffusé ────────────────────────────────────────────────────
+
+  titleFR String
+  titleEN String?
+
+  messageFR String
+  messageEN String?
+
+  instructionFR String?
+  instructionEN String?
+
+  // ── Validation humaine ─────────────────────────────────────────────────
+
+  createdByType CoroActorType
+  createdById   String
+
+  approvedByType CoroActorType?
+  approvedById   String?
+  approvedAt     DateTime?
+
+  // ── Cycle de vie ───────────────────────────────────────────────────────
+
+  scheduledAt        DateTime?
+  recipientsFrozenAt DateTime?
+  sendingAt          DateTime?
+  activatedAt        DateTime?
+  endedAt            DateTime?
+  cancelledAt DateTime?
+
+  // ── Preuve / snapshot ──────────────────────────────────────────────────
+  //
+  // Conserve le contexte opérationnel utilisé lors de la diffusion.
+  // Les modifications futures du PUE ou du profil RUE ne doivent pas
+  // réécrire l'histoire de cette alerte.
+
+  contextSnapshot Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zones      PopulationAlertZone[]
+  deliveries PopulationAlertDelivery[]
+
+  @@index([programId])
+  @@index([incidentEventId])
+  @@index([emergencyScenarioId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model PopulationAlertZone {
+  id String @id @default(uuid())
+
+  alertId String
+  alert   PopulationAlert @relation(fields: [alertId], references: [id], onDelete: Restrict)
+
+  // Référence vers une zone RUE/PUE préconfigurée lorsqu'elle existe.
+  //
+  // Cette relation est facultative pour deux raisons :
+  // 1. une zone source peut être retirée ultérieurement;
+  // 2. une alerte peut utiliser une zone opérationnelle dynamique calculée
+  //    pendant l'incident, sans RueImpactZone préexistante.
+  //
+  // Dans tous les cas, les champs *Snapshot ci-dessous constituent
+  // l'état historique de la zone réellement utilisée.
+  impactZoneId String?
+  impactZone   RueImpactZone? @relation(fields: [impactZoneId], references: [id], onDelete: SetNull)
+
+  // Snapshot de la zone utilisée lors de l'alerte.
+  zoneCodeSnapshot   String
+  zoneNameFRSnapshot String
+  zoneNameENSnapshot String?
+
+  geometrySnapshot      Json?
+  maxDistanceKmSnapshot Float?
+  protectiveActionSnapshot RueProtectiveAction?
+
+  instructionFRSnapshot String?
+  instructionENSnapshot String?
+
+  // Nombre d'abonnés déterminés comme étant dans cette zone
+  // au moment où le ciblage a été figé.
+  targetedSubscriberCount Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([alertId, zoneCodeSnapshot])
+  @@index([alertId])
+  @@index([impactZoneId])
+}
+
+model PopulationAlertDelivery {
+  id String @id @default(uuid())
+
+  // Clé technique générée par CORO avant l'envoi.
+  // Une même opération logique d'envoi ne peut être créée qu'une seule fois,
+  // même en cas de retry HTTP, double clic ou concurrence entre workers.
+  idempotencyKey String @unique
+
+  alertId String
+  alert   PopulationAlert @relation(fields: [alertId], references: [id], onDelete: Restrict)
+
+  subscriberId String?
+  subscriber   PopulationSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+
+  channel PopulationAlertChannel
+  status  PopulationDeliveryStatus @default(QUEUED)
+
+  // Langue réellement utilisée pour cette transmission.
+  language PopulationPreferredLanguage
+
+  // Message réellement transmis.
+  //
+  // Important pour préserver la preuve si le brouillon de l'alerte
+  // est ultérieurement modifié.
+  messageSnapshot String
+
+  // Destination protégée/minimisée utilisée au moment de l'envoi.
+  // La stratégie exacte de protection sera définie côté service.
+  destinationSnapshot String?
+
+  // Identifiant retourné par Brevo/Twilio/autre fournisseur.
+  providerMessageId String?
+
+  provider String?
+
+  queuedAt    DateTime  @default(now())
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  failedAt    DateTime?
+  cancelledAt DateTime?
+
+  errorCode    String?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([alertId])
+  @@index([subscriberId])
+  @@index([status])
+  @@index([providerMessageId])
+}
+
+enum RueAuthorityType {
+  MUNICIPALITY
+  CIVIL_SECURITY
+  FIRE_DEPARTMENT
+  POLICE
+  EMS
+  ENVIRONMENTAL_AUTHORITY
+  PUBLIC_HEALTH
+  TRANSPORT_AUTHORITY
+  PUBLIC_UTILITY
+  OTHER_GOVERNMENT
+  COMMUNITY_OR_INTEREST_GROUP
+  OTHER
+}
+
+enum RueSurroundingAssetType {
+  HOSPITAL
+  SCHOOL
+  DAYCARE
+  SENIORS_RESIDENCE
+  RESIDENTIAL_BUILDING
+  COMMERCIAL_BUILDING
+  INDUSTRIAL_BUILDING
+  HIGHWAY
+  PUBLIC_TRANSIT
+  PARK
+  FOREST
+  WILDLIFE_HABITAT
+  WATER_SOURCE
+  WATER_BODY
+  OTHER
+}
+
+enum RueEmergencyMeasurePhase {
+  PREVENTION
+  PREPAREDNESS
+  RESPONSE
+  RECOVERY
+}
+
+enum PopulationSubscriberStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  UNSUBSCRIBED
+  SUSPENDED
+}
+
+enum PopulationPreferredLanguage {
+  FR
+  EN
+}
+
+enum PopulationConsentEventType {
+  SUBSCRIBED
+  VERIFIED
+  CONSENT_UPDATED
+  UNSUBSCRIBED
+}
+
+enum PopulationVerificationChannel {
+  SMS
+  EMAIL
+}
+
+enum PopulationProgramStatus {
+  NOT_CONFIGURED
+  CONFIGURING
+  READY
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum PopulationAlertType {
+  TEST
+  PRE_ALERT
+  EMERGENCY
+  UPDATE
+  ALL_CLEAR
+}
+
+enum PopulationAlertStatus {
+  DRAFT
+  READY
+  SENDING
+  ACTIVE
+  ENDED
+  CANCELLED
+  FAILED
+}
+
+enum PopulationAlertChannel {
+  SMS
+  EMAIL
+}
+
+enum PopulationDeliveryStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum RueScenarioType {
+  WORST_CASE
+  ALTERNATIVE
+  OTHER
+}
+
+enum RueProtectiveAction {
+  SHELTER_IN_PLACE
+  EVACUATE
+  AVOID_AREA
+  OTHER
+}
+
+model RueRegulatedSubstance {
+  id String @id @default(uuid())
+
+  // Position officielle dans l'annexe 1 du RUE.
+  schedulePart Int
+  scheduleItem Int
+
+  // Identification réglementaire.
+  casNumber String
+  nameFR    String
+  nameEN    String?
+
+  // Numéros UN publiés à titre opérationnel lorsqu'applicables.
+  // Une substance peut être associée à plus d'un numéro UN.
+  unNumbers String[] @default([])
+
+  // Valeurs de l'annexe 1 du RUE.
+  minimumConcentrationPercent Decimal @db.Decimal(10, 4)
+  minimumQuantityTonnes       Decimal @db.Decimal(14, 6)
+  hazardCategory              String
+
+  // Gestion du référentiel CORO.
+  isActive          Boolean       @default(true)
+  regulatorySource  String?
+  regulatoryVersion String?
+  source            RueDataSource @default(GOVERNMENT_REFERENCE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facilitySubstances RueFacilitySubstance[]
+
+  @@unique([schedulePart, scheduleItem])
+  @@index([casNumber])
+  @@index([nameFR])
+  @@index([hazardCategory])
+}
+
+model RueFacilitySubstance {
+  id String @id @default(uuid())
+
+  facilityProfileId String
+  facilityProfile   RueFacilityProfile @relation(fields: [facilityProfileId], references: [id], onDelete: Restrict)
+
+  regulatedSubstanceId String
+  regulatedSubstance   RueRegulatedSubstance @relation(fields: [regulatedSubstanceId], references: [id], onDelete: Restrict)
+
+  // Données agrégées pour cette substance à l'échelle de l'installation.
+  concentrationPercent  Decimal? @db.Decimal(10, 4)
+  maximumQuantityTonnes Decimal? @db.Decimal(14, 6)
+
+  // Indique qu'une partie de la substance peut être présente hors
+  // d'un système de réservoirs. Cette information intervient notamment
+  // dans l'évaluation réglementaire et la préparation du PUE.
+  hasQuantityOutsideContainerSystem Boolean @default(false)
+
+  // Informations complémentaires pouvant être utiles au calcul,
+  // à la validation réglementaire ou au futur PUE.
+  notes String?
+
+  // Provenance et validation de la donnée.
+  source          RueDataSource  @default(MANUAL)
+  sourceReference String?
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Systèmes physiques dans lesquels cette substance est présente.
+  containerSystems RueFacilityContainerSystem[]
+
+  emergencyScenarios RueEmergencyScenario[]
+
+  @@unique([facilityProfileId, regulatedSubstanceId])
+  @@index([facilityProfileId])
+  @@index([regulatedSubstanceId])
+}
+
+model RueFacilityContainerSystem {
+  id String @id @default(uuid())
+
+  facilitySubstanceId String
+  facilitySubstance   RueFacilitySubstance @relation(fields: [facilitySubstanceId], references: [id], onDelete: Restrict)
+
+  // Identification opérationnelle du système.
+  // Ex. R-101, Réservoir ammoniac extérieur,
+  // Circuit de réfrigération principal.
+  code String?
+  name String
+
+  // Capacité physique maximale du système en tonnes.
+  // Il s'agit de la capacité du système, distincte de la quantité
+  // effectivement ou normalement présente.
+  maximumCapacityTonnes Decimal @db.Decimal(14, 6)
+
+  // Quantité maximale prévue dans ce système lorsqu'elle est connue.
+  maximumExpectedQuantityTonnes Decimal? @db.Decimal(14, 6)
+
+  // Localisation et description utiles au PUE et aux premiers répondants.
+  locationDescription  String?
+  containerDescription String?
+  processDescription   String?
+
+  // Coordonnées facultatives permettant de positionner précisément
+  // le système sur la carte opérationnelle.
+  latitude  Float?
+  longitude Float?
+
+  // Provenance et validation.
+  source          RueDataSource @default(MANUAL)
+  sourceReference String?
+
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  notes String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([facilitySubstanceId])
+  @@index([isActive])
+}
+
+model RueEmergencyScenario {
+  id String @id @default(uuid())
+
+  facilityProfileId String
+  facilityProfile   RueFacilityProfile @relation(fields: [facilityProfileId], references: [id], onDelete: Restrict)
+
+  // Substance du site principalement associée au scénario.
+  facilitySubstanceId String?
+  facilitySubstance   RueFacilitySubstance? @relation(fields: [facilitySubstanceId], references: [id], onDelete: SetNull)
+
+  // Identification du scénario.
+  nameFR      String
+  nameEN      String?
+  description String?
+
+  type RueScenarioType @default(OTHER)
+
+  // Exemples : fuite, rupture, incendie, explosion, rejet toxique.
+  eventType String?
+
+  // Hypothèses et conséquences déterminées dans l'analyse de risques.
+  releaseDescription String?
+  potentialEffects   String?
+
+  // Distance réglementaire/modélisée jusqu'au point le plus éloigné
+  // susceptible d'être touché.
+  impactDistanceKm Float?
+
+  // Méthode ayant servi à déterminer cette distance.
+  // Ex. logiciel de modélisation, étude d'ingénierie, méthode reconnue.
+  impactMethod String?
+
+  // Action de protection normalement associée au scénario.
+  defaultProtectiveAction RueProtectiveAction?
+
+  // Instructions préparées pour une éventuelle communication publique.
+  publicInstructionFR String?
+  publicInstructionEN String?
+
+  // Provenance et validation.
+  source          RueDataSource  @default(MANUAL)
+  sourceReference String?
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  impactZones RueImpactZone[]
+
+  // Alertes Population ayant utilisé ce scénario comme contexte source.
+  // La relation peut ensuite être détachée sans perdre l'historique,
+  // puisque l'alerte conserve son propre snapshot.
+  populationAlerts PopulationAlert[]
+
+  // Mesures prévues pour prévenir, se préparer, intervenir
+  // et se rétablir relativement à ce scénario.
+  emergencyMeasures RueEmergencyMeasure[]
+
+  @@index([facilityProfileId])
+  @@index([facilitySubstanceId])
+  @@index([type])
+}
+
+model RueEmergencyMeasure {
+  id String @id @default(uuid())
+
+  scenarioId String
+  scenario   RueEmergencyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  // Pilier réglementaire auquel appartient la mesure.
+  phase RueEmergencyMeasurePhase
+
+  // Identification de la mesure.
+  titleFR String
+  titleEN String?
+
+  descriptionFR String?
+  descriptionEN String?
+
+  // Ordre d'affichage et d'exécution lorsque pertinent.
+  sortOrder Int @default(0)
+
+  // Responsabilité opérationnelle.
+  // On conserve ici un titre/fonction plutôt qu'une personne nominative,
+  // afin que le PUE reste valide malgré les changements de personnel.
+  responsiblePosition String?
+
+  // Une mesure peut être une action planifiée ou une capacité permanente.
+  isRequired Boolean @default(true)
+
+  // Référence vers une procédure, une instruction, une norme,
+  // une étude ou une autre source documentaire.
+  sourceReference String?
+
+  // Provenance et validation.
+  source          RueDataSource  @default(MANUAL)
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  notes String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scenarioId])
+  @@index([phase])
+  @@index([scenarioId, phase])
+}
+
+model RueImpactZone {
+  id String @id @default(uuid())
+
+  scenarioId String
+  scenario   RueEmergencyScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  // Identification opérationnelle.
+  code   String
+  nameFR String
+  nameEN String?
+
+  description String?
+
+  // Géométrie de la zone.
+  //
+  // Prévue pour recevoir du GeoJSON Polygon ou MultiPolygon.
+  // On ne limite donc pas CORO à un simple rayon autour de l'installation.
+  geometry Json?
+
+  // Distance maximale associée à cette zone lorsqu'elle est pertinente.
+  maxDistanceKm Float?
+
+  // Action de protection recommandée dans cette zone.
+  protectiveAction RueProtectiveAction?
+
+  instructionFR String?
+  instructionEN String?
+
+  // Méthode/source utilisée pour définir cette zone.
+  determinationMethod String?
+  sourceReference     String?
+  source              RueDataSource @default(MANUAL)
+
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  populationAlertZones PopulationAlertZone[]
+
+  @@unique([scenarioId, code])
+  @@index([scenarioId])
+}
+
+model RueSurroundingAsset {
+  id String @id @default(uuid())
+
+  facilityProfileId String
+  facilityProfile   RueFacilityProfile @relation(fields: [facilityProfileId], references: [id], onDelete: Restrict)
+
+  type RueSurroundingAssetType
+
+  // Identification.
+  name        String
+  description String?
+
+  // Localisation.
+  address    String?
+  city       String?
+  province   String?
+  postalCode String?
+
+  latitude  Float?
+  longitude Float?
+
+  // Géométrie facultative pour les éléments qui ne sont pas de simples points :
+  // forêt, parc, plan d'eau, infrastructure, grand complexe, etc.
+  geometry Json?
+
+  // Informations opérationnelles.
+  estimatedOccupancy Int?
+  isSensitive        Boolean @default(false)
+  isCritical         Boolean @default(false)
+
+  // Coordonnées institutionnelles — pas des données citoyennes.
+  publicPhone String?
+  publicEmail String?
+  websiteUrl  String?
+
+  // Provenance et validation.
+  source          RueDataSource  @default(MANUAL)
+  sourceReference String?
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts RueSurroundingAssetContact[]
+
+  @@index([facilityProfileId])
+  @@index([type])
+  @@index([isSensitive])
+}
+
+model RueSurroundingAssetContact {
+  id String @id @default(uuid())
+
+  surroundingAssetId String
+  surroundingAsset   RueSurroundingAsset @relation(fields: [surroundingAssetId], references: [id], onDelete: Cascade)
+
+  // Contact institutionnel ou opérationnel.
+  firstName String?
+  lastName  String?
+  title     String?
+
+  phone String?
+  email String?
+
+  // Ex. sécurité, direction, urgence, opérations.
+  roleDescription String?
+
+  isPrimary   Boolean @default(false)
+  isEmergency Boolean @default(false)
+  is24x7      Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([surroundingAssetId])
+}
+
+model RueLocalAuthority {
+  id String @id @default(uuid())
+
+  facilityProfileId String
+  facilityProfile   RueFacilityProfile @relation(fields: [facilityProfileId], references: [id], onDelete: Restrict)
+
+  type RueAuthorityType
+
+  // Identification de l'autorité ou de l'organisme.
+  name String
+
+  // Territoire ou juridiction concerné.
+  jurisdiction String?
+
+  address    String?
+  city       String?
+  province   String?
+  postalCode String?
+
+  publicPhone String?
+  publicEmail String?
+  websiteUrl  String?
+
+  // Rôle prévu dans le PUE ou lors d'une urgence.
+  roleDescription String?
+
+  // Participation à la préparation du PUE.
+  involvedInPlanDevelopment Boolean @default(false)
+
+  // Consultation relativement aux mesures de communication publique.
+  publicCommunicationConsulted Boolean @default(false)
+
+  // Le PUE ou ses parties pertinentes ont-ils été rendus accessibles
+  // à cette autorité?
+  planMadeAvailable   Boolean   @default(false)
+  planMadeAvailableAt DateTime?
+
+  // L'autorité est susceptible de participer à l'intervention.
+  expectedEmergencyResponder Boolean @default(false)
+
+  // Provenance et validation.
+  source          RueDataSource  @default(MANUAL)
+  sourceReference String?
+  validatedAt     DateTime?
+  validatedByType CoroActorType?
+  validatedById   String?
+
+  notes String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts RueLocalAuthorityContact[]
+
+  @@index([facilityProfileId])
+  @@index([type])
+  @@index([expectedEmergencyResponder])
+}
+
+model RueLocalAuthorityContact {
+  id String @id @default(uuid())
+
+  localAuthorityId String
+  localAuthority   RueLocalAuthority @relation(fields: [localAuthorityId], references: [id], onDelete: Cascade)
+
+  firstName String?
+  lastName  String?
+  title     String?
+
+  phone String?
+  email String?
+
+  roleDescription String?
+
+  isPrimary   Boolean @default(false)
+  isAlternate Boolean @default(false)
+  isEmergency Boolean @default(false)
+  is24x7      Boolean @default(false)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([localAuthorityId])
+}
+
 // ─── CORO SENTINELLE — Module Incident ──────────────────────────────────────
 
 enum IncidentType {
@@ -1296,6 +2332,7 @@ model IncidentEvent {
   logs              IncidentLog[]
   exerciseReports   ExerciseReport[]
   correctiveActions CorrectiveAction[]
+  populationAlerts  PopulationAlert[]
 }
 
 model IncidentTask {

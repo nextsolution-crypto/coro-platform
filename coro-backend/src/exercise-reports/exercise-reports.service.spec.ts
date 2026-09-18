@@ -11,7 +11,7 @@ import {
 } from '@prisma/client';
 import { ExerciseReportsService } from './exercise-reports.service';
 
-const user = { userId: 'user-a', organizationId: 'org-a' };
+const user = { userId: 'user-a', organizationId: 'org-a', role: 'ADMIN' };
 
 function activity(type = 'exercice_table') {
   return {
@@ -120,8 +120,8 @@ function harness() {
     exerciseReport: { findFirst: jest.fn().mockResolvedValue(null) },
     projectActivity: { findFirst: jest.fn().mockResolvedValue(activity()) },
     booking: { findFirst: jest.fn() },
-    incidentEvent: { findFirst: jest.fn() },
-    evacuationEvent: { findFirst: jest.fn() },
+    incidentEvent: { findFirst: jest.fn(), findMany: jest.fn() },
+    evacuationEvent: { findFirst: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) =>
       callback(tx),
     ),
@@ -491,6 +491,170 @@ describe('ExerciseReportsService updateDraft', () => {
       occurredAt: null,
       startedAt: null,
     });
+  });
+});
+
+describe('ExerciseReportsService authorization and compatible sources', () => {
+  it('allows an ADMIN through the organization-scoped project relation', async () => {
+    const h = harness();
+    h.prisma.exerciseReport.findFirst.mockResolvedValue(report());
+    await h.service.getDraft('report-a', user);
+    expect(h.prisma.exerciseReport.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: 'org-a',
+          project: { is: { organizationId: 'org-a' } },
+        }),
+      }),
+    );
+  });
+
+  it('allows an assigned OPERATOR and applies the same policy to POST', async () => {
+    const h = harness();
+    await h.service.createFromActivity(
+      'activity-a',
+      {},
+      {
+        ...user,
+        role: 'OPERATOR',
+      },
+    );
+    expect(h.prisma.projectActivity.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: 'org-a',
+          project: {
+            is: {
+              organizationId: 'org-a',
+              OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }],
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('rejects an unassigned OPERATOR and a foreign organization', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findFirst.mockResolvedValue(null);
+    await expect(
+      h.service.createFromActivity(
+        'activity-a',
+        {},
+        {
+          ...user,
+          role: 'OPERATOR',
+        },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      h.service.createFromActivity(
+        'activity-a',
+        {},
+        {
+          ...user,
+          organizationId: 'org-b',
+        },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('applies operator project authorization to PUT', async () => {
+    const h = harness();
+    await h.service.updateDraft(
+      'report-a',
+      { conclusion: 'ok' },
+      {
+        ...user,
+        role: 'OPERATOR',
+      },
+    );
+    expect(h.tx.exerciseReport.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          project: {
+            is: {
+              organizationId: 'org-a',
+              OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }],
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('rejects GET and PUT when the report is outside operator scope', async () => {
+    const h = harness();
+    const operator = { ...user, role: 'OPERATOR' };
+    h.prisma.exerciseReport.findFirst.mockResolvedValue(null);
+    await expect(
+      h.service.getDraft('report-a', operator),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    h.tx.exerciseReport.findFirst.mockResolvedValue(null);
+    await expect(
+      h.service.updateDraft('report-a', { conclusion: 'x' }, operator),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns only minimally exposed compatible Sentinelle sources', async () => {
+    const h = harness();
+    h.prisma.incidentEvent.findMany.mockResolvedValue([
+      {
+        id: 'incident-a',
+        type: 'FIRE',
+        status: 'RESOLVED',
+        triggeredAt: new Date('2026-09-16T14:00:00Z'),
+        resolvedAt: new Date('2026-09-16T15:00:00Z'),
+        rexWentWell: 'Bien',
+        rexToImprove: null,
+        rexRecommendations: null,
+        rexCorrectiveActions: null,
+      },
+    ]);
+    h.prisma.evacuationEvent.findMany.mockResolvedValue([
+      {
+        id: 'evacuation-a',
+        status: 'RESOLVED',
+        triggeredAt: new Date('2026-09-16T14:00:00Z'),
+        resolvedAt: new Date('2026-09-16T15:00:00Z'),
+      },
+    ]);
+    const result = await h.service.getCompatibleSources('activity-a', user);
+    expect(result).toMatchObject({
+      canCreateDraft: true,
+      reportType: 'TABLETOP',
+      selectionMode: 'SINGLE_OPERATIONAL_SOURCE',
+      incidents: [{ id: 'incident-a', hasRex: true }],
+      evacuations: [{ id: 'evacuation-a' }],
+    });
+    expect(h.prisma.incidentEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org-a',
+          buildingId: 'building-a',
+          isExercise: true,
+        },
+      }),
+    );
+    expect(h.prisma.evacuationEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org-a', buildingId: 'building-a' },
+      }),
+    );
+  });
+
+  it('rejects source discovery for inaccessible or inadmissible activities', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findFirst.mockResolvedValue(null);
+    await expect(
+      h.service.getCompatibleSources('activity-a', user),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    h.prisma.projectActivity.findFirst.mockResolvedValue(
+      activity('formation_epi'),
+    );
+    await expect(
+      h.service.getCompatibleSources('activity-a', user),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 

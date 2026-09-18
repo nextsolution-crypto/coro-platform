@@ -12,9 +12,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { CreateExerciseReportDto } from './dto/create-exercise-report.dto';
 import { UpdateExerciseReportDto } from './dto/update-exercise-report.dto';
 import { ExerciseReportsService } from './exercise-reports.service';
+import { AdviserActor } from '../auth/project-access';
+import { CompatibleExerciseSourcesDto } from './dto/compatible-exercise-sources.dto';
 
 interface AuthenticatedRequest {
-  user: { userId: string; organizationId: string };
+  user: AdviserActor;
 }
 
 @Controller()
@@ -33,7 +35,15 @@ export class ExerciseReportsController {
 
   @Get('exercise-reports/:id')
   get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    return this.service.getDraft(id, req.user.organizationId);
+    return this.service.getDraft(id, req.user);
+  }
+
+  @Get('activities/:activityId/exercise-report-sources')
+  getCompatibleSources(
+    @Param('activityId') activityId: string,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<CompatibleExerciseSourcesDto> {
+    return this.service.getCompatibleSources(activityId, req.user);
   }
 
   @Put('exercise-reports/:id')

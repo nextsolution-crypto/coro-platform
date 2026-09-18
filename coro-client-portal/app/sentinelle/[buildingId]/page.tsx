@@ -5,7 +5,8 @@ import { apiGet, apiPost, getUser } from '../../store/auth';
 import PortalLayout from '../../components/PortalLayout';
 import {
   Users, UserCheck, UserX, Clock, AlertTriangle,
-  RefreshCw, QrCode, Shield, ChevronRight, Copy, Radio
+  RefreshCw, QrCode, Shield, ChevronRight, Copy, Radio,
+  RadioTower
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
@@ -36,6 +37,7 @@ export default function SentinelleDashboard() {
   const [panicMode, setPanicMode]           = useState(false);
   const [panicSending, setPanicSending]     = useState(false);
   const [panicResult, setPanicResult]       = useState<any>(null);
+  const [populationStatus, setPopulationStatus] = useState<any>(null);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -56,6 +58,7 @@ export default function SentinelleDashboard() {
         fetchOccupancyWithToken(token),
         fetchActiveEvacuation(),
         fetchAlarmToken(),
+        fetchPopulationStatus(),
       ]);
     } catch (err) {
       console.error(err);
@@ -88,6 +91,15 @@ export default function SentinelleDashboard() {
       const res = await apiGet(`/occupancy/buildings/${buildingId}/alarm-token`);
       setAlarmToken(res.token);
     } catch (err) { console.error(err); }
+  };
+
+  const fetchPopulationStatus = async () => {
+    try {
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/population/status`);
+      setPopulationStatus(res);
+    } catch {
+      setPopulationStatus(null);
+    }
   };
 
   const handleCopyAlarmUrl = () => {
@@ -323,6 +335,179 @@ export default function SentinelleDashboard() {
           📋 Historique
         </button>
       </div>
+
+      {/* ── Sentinelle Population ── */}
+      {populationStatus?.eligible && (
+        <section
+          style={{
+            marginBottom: 20,
+            borderRadius: 14,
+            overflow: 'hidden',
+            border: populationStatus.populationEnabled
+              ? '1px solid #B8D8D0'
+              : '1px solid #E9ECEF',
+            backgroundColor: '#FFFFFF',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'stretch',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div
+              style={{
+                width: 6,
+                backgroundColor: populationStatus.populationEnabled
+                  ? '#167D6A'
+                  : '#ADB5BD',
+                flexShrink: 0,
+              }}
+            />
+
+            <div
+              style={{
+                flex: 1,
+                minWidth: 260,
+                padding: '20px 22px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 14,
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    backgroundColor: populationStatus.populationEnabled
+                      ? '#E8F5F1'
+                      : '#F1F3F5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <RadioTower
+                    size={21}
+                    color={
+                      populationStatus.populationEnabled
+                        ? '#167D6A'
+                        : '#6C757D'
+                    }
+                  />
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      flexWrap: 'wrap',
+                      marginBottom: 4,
+                    }}
+                  >
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: '#2C3E50',
+                      }}
+                    >
+                      Sentinelle Population
+                    </h2>
+
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 20,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.05em',
+                        backgroundColor: '#FDEDEC',
+                        color: '#C0392B',
+                      }}
+                    >
+                      RUE / E2
+                    </span>
+
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 20,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.04em',
+                        backgroundColor: populationStatus.populationEnabled
+                          ? '#E8F5F1'
+                          : '#F1F3F5',
+                        color: populationStatus.populationEnabled
+                          ? '#167D6A'
+                          : '#6C757D',
+                      }}
+                    >
+                      {populationStatus.programStatus || 'À CONFIGURER'}
+                    </span>
+                  </div>
+
+                  <p
+                    style={{
+                      margin: 0,
+                      maxWidth: 720,
+                      fontSize: 13,
+                      lineHeight: 1.55,
+                      color: '#6C757D',
+                    }}
+                  >
+                    Préparer, cibler et diffuser les communications d&apos;urgence
+                    destinées à la population potentiellement touchée autour du site.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(`/sentinelle/${buildingId}/population`)
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: '#167D6A',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Ouvrir le module
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── URL Borne kiosque ── */}
       {kioskToken && (

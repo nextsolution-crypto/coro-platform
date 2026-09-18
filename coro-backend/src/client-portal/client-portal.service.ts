@@ -1,10 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PopulationAlertType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
 import { EmailService } from './email.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PopulationService } from '../population/population.service';
+import { CreatePopulationFollowUpDto } from '../population/dto/create-population-follow-up.dto';
+import { ConfigurePopulationProgramDto } from '../population/dto/population-program.dto';
+import { CreatePopulationAlertDraftDto } from '../population/dto/create-population-alert-draft.dto';
+import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
 
 @Injectable()
 export class ClientPortalService {
@@ -15,7 +25,607 @@ export class ClientPortalService {
     private emailService: EmailService,
     private bookingsService: BookingsService,
     private notificationsService: NotificationsService,
+    private populationService: PopulationService,
   ) {}
+
+    /**
+   * Vérifie qu'un utilisateur du portail client peut accéder à un bâtiment.
+   *
+   * Sécurité :
+   * - le bâtiment doit appartenir à la même organisation;
+   * - un CLIENT_MANAGER limité à des buildingIds ne peut accéder
+   *   qu'aux bâtiments explicitement autorisés;
+   * - un CLIENT_MANAGER sans buildingIds est limité à son client;
+   * - aucune donnée métier du bâtiment n'est retournée avant validation.
+   */
+  async assertBuildingAccess(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    const building = await this.prisma.building.findFirst({
+      where: {
+        id: buildingId,
+        organizationId: actor.organizationId,
+      },
+      select: {
+        id: true,
+        clientId: true,
+      },
+    });
+
+    if (!building) {
+      throw new NotFoundException('Bâtiment introuvable');
+    }
+
+    if (actor.role === 'CLIENT_MANAGER') {
+      if (actor.buildingIds?.length) {
+        if (!actor.buildingIds.includes(building.id)) {
+          throw new ForbiddenException('Accès refusé à ce bâtiment');
+        }
+      } else if (building.clientId !== actor.clientId) {
+        throw new ForbiddenException('Accès refusé à ce bâtiment');
+      }
+    }
+
+    return building;
+  }
+
+  /**
+   * Retourne l'état RUE / Sentinelle Population d'un bâtiment accessible
+   * depuis le portail client.
+   *
+   * IMPORTANT :
+   * - l'autorisation bâtiment est vérifiée avant toute lecture du profil RUE;
+   * - un bâtiment industriel n'est jamais considéré comme admissible
+   *   simplement à cause de son buildingType;
+   * - l'admissibilité réglementaire et l'activation du module Population
+   *   restent deux notions distinctes.
+   */
+  async getPopulationStatus(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    const profile = await this.prisma.rueFacilityProfile.findUnique({
+      where: { buildingId },
+      select: {
+        assessmentStatus: true,
+        populationEnabled: true,
+        populationProgram: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      return {
+        eligible: false,
+        rueStatus: 'NOT_ASSESSED' as const,
+        populationEnabled: false,
+        programStatus: 'NOT_CONFIGURED' as const,
+      };
+    }
+
+    const eligible = profile.assessmentStatus === 'CONFIRMED_SUBJECT';
+
+    return {
+      eligible,
+      rueStatus: profile.assessmentStatus,
+      populationEnabled: profile.populationEnabled,
+      programStatus:
+        profile.populationProgram?.status ?? ('NOT_CONFIGURED' as const),
+    };
+  }
+
+  /**
+   * Retourne la configuration Sentinelle Population d'un bâtiment
+   * accessible depuis le portail client.
+   *
+   * L'autorisation du bâtiment est vérifiée ici avant toute délégation
+   * au domaine Population.
+   */
+    async getPopulationConfiguration(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.getProgramConfiguration(buildingId);
+  }
+
+  async configurePopulationProgram(
+    buildingId: string,
+    dto: ConfigurePopulationProgramDto,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.configureProgram(buildingId, dto);
+  }
+
+  async markPopulationReady(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.markReady(buildingId);
+  }
+
+  async activatePopulationProgram(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.activateProgram(buildingId);
+  }
+
+  async suspendPopulationProgram(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.suspendProgram(buildingId);
+  }
+
+  async archivePopulationProgram(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.archiveProgram(buildingId);
+  }
+
+  /**
+   * Retourne les scénarios RUE disponibles pour Sentinelle Population.
+   *
+   * Sécurité :
+   * - l'accès au bâtiment est validé avant toute délégation;
+   * - le domaine Population vérifie ensuite l'admissibilité RUE;
+   * - aucune donnée d'abonné n'est exposée.
+   */
+  async getPopulationScenarios(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.getAvailableScenarios(buildingId);
+  }
+
+  /**
+   * Retourne l'aperçu agrégé de la population ciblée
+   * par les zones d'impact d'un scénario RUE.
+   *
+   * Sécurité :
+   * - l'accès au bâtiment est validé avant toute délégation;
+   * - le domaine Population vérifie ensuite que le programme est opérationnel;
+   * - aucune donnée nominative d'abonné n'est retournée.
+   */
+  async getPopulationScenarioPreview(
+    buildingId: string,
+    scenarioId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.getScenarioPopulationPreview(
+      buildingId,
+      scenarioId,
+    );
+  }
+
+  async createPopulationAlertDraft(
+    buildingId: string,
+    dto: CreatePopulationAlertDraftDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    if (!actor.sub) {
+      throw new ForbiddenException(
+        'Identité de l’utilisateur client introuvable',
+      );
+    }
+
+    return this.populationService.createAlertDraft(
+      buildingId,
+      dto,
+      {
+        type: 'CLIENT_USER',
+        id: actor.sub,
+      },
+    );
+  }
+
+  async getPopulationAlert(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.getAlert(
+      buildingId,
+      alertId,
+    );
+  }
+
+  async getPopulationAlertDeliveryStatus(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.getAlertDeliveryStatus(
+      buildingId,
+      alertId,
+    );
+  }
+
+  async updatePopulationAlertDraft(
+    buildingId: string,
+    alertId: string,
+    dto: UpdatePopulationAlertDraftDto,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.updateAlertDraft(
+      buildingId,
+      alertId,
+      dto,
+    );
+  }
+
+  async refreshPopulationAlertDraftTargeting(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.refreshAlertDraftTargeting(
+      buildingId,
+      alertId,
+    );
+  }
+
+  async markPopulationAlertReady(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.markAlertDraftReady(
+      buildingId,
+      alertId,
+    );
+  }
+
+  async approvePopulationAlert(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    if (!actor.sub) {
+      throw new ForbiddenException(
+        'Identité de l’utilisateur client introuvable',
+      );
+    }
+
+    return this.populationService.approveAlert(
+      buildingId,
+      alertId,
+      {
+        type: 'CLIENT_USER',
+        id: actor.sub,
+      },
+    );
+  }
+
+  async freezePopulationAlertRecipients(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.freezeAlertRecipients(
+      buildingId,
+      alertId,
+    );
+  }
+
+    /**
+   * DÃ©clenche la diffusion d'une alerte Sentinelle Population.
+   *
+   * SÃ©curitÃ© :
+   * - l'accÃ¨s au bÃ¢timent est validÃ© avant toute dÃ©lÃ©gation;
+   * - les primitives internes de claim et de diffusion ne sont jamais
+   *   exposÃ©es directement au portail client;
+   * - PopulationService conserve la responsabilitÃ© des invariants mÃ©tier :
+   *   approbation humaine, freeze des destinataires et cycle d'envoi.
+   */
+  async sendPopulationAlert(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+
+    return this.populationService.sendAlert(
+      buildingId,
+      alertId,
+    );
+  }
+
+  /**
+   * Crée un nouveau brouillon UPDATE dans le cycle
+   * historique d'un incident Population.
+   */
+  async createPopulationIncidentUpdateDraft(
+    buildingId: string,
+    incidentEventId: string,
+    dto: CreatePopulationFollowUpDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(
+      buildingId,
+      actor,
+    );
+
+    if (!actor.sub) {
+      throw new ForbiddenException(
+        'Identité utilisateur requise',
+      );
+    }
+
+    return this.populationService.createIncidentFollowUpDraft(
+      buildingId,
+      incidentEventId,
+      dto.sourceAlertId,
+      PopulationAlertType.UPDATE,
+      {
+        titleFR: dto.titleFR,
+        titleEN: dto.titleEN,
+        messageFR: dto.messageFR,
+        messageEN: dto.messageEN,
+        instructionFR: dto.instructionFR,
+        instructionEN: dto.instructionEN,
+      },
+      {
+        type: 'CLIENT_USER',
+        id: actor.sub,
+      },
+    );
+  }
+
+  /**
+   * Crée le brouillon ALL_CLEAR d'un incident.
+   */
+  async createPopulationIncidentAllClearDraft(
+    buildingId: string,
+    incidentEventId: string,
+    dto: CreatePopulationFollowUpDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(
+      buildingId,
+      actor,
+    );
+
+    if (!actor.sub) {
+      throw new ForbiddenException(
+        'Identité utilisateur requise',
+      );
+    }
+
+    return this.populationService.createIncidentFollowUpDraft(
+      buildingId,
+      incidentEventId,
+      dto.sourceAlertId,
+      PopulationAlertType.ALL_CLEAR,
+      {
+        titleFR: dto.titleFR,
+        titleEN: dto.titleEN,
+        messageFR: dto.messageFR,
+        messageEN: dto.messageEN,
+        instructionFR: dto.instructionFR,
+        instructionEN: dto.instructionEN,
+      },
+      {
+        type: 'CLIENT_USER',
+        id: actor.sub,
+      },
+    );
+  }
+
+  /**
+   * Retourne la chronologie Population d'un incident.
+   */
+  async getPopulationIncidentAlertHistory(
+    buildingId: string,
+    incidentEventId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(
+      buildingId,
+      actor,
+    );
+
+    return this.populationService.getIncidentAlertHistory(
+      buildingId,
+      incidentEventId,
+    );
+  }
+
+  /**
+   * Clôture une communication Population ACTIVE.
+   */
+  async endPopulationAlert(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(
+      buildingId,
+      actor,
+    );
+
+    return this.populationService.endAlert(
+      buildingId,
+      alertId,
+    );
+  }
+
+  /**
+   * Annule une communication Population qui n'a pas encore
+   * commencé sa diffusion.
+   */
+  async cancelPopulationAlert(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(
+      buildingId,
+      actor,
+    );
+
+    return this.populationService.cancelAlert(
+      buildingId,
+      alertId,
+    );
+  }
 
   async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
     const where: any = { organizationId };
