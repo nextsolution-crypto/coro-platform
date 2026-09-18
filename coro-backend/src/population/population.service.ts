@@ -47,6 +47,8 @@ import { GeocodingService } from '../geocoding/geocoding.service';
 import { GeocodingError } from '../geocoding/geocoding.errors';
 import { ResolvePopulationLocationDto } from './dto/resolve-population-location.dto';
 import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.dto';
+import { RequestPopulationAccessByDestinationDto } from './dto/request-population-access-by-destination.dto';
+import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access-request.dto';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE =
   'POPULATION_LOCATION_RESOLUTION';
@@ -56,6 +58,14 @@ const POPULATION_LOCATION_TOKEN_AAD = Buffer.from(
   `CORO:${POPULATION_LOCATION_RESOLUTION_PURPOSE}:${POPULATION_LOCATION_TOKEN_VERSION}`,
   'utf8',
 );
+const POPULATION_ACCESS_REQUEST_PURPOSE = 'POPULATION_ACCESS_REQUEST';
+const POPULATION_ACCESS_REQUEST_TOKEN_VERSION = 'v1';
+const POPULATION_ACCESS_REQUEST_TTL_MS = 10 * 60 * 1000;
+const POPULATION_ACCESS_REQUEST_PLAINTEXT_BYTES = 512;
+const POPULATION_ACCESS_REQUEST_TOKEN_AAD = Buffer.from(
+  `CORO:${POPULATION_ACCESS_REQUEST_PURPOSE}:${POPULATION_ACCESS_REQUEST_TOKEN_VERSION}`,
+  'utf8',
+);
 
 type PopulationLocationResolutionPayload = {
   purpose: typeof POPULATION_LOCATION_RESOLUTION_PURPOSE;
@@ -63,6 +73,17 @@ type PopulationLocationResolutionPayload = {
   programId: string;
   latitude: number;
   longitude: number;
+  iat: number;
+  exp: number;
+  jti: string;
+};
+
+type PopulationAccessRequestPayload = {
+  purpose: typeof POPULATION_ACCESS_REQUEST_PURPOSE;
+  programId: string;
+  subscriberId: string;
+  verificationId: string;
+  channel: PopulationVerificationChannel;
   iat: number;
   exp: number;
   jti: string;
@@ -666,6 +687,112 @@ export class PopulationService {
 
     if (key.length !== 32) throw unavailable();
     return key;
+  }
+
+  private getPopulationAccessRequestTokenKey() {
+    const secret = process.env.POPULATION_ACCESS_REQUEST_TOKEN_SECRET?.trim();
+    const unavailable = () =>
+      new ServiceUnavailableException(
+        'Récupération d’accès temporairement indisponible',
+      );
+
+    if (!secret) throw unavailable();
+    const key = /^[0-9a-fA-F]{64}$/.test(secret)
+      ? Buffer.from(secret, 'hex')
+      : /^(?:[A-Za-z0-9+/]{4}){10}[A-Za-z0-9+/]{3}=$/.test(secret)
+        ? Buffer.from(secret, 'base64')
+        : null;
+    if (!key || key.length !== 32) throw unavailable();
+    return key;
+  }
+
+  private createPopulationAccessRequestToken(
+    payload: PopulationAccessRequestPayload,
+    key: Buffer,
+  ) {
+    const serialized = Buffer.from(JSON.stringify(payload), 'utf8');
+    if (serialized.length > POPULATION_ACCESS_REQUEST_PLAINTEXT_BYTES) {
+      throw new ServiceUnavailableException(
+        'Récupération d’accès temporairement indisponible',
+      );
+    }
+    const plaintext = Buffer.alloc(
+      POPULATION_ACCESS_REQUEST_PLAINTEXT_BYTES,
+      0x20,
+    );
+    serialized.copy(plaintext);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    cipher.setAAD(POPULATION_ACCESS_REQUEST_TOKEN_AAD);
+    const ciphertext = Buffer.concat([
+      cipher.update(plaintext),
+      cipher.final(),
+    ]);
+    return [
+      POPULATION_ACCESS_REQUEST_TOKEN_VERSION,
+      iv.toString('base64url'),
+      ciphertext.toString('base64url'),
+      cipher.getAuthTag().toString('base64url'),
+    ].join('.');
+  }
+
+  private verifyPopulationAccessRequestToken(
+    token: string,
+  ): PopulationAccessRequestPayload {
+    const invalid = () =>
+      new BadRequestException('Code d’accès invalide ou expiré');
+    const parts = token.split('.');
+    if (
+      parts.length !== 4 ||
+      parts[0] !== POPULATION_ACCESS_REQUEST_TOKEN_VERSION
+    ) {
+      throw invalid();
+    }
+    const [, encodedIv, encodedCiphertext, encodedTag] = parts;
+    const iv = Buffer.from(encodedIv, 'base64url');
+    const ciphertext = Buffer.from(encodedCiphertext, 'base64url');
+    const tag = Buffer.from(encodedTag, 'base64url');
+    if (
+      iv.length !== 12 ||
+      ciphertext.length !== POPULATION_ACCESS_REQUEST_PLAINTEXT_BYTES ||
+      tag.length !== 16
+    ) {
+      throw invalid();
+    }
+
+    const key = this.getPopulationAccessRequestTokenKey();
+    let payload: Partial<PopulationAccessRequestPayload>;
+    try {
+      const decipher = createDecipheriv('aes-256-gcm', key, iv);
+      decipher.setAAD(POPULATION_ACCESS_REQUEST_TOKEN_AAD);
+      decipher.setAuthTag(tag);
+      payload = JSON.parse(
+        Buffer.concat([
+          decipher.update(ciphertext),
+          decipher.final(),
+        ]).toString('utf8'),
+      );
+    } catch {
+      throw invalid();
+    }
+
+    if (
+      payload.purpose !== POPULATION_ACCESS_REQUEST_PURPOSE ||
+      typeof payload.programId !== 'string' ||
+      typeof payload.subscriberId !== 'string' ||
+      typeof payload.verificationId !== 'string' ||
+      !Object.values(PopulationVerificationChannel).includes(payload.channel!) ||
+      typeof payload.iat !== 'number' ||
+      !Number.isFinite(payload.iat) ||
+      payload.iat > Date.now() ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= Date.now() ||
+      typeof payload.jti !== 'string' ||
+      !payload.jti
+    ) {
+      throw invalid();
+    }
+    return payload as PopulationAccessRequestPayload;
   }
 
   private createSubscriberAccessToken(
@@ -1363,6 +1490,205 @@ export class PopulationService {
     }
 
     return genericResponse;
+  }
+
+  async requestSubscriberAccessByDestination(
+    publicSlug: string,
+    dto: RequestPopulationAccessByDestinationDto,
+  ) {
+    const key = this.getPopulationAccessRequestTokenKey();
+    const now = Date.now();
+    const verificationCode = this.generateVerificationCode();
+    // This work is intentionally performed for real and decoy requests.
+    const verificationCodeHash = this.hashVerificationCode(verificationCode);
+    let programId: string = randomUUID();
+    let subscriberId: string = randomUUID();
+    let verificationId: string = randomUUID();
+
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: {
+        id: true,
+        status: true,
+        smsEnabled: true,
+        emailEnabled: true,
+        rueFacilityProfile: {
+          select: { assessmentStatus: true, populationEnabled: true },
+        },
+      },
+    });
+    const operational = Boolean(
+      program &&
+        program.status === PopulationProgramStatus.ACTIVE &&
+        program.rueFacilityProfile.assessmentStatus ===
+          RueAssessmentStatus.CONFIRMED_SUBJECT &&
+        program.rueFacilityProfile.populationEnabled,
+    );
+    const destination =
+      dto.channel === PopulationVerificationChannel.EMAIL
+        ? dto.destination.trim().toLowerCase()
+        : dto.destination.trim();
+
+    if (operational && destination) {
+      const channelAvailable =
+        dto.channel === PopulationVerificationChannel.SMS
+          ? program!.smsEnabled
+          : program!.emailEnabled;
+      if (channelAvailable) {
+        const candidates = await this.prisma.populationSubscriber.findMany({
+          where: {
+            programId: program!.id,
+            status: PopulationSubscriberStatus.ACTIVE,
+            ...(dto.channel === PopulationVerificationChannel.SMS
+              ? { phone: destination, smsEnabled: true }
+              : { email: destination, emailEnabled: true }),
+          },
+          select: { id: true, phone: true, email: true },
+          take: 2,
+        });
+
+        if (candidates.length === 1) {
+          const subscriber = candidates[0];
+          const latest = await this.prisma.populationVerification.findFirst({
+            where: { subscriberId: subscriber.id, channel: dto.channel },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+          });
+          const recentCount = await this.prisma.populationVerification.count({
+            where: {
+              subscriberId: subscriber.id,
+              channel: dto.channel,
+              createdAt: { gte: new Date(now - 60 * 60 * 1000) },
+            },
+          });
+          if (
+            (!latest || now - latest.createdAt.getTime() >= 60 * 1000) &&
+            recentCount < 5
+          ) {
+            const verification =
+              await this.prisma.populationVerification.create({
+                data: {
+                  subscriberId: subscriber.id,
+                  channel: dto.channel,
+                  codeHash: verificationCodeHash,
+                  expiresAt: new Date(now + POPULATION_ACCESS_REQUEST_TTL_MS),
+                  maxAttempts: 5,
+                },
+                select: { id: true },
+              });
+            programId = program!.id;
+            subscriberId = subscriber.id;
+            verificationId = verification.id;
+            try {
+              if (dto.channel === PopulationVerificationChannel.SMS) {
+                await this.populationDeliveryService.sendSms(
+                  subscriber.phone!,
+                  `Votre code d’accès CORO est ${verificationCode}. Il expire dans 10 minutes.`,
+                );
+              } else {
+                await this.populationDeliveryService.sendEmail({
+                  destination: subscriber.email!,
+                  subject: 'Votre code d’accès CORO',
+                  html: `<p>Votre code d’accès CORO est <strong>${verificationCode}</strong>.</p><p>Il expire dans 10 minutes.</p>`,
+                });
+              }
+            } catch {
+              // The public response remains identical on transport failure.
+            }
+          }
+        }
+      }
+    }
+
+    const expiresAt = now + POPULATION_ACCESS_REQUEST_TTL_MS;
+    const accessRequestToken = this.createPopulationAccessRequestToken(
+      {
+        purpose: POPULATION_ACCESS_REQUEST_PURPOSE,
+        programId,
+        subscriberId,
+        verificationId,
+        channel: dto.channel,
+        iat: now,
+        exp: expiresAt,
+        jti: randomUUID(),
+      },
+      key,
+    );
+    return {
+      ...this.accessRequestResponse(),
+      accessRequestToken,
+      expiresAt: new Date(expiresAt).toISOString(),
+    };
+  }
+
+  async verifySubscriberAccessRequest(
+    publicSlug: string,
+    dto: VerifyPopulationAccessRequestDto,
+  ) {
+    const invalid = () =>
+      new BadRequestException('Code d’accès invalide ou expiré');
+    const payload = this.verifyPopulationAccessRequestToken(
+      dto.accessRequestToken,
+    );
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: { id: true },
+    });
+    if (!program || program.id !== payload.programId) throw invalid();
+
+    const verification = await this.prisma.populationVerification.findFirst({
+      where: {
+        id: payload.verificationId,
+        subscriberId: payload.subscriberId,
+        channel: payload.channel,
+        verifiedAt: null,
+      },
+      include: {
+        subscriber: {
+          select: { id: true, programId: true, status: true },
+        },
+      },
+    });
+    if (
+      !verification ||
+      verification.subscriber.programId !== program.id ||
+      verification.subscriber.status !== PopulationSubscriberStatus.ACTIVE ||
+      verification.expiresAt.getTime() <= Date.now() ||
+      verification.attemptCount >= verification.maxAttempts
+    ) {
+      throw invalid();
+    }
+    if (!this.verificationCodeMatches(dto.code, verification.codeHash)) {
+      await this.prisma.populationVerification.updateMany({
+        where: {
+          id: verification.id,
+          verifiedAt: null,
+          attemptCount: { lt: verification.maxAttempts },
+        },
+        data: { attemptCount: { increment: 1 } },
+      });
+      throw invalid();
+    }
+    const consumed = await this.prisma.populationVerification.updateMany({
+      where: {
+        id: verification.id,
+        verifiedAt: null,
+        attemptCount: { lt: verification.maxAttempts },
+        expiresAt: { gt: new Date() },
+      },
+      data: { verifiedAt: new Date() },
+    });
+    if (consumed.count !== 1) throw invalid();
+
+    return {
+      verified: true,
+      subscriberId: verification.subscriber.id,
+      accessToken: this.createSubscriberAccessToken(
+        verification.subscriber.id,
+        program.id,
+      ),
+      accessTokenExpiresInSeconds: 30 * 60,
+    };
   }
 
   async verifySubscriberAccess(

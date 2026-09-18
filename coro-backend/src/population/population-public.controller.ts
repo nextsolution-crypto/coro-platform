@@ -16,6 +16,8 @@ import { PopulationAccessDto } from './dto/population-access.dto';
 import { UpdatePopulationPreferencesDto } from './dto/update-population-preferences.dto';
 import { ResolvePopulationLocationDto } from './dto/resolve-population-location.dto';
 import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.dto';
+import { RequestPopulationAccessByDestinationDto } from './dto/request-population-access-by-destination.dto';
+import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access-request.dto';
 
 @Controller('population/public')
 export class PopulationPublicController {
@@ -88,6 +90,44 @@ export class PopulationPublicController {
     return this.populationService.verifySubscriberAccess(
       publicSlug,
       subscriberId,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/access/request')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
+  async requestSubscriberAccessByDestination(
+    @Param('publicSlug') publicSlug: string,
+    @Body(new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    })) dto: RequestPopulationAccessByDestinationDto,
+  ) {
+    return this.populationService.requestSubscriberAccessByDestination(
+      publicSlug,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/access/verify')
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    long: { ttl: 3600000, limit: 30 },
+  })
+  async verifySubscriberAccessRequest(
+    @Param('publicSlug') publicSlug: string,
+    @Body(new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    })) dto: VerifyPopulationAccessRequestDto,
+  ) {
+    return this.populationService.verifySubscriberAccessRequest(
+      publicSlug,
       dto,
     );
   }
