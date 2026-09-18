@@ -16,6 +16,7 @@ import {
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_ADDRESS_LINE_LENGTH = 200;
 const MAX_CITY_LENGTH = 100;
+const MAX_CANDIDATES = 5;
 const POSTAL_CODE_PATTERN =
   /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z] \d[ABCEGHJ-NPRSTV-Z]\d$/;
 
@@ -100,6 +101,117 @@ export class GeocodingService {
     } finally {
       if (timeout) clearTimeout(timeout);
     }
+  }
+
+  async geocodeCandidates(address: GeocodingAddress): Promise<GeocodingResult[]> {
+    const normalized = this.normalizeAddress(address);
+    if (!this.provider) {
+      throw new GeocodingError('GEOCODING_NOT_CONFIGURED');
+    }
+
+    const candidates = await this.requestCandidates(normalized);
+    const accepted: GeocodingResult[] = [];
+    const seen = new Set<string>();
+
+    for (const candidate of candidates) {
+      if (!this.isPlausible(candidate, normalized)) continue;
+      let result: GeocodingResult;
+      try {
+        result = this.validateCandidate(candidate, normalized);
+      } catch (error) {
+        if (
+          error instanceof GeocodingError &&
+          (error.code === 'GEOCODING_INVALID_RESULT' ||
+            error.code === 'GEOCODING_COUNTRY_MISMATCH' ||
+            error.code === 'GEOCODING_PROVINCE_MISMATCH')
+        ) {
+          continue;
+        }
+        throw error;
+      }
+      const keys = this.candidateKeys(candidate, result);
+      if (keys.some((key) => seen.has(key))) continue;
+      keys.forEach((key) => seen.add(key));
+      accepted.push(result);
+      if (accepted.length === MAX_CANDIDATES) break;
+    }
+
+    if (accepted.length === 0) {
+      throw new GeocodingError('GEOCODING_NO_RESULT');
+    }
+    return accepted;
+  }
+
+  private async requestCandidates(
+    normalized: GeocodingAddress,
+  ): Promise<ProviderGeocodingCandidate[]> {
+    const timeoutMs = this.timeoutMs();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const response = await Promise.race([
+        this.provider!.geocode(normalized, { timeoutMs }),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(
+            () => reject(new GeocodingError('GEOCODING_TIMEOUT')),
+            timeoutMs,
+          );
+        }),
+      ]);
+      if (!response || !Array.isArray(response.candidates)) {
+        throw new GeocodingError('GEOCODING_INVALID_RESULT');
+      }
+      return response.candidates;
+    } catch (error) {
+      if (error instanceof GeocodingError) throw error;
+      throw new GeocodingError('GEOCODING_PROVIDER_UNAVAILABLE');
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+
+  private isPlausible(
+    candidate: ProviderGeocodingCandidate,
+    requestedAddress: GeocodingAddress,
+  ) {
+    if (candidate.featureType && candidate.featureType !== 'address') return false;
+    if (candidate.confidence === 'low') return false;
+    if (
+      !candidate.normalizedAddress?.addressLine?.trim() ||
+      !candidate.normalizedAddress?.city?.trim()
+    ) {
+      return false;
+    }
+    const unmatched = new Set(candidate.unmatchedComponents ?? []);
+    if (
+      unmatched.has('address_number') ||
+      unmatched.has('street') ||
+      unmatched.has('place') ||
+      unmatched.has('region') ||
+      (requestedAddress.postalCode && unmatched.has('postcode'))
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  private candidateKeys(
+    candidate: ProviderGeocodingCandidate,
+    result: GeocodingResult,
+  ) {
+    const address = result.normalizedAddress;
+    const normalizedKey = [
+      address.addressLine,
+      address.city,
+      address.province,
+      address.postalCode,
+      result.latitude.toFixed(5),
+      result.longitude.toFixed(5),
+    ]
+      .map((value) => String(value ?? '').trim().toLocaleLowerCase('en-CA'))
+      .join('|');
+    return candidate.providerCandidateId
+      ? [`id:${candidate.providerCandidateId}`, `address:${normalizedKey}`]
+      : [`address:${normalizedKey}`];
   }
 
   private validateCandidate(

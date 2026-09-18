@@ -110,7 +110,8 @@ export type CanadianProvinceCode =
   | "AB" | "BC" | "MB" | "NB" | "NL" | "NS" | "NT"
   | "NU" | "ON" | "PE" | "QC" | "SK" | "YT";
 
-export type ResolvePopulationLocationResult = {
+export type ResolvedPopulationLocationResult = {
+  status: "RESOLVED";
   location: {
     addressLine?: string;
     city?: string;
@@ -121,6 +122,20 @@ export type ResolvePopulationLocationResult = {
   resolutionToken: string;
   expiresAt: string;
 };
+
+export type PopulationLocationSelectionResult = {
+  status: "SELECTION_REQUIRED";
+  candidates: Array<{
+    label: string;
+    locality: string;
+    selectionToken: string;
+  }>;
+  expiresAt: string;
+};
+
+export type ResolvePopulationLocationResult =
+  | ResolvedPopulationLocationResult
+  | PopulationLocationSelectionResult;
 
 export type ConfirmPopulationLocationResult = {
   confirmed: true;
@@ -298,6 +313,17 @@ export function confirmPopulationLocation(
 ) {
   return publicRequest<ConfirmPopulationLocationResult>(
     `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/location/confirm`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function selectPopulationLocation(
+  publicSlug: string,
+  subscriberId: string,
+  input: { accessToken: string; selectionToken: string },
+) {
+  return publicRequest<ResolvedPopulationLocationResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/location/select`,
     { method: "POST", body: JSON.stringify(input) },
   );
 }

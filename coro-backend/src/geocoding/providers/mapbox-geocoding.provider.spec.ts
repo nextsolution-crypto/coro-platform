@@ -108,6 +108,7 @@ describe('MapboxGeocodingProvider', () => {
             postalCode: 'H2X 1Y4',
             country: 'CA',
           },
+          featureType: 'address',
         },
       ],
     });
@@ -128,6 +129,33 @@ describe('MapboxGeocodingProvider', () => {
     ).rejects.toMatchObject({
       code: 'GEOCODING_AMBIGUOUS_RESULT',
     });
+  });
+
+  it('extrait uniquement les métadonnées de plausibilité nécessaires', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      responseWith([
+        mapboxFeature({
+          mapbox_id: 'address.test-id',
+          match_code: {
+            confidence: 'medium',
+            address_number: 'matched',
+            street: 'matched',
+            postcode: 'unmatched',
+          },
+          attribution: 'never exposed',
+        }),
+      ]),
+    );
+    const result = await new MapboxGeocodingProvider(TOKEN).geocode(address, {
+      timeoutMs: 1_000,
+    });
+    expect(result.candidates[0]).toMatchObject({
+      providerCandidateId: 'address.test-id',
+      featureType: 'address',
+      confidence: 'medium',
+      unmatchedComponents: ['postcode'],
+    });
+    expect(JSON.stringify(result)).not.toContain('attribution');
   });
 
   it('retourne zéro candidat sans fabriquer de résultat', async () => {

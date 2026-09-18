@@ -6,8 +6,10 @@ import {
   confirmPopulationLocation,
   PublicPopulationApiError,
   resolvePopulationLocation,
+  selectPopulationLocation,
   type CanadianProvinceCode,
-  type ResolvePopulationLocationResult,
+  type PopulationLocationSelectionResult,
+  type ResolvedPopulationLocationResult,
 } from "../lib/publicPopulationApi";
 import {
   clearPopulationWorkflowSession,
@@ -17,7 +19,7 @@ import {
 import styles from "./PopulationPublicShell.module.css";
 
 type Language = "fr" | "en";
-type Step = "form" | "confirm" | "unavailable" | "success";
+type Step = "form" | "selection" | "confirm" | "unavailable" | "success";
 
 const provinces: Array<{ code: CanadianProvinceCode; fr: string; en: string }> = [
   { code: "AB", fr: "Alberta", en: "Alberta" },
@@ -51,6 +53,10 @@ const copy = {
     resolve: "Vérifier mon emplacement",
     resolving: "Vérification…",
     confirmTitle: "Confirmez votre secteur d’alerte",
+    selectionTitle: "Sélectionnez votre adresse",
+    selectionIntro: "Plusieurs adresses peuvent correspondre aux renseignements fournis. Sélectionnez celle qui correspond à votre secteur d’alerte.",
+    useAddress: "Utiliser cette adresse",
+    editSearch: "Modifier ma recherche",
     confirm: "Confirmer ce secteur",
     confirming: "Confirmation…",
     edit: "Modifier l’adresse",
@@ -86,6 +92,10 @@ const copy = {
     resolve: "Verify my location",
     resolving: "Verifying…",
     confirmTitle: "Confirm your alert area",
+    selectionTitle: "Select your address",
+    selectionIntro: "Several addresses may match the information provided. Select the one that corresponds to your alert area.",
+    useAddress: "Use this address",
+    editSearch: "Edit my search",
     confirm: "Confirm this area",
     confirming: "Confirming…",
     edit: "Edit address",
@@ -133,7 +143,9 @@ export default function PopulationLocation({
   const [city, setCity] = useState("");
   const [province, setProvince] = useState<CanadianProvinceCode | "">("");
   const [postalCode, setPostalCode] = useState("");
-  const [resolution, setResolution] = useState<ResolvePopulationLocationResult | null>(null);
+  const [resolution, setResolution] = useState<ResolvedPopulationLocationResult | null>(null);
+  const [selection, setSelection] = useState<PopulationLocationSelectionResult | null>(null);
+  const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +155,7 @@ export default function PopulationLocation({
   const errorRef = useRef<HTMLDivElement>(null);
   const resolveInFlight = useRef(false);
   const confirmInFlight = useRef(false);
+  const selectInFlight = useRef(false);
 
   useEffect(() => {
     if (!resolution) return;
@@ -161,6 +174,26 @@ export default function PopulationLocation({
     }, remaining);
     return () => window.clearTimeout(timer);
   }, [resolution, t.expired]);
+
+  useEffect(() => {
+    if (!selection) return;
+    const remaining = Date.parse(selection.expiresAt) - Date.now();
+    if (remaining <= 0) {
+      setSelection(null);
+      setSelectedToken(null);
+      setStep("form");
+      setError(t.expired);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setSelection(null);
+      setSelectedToken(null);
+      setStep("form");
+      setError(t.expired);
+      window.requestAnimationFrame(() => addressRef.current?.focus());
+    }, remaining);
+    return () => window.clearTimeout(timer);
+  }, [selection, t.expired]);
 
   const focusError = () => window.requestAnimationFrame(() => errorRef.current?.focus());
   const expireSession = () => {
@@ -199,8 +232,14 @@ export default function PopulationLocation({
       setCity("");
       setProvince("");
       setPostalCode("");
-      setResolution(result);
-      setStep("confirm");
+      if (result.status === "SELECTION_REQUIRED") {
+        setSelection(result);
+        setSelectedToken(null);
+        setStep("selection");
+      } else {
+        setResolution(result);
+        setStep("confirm");
+      }
     } catch (caught: unknown) {
       const apiError = caught instanceof PublicPopulationApiError ? caught : null;
       if (apiError?.reason === "ACCESS_INVALID" || apiError?.status === 401 || apiError?.status === 403) expireSession();
@@ -215,6 +254,36 @@ export default function PopulationLocation({
     } finally {
       resolveInFlight.current = false;
       setResolving(false);
+    }
+  };
+
+  const selectCandidate = async () => {
+    if (!selectedToken || selectInFlight.current) return;
+    selectInFlight.current = true;
+    setConfirming(true);
+    setError(null);
+    try {
+      const result = await selectPopulationLocation(
+        workflow.publicSlug,
+        workflow.subscriberId,
+        { accessToken: workflow.accessToken, selectionToken: selectedToken },
+      );
+      setSelection(null);
+      setSelectedToken(null);
+      setResolution(result);
+      setStep("confirm");
+    } catch (caught: unknown) {
+      const apiError = caught instanceof PublicPopulationApiError ? caught : null;
+      if (apiError?.reason === "ACCESS_INVALID" || apiError?.status === 401 || apiError?.status === 403) expireSession();
+      else {
+        setSelection(null);
+        setSelectedToken(null);
+        setStep("form");
+        setError(t.expired);
+      }
+    } finally {
+      selectInFlight.current = false;
+      setConfirming(false);
     }
   };
 
@@ -278,6 +347,29 @@ export default function PopulationLocation({
       </div>
     </section></main>
   );
+
+  if (step === "selection" && selection) {
+    return (
+      <main className={styles.formMain}><section className={styles.locationSection}>
+        <h1>{t.selectionTitle}</h1>
+        <p className={styles.formIntro}>{t.selectionIntro}</p>
+        <fieldset className={styles.locationCandidates}>
+          <legend className={styles.srOnly}>{t.selectionTitle}</legend>
+          {selection.candidates.map((candidate) => (
+            <label key={candidate.selectionToken} className={styles.locationCandidate}>
+              <input type="radio" name="population-location-candidate" checked={selectedToken === candidate.selectionToken} onChange={() => setSelectedToken(candidate.selectionToken)} />
+              <span><strong>{candidate.label}</strong><small>{candidate.locality}</small></span>
+            </label>
+          ))}
+        </fieldset>
+        <div ref={errorRef} className={styles.formError} role="alert" aria-live="assertive" tabIndex={-1}>{error}</div>
+        <div className={styles.postVerificationActions}>
+          <button className={`${styles.button} ${styles.primary}`} type="button" onClick={selectCandidate} disabled={!selectedToken || confirming}>{confirming ? t.confirming : t.useAddress}<ArrowRight size={17} /></button>
+          <button className={`${styles.button} ${styles.secondary}`} type="button" onClick={() => { setSelection(null); setSelectedToken(null); setStep("form"); }} disabled={confirming}>{t.editSearch}</button>
+        </div>
+      </section></main>
+    );
+  }
 
   if (step === "confirm" && resolution) {
     const location = resolution.location;

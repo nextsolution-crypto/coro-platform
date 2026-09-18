@@ -47,6 +47,10 @@ export type ProviderGeocodingCandidate = {
     postalCode?: string;
     country: string;
   };
+  providerCandidateId?: string;
+  featureType?: string;
+  confidence?: 'exact' | 'high' | 'medium' | 'low';
+  unmatchedComponents?: string[];
 };
 
 export type ProviderGeocodingResponse = {

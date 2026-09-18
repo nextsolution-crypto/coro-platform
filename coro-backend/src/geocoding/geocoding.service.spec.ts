@@ -112,6 +112,70 @@ describe('GeocodingService', () => {
     ).rejects.toMatchObject({ code: 'GEOCODING_AMBIGUOUS_RESULT' });
   });
 
+  describe('geocodeCandidates', () => {
+    it('retourne un candidat unique validé', async () => {
+      await expect(
+        new GeocodingService(providerWith()).geocodeCandidates(address),
+      ).resolves.toEqual([{ ...candidate, provider: 'mock-provider' }]);
+    });
+
+    it('conserve plusieurs candidats plausibles sans en choisir un', async () => {
+      const second = {
+        ...candidate,
+        longitude: -73.562,
+        normalizedAddress: {
+          ...candidate.normalizedAddress,
+          addressLine: '125 Rue Principale',
+        },
+      };
+      await expect(
+        new GeocodingService(providerWith([candidate, second])).geocodeCandidates(
+          address,
+        ),
+      ).resolves.toHaveLength(2);
+    });
+
+    it('élimine pays, province, coordonnées et qualité incompatibles', async () => {
+      const invalid = [
+        { ...candidate, latitude: Number.NaN },
+        { ...candidate, normalizedAddress: { ...candidate.normalizedAddress, country: 'US' } },
+        { ...candidate, normalizedAddress: { ...candidate.normalizedAddress, province: 'ON' } },
+        { ...candidate, confidence: 'low' as const },
+        { ...candidate, unmatchedComponents: ['street'] },
+      ];
+      await expect(
+        new GeocodingService(providerWith([...invalid, candidate])).geocodeCandidates(
+          address,
+        ),
+      ).resolves.toEqual([{ ...candidate, provider: 'mock-provider' }]);
+    });
+
+    it('déduplique un même identifiant fournisseur et borne à cinq', async () => {
+      const candidates = Array.from({ length: 7 }, (_, index) => ({
+        ...candidate,
+        longitude: candidate.longitude - index / 1000,
+        providerCandidateId: index < 2 ? 'same-address' : `address-${index}`,
+        normalizedAddress: {
+          ...candidate.normalizedAddress,
+          addressLine: `${123 + index} Rue Principale`,
+        },
+      }));
+      const results = await new GeocodingService(
+        providerWith(candidates),
+      ).geocodeCandidates(address);
+      expect(results).toHaveLength(5);
+      expect(results.filter((item) => item.latitude === candidate.latitude)).toHaveLength(5);
+    });
+
+    it('retourne NO_RESULT lorsque rien de plausible ne subsiste', async () => {
+      await expect(
+        new GeocodingService(
+          providerWith([{ ...candidate, confidence: 'low' }]),
+        ).geocodeCandidates(address),
+      ).rejects.toMatchObject({ code: 'GEOCODING_NO_RESULT' });
+    });
+  });
+
   it('applique un timeout explicite au provider', async () => {
     jest.useFakeTimers();
     process.env.GEOCODING_TIMEOUT_MS = '25';

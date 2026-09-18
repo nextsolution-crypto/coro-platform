@@ -49,6 +49,8 @@ import { ResolvePopulationLocationDto } from './dto/resolve-population-location.
 import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.dto';
 import { RequestPopulationAccessByDestinationDto } from './dto/request-population-access-by-destination.dto';
 import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access-request.dto';
+import { SelectPopulationLocationDto } from './dto/select-population-location.dto';
+import type { GeocodingResult } from '../geocoding/geocoding.types';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE =
   'POPULATION_LOCATION_RESOLUTION';
@@ -56,6 +58,12 @@ const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
 const POPULATION_LOCATION_TOKEN_VERSION = 'v1';
 const POPULATION_LOCATION_TOKEN_AAD = Buffer.from(
   `CORO:${POPULATION_LOCATION_RESOLUTION_PURPOSE}:${POPULATION_LOCATION_TOKEN_VERSION}`,
+  'utf8',
+);
+const POPULATION_LOCATION_SELECTION_PURPOSE =
+  'POPULATION_LOCATION_SELECTION';
+const POPULATION_LOCATION_SELECTION_AAD = Buffer.from(
+  `CORO:${POPULATION_LOCATION_SELECTION_PURPOSE}:${POPULATION_LOCATION_TOKEN_VERSION}`,
   'utf8',
 );
 const POPULATION_ACCESS_REQUEST_PURPOSE = 'POPULATION_ACCESS_REQUEST';
@@ -73,6 +81,18 @@ type PopulationLocationResolutionPayload = {
   programId: string;
   latitude: number;
   longitude: number;
+  iat: number;
+  exp: number;
+  jti: string;
+};
+
+type PopulationLocationSelectionPayload = {
+  purpose: typeof POPULATION_LOCATION_SELECTION_PURPOSE;
+  subscriberId: string;
+  programId: string;
+  latitude: number;
+  longitude: number;
+  normalizedAddress: GeocodingResult['normalizedAddress'];
   iat: number;
   exp: number;
   jti: string;
@@ -984,6 +1004,106 @@ export class PopulationService {
       ].join('.'),
       expiresAt: payload.exp,
     };
+  }
+
+  private createLocationSelectionToken(
+    subscriberId: string,
+    programId: string,
+    result: GeocodingResult,
+    key: Buffer,
+    issuedAt: number,
+  ) {
+    const payload: PopulationLocationSelectionPayload = {
+      purpose: POPULATION_LOCATION_SELECTION_PURPOSE,
+      subscriberId,
+      programId,
+      latitude: result.latitude,
+      longitude: result.longitude,
+      normalizedAddress: result.normalizedAddress,
+      iat: issuedAt,
+      exp: issuedAt + POPULATION_LOCATION_RESOLUTION_TTL_MS,
+      jti: randomUUID(),
+    };
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    cipher.setAAD(POPULATION_LOCATION_SELECTION_AAD);
+    const ciphertext = Buffer.concat([
+      cipher.update(JSON.stringify(payload), 'utf8'),
+      cipher.final(),
+    ]);
+    return [
+      POPULATION_LOCATION_TOKEN_VERSION,
+      iv.toString('base64url'),
+      ciphertext.toString('base64url'),
+      cipher.getAuthTag().toString('base64url'),
+    ].join('.');
+  }
+
+  verifyLocationSelectionToken(
+    token: string,
+    expectedSubscriberId: string,
+    expectedProgramId: string,
+  ): PopulationLocationSelectionPayload {
+    const invalidToken = () =>
+      new BadRequestException(
+        'Sélection de localisation invalide ou expirée',
+      );
+    const parts = token.split('.');
+    if (parts.length !== 4 || parts[0] !== POPULATION_LOCATION_TOKEN_VERSION) {
+      throw invalidToken();
+    }
+    const [, encodedIv, encodedCiphertext, encodedTag] = parts;
+    const iv = Buffer.from(encodedIv, 'base64url');
+    const ciphertext = Buffer.from(encodedCiphertext, 'base64url');
+    const tag = Buffer.from(encodedTag, 'base64url');
+    if (iv.length !== 12 || !ciphertext.length || tag.length !== 16) {
+      throw invalidToken();
+    }
+
+    let payload: Partial<PopulationLocationSelectionPayload>;
+    try {
+      const decipher = createDecipheriv(
+        'aes-256-gcm',
+        this.getPopulationLocationTokenKey(),
+        iv,
+      );
+      decipher.setAAD(POPULATION_LOCATION_SELECTION_AAD);
+      decipher.setAuthTag(tag);
+      payload = JSON.parse(
+        Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+          'utf8',
+        ),
+      );
+    } catch {
+      throw invalidToken();
+    }
+
+    const address = payload.normalizedAddress;
+    if (
+      payload.purpose !== POPULATION_LOCATION_SELECTION_PURPOSE ||
+      payload.subscriberId !== expectedSubscriberId ||
+      payload.programId !== expectedProgramId ||
+      !Number.isFinite(payload.latitude) ||
+      !Number.isFinite(payload.longitude) ||
+      payload.latitude! < -90 ||
+      payload.latitude! > 90 ||
+      payload.longitude! < -180 ||
+      payload.longitude! > 180 ||
+      !address ||
+      address.country !== 'CA' ||
+      typeof address.province !== 'string' ||
+      !address.province ||
+      typeof payload.iat !== 'number' ||
+      !Number.isFinite(payload.iat) ||
+      payload.iat > Date.now() ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= Date.now() ||
+      typeof payload.jti !== 'string' ||
+      !payload.jti
+    ) {
+      throw invalidToken();
+    }
+    return payload as PopulationLocationSelectionPayload;
   }
 
   verifyLocationResolutionToken(
@@ -4985,9 +5105,9 @@ export class PopulationService {
     }
 
     const locationTokenKey = this.getPopulationLocationTokenKey();
-    let result: Awaited<ReturnType<GeocodingService['geocode']>>;
+    let results: Awaited<ReturnType<GeocodingService['geocodeCandidates']>>;
     try {
-      result = await this.geocodingService.geocode({
+      results = await this.geocodingService.geocodeCandidates({
         addressLine: dto.addressLine,
         city: dto.city,
         province: dto.province,
@@ -4998,6 +5118,37 @@ export class PopulationService {
       this.translateGeocodingError(error);
     }
 
+    if (results.length > 1) {
+      const issuedAt = Date.now();
+      return {
+        status: 'SELECTION_REQUIRED' as const,
+        candidates: results.slice(0, 5).map((result) => ({
+          label:
+            result.normalizedAddress.addressLine!,
+          locality: [
+            result.normalizedAddress.city,
+            result.normalizedAddress.province,
+            result.normalizedAddress.postalCode,
+          ]
+            .filter(Boolean)
+            .join(', ')
+            .replace(/, ([A-Z]\d[A-Z] \d[A-Z]\d)$/, ' $1'),
+          selectionToken: this.createLocationSelectionToken(
+            subscriber.id,
+            program.id,
+            result,
+            locationTokenKey,
+            issuedAt,
+          ),
+        })),
+        expiresAt: new Date(
+          issuedAt + POPULATION_LOCATION_RESOLUTION_TTL_MS,
+        ).toISOString(),
+      };
+    }
+
+    const result = results[0];
+
     const resolution = this.createLocationResolutionToken(
       subscriber.id,
       program.id,
@@ -5006,7 +5157,70 @@ export class PopulationService {
     );
 
     return {
+      status: 'RESOLVED' as const,
       location: result.normalizedAddress,
+      resolutionToken: resolution.token,
+      expiresAt: new Date(resolution.expiresAt).toISOString(),
+    };
+  }
+
+  async selectSubscriberLocation(
+    publicSlug: string,
+    subscriberId: string,
+    dto: SelectPopulationLocationDto,
+  ) {
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: {
+        id: true,
+        rueFacilityProfile: { select: { buildingId: true } },
+      },
+    });
+    if (!program) {
+      throw new NotFoundException(
+        'Programme Sentinelle Population introuvable',
+      );
+    }
+
+    this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
+    const operationalProfile = await this.assertPopulationOperational(
+      program.rueFacilityProfile.buildingId,
+    );
+    if (operationalProfile.populationProgram?.id !== program.id) {
+      throw new BadRequestException(
+        'Le programme Sentinelle Population n’est pas actif',
+      );
+    }
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+    if (!subscriber) throw new BadRequestException('Accès citoyen invalide');
+
+    const selected = this.verifyLocationSelectionToken(
+      dto.selectionToken,
+      subscriber.id,
+      program.id,
+    );
+    const result: GeocodingResult = {
+      latitude: selected.latitude,
+      longitude: selected.longitude,
+      normalizedAddress: selected.normalizedAddress,
+      provider: 'TOKEN',
+    };
+    const resolution = this.createLocationResolutionToken(
+      subscriber.id,
+      program.id,
+      result,
+      this.getPopulationLocationTokenKey(),
+    );
+    return {
+      status: 'RESOLVED' as const,
+      location: selected.normalizedAddress,
       resolutionToken: resolution.token,
       expiresAt: new Date(resolution.expiresAt).toISOString(),
     };

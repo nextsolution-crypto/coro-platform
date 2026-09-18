@@ -18,6 +18,7 @@ import { ResolvePopulationLocationDto } from './dto/resolve-population-location.
 import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.dto';
 import { RequestPopulationAccessByDestinationDto } from './dto/request-population-access-by-destination.dto';
 import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access-request.dto';
+import { SelectPopulationLocationDto } from './dto/select-population-location.dto';
 
 @Controller('population/public')
 export class PopulationPublicController {
@@ -150,6 +151,30 @@ export class PopulationPublicController {
     dto: ResolvePopulationLocationDto,
   ) {
     return this.populationService.resolveSubscriberLocation(
+      publicSlug,
+      subscriberId,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/location/select')
+  @Throttle({
+    short: { ttl: 60000, limit: 5 },
+    long: { ttl: 3600000, limit: 20 },
+  })
+  async selectSubscriberLocation(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    )
+    dto: SelectPopulationLocationDto,
+  ) {
+    return this.populationService.selectSubscriberLocation(
       publicSlug,
       subscriberId,
       dto,

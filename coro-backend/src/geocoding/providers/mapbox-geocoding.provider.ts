@@ -144,6 +144,11 @@ export class MapboxGeocodingProvider implements GeocodingProvider {
     const regionContext = this.asRecord(context.region);
     const postcodeContext = this.asRecord(context.postcode);
     const countryContext = this.asRecord(context.country);
+    const matchCode = this.asRecord(properties.match_code);
+    const confidence = this.stringValue(matchCode?.confidence).toLowerCase();
+    const unmatchedComponents = Object.entries(matchCode ?? {})
+      .filter(([key, value]) => key !== 'confidence' && value === 'unmatched')
+      .map(([key]) => key);
 
     return {
       latitude: latitude as number,
@@ -155,6 +160,20 @@ export class MapboxGeocodingProvider implements GeocodingProvider {
         postalCode: this.stringValue(postcodeContext?.name),
         country: this.stringValue(countryContext?.country_code),
       },
+      ...(this.stringValue(properties.mapbox_id)
+        ? { providerCandidateId: this.stringValue(properties.mapbox_id) }
+        : {}),
+      ...(this.stringValue(properties.feature_type)
+        ? { featureType: this.stringValue(properties.feature_type) }
+        : {}),
+      ...(
+        confidence === 'exact' ||
+        confidence === 'high' ||
+        confidence === 'medium' ||
+        confidence === 'low'
+          ? { confidence }
+          : {}),
+      ...(unmatchedComponents.length ? { unmatchedComponents } : {}),
     };
   }
 

@@ -15,6 +15,8 @@ const ACCESS_SECRET = 'test-population-access-secret-not-for-production';
 const KEY = Buffer.alloc(32, 7);
 const PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const aad = Buffer.from(`CORO:${PURPOSE}:v1`);
+const SELECTION_PURPOSE = 'POPULATION_LOCATION_SELECTION';
+const selectionAad = Buffer.from(`CORO:${SELECTION_PURPOSE}:v1`);
 
 describe('PopulationService location resolution', () => {
   const prisma = {
@@ -22,7 +24,7 @@ describe('PopulationService location resolution', () => {
     rueFacilityProfile: { findUnique: jest.fn() },
     populationSubscriber: { findFirst: jest.fn(), updateMany: jest.fn() },
   };
-  const geocoding = { geocode: jest.fn() };
+  const geocoding = { geocodeCandidates: jest.fn() };
   let service: PopulationService;
   const accessToken = (
     subscriberId = 'subscriber-1',
@@ -62,6 +64,33 @@ describe('PopulationService location resolution', () => {
       cipher.getAuthTag().toString('base64url'),
     ].join('.');
   };
+  const selectionToken = (overrides: Record<string, unknown> = {}) => {
+    const payload = {
+      purpose: SELECTION_PURPOSE,
+      subscriberId: 'subscriber-1',
+      programId: 'program-1',
+      latitude: 45.508,
+      longitude: -73.561,
+      normalizedAddress: {
+        addressLine: '123 Rue Principale',
+        city: 'Montreal',
+        province: 'QC',
+        country: 'CA',
+      },
+      iat: Date.now(),
+      exp: Date.now() + 600_000,
+      jti: 'selection-jti',
+      ...overrides,
+    };
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', KEY, iv);
+    cipher.setAAD(selectionAad);
+    const encrypted = Buffer.concat([
+      cipher.update(JSON.stringify(payload)),
+      cipher.final(),
+    ]);
+    return ['v1', iv.toString('base64url'), encrypted.toString('base64url'), cipher.getAuthTag().toString('base64url')].join('.');
+  };
   const dto = () => ({
     accessToken: accessToken(),
     addressLine: '123 Rue Principale',
@@ -93,7 +122,7 @@ describe('PopulationService location resolution', () => {
       status: PopulationSubscriberStatus.ACTIVE,
     });
     prisma.populationSubscriber.updateMany.mockResolvedValue({ count: 1 });
-    geocoding.geocode.mockResolvedValue({
+    geocoding.geocodeCandidates.mockResolvedValue([{
       latitude: 45.508,
       longitude: -73.561,
       normalizedAddress: {
@@ -104,7 +133,7 @@ describe('PopulationService location resolution', () => {
         country: 'CA',
       },
       provider: 'MOCK',
-    });
+    }]);
     service = new PopulationService(
       prisma as any,
       {} as any,
@@ -119,8 +148,10 @@ describe('PopulationService location resolution', () => {
       'subscriber-1',
       dto(),
     );
+    expect(result.status).toBe('RESOLVED');
+    if (result.status !== 'RESOLVED') throw new Error('Expected RESOLVED');
     expect(Object.keys(result).sort()).toEqual(
-      ['expiresAt', 'location', 'resolutionToken'].sort(),
+      ['expiresAt', 'location', 'resolutionToken', 'status'].sort(),
     );
     expect(result.location).toMatchObject({
       postalCode: 'H2X 1Y4',
@@ -149,6 +180,7 @@ describe('PopulationService location resolution', () => {
       'subscriber-1',
       dto(),
     );
+    if (result.status !== 'RESOLVED') throw new Error('Expected RESOLVED');
     const payload = service.verifyLocationResolutionToken(
       result.resolutionToken,
       'subscriber-1',
@@ -176,10 +208,118 @@ describe('PopulationService location resolution', () => {
       'subscriber-1',
       dto(),
     );
+    if (first.status !== 'RESOLVED' || second.status !== 'RESOLVED') {
+      throw new Error('Expected RESOLVED');
+    }
     expect(first.resolutionToken).not.toBe(second.resolutionToken);
     expect(first.resolutionToken.split('.')[1]).not.toBe(
       second.resolutionToken.split('.')[1],
     );
+  });
+
+  it('returns sanitized opaque choices for multiple candidates', async () => {
+    geocoding.geocodeCandidates.mockResolvedValue([
+      {
+        latitude: 45.508,
+        longitude: -73.561,
+        normalizedAddress: {
+          addressLine: '123 Rue Principale', city: 'Montreal', province: 'QC', postalCode: 'H2X 1Y4', country: 'CA',
+        },
+        provider: 'MAPBOX',
+      },
+      {
+        latitude: 45.509,
+        longitude: -73.562,
+        normalizedAddress: {
+          addressLine: '125 Rue Principale', city: 'Montreal', province: 'QC', postalCode: 'H2X 1Y4', country: 'CA',
+        },
+        provider: 'MAPBOX',
+      },
+    ]);
+
+    const result = await service.resolveSubscriberLocation(
+      'slug',
+      'subscriber-1',
+      dto(),
+    );
+    expect(result.status).toBe('SELECTION_REQUIRED');
+    if (result.status !== 'SELECTION_REQUIRED') throw new Error('Expected selection');
+    expect(result.candidates).toHaveLength(2);
+    expect(result.candidates[0]).toEqual({
+      label: '123 Rue Principale',
+      locality: 'Montreal, QC H2X 1Y4',
+      selectionToken: expect.any(String),
+    });
+    const publicCandidates = result.candidates.map(
+      ({ selectionToken: _selectionToken, ...candidate }) => candidate,
+    );
+    expect(JSON.stringify(publicCandidates)).not.toMatch(
+      /latitude|longitude|provider|mapbox|coordinates|geometry|raw/i,
+    );
+    expect(result.candidates[0].selectionToken).not.toContain('45.508');
+    expect(prisma.populationSubscriber.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('turns a valid selection into a resolution without geocoding or persistence', async () => {
+    geocoding.geocodeCandidates.mockResolvedValue([
+      {
+        latitude: 45.508,
+        longitude: -73.561,
+        normalizedAddress: {
+          addressLine: '123 Rue Principale', city: 'Montreal', province: 'QC', postalCode: 'H2X 1Y4', country: 'CA',
+        },
+        provider: 'MAPBOX',
+      },
+      {
+        latitude: 45.509,
+        longitude: -73.562,
+        normalizedAddress: {
+          addressLine: '125 Rue Principale', city: 'Montreal', province: 'QC', postalCode: 'H2X 1Y4', country: 'CA',
+        },
+        provider: 'MAPBOX',
+      },
+    ]);
+    const choices = await service.resolveSubscriberLocation('slug', 'subscriber-1', dto());
+    if (choices.status !== 'SELECTION_REQUIRED') throw new Error('Expected selection');
+    geocoding.geocodeCandidates.mockClear();
+
+    const selected = await service.selectSubscriberLocation('slug', 'subscriber-1', {
+      accessToken: accessToken(),
+      selectionToken: choices.candidates[0].selectionToken,
+    });
+    expect(selected).toMatchObject({
+      status: 'RESOLVED',
+      location: { addressLine: '123 Rue Principale', country: 'CA' },
+      resolutionToken: expect.any(String),
+      expiresAt: expect.any(String),
+    });
+    expect(geocoding.geocodeCandidates).not.toHaveBeenCalled();
+    expect(prisma.populationSubscriber.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects modified selection and incompatible access identity', async () => {
+    geocoding.geocodeCandidates.mockResolvedValue([
+      { latitude: 45.508, longitude: -73.561, normalizedAddress: { addressLine: '123 Rue Principale', city: 'Montreal', province: 'QC', country: 'CA' }, provider: 'MAPBOX' },
+      { latitude: 45.509, longitude: -73.562, normalizedAddress: { addressLine: '125 Rue Principale', city: 'Montreal', province: 'QC', country: 'CA' }, provider: 'MAPBOX' },
+    ]);
+    const choices = await service.resolveSubscriberLocation('slug', 'subscriber-1', dto());
+    if (choices.status !== 'SELECTION_REQUIRED') throw new Error('Expected selection');
+    const token = choices.candidates[0].selectionToken;
+    const parts = token.split('.');
+    parts[2] = `${parts[2][0] === 'A' ? 'B' : 'A'}${parts[2].slice(1)}`;
+    const modified = parts.join('.');
+
+    await expect(
+      service.selectSubscriberLocation('slug', 'subscriber-1', {
+        accessToken: accessToken(), selectionToken: modified,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.selectSubscriberLocation('slug', 'subscriber-1', {
+        accessToken: accessToken('subscriber-2'), selectionToken: token,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.populationSubscriber.updateMany).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -229,6 +369,22 @@ describe('PopulationService location resolution', () => {
   });
 
   it.each([
+    ['truncated', () => selectionToken().slice(0, -8)],
+    ['expired', () => selectionToken({ exp: Date.now() - 1 })],
+    ['wrong purpose', () => selectionToken({ purpose: PURPOSE })],
+    ['wrong subscriber', () => selectionToken({ subscriberId: 'subscriber-2' })],
+    ['wrong program', () => selectionToken({ programId: 'program-2' })],
+  ])('rejects a selection token with %s', (_label, token) => {
+    expect(() =>
+      service.verifyLocationSelectionToken(
+        token(),
+        'subscriber-1',
+        'program-1',
+      ),
+    ).toThrow(BadRequestException);
+  });
+
+  it.each([
     ['missing', undefined],
     ['invalid', 'dG9vLXNob3J0'],
     ['short hex', 'ab'.repeat(31)],
@@ -239,7 +395,7 @@ describe('PopulationService location resolution', () => {
     await expect(
       service.resolveSubscriberLocation('slug', 'subscriber-1', dto()),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(geocoding.geocode).not.toHaveBeenCalled();
+    expect(geocoding.geocodeCandidates).not.toHaveBeenCalled();
   });
 
   it('rejects incompatible access identities before geocoding', async () => {
@@ -249,11 +405,11 @@ describe('PopulationService location resolution', () => {
         accessToken: accessToken('subscriber-2'),
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(geocoding.geocode).not.toHaveBeenCalled();
+    expect(geocoding.geocodeCandidates).not.toHaveBeenCalled();
   });
 
   it('sanitizes provider failures', async () => {
-    geocoding.geocode.mockRejectedValue(
+    geocoding.geocodeCandidates.mockRejectedValue(
       new Error('123 Rue Principale H2X 1Y4 45.508 -73.561 secret'),
     );
     await expect(
