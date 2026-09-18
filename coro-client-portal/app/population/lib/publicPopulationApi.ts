@@ -45,6 +45,7 @@ export type RegisterPopulationSubscriberResult = {
   verificationRequired: true;
   verificationChannel: "SMS" | "EMAIL";
   verificationExpiresAt: string;
+  deliveryStatus: "SENT" | "FAILED";
 };
 
 export type VerifyPopulationSubscriberResult = {
@@ -58,6 +59,7 @@ export type ResendPopulationVerificationResult = {
   verificationRequired: true;
   verificationChannel: "SMS" | "EMAIL";
   verificationExpiresAt: string;
+  deliveryStatus: "SENT" | "FAILED";
 };
 
 export type PublicPopulationErrorReason =

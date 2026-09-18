@@ -34,6 +34,7 @@ const text = {
     resending: "Envoi…",
     resendIn: "Nouveau code disponible dans",
     resent: "Un nouveau code a été envoyé.",
+    deliveryFailed: "Le code n’a pas pu être transmis. Vous pourrez demander un nouvel envoi dans un instant.",
     invalid: "Le code est invalide. Vérifiez les 6 chiffres et réessayez.",
     attempts: "Ce code ne peut plus être utilisé. Demandez-en un nouveau.",
     used: "Ce code n’est plus actif. Demandez-en un nouveau.",
@@ -64,6 +65,7 @@ const text = {
     resending: "Sending…",
     resendIn: "New code available in",
     resent: "A new code has been sent.",
+    deliveryFailed: "The code could not be delivered. You can request another one shortly.",
     invalid: "The code is invalid. Check all 6 digits and try again.",
     attempts: "This code can no longer be used. Request a new one.",
     used: "This code is no longer active. Request a new one.",
@@ -125,6 +127,15 @@ export default function PopulationVerification({
   const errorRef = useRef<HTMLDivElement>(null);
   const verifyInFlight = useRef(false);
   const resendInFlight = useRef(false);
+
+  useEffect(() => {
+    if (
+      workflow.state === "PENDING" &&
+      workflow.verification.deliveryStatus === "FAILED"
+    ) {
+      setError(t.deliveryFailed);
+    }
+  }, [t.deliveryFailed, workflow]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -265,12 +276,14 @@ export default function PopulationVerification({
       const updated = updatePopulationVerificationExpiry(
         workflow,
         result.verificationExpiresAt,
+        result.deliveryStatus,
       );
       onWorkflowChange(updated);
       setCode("");
       setForcedExpired(false);
       setCooldownUntil(Date.now() + 60 * 1000);
-      setNotice(t.resent);
+      if (result.deliveryStatus === "SENT") setNotice(t.resent);
+      else setError(t.deliveryFailed);
       window.requestAnimationFrame(() => codeRef.current?.focus());
     } catch (caught: unknown) {
       const apiError = caught instanceof PublicPopulationApiError ? caught : null;

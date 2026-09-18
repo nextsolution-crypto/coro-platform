@@ -101,6 +101,15 @@ const geocodingService = {
   beforeEach(() => {
   jest.clearAllMocks();
 
+  populationDeliveryService.sendSms.mockResolvedValue({
+    provider: 'BREVO',
+    providerMessageId: 'message-sms',
+  });
+  populationDeliveryService.sendEmail.mockResolvedValue({
+    provider: 'BREVO',
+    providerMessageId: 'message-email',
+  });
+
   prisma.$transaction.mockImplementation(
     async (callback: any) => callback(prisma),
   );
@@ -1815,6 +1824,15 @@ const geocodingService = {
       expect(result.verificationChannel).toBe(
         PopulationVerificationChannel.SMS,
       );
+      expect(result.deliveryStatus).toBe('SENT');
+      expect(populationDeliveryService.sendSms).toHaveBeenCalledTimes(1);
+      const [destination, message] =
+        populationDeliveryService.sendSms.mock.calls[0];
+      expect(destination).toBe('+14505551234');
+      expect(message).toMatch(/\d{6}/);
+      expect(JSON.stringify(result)).not.toContain(
+        message.match(/\d{6}/)?.[0],
+      );
     });
 
     it('crée une inscription EMAIL lorsque seul le courriel est fourni', async () => {
@@ -1850,6 +1868,32 @@ const geocodingService = {
           maxAttempts: 5,
         }),
       });
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          destination: 'citoyen@example.com',
+          subject: expect.stringContaining('verification'),
+          html: expect.stringMatching(/\d{6}/),
+        }),
+      );
+    });
+
+    it('conserve l inscription en attente lorsque le transport echoue', async () => {
+      populationDeliveryService.sendSms.mockRejectedValue(
+        new PopulationProviderError('BREVO_NETWORK_ERROR', 'indisponible'),
+      );
+
+      const result = await service.registerSubscriber(
+        'sobeys-boucherville',
+        {
+          phone: '+14505551234',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        },
+      );
+
+      expect(result.deliveryStatus).toBe('FAILED');
+      expect(prisma.populationSubscriber.create).toHaveBeenCalledTimes(1);
+      expect(prisma.populationVerification.create).toHaveBeenCalledTimes(1);
     });
 
     it('refuse un programme public inexistant', async () => {
@@ -2031,6 +2075,24 @@ const geocodingService = {
       expect(result.verificationChannel).toBe(
         PopulationVerificationChannel.SMS,
       );
+      expect(result.deliveryStatus).toBe('SENT');
+      expect(populationDeliveryService.sendSms).toHaveBeenCalledTimes(1);
+    });
+
+    it('retourne FAILED sans creer une seconde inscription si le renvoi echoue', async () => {
+      populationDeliveryService.sendSms.mockRejectedValue(
+        new PopulationProviderError('BREVO_NETWORK_ERROR', 'indisponible'),
+      );
+
+      const result = await service.resendVerification(
+        'sobeys-boucherville',
+        'subscriber-1',
+        { channel: PopulationVerificationChannel.SMS },
+      );
+
+      expect(result.deliveryStatus).toBe('FAILED');
+      expect(prisma.populationVerification.create).toHaveBeenCalledTimes(1);
+      expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
     });
 
     it('refuse un renvoi avant 60 secondes', async () => {

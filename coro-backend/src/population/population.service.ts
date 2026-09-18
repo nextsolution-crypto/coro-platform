@@ -116,6 +116,44 @@ export class PopulationService {
     );
   }
 
+  private async sendSubscriberOtp(data: {
+    channel: PopulationVerificationChannel;
+    destination: string;
+    code: string;
+    preferredLanguage: PopulationPreferredLanguage;
+    purpose: 'VERIFICATION' | 'ACCESS';
+  }): Promise<'SENT' | 'FAILED'> {
+    const english = data.preferredLanguage === PopulationPreferredLanguage.EN;
+    const isAccess = data.purpose === 'ACCESS';
+
+    try {
+      if (data.channel === PopulationVerificationChannel.SMS) {
+        const message = english
+          ? `CORO Sentinelle Population: your ${isAccess ? 'access' : 'verification'} code is ${data.code}. Valid for 10 minutes.`
+          : `CORO Sentinelle Population : votre code ${isAccess ? "d'accès" : 'de vérification'} est ${data.code}. Valide 10 minutes.`;
+        await this.populationDeliveryService.sendSms(data.destination, message);
+      } else {
+        const subject = english
+          ? `Your ${isAccess ? 'access' : 'verification'} code - Sentinelle Population`
+          : `Votre code ${isAccess ? "d'accès" : 'de vérification'} - Sentinelle Population`;
+        const intro = english
+          ? `Your ${isAccess ? 'access' : 'verification'} code is`
+          : `Votre code ${isAccess ? "d'accès" : 'de vérification'} est`;
+        const expiry = english
+          ? 'It expires in 10 minutes. If you did not request this code, you can ignore this email.'
+          : "Il expire dans 10 minutes. Si vous n'avez pas demandé ce code, vous pouvez ignorer ce courriel.";
+        await this.populationDeliveryService.sendEmail({
+          destination: data.destination,
+          subject,
+          html: `<p>${intro} <strong>${data.code}</strong>.</p><p>${expiry}</p>`,
+        });
+      }
+      return 'SENT';
+    } catch {
+      return 'FAILED';
+    }
+  }
+
   /**
    * Charge le profil RUE d'un bâtiment.
    *
@@ -1196,19 +1234,24 @@ export class PopulationService {
       },
     );
 
+    const deliveryStatus = await this.sendSubscriberOtp({
+      channel: verificationChannel,
+      destination:
+        verificationChannel === PopulationVerificationChannel.SMS
+          ? phone!
+          : email!,
+      code: verificationCode,
+      preferredLanguage: dto.preferredLanguage,
+      purpose: 'VERIFICATION',
+    });
+
     return {
       subscriber: result,
       verificationRequired: true,
       verificationChannel,
       verificationExpiresAt,
 
-      // TEMPORAIRE :
-      // nécessaire tant que le fournisseur SMS/email n'est pas branché.
-      // À supprimer impérativement avant production.
-      developmentVerificationCode:
-        process.env.NODE_ENV === 'production'
-          ? undefined
-          : verificationCode,
+      deliveryStatus,
     };
   }
 
@@ -1270,6 +1313,7 @@ export class PopulationService {
           status: true,
           phone: true,
           email: true,
+          preferredLanguage: true,
         },
       });
 
@@ -1372,16 +1416,23 @@ export class PopulationService {
       },
     });
 
+    const deliveryStatus = await this.sendSubscriberOtp({
+      channel: dto.channel,
+      destination:
+        dto.channel === PopulationVerificationChannel.SMS
+          ? subscriber.phone!
+          : subscriber.email!,
+      code: verificationCode,
+      preferredLanguage: subscriber.preferredLanguage,
+      purpose: 'VERIFICATION',
+    });
+
     return {
       verificationRequired: true,
       verificationChannel: dto.channel,
       verificationExpiresAt,
 
-      // TEMPORAIRE : supprimé lorsque l'envoi SMS/email est branché.
-      developmentVerificationCode:
-        process.env.NODE_ENV === 'production'
-          ? undefined
-          : verificationCode,
+      deliveryStatus,
     };
   }
 
@@ -1430,6 +1481,7 @@ export class PopulationService {
           email: true,
           smsEnabled: true,
           emailEnabled: true,
+          preferredLanguage: true,
         },
       });
 
@@ -1490,22 +1542,13 @@ export class PopulationService {
       },
     });
 
-    try {
-      if (dto.channel === PopulationVerificationChannel.SMS) {
-        await this.populationDeliveryService.sendSms(
-          destination,
-          `Votre code d’accès CORO est ${verificationCode}. Il expire dans 10 minutes.`,
-        );
-      } else {
-        await this.populationDeliveryService.sendEmail({
-          destination,
-          subject: 'Votre code d’accès CORO',
-          html: `<p>Votre code d’accès CORO est <strong>${verificationCode}</strong>.</p><p>Il expire dans 10 minutes.</p>`,
-        });
-      }
-    } catch {
-      // La réponse reste identique afin de ne pas révéler l'état du compte.
-    }
+    await this.sendSubscriberOtp({
+      channel: dto.channel,
+      destination,
+      code: verificationCode,
+      preferredLanguage: subscriber.preferredLanguage,
+      purpose: 'ACCESS',
+    });
 
     return genericResponse;
   }
@@ -1561,7 +1604,12 @@ export class PopulationService {
               ? { phone: destination, smsEnabled: true }
               : { email: destination, emailEnabled: true }),
           },
-          select: { id: true, phone: true, email: true },
+          select: {
+            id: true,
+            phone: true,
+            email: true,
+            preferredLanguage: true,
+          },
           take: 2,
         });
 
@@ -1597,22 +1645,16 @@ export class PopulationService {
             programId = program!.id;
             subscriberId = subscriber.id;
             verificationId = verification.id;
-            try {
-              if (dto.channel === PopulationVerificationChannel.SMS) {
-                await this.populationDeliveryService.sendSms(
-                  subscriber.phone!,
-                  `Votre code d’accès CORO est ${verificationCode}. Il expire dans 10 minutes.`,
-                );
-              } else {
-                await this.populationDeliveryService.sendEmail({
-                  destination: subscriber.email!,
-                  subject: 'Votre code d’accès CORO',
-                  html: `<p>Votre code d’accès CORO est <strong>${verificationCode}</strong>.</p><p>Il expire dans 10 minutes.</p>`,
-                });
-              }
-            } catch {
-              // The public response remains identical on transport failure.
-            }
+            await this.sendSubscriberOtp({
+              channel: dto.channel,
+              destination:
+                dto.channel === PopulationVerificationChannel.SMS
+                  ? subscriber.phone!
+                  : subscriber.email!,
+              code: verificationCode,
+              preferredLanguage: subscriber.preferredLanguage,
+              purpose: 'ACCESS',
+            });
           }
         }
       }

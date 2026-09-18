@@ -17,6 +17,7 @@ export type PendingPopulationWorkflowSession = PopulationWorkflowSessionBase & {
   verification: {
     channel: "SMS" | "EMAIL";
     expiresAt: string;
+    deliveryStatus?: "SENT" | "FAILED";
   };
 };
 
@@ -62,6 +63,7 @@ export function savePopulationWorkflowSession(
     verification: {
       channel: result.verificationChannel,
       expiresAt: result.verificationExpiresAt,
+      deliveryStatus: result.deliveryStatus,
     },
   };
 
@@ -77,10 +79,11 @@ export function savePopulationWorkflowSession(
 export function updatePopulationVerificationExpiry(
   session: PendingPopulationWorkflowSession,
   expiresAt: string,
+  deliveryStatus: "SENT" | "FAILED",
 ) {
   const updated: PendingPopulationWorkflowSession = {
     ...session,
-    verification: { ...session.verification, expiresAt },
+    verification: { ...session.verification, expiresAt, deliveryStatus },
   };
   writePopulationWorkflowSession(updated);
   return updated;
