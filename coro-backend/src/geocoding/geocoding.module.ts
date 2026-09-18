@@ -3,6 +3,7 @@ import { GEOCODING_CACHE, GeocodingCache } from './geocoding-cache.interface';
 import { GEOCODING_PROVIDER } from './geocoding-provider.interface';
 import { GeocodingService } from './geocoding.service';
 import { MemoryGeocodingCache } from './memory-geocoding-cache';
+import { MapboxGeocodingProvider } from './providers/mapbox-geocoding.provider';
 
 function positiveInteger(value: string | undefined): number | undefined {
   const parsed = Number(value);
@@ -14,7 +15,14 @@ function positiveInteger(value: string | undefined): number | undefined {
     GeocodingService,
     {
       provide: GEOCODING_PROVIDER,
-      useValue: null,
+      useFactory: () => {
+        if (process.env.GEOCODING_PROVIDER?.trim().toLowerCase() !== 'mapbox') {
+          return null;
+        }
+
+        const token = process.env.MAPBOX_GEOCODING_ACCESS_TOKEN?.trim();
+        return token ? new MapboxGeocodingProvider(token) : null;
+      },
     },
     {
       provide: GEOCODING_CACHE,
