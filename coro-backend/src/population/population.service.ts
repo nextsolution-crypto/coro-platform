@@ -613,6 +613,15 @@ export class PopulationService {
           select: {
             assessmentStatus: true,
             populationEnabled: true,
+            building: {
+              select: {
+                name: true,
+                address: true,
+                city: true,
+                province: true,
+                postalCode: true,
+              },
+            },
           },
         },
       },
@@ -632,11 +641,20 @@ export class PopulationService {
 
     const {
       status: _status,
-      rueFacilityProfile: _rueFacilityProfile,
+      rueFacilityProfile,
       ...publicProgram
     } = program;
 
-    return publicProgram;
+    return {
+      ...publicProgram,
+      site: {
+        name: rueFacilityProfile.building.name,
+        address: rueFacilityProfile.building.address,
+        city: rueFacilityProfile.building.city,
+        province: rueFacilityProfile.building.province,
+        postalCode: rueFacilityProfile.building.postalCode,
+      },
+    };
   }
 
   private generateVerificationCode() {

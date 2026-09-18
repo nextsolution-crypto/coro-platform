@@ -279,6 +279,14 @@ const geocodingService = {
   });
 
   describe('getPublicProgram', () => {
+    const publicSite = {
+      name: 'Installation industrielle Prémont',
+      address: '1000, rue Industrielle',
+      city: 'Boucherville',
+      province: 'QC',
+      postalCode: 'J4B 8G5',
+    };
+
     const publicProgram = {
       publicSlug: 'sobeys-boucherville',
 
@@ -313,6 +321,7 @@ const geocodingService = {
         rueFacilityProfile: {
           assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
           populationEnabled: true,
+          building: publicSite,
         },
       });
 
@@ -331,14 +340,34 @@ const geocodingService = {
             select: {
               assessmentStatus: true,
               populationEnabled: true,
+              building: {
+                select: {
+                  name: true,
+                  address: true,
+                  city: true,
+                  province: true,
+                  postalCode: true,
+                },
+              },
             },
           },
         }),
       });
 
-      expect(result).toEqual(publicProgram);
+      expect(result).toEqual({
+        ...publicProgram,
+        site: publicSite,
+      });
       expect(result).not.toHaveProperty('status');
       expect(result).not.toHaveProperty('rueFacilityProfile');
+      expect(result.site).not.toHaveProperty('id');
+      expect(result.site).not.toHaveProperty('buildingId');
+      expect(result.site).not.toHaveProperty('clientId');
+      expect(result.site).not.toHaveProperty('organizationId');
+      expect(result.site).not.toHaveProperty('latitude');
+      expect(result.site).not.toHaveProperty('longitude');
+      expect(result.site).not.toHaveProperty('responsableFirstName');
+      expect(result.site).not.toHaveProperty('responsableEmail');
     });
 
     it('retourne 404 lorsque le slug public n’existe pas', async () => {

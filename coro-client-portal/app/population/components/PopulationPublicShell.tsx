@@ -21,6 +21,7 @@ import {
   PublicPopulationApiError,
   type PublicPopulationProgram,
 } from "../lib/publicPopulationApi";
+import PopulationRegistration from "./PopulationRegistration";
 import styles from "./PopulationPublicShell.module.css";
 
 type Language = "fr" | "en";
@@ -28,7 +29,7 @@ type View = "home" | "register" | "access";
 type Status = "loading" | "ready" | "not-found" | "error";
 const text = {
   fr: {
-    brand: "CORO Sentinelle",
+    brand: "Sentinelle Population",
     eyebrow: "Programme d’alerte locale",
     promise:
       "Recevez les alertes importantes qui peuvent concerner votre secteur.",
@@ -65,7 +66,7 @@ const text = {
     back: "Retour à l’information du programme",
   },
   en: {
-    brand: "CORO Sentinel",
+    brand: "Sentinelle Population",
     eyebrow: "Local alert program",
     promise: "Receive important alerts that may affect your area.",
     sms: "SMS alerts",
@@ -216,8 +217,9 @@ export default function PopulationPublicShell({
       </main>
     );
   }
-  const name =
+  const programName =
     language === "en" ? program.nameEN || program.nameFR : program.nameFR;
+  const siteName = program.site?.name || programName;
   const description =
     language === "en"
       ? program.descriptionEN || program.descriptionFR
@@ -240,6 +242,21 @@ export default function PopulationPublicShell({
       </div>
     </header>
   );
+  if (view === "register" && program.registrationEnabled)
+    return (
+      <div className={styles.page}>
+        {header}
+        <PopulationRegistration
+          publicSlug={publicSlug}
+          program={program}
+          language={language}
+          onBack={() => setView("home")}
+        />
+        <footer className={styles.footer}>
+          <div className={styles.footerInner}>{t.powered}</div>
+        </footer>
+      </div>
+    );
   if (view !== "home")
     return (
       <div className={styles.page}>
@@ -275,8 +292,19 @@ export default function PopulationPublicShell({
       {header}
       <main className={styles.main}>
         <section className={styles.hero}>
-          <p className={styles.eyebrow}>{t.eyebrow}</p>
-          <h1 className={styles.title}>{name}</h1>
+          <p className={styles.eyebrow}>
+            {t.brand} · {t.powered}
+          </p>
+          <h1 className={styles.title}>{siteName}</h1>
+          {program.site && (
+            <address className={styles.siteAddress}>
+              <span>{program.site.address}</span>
+              <span>
+                {program.site.city}, {program.site.province}
+                {program.site.postalCode ? ` ${program.site.postalCode}` : ""}
+              </span>
+            </address>
+          )}
           <p className={styles.promise}>{t.promise}</p>
           {description && <p className={styles.description}>{description}</p>}
           <div
@@ -306,7 +334,9 @@ export default function PopulationPublicShell({
               className={`${styles.button} ${styles.primary}`}
               type="button"
               disabled={!program.registrationEnabled}
-              onClick={() => setView("register")}
+              onClick={() => {
+                if (program.registrationEnabled) setView("register");
+              }}
             >
               <UserPlus size={18} />
               {t.register}

@@ -38,7 +38,8 @@
   }
 
   .mapCard :global(.coro-population-map) {
-    height: 520px !important;
+    height: 1000px !important;
+    min-height: 1000px;
   }
 }
 
@@ -52,7 +53,7 @@
   }
 
   .mapCard :global(.coro-population-map) {
-    height: 470px !important;
+    height: 800px !important;
   }
 }
 
@@ -74,6 +75,10 @@
   .controlCenter {
     max-width: 360px;
   }
+
+  .mapCard :global(.coro-population-map) {
+    height: 650px !important;
+  }
 }
 
 @media (min-width: 700px) and (max-width: 899px) {
@@ -94,6 +99,10 @@
   .controlCenter {
     max-width: none;
     justify-self: stretch;
+  }
+
+  .mapCard :global(.coro-population-map) {
+    height: 525px !important;
   }
 }
 
@@ -123,7 +132,7 @@
   }
 
   .mapCard :global(.coro-population-map) {
-    height: 360px !important;
+    height: 420px !important;
   }
 
   .controlCenter button,
@@ -139,6 +148,10 @@
 @media (max-width: 430px) {
   .statusGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mapCard :global(.coro-population-map) {
+    height: 390px !important;
   }
 }
 

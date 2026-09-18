@@ -1,6 +1,13 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
 
 export type PublicPopulationProgram = {
+  site?: {
+    name: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string | null;
+  };
   publicSlug: string;
   nameFR: string;
   nameEN: string | null;
@@ -17,6 +24,27 @@ export type PublicPopulationProgram = {
   consentTextFR: string | null;
   consentTextEN: string | null;
   consentVersion: string | null;
+};
+
+export type PopulationPreferredLanguage = "FR" | "EN";
+
+export type RegisterPopulationSubscriberInput = {
+  phone?: string;
+  email?: string;
+  preferredLanguage: PopulationPreferredLanguage;
+  consentVersion: string;
+};
+
+export type RegisterPopulationSubscriberResult = {
+  subscriber: {
+    id: string;
+    status: "PENDING_VERIFICATION";
+    preferredLanguage: PopulationPreferredLanguage;
+    createdAt: string;
+  };
+  verificationRequired: true;
+  verificationChannel: "SMS" | "EMAIL";
+  verificationExpiresAt: string;
 };
 
 export class PublicPopulationApiError extends Error {
@@ -52,5 +80,18 @@ export function getPublicPopulationProgram(
   return publicRequest<PublicPopulationProgram>(
     `/population/public/${encodeURIComponent(publicSlug)}`,
     { method: "GET", signal },
+  );
+}
+
+export function registerPopulationSubscriber(
+  publicSlug: string,
+  input: RegisterPopulationSubscriberInput,
+) {
+  return publicRequest<RegisterPopulationSubscriberResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/register`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
   );
 }

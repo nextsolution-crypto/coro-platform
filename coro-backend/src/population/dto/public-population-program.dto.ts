@@ -1,4 +1,12 @@
 export class PublicPopulationProgramDto {
+  site: {
+    name: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string | null;
+  };
+
   publicSlug: string;
 
   nameFR: string;
