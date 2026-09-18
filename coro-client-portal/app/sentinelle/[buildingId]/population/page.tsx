@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -377,6 +377,7 @@ export default function PopulationPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const [alertComposerOpen, setAlertComposerOpen] = useState(false);
+  const alertComposerRef = useRef<HTMLElement | null>(null);
   const [alertStep, setAlertStep] = useState(1);
   const [alertCreating, setAlertCreating] = useState(false);
   const [alertWorkflowLoading, setAlertWorkflowLoading] = useState(false);
@@ -736,6 +737,17 @@ export default function PopulationPage() {
     setSendConfirmationOpen(false);
     setAlertComposerOpen(true);
   };
+
+  useEffect(() => {
+    if (!alertComposerOpen) {
+      return;
+    }
+
+    alertComposerRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [alertComposerOpen]);
 
   const updateAlertField = <
     K extends keyof PopulationAlertDraftForm,
@@ -1318,6 +1330,8 @@ export default function PopulationPage() {
 
   const isActive =
     status.populationEnabled && status.programStatus === 'ACTIVE';
+  const canPrepare =
+    status.populationPermissions?.includes('POPULATION_PREPARE') ?? false;
 
   const canMarkReady =
     isConfigured && status.programStatus === 'CONFIGURING';
@@ -2085,6 +2099,19 @@ export default function PopulationPage() {
             </div>
           )}
 
+          <div
+            className={`${styles.deliveryModeNotice} ${
+              status.deliveryMode === 'LIVE' ? styles.deliveryModeLive : ''
+            }`}
+          >
+            <strong>MODE {status.deliveryMode}</strong>
+            <span>
+              {status.deliveryMode === 'SANDBOX'
+                ? 'Simulation — aucune communication externe ne sera transmise.'
+                : 'Diffusion réelle — les communications admissibles seront transmises aux destinataires.'}
+            </span>
+          </div>
+
           <ActionButton
             icon={<AlertTriangle size={17} />}
             title={
@@ -2093,7 +2120,9 @@ export default function PopulationPage() {
                 : 'Calculer la population ciblée'
             }
             detail={
-              preview
+              preview && !canPrepare
+                ? 'Permission POPULATION_PREPARE requise'
+                : preview
                 ? `${preview.population.uniqueTargetCount} personne${
                     preview.population.uniqueTargetCount > 1 ? 's' : ''
                   } ciblée${
@@ -2108,7 +2137,8 @@ export default function PopulationPage() {
               !isActive ||
               !selectedScenario ||
               !selectedScenario.operational ||
-              previewLoading
+              previewLoading ||
+              (Boolean(preview) && !canPrepare)
             }
             onClick={() => {
               if (!selectedScenario) {
@@ -2756,6 +2786,7 @@ export default function PopulationPage() {
 
       {alertComposerOpen && selectedScenario && preview && (
         <section
+          ref={alertComposerRef}
           style={{
             marginBottom: 18,
             overflow: 'hidden',
@@ -6653,6 +6684,7 @@ function ActionButton({
 }) {
   return (
     <button
+      className={styles.actionButton}
       type="button"
       disabled={disabled}
       onClick={onClick}
@@ -6665,8 +6697,12 @@ function ActionButton({
         padding: '12px 13px',
         borderRadius: 9,
         border: primary ? 'none' : '1px solid #E9ECEF',
-        backgroundColor: primary ? '#167D6A' : '#FFFFFF',
-        color: primary ? '#FFFFFF' : '#2C3E50',
+        backgroundColor: disabled
+          ? '#E9ECEF'
+          : primary
+            ? '#167D6A'
+            : '#FFFFFF',
+        color: disabled ? '#6C757D' : primary ? '#FFFFFF' : '#2C3E50',
         cursor: disabled ? 'not-allowed' : 'pointer',
         textAlign: 'left',
         opacity: disabled ? 0.45 : 1,
@@ -6698,7 +6734,7 @@ function ActionButton({
         <span
           style={{
             display: 'block',
-            color: primary ? '#CDE5DF' : '#ADB5BD',
+            color: disabled ? '#6C757D' : primary ? '#CDE5DF' : '#ADB5BD',
             fontSize: 10,
             lineHeight: 1.4,
           }}
@@ -6709,7 +6745,7 @@ function ActionButton({
 
       <ChevronRight
         size={14}
-        color={primary ? '#FFFFFF' : '#ADB5BD'}
+        color={disabled ? '#6C757D' : primary ? '#FFFFFF' : '#ADB5BD'}
       />
     </button>
   );

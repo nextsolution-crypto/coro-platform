@@ -220,6 +220,42 @@ describe('ClientPortalService - Sentinelle Population', () => {
       });
     });
 
+    it('expose les permissions Population relues depuis ClientUser', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        assessmentStatus: 'CONFIRMED_SUBJECT',
+        populationEnabled: true,
+        populationProgram: {
+          status: 'ACTIVE',
+          deliveryMode: 'SANDBOX',
+          governanceMode: 'STANDARD',
+        },
+      });
+      prisma.clientUser.findUnique.mockResolvedValue({
+        populationPermissions: [
+          'POPULATION_PREPARE',
+          'POPULATION_APPROVE',
+          'POPULATION_SEND',
+        ],
+      });
+
+      await expect(
+        service.getPopulationStatus('building-1', {
+          ...actor,
+          sub: 'client-user-1',
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          deliveryMode: 'SANDBOX',
+          governanceMode: 'STANDARD',
+          populationPermissions: [
+            'POPULATION_PREPARE',
+            'POPULATION_APPROVE',
+            'POPULATION_SEND',
+          ],
+        }),
+      );
+    });
+
     it('vérifie l’accès bâtiment avant de lire les données RUE', async () => {
       prisma.building.findFirst.mockResolvedValue(null);
 

@@ -22,6 +22,43 @@
   min-width: 0;
 }
 
+.deliveryModeNotice {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 12px 13px;
+  border: 1px solid #b8c5d1;
+  border-radius: 8px;
+  background: #f4f8fb;
+  color: #2c3e50;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.deliveryModeNotice strong {
+  font-size: 11px;
+}
+
+.deliveryModeLive {
+  border-color: #d79a92;
+  background: #fff4f2;
+  color: #7f1d1d;
+}
+
+.actionButton {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.actionButton:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.actionButton:focus-visible {
+  outline: 3px solid #f4b942;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
 .controlCenter {
   width: 100%;
   max-width: 430px;

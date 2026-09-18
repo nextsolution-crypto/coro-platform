@@ -12,6 +12,11 @@ export interface ClientUser {
   clientId: string;
   clientName: string;
   organizationId: string;
+  populationPermissions: Array<
+    | 'POPULATION_PREPARE'
+    | 'POPULATION_APPROVE'
+    | 'POPULATION_SEND'
+  >;
 }
 
 export function getToken(): string | null {
