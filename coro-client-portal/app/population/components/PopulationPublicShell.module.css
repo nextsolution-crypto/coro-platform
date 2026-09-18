@@ -429,6 +429,106 @@
 .confirmation .backButton {
   margin-top: 14px;
 }
+.otpSection {
+  width: min(100%, 520px);
+  margin: 32px auto 0;
+}
+.otpSection h1 {
+  color: #1f3029;
+  font-size: clamp(28px, 7vw, 40px);
+  line-height: 1.15;
+}
+.otpSection form {
+  margin-top: 28px;
+}
+.otpLabel {
+  display: block;
+  margin-bottom: 9px;
+  color: #273d34;
+  font-weight: 750;
+}
+.otpInput {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 16px;
+  border: 1px solid #9fb5aa;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f3029;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.42em;
+  text-align: center;
+}
+.otpInput:focus {
+  border-color: #176b4d;
+  outline: 3px solid rgba(23, 107, 77, 0.14);
+}
+.otpInput[aria-invalid="true"] {
+  border-color: #a33b32;
+}
+.otpTimer,
+.expiredTimer {
+  margin-top: 10px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+.otpTimer {
+  color: #52675d;
+}
+.expiredTimer {
+  color: #97372f;
+}
+.formNotice {
+  min-height: 24px;
+  color: #176b4d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.resendBlock {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #dfe7e2;
+  text-align: center;
+}
+.resendBlock p {
+  color: #5d6f67;
+  font-size: 14px;
+}
+.resendButton {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: #176b4d;
+  cursor: pointer;
+  font-weight: 750;
+}
+.resendButton:disabled {
+  color: #788980;
+  cursor: not-allowed;
+}
+.optionalNotice {
+  padding: 12px 14px;
+  border-left: 3px solid #176b4d;
+  background: #eaf3ee;
+  text-align: left;
+}
+.postVerificationActions {
+  display: grid;
+  gap: 12px;
+  margin-top: 26px;
+}
+.postVerificationActions .button {
+  width: 100%;
+  margin-top: 0;
+}
 .retry {
   margin-top: 22px;
   border: 1px solid #176b4d;

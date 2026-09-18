@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Mail, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, Mail, MessageSquare } from "lucide-react";
 import {
   PublicPopulationApiError,
   registerPopulationSubscriber,
@@ -18,6 +18,7 @@ import {
   type PopulationWorkflowSession,
 } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
+import PopulationVerification from "./PopulationVerification";
 
 type Language = "fr" | "en";
 
@@ -128,22 +129,13 @@ export default function PopulationRegistration({
       : program.privacyTextFR;
 
   if (workflow) {
-    const sentBySms = workflow.verification.channel === "SMS";
     return (
-      <main className={styles.formMain}>
-        <section className={styles.confirmation}>
-          <span className={styles.confirmationIcon}><CheckCircle2 size={27} /></span>
-          <h1>{t.sent}</h1>
-          <p>{sentBySms ? t.sentSms : t.sentEmail}</p>
-          <p className={styles.muted}>{t.continueNote}</p>
-          <button className={`${styles.button} ${styles.primary}`} type="button" disabled>
-            {t.continue}<ArrowRight size={17} />
-          </button>
-          <button className={styles.backButton} type="button" onClick={onBack}>
-            <ArrowLeft size={17} />{t.back}
-          </button>
-        </section>
-      </main>
+      <PopulationVerification
+        workflow={workflow}
+        language={language}
+        onWorkflowChange={setWorkflow}
+        onBack={onBack}
+      />
     );
   }
 

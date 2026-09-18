@@ -22,6 +22,7 @@ import {
   type PublicPopulationProgram,
 } from "../lib/publicPopulationApi";
 import PopulationRegistration from "./PopulationRegistration";
+import { readPopulationWorkflowSession } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
 
 type Language = "fr" | "en";
@@ -149,6 +150,12 @@ export default function PopulationPublicShell({
     load(controller.signal);
     return () => controller.abort();
   }, [load]);
+  useEffect(() => {
+    const workflow = readPopulationWorkflowSession(publicSlug);
+    if (!workflow) return;
+    setLanguage(workflow.preferredLanguage === "EN" ? "en" : "fr");
+    setView("register");
+  }, [publicSlug]);
   const languages = (
     <div
       className={styles.languages}
@@ -242,7 +249,7 @@ export default function PopulationPublicShell({
       </div>
     </header>
   );
-  if (view === "register" && program.registrationEnabled)
+  if (view === "register")
     return (
       <div className={styles.page}>
         {header}
@@ -267,13 +274,9 @@ export default function PopulationPublicShell({
         >
           <div className={styles.stateContent}>
             <div className={styles.stateIcon}>
-              {view === "register" ? (
-                <UserPlus size={25} />
-              ) : (
-                <LogIn size={25} />
-              )}
+              <LogIn size={25} />
             </div>
-            <h1>{view === "register" ? t.nextRegister : t.nextAccess}</h1>
+            <h1>{t.nextAccess}</h1>
             <p>{t.nextMessage}</p>
             <button
               className={styles.retry}

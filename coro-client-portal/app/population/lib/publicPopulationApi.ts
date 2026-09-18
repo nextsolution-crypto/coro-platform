@@ -47,11 +47,48 @@ export type RegisterPopulationSubscriberResult = {
   verificationExpiresAt: string;
 };
 
+export type VerifyPopulationSubscriberResult = {
+  verified: true;
+  status: "ACTIVE";
+  accessToken: string;
+  accessTokenExpiresInSeconds: number;
+};
+
+export type ResendPopulationVerificationResult = {
+  verificationRequired: true;
+  verificationChannel: "SMS" | "EMAIL";
+  verificationExpiresAt: string;
+};
+
+export type PublicPopulationErrorReason =
+  | "INVALID_CODE"
+  | "EXPIRED_CODE"
+  | "TOO_MANY_ATTEMPTS"
+  | "NO_ACTIVE_CODE"
+  | "ALREADY_VERIFIED"
+  | "RESEND_COOLDOWN"
+  | "TOO_MANY_CODES";
+
 export class PublicPopulationApiError extends Error {
-  constructor(public readonly status: number | null) {
+  constructor(
+    public readonly status: number | null,
+    public readonly reason?: PublicPopulationErrorReason,
+  ) {
     super("Public Population API request failed");
     this.name = "PublicPopulationApiError";
   }
+}
+
+function classifyPublicError(message: unknown): PublicPopulationErrorReason | undefined {
+  if (typeof message !== "string") return undefined;
+  if (message.includes("Code de vérification invalide")) return "INVALID_CODE";
+  if (message.includes("code de vérification est expiré")) return "EXPIRED_CODE";
+  if (message.includes("nombre maximal de tentatives")) return "TOO_MANY_ATTEMPTS";
+  if (message.includes("Aucune vérification active")) return "NO_ACTIVE_CODE";
+  if (message.includes("déjà vérifié")) return "ALREADY_VERIFIED";
+  if (message.includes("attendre avant de demander")) return "RESEND_COOLDOWN";
+  if (message.includes("Trop de codes de vérification")) return "TOO_MANY_CODES";
+  return undefined;
 }
 
 async function publicRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -65,7 +102,16 @@ async function publicRequest<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new PublicPopulationApiError(null);
   }
-  if (!response.ok) throw new PublicPopulationApiError(response.status);
+  if (!response.ok) {
+    let reason: PublicPopulationErrorReason | undefined;
+    try {
+      const body = (await response.json()) as { message?: unknown };
+      reason = classifyPublicError(body.message);
+    } catch {
+      reason = undefined;
+    }
+    throw new PublicPopulationApiError(response.status, reason);
+  }
   try {
     return (await response.json()) as T;
   } catch {
@@ -93,5 +139,27 @@ export function registerPopulationSubscriber(
       method: "POST",
       body: JSON.stringify(input),
     },
+  );
+}
+
+export function verifyPopulationSubscriber(
+  publicSlug: string,
+  subscriberId: string,
+  input: { channel: "SMS" | "EMAIL"; code: string },
+) {
+  return publicRequest<VerifyPopulationSubscriberResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/verify`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function resendPopulationVerification(
+  publicSlug: string,
+  subscriberId: string,
+  input: { channel: "SMS" | "EMAIL" },
+) {
+  return publicRequest<ResendPopulationVerificationResult>(
+    `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/resend-verification`,
+    { method: "POST", body: JSON.stringify(input) },
   );
 }
