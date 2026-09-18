@@ -94,6 +94,10 @@ const populationDeliveryService = {
   sendEmail: jest.fn(),
 };
 
+const geocodingService = {
+  geocode: jest.fn(),
+};
+
   beforeEach(() => {
   jest.clearAllMocks();
 
@@ -115,6 +119,7 @@ const populationDeliveryService = {
       prisma as any,
       populationGeospatialService as any,
       populationDeliveryService as any,
+      geocodingService as any,
     );
   });
 

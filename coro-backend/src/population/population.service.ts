@@ -2,6 +2,8 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   PopulationAlertStatus,
@@ -17,8 +19,12 @@ PopulationDeliveryStatus,
 PopulationPreferredLanguage,
 } from '@prisma/client';
 import {
+  createCipheriv,
+  createDecipheriv,
   createHmac,
+  randomBytes,
   randomInt,
+  randomUUID,
   timingSafeEqual,
 } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -36,6 +42,29 @@ import {
   PopulationDeliveryService,
   PopulationProviderError,
 } from './population-delivery.service';
+import { GeocodingService } from '../geocoding/geocoding.service';
+import { GeocodingError } from '../geocoding/geocoding.errors';
+import { ResolvePopulationLocationDto } from './dto/resolve-population-location.dto';
+
+const POPULATION_LOCATION_RESOLUTION_PURPOSE =
+  'POPULATION_LOCATION_RESOLUTION';
+const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
+const POPULATION_LOCATION_TOKEN_VERSION = 'v1';
+const POPULATION_LOCATION_TOKEN_AAD = Buffer.from(
+  `CORO:${POPULATION_LOCATION_RESOLUTION_PURPOSE}:${POPULATION_LOCATION_TOKEN_VERSION}`,
+  'utf8',
+);
+
+type PopulationLocationResolutionPayload = {
+  purpose: typeof POPULATION_LOCATION_RESOLUTION_PURPOSE;
+  subscriberId: string;
+  programId: string;
+  latitude: number;
+  longitude: number;
+  iat: number;
+  exp: number;
+  jti: string;
+};
 
 @Injectable()
 export class PopulationService {
@@ -43,6 +72,7 @@ export class PopulationService {
     private readonly prisma: PrismaService,
     private readonly populationGeospatialService: PopulationGeospatialService,
     private readonly populationDeliveryService: PopulationDeliveryService,
+    private readonly geocodingService: GeocodingService,
   ) {}
 
   private canReceiveSms(
@@ -614,6 +644,28 @@ export class PopulationService {
     return secret;
   }
 
+  private getPopulationLocationTokenKey() {
+    const secret = process.env.POPULATION_LOCATION_TOKEN_SECRET?.trim();
+    const unavailable = () =>
+      new ServiceUnavailableException(
+        'Résolution de localisation temporairement indisponible',
+      );
+
+    if (!secret) throw unavailable();
+
+    let key: Buffer;
+    if (/^[0-9a-fA-F]{64}$/.test(secret)) {
+      key = Buffer.from(secret, 'hex');
+    } else if (/^(?:[A-Za-z0-9+/]{4}){10}[A-Za-z0-9+/]{3}=$/.test(secret)) {
+      key = Buffer.from(secret, 'base64');
+    } else {
+      throw unavailable();
+    }
+
+    if (key.length !== 32) throw unavailable();
+    return key;
+  }
+
   private createSubscriberAccessToken(
     subscriberId: string,
     programId: string,
@@ -710,6 +762,123 @@ export class PopulationService {
     }
 
     return payload;
+  }
+
+  private createLocationResolutionToken(
+    subscriberId: string,
+    programId: string,
+    result: Awaited<ReturnType<GeocodingService['geocode']>>,
+    key: Buffer,
+  ) {
+    const issuedAt = Date.now();
+    const payload: PopulationLocationResolutionPayload = {
+      purpose: POPULATION_LOCATION_RESOLUTION_PURPOSE,
+      subscriberId,
+      programId,
+      latitude: result.latitude,
+      longitude: result.longitude,
+      iat: issuedAt,
+      exp: issuedAt + POPULATION_LOCATION_RESOLUTION_TTL_MS,
+      jti: randomUUID(),
+    };
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    cipher.setAAD(POPULATION_LOCATION_TOKEN_AAD);
+    const ciphertext = Buffer.concat([
+      cipher.update(JSON.stringify(payload), 'utf8'),
+      cipher.final(),
+    ]);
+    const authenticationTag = cipher.getAuthTag();
+
+    return {
+      token: [
+        POPULATION_LOCATION_TOKEN_VERSION,
+        iv.toString('base64url'),
+        ciphertext.toString('base64url'),
+        authenticationTag.toString('base64url'),
+      ].join('.'),
+      expiresAt: payload.exp,
+    };
+  }
+
+  verifyLocationResolutionToken(
+    token: string,
+    expectedSubscriberId: string,
+    expectedProgramId: string,
+  ): PopulationLocationResolutionPayload {
+    const invalidToken = () =>
+      new BadRequestException(
+        'Jeton de résolution de localisation invalide ou expiré',
+      );
+    const parts = token.split('.');
+    if (parts.length !== 4 || parts[0] !== POPULATION_LOCATION_TOKEN_VERSION) {
+      throw invalidToken();
+    }
+
+    const [, encodedIv, encodedCiphertext, encodedAuthenticationTag] = parts;
+    const iv = Buffer.from(encodedIv, 'base64url');
+    const ciphertext = Buffer.from(encodedCiphertext, 'base64url');
+    const authenticationTag = Buffer.from(encodedAuthenticationTag, 'base64url');
+    if (iv.length !== 12 || !ciphertext.length || authenticationTag.length !== 16) {
+      throw invalidToken();
+    }
+
+    let payload: Partial<PopulationLocationResolutionPayload>;
+    try {
+      const decipher = createDecipheriv(
+        'aes-256-gcm',
+        this.getPopulationLocationTokenKey(),
+        iv,
+      );
+      decipher.setAAD(POPULATION_LOCATION_TOKEN_AAD);
+      decipher.setAuthTag(authenticationTag);
+      const plaintext = Buffer.concat([
+        decipher.update(ciphertext),
+        decipher.final(),
+      ]).toString('utf8');
+      payload = JSON.parse(plaintext);
+    } catch {
+      throw invalidToken();
+    }
+
+    if (
+      payload.purpose !== POPULATION_LOCATION_RESOLUTION_PURPOSE ||
+      payload.subscriberId !== expectedSubscriberId ||
+      payload.programId !== expectedProgramId ||
+      !Number.isFinite(payload.latitude) ||
+      !Number.isFinite(payload.longitude) ||
+      typeof payload.iat !== 'number' ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= Date.now() ||
+      typeof payload.jti !== 'string' ||
+      !payload.jti
+    ) {
+      throw invalidToken();
+    }
+
+    return payload as PopulationLocationResolutionPayload;
+  }
+
+  private translateGeocodingError(error: unknown): never {
+    if (!(error instanceof GeocodingError)) {
+      throw new ServiceUnavailableException(
+        'Résolution de localisation temporairement indisponible',
+      );
+    }
+    if (error.code === 'GEOCODING_INVALID_INPUT') {
+      throw new BadRequestException('Adresse invalide');
+    }
+    if (error.code === 'GEOCODING_NO_RESULT') {
+      throw new UnprocessableEntityException('Adresse introuvable');
+    }
+    if (error.code === 'GEOCODING_AMBIGUOUS_RESULT') {
+      throw new UnprocessableEntityException(
+        'Adresse ambiguë; veuillez la préciser',
+      );
+    }
+    throw new ServiceUnavailableException(
+      'Résolution de localisation temporairement indisponible',
+    );
   }
 
   private hashVerificationCode(code: string) {
@@ -4366,6 +4535,86 @@ export class PopulationService {
         errorCode: providerError.code,
       };
     }
+  }
+
+  /**
+   * Résout temporairement une adresse citoyenne sans persister l'adresse
+   * ni les coordonnées. La confirmation sera traitée dans le lot suivant.
+   */
+  async resolveSubscriberLocation(
+    publicSlug: string,
+    subscriberId: string,
+    dto: ResolvePopulationLocationDto,
+  ) {
+    const program = await this.prisma.populationProgram.findUnique({
+      where: { publicSlug },
+      select: {
+        id: true,
+        rueFacilityProfile: {
+          select: { buildingId: true },
+        },
+      },
+    });
+
+    if (!program) {
+      throw new NotFoundException(
+        'Programme Sentinelle Population introuvable',
+      );
+    }
+
+    this.verifySubscriberAccessToken(
+      dto.accessToken,
+      subscriberId,
+      program.id,
+    );
+
+    const operationalProfile = await this.assertPopulationOperational(
+      program.rueFacilityProfile.buildingId,
+    );
+    if (operationalProfile.populationProgram?.id !== program.id) {
+      throw new BadRequestException(
+        'Le programme Sentinelle Population n’est pas actif',
+      );
+    }
+
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+    if (!subscriber) {
+      throw new BadRequestException('Accès citoyen invalide');
+    }
+
+    const locationTokenKey = this.getPopulationLocationTokenKey();
+    let result: Awaited<ReturnType<GeocodingService['geocode']>>;
+    try {
+      result = await this.geocodingService.geocode({
+        addressLine: dto.addressLine,
+        city: dto.city,
+        province: dto.province,
+        postalCode: dto.postalCode,
+        country: 'CA',
+      });
+    } catch (error) {
+      this.translateGeocodingError(error);
+    }
+
+    const resolution = this.createLocationResolutionToken(
+      subscriber.id,
+      program.id,
+      result,
+      locationTokenKey,
+    );
+
+    return {
+      location: result.normalizedAddress,
+      resolutionToken: resolution.token,
+      expiresAt: new Date(resolution.expiresAt).toISOString(),
+    };
   }
 
   /**

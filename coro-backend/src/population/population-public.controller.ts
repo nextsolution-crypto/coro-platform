@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  ValidationPipe,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { PopulationService } from './population.service';
@@ -13,6 +14,7 @@ import { ResendPopulationVerificationDto } from './dto/resend-population-verific
 import { UnsubscribePopulationSubscriberDto } from './dto/unsubscribe-population-subscriber.dto';
 import { PopulationAccessDto } from './dto/population-access.dto';
 import { UpdatePopulationPreferencesDto } from './dto/update-population-preferences.dto';
+import { ResolvePopulationLocationDto } from './dto/resolve-population-location.dto';
 
 @Controller('population/public')
 export class PopulationPublicController {
@@ -83,6 +85,27 @@ export class PopulationPublicController {
     @Body() dto: VerifyPopulationSubscriberDto,
   ) {
     return this.populationService.verifySubscriberAccess(
+      publicSlug,
+      subscriberId,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/location/resolve')
+  @Throttle({
+    short: { ttl: 60000, limit: 5 },
+    long: { ttl: 3600000, limit: 20 },
+  })
+  async resolveSubscriberLocation(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body(new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    })) dto: ResolvePopulationLocationDto,
+  ) {
+    return this.populationService.resolveSubscriberLocation(
       publicSlug,
       subscriberId,
       dto,
