@@ -128,6 +128,8 @@ describe('PopulationDeliveryService', () => {
       htmlContent: '<p>Mettez-vous à l’abri.</p>',
       headers: {
         idempotencyKey: '11111111-1111-4111-8111-111111111111',
+        'X-Mailin-custom':
+          'coro-population=11111111-1111-4111-8111-111111111111',
       },
     });
 

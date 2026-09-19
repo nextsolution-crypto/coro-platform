@@ -14,6 +14,7 @@ function configuredEnvironment(): NodeJS.ProcessEnv {
     BREVO_API_KEY: 'brevo-test-key',
     BREVO_SENDER_EMAIL: 'alerts@example.test',
     POPULATION_EMAIL_TIMEOUT_MS: '10000',
+    POPULATION_BREVO_WEBHOOK_SECRET: strong('w'),
     BREVO_SMS_SENDER: 'CORO',
     POPULATION_SMS_PRODUCTION_VALIDATED: 'true',
     GEOCODING_PROVIDER: 'mapbox',
@@ -123,11 +124,27 @@ describe('PopulationReadinessService', () => {
         locationToken: 'READY',
         geocoding: 'READY',
         email: 'READY',
+        emailOutbound: 'READY',
+        emailWebhook: 'READY',
+        emailLive: 'READY',
         sms: 'READY',
       },
     });
     for (const value of Object.values(env)) {
       expect(JSON.stringify(readiness)).not.toContain(value);
     }
+  });
+
+  it('distingue le transport sortant du webhook entrant', () => {
+    const env = configuredEnvironment();
+    delete env.POPULATION_BREVO_WEBHOOK_SECRET;
+    const readiness = new PopulationReadinessService(env).getReadiness();
+    expect(readiness.population.email).toBe('READY');
+    expect(readiness.population.emailOutbound).toBe('READY');
+    expect(readiness.population.emailWebhook).toBe('NOT_CONFIGURED');
+    expect(readiness.population.emailLive).toBe('NOT_CONFIGURED');
+    expect(() =>
+      new PopulationReadinessService(env).assertEmailLiveReady(),
+    ).toThrow(ServiceUnavailableException);
   });
 });

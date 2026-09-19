@@ -27,6 +27,7 @@ const AES_SECRET_NAMES = [
 const POPULATION_SECRET_NAMES = [
   'POPULATION_OTP_SECRET',
   'POPULATION_ACCESS_SECRET',
+  'POPULATION_BREVO_WEBHOOK_SECRET',
   ...AES_SECRET_NAMES,
 ] as const;
 
@@ -50,6 +51,10 @@ export class PopulationReadinessService {
     const location = duplicateSecret
       ? 'INVALID'
       : secrets.POPULATION_LOCATION_TOKEN_SECRET;
+    const emailOutbound = this.emailStatus();
+    const emailWebhook = duplicateSecret
+      ? 'INVALID'
+      : this.hmacSecretStatus('POPULATION_BREVO_WEBHOOK_SECRET');
 
     return {
       population: {
@@ -58,7 +63,10 @@ export class PopulationReadinessService {
         access: this.combine(accessSecret, accessRequest),
         locationToken: location,
         geocoding: this.geocodingStatus(location),
-        email: this.emailStatus(),
+        email: emailOutbound,
+        emailOutbound,
+        emailWebhook,
+        emailLive: this.combine(emailOutbound, emailWebhook),
         sms: this.smsStatus(),
       },
     };
@@ -104,12 +112,25 @@ export class PopulationReadinessService {
   }
 
   assertAlertChannelReady(channel: PopulationAlertChannel) {
-    if (channel === PopulationAlertChannel.EMAIL) this.assertEmailReady();
+    if (channel === PopulationAlertChannel.EMAIL) this.assertEmailLiveReady();
     else this.assertSmsReady();
   }
 
   assertEmailReady() {
     this.assertStatus(this.emailStatus(), 'Transport courriel Population');
+  }
+
+  assertEmailWebhookReady() {
+    this.assertStatus(
+      this.hmacSecretStatus('POPULATION_BREVO_WEBHOOK_SECRET'),
+      'Webhook courriel Population',
+    );
+    this.assertSecretsDistinct();
+  }
+
+  assertEmailLiveReady() {
+    const readiness = this.getReadiness().population;
+    this.assertStatus(readiness.emailLive, 'Courriel LIVE Population');
   }
 
   assertSmsReady() {
@@ -127,6 +148,9 @@ export class PopulationReadinessService {
       ),
       POPULATION_LOCATION_TOKEN_SECRET: this.aesSecretStatus(
         'POPULATION_LOCATION_TOKEN_SECRET',
+      ),
+      POPULATION_BREVO_WEBHOOK_SECRET: this.hmacSecretStatus(
+        'POPULATION_BREVO_WEBHOOK_SECRET',
       ),
     };
   }

@@ -1501,12 +1501,50 @@ model PopulationAlertDelivery {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  providerEvents PopulationDeliveryProviderEvent[]
+
   @@index([alertId])
   @@index([subscriberId])
   @@index([status])
   @@index([providerMessageId])
   @@index([status, nextAttemptAt])
   @@index([status, leaseExpiresAt])
+}
+
+model PopulationDeliveryProviderEvent {
+  id String @id @default(uuid())
+
+  deliveryId String
+  delivery   PopulationAlertDelivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
+
+  provider         String
+  providerMessageId String
+  eventType        PopulationDeliveryProviderEventType
+  providerOccurredAt DateTime
+  receivedAt       DateTime @default(now())
+
+  // Empreintes SHA-256 de valeurs techniques minimales. Aucun payload brut,
+  // contenu de message ou destination citoyenne n'est conservé ici.
+  eventFingerprint   String @unique
+  payloadFingerprint String
+
+  @@index([deliveryId])
+  @@index([providerMessageId])
+  @@index([eventType])
+  @@index([providerOccurredAt])
+}
+
+enum PopulationDeliveryProviderEventType {
+  ACCEPTED
+  DELIVERED
+  DEFERRED
+  SOFT_BOUNCE
+  HARD_BOUNCE
+  BLOCKED
+  INVALID
+  ERROR
+  SPAM
+  UNSUBSCRIBED
 }
 
 enum RueAuthorityType {

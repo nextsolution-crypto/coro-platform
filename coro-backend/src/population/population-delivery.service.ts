@@ -172,6 +172,11 @@ export class PopulationDeliveryService {
       htmlContent: data.html,
       headers: {
         idempotencyKey: data.providerIdempotencyKey ?? randomUUID(),
+        ...(data.providerIdempotencyKey
+          ? {
+              'X-Mailin-custom': `coro-population=${data.providerIdempotencyKey}`,
+            }
+          : {}),
       },
     });
     const controller = new AbortController();

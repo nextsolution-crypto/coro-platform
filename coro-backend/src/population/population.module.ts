@@ -5,6 +5,8 @@ import { PopulationGeospatialService } from './population-geospatial.service';
 import { PopulationDeliveryService } from './population-delivery.service';
 import { GeocodingModule } from '../geocoding/geocoding.module';
 import { PopulationReadinessController } from './population-readiness.controller';
+import { PopulationBrevoWebhookController } from './population-brevo-webhook.controller';
+import { PopulationBrevoWebhookService } from './population-brevo-webhook.service';
 import {
   POPULATION_ENVIRONMENT,
   PopulationReadinessService,
@@ -12,17 +14,22 @@ import {
 
 @Module({
   imports: [GeocodingModule],
-  controllers: [PopulationPublicController, PopulationReadinessController],
+  controllers: [
+    PopulationPublicController,
+    PopulationReadinessController,
+    PopulationBrevoWebhookController,
+  ],
   providers: [
-  PopulationService,
-  PopulationGeospatialService,
-  PopulationDeliveryService,
-  {
-    provide: POPULATION_ENVIRONMENT,
-    useFactory: () => process.env,
-  },
-  PopulationReadinessService,
-],
+    PopulationService,
+    PopulationGeospatialService,
+    PopulationDeliveryService,
+    {
+      provide: POPULATION_ENVIRONMENT,
+      useFactory: () => process.env,
+    },
+    PopulationReadinessService,
+    PopulationBrevoWebhookService,
+  ],
   exports: [PopulationService, PopulationReadinessService],
 })
 export class PopulationModule {}
