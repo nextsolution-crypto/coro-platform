@@ -22,7 +22,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:postgres": "jest --config ./test/jest-postgres.json --runInBand",
-    "demo:premont:population": "ts-node src/seed-demo-premont-population.ts"
+    "demo:premont:population": "ts-node src/seed-demo-premont-population.ts",
+    "admin:population-live-setup": "ts-node src/admin/setup-population-live-validation.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

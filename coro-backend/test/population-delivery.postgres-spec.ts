@@ -19,9 +19,9 @@ const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
 
 describePostgres('Population delivery PostgreSQL invariants', () => {
-  const prisma = new PrismaClient({
-    datasources: { db: { url: databaseUrl } },
-  });
+  const prisma = databaseUrl
+    ? new PrismaClient({ datasources: { db: { url: databaseUrl } } })
+    : new PrismaClient();
   const suffix = randomUUID();
   const ids = {
     organization: `pg-org-${suffix}`,

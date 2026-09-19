@@ -4,11 +4,27 @@ Cette procédure prépare un test contrôlé. Elle ne déclenche aucun envoi et 
 
 ## Environnement isolé
 
-Créer avec les outils d'administration habituels une organisation cliente de validation, un bâtiment distinct, puis un `RueFacilityProfile` propre à ce bâtiment. Le profil doit être explicitement évalué `CONFIRMED_SUBJECT` et avoir Population activé. Créer ensuite un programme nommé **Sentinelle Population - Validation LIVE** avec un `publicSlug` unique.
+Créer d'abord l'organisation cliente, le client et le bâtiment distinct avec l'interface d'administration. Le bâtiment doit posséder ses coordonnées publiques de site. Relever ensuite son `buildingId` dans la fiche ou la requête d'administration.
+
+Le helper manuel `admin:population-live-setup` crée le profil RUE, le scénario TEST, la zone TEST et le programme Population. Il ne crée ni bâtiment, ni utilisateur, ni abonné. Il refuse explicitement le bâtiment et le slug Prémont.
+
+Exécuter obligatoirement le dry-run depuis `coro-backend` avant l'initialisation réelle :
+
+```powershell
+$env:ALLOW_POPULATION_LIVE_SETUP='true'; $env:BUILDING_ID='<buildingId>'; $env:PUBLIC_SLUG='<slug-unique>'; $env:DRY_RUN='true'; npm run admin:population-live-setup
+```
+
+Après contrôle des identifiants et des modes affichés, exécuter le setup dans une nouvelle commande contrôlée :
+
+```powershell
+$env:ALLOW_POPULATION_LIVE_SETUP='true'; $env:BUILDING_ID='<buildingId>'; $env:PUBLIC_SLUG='<slug-unique>'; $env:DRY_RUN='false'; npm run admin:population-live-setup
+```
+
+La garde ne doit jamais être ajoutée à la configuration permanente du service. Le programme est volontairement laissé en `CONFIGURING`; ne pas le modifier directement en base.
 
 Configuration attendue :
 
-- `status = ACTIVE`
+- `status = CONFIGURING`, puis transitions métier `READY` et `ACTIVE` dans le portail client
 - `deliveryMode = LIVE`
 - `governanceMode = STANDARD`
 - `registrationEnabled = true`
@@ -17,6 +33,16 @@ Configuration attendue :
 - aucun abonné synthétique et aucune fixture
 
 Créer un scénario de test validé et actif, une zone d'impact exploitable, ainsi que des instructions publiques portant clairement la mention TEST. Ne copier aucun identifiant de bâtiment, profil, programme, scénario, zone ou abonné de Prémont.
+
+## Contrôles après setup
+
+Contrôler en base, sans afficher de donnée citoyenne, que les quatre IDs retournés sont reliés au bon bâtiment, que le programme est `CONFIGURING`, `LIVE`, `STANDARD`, courriel activé et SMS désactivé, et qu'il ne contient aucun subscriber. Contrôler aussi le scénario et la zone TEST actifs et validés.
+
+L'accès opérateur n'est pas modifié par le helper. Dans l'administration client, rattacher uniquement l'utilisateur de validation approprié au nouveau `buildingId`, puis lui attribuer explicitement `POPULATION_PREPARE`, `POPULATION_APPROVE` et `POPULATION_SEND`. Ne pas étendre automatiquement tous les `ClientUser`.
+
+Dans le portail client, ouvrir Sentinelle Population pour ce bâtiment, compléter les contrôles de configuration, effectuer la transition `CONFIGURING` vers `READY`, puis vers `ACTIVE`. L'URL publique devient `/population/<publicSlug>` sur l'origine du portail citoyen. Le premier subscriber doit ensuite suivre le parcours public normal : inscription, OTP, activation et localisation.
+
+Avant toute transition, confirmer une dernière fois que le programme Prémont est toujours `SANDBOX` et qu'aucune opération du test ne le cible.
 
 Le seul abonné réel doit s'inscrire depuis le portail public normal, confirmer l'OTP et atteindre l'état `ACTIVE`. Aucune adresse ou destination personnelle ne doit être placée dans un seed, une migration, un script ou ce document.
 
