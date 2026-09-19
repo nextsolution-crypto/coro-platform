@@ -595,6 +595,17 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings/:buildingId/population/alerts/legacy-active')
+  getPopulationLegacyActiveAlerts(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationLegacyActiveAlerts(
+      buildingId,
+      req.clientUser,
+    );
+  }
+
   @Get('buildings/:buildingId/population/operational-events/:eventId')
   getPopulationOperationalEvent(
     @Param('buildingId') buildingId: string,

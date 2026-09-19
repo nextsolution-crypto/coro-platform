@@ -50,6 +50,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
     createIncidentFollowUpDraft: jest.fn(),
     createOperationalFollowUpDraft: jest.fn(),
     getActiveOperationalEvent: jest.fn(),
+    listLegacyActiveAlerts: jest.fn(),
     getOperationalEvent: jest.fn(),
     listOperationalEventAlerts: jest.fn(),
     closeOperationalEvent: jest.fn(),
@@ -1321,6 +1322,24 @@ describe('ClientPortalService - Sentinelle Population', () => {
       expect(result).toHaveLength(2);
     });
 
+    it('retourne les communications legacy actives après validation de l’accès bâtiment', async () => {
+      const assertBuildingAccessSpy = jest
+        .spyOn(service, 'assertBuildingAccess')
+        .mockResolvedValue({ id: 'building-1', clientId: 'client-1' } as any);
+      populationService.listLegacyActiveAlerts.mockResolvedValue([
+        { id: 'legacy-1', status: 'ACTIVE' },
+      ] as any);
+
+      await expect(
+        service.getPopulationLegacyActiveAlerts('building-1', actor),
+      ).resolves.toEqual([{ id: 'legacy-1', status: 'ACTIVE' }]);
+      expect(assertBuildingAccessSpy).toHaveBeenCalledWith('building-1', actor);
+      expect(populationService.listLegacyActiveAlerts).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+      );
+    });
+
     it('clôture une alerte Population après validation de l’accès', async () => {
       const assertBuildingAccessSpy = jest
         .spyOn(service, 'assertBuildingAccess')
@@ -1421,6 +1440,10 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       await expect(
+        service.getPopulationLegacyActiveAlerts('building-forbidden', actor),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      await expect(
         service.endPopulationAlert('building-forbidden', 'alert-1', actor),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
@@ -1433,6 +1456,8 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).not.toHaveBeenCalled();
 
       expect(populationService.getIncidentAlertHistory).not.toHaveBeenCalled();
+
+      expect(populationService.listLegacyActiveAlerts).not.toHaveBeenCalled();
 
       expect(populationService.endAlert).not.toHaveBeenCalled();
 

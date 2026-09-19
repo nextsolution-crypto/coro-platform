@@ -4712,9 +4712,10 @@ describe('PopulationService', () => {
       });
     });
 
-    it('clôture une alerte ACTIVE en ENDED sans modifier son historique', async () => {
+    it('clôture une legacy ACTIVE en ENDED sans transport ni événement', async () => {
       prisma.populationAlert.findFirst.mockResolvedValue({
         ...sourceAlert,
+        operationalEventId: null,
         status: PopulationAlertStatus.ACTIVE,
       });
 
@@ -4725,10 +4726,12 @@ describe('PopulationService', () => {
       prisma.populationAlert.findFirst
         .mockResolvedValueOnce({
           ...sourceAlert,
+          operationalEventId: null,
           status: PopulationAlertStatus.ACTIVE,
         })
         .mockResolvedValueOnce({
           ...sourceAlert,
+          operationalEventId: null,
           status: PopulationAlertStatus.ENDED,
           endedAt: expect.anything(),
         });
@@ -4759,6 +4762,10 @@ describe('PopulationService', () => {
       expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
 
       expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+
+      expect(
+        operationalEvents.createOperationalEventInTransaction,
+      ).not.toHaveBeenCalled();
     });
 
     it('permet de clôturer une alerte ACTIVE après suspension et désactivation du programme', async () => {
@@ -7819,6 +7826,129 @@ describe('PopulationService', () => {
   });
 
   describe('operational event cockpit contract', () => {
+    it('retourne les legacy ACTIVE du seul programme avec des agrégats sans PII', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      prisma.populationAlert.findMany.mockResolvedValue([
+        {
+          id: 'legacy-1',
+          type: PopulationAlertType.TEST,
+          status: PopulationAlertStatus.ACTIVE,
+          titleFR: 'Test contrôlé',
+          createdAt: new Date('2026-09-18T12:00:00Z'),
+          readyAt: new Date('2026-09-18T12:01:00Z'),
+          approvedAt: new Date('2026-09-18T12:02:00Z'),
+          recipientsFrozenAt: new Date('2026-09-18T12:03:00Z'),
+          activatedAt: new Date('2026-09-18T12:04:00Z'),
+          endedAt: null,
+          deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+          deliveries: [
+            {
+              status: PopulationDeliveryStatus.DELIVERED,
+              subscriberId: 'subscriber-secret',
+            },
+            {
+              status: PopulationDeliveryStatus.SUPPRESSED,
+              subscriberId: 'subscriber-secret',
+            },
+            {
+              status: PopulationDeliveryStatus.FAILED,
+              subscriberId: 'subscriber-2',
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.listLegacyActiveAlerts(
+        'building-1',
+        'organization-1',
+      );
+
+      expect(prisma.populationAlert.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            programId: 'program-1',
+            status: PopulationAlertStatus.ACTIVE,
+            operationalEventId: null,
+          },
+          orderBy: [
+            { activatedAt: 'asc' },
+            { createdAt: 'asc' },
+            { id: 'asc' },
+          ],
+        }),
+      );
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'legacy-1',
+          targeted: 2,
+          deliverable: 2,
+          sent: 0,
+          delivered: 1,
+          failed: 1,
+          suppressed: 1,
+        }),
+      ]);
+      const serialized = JSON.stringify(result);
+      for (const forbidden of [
+        'subscriber-secret',
+        'subscriberId',
+        'destinationSnapshot',
+        'providerMessageId',
+        'providerIdempotencyKey',
+        'email',
+        'phone',
+        'latitude',
+        'longitude',
+        'contextSnapshot',
+      ]) {
+        expect(serialized).not.toContain(forbidden);
+      }
+    });
+
+    it('retourne plusieurs legacy dans l’ordre déterministe reçu de Prisma', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      prisma.populationAlert.findMany.mockResolvedValue([
+        { id: 'legacy-1', deliveries: [] },
+        { id: 'legacy-2', deliveries: [] },
+      ]);
+      const result = await service.listLegacyActiveAlerts(
+        'building-1',
+        'organization-1',
+      );
+      expect(result.map((alert) => alert.id)).toEqual([
+        'legacy-1',
+        'legacy-2',
+      ]);
+    });
+
+    it('retourne une liste vide lorsqu’aucune legacy active n’existe', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      prisma.populationAlert.findMany.mockResolvedValue([]);
+      await expect(
+        service.listLegacyActiveAlerts('building-1', 'organization-1'),
+      ).resolves.toEqual([]);
+    });
+
+    it('refuse un autre tenant avant toute lecture des alertes', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-2' },
+        populationProgram: { id: 'program-2' },
+      });
+      await expect(
+        service.listLegacyActiveAlerts('building-1', 'organization-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.populationAlert.findMany).not.toHaveBeenCalled();
+    });
+
     it('retourne uniquement les agrégats nécessaires à la chronologie', async () => {
       prisma.rueFacilityProfile.findUnique.mockResolvedValue({
         building: { organizationId: 'organization-1' },

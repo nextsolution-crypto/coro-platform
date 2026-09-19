@@ -3685,6 +3685,66 @@ export class PopulationService {
       : null;
   }
 
+  async listLegacyActiveAlerts(
+    buildingId: string,
+    organizationId: string,
+  ) {
+    const program = await this.getOperationalEventProgramContext(
+      buildingId,
+      organizationId,
+    );
+    const alerts = await this.prisma.populationAlert.findMany({
+      where: {
+        programId: program.id,
+        status: PopulationAlertStatus.ACTIVE,
+        operationalEventId: null,
+      },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        titleFR: true,
+        createdAt: true,
+        readyAt: true,
+        approvedAt: true,
+        recipientsFrozenAt: true,
+        activatedAt: true,
+        endedAt: true,
+        deliveryModeSnapshot: true,
+        deliveries: {
+          select: { status: true, subscriberId: true },
+        },
+      },
+      orderBy: [{ activatedAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    return alerts.map(({ deliveries, ...alert }) => {
+      const targeted = new Set(
+        deliveries
+          .map((delivery) => delivery.subscriberId)
+          .filter((subscriberId): subscriberId is string =>
+            Boolean(subscriberId),
+          ),
+      ).size;
+      const count = (status: PopulationDeliveryStatus) =>
+        deliveries.filter((delivery) => delivery.status === status).length;
+
+      return {
+        ...alert,
+        targeted,
+        deliverable: deliveries.filter(
+          (delivery) =>
+            delivery.status !== PopulationDeliveryStatus.SUPPRESSED &&
+            delivery.status !== PopulationDeliveryStatus.CANCELLED,
+        ).length,
+        sent: count(PopulationDeliveryStatus.SENT),
+        delivered: count(PopulationDeliveryStatus.DELIVERED),
+        failed: count(PopulationDeliveryStatus.FAILED),
+        suppressed: count(PopulationDeliveryStatus.SUPPRESSED),
+      };
+    });
+  }
+
   async getOperationalEvent(
     buildingId: string,
     organizationId: string,

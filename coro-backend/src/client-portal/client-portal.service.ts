@@ -714,6 +714,22 @@ export class ClientPortalService {
     );
   }
 
+  async getPopulationLegacyActiveAlerts(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.listLegacyActiveAlerts(
+      buildingId,
+      actor.organizationId,
+    );
+  }
+
   async closePopulationOperationalEvent(
     buildingId: string,
     eventId: string,

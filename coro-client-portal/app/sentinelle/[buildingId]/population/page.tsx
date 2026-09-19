@@ -24,7 +24,7 @@ import PortalLayout from "../../../components/PortalLayout";
 import PopulationOperationalMap from "./PopulationOperationalMap";
 import {
   normalizeOperationalEvent,
-  selectLegacyActiveAlerts,
+  normalizeLegacyActiveAlerts,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -314,6 +314,26 @@ type PopulationIncidentAlert = CreatedPopulationAlert & {
   operationalEventId?: string | null;
 };
 
+type PopulationLegacyAlert = {
+  id: string;
+  type: string;
+  status: "ACTIVE";
+  titleFR: string;
+  createdAt: string;
+  readyAt: string | null;
+  approvedAt: string | null;
+  recipientsFrozenAt: string | null;
+  activatedAt: string | null;
+  endedAt: string | null;
+  deliveryModeSnapshot: "SANDBOX" | "LIVE" | null;
+  targeted: number;
+  deliverable: number;
+  sent: number;
+  delivered: number;
+  failed: number;
+  suppressed: number;
+};
+
 type PopulationFreezeResult = {
   alertId: string;
   status: string;
@@ -538,6 +558,9 @@ export default function PopulationPage() {
   const [closeEventReason, setCloseEventReason] = useState("");
   const [confirmIncompleteClose, setConfirmIncompleteClose] = useState(false);
   const [legacyEndingId, setLegacyEndingId] = useState<string | null>(null);
+  const [legacyActiveAlerts, setLegacyActiveAlerts] = useState<
+    PopulationLegacyAlert[]
+  >([]);
 
   const [alertForm, setAlertForm] = useState<PopulationAlertDraftForm>({
     type: "EMERGENCY",
@@ -763,6 +786,27 @@ export default function PopulationPage() {
     }
   };
 
+  const loadLegacyActiveAlerts = async () => {
+    try {
+      const response = await apiGet(
+        `/client-portal/buildings/${buildingId}/population/alerts/legacy-active`,
+      );
+      const result = normalizeLegacyActiveAlerts(
+        response,
+      ) as PopulationLegacyAlert[];
+      setLegacyActiveAlerts(result);
+      return result;
+    } catch (error: any) {
+      setLegacyActiveAlerts([]);
+      setEventError(
+        typeof error?.message === "string"
+          ? error.message
+          : "Les communications historiques actives n’ont pas pu être chargées.",
+      );
+      return [];
+    }
+  };
+
   const fetchStatus = async () => {
     setLoading(true);
 
@@ -824,6 +868,7 @@ export default function PopulationPage() {
             loadActiveIncidents(),
             loadIncidentHistory(),
             loadActiveOperationalEvent(),
+            loadLegacyActiveAlerts(),
           ]);
         } else {
           setIncidents([]);
@@ -834,6 +879,7 @@ export default function PopulationPage() {
           setIncidentHistoryError(null);
           setIncidentAlertsError(null);
           setActiveEvent(null);
+          setLegacyActiveAlerts([]);
         }
 
         const program = configurationRes.program;
@@ -874,6 +920,7 @@ export default function PopulationPage() {
         setIncidentHistoryError(null);
         setIncidentAlertsError(null);
         setActiveEvent(null);
+        setLegacyActiveAlerts([]);
       }
     } catch {
       setStatus(null);
@@ -1388,6 +1435,7 @@ export default function PopulationPage() {
         `/client-portal/buildings/${buildingId}/population/alerts/${alertId}/end`,
         {},
       );
+      await loadLegacyActiveAlerts();
       if (selectedIncidentId) {
         await loadIncidentAlertHistory(selectedIncidentId);
       }
@@ -1887,9 +1935,9 @@ export default function PopulationPage() {
           />
         )}
 
-        {!activeEvent &&
-          selectLegacyActiveAlerts(incidentAlerts)
-            .map((alert) => (
+        {legacyActiveAlerts.length > 0 && (
+          <section aria-label="Communications historiques actives">
+            {legacyActiveAlerts.map((alert) => (
               <LegacyCommunicationNotice
                 key={alert.id}
                 alert={alert}
@@ -1898,6 +1946,8 @@ export default function PopulationPage() {
                 onEnd={() => void endLegacyCommunication(alert.id)}
               />
             ))}
+          </section>
+        )}
 
         {/* Scénarios RUE */}
         <section
@@ -4068,7 +4118,7 @@ function LegacyCommunicationNotice({
   loading,
   onEnd,
 }: {
-  alert: PopulationIncidentAlert;
+  alert: PopulationLegacyAlert;
   canPrepare: boolean;
   loading: boolean;
   onEnd: () => void;
@@ -4077,6 +4127,20 @@ function LegacyCommunicationNotice({
     <section className={styles.legacyNotice} aria-live="polite">
       <div>
         <strong>COMMUNICATION HISTORIQUE ACTIVE</strong>
+        <p>
+          {alert.titleFR} · Mode :{" "}
+          {alert.deliveryModeSnapshot === "LIVE"
+            ? "DIFFUSION RÉELLE"
+            : "SIMULATION"}
+          {" · "}Statut transport :{" "}
+          {alert.delivered > 0
+            ? "LIVRÉE"
+            : alert.sent > 0
+              ? "ACCEPTÉE"
+              : alert.failed > 0
+                ? "ÉCHEC"
+                : "ACTIVE"}
+        </p>
         <p>
           Cette communication a été créée avant le cycle événementiel actuel.
           Terminer cette communication n’envoie aucun nouveau message.

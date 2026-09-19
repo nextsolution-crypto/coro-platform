@@ -33,7 +33,7 @@ export function normalizeOperationalEvent(value) {
   };
 }
 
-export function selectLegacyActiveAlerts(value) {
+export function normalizeLegacyActiveAlerts(value) {
   if (!Array.isArray(value)) return [];
   return value.filter(
     (alert) =>
@@ -43,3 +43,5 @@ export function selectLegacyActiveAlerts(value) {
       alert.operationalEventId == null,
   );
 }
+
+export const selectLegacyActiveAlerts = normalizeLegacyActiveAlerts;
