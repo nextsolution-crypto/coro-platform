@@ -186,9 +186,18 @@ type CreatedPopulationAlert = {
   approvedAt?: string | null;
   approvedByType?: string | null;
   approvedById?: string | null;
+  readyAt?: string | null;
+  readyByType?: string | null;
+  readyById?: string | null;
   recipientsFrozenAt?: string | null;
+  frozenByType?: string | null;
+  frozenById?: string | null;
   deliveryModeSnapshot?: 'SANDBOX' | 'LIVE' | null;
   sendingAt?: string | null;
+  sentByType?: string | null;
+  sentById?: string | null;
+  createdByType?: string | null;
+  createdById?: string | null;
   activatedAt?: string | null;
   endedAt?: string | null;
   createdAt?: string;
@@ -274,6 +283,37 @@ type PopulationFreezeResult = {
     suppressedCount: number;
   };
   deliveries: FrozenPopulationDelivery[];
+};
+
+type PopulationLivePreflight = {
+  ready: boolean;
+  blockingReasons: string[];
+  mode: 'SANDBOX' | 'LIVE' | null;
+  targetedPeople: number;
+  materialized: number;
+  deliverable: number;
+  email: number;
+  sms: number;
+  synthetic: number;
+  suppressed: number;
+  retryPending: number;
+  reconciliation: number;
+};
+
+type PopulationDeliverySummary = {
+  counts: {
+    total: number;
+    queued: number;
+    sending: number;
+    sent: number;
+    delivered: number;
+    failed: number;
+    suppressed: number;
+    retryPending: number;
+    reconciliationRequired: number;
+    email: number;
+    sms: number;
+  };
 };
 
 type PopulationConfigurationForm = {
@@ -399,6 +439,10 @@ export default function PopulationPage() {
 
   const [sendConfirmationOpen, setSendConfirmationOpen] =
     useState(false);
+  const [livePreflight, setLivePreflight] =
+    useState<PopulationLivePreflight | null>(null);
+  const [deliverySummary, setDeliverySummary] =
+    useState<PopulationDeliverySummary | null>(null);
 
   const [incidents, setIncidents] = useState<PopulationIncident[]>([]);
   const [incidentsLoading, setIncidentsLoading] = useState(false);
@@ -449,6 +493,50 @@ export default function PopulationPage() {
 
     fetchStatus();
   }, [buildingId]);
+
+  useEffect(() => {
+    if (
+      !createdAlert?.id ||
+      createdAlert.deliveryModeSnapshot !== 'LIVE' ||
+      !['SENDING', 'ACTIVE'].includes(createdAlert.status)
+    ) {
+      return;
+    }
+    let polls = 0;
+    const refresh = async () => {
+      polls += 1;
+      try {
+        const result = (await apiGet(
+          `/client-portal/buildings/${buildingId}/population/alerts/${createdAlert.id}/delivery-status`,
+        )) as PopulationDeliverySummary;
+        setDeliverySummary(result);
+      } catch {
+        // Le statut courant reste affiché; le polling est borné et non bloquant.
+      }
+    };
+    void refresh();
+    const interval = window.setInterval(() => {
+      if (polls >= 24) {
+        window.clearInterval(interval);
+        return;
+      }
+      void refresh();
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [
+    buildingId,
+    createdAlert?.id,
+    createdAlert?.status,
+    createdAlert?.deliveryModeSnapshot,
+  ]);
+
+  const loadLivePreflight = async (alertId: string) => {
+    const result = (await apiGet(
+      `/client-portal/buildings/${buildingId}/population/alerts/${alertId}/live-preflight`,
+    )) as PopulationLivePreflight;
+    setLivePreflight(result);
+    return result;
+  };
 
   const loadIncidentAlertHistory = async (incidentId: string) => {
     setIncidentAlertsLoading(true);
@@ -1077,6 +1165,9 @@ export default function PopulationPage() {
             }
           : current,
       );
+      if (result.deliveryMode === 'LIVE') {
+        await loadLivePreflight(result.alertId);
+      }
     } catch (error: any) {
       setAlertError(
         typeof error?.message === 'string'
@@ -1104,6 +1195,14 @@ export default function PopulationPage() {
     setAlertError(null);
 
     try {
+      if (freezeResult.deliveryMode === 'LIVE') {
+        const preflight = await loadLivePreflight(createdAlert.id);
+        if (!preflight.ready) {
+          throw new Error(
+            'Le preflight LIVE a changé. Vérifiez le roster avant de diffuser.',
+          );
+        }
+      }
       const result = (await apiPost(
         `/client-portal/buildings/${buildingId}/population/alerts/${createdAlert.id}/send`,
         {},
@@ -2924,6 +3023,8 @@ export default function PopulationPage() {
                 loading={alertWorkflowLoading}
                 freezeConfirmationOpen={freezeConfirmationOpen}
                 freezeResult={freezeResult}
+                livePreflight={livePreflight}
+                deliverySummary={deliverySummary}
                 sendConfirmationOpen={sendConfirmationOpen}
                 deliveryMode={freezeResult?.deliveryMode ?? status.deliveryMode}
                 permissions={status.populationPermissions}
@@ -2953,6 +3054,8 @@ export default function PopulationPage() {
                   setAlertError(null);
                   setFreezeConfirmationOpen(false);
                   setFreezeResult(null);
+                  setLivePreflight(null);
+                  setDeliverySummary(null);
                   setSendConfirmationOpen(false);
                 }}
               />
@@ -4948,6 +5051,8 @@ function AlertDraftWorkspace({
   loading,
   freezeConfirmationOpen,
   freezeResult,
+  livePreflight,
+  deliverySummary,
   sendConfirmationOpen,
   deliveryMode,
   permissions,
@@ -4969,6 +5074,8 @@ function AlertDraftWorkspace({
   loading: boolean;
   freezeConfirmationOpen: boolean;
   freezeResult: PopulationFreezeResult | null;
+  livePreflight: PopulationLivePreflight | null;
+  deliverySummary: PopulationDeliverySummary | null;
   sendConfirmationOpen: boolean;
   deliveryMode: 'SANDBOX' | 'LIVE';
   permissions: PopulationStatus['populationPermissions'];
@@ -4997,6 +5104,8 @@ function AlertDraftWorkspace({
   const canPrepare = permissions.includes('POPULATION_PREPARE');
   const canApprove = permissions.includes('POPULATION_APPROVE');
   const canSend = permissions.includes('POPULATION_SEND');
+  const liveSendReady =
+    deliveryMode !== 'LIVE' || livePreflight?.ready === true;
 
   const diffusionStarted =
     alert.status === 'SENDING' ||
@@ -5602,6 +5711,22 @@ function AlertDraftWorkspace({
                 label="Supprimés / démo"
                 value={freezeResult.targeting.suppressedCount}
               />
+              {deliveryMode === 'LIVE' && livePreflight && (
+                <>
+                  <FrozenMetric
+                    label="Synthétiques"
+                    value={livePreflight.synthetic}
+                  />
+                  <FrozenMetric
+                    label="Retry pending"
+                    value={livePreflight.retryPending}
+                  />
+                  <FrozenMetric
+                    label="Réconciliation"
+                    value={livePreflight.reconciliation}
+                  />
+                </>
+              )}
             </div>
 
             <div
@@ -5680,7 +5805,7 @@ function AlertDraftWorkspace({
                       ? 'Préparer la diffusion'
                       : 'Préparer la simulation'
                   }
-                  disabled={loading || !canSend}
+                  disabled={loading || !canSend || !liveSendReady}
                   onClick={onRequestSend}
                   danger
                 />
@@ -5756,6 +5881,15 @@ function AlertDraftWorkspace({
                   {deliveryMode === 'LIVE' && (
                     <>
                       <br />
+                      <strong>{livePreflight?.email ?? 0}</strong> courriel(s)
+                      {' · '}
+                      <strong>{livePreflight?.sms ?? 0}</strong> SMS
+                      <br />
+                      <strong>{livePreflight?.retryPending ?? 0}</strong> retry
+                      pending {' · '}
+                      <strong>{livePreflight?.reconciliation ?? 0}</strong>{' '}
+                      réconciliation(s)
+                      <br />
                       <br />
                       Cette confirmation déclenche la diffusion réelle. Elle
                       ne pourra pas être annulée pour les communications déjà
@@ -5786,7 +5920,7 @@ function AlertDraftWorkspace({
                           ? 'DIFFUSER L’ALERTE'
                           : 'SIMULER LA DIFFUSION'
                     }
-                    disabled={loading || !canSend}
+                    disabled={loading || !canSend || !liveSendReady}
                     onClick={onConfirmSend}
                     danger
                   />
@@ -5799,7 +5933,11 @@ function AlertDraftWorkspace({
       {(alert.status === 'SENDING' ||
         alert.status === 'ACTIVE' ||
         alert.status === 'FAILED') && (
-        <PopulationDiffusionResult alert={alert} freezeResult={freezeResult} />
+        <PopulationDiffusionResult
+          alert={alert}
+          freezeResult={freezeResult}
+          deliverySummary={deliverySummary}
+        />
       )}
 
       <div
@@ -5847,12 +5985,21 @@ function AlertDraftWorkspace({
 function PopulationDiffusionResult({
   alert,
   freezeResult,
+  deliverySummary,
 }: {
   alert: CreatedPopulationAlert;
   freezeResult: PopulationFreezeResult | null;
+  deliverySummary: PopulationDeliverySummary | null;
 }) {
   const isActive = alert.status === 'ACTIVE';
   const isSending = alert.status === 'SENDING';
+  const proofSteps = [
+    { label: 'Créée', actorType: alert.createdByType, actorId: alert.createdById, at: alert.createdAt },
+    { label: 'READY', actorType: alert.readyByType, actorId: alert.readyById, at: alert.readyAt },
+    { label: 'Approuvée', actorType: alert.approvedByType, actorId: alert.approvedById, at: alert.approvedAt },
+    { label: 'Roster figé', actorType: alert.frozenByType, actorId: alert.frozenById, at: alert.recipientsFrozenAt },
+    { label: 'Diffusée', actorType: alert.sentByType, actorId: alert.sentById, at: alert.sendingAt },
+  ].filter((step) => step.at);
   const isFailed = alert.status === 'FAILED';
   const isSandbox = alert.deliveryModeSnapshot === 'SANDBOX';
   const sandboxSuppressedCount = freezeResult?.deliveries.filter(
@@ -5974,6 +6121,41 @@ function PopulationDiffusionResult({
               communication; seul DELIVERED confirme sa livraison.
               ACTIVE ne signifie donc pas que toutes les communications
               ont été livrées.
+            </div>
+          )}
+
+          {!isSandbox && deliverySummary && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(115px, 100%), 1fr))', gap: 8, marginTop: 12 }}>
+              <FrozenMetric label="Matérialisées" value={deliverySummary.counts.total} />
+              <FrozenMetric label="Supprimées" value={deliverySummary.counts.suppressed} />
+              <FrozenMetric label="En attente" value={deliverySummary.counts.queued} />
+              <FrozenMetric label="En traitement" value={deliverySummary.counts.sending} />
+              <FrozenMetric label="Acceptées fournisseur" value={deliverySummary.counts.sent} />
+              <FrozenMetric label="Livrées destinataire" value={deliverySummary.counts.delivered} />
+              <FrozenMetric label="Échecs" value={deliverySummary.counts.failed} />
+              <FrozenMetric label="Retry pending" value={deliverySummary.counts.retryPending} />
+              <FrozenMetric label="Réconciliation" value={deliverySummary.counts.reconciliationRequired} />
+            </div>
+          )}
+
+          {proofSteps.length > 0 && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #DEE2E6' }}>
+              <p style={{ margin: '0 0 8px', color: '#6C757D', fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>
+                Preuve opérateur
+              </p>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {proofSteps.map((step) => (
+                  <div key={step.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: '#495057', fontSize: 9 }}>
+                    <span>
+                      <strong>{step.label}</strong>
+                      {step.actorId ? ` · ${step.actorType ?? 'ACTOR'} ${step.actorId}` : ''}
+                    </span>
+                    <time dateTime={step.at ?? undefined}>
+                      {step.at ? new Date(step.at).toLocaleString('fr-CA') : ''}
+                    </time>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

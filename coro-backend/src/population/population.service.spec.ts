@@ -6041,10 +6041,22 @@ describe('PopulationService', () => {
     it('rejects an unavailable transport before claiming the alert', async () => {
       prisma.populationAlertDelivery.findMany.mockResolvedValueOnce([
         {
+          id: 'delivery-send-1',
           channel: PopulationAlertChannel.EMAIL,
+          status: PopulationDeliveryStatus.QUEUED,
           destinationSnapshot: 'citoyen@example.com',
           suppressionReason: null,
-          subscriber: { isSynthetic: false },
+          nextAttemptAt: null,
+          outcomeUnknownAt: null,
+          subscriberId: 'subscriber-1',
+          subscriber: {
+            status: PopulationSubscriberStatus.ACTIVE,
+            isSynthetic: false,
+            smsEnabled: false,
+            emailEnabled: true,
+            phone: null,
+            email: 'citoyen@example.com',
+          },
         },
       ]);
       readiness.assertAlertChannelReady.mockImplementationOnce(() => {
@@ -6053,7 +6065,14 @@ describe('PopulationService', () => {
 
       await expect(
         service.sendAlert('building-1', 'alert-send-1'),
-      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          preflight: expect.objectContaining({
+            ready: false,
+            blockingReasons: expect.arrayContaining(['SMS_NOT_READY']),
+          }),
+        }),
+      });
 
       expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
       expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
@@ -6112,9 +6131,20 @@ describe('PopulationService', () => {
         {
           id: 'delivery-send-1',
           channel: PopulationAlertChannel.SMS,
+          status: PopulationDeliveryStatus.QUEUED,
           destinationSnapshot: '+15145550101',
           suppressionReason: null,
-          subscriber: { isSynthetic: false },
+          nextAttemptAt: null,
+          outcomeUnknownAt: null,
+          subscriberId: 'subscriber-1',
+          subscriber: {
+            status: PopulationSubscriberStatus.ACTIVE,
+            isSynthetic: false,
+            smsEnabled: true,
+            emailEnabled: false,
+            phone: '+15145550101',
+            email: null,
+          },
         },
       ]);
 
@@ -6276,7 +6306,9 @@ describe('PopulationService', () => {
 
       expect(prisma.populationAlert.updateMany).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: PopulationAlertStatus.ACTIVE }),
+          data: expect.objectContaining({
+            status: PopulationAlertStatus.ACTIVE,
+          }),
         }),
       );
     });
@@ -6369,6 +6401,97 @@ describe('PopulationService', () => {
           subscriber: { select: { isSynthetic: true } },
         },
       });
+    });
+
+    it('autorise un roster LIVE email-only même si le transport SMS est indisponible', async () => {
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([
+        {
+          id: 'delivery-email-1',
+          channel: PopulationAlertChannel.EMAIL,
+          status: PopulationDeliveryStatus.QUEUED,
+          destinationSnapshot: 'citoyen@example.com',
+          suppressionReason: null,
+          nextAttemptAt: null,
+          outcomeUnknownAt: null,
+          subscriberId: 'subscriber-1',
+          subscriber: {
+            status: PopulationSubscriberStatus.ACTIVE,
+            isSynthetic: false,
+            smsEnabled: false,
+            emailEnabled: true,
+            phone: null,
+            email: 'citoyen@example.com',
+          },
+        },
+      ]);
+      readiness.assertAlertChannelReady.mockImplementation((channel) => {
+        if (channel === PopulationAlertChannel.SMS) {
+          throw new ServiceUnavailableException('SMS indisponible');
+        }
+      });
+
+      await expect(
+        service.getAlertLivePreflight('building-1', 'alert-send-1'),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          ready: true,
+          deliverable: 1,
+          email: 1,
+          sms: 0,
+          synthetic: 0,
+          retryPending: 0,
+          reconciliation: 0,
+        }),
+      );
+      expect(readiness.assertAlertChannelReady).toHaveBeenCalledTimes(1);
+      expect(readiness.assertAlertChannelReady).toHaveBeenCalledWith(
+        PopulationAlertChannel.EMAIL,
+      );
+    });
+
+    it('supprime au dernier moment un abonné désinscrit sans appeler le fournisseur', async () => {
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([
+        {
+          id: 'delivery-email-1',
+          channel: PopulationAlertChannel.EMAIL,
+          status: PopulationDeliveryStatus.QUEUED,
+          destinationSnapshot: 'citoyen@example.com',
+          suppressionReason: null,
+          nextAttemptAt: null,
+          outcomeUnknownAt: null,
+          subscriberId: 'subscriber-1',
+          subscriber: {
+            status: PopulationSubscriberStatus.UNSUBSCRIBED,
+            isSynthetic: false,
+            smsEnabled: false,
+            emailEnabled: false,
+            phone: null,
+            email: 'citoyen@example.com',
+          },
+        },
+      ]);
+
+      await expect(
+        service.sendAlert('building-1', 'alert-send-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: PopulationDeliveryStatus.SUPPRESSED,
+            suppressionReason:
+              PopulationDeliverySuppressionReason.SUBSCRIBER_INACTIVE,
+          }),
+        }),
+      );
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: PopulationAlertStatus.SENDING,
+          }),
+        }),
+      );
     });
   });
 
@@ -6963,9 +7086,7 @@ describe('PopulationService', () => {
       );
 
       expect(populationDeliveryService.sendEmail).toHaveBeenCalledTimes(1);
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
         where: expect.objectContaining({
           id: 'delivery-1',
           status: PopulationDeliveryStatus.SENDING,

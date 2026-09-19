@@ -368,6 +368,25 @@ export class ClientPortalService {
     );
   }
 
+  async getPopulationAlertLivePreflight(
+    buildingId: string,
+    alertId: string,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_SEND,
+    );
+    return this.populationService.getAlertLivePreflight(buildingId, alertId);
+  }
+
   async updatePopulationAlertDraft(
     buildingId: string,
     alertId: string,

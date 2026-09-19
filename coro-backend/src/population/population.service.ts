@@ -4368,6 +4368,17 @@ export class PopulationService {
       throw new BadRequestException('Le mode de diffusion fige est absent');
     }
 
+    if (alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE) {
+      await this.suppressInvalidFrozenDeliveries(alert.id);
+      const preflight = await this.getAlertLivePreflight(buildingId, alert.id);
+      if (!preflight.ready) {
+        throw new BadRequestException({
+          message: 'Le preflight LIVE ne permet pas la diffusion',
+          preflight,
+        });
+      }
+    }
+
     if (
       program.governanceMode === PopulationGovernanceMode.DUAL_CONTROL &&
       alert.createdByType === alert.approvedByType &&
@@ -4527,6 +4538,180 @@ export class PopulationService {
      * réellement enregistré en base.
      */
     return this.finalizeSendingAlert(buildingId, alert.id, program.id);
+  }
+
+  async getAlertLivePreflight(buildingId: string, alertId: string) {
+    const { alert, program } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
+    const deliveries = await this.prisma.populationAlertDelivery.findMany({
+      where: { alertId: alert.id },
+      select: {
+        channel: true,
+        status: true,
+        suppressionReason: true,
+        nextAttemptAt: true,
+        outcomeUnknownAt: true,
+        subscriberId: true,
+        subscriber: {
+          select: {
+            status: true,
+            isSynthetic: true,
+            smsEnabled: true,
+            emailEnabled: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+    });
+    const deliverable = deliveries.filter(
+      (delivery) => delivery.status === PopulationDeliveryStatus.QUEUED,
+    );
+    const blockingReasons: string[] = [];
+
+    if (program.status !== PopulationProgramStatus.ACTIVE)
+      blockingReasons.push('PROGRAM_NOT_ACTIVE');
+    if (alert.status !== PopulationAlertStatus.READY)
+      blockingReasons.push('ALERT_NOT_READY');
+    if (!alert.approvedAt || !alert.approvedByType || !alert.approvedById)
+      blockingReasons.push('ALERT_NOT_APPROVED');
+    if (!alert.recipientsFrozenAt) blockingReasons.push('ROSTER_NOT_FROZEN');
+    if (alert.deliveryModeSnapshot !== PopulationDeliveryMode.LIVE)
+      blockingReasons.push('NOT_LIVE');
+    if (deliverable.length === 0)
+      blockingReasons.push('NO_DELIVERABLE_COMMUNICATION');
+
+    for (const channel of new Set(deliverable.map((item) => item.channel))) {
+      try {
+        this.readiness.assertAlertChannelReady(channel);
+      } catch {
+        blockingReasons.push(`${channel}_NOT_READY`);
+      }
+    }
+
+    if (
+      deliverable.some(
+        (delivery) =>
+          !delivery.subscriber ||
+          delivery.subscriber.status !== PopulationSubscriberStatus.ACTIVE ||
+          delivery.subscriber.isSynthetic ||
+          (delivery.channel === PopulationAlertChannel.EMAIL &&
+            (!delivery.subscriber.emailEnabled ||
+              !delivery.subscriber.email)) ||
+          (delivery.channel === PopulationAlertChannel.SMS &&
+            (!delivery.subscriber.smsEnabled || !delivery.subscriber.phone)),
+      )
+    ) {
+      blockingReasons.push('ROSTER_REVALIDATION_FAILED');
+    }
+
+    const retryPending = deliveries.filter(
+      (delivery) =>
+        delivery.status === PopulationDeliveryStatus.QUEUED &&
+        delivery.nextAttemptAt,
+    ).length;
+    const reconciliation = deliveries.filter(
+      (delivery) =>
+        delivery.status === PopulationDeliveryStatus.SENDING &&
+        delivery.outcomeUnknownAt,
+    ).length;
+    if (retryPending > 0) blockingReasons.push('RETRY_PENDING');
+    if (reconciliation > 0) blockingReasons.push('RECONCILIATION_REQUIRED');
+
+    return {
+      ready: blockingReasons.length === 0,
+      blockingReasons: [...new Set(blockingReasons)],
+      mode: alert.deliveryModeSnapshot,
+      targetedPeople: new Set(
+        deliveries
+          .map((delivery) => delivery.subscriberId)
+          .filter((id): id is string => Boolean(id)),
+      ).size,
+      materialized: deliveries.length,
+      deliverable: deliverable.length,
+      email: deliverable.filter(
+        (delivery) => delivery.channel === PopulationAlertChannel.EMAIL,
+      ).length,
+      sms: deliverable.filter(
+        (delivery) => delivery.channel === PopulationAlertChannel.SMS,
+      ).length,
+      synthetic: deliveries.filter(
+        (delivery) => delivery.subscriber?.isSynthetic,
+      ).length,
+      suppressed: deliveries.filter(
+        (delivery) => delivery.status === PopulationDeliveryStatus.SUPPRESSED,
+      ).length,
+      retryPending,
+      reconciliation,
+    };
+  }
+
+  private async suppressInvalidFrozenDeliveries(alertId: string) {
+    const deliveries = await this.prisma.populationAlertDelivery.findMany({
+      where: { alertId, status: PopulationDeliveryStatus.QUEUED },
+      select: {
+        id: true,
+        channel: true,
+        destinationSnapshot: true,
+        subscriber: {
+          select: {
+            status: true,
+            isSynthetic: true,
+            smsEnabled: true,
+            emailEnabled: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    for (const delivery of deliveries) {
+      let reason: PopulationDeliverySuppressionReason | null = null;
+      const subscriber = delivery.subscriber;
+      if (
+        !subscriber ||
+        subscriber.status !== PopulationSubscriberStatus.ACTIVE
+      )
+        reason = PopulationDeliverySuppressionReason.SUBSCRIBER_INACTIVE;
+      else if (subscriber.isSynthetic)
+        reason = PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT;
+      else if (
+        (delivery.channel === PopulationAlertChannel.EMAIL &&
+          !subscriber.emailEnabled) ||
+        (delivery.channel === PopulationAlertChannel.SMS &&
+          !subscriber.smsEnabled)
+      )
+        reason = PopulationDeliverySuppressionReason.CHANNEL_DISABLED;
+      else {
+        const current =
+          delivery.channel === PopulationAlertChannel.EMAIL
+            ? subscriber.email?.trim().toLowerCase()
+            : subscriber.phone;
+        const frozen =
+          delivery.channel === PopulationAlertChannel.EMAIL
+            ? delivery.destinationSnapshot?.trim().toLowerCase()
+            : delivery.destinationSnapshot;
+        if (!current || current !== frozen)
+          reason = PopulationDeliverySuppressionReason.DESTINATION_CHANGED;
+      }
+      if (!reason) continue;
+      await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId,
+          status: PopulationDeliveryStatus.QUEUED,
+        },
+        data: {
+          status: PopulationDeliveryStatus.SUPPRESSED,
+          suppressionReason: reason,
+          errorCode: reason,
+          errorMessage: 'Livraison supprimée après revalidation LIVE',
+        },
+      });
+    }
   }
 
   private async resumeSendingAlert(
@@ -4936,10 +5121,7 @@ export class PopulationService {
           ? currentDestination?.trim().toLowerCase() !==
             delivery.destinationSnapshot?.trim().toLowerCase()
           : currentDestination !== delivery.destinationSnapshot;
-      if (
-        !currentDestination ||
-        destinationChanged
-      ) {
+      if (!currentDestination || destinationChanged) {
         currentSuppressionReason =
           PopulationDeliverySuppressionReason.DESTINATION_CHANGED;
       }
@@ -5198,9 +5380,9 @@ export class PopulationService {
         data: outcomeUnknown
           ? {
               outcomeUnknownAt: failureAt,
-                leaseExpiresAt: null,
-                errorCode: providerError.code,
-                errorMessage: safeErrorMessage,
+              leaseExpiresAt: null,
+              errorCode: providerError.code,
+              errorMessage: safeErrorMessage,
             }
           : retryable
             ? {
@@ -5208,18 +5390,18 @@ export class PopulationService {
                 nextAttemptAt,
                 claimedAt: null,
                 leaseExpiresAt: null,
-                  failedAt: null,
-                  errorCode: providerError.code,
-                  errorMessage: safeErrorMessage,
+                failedAt: null,
+                errorCode: providerError.code,
+                errorMessage: safeErrorMessage,
               }
             : {
                 status: PopulationDeliveryStatus.FAILED,
                 failedAt: failureAt,
                 claimedAt: null,
                 leaseExpiresAt: null,
-                  nextAttemptAt: null,
-                  errorCode: providerError.code,
-                  errorMessage: safeErrorMessage,
+                nextAttemptAt: null,
+                errorCode: providerError.code,
+                errorMessage: safeErrorMessage,
               },
       });
 

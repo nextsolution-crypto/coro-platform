@@ -40,6 +40,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
     createAlertDraft: jest.fn(),
     getAlert: jest.fn(),
     getAlertDeliveryStatus: jest.fn(),
+    getAlertLivePreflight: jest.fn(),
     updateAlertDraft: jest.fn(),
     refreshAlertDraftTargeting: jest.fn(),
     markAlertDraftReady: jest.fn(),
@@ -855,6 +856,50 @@ describe('ClientPortalService - Sentinelle Population', () => {
       ).not.toHaveBeenCalled();
 
       expect(populationService.markAlertDraftReady).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPopulationAlertLivePreflight', () => {
+    const actor = {
+      sub: 'client-user-1',
+      clientId: 'client-1',
+      organizationId: 'org-1',
+      role: 'CLIENT_MANAGER',
+      buildingIds: ['building-1'],
+    };
+
+    beforeEach(() => {
+      prisma.building.findFirst.mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      });
+      populationService.getAlertLivePreflight.mockResolvedValue({
+        ready: true,
+        mode: 'LIVE',
+        deliverable: 1,
+      });
+    });
+
+    it('expose le preflight uniquement avec POPULATION_SEND', async () => {
+      prisma.clientUser.findFirst.mockResolvedValue({ id: 'client-user-1' });
+
+      await expect(
+        service.getPopulationAlertLivePreflight('building-1', 'alert-1', actor),
+      ).resolves.toEqual(
+        expect.objectContaining({ ready: true, mode: 'LIVE' }),
+      );
+      expect(populationService.getAlertLivePreflight).toHaveBeenCalledWith(
+        'building-1',
+        'alert-1',
+      );
+    });
+
+    it('refuse le preflight sans POPULATION_SEND', async () => {
+      prisma.clientUser.findFirst.mockResolvedValue(null);
+      await expect(
+        service.getPopulationAlertLivePreflight('building-1', 'alert-1', actor),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(populationService.getAlertLivePreflight).not.toHaveBeenCalled();
     });
   });
 

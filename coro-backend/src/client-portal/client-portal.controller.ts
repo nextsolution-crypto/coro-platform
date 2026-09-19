@@ -447,6 +447,19 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings/:buildingId/population/alerts/:alertId/live-preflight')
+  async getPopulationAlertLivePreflight(
+    @Param('buildingId') buildingId: string,
+    @Param('alertId') alertId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationAlertLivePreflight(
+      buildingId,
+      alertId,
+      req.clientUser,
+    );
+  }
+
   @Get('buildings/:buildingId/population/alerts/:alertId')
   async getPopulationAlert(
     @Param('buildingId') buildingId: string,
