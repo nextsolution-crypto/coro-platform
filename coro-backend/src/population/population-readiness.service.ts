@@ -7,6 +7,7 @@ import {
   PopulationAlertChannel,
   PopulationVerificationChannel,
 } from '@prisma/client';
+import { POPULATION_EMAIL_TIMEOUT_MAX_MS } from './population-delivery.constants';
 
 export type CapabilityStatus =
   | 'READY'
@@ -153,7 +154,15 @@ export class PopulationReadinessService {
     if (!this.value('BREVO_API_KEY') || !this.value('BREVO_SENDER_EMAIL')) {
       return 'NOT_CONFIGURED';
     }
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value('BREVO_SENDER_EMAIL')!)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value('BREVO_SENDER_EMAIL')!)) {
+      return 'INVALID';
+    }
+    const configuredTimeout = this.value('POPULATION_EMAIL_TIMEOUT_MS');
+    if (!configuredTimeout) return 'READY';
+    const timeout = Number(configuredTimeout);
+    return Number.isInteger(timeout) &&
+      timeout > 0 &&
+      timeout <= POPULATION_EMAIL_TIMEOUT_MAX_MS
       ? 'READY'
       : 'INVALID';
   }

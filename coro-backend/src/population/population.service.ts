@@ -55,17 +55,16 @@ import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access
 import { SelectPopulationLocationDto } from './dto/select-population-location.dto';
 import type { GeocodingResult } from '../geocoding/geocoding.types';
 import { PopulationReadinessService } from './population-readiness.service';
+import { POPULATION_DELIVERY_LEASE_MS } from './population-delivery.constants';
 
-const POPULATION_LOCATION_RESOLUTION_PURPOSE =
-  'POPULATION_LOCATION_RESOLUTION';
+const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
 const POPULATION_LOCATION_TOKEN_VERSION = 'v1';
 const POPULATION_LOCATION_TOKEN_AAD = Buffer.from(
   `CORO:${POPULATION_LOCATION_RESOLUTION_PURPOSE}:${POPULATION_LOCATION_TOKEN_VERSION}`,
   'utf8',
 );
-const POPULATION_LOCATION_SELECTION_PURPOSE =
-  'POPULATION_LOCATION_SELECTION';
+const POPULATION_LOCATION_SELECTION_PURPOSE = 'POPULATION_LOCATION_SELECTION';
 const POPULATION_LOCATION_SELECTION_AAD = Buffer.from(
   `CORO:${POPULATION_LOCATION_SELECTION_PURPOSE}:${POPULATION_LOCATION_TOKEN_VERSION}`,
   'utf8',
@@ -78,6 +77,9 @@ const POPULATION_ACCESS_REQUEST_TOKEN_AAD = Buffer.from(
   `CORO:${POPULATION_ACCESS_REQUEST_PURPOSE}:${POPULATION_ACCESS_REQUEST_TOKEN_VERSION}`,
   'utf8',
 );
+
+const POPULATION_DELIVERY_MAX_ATTEMPTS = 3;
+const POPULATION_DELIVERY_BACKOFF_MS = [60_000, 5 * 60_000, 15 * 60_000];
 
 type PopulationLocationResolutionPayload = {
   purpose: typeof POPULATION_LOCATION_RESOLUTION_PURPOSE;
@@ -381,7 +383,8 @@ export class PopulationService {
 
     if (!readiness.ready) {
       throw new BadRequestException({
-        message: 'Le programme Sentinelle Population n’est pas prêt à être activé',
+        message:
+          'Le programme Sentinelle Population n’est pas prêt à être activé',
         missingRequirements: readiness.missingRequirements,
       });
     }
@@ -702,11 +705,7 @@ export class PopulationService {
       );
     }
 
-    const {
-      status: _status,
-      rueFacilityProfile,
-      ...publicProgram
-    } = program;
+    const { status: _status, rueFacilityProfile, ...publicProgram } = program;
 
     return {
       ...publicProgram,
@@ -728,9 +727,7 @@ export class PopulationService {
     const secret = process.env.POPULATION_OTP_SECRET;
 
     if (!secret) {
-      throw new Error(
-        'POPULATION_OTP_SECRET doit être configuré',
-      );
+      throw new Error('POPULATION_OTP_SECRET doit être configuré');
     }
 
     return secret;
@@ -740,9 +737,7 @@ export class PopulationService {
     const secret = process.env.POPULATION_ACCESS_SECRET;
 
     if (!secret) {
-      throw new Error(
-        'POPULATION_ACCESS_SECRET doit être configuré',
-      );
+      throw new Error('POPULATION_ACCESS_SECRET doit être configuré');
     }
 
     return secret;
@@ -848,10 +843,9 @@ export class PopulationService {
       decipher.setAAD(POPULATION_ACCESS_REQUEST_TOKEN_AAD);
       decipher.setAuthTag(tag);
       payload = JSON.parse(
-        Buffer.concat([
-          decipher.update(ciphertext),
-          decipher.final(),
-        ]).toString('utf8'),
+        Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+          'utf8',
+        ),
       );
     } catch {
       throw invalid();
@@ -862,7 +856,9 @@ export class PopulationService {
       typeof payload.programId !== 'string' ||
       typeof payload.subscriberId !== 'string' ||
       typeof payload.verificationId !== 'string' ||
-      !Object.values(PopulationVerificationChannel).includes(payload.channel!) ||
+      !Object.values(PopulationVerificationChannel).includes(
+        payload.channel!,
+      ) ||
       typeof payload.iat !== 'number' ||
       !Number.isFinite(payload.iat) ||
       payload.iat > Date.now() ||
@@ -876,24 +872,18 @@ export class PopulationService {
     return payload as PopulationAccessRequestPayload;
   }
 
-  private createSubscriberAccessToken(
-    subscriberId: string,
-    programId: string,
-  ) {
+  private createSubscriberAccessToken(subscriberId: string, programId: string) {
     const payload = {
       subscriberId,
       programId,
       exp: Date.now() + 30 * 60 * 1000,
     };
 
-    const encodedPayload = Buffer.from(
-      JSON.stringify(payload),
-    ).toString('base64url');
+    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString(
+      'base64url',
+    );
 
-    const signature = createHmac(
-      'sha256',
-      this.getPopulationAccessSecret(),
-    )
+    const signature = createHmac('sha256', this.getPopulationAccessSecret())
       .update(encodedPayload)
       .digest('base64url');
 
@@ -908,9 +898,7 @@ export class PopulationService {
     const parts = token.split('.');
 
     if (parts.length !== 2) {
-      throw new BadRequestException(
-        'Jeton d’accès invalide',
-      );
+      throw new BadRequestException('Jeton d’accès invalide');
     }
 
     const [encodedPayload, suppliedSignature] = parts;
@@ -922,23 +910,15 @@ export class PopulationService {
       .update(encodedPayload)
       .digest('base64url');
 
-    const suppliedBuffer = Buffer.from(
-      suppliedSignature,
-      'utf8',
-    );
+    const suppliedBuffer = Buffer.from(suppliedSignature, 'utf8');
 
-    const expectedBuffer = Buffer.from(
-      expectedSignature,
-      'utf8',
-    );
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
 
     if (
       suppliedBuffer.length !== expectedBuffer.length ||
       !timingSafeEqual(suppliedBuffer, expectedBuffer)
     ) {
-      throw new BadRequestException(
-        'Jeton d’accès invalide',
-      );
+      throw new BadRequestException('Jeton d’accès invalide');
     }
 
     let payload: {
@@ -949,15 +929,10 @@ export class PopulationService {
 
     try {
       payload = JSON.parse(
-        Buffer.from(
-          encodedPayload,
-          'base64url',
-        ).toString('utf8'),
+        Buffer.from(encodedPayload, 'base64url').toString('utf8'),
       );
     } catch {
-      throw new BadRequestException(
-        'Jeton d’accès invalide',
-      );
+      throw new BadRequestException('Jeton d’accès invalide');
     }
 
     if (
@@ -966,9 +941,7 @@ export class PopulationService {
       typeof payload.exp !== 'number' ||
       payload.exp <= Date.now()
     ) {
-      throw new BadRequestException(
-        'Jeton d’accès invalide ou expiré',
-      );
+      throw new BadRequestException('Jeton d’accès invalide ou expiré');
     }
 
     return payload;
@@ -1050,9 +1023,7 @@ export class PopulationService {
     expectedProgramId: string,
   ): PopulationLocationSelectionPayload {
     const invalidToken = () =>
-      new BadRequestException(
-        'Sélection de localisation invalide ou expirée',
-      );
+      new BadRequestException('Sélection de localisation invalide ou expirée');
     const parts = token.split('.');
     if (parts.length !== 4 || parts[0] !== POPULATION_LOCATION_TOKEN_VERSION) {
       throw invalidToken();
@@ -1128,19 +1099,22 @@ export class PopulationService {
     const [, encodedIv, encodedCiphertext, encodedAuthenticationTag] = parts;
     const iv = Buffer.from(encodedIv, 'base64url');
     const ciphertext = Buffer.from(encodedCiphertext, 'base64url');
-    const authenticationTag = Buffer.from(encodedAuthenticationTag, 'base64url');
-    if (iv.length !== 12 || !ciphertext.length || authenticationTag.length !== 16) {
+    const authenticationTag = Buffer.from(
+      encodedAuthenticationTag,
+      'base64url',
+    );
+    if (
+      iv.length !== 12 ||
+      !ciphertext.length ||
+      authenticationTag.length !== 16
+    ) {
       throw invalidToken();
     }
 
     const key = this.getPopulationLocationTokenKey();
     let payload: Partial<PopulationLocationResolutionPayload>;
     try {
-      const decipher = createDecipheriv(
-        'aes-256-gcm',
-        key,
-        iv,
-      );
+      const decipher = createDecipheriv('aes-256-gcm', key, iv);
       decipher.setAAD(POPULATION_LOCATION_TOKEN_AAD);
       decipher.setAuthTag(authenticationTag);
       const plaintext = Buffer.concat([
@@ -1199,22 +1173,11 @@ export class PopulationService {
   }
 
   private hashVerificationCode(code: string) {
-    return createHmac(
-      'sha256',
-      this.getOtpSecret(),
-    )
-      .update(code)
-      .digest('hex');
+    return createHmac('sha256', this.getOtpSecret()).update(code).digest('hex');
   }
 
-  private verificationCodeMatches(
-    code: string,
-    codeHash: string,
-  ) {
-    const submittedHash = Buffer.from(
-      this.hashVerificationCode(code),
-      'hex',
-    );
+  private verificationCodeMatches(code: string, codeHash: string) {
+    const submittedHash = Buffer.from(this.hashVerificationCode(code), 'hex');
 
     const storedHash = Buffer.from(codeHash, 'hex');
 
@@ -1322,44 +1285,37 @@ export class PopulationService {
 
     const verificationCode = this.generateVerificationCode();
 
-    const verificationExpiresAt = new Date(
-      Date.now() + 10 * 60 * 1000,
-    );
+    const verificationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    const result = await this.prisma.$transaction(
-      async (tx) => {
-        const subscriber =
-          await tx.populationSubscriber.create({
-            data: {
-              programId: program.id,
-              phone,
-              email,
-              preferredLanguage: dto.preferredLanguage,
-              status:
-                PopulationSubscriberStatus.PENDING_VERIFICATION,
-            },
-            select: {
-              id: true,
-              status: true,
-              preferredLanguage: true,
-              createdAt: true,
-            },
-          });
+    const result = await this.prisma.$transaction(async (tx) => {
+      const subscriber = await tx.populationSubscriber.create({
+        data: {
+          programId: program.id,
+          phone,
+          email,
+          preferredLanguage: dto.preferredLanguage,
+          status: PopulationSubscriberStatus.PENDING_VERIFICATION,
+        },
+        select: {
+          id: true,
+          status: true,
+          preferredLanguage: true,
+          createdAt: true,
+        },
+      });
 
-        await tx.populationVerification.create({
-          data: {
-            subscriberId: subscriber.id,
-            channel: verificationChannel,
-            codeHash:
-              this.hashVerificationCode(verificationCode),
-            expiresAt: verificationExpiresAt,
-            maxAttempts: 5,
-          },
-        });
+      await tx.populationVerification.create({
+        data: {
+          subscriberId: subscriber.id,
+          channel: verificationChannel,
+          codeHash: this.hashVerificationCode(verificationCode),
+          expiresAt: verificationExpiresAt,
+          maxAttempts: 5,
+        },
+      });
 
-        return subscriber;
-      },
-    );
+      return subscriber;
+    });
 
     const deliveryStatus = await this.sendSubscriberOtp({
       channel: verificationChannel,
@@ -1398,25 +1354,24 @@ export class PopulationService {
     dto: ResendPopulationVerificationDto,
   ) {
     this.readiness.assertVerificationChannelReady(dto.channel);
-    const program =
-      await this.prisma.populationProgram.findUnique({
-        where: {
-          publicSlug,
-        },
-        select: {
-          id: true,
-          status: true,
-          smsEnabled: true,
-          emailEnabled: true,
+    const program = await this.prisma.populationProgram.findUnique({
+      where: {
+        publicSlug,
+      },
+      select: {
+        id: true,
+        status: true,
+        smsEnabled: true,
+        emailEnabled: true,
 
-          rueFacilityProfile: {
-            select: {
-              assessmentStatus: true,
-              populationEnabled: true,
-            },
+        rueFacilityProfile: {
+          select: {
+            assessmentStatus: true,
+            populationEnabled: true,
           },
         },
-      });
+      },
+    });
 
     if (
       !program ||
@@ -1430,31 +1385,25 @@ export class PopulationService {
       );
     }
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-        },
-        select: {
-          id: true,
-          status: true,
-          phone: true,
-          email: true,
-          preferredLanguage: true,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+      },
+      select: {
+        id: true,
+        status: true,
+        phone: true,
+        email: true,
+        preferredLanguage: true,
+      },
+    });
 
     if (!subscriber) {
-      throw new NotFoundException(
-        'Inscription introuvable',
-      );
+      throw new NotFoundException('Inscription introuvable');
     }
 
-    if (
-      subscriber.status !==
-      PopulationSubscriberStatus.PENDING_VERIFICATION
-    ) {
+    if (subscriber.status !== PopulationSubscriberStatus.PENDING_VERIFICATION) {
       throw new BadRequestException(
         'Cette inscription n’est pas en attente de vérification',
       );
@@ -1496,18 +1445,14 @@ export class PopulationService {
 
     if (
       latestVerification &&
-      now.getTime() -
-        latestVerification.createdAt.getTime() <
-        60 * 1000
+      now.getTime() - latestVerification.createdAt.getTime() < 60 * 1000
     ) {
       throw new BadRequestException(
         'Veuillez attendre avant de demander un nouveau code',
       );
     }
 
-    const oneHourAgo = new Date(
-      now.getTime() - 60 * 60 * 1000,
-    );
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
     const recentVerificationCount =
       await this.prisma.populationVerification.count({
@@ -1526,19 +1471,15 @@ export class PopulationService {
       );
     }
 
-    const verificationCode =
-      this.generateVerificationCode();
+    const verificationCode = this.generateVerificationCode();
 
-    const verificationExpiresAt = new Date(
-      now.getTime() + 10 * 60 * 1000,
-    );
+    const verificationExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
 
     await this.prisma.populationVerification.create({
       data: {
         subscriberId,
         channel: dto.channel,
-        codeHash:
-          this.hashVerificationCode(verificationCode),
+        codeHash: this.hashVerificationCode(verificationCode),
         expiresAt: verificationExpiresAt,
         maxAttempts: 5,
       },
@@ -1598,22 +1539,21 @@ export class PopulationService {
       return genericResponse;
     }
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-          status: PopulationSubscriberStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-          phone: true,
-          email: true,
-          smsEnabled: true,
-          emailEnabled: true,
-          preferredLanguage: true,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+      },
+      select: {
+        id: true,
+        phone: true,
+        email: true,
+        smsEnabled: true,
+        emailEnabled: true,
+        preferredLanguage: true,
+      },
+    });
 
     const destination =
       dto.channel === PopulationVerificationChannel.SMS
@@ -1712,10 +1652,10 @@ export class PopulationService {
     });
     const operational = Boolean(
       program &&
-        program.status === PopulationProgramStatus.ACTIVE &&
-        program.rueFacilityProfile.assessmentStatus ===
-          RueAssessmentStatus.CONFIRMED_SUBJECT &&
-        program.rueFacilityProfile.populationEnabled,
+      program.status === PopulationProgramStatus.ACTIVE &&
+      program.rueFacilityProfile.assessmentStatus ===
+        RueAssessmentStatus.CONFIRMED_SUBJECT &&
+      program.rueFacilityProfile.populationEnabled,
     );
     const destination =
       dto.channel === PopulationVerificationChannel.EMAIL
@@ -1902,19 +1842,18 @@ export class PopulationService {
       throw invalidAccess();
     }
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-          status: PopulationSubscriberStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-          smsEnabled: true,
-          emailEnabled: true,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+      },
+      select: {
+        id: true,
+        smsEnabled: true,
+        emailEnabled: true,
+      },
+    });
 
     const channelEnabled =
       dto.channel === PopulationVerificationChannel.SMS
@@ -1925,15 +1864,14 @@ export class PopulationService {
       throw invalidAccess();
     }
 
-    const verification =
-      await this.prisma.populationVerification.findFirst({
-        where: {
-          subscriberId: subscriber.id,
-          channel: dto.channel,
-          verifiedAt: null,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+    const verification = await this.prisma.populationVerification.findFirst({
+      where: {
+        subscriberId: subscriber.id,
+        channel: dto.channel,
+        verifiedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
     if (
       !verification ||
@@ -1951,15 +1889,14 @@ export class PopulationService {
       throw invalidAccess();
     }
 
-    const consumed =
-      await this.prisma.populationVerification.updateMany({
-        where: {
-          id: verification.id,
-          verifiedAt: null,
-          attemptCount: { lt: verification.maxAttempts },
-        },
-        data: { verifiedAt: new Date() },
-      });
+    const consumed = await this.prisma.populationVerification.updateMany({
+      where: {
+        id: verification.id,
+        verifiedAt: null,
+        attemptCount: { lt: verification.maxAttempts },
+      },
+      data: { verifiedAt: new Date() },
+    });
 
     if (consumed.count !== 1) {
       throw invalidAccess();
@@ -1967,10 +1904,7 @@ export class PopulationService {
 
     return {
       verified: true,
-      accessToken: this.createSubscriberAccessToken(
-        subscriber.id,
-        program.id,
-      ),
+      accessToken: this.createSubscriberAccessToken(subscriber.id, program.id),
       accessTokenExpiresInSeconds: 30 * 60,
     };
   }
@@ -1986,24 +1920,23 @@ export class PopulationService {
     // Must run before a valid OTP can irreversibly activate the subscriber.
     this.readiness.assertAccessReady();
     this.readiness.assertOtpReady();
-    const program =
-      await this.prisma.populationProgram.findUnique({
-        where: {
-          publicSlug,
-        },
-        select: {
-          id: true,
-          status: true,
-          consentVersion: true,
+    const program = await this.prisma.populationProgram.findUnique({
+      where: {
+        publicSlug,
+      },
+      select: {
+        id: true,
+        status: true,
+        consentVersion: true,
 
-          rueFacilityProfile: {
-            select: {
-              assessmentStatus: true,
-              populationEnabled: true,
-            },
+        rueFacilityProfile: {
+          select: {
+            assessmentStatus: true,
+            populationEnabled: true,
           },
         },
-      });
+      },
+    });
 
     if (
       !program ||
@@ -2017,23 +1950,19 @@ export class PopulationService {
       );
     }
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+      },
+    });
 
     if (!subscriber) {
-      throw new NotFoundException(
-        'Inscription introuvable',
-      );
+      throw new NotFoundException('Inscription introuvable');
     }
 
     const isInitialVerification =
-      subscriber.status ===
-      PopulationSubscriberStatus.PENDING_VERIFICATION;
+      subscriber.status === PopulationSubscriberStatus.PENDING_VERIFICATION;
 
     const isAdditionalChannelVerification =
       subscriber.status === PopulationSubscriberStatus.ACTIVE &&
@@ -2057,43 +1986,30 @@ export class PopulationService {
       );
     }
 
-    if (
-      !isInitialVerification &&
-      !isAdditionalChannelVerification
-    ) {
-      throw new BadRequestException(
-        'Ce canal ne peut pas être vérifié',
-      );
+    if (!isInitialVerification && !isAdditionalChannelVerification) {
+      throw new BadRequestException('Ce canal ne peut pas être vérifié');
     }
 
-    const verification =
-      await this.prisma.populationVerification.findFirst({
-        where: {
-          subscriberId,
-          channel: dto.channel,
-          verifiedAt: null,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+    const verification = await this.prisma.populationVerification.findFirst({
+      where: {
+        subscriberId,
+        channel: dto.channel,
+        verifiedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     if (!verification) {
-      throw new BadRequestException(
-        'Aucune vérification active trouvée',
-      );
+      throw new BadRequestException('Aucune vérification active trouvée');
     }
 
     if (verification.expiresAt.getTime() <= Date.now()) {
-      throw new BadRequestException(
-        'Le code de vérification est expiré',
-      );
+      throw new BadRequestException('Le code de vérification est expiré');
     }
 
-    if (
-      verification.attemptCount >=
-      verification.maxAttempts
-    ) {
+    if (verification.attemptCount >= verification.maxAttempts) {
       throw new BadRequestException(
         'Le nombre maximal de tentatives est atteint',
       );
@@ -2116,9 +2032,7 @@ export class PopulationService {
         },
       });
 
-      throw new BadRequestException(
-        'Code de vérification invalide',
-      );
+      throw new BadRequestException('Code de vérification invalide');
     }
 
     if (!program.consentVersion) {
@@ -2147,18 +2061,15 @@ export class PopulationService {
         data: {
           status: PopulationSubscriberStatus.ACTIVE,
 
-          verifiedAt:
-            subscriber.verifiedAt ?? verifiedAt,
+          verifiedAt: subscriber.verifiedAt ?? verifiedAt,
 
           smsEnabled:
             subscriber.smsEnabled ||
-            dto.channel ===
-              PopulationVerificationChannel.SMS,
+            dto.channel === PopulationVerificationChannel.SMS,
 
           emailEnabled:
             subscriber.emailEnabled ||
-            dto.channel ===
-              PopulationVerificationChannel.EMAIL,
+            dto.channel === PopulationVerificationChannel.EMAIL,
         },
       });
 
@@ -2173,13 +2084,11 @@ export class PopulationService {
 
           smsEnabled:
             subscriber.smsEnabled ||
-            dto.channel ===
-              PopulationVerificationChannel.SMS,
+            dto.channel === PopulationVerificationChannel.SMS,
 
           emailEnabled:
             subscriber.emailEnabled ||
-            dto.channel ===
-              PopulationVerificationChannel.EMAIL,
+            dto.channel === PopulationVerificationChannel.EMAIL,
 
           source: 'PUBLIC_PORTAL',
           occurredAt: verifiedAt,
@@ -2195,13 +2104,11 @@ export class PopulationService {
 
           smsEnabled:
             subscriber.smsEnabled ||
-            dto.channel ===
-              PopulationVerificationChannel.SMS,
+            dto.channel === PopulationVerificationChannel.SMS,
 
           emailEnabled:
             subscriber.emailEnabled ||
-            dto.channel ===
-              PopulationVerificationChannel.EMAIL,
+            dto.channel === PopulationVerificationChannel.EMAIL,
 
           source: 'PUBLIC_PORTAL',
           occurredAt: verifiedAt,
@@ -2212,15 +2119,12 @@ export class PopulationService {
     return {
       verified: true,
       status: PopulationSubscriberStatus.ACTIVE,
-      accessToken: this.createSubscriberAccessToken(
-        subscriber.id,
-        program.id,
-      ),
+      accessToken: this.createSubscriberAccessToken(subscriber.id, program.id),
       accessTokenExpiresInSeconds: 30 * 60,
     };
   }
 
-      /**
+  /**
    * Retourne les scénarios RUE disponibles pour Sentinelle Population.
    *
    * Cette lecture est disponible dès qu'un site est confirmé assujetti
@@ -2343,9 +2247,7 @@ export class PopulationService {
     buildingId: string,
     scenarioId: string,
   ) {
-    const profile = await this.assertPopulationOperational(
-      buildingId,
-    );
+    const profile = await this.assertPopulationOperational(buildingId);
 
     const building = await this.prisma.building.findUnique({
       where: {
@@ -2363,9 +2265,7 @@ export class PopulationService {
     });
 
     if (!building) {
-      throw new NotFoundException(
-        'Bâtiment introuvable',
-      );
+      throw new NotFoundException('Bâtiment introuvable');
     }
 
     const program = profile.populationProgram;
@@ -2376,68 +2276,64 @@ export class PopulationService {
       );
     }
 
-    const scenario =
-      await this.prisma.rueEmergencyScenario.findFirst({
-        where: {
-          id: scenarioId,
-          facilityProfileId: profile.id,
-          isActive: true,
-          validatedAt: {
-            not: null,
-          },
+    const scenario = await this.prisma.rueEmergencyScenario.findFirst({
+      where: {
+        id: scenarioId,
+        facilityProfileId: profile.id,
+        isActive: true,
+        validatedAt: {
+          not: null,
         },
-        select: {
-          id: true,
-          nameFR: true,
-          nameEN: true,
+      },
+      select: {
+        id: true,
+        nameFR: true,
+        nameEN: true,
 
-          impactZones: {
-            where: {
-              isActive: true,
-              validatedAt: {
-                not: null,
-              },
-            },
-            orderBy: {
-              code: 'asc',
-            },
-            select: {
-              id: true,
-              code: true,
-              nameFR: true,
-              nameEN: true,
-              geometry: true,
-              maxDistanceKm: true,
-              protectiveAction: true,
-              instructionFR: true,
-              instructionEN: true,
+        impactZones: {
+          where: {
+            isActive: true,
+            validatedAt: {
+              not: null,
             },
           },
+          orderBy: {
+            code: 'asc',
+          },
+          select: {
+            id: true,
+            code: true,
+            nameFR: true,
+            nameEN: true,
+            geometry: true,
+            maxDistanceKm: true,
+            protectiveAction: true,
+            instructionFR: true,
+            instructionEN: true,
+          },
         },
-      });
+      },
+    });
 
     if (!scenario) {
-      throw new NotFoundException(
-        'Scénario RUE actif et validé introuvable',
-      );
+      throw new NotFoundException('Scénario RUE actif et validé introuvable');
     }
 
-    const subscribers =
-      await this.prisma.populationSubscriber.findMany({
-        where: {
-          programId: program.id,
-          status: PopulationSubscriberStatus.ACTIVE,
-        },
-        select: {
-          id: true,
-          latitude: true,
-          longitude: true,
-          phone: true,
-          email: true,
-          smsEnabled: true,
-          emailEnabled: true,
-        },
-      });
+    const subscribers = await this.prisma.populationSubscriber.findMany({
+      where: {
+        programId: program.id,
+        status: PopulationSubscriberStatus.ACTIVE,
+      },
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+        phone: true,
+        email: true,
+        smsEnabled: true,
+        emailEnabled: true,
+      },
+    });
 
     const geolocatedSubscribers = subscribers.filter(
       (
@@ -2521,15 +2417,12 @@ export class PopulationService {
       },
       population: {
         activeSubscriberCount: subscribers.length,
-        geolocatedSubscriberCount:
-          geolocatedSubscribers.length,
+        geolocatedSubscriberCount: geolocatedSubscribers.length,
         unlocatedSubscriberCount:
-          subscribers.length -
-          geolocatedSubscribers.length,
+          subscribers.length - geolocatedSubscribers.length,
         uniqueTargetCount: uniqueTargetIds.size,
         uniqueSmsTargetCount: uniqueSmsTargetIds.size,
-        uniqueEmailTargetCount:
-          uniqueEmailTargetIds.size,
+        uniqueEmailTargetCount: uniqueEmailTargetIds.size,
       },
       zones,
     };
@@ -2542,15 +2435,11 @@ export class PopulationService {
    * Aucune identité, coordonnée ou destination individuelle
    * d'abonné n'est retournée à l'opérateur.
    */
-  async getScenarioPopulationPreview(
-    buildingId: string,
-    scenarioId: string,
-  ) {
-    const targeting =
-      await this.calculateScenarioPopulationTargeting(
-        buildingId,
-        scenarioId,
-      );
+  async getScenarioPopulationPreview(buildingId: string, scenarioId: string) {
+    const targeting = await this.calculateScenarioPopulationTargeting(
+      buildingId,
+      scenarioId,
+    );
 
     return {
       building: {
@@ -2608,11 +2497,10 @@ export class PopulationService {
       );
     }
 
-    const targeting =
-      await this.calculateScenarioPopulationTargeting(
-        buildingId,
-        dto.scenarioId,
-      );
+    const targeting = await this.calculateScenarioPopulationTargeting(
+      buildingId,
+      dto.scenarioId,
+    );
 
     const titleFR = dto.titleFR.trim();
     const messageFR = dto.messageFR.trim();
@@ -2626,14 +2514,12 @@ export class PopulationService {
     let incidentEventId: string | null = null;
 
     if (dto.incidentEventId?.trim()) {
-      const incidentContext =
-        await this.getPopulationAlertContextForIncident(
-          buildingId,
-          dto.incidentEventId.trim(),
-        );
+      const incidentContext = await this.getPopulationAlertContextForIncident(
+        buildingId,
+        dto.incidentEventId.trim(),
+      );
 
-      incidentEventId =
-        incidentContext.incident.id;
+      incidentEventId = incidentContext.incident.id;
     }
 
     const createdAt = new Date();
@@ -2686,10 +2572,8 @@ export class PopulationService {
           messageFR,
           messageEN: dto.messageEN?.trim() || null,
 
-          instructionFR:
-            dto.instructionFR?.trim() || null,
-          instructionEN:
-            dto.instructionEN?.trim() || null,
+          instructionFR: dto.instructionFR?.trim() || null,
+          instructionEN: dto.instructionEN?.trim() || null,
 
           createdByType: actor.type as any,
           createdById: actor.id,
@@ -2713,20 +2597,15 @@ export class PopulationService {
                 ? Prisma.JsonNull
                 : (zone.geometry as Prisma.InputJsonValue),
 
-            maxDistanceKmSnapshot:
-              zone.maxDistanceKm,
+            maxDistanceKmSnapshot: zone.maxDistanceKm,
 
-            protectiveActionSnapshot:
-              zone.protectiveAction,
+            protectiveActionSnapshot: zone.protectiveAction,
 
-            instructionFRSnapshot:
-              zone.instructionFR,
+            instructionFRSnapshot: zone.instructionFR,
 
-            instructionENSnapshot:
-              zone.instructionEN,
+            instructionENSnapshot: zone.instructionEN,
 
-            targetedSubscriberCount:
-              zone.targetCount,
+            targetedSubscriberCount: zone.targetCount,
           })),
         });
       }
@@ -2754,9 +2633,7 @@ export class PopulationService {
     buildingId: string,
     alertId: string,
   ) {
-    const profile = await this.assertPopulationOperational(
-      buildingId,
-    );
+    const profile = await this.assertPopulationOperational(buildingId);
 
     const program = profile.populationProgram;
 
@@ -2781,9 +2658,7 @@ export class PopulationService {
     });
 
     if (!alert) {
-      throw new NotFoundException(
-        'Alerte Sentinelle Population introuvable',
-      );
+      throw new NotFoundException('Alerte Sentinelle Population introuvable');
     }
 
     return {
@@ -2809,20 +2684,17 @@ export class PopulationService {
     buildingId: string,
     alertId: string,
   ) {
-    const profile =
-      await this.prisma.rueFacilityProfile.findUnique({
-        where: {
-          buildingId,
-        },
-        include: {
-          populationProgram: true,
-        },
-      });
+    const profile = await this.prisma.rueFacilityProfile.findUnique({
+      where: {
+        buildingId,
+      },
+      include: {
+        populationProgram: true,
+      },
+    });
 
     if (!profile) {
-      throw new NotFoundException(
-        'Profil RUE introuvable pour ce bâtiment',
-      );
+      throw new NotFoundException('Profil RUE introuvable pour ce bâtiment');
     }
 
     const program = profile.populationProgram;
@@ -2833,25 +2705,22 @@ export class PopulationService {
       );
     }
 
-    const alert =
-      await this.prisma.populationAlert.findFirst({
-        where: {
-          id: alertId,
-          programId: program.id,
-        },
-        include: {
-          zones: {
-            orderBy: {
-              zoneCodeSnapshot: 'asc',
-            },
+    const alert = await this.prisma.populationAlert.findFirst({
+      where: {
+        id: alertId,
+        programId: program.id,
+      },
+      include: {
+        zones: {
+          orderBy: {
+            zoneCodeSnapshot: 'asc',
           },
         },
-      });
+      },
+    });
 
     if (!alert) {
-      throw new NotFoundException(
-        'Alerte Sentinelle Population introuvable',
-      );
+      throw new NotFoundException('Alerte Sentinelle Population introuvable');
     }
 
     return {
@@ -2867,15 +2736,11 @@ export class PopulationService {
    * Les livraisons individuelles ne sont volontairement pas
    * chargées par cette vue.
    */
-  async getAlert(
-    buildingId: string,
-    alertId: string,
-  ) {
-    const { alert } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+  async getAlert(buildingId: string, alertId: string) {
+    const { alert } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     return alert;
   }
@@ -2892,43 +2757,41 @@ export class PopulationService {
    * La lecture est historique : elle demeure disponible même si
    * le programme Population est ensuite suspendu ou désactivé.
    */
-  async getAlertDeliveryStatus(
-    buildingId: string,
-    alertId: string,
-  ) {
-    const { alert } =
-      await this.getPopulationAlertHistoricalForBuilding(
-        buildingId,
-        alertId,
-      );
+  async getAlertDeliveryStatus(buildingId: string, alertId: string) {
+    const { alert } = await this.getPopulationAlertHistoricalForBuilding(
+      buildingId,
+      alertId,
+    );
 
-    const deliveries =
-      await this.prisma.populationAlertDelivery.findMany({
-        where: {
-          alertId: alert.id,
+    const deliveries = await this.prisma.populationAlertDelivery.findMany({
+      where: {
+        alertId: alert.id,
+      },
+      select: {
+        id: true,
+        channel: true,
+        status: true,
+        language: true,
+        queuedAt: true,
+        sentAt: true,
+        deliveredAt: true,
+        failedAt: true,
+        cancelledAt: true,
+        provider: true,
+        suppressionReason: true,
+        nextAttemptAt: true,
+        outcomeUnknownAt: true,
+        attemptCount: true,
+      },
+      orderBy: [
+        {
+          queuedAt: 'asc',
         },
-        select: {
-          id: true,
-          channel: true,
-          status: true,
-          language: true,
-          queuedAt: true,
-          sentAt: true,
-          deliveredAt: true,
-          failedAt: true,
-          cancelledAt: true,
-          provider: true,
-          suppressionReason: true,
+        {
+          id: 'asc',
         },
-        orderBy: [
-          {
-            queuedAt: 'asc',
-          },
-          {
-            id: 'asc',
-          },
-        ],
-      });
+      ],
+    });
 
     const counts = {
       total: deliveries.length,
@@ -2939,6 +2802,8 @@ export class PopulationService {
       failed: 0,
       cancelled: 0,
       suppressed: 0,
+      retryPending: 0,
+      reconciliationRequired: 0,
       sms: 0,
       email: 0,
     };
@@ -2981,6 +2846,19 @@ export class PopulationService {
           counts.suppressed += 1;
           break;
       }
+
+      if (
+        delivery.status === PopulationDeliveryStatus.QUEUED &&
+        delivery.nextAttemptAt
+      ) {
+        counts.retryPending += 1;
+      }
+      if (
+        delivery.status === PopulationDeliveryStatus.SENDING &&
+        delivery.outcomeUnknownAt
+      ) {
+        counts.reconciliationRequired += 1;
+      }
     }
 
     return {
@@ -3011,57 +2889,51 @@ export class PopulationService {
    * Les destinations individuelles et les identités des abonnés
    * ne sont jamais exposées dans cette vue.
    */
-  async getIncidentAlertHistory(
-    buildingId: string,
-    incidentEventId: string,
-  ) {
-        const {
-      program,
-    } =
+  async getIncidentAlertHistory(buildingId: string, incidentEventId: string) {
+    const { program } =
       await this.getPopulationAlertHistoricalContextForIncident(
         buildingId,
         incidentEventId,
       );
 
-    const alerts =
-      await this.prisma.populationAlert.findMany({
-        where: {
-          programId: program.id,
-          incidentEventId,
-        },
-        include: {
-          zones: {
-            orderBy: {
-              zoneCodeSnapshot: 'asc',
-            },
-          },
-          deliveries: {
-            select: {
-              id: true,
-              channel: true,
-              status: true,
-              language: true,
-              queuedAt: true,
-              sentAt: true,
-              deliveredAt: true,
-              failedAt: true,
-              cancelledAt: true,
-              provider: true,
-            },
-            orderBy: {
-              queuedAt: 'asc',
-            },
+    const alerts = await this.prisma.populationAlert.findMany({
+      where: {
+        programId: program.id,
+        incidentEventId,
+      },
+      include: {
+        zones: {
+          orderBy: {
+            zoneCodeSnapshot: 'asc',
           },
         },
-        orderBy: [
-          {
-            createdAt: 'asc',
+        deliveries: {
+          select: {
+            id: true,
+            channel: true,
+            status: true,
+            language: true,
+            queuedAt: true,
+            sentAt: true,
+            deliveredAt: true,
+            failedAt: true,
+            cancelledAt: true,
+            provider: true,
           },
-          {
-            id: 'asc',
+          orderBy: {
+            queuedAt: 'asc',
           },
-        ],
-      });
+        },
+      },
+      orderBy: [
+        {
+          createdAt: 'asc',
+        },
+        {
+          id: 'asc',
+        },
+      ],
+    });
 
     return alerts;
   }
@@ -3088,20 +2960,17 @@ export class PopulationService {
     buildingId: string,
     incidentEventId: string,
   ) {
-    const profile =
-      await this.prisma.rueFacilityProfile.findUnique({
-        where: {
-          buildingId,
-        },
-        include: {
-          populationProgram: true,
-        },
-      });
+    const profile = await this.prisma.rueFacilityProfile.findUnique({
+      where: {
+        buildingId,
+      },
+      include: {
+        populationProgram: true,
+      },
+    });
 
     if (!profile) {
-      throw new NotFoundException(
-        'Profil RUE introuvable pour ce bâtiment',
-      );
+      throw new NotFoundException('Profil RUE introuvable pour ce bâtiment');
     }
 
     const program = profile.populationProgram;
@@ -3112,41 +2981,35 @@ export class PopulationService {
       );
     }
 
-    const building =
-      await this.prisma.building.findUnique({
-        where: {
-          id: buildingId,
-        },
-        select: {
-          id: true,
-          organizationId: true,
-        },
-      });
+    const building = await this.prisma.building.findUnique({
+      where: {
+        id: buildingId,
+      },
+      select: {
+        id: true,
+        organizationId: true,
+      },
+    });
 
     if (!building) {
-      throw new NotFoundException(
-        'Bâtiment introuvable',
-      );
+      throw new NotFoundException('Bâtiment introuvable');
     }
 
-    const incident =
-      await this.prisma.incidentEvent.findFirst({
-        where: {
-          id: incidentEventId,
-          buildingId: building.id,
-          organizationId: building.organizationId,
-        },
-        select: {
-          id: true,
-          buildingId: true,
-          organizationId: true,
-        },
-      });
+    const incident = await this.prisma.incidentEvent.findFirst({
+      where: {
+        id: incidentEventId,
+        buildingId: building.id,
+        organizationId: building.organizationId,
+      },
+      select: {
+        id: true,
+        buildingId: true,
+        organizationId: true,
+      },
+    });
 
     if (!incident) {
-      throw new NotFoundException(
-        'Incident introuvable pour ce bâtiment',
-      );
+      throw new NotFoundException('Incident introuvable pour ce bâtiment');
     }
 
     return {
@@ -3160,10 +3023,7 @@ export class PopulationService {
     buildingId: string,
     incidentEventId: string,
   ) {
-    const profile =
-      await this.assertPopulationOperational(
-        buildingId,
-      );
+    const profile = await this.assertPopulationOperational(buildingId);
 
     const program = profile.populationProgram;
 
@@ -3173,42 +3033,35 @@ export class PopulationService {
       );
     }
 
-    const building =
-      await this.prisma.building.findUnique({
-        where: {
-          id: buildingId,
-        },
-        select: {
-          id: true,
-          organizationId: true,
-        },
-      });
+    const building = await this.prisma.building.findUnique({
+      where: {
+        id: buildingId,
+      },
+      select: {
+        id: true,
+        organizationId: true,
+      },
+    });
 
     if (!building) {
-      throw new NotFoundException(
-        'Bâtiment introuvable',
-      );
+      throw new NotFoundException('Bâtiment introuvable');
     }
 
-    const incident =
-      await this.prisma.incidentEvent.findFirst({
-        where: {
-          id: incidentEventId,
-          buildingId,
-          organizationId:
-            building.organizationId,
-        },
-        select: {
-          id: true,
-          buildingId: true,
-          organizationId: true,
-        },
-      });
+    const incident = await this.prisma.incidentEvent.findFirst({
+      where: {
+        id: incidentEventId,
+        buildingId,
+        organizationId: building.organizationId,
+      },
+      select: {
+        id: true,
+        buildingId: true,
+        organizationId: true,
+      },
+    });
 
     if (!incident) {
-      throw new NotFoundException(
-        'Incident introuvable pour ce bâtiment',
-      );
+      throw new NotFoundException('Incident introuvable pour ce bâtiment');
     }
 
     return {
@@ -3252,45 +3105,37 @@ export class PopulationService {
       );
     }
 
-        const titleFR = content.titleFR?.trim();
+    const titleFR = content.titleFR?.trim();
     const messageFR = content.messageFR?.trim();
 
     if (!titleFR) {
-      throw new BadRequestException(
-        'Le titre français est obligatoire',
-      );
+      throw new BadRequestException('Le titre français est obligatoire');
     }
 
     if (!messageFR) {
-      throw new BadRequestException(
-        'Le message français est obligatoire',
-      );
+      throw new BadRequestException('Le message français est obligatoire');
     }
 
-    const {
-      program,
-      incident,
-    } =
+    const { program, incident } =
       await this.getPopulationAlertContextForIncident(
         buildingId,
         incidentEventId,
       );
 
-    const sourceAlert =
-      await this.prisma.populationAlert.findFirst({
-        where: {
-          id: sourceAlertId,
-          programId: program.id,
-          incidentEventId,
-        },
-        include: {
-          zones: {
-            orderBy: {
-              zoneCodeSnapshot: 'asc',
-            },
+    const sourceAlert = await this.prisma.populationAlert.findFirst({
+      where: {
+        id: sourceAlertId,
+        programId: program.id,
+        incidentEventId,
+      },
+      include: {
+        zones: {
+          orderBy: {
+            zoneCodeSnapshot: 'asc',
           },
         },
-      });
+      },
+    });
 
     if (!sourceAlert) {
       throw new NotFoundException(
@@ -3299,10 +3144,8 @@ export class PopulationService {
     }
 
     if (
-      sourceAlert.status !==
-        PopulationAlertStatus.ACTIVE &&
-      sourceAlert.status !==
-        PopulationAlertStatus.ENDED
+      sourceAlert.status !== PopulationAlertStatus.ACTIVE &&
+      sourceAlert.status !== PopulationAlertStatus.ENDED
     ) {
       throw new BadRequestException(
         'Le suivi doit être créé à partir d’une alerte déjà diffusée',
@@ -3323,50 +3166,42 @@ export class PopulationService {
      * L'index unique partiel PostgreSQL protège en complément
      * contre les créations ALL_CLEAR concurrentes.
      */
-    const existingAllClear =
-      await this.prisma.populationAlert.findFirst({
-        where: {
-          programId: program.id,
-          incidentEventId,
-          type: PopulationAlertType.ALL_CLEAR,
-          status: {
-            not: PopulationAlertStatus.CANCELLED,
-          },
+    const existingAllClear = await this.prisma.populationAlert.findFirst({
+      where: {
+        programId: program.id,
+        incidentEventId,
+        type: PopulationAlertType.ALL_CLEAR,
+        status: {
+          not: PopulationAlertStatus.CANCELLED,
         },
-        select: {
-          id: true,
-          status: true,
-        },
-      });
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
 
-    if (
-      type === PopulationAlertType.ALL_CLEAR &&
-      existingAllClear
-    ) {
+    if (type === PopulationAlertType.ALL_CLEAR && existingAllClear) {
       throw new BadRequestException(
         'Un ALL_CLEAR existe déjà pour cet incident',
       );
     }
 
-    if (
-  type === PopulationAlertType.UPDATE &&
-  existingAllClear
-) {
-  throw new BadRequestException(
-    'Une mise à jour ne peut plus être créée dès qu’un ALL_CLEAR existe pour cet incident',
-  );
-}
+    if (type === PopulationAlertType.UPDATE && existingAllClear) {
+      throw new BadRequestException(
+        'Une mise à jour ne peut plus être créée dès qu’un ALL_CLEAR existe pour cet incident',
+      );
+    }
 
     /*
      * Le ciblage est recalculé au moment du nouveau message.
      * Le nouvel UPDATE / ALL_CLEAR possède donc son propre
      * snapshot historique de population et de zones.
      */
-    const targeting =
-      await this.calculateScenarioPopulationTargeting(
-        buildingId,
-        sourceAlert.emergencyScenarioId,
-      );
+    const targeting = await this.calculateScenarioPopulationTargeting(
+      buildingId,
+      sourceAlert.emergencyScenarioId,
+    );
 
     const createdAt = new Date();
 
@@ -3407,38 +3242,31 @@ export class PopulationService {
       let alert;
 
       try {
-        alert =
-          await tx.populationAlert.create({
-            data: {
-              programId: program.id,
-              incidentEventId,
-              emergencyScenarioId:
-                targeting.scenario.id,
+        alert = await tx.populationAlert.create({
+          data: {
+            programId: program.id,
+            incidentEventId,
+            emergencyScenarioId: targeting.scenario.id,
 
-              type,
-              status:
-                PopulationAlertStatus.DRAFT,
+            type,
+            status: PopulationAlertStatus.DRAFT,
 
-              titleFR,
-              titleEN:
-                content.titleEN?.trim() || null,
+            titleFR,
+            titleEN: content.titleEN?.trim() || null,
 
-              messageFR,
-              messageEN:
-                content.messageEN?.trim() || null,
+            messageFR,
+            messageEN: content.messageEN?.trim() || null,
 
-              instructionFR:
-                content.instructionFR?.trim() || null,
+            instructionFR: content.instructionFR?.trim() || null,
 
-              instructionEN:
-                content.instructionEN?.trim() || null,
+            instructionEN: content.instructionEN?.trim() || null,
 
-              createdByType: actor.type as any,
-              createdById: actor.id,
+            createdByType: actor.type as any,
+            createdById: actor.id,
 
-              contextSnapshot,
-            },
-          });
+            contextSnapshot,
+          },
+        });
       } catch (error) {
         /*
          * La vérification applicative effectuée avant la
@@ -3450,8 +3278,7 @@ export class PopulationService {
          */
         if (
           type === PopulationAlertType.ALL_CLEAR &&
-          error instanceof
-            Prisma.PrismaClientKnownRequestError &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2002'
         ) {
           throw new BadRequestException(
@@ -3464,38 +3291,29 @@ export class PopulationService {
 
       if (targeting.zones.length > 0) {
         await tx.populationAlertZone.createMany({
-          data: targeting.zones.map(
-            (zone) => ({
-              alertId: alert.id,
-              impactZoneId: zone.id,
+          data: targeting.zones.map((zone) => ({
+            alertId: alert.id,
+            impactZoneId: zone.id,
 
-              zoneCodeSnapshot: zone.code,
-              zoneNameFRSnapshot:
-                zone.nameFR,
-              zoneNameENSnapshot:
-                zone.nameEN,
+            zoneCodeSnapshot: zone.code,
+            zoneNameFRSnapshot: zone.nameFR,
+            zoneNameENSnapshot: zone.nameEN,
 
-              geometrySnapshot:
-                zone.geometry === null
-                  ? Prisma.JsonNull
-                  : (zone.geometry as Prisma.InputJsonValue),
+            geometrySnapshot:
+              zone.geometry === null
+                ? Prisma.JsonNull
+                : (zone.geometry as Prisma.InputJsonValue),
 
-              maxDistanceKmSnapshot:
-                zone.maxDistanceKm,
+            maxDistanceKmSnapshot: zone.maxDistanceKm,
 
-              protectiveActionSnapshot:
-                zone.protectiveAction,
+            protectiveActionSnapshot: zone.protectiveAction,
 
-              instructionFRSnapshot:
-                zone.instructionFR,
+            instructionFRSnapshot: zone.instructionFR,
 
-              instructionENSnapshot:
-                zone.instructionEN,
+            instructionENSnapshot: zone.instructionEN,
 
-              targetedSubscriberCount:
-                zone.targetCount,
-            }),
-          ),
+            targetedSubscriberCount: zone.targetCount,
+          })),
         });
       }
 
@@ -3530,10 +3348,7 @@ export class PopulationService {
     actor?: { type: string; id: string },
   ) {
     const { alert, program } =
-      await this.getPopulationAlertHistoricalForBuilding(
-        buildingId,
-        alertId,
-      );
+      await this.getPopulationAlertHistoricalForBuilding(buildingId, alertId);
 
     if (alert.status === PopulationAlertStatus.ENDED) {
       return alert;
@@ -3547,19 +3362,20 @@ export class PopulationService {
 
     const endedAt = new Date();
 
-    const ended =
-      await this.prisma.populationAlert.updateMany({
-        where: {
-          id: alert.id,
-          programId: program.id,
-          status: PopulationAlertStatus.ACTIVE,
-        },
-        data: {
-          status: PopulationAlertStatus.ENDED,
-          endedAt,
-          ...(actor ? { endedByType: actor.type as any, endedById: actor.id } : {}),
-        },
-      });
+    const ended = await this.prisma.populationAlert.updateMany({
+      where: {
+        id: alert.id,
+        programId: program.id,
+        status: PopulationAlertStatus.ACTIVE,
+      },
+      data: {
+        status: PopulationAlertStatus.ENDED,
+        endedAt,
+        ...(actor
+          ? { endedByType: actor.type as any, endedById: actor.id }
+          : {}),
+      },
+    });
 
     /*
      * Le compare-and-set peut perdre une course si une autre
@@ -3569,20 +3385,18 @@ export class PopulationService {
      * le programme soit encore opérationnel.
      */
     if (ended.count !== 1) {
-      const current =
-        await this.getPopulationAlertHistoricalForBuilding(
-          buildingId,
-          alertId,
-        );
+      const current = await this.getPopulationAlertHistoricalForBuilding(
+        buildingId,
+        alertId,
+      );
 
       return current.alert;
     }
 
-    const current =
-      await this.getPopulationAlertHistoricalForBuilding(
-        buildingId,
-        alertId,
-      );
+    const current = await this.getPopulationAlertHistoricalForBuilding(
+      buildingId,
+      alertId,
+    );
 
     return current.alert;
   }
@@ -3609,10 +3423,7 @@ export class PopulationService {
     actor?: { type: string; id: string },
   ) {
     const { alert, program } =
-      await this.getPopulationAlertHistoricalForBuilding(
-        buildingId,
-        alertId,
-      );
+      await this.getPopulationAlertHistoricalForBuilding(buildingId, alertId);
 
     if (alert.status === PopulationAlertStatus.CANCELLED) {
       return alert;
@@ -3629,24 +3440,22 @@ export class PopulationService {
 
     const cancelledAt = new Date();
 
-    const cancelled =
-      await this.prisma.populationAlert.updateMany({
-        where: {
-          id: alert.id,
-          programId: program.id,
-          status: {
-            in: [
-              PopulationAlertStatus.DRAFT,
-              PopulationAlertStatus.READY,
-            ],
-          },
+    const cancelled = await this.prisma.populationAlert.updateMany({
+      where: {
+        id: alert.id,
+        programId: program.id,
+        status: {
+          in: [PopulationAlertStatus.DRAFT, PopulationAlertStatus.READY],
         },
-        data: {
-          status: PopulationAlertStatus.CANCELLED,
-          cancelledAt,
-          ...(actor ? { cancelledByType: actor.type as any, cancelledById: actor.id } : {}),
-        },
-      });
+      },
+      data: {
+        status: PopulationAlertStatus.CANCELLED,
+        cancelledAt,
+        ...(actor
+          ? { cancelledByType: actor.type as any, cancelledById: actor.id }
+          : {}),
+      },
+    });
 
     /*
      * Le compare-and-set protège contre deux annulations concurrentes
@@ -3657,20 +3466,18 @@ export class PopulationService {
      * persisté sans exiger que le programme soit encore opérationnel.
      */
     if (cancelled.count !== 1) {
-      const current =
-        await this.getPopulationAlertHistoricalForBuilding(
-          buildingId,
-          alertId,
-        );
+      const current = await this.getPopulationAlertHistoricalForBuilding(
+        buildingId,
+        alertId,
+      );
 
       return current.alert;
     }
 
-    const current =
-      await this.getPopulationAlertHistoricalForBuilding(
-        buildingId,
-        alertId,
-      );
+    const current = await this.getPopulationAlertHistoricalForBuilding(
+      buildingId,
+      alertId,
+    );
 
     return current.alert;
   }
@@ -3686,11 +3493,10 @@ export class PopulationService {
     alertId: string,
     dto: UpdatePopulationAlertDraftDto,
   ) {
-    const { alert } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+    const { alert } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     if (alert.status !== PopulationAlertStatus.DRAFT) {
       throw new BadRequestException(
@@ -3716,10 +3522,7 @@ export class PopulationService {
        * Cela protège aussi bien l'EMERGENCY initial que
        * les UPDATE et le ALL_CLEAR.
        */
-      if (
-        alert.incidentEventId &&
-        dto.type !== alert.type
-      ) {
+      if (alert.incidentEventId && dto.type !== alert.type) {
         throw new BadRequestException(
           'Le type d’une communication rattachée à un incident ne peut pas être modifié',
         );
@@ -3761,13 +3564,11 @@ export class PopulationService {
     }
 
     if (dto.instructionFR !== undefined) {
-      data.instructionFR =
-        dto.instructionFR.trim() || null;
+      data.instructionFR = dto.instructionFR.trim() || null;
     }
 
     if (dto.instructionEN !== undefined) {
-      data.instructionEN =
-        dto.instructionEN.trim() || null;
+      data.instructionEN = dto.instructionEN.trim() || null;
     }
 
     if (Object.keys(data).length === 0) {
@@ -3795,15 +3596,11 @@ export class PopulationService {
    *
    * Les anciens snapshots de zones sont remplacés atomiquement.
    */
-  async refreshAlertDraftTargeting(
-    buildingId: string,
-    alertId: string,
-  ) {
-    const { alert } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+  async refreshAlertDraftTargeting(buildingId: string, alertId: string) {
+    const { alert } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     if (alert.status !== PopulationAlertStatus.DRAFT) {
       throw new BadRequestException(
@@ -3817,11 +3614,10 @@ export class PopulationService {
       );
     }
 
-    const targeting =
-      await this.calculateScenarioPopulationTargeting(
-        buildingId,
-        alert.emergencyScenarioId,
-      );
+    const targeting = await this.calculateScenarioPopulationTargeting(
+      buildingId,
+      alert.emergencyScenarioId,
+    );
 
     const calculatedAt = new Date();
 
@@ -3874,20 +3670,15 @@ export class PopulationService {
                 ? Prisma.JsonNull
                 : (zone.geometry as Prisma.InputJsonValue),
 
-            maxDistanceKmSnapshot:
-              zone.maxDistanceKm,
+            maxDistanceKmSnapshot: zone.maxDistanceKm,
 
-            protectiveActionSnapshot:
-              zone.protectiveAction,
+            protectiveActionSnapshot: zone.protectiveAction,
 
-            instructionFRSnapshot:
-              zone.instructionFR,
+            instructionFRSnapshot: zone.instructionFR,
 
-            instructionENSnapshot:
-              zone.instructionEN,
+            instructionENSnapshot: zone.instructionEN,
 
-            targetedSubscriberCount:
-              zone.targetCount,
+            targetedSubscriberCount: zone.targetCount,
           })),
         });
       }
@@ -3930,11 +3721,10 @@ export class PopulationService {
     alertId: string,
     actor?: { type: string; id: string },
   ) {
-    const { alert } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+    const { alert } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     if (alert.status === PopulationAlertStatus.READY) {
       return alert;
@@ -3947,21 +3737,15 @@ export class PopulationService {
     }
 
     if (!alert.titleFR?.trim()) {
-      throw new BadRequestException(
-        'Le titre français est requis',
-      );
+      throw new BadRequestException('Le titre français est requis');
     }
 
     if (!alert.messageFR?.trim()) {
-      throw new BadRequestException(
-        'Le message français est requis',
-      );
+      throw new BadRequestException('Le message français est requis');
     }
 
     if (!alert.emergencyScenarioId) {
-      throw new BadRequestException(
-        'Un scénario RUE est requis',
-      );
+      throw new BadRequestException('Un scénario RUE est requis');
     }
 
     /*
@@ -3969,10 +3753,7 @@ export class PopulationService {
      * On ne se contente jamais du snapshot potentiellement
      * ancien créé avec le brouillon.
      */
-    await this.refreshAlertDraftTargeting(
-      buildingId,
-      alert.id,
-    );
+    await this.refreshAlertDraftTargeting(buildingId, alert.id);
 
     return this.prisma.populationAlert.update({
       where: {
@@ -3980,11 +3761,13 @@ export class PopulationService {
       },
       data: {
         status: PopulationAlertStatus.READY,
-        ...(actor ? {
-          readyAt: new Date(),
-          readyByType: actor.type as any,
-          readyById: actor.id,
-        } : {}),
+        ...(actor
+          ? {
+              readyAt: new Date(),
+              readyByType: actor.type as any,
+              readyById: actor.id,
+            }
+          : {}),
       },
       include: {
         zones: {
@@ -4013,11 +3796,10 @@ export class PopulationService {
       id: string;
     },
   ) {
-    const { alert, program } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+    const { alert, program } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     if (alert.status !== PopulationAlertStatus.READY) {
       throw new BadRequestException(
@@ -4049,7 +3831,11 @@ export class PopulationService {
     const approvedAt = new Date();
 
     const approved = await this.prisma.populationAlert.updateMany({
-      where: { id: alert.id, status: PopulationAlertStatus.READY, approvedAt: null },
+      where: {
+        id: alert.id,
+        status: PopulationAlertStatus.READY,
+        approvedAt: null,
+      },
       data: {
         approvedByType: actor.type as any,
         approvedById: actor.id,
@@ -4066,7 +3852,10 @@ export class PopulationService {
       };
     }
 
-    const current = await this.getPopulationAlertForBuilding(buildingId, alertId);
+    const current = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
     if (approved.count !== 1 && !current.alert.approvedAt) {
       throw new BadRequestException('Impossible de confirmer approbation');
     }
@@ -4083,121 +3872,107 @@ export class PopulationService {
    * approuvés de l'alerte, jamais sur la configuration RUE courante.
    */
   async freezeAlertRecipients(
-  buildingId: string,
-  alertId: string,
-  actor?: { type: string; id: string },
-) {
-  const { alert, program } =
-    await this.getPopulationAlertForBuilding(
+    buildingId: string,
+    alertId: string,
+    actor?: { type: string; id: string },
+  ) {
+    const { alert, program } = await this.getPopulationAlertForBuilding(
       buildingId,
       alertId,
     );
 
-  if (alert.status !== PopulationAlertStatus.READY) {
-    throw new BadRequestException(
-      'Seule une alerte READY peut figer ses destinataires',
-    );
-  }
+    if (alert.status !== PopulationAlertStatus.READY) {
+      throw new BadRequestException(
+        'Seule une alerte READY peut figer ses destinataires',
+      );
+    }
 
-  if (
-    !alert.approvedAt ||
-    !alert.approvedByType ||
-    !alert.approvedById
-  ) {
-    throw new BadRequestException(
-      'L’alerte doit être approuvée avant de figer les destinataires',
-    );
-  }
+    if (!alert.approvedAt || !alert.approvedByType || !alert.approvedById) {
+      throw new BadRequestException(
+        'L’alerte doit être approuvée avant de figer les destinataires',
+      );
+    }
 
-  /*
-   * Un freeze déjà effectué est immuable.
-   *
-   * On ne relit ni les abonnés, ni leur localisation,
-   * ni les zones pour recalculer le roster.
-   */
-  if (alert.recipientsFrozenAt) {
-    const frozenDeliveries =
-      await this.prisma.populationAlertDelivery.findMany({
-        where: {
-          alertId: alert.id,
-        },
-        select: {
-          id: true,
-          channel: true,
-          status: true,
-          language: true,
-          queuedAt: true,
-          sentAt: true,
-          deliveredAt: true,
-          failedAt: true,
-        },
-        orderBy: [
-          { channel: 'asc' },
-          { queuedAt: 'asc' },
-        ],
-      });
-
-    const frozenSubscriberCount =
-      await this.prisma.populationAlertDelivery.findMany({
-        where: {
-          alertId: alert.id,
-          subscriberId: {
-            not: null,
+    /*
+     * Un freeze déjà effectué est immuable.
+     *
+     * On ne relit ni les abonnés, ni leur localisation,
+     * ni les zones pour recalculer le roster.
+     */
+    if (alert.recipientsFrozenAt) {
+      const frozenDeliveries =
+        await this.prisma.populationAlertDelivery.findMany({
+          where: {
+            alertId: alert.id,
           },
-        },
-        select: {
-          subscriberId: true,
-        },
-        distinct: ['subscriberId'],
-      });
+          select: {
+            id: true,
+            channel: true,
+            status: true,
+            language: true,
+            queuedAt: true,
+            sentAt: true,
+            deliveredAt: true,
+            failedAt: true,
+          },
+          orderBy: [{ channel: 'asc' }, { queuedAt: 'asc' }],
+        });
 
-    return {
-      alertId: alert.id,
-      status: alert.status,
-      approvedAt: alert.approvedAt,
-      recipientsFrozenAt:
-        alert.recipientsFrozenAt,
-      deliveryMode: alert.deliveryModeSnapshot,
-      targeting: {
-        subscriberCount:
-          frozenSubscriberCount.length,
-        deliveryCount:
-          frozenDeliveries.length,
-        smsDeliveryCount:
-          frozenDeliveries.filter(
-            delivery =>
-              delivery.channel ===
-              PopulationAlertChannel.SMS,
-          ).length,
-        emailDeliveryCount:
-          frozenDeliveries.filter(
-            delivery =>
-              delivery.channel ===
-              PopulationAlertChannel.EMAIL,
-          ).length,
-        deliverableCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.QUEUED,
-        ).length,
-        deliverableSmsCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.QUEUED && delivery.channel === PopulationAlertChannel.SMS,
-        ).length,
-        deliverableEmailCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.QUEUED && delivery.channel === PopulationAlertChannel.EMAIL,
-        ).length,
-        suppressedCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.SUPPRESSED,
-        ).length,
-      },
-      deliveries: frozenDeliveries,
-    };
-  }
+      const frozenSubscriberCount =
+        await this.prisma.populationAlertDelivery.findMany({
+          where: {
+            alertId: alert.id,
+            subscriberId: {
+              not: null,
+            },
+          },
+          select: {
+            subscriberId: true,
+          },
+          distinct: ['subscriberId'],
+        });
 
-  const subscribers =
-    await this.prisma.populationSubscriber.findMany({
+      return {
+        alertId: alert.id,
+        status: alert.status,
+        approvedAt: alert.approvedAt,
+        recipientsFrozenAt: alert.recipientsFrozenAt,
+        deliveryMode: alert.deliveryModeSnapshot,
+        targeting: {
+          subscriberCount: frozenSubscriberCount.length,
+          deliveryCount: frozenDeliveries.length,
+          smsDeliveryCount: frozenDeliveries.filter(
+            (delivery) => delivery.channel === PopulationAlertChannel.SMS,
+          ).length,
+          emailDeliveryCount: frozenDeliveries.filter(
+            (delivery) => delivery.channel === PopulationAlertChannel.EMAIL,
+          ).length,
+          deliverableCount: frozenDeliveries.filter(
+            (delivery) => delivery.status === PopulationDeliveryStatus.QUEUED,
+          ).length,
+          deliverableSmsCount: frozenDeliveries.filter(
+            (delivery) =>
+              delivery.status === PopulationDeliveryStatus.QUEUED &&
+              delivery.channel === PopulationAlertChannel.SMS,
+          ).length,
+          deliverableEmailCount: frozenDeliveries.filter(
+            (delivery) =>
+              delivery.status === PopulationDeliveryStatus.QUEUED &&
+              delivery.channel === PopulationAlertChannel.EMAIL,
+          ).length,
+          suppressedCount: frozenDeliveries.filter(
+            (delivery) =>
+              delivery.status === PopulationDeliveryStatus.SUPPRESSED,
+          ).length,
+        },
+        deliveries: frozenDeliveries,
+      };
+    }
+
+    const subscribers = await this.prisma.populationSubscriber.findMany({
       where: {
         programId: program.id,
-        status:
-          PopulationSubscriberStatus.ACTIVE,
+        status: PopulationSubscriberStatus.ACTIVE,
       },
       select: {
         id: true,
@@ -4212,171 +3987,164 @@ export class PopulationService {
       },
     });
 
-  const contextSnapshot =
-    alert.contextSnapshot &&
-    typeof alert.contextSnapshot === 'object' &&
-    !Array.isArray(alert.contextSnapshot)
-      ? (alert.contextSnapshot as Record<
-          string,
-          any
-        >)
-      : null;
+    const contextSnapshot =
+      alert.contextSnapshot &&
+      typeof alert.contextSnapshot === 'object' &&
+      !Array.isArray(alert.contextSnapshot)
+        ? (alert.contextSnapshot as Record<string, any>)
+        : null;
 
-  const buildingSnapshot =
-    contextSnapshot?.building &&
-    typeof contextSnapshot.building === 'object'
-      ? contextSnapshot.building
-      : null;
+    const buildingSnapshot =
+      contextSnapshot?.building && typeof contextSnapshot.building === 'object'
+        ? contextSnapshot.building
+        : null;
 
-  const referenceLatitude =
-    typeof buildingSnapshot?.latitude === 'number'
-      ? buildingSnapshot.latitude
-      : null;
+    const referenceLatitude =
+      typeof buildingSnapshot?.latitude === 'number'
+        ? buildingSnapshot.latitude
+        : null;
 
-  const referenceLongitude =
-    typeof buildingSnapshot?.longitude === 'number'
-      ? buildingSnapshot.longitude
-      : null;
+    const referenceLongitude =
+      typeof buildingSnapshot?.longitude === 'number'
+        ? buildingSnapshot.longitude
+        : null;
 
-  const targetedSubscriberIds =
-    new Set<string>();
+    const targetedSubscriberIds = new Set<string>();
 
-  for (const subscriber of subscribers) {
-    if (
-      subscriber.latitude === null ||
-      subscriber.longitude === null ||
-      !Number.isFinite(subscriber.latitude) ||
-      !Number.isFinite(subscriber.longitude)
-    ) {
-      continue;
-    }
+    for (const subscriber of subscribers) {
+      if (
+        subscriber.latitude === null ||
+        subscriber.longitude === null ||
+        !Number.isFinite(subscriber.latitude) ||
+        !Number.isFinite(subscriber.longitude)
+      ) {
+        continue;
+      }
 
-    const isTargeted = alert.zones.some(
-      zone =>
-        this.populationGeospatialService
-          .isPointInsideImpactZone({
-            latitude: subscriber.latitude!,
-            longitude: subscriber.longitude!,
-            geometry: zone.geometrySnapshot,
-            maxDistanceKm:
-              zone.maxDistanceKmSnapshot,
-            referenceLatitude,
-            referenceLongitude,
-          }),
-    );
-
-    if (isTargeted) {
-      targetedSubscriberIds.add(
-        subscriber.id,
+      const isTargeted = alert.zones.some((zone) =>
+        this.populationGeospatialService.isPointInsideImpactZone({
+          latitude: subscriber.latitude!,
+          longitude: subscriber.longitude!,
+          geometry: zone.geometrySnapshot,
+          maxDistanceKm: zone.maxDistanceKmSnapshot,
+          referenceLatitude,
+          referenceLongitude,
+        }),
       );
-    }
-  }
 
-  const targetedSubscribers =
-    subscribers.filter(subscriber =>
-      targetedSubscriberIds.has(
-        subscriber.id,
-      ),
+      if (isTargeted) {
+        targetedSubscriberIds.add(subscriber.id);
+      }
+    }
+
+    const targetedSubscribers = subscribers.filter((subscriber) =>
+      targetedSubscriberIds.has(subscriber.id),
     );
 
-  const deliveries: Array<{
-    idempotencyKey: string;
-    alertId: string;
-    subscriberId: string;
-    channel: PopulationAlertChannel;
-    status: PopulationDeliveryStatus;
-    suppressionReason: PopulationDeliverySuppressionReason | null;
-    language: PopulationPreferredLanguage;
-    messageSnapshot: string;
-    destinationSnapshot: string;
-  }> = [];
+    const deliveries: Array<{
+      idempotencyKey: string;
+      alertId: string;
+      subscriberId: string;
+      channel: PopulationAlertChannel;
+      status: PopulationDeliveryStatus;
+      suppressionReason: PopulationDeliverySuppressionReason | null;
+      providerIdempotencyKey: string | null;
+      language: PopulationPreferredLanguage;
+      messageSnapshot: string;
+      destinationSnapshot: string;
+    }> = [];
 
-  for (const subscriber of targetedSubscribers) {
-    const suppressionReason =
-      program.deliveryMode === PopulationDeliveryMode.SANDBOX
-        ? PopulationDeliverySuppressionReason.SANDBOX_MODE
-        : subscriber.isSynthetic
-          ? PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT
-          : null;
-    const deliveryStatus = suppressionReason
-      ? PopulationDeliveryStatus.SUPPRESSED
-      : PopulationDeliveryStatus.QUEUED;
-    const language =
-      subscriber.preferredLanguage ===
-        PopulationPreferredLanguage.EN &&
-      alert.messageEN?.trim()
-        ? PopulationPreferredLanguage.EN
-        : PopulationPreferredLanguage.FR;
+    for (const subscriber of targetedSubscribers) {
+      const suppressionReason =
+        program.deliveryMode === PopulationDeliveryMode.SANDBOX
+          ? PopulationDeliverySuppressionReason.SANDBOX_MODE
+          : subscriber.isSynthetic
+            ? PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT
+            : null;
+      const deliveryStatus = suppressionReason
+        ? PopulationDeliveryStatus.SUPPRESSED
+        : PopulationDeliveryStatus.QUEUED;
+      const language =
+        subscriber.preferredLanguage === PopulationPreferredLanguage.EN &&
+        alert.messageEN?.trim()
+          ? PopulationPreferredLanguage.EN
+          : PopulationPreferredLanguage.FR;
 
-    const messageSnapshot =
-      language === PopulationPreferredLanguage.EN
-        ? alert.messageEN!.trim()
-        : alert.messageFR.trim();
+      const messageSnapshot =
+        language === PopulationPreferredLanguage.EN
+          ? alert.messageEN!.trim()
+          : alert.messageFR.trim();
 
-    if (this.canReceiveSms(program, subscriber)) {
-      deliveries.push({
-        idempotencyKey:
-          `${alert.id}:${subscriber.id}:SMS`,
-        alertId: alert.id,
-        subscriberId: subscriber.id,
-        channel: PopulationAlertChannel.SMS,
-        status: deliveryStatus,
-        suppressionReason,
-        language,
-        messageSnapshot,
-        destinationSnapshot:
-          subscriber.phone!,
-      });
-    }
-
-    if (this.canReceiveEmail(program, subscriber)) {
-      deliveries.push({
-        idempotencyKey:
-          `${alert.id}:${subscriber.id}:EMAIL`,
-        alertId: alert.id,
-        subscriberId: subscriber.id,
-        channel:
-          PopulationAlertChannel.EMAIL,
-        status: deliveryStatus,
-        suppressionReason,
-        language,
-        messageSnapshot,
-        destinationSnapshot:
-          subscriber.email!,
-      });
-    }
-  }
-
-  for (const channel of new Set(deliveries.filter(delivery => delivery.status === PopulationDeliveryStatus.QUEUED).map(delivery => delivery.channel))) {
-    this.readiness.assertAlertChannelReady(channel);
-  }
-
-  const recipientsFrozenAt = new Date();
-
-  /*
-   * Le claim du freeze et la matérialisation du roster
-   * forment une seule unité atomique.
-   *
-   * Si createMany échoue, recipientsFrozenAt est rollbacké.
-   */
-  const freezeResult =
-    await this.prisma.$transaction(async tx => {
-      const freezeClaim =
-        await tx.populationAlert.updateMany({
-          where: {
-            id: alert.id,
-            programId: program.id,
-            status: PopulationAlertStatus.READY,
-            recipientsFrozenAt: null,
-          },
-          data: {
-            recipientsFrozenAt,
-            ...(actor ? { frozenByType: actor.type as any, frozenById: actor.id } : {}),
-            ...(program.deliveryMode
-              ? { deliveryModeSnapshot: program.deliveryMode }
-              : {}),
-          },
+      if (this.canReceiveSms(program, subscriber)) {
+        deliveries.push({
+          idempotencyKey: `${alert.id}:${subscriber.id}:SMS`,
+          alertId: alert.id,
+          subscriberId: subscriber.id,
+          channel: PopulationAlertChannel.SMS,
+          status: deliveryStatus,
+          suppressionReason,
+          providerIdempotencyKey: null,
+          language,
+          messageSnapshot,
+          destinationSnapshot: subscriber.phone!,
         });
+      }
+
+      if (this.canReceiveEmail(program, subscriber)) {
+        deliveries.push({
+          idempotencyKey: `${alert.id}:${subscriber.id}:EMAIL`,
+          alertId: alert.id,
+          subscriberId: subscriber.id,
+          channel: PopulationAlertChannel.EMAIL,
+          status: deliveryStatus,
+          suppressionReason,
+          providerIdempotencyKey:
+            deliveryStatus === PopulationDeliveryStatus.QUEUED
+              ? randomUUID()
+              : null,
+          language,
+          messageSnapshot,
+          destinationSnapshot: subscriber.email!,
+        });
+      }
+    }
+
+    for (const channel of new Set(
+      deliveries
+        .filter(
+          (delivery) => delivery.status === PopulationDeliveryStatus.QUEUED,
+        )
+        .map((delivery) => delivery.channel),
+    )) {
+      this.readiness.assertAlertChannelReady(channel);
+    }
+
+    const recipientsFrozenAt = new Date();
+
+    /*
+     * Le claim du freeze et la matérialisation du roster
+     * forment une seule unité atomique.
+     *
+     * Si createMany échoue, recipientsFrozenAt est rollbacké.
+     */
+    const freezeResult = await this.prisma.$transaction(async (tx) => {
+      const freezeClaim = await tx.populationAlert.updateMany({
+        where: {
+          id: alert.id,
+          programId: program.id,
+          status: PopulationAlertStatus.READY,
+          recipientsFrozenAt: null,
+        },
+        data: {
+          recipientsFrozenAt,
+          ...(actor
+            ? { frozenByType: actor.type as any, frozenById: actor.id }
+            : {}),
+          ...(program.deliveryMode
+            ? { deliveryModeSnapshot: program.deliveryMode }
+            : {}),
+        },
+      });
 
       /*
        * Un autre processus a déjà figé cette alerte.
@@ -4400,13 +4168,12 @@ export class PopulationService {
       };
     });
 
-  /*
-   * Si nous avons perdu la course, nous relisons uniquement
-   * le roster déjà matérialisé par le processus gagnant.
-   */
-  if (!freezeResult.claimed) {
-    const currentAlert =
-      await this.prisma.populationAlert.findFirst({
+    /*
+     * Si nous avons perdu la course, nous relisons uniquement
+     * le roster déjà matérialisé par le processus gagnant.
+     */
+    if (!freezeResult.claimed) {
+      const currentAlert = await this.prisma.populationAlert.findFirst({
         where: {
           id: alert.id,
           programId: program.id,
@@ -4416,14 +4183,81 @@ export class PopulationService {
         },
       });
 
-    if (!currentAlert?.recipientsFrozenAt) {
-      throw new Error(
-        'Impossible de confirmer le freeze des destinataires',
-      );
+      if (!currentAlert?.recipientsFrozenAt) {
+        throw new Error('Impossible de confirmer le freeze des destinataires');
+      }
+
+      const frozenDeliveries =
+        await this.prisma.populationAlertDelivery.findMany({
+          where: {
+            alertId: alert.id,
+          },
+          select: {
+            id: true,
+            channel: true,
+            status: true,
+            language: true,
+            queuedAt: true,
+            sentAt: true,
+            deliveredAt: true,
+            failedAt: true,
+          },
+          orderBy: [{ channel: 'asc' }, { queuedAt: 'asc' }],
+        });
+
+      const frozenSubscriberCount =
+        await this.prisma.populationAlertDelivery.findMany({
+          where: {
+            alertId: alert.id,
+            subscriberId: {
+              not: null,
+            },
+          },
+          select: {
+            subscriberId: true,
+          },
+          distinct: ['subscriberId'],
+        });
+
+      return {
+        alertId: alert.id,
+        status: alert.status,
+        approvedAt: alert.approvedAt,
+        recipientsFrozenAt: currentAlert.recipientsFrozenAt,
+        deliveryMode: alert.deliveryModeSnapshot,
+        targeting: {
+          subscriberCount: frozenSubscriberCount.length,
+          deliveryCount: frozenDeliveries.length,
+          smsDeliveryCount: frozenDeliveries.filter(
+            (delivery) => delivery.channel === PopulationAlertChannel.SMS,
+          ).length,
+          emailDeliveryCount: frozenDeliveries.filter(
+            (delivery) => delivery.channel === PopulationAlertChannel.EMAIL,
+          ).length,
+          deliverableCount: frozenDeliveries.filter(
+            (delivery) => delivery.status === PopulationDeliveryStatus.QUEUED,
+          ).length,
+          deliverableSmsCount: frozenDeliveries.filter(
+            (delivery) =>
+              delivery.status === PopulationDeliveryStatus.QUEUED &&
+              delivery.channel === PopulationAlertChannel.SMS,
+          ).length,
+          deliverableEmailCount: frozenDeliveries.filter(
+            (delivery) =>
+              delivery.status === PopulationDeliveryStatus.QUEUED &&
+              delivery.channel === PopulationAlertChannel.EMAIL,
+          ).length,
+          suppressedCount: frozenDeliveries.filter(
+            (delivery) =>
+              delivery.status === PopulationDeliveryStatus.SUPPRESSED,
+          ).length,
+        },
+        deliveries: frozenDeliveries,
+      };
     }
 
-    const frozenDeliveries =
-      await this.prisma.populationAlertDelivery.findMany({
+    const frozenDeliveries = await this.prisma.populationAlertDelivery.findMany(
+      {
         where: {
           alertId: alert.id,
         },
@@ -4437,127 +4271,45 @@ export class PopulationService {
           deliveredAt: true,
           failedAt: true,
         },
-        orderBy: [
-          { channel: 'asc' },
-          { queuedAt: 'asc' },
-        ],
-      });
-
-    const frozenSubscriberCount =
-      await this.prisma.populationAlertDelivery.findMany({
-        where: {
-          alertId: alert.id,
-          subscriberId: {
-            not: null,
-          },
-        },
-        select: {
-          subscriberId: true,
-        },
-        distinct: ['subscriberId'],
-      });
+        orderBy: [{ channel: 'asc' }, { queuedAt: 'asc' }],
+      },
+    );
 
     return {
       alertId: alert.id,
       status: alert.status,
       approvedAt: alert.approvedAt,
-      recipientsFrozenAt:
-        currentAlert.recipientsFrozenAt,
-      deliveryMode: alert.deliveryModeSnapshot,
+      recipientsFrozenAt,
+      deliveryMode: program.deliveryMode,
       targeting: {
-        subscriberCount:
-          frozenSubscriberCount.length,
-        deliveryCount:
-          frozenDeliveries.length,
-        smsDeliveryCount:
-          frozenDeliveries.filter(
-            delivery =>
-              delivery.channel ===
-              PopulationAlertChannel.SMS,
-          ).length,
-        emailDeliveryCount:
-          frozenDeliveries.filter(
-            delivery =>
-              delivery.channel ===
-              PopulationAlertChannel.EMAIL,
-          ).length,
+        subscriberCount: targetedSubscriberIds.size,
+        deliveryCount: frozenDeliveries.length,
+        smsDeliveryCount: frozenDeliveries.filter(
+          (delivery) => delivery.channel === PopulationAlertChannel.SMS,
+        ).length,
+        emailDeliveryCount: frozenDeliveries.filter(
+          (delivery) => delivery.channel === PopulationAlertChannel.EMAIL,
+        ).length,
         deliverableCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.QUEUED,
+          (delivery) => delivery.status === PopulationDeliveryStatus.QUEUED,
         ).length,
         deliverableSmsCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.QUEUED && delivery.channel === PopulationAlertChannel.SMS,
+          (delivery) =>
+            delivery.status === PopulationDeliveryStatus.QUEUED &&
+            delivery.channel === PopulationAlertChannel.SMS,
         ).length,
         deliverableEmailCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.QUEUED && delivery.channel === PopulationAlertChannel.EMAIL,
+          (delivery) =>
+            delivery.status === PopulationDeliveryStatus.QUEUED &&
+            delivery.channel === PopulationAlertChannel.EMAIL,
         ).length,
         suppressedCount: frozenDeliveries.filter(
-          delivery => delivery.status === PopulationDeliveryStatus.SUPPRESSED,
+          (delivery) => delivery.status === PopulationDeliveryStatus.SUPPRESSED,
         ).length,
       },
       deliveries: frozenDeliveries,
     };
   }
-
-  const frozenDeliveries =
-    await this.prisma.populationAlertDelivery.findMany({
-      where: {
-        alertId: alert.id,
-      },
-      select: {
-        id: true,
-        channel: true,
-        status: true,
-        language: true,
-        queuedAt: true,
-        sentAt: true,
-        deliveredAt: true,
-        failedAt: true,
-      },
-      orderBy: [
-        { channel: 'asc' },
-        { queuedAt: 'asc' },
-      ],
-    });
-
-  return {
-    alertId: alert.id,
-    status: alert.status,
-    approvedAt: alert.approvedAt,
-    recipientsFrozenAt,
-    deliveryMode: program.deliveryMode,
-    targeting: {
-      subscriberCount:
-        targetedSubscriberIds.size,
-      deliveryCount:
-        frozenDeliveries.length,
-      smsDeliveryCount:
-        frozenDeliveries.filter(
-          delivery =>
-            delivery.channel ===
-            PopulationAlertChannel.SMS,
-        ).length,
-      emailDeliveryCount:
-        frozenDeliveries.filter(
-          delivery =>
-            delivery.channel ===
-            PopulationAlertChannel.EMAIL,
-        ).length,
-      deliverableCount: frozenDeliveries.filter(
-        delivery => delivery.status === PopulationDeliveryStatus.QUEUED,
-      ).length,
-      deliverableSmsCount: frozenDeliveries.filter(
-        delivery => delivery.status === PopulationDeliveryStatus.QUEUED && delivery.channel === PopulationAlertChannel.SMS,
-      ).length,
-      deliverableEmailCount: frozenDeliveries.filter(
-        delivery => delivery.status === PopulationDeliveryStatus.QUEUED && delivery.channel === PopulationAlertChannel.EMAIL,
-      ).length,
-      suppressedCount: frozenDeliveries.filter(
-        delivery => delivery.status === PopulationDeliveryStatus.SUPPRESSED,
-      ).length,
-    },
-    deliveries: frozenDeliveries,
-  };
-}
 
   /**
    * Orchestre l'envoi initial d'une alerte Population.
@@ -4576,38 +4328,31 @@ export class PopulationService {
     alertId: string,
     actor?: { type: string; id: string },
   ) {
-    const { alert, program } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+    const { alert, program } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     /*
      * Une alerte déjà prise en charge ne doit jamais
      * déclencher une seconde diffusion.
      */
     if (alert.status !== PopulationAlertStatus.READY) {
+      if (alert.status === PopulationAlertStatus.SENDING) {
+        return this.resumeSendingAlert(buildingId, alert.id, program.id);
+      }
+
       if (
-        alert.status === PopulationAlertStatus.SENDING ||
         alert.status === PopulationAlertStatus.ACTIVE ||
         alert.status === PopulationAlertStatus.FAILED
       ) {
-        return this.getAlert(
-          buildingId,
-          alertId,
-        );
+        return this.getAlert(buildingId, alertId);
       }
 
-      throw new BadRequestException(
-        'Seule une alerte READY peut être envoyée',
-      );
+      throw new BadRequestException('Seule une alerte READY peut être envoyée');
     }
 
-    if (
-      !alert.approvedAt ||
-      !alert.approvedByType ||
-      !alert.approvedById
-    ) {
+    if (!alert.approvedAt || !alert.approvedByType || !alert.approvedById) {
       throw new BadRequestException(
         'L’alerte doit être approuvée avant son envoi',
       );
@@ -4628,15 +4373,16 @@ export class PopulationService {
       alert.createdByType === alert.approvedByType &&
       alert.createdById === alert.approvedById
     ) {
-      throw new BadRequestException('La gouvernance double controle nest pas satisfaite');
+      throw new BadRequestException(
+        'La gouvernance double controle nest pas satisfaite',
+      );
     }
 
-    const deliveryCount =
-      await this.prisma.populationAlertDelivery.count({
-        where: {
-          alertId: alert.id,
-        },
-      });
+    const deliveryCount = await this.prisma.populationAlertDelivery.count({
+      where: {
+        alertId: alert.id,
+      },
+    });
 
     if (deliveryCount === 0) {
       throw new BadRequestException(
@@ -4648,23 +4394,27 @@ export class PopulationService {
       where: { alertId: alert.id, status: PopulationDeliveryStatus.QUEUED },
     });
 
-    if (alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE && queuedCount === 0) {
-      throw new BadRequestException('Aucune communication reelle admissible pour cette alerte');
+    if (
+      alert.deliveryModeSnapshot === PopulationDeliveryMode.LIVE &&
+      queuedCount === 0
+    ) {
+      throw new BadRequestException(
+        'Aucune communication reelle admissible pour cette alerte',
+      );
     }
 
-    const frozenChannels =
-      await this.prisma.populationAlertDelivery.findMany({
-        where: {
-          alertId: alert.id,
-          status: PopulationDeliveryStatus.QUEUED,
-        },
-        select: {
-          channel: true,
-          destinationSnapshot: true,
-          suppressionReason: true,
-          subscriber: { select: { isSynthetic: true } },
-        },
-      });
+    const frozenChannels = await this.prisma.populationAlertDelivery.findMany({
+      where: {
+        alertId: alert.id,
+        status: PopulationDeliveryStatus.QUEUED,
+      },
+      select: {
+        channel: true,
+        destinationSnapshot: true,
+        suppressionReason: true,
+        subscriber: { select: { isSynthetic: true } },
+      },
+    });
 
     for (const delivery of frozenChannels) {
       if (
@@ -4687,31 +4437,27 @@ export class PopulationService {
      * Deux workers peuvent arriver ici simultanément,
      * mais un seul peut effectuer READY -> SENDING.
      */
-    const alertClaim =
-      await this.prisma.populationAlert.updateMany({
-        where: {
-          id: alert.id,
-          programId: program.id,
-          status: PopulationAlertStatus.READY,
-          recipientsFrozenAt: {
-            not: null,
-          },
-          approvedAt: {
-            not: null,
-          },
+    const alertClaim = await this.prisma.populationAlert.updateMany({
+      where: {
+        id: alert.id,
+        programId: program.id,
+        status: PopulationAlertStatus.READY,
+        recipientsFrozenAt: {
+          not: null,
         },
-        data: {
-          status: PopulationAlertStatus.SENDING,
-          sendingAt,
-          ...(actor ? { sentByType: actor.type as any, sentById: actor.id } : {}),
+        approvedAt: {
+          not: null,
         },
-      });
+      },
+      data: {
+        status: PopulationAlertStatus.SENDING,
+        sendingAt,
+        ...(actor ? { sentByType: actor.type as any, sentById: actor.id } : {}),
+      },
+    });
 
     if (alertClaim.count !== 1) {
-      return this.getAlert(
-        buildingId,
-        alertId,
-      );
+      return this.getAlert(buildingId, alertId);
     }
 
     if (alert.deliveryModeSnapshot === PopulationDeliveryMode.SANDBOX) {
@@ -4733,8 +4479,8 @@ export class PopulationService {
      * Après le claim de l'alerte, seules les deliveries
      * encore QUEUED sont candidates à la diffusion.
      */
-    const queuedDeliveries =
-      await this.prisma.populationAlertDelivery.findMany({
+    const queuedDeliveries = await this.prisma.populationAlertDelivery.findMany(
+      {
         where: {
           alertId: alert.id,
           status: PopulationDeliveryStatus.QUEUED,
@@ -4745,7 +4491,8 @@ export class PopulationService {
         orderBy: {
           queuedAt: 'asc',
         },
-      });
+      },
+    );
 
     /*
      * Une anomalie sur une livraison ne doit pas empêcher
@@ -4753,22 +4500,17 @@ export class PopulationService {
      */
     for (const delivery of queuedDeliveries) {
       try {
-        const claim =
-          await this.claimAlertDelivery(
-            buildingId,
-            alert.id,
-            delivery.id,
-          );
+        const claim = await this.claimAlertDelivery(
+          buildingId,
+          alert.id,
+          delivery.id,
+        );
 
         if (!claim.claimed) {
           continue;
         }
 
-        await this.dispatchAlertDelivery(
-          buildingId,
-          alert.id,
-          delivery.id,
-        );
+        await this.dispatchAlertDelivery(buildingId, alert.id, delivery.id);
       } catch {
         /*
          * dispatchAlertDelivery() matérialise déjà les erreurs
@@ -4784,89 +4526,176 @@ export class PopulationService {
      * Le résultat global est déterminé depuis l'état
      * réellement enregistré en base.
      */
-    const deliverySummary =
-      await this.prisma.populationAlertDelivery.groupBy({
-        by: ['status'],
-        where: {
-          alertId: alert.id,
-        },
-        _count: {
-          _all: true,
-        },
-      });
+    return this.finalizeSendingAlert(buildingId, alert.id, program.id);
+  }
 
-    const countByStatus = new Map<
-      PopulationDeliveryStatus,
-      number
-    >();
-
-    for (const row of deliverySummary) {
-      countByStatus.set(
-        row.status,
-        row._count._all,
-      );
+  private async resumeSendingAlert(
+    buildingId: string,
+    alertId: string,
+    programId: string,
+  ) {
+    const pendingChannels = await this.prisma.populationAlertDelivery.findMany({
+      where: {
+        alertId,
+        status: {
+          in: [
+            PopulationDeliveryStatus.QUEUED,
+            PopulationDeliveryStatus.SENDING,
+          ],
+        },
+        suppressionReason: null,
+      },
+      select: { channel: true },
+      distinct: ['channel'],
+    });
+    for (const delivery of pendingChannels) {
+      this.readiness.assertAlertChannelReady(delivery.channel);
     }
+
+    await this.recoverExpiredDeliveryLeases(alertId);
+
+    const now = new Date();
+    const queuedDeliveries = await this.prisma.populationAlertDelivery.findMany(
+      {
+        where: {
+          alertId,
+          status: PopulationDeliveryStatus.QUEUED,
+          attemptCount: { lt: POPULATION_DELIVERY_MAX_ATTEMPTS },
+          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+        },
+        select: {
+          id: true,
+          channel: true,
+          destinationSnapshot: true,
+          suppressionReason: true,
+          subscriber: { select: { isSynthetic: true } },
+        },
+        orderBy: { queuedAt: 'asc' },
+      },
+    );
+
+    // Fail closed before any mutation, notably when an SMS transport is blocked.
+    for (const delivery of queuedDeliveries) {
+      if (
+        !delivery.destinationSnapshot ||
+        delivery.suppressionReason !== null ||
+        delivery.subscriber?.isSynthetic
+      ) {
+        throw new BadRequestException(
+          'Roster de diffusion incoherent ou non admissible',
+        );
+      }
+      this.readiness.assertAlertChannelReady(delivery.channel);
+    }
+
+    for (const delivery of queuedDeliveries) {
+      try {
+        const claim = await this.claimAlertDelivery(
+          buildingId,
+          alertId,
+          delivery.id,
+        );
+        if (claim.claimed) {
+          await this.dispatchAlertDelivery(buildingId, alertId, delivery.id);
+        }
+      } catch {
+        // Each delivery materializes its own controlled provider result.
+      }
+    }
+
+    return this.finalizeSendingAlert(buildingId, alertId, programId);
+  }
+
+  private async recoverExpiredDeliveryLeases(alertId: string) {
+    const now = new Date();
+    const expired = await this.prisma.populationAlertDelivery.findMany({
+      where: {
+        alertId,
+        status: PopulationDeliveryStatus.SENDING,
+        outcomeUnknownAt: null,
+        leaseExpiresAt: { lte: now },
+      },
+      select: {
+        id: true,
+        claimedAt: true,
+        lastAttemptAt: true,
+      },
+    });
+
+    for (const delivery of expired) {
+      const providerMayHaveStarted = Boolean(
+        delivery.claimedAt &&
+        delivery.lastAttemptAt &&
+        delivery.lastAttemptAt >= delivery.claimedAt,
+      );
+
+      await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId,
+          status: PopulationDeliveryStatus.SENDING,
+          claimedAt: delivery.claimedAt,
+          outcomeUnknownAt: null,
+        },
+        data: providerMayHaveStarted
+          ? {
+              outcomeUnknownAt: now,
+              leaseExpiresAt: null,
+              errorCode: 'PROVIDER_OUTCOME_UNKNOWN_AFTER_LEASE',
+              errorMessage: 'Résultat fournisseur à réconcilier',
+            }
+          : {
+              status: PopulationDeliveryStatus.QUEUED,
+              claimedAt: null,
+              leaseExpiresAt: null,
+              nextAttemptAt: null,
+            },
+      });
+    }
+  }
+
+  private async finalizeSendingAlert(
+    buildingId: string,
+    alertId: string,
+    programId: string,
+  ) {
+    const deliverySummary = await this.prisma.populationAlertDelivery.groupBy({
+      by: ['status'],
+      where: { alertId },
+      _count: { _all: true },
+    });
+    const countByStatus = new Map<PopulationDeliveryStatus, number>();
+    for (const row of deliverySummary)
+      countByStatus.set(row.status, row._count._all);
 
     const successfulCount =
-      (countByStatus.get(
-        PopulationDeliveryStatus.SENT,
-      ) ?? 0) +
-      (countByStatus.get(
-        PopulationDeliveryStatus.DELIVERED,
-      ) ?? 0);
-
-    const failedCount =
-      countByStatus.get(
-        PopulationDeliveryStatus.FAILED,
-      ) ?? 0;
-
+      (countByStatus.get(PopulationDeliveryStatus.SENT) ?? 0) +
+      (countByStatus.get(PopulationDeliveryStatus.DELIVERED) ?? 0);
     const pendingCount =
-      (countByStatus.get(
-        PopulationDeliveryStatus.QUEUED,
-      ) ?? 0) +
-      (countByStatus.get(
-        PopulationDeliveryStatus.SENDING,
-      ) ?? 0);
+      (countByStatus.get(PopulationDeliveryStatus.QUEUED) ?? 0) +
+      (countByStatus.get(PopulationDeliveryStatus.SENDING) ?? 0);
 
-    /*
-     * ACTIVE signifie qu'au moins une diffusion initiale
-     * a été acceptée par le fournisseur.
-     *
-     * DELIVERED restera réservé à une confirmation
-     * fournisseur ultérieure.
-     */
-    if (successfulCount > 0) {
+    if (pendingCount === 0 && successfulCount > 0) {
       await this.prisma.populationAlert.updateMany({
         where: {
-          id: alert.id,
-          programId: program.id,
+          id: alertId,
+          programId,
           status: PopulationAlertStatus.SENDING,
         },
-        data: {
-          status: PopulationAlertStatus.ACTIVE,
-          activatedAt: new Date(),
-        },
+        data: { status: PopulationAlertStatus.ACTIVE, activatedAt: new Date() },
       });
-    } else if (
-      pendingCount === 0 &&
-      failedCount > 0
-    ) {
+    } else if (pendingCount === 0) {
       await this.prisma.populationAlert.updateMany({
         where: {
-          id: alert.id,
-          programId: program.id,
+          id: alertId,
+          programId,
           status: PopulationAlertStatus.SENDING,
         },
-        data: {
-          status: PopulationAlertStatus.FAILED,
-        },
+        data: { status: PopulationAlertStatus.FAILED },
       });
     }
 
-    return this.getAlert(
-      buildingId,
-      alertId,
-    );
+    return this.getAlert(buildingId, alertId);
   }
 
   /**
@@ -4883,11 +4712,10 @@ export class PopulationService {
     alertId: string,
     deliveryId: string,
   ) {
-    const { alert } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+    const { alert } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     if (alert.status !== PopulationAlertStatus.SENDING) {
       throw new BadRequestException(
@@ -4895,11 +4723,7 @@ export class PopulationService {
       );
     }
 
-    if (
-      !alert.approvedAt ||
-      !alert.approvedByType ||
-      !alert.approvedById
-    ) {
+    if (!alert.approvedAt || !alert.approvedByType || !alert.approvedById) {
       throw new BadRequestException(
         'L’alerte doit être approuvée avant toute diffusion',
       );
@@ -4916,17 +4740,24 @@ export class PopulationService {
      *
      * peut passer à SENDING.
      */
-    const claim =
-      await this.prisma.populationAlertDelivery.updateMany({
-        where: {
-          id: deliveryId,
-          alertId: alert.id,
-          status: PopulationDeliveryStatus.QUEUED,
-        },
-        data: {
-          status: PopulationDeliveryStatus.SENDING,
-        },
-      });
+    const claimedAt = new Date();
+    const leaseExpiresAt = new Date(
+      claimedAt.getTime() + POPULATION_DELIVERY_LEASE_MS,
+    );
+    const claim = await this.prisma.populationAlertDelivery.updateMany({
+      where: {
+        id: deliveryId,
+        alertId: alert.id,
+        status: PopulationDeliveryStatus.QUEUED,
+        attemptCount: { lt: POPULATION_DELIVERY_MAX_ATTEMPTS },
+        OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: claimedAt } }],
+      },
+      data: {
+        status: PopulationDeliveryStatus.SENDING,
+        claimedAt,
+        leaseExpiresAt,
+      },
+    });
 
     if (claim.count !== 1) {
       return {
@@ -4935,27 +4766,38 @@ export class PopulationService {
       };
     }
 
-    const delivery =
-      await this.prisma.populationAlertDelivery.findFirst({
-        where: {
-          id: deliveryId,
-          alertId: alert.id,
-          status: PopulationDeliveryStatus.SENDING,
-        },
-        select: {
-          id: true,
-          channel: true,
-          status: true,
-          language: true,
-          messageSnapshot: true,
-          destinationSnapshot: true,
-          suppressionReason: true,
-          subscriber: {
-            select: { isSynthetic: true },
+    const delivery = await this.prisma.populationAlertDelivery.findFirst({
+      where: {
+        id: deliveryId,
+        alertId: alert.id,
+        status: PopulationDeliveryStatus.SENDING,
+      },
+      select: {
+        id: true,
+        channel: true,
+        status: true,
+        language: true,
+        messageSnapshot: true,
+        destinationSnapshot: true,
+        suppressionReason: true,
+        providerIdempotencyKey: true,
+        attemptCount: true,
+        claimedAt: true,
+        leaseExpiresAt: true,
+        outcomeUnknownAt: true,
+        subscriber: {
+          select: {
+            status: true,
+            isSynthetic: true,
+            smsEnabled: true,
+            emailEnabled: true,
+            phone: true,
+            email: true,
           },
-          queuedAt: true,
         },
-      });
+        queuedAt: true,
+      },
+    });
 
     if (!delivery) {
       throw new Error(
@@ -4992,11 +4834,10 @@ export class PopulationService {
     alertId: string,
     deliveryId: string,
   ) {
-    const { alert } =
-      await this.getPopulationAlertForBuilding(
-        buildingId,
-        alertId,
-      );
+    const { alert } = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alertId,
+    );
 
     if (alert.status !== PopulationAlertStatus.SENDING) {
       throw new BadRequestException(
@@ -5004,40 +4845,45 @@ export class PopulationService {
       );
     }
 
-    if (
-      !alert.approvedAt ||
-      !alert.approvedByType ||
-      !alert.approvedById
-    ) {
+    if (!alert.approvedAt || !alert.approvedByType || !alert.approvedById) {
       throw new BadRequestException(
         'L’alerte doit être approuvée avant toute diffusion',
       );
     }
 
-    const delivery =
-      await this.prisma.populationAlertDelivery.findFirst({
-        where: {
-          id: deliveryId,
-          alertId: alert.id,
-        },
-        select: {
-          id: true,
-          channel: true,
-          status: true,
-          language: true,
-          messageSnapshot: true,
-          destinationSnapshot: true,
-          suppressionReason: true,
-          subscriber: {
-            select: { isSynthetic: true },
+    const delivery = await this.prisma.populationAlertDelivery.findFirst({
+      where: {
+        id: deliveryId,
+        alertId: alert.id,
+      },
+      select: {
+        id: true,
+        channel: true,
+        status: true,
+        language: true,
+        messageSnapshot: true,
+        destinationSnapshot: true,
+        suppressionReason: true,
+        providerIdempotencyKey: true,
+        attemptCount: true,
+        claimedAt: true,
+        leaseExpiresAt: true,
+        outcomeUnknownAt: true,
+        subscriber: {
+          select: {
+            status: true,
+            isSynthetic: true,
+            smsEnabled: true,
+            emailEnabled: true,
+            phone: true,
+            email: true,
           },
         },
-      });
+      },
+    });
 
     if (!delivery) {
-      throw new NotFoundException(
-        'Livraison Population introuvable',
-      );
+      throw new NotFoundException('Livraison Population introuvable');
     }
 
     /*
@@ -5046,10 +4892,7 @@ export class PopulationService {
      * dispatchAlertDelivery() n'effectue jamais elle-même
      * QUEUED -> SENDING.
      */
-    if (
-      delivery.status !==
-      PopulationDeliveryStatus.SENDING
-    ) {
+    if (delivery.status !== PopulationDeliveryStatus.SENDING) {
       throw new BadRequestException(
         'La livraison doit être réclamée avant sa diffusion',
       );
@@ -5057,12 +4900,73 @@ export class PopulationService {
 
     if (
       alert.deliveryModeSnapshot !== PopulationDeliveryMode.LIVE ||
-      delivery.suppressionReason !== null ||
-      delivery.subscriber?.isSynthetic
+      delivery.suppressionReason !== null
     ) {
       throw new BadRequestException(
         'Livraison non admissible au transport externe',
       );
+    }
+
+    let currentSuppressionReason: PopulationDeliverySuppressionReason | null =
+      null;
+    if (
+      !delivery.subscriber ||
+      delivery.subscriber.status !== PopulationSubscriberStatus.ACTIVE
+    ) {
+      currentSuppressionReason =
+        PopulationDeliverySuppressionReason.SUBSCRIBER_INACTIVE;
+    } else if (delivery.subscriber.isSynthetic) {
+      currentSuppressionReason =
+        PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT;
+    } else if (
+      (delivery.channel === PopulationAlertChannel.EMAIL &&
+        !delivery.subscriber.emailEnabled) ||
+      (delivery.channel === PopulationAlertChannel.SMS &&
+        !delivery.subscriber.smsEnabled)
+    ) {
+      currentSuppressionReason =
+        PopulationDeliverySuppressionReason.CHANNEL_DISABLED;
+    } else {
+      const currentDestination =
+        delivery.channel === PopulationAlertChannel.EMAIL
+          ? delivery.subscriber.email
+          : delivery.subscriber.phone;
+      const destinationChanged =
+        delivery.channel === PopulationAlertChannel.EMAIL
+          ? currentDestination?.trim().toLowerCase() !==
+            delivery.destinationSnapshot?.trim().toLowerCase()
+          : currentDestination !== delivery.destinationSnapshot;
+      if (
+        !currentDestination ||
+        destinationChanged
+      ) {
+        currentSuppressionReason =
+          PopulationDeliverySuppressionReason.DESTINATION_CHANGED;
+      }
+    }
+
+    if (currentSuppressionReason) {
+      await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId: alert.id,
+          status: PopulationDeliveryStatus.SENDING,
+        },
+        data: {
+          status: PopulationDeliveryStatus.SUPPRESSED,
+          suppressionReason: currentSuppressionReason,
+          claimedAt: null,
+          leaseExpiresAt: null,
+          nextAttemptAt: null,
+          errorCode: currentSuppressionReason,
+          errorMessage: 'Livraison supprimée après revalidation',
+        },
+      });
+      return {
+        deliveryId: delivery.id,
+        status: PopulationDeliveryStatus.SUPPRESSED,
+        suppressionReason: currentSuppressionReason,
+      };
     }
 
     if (!delivery.destinationSnapshot) {
@@ -5078,8 +4982,9 @@ export class PopulationService {
           status: PopulationDeliveryStatus.FAILED,
           failedAt,
           errorCode: 'DESTINATION_MISSING',
-          errorMessage:
-            'Destination de communication absente',
+          errorMessage: 'Destination de communication absente',
+          claimedAt: null,
+          leaseExpiresAt: null,
         },
       });
 
@@ -5094,25 +4999,85 @@ export class PopulationService {
       };
     }
 
+    if (delivery.attemptCount >= POPULATION_DELIVERY_MAX_ATTEMPTS) {
+      await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId: alert.id,
+          status: PopulationDeliveryStatus.SENDING,
+        },
+        data: {
+          status: PopulationDeliveryStatus.FAILED,
+          failedAt: new Date(),
+          claimedAt: null,
+          leaseExpiresAt: null,
+          errorCode: 'MAX_ATTEMPTS_REACHED',
+          errorMessage: 'Nombre maximal de tentatives atteint',
+        },
+      });
+      return {
+        deliveryId: delivery.id,
+        status: PopulationDeliveryStatus.FAILED,
+      };
+    }
+
+    let providerIdempotencyKey = delivery.providerIdempotencyKey;
+    if (
+      delivery.channel === PopulationAlertChannel.EMAIL &&
+      !providerIdempotencyKey
+    ) {
+      providerIdempotencyKey = randomUUID();
+      const assigned = await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId: alert.id,
+          status: PopulationDeliveryStatus.SENDING,
+          providerIdempotencyKey: null,
+        },
+        data: { providerIdempotencyKey },
+      });
+      if (assigned.count !== 1) {
+        throw new Error(
+          'Impossible d’attribuer la clé d’idempotence fournisseur',
+        );
+      }
+    }
+
+    const attemptNumber = delivery.attemptCount + 1;
+    const lastAttemptAt = new Date();
+    const attemptStarted = await this.prisma.populationAlertDelivery.updateMany(
+      {
+        where: {
+          id: delivery.id,
+          alertId: alert.id,
+          status: PopulationDeliveryStatus.SENDING,
+          attemptCount: delivery.attemptCount,
+          outcomeUnknownAt: null,
+        },
+        data: {
+          attemptCount: { increment: 1 },
+          lastAttemptAt,
+          nextAttemptAt: null,
+          errorCode: null,
+          errorMessage: null,
+        },
+      },
+    );
+    if (attemptStarted.count !== 1) {
+      throw new Error('La tentative de livraison a déjà été prise en charge');
+    }
+
     try {
       let providerResult;
 
-      if (
-        delivery.channel ===
-        PopulationAlertChannel.SMS
-      ) {
-        providerResult =
-          await this.populationDeliveryService.sendSms(
-            delivery.destinationSnapshot,
-            delivery.messageSnapshot,
-          );
-      } else if (
-        delivery.channel ===
-        PopulationAlertChannel.EMAIL
-      ) {
+      if (delivery.channel === PopulationAlertChannel.SMS) {
+        providerResult = await this.populationDeliveryService.sendSms(
+          delivery.destinationSnapshot,
+          delivery.messageSnapshot,
+        );
+      } else if (delivery.channel === PopulationAlertChannel.EMAIL) {
         const subject =
-          delivery.language ===
-            PopulationPreferredLanguage.EN &&
+          delivery.language === PopulationPreferredLanguage.EN &&
           alert.titleEN?.trim()
             ? alert.titleEN.trim()
             : alert.titleFR.trim();
@@ -5125,22 +5090,20 @@ export class PopulationService {
          * aucun contenu métier supplémentaire n'est inventé
          * au moment de l'envoi.
          */
-        const escapedMessage =
-          delivery.messageSnapshot
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;')
-            .replace(/\r?\n/g, '<br>');
+        const escapedMessage = delivery.messageSnapshot
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;')
+          .replace(/\r?\n/g, '<br>');
 
-        providerResult =
-          await this.populationDeliveryService.sendEmail({
-            destination:
-              delivery.destinationSnapshot,
-            subject,
-            html: `<p>${escapedMessage}</p>`,
-          });
+        providerResult = await this.populationDeliveryService.sendEmail({
+          destination: delivery.destinationSnapshot,
+          subject,
+          html: `<p>${escapedMessage}</p>`,
+          providerIdempotencyKey: providerIdempotencyKey!,
+        });
       } else {
         throw new PopulationProviderError(
           'UNSUPPORTED_CHANNEL',
@@ -5154,37 +5117,36 @@ export class PopulationService {
        * Compare-and-set également au retour fournisseur.
        * On ne doit pas écraser un état qui aurait changé.
        */
-      const updated =
-        await this.prisma.populationAlertDelivery.updateMany({
-          where: {
-            id: delivery.id,
-            alertId: alert.id,
-            status: PopulationDeliveryStatus.SENDING,
-          },
-          data: {
-            status: PopulationDeliveryStatus.SENT,
-            provider: providerResult.provider,
-            providerMessageId:
-              providerResult.providerMessageId,
-            sentAt,
-            failedAt: null,
-            errorCode: null,
-            errorMessage: null,
-          },
-        });
+      const updated = await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId: alert.id,
+          status: PopulationDeliveryStatus.SENDING,
+        },
+        data: {
+          status: PopulationDeliveryStatus.SENT,
+          provider: providerResult.provider,
+          providerMessageId: providerResult.providerMessageId,
+          sentAt,
+          failedAt: null,
+          errorCode: null,
+          errorMessage: null,
+          claimedAt: null,
+          leaseExpiresAt: null,
+          nextAttemptAt: null,
+          outcomeUnknownAt: null,
+        },
+      });
 
       if (updated.count !== 1) {
-        throw new Error(
-          'État de livraison modifié pendant la diffusion',
-        );
+        throw new Error('État de livraison modifié pendant la diffusion');
       }
 
       return {
         deliveryId: delivery.id,
         status: PopulationDeliveryStatus.SENT,
         provider: providerResult.provider,
-        providerMessageId:
-          providerResult.providerMessageId,
+        providerMessageId: providerResult.providerMessageId,
         sentAt,
         failedAt: null,
         errorCode: null,
@@ -5205,23 +5167,61 @@ export class PopulationService {
               'Erreur interne lors de la diffusion',
             );
 
-      const failedAt = new Date();
+      const failureAt = new Date();
+      const retryable =
+        providerError.outcome === 'RETRYABLE_CONFIRMED' &&
+        attemptNumber < POPULATION_DELIVERY_MAX_ATTEMPTS;
+      const outcomeUnknown = providerError.outcome === 'OUTCOME_UNKNOWN';
+      const safeErrorMessage = outcomeUnknown
+        ? 'Résultat fournisseur à réconcilier'
+        : retryable
+          ? 'Échec fournisseur temporaire confirmé'
+          : 'Échec fournisseur permanent confirmé';
+      const nextAttemptAt = retryable
+        ? new Date(
+            failureAt.getTime() +
+              POPULATION_DELIVERY_BACKOFF_MS[
+                Math.min(
+                  attemptNumber - 1,
+                  POPULATION_DELIVERY_BACKOFF_MS.length - 1,
+                )
+              ],
+          )
+        : null;
 
-      const failed =
-        await this.prisma.populationAlertDelivery.updateMany({
-          where: {
-            id: delivery.id,
-            alertId: alert.id,
-            status: PopulationDeliveryStatus.SENDING,
-          },
-          data: {
-            status: PopulationDeliveryStatus.FAILED,
-            failedAt,
-            errorCode: providerError.code,
-            errorMessage:
-              providerError.message.slice(0, 500),
-          },
-        });
+      const failed = await this.prisma.populationAlertDelivery.updateMany({
+        where: {
+          id: delivery.id,
+          alertId: alert.id,
+          status: PopulationDeliveryStatus.SENDING,
+        },
+        data: outcomeUnknown
+          ? {
+              outcomeUnknownAt: failureAt,
+                leaseExpiresAt: null,
+                errorCode: providerError.code,
+                errorMessage: safeErrorMessage,
+            }
+          : retryable
+            ? {
+                status: PopulationDeliveryStatus.QUEUED,
+                nextAttemptAt,
+                claimedAt: null,
+                leaseExpiresAt: null,
+                  failedAt: null,
+                  errorCode: providerError.code,
+                  errorMessage: safeErrorMessage,
+              }
+            : {
+                status: PopulationDeliveryStatus.FAILED,
+                failedAt: failureAt,
+                claimedAt: null,
+                leaseExpiresAt: null,
+                  nextAttemptAt: null,
+                  errorCode: providerError.code,
+                  errorMessage: safeErrorMessage,
+              },
+      });
 
       /*
        * Si le succès fournisseur a déjà été enregistré SENT
@@ -5234,11 +5234,17 @@ export class PopulationService {
 
       return {
         deliveryId: delivery.id,
-        status: PopulationDeliveryStatus.FAILED,
+        status: outcomeUnknown
+          ? PopulationDeliveryStatus.SENDING
+          : retryable
+            ? PopulationDeliveryStatus.QUEUED
+            : PopulationDeliveryStatus.FAILED,
         provider: null,
         providerMessageId: null,
         sentAt: null,
-        failedAt,
+        failedAt: outcomeUnknown || retryable ? null : failureAt,
+        nextAttemptAt,
+        outcomeUnknown,
         errorCode: providerError.code,
       };
     }
@@ -5272,11 +5278,7 @@ export class PopulationService {
       );
     }
 
-    this.verifySubscriberAccessToken(
-      dto.accessToken,
-      subscriberId,
-      program.id,
-    );
+    this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
 
     const operationalProfile = await this.assertPopulationOperational(
       program.rueFacilityProfile.buildingId,
@@ -5318,8 +5320,7 @@ export class PopulationService {
       return {
         status: 'SELECTION_REQUIRED' as const,
         candidates: results.slice(0, 5).map((result) => ({
-          label:
-            result.normalizedAddress.addressLine!,
+          label: result.normalizedAddress.addressLine!,
           locality: [
             result.normalizedAddress.city,
             result.normalizedAddress.province,
@@ -5438,7 +5439,9 @@ export class PopulationService {
       },
     });
     if (!program) {
-      throw new NotFoundException('Programme Sentinelle Population introuvable');
+      throw new NotFoundException(
+        'Programme Sentinelle Population introuvable',
+      );
     }
 
     this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
@@ -5446,7 +5449,9 @@ export class PopulationService {
       program.rueFacilityProfile.buildingId,
     );
     if (operationalProfile.populationProgram?.id !== program.id) {
-      throw new BadRequestException('Le programme Sentinelle Population n’est pas actif');
+      throw new BadRequestException(
+        'Le programme Sentinelle Population n’est pas actif',
+      );
     }
 
     const subscriber = await this.prisma.populationSubscriber.findFirst({
@@ -5497,7 +5502,9 @@ export class PopulationService {
         current.latitude === resolution.latitude &&
         current.longitude === resolution.longitude;
       if (!idempotent) {
-        throw new ConflictException('Cette confirmation de localisation est obsolète');
+        throw new ConflictException(
+          'Cette confirmation de localisation est obsolète',
+        );
       }
     }
 
@@ -5519,15 +5526,14 @@ export class PopulationService {
     subscriberId: string,
     dto: PopulationAccessDto,
   ) {
-    const program =
-      await this.prisma.populationProgram.findUnique({
-        where: {
-          publicSlug,
-        },
-        select: {
-          id: true,
-        },
-      });
+    const program = await this.prisma.populationProgram.findUnique({
+      where: {
+        publicSlug,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     if (!program) {
       throw new NotFoundException(
@@ -5535,38 +5541,31 @@ export class PopulationService {
       );
     }
 
-    this.verifySubscriberAccessToken(
-      dto.accessToken,
-      subscriberId,
-      program.id,
-    );
+    this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-        },
-        select: {
-          id: true,
-          status: true,
-          preferredLanguage: true,
-          phone: true,
-          email: true,
-          smsEnabled: true,
-          emailEnabled: true,
-          verifiedAt: true,
-          unsubscribedAt: true,
-          latitude: true,
-          longitude: true,
-          locationResolvedAt: true,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+      },
+      select: {
+        id: true,
+        status: true,
+        preferredLanguage: true,
+        phone: true,
+        email: true,
+        smsEnabled: true,
+        emailEnabled: true,
+        verifiedAt: true,
+        unsubscribedAt: true,
+        latitude: true,
+        longitude: true,
+        locationResolvedAt: true,
+      },
+    });
 
     if (!subscriber) {
-      throw new NotFoundException(
-        'Inscription introuvable',
-      );
+      throw new NotFoundException('Inscription introuvable');
     }
 
     const maskPhone = (phone: string | null) => {
@@ -5574,9 +5573,7 @@ export class PopulationService {
 
       const visible = phone.slice(-4);
 
-      return `${'*'.repeat(
-        Math.max(phone.length - 4, 0),
-      )}${visible}`;
+      return `${'*'.repeat(Math.max(phone.length - 4, 0))}${visible}`;
     };
 
     const maskEmail = (email: string | null) => {
@@ -5586,10 +5583,7 @@ export class PopulationService {
 
       if (!domain) return '***';
 
-      const visibleLocal =
-        localPart.length <= 1
-          ? '*'
-          : `${localPart[0]}***`;
+      const visibleLocal = localPart.length <= 1 ? '*' : `${localPart[0]}***`;
 
       return `${visibleLocal}@${domain}`;
     };
@@ -5629,16 +5623,15 @@ export class PopulationService {
     subscriberId: string,
     dto: UpdatePopulationPreferencesDto,
   ) {
-    const program =
-      await this.prisma.populationProgram.findUnique({
-        where: {
-          publicSlug,
-        },
-        select: {
-          id: true,
-          consentVersion: true,
-        },
-      });
+    const program = await this.prisma.populationProgram.findUnique({
+      where: {
+        publicSlug,
+      },
+      select: {
+        id: true,
+        consentVersion: true,
+      },
+    });
 
     if (!program) {
       throw new NotFoundException(
@@ -5646,29 +5639,20 @@ export class PopulationService {
       );
     }
 
-    this.verifySubscriberAccessToken(
-      dto.accessToken,
-      subscriberId,
-      program.id,
-    );
+    this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+      },
+    });
 
     if (!subscriber) {
-      throw new NotFoundException(
-        'Inscription introuvable',
-      );
+      throw new NotFoundException('Inscription introuvable');
     }
 
-    if (
-      subscriber.status !== PopulationSubscriberStatus.ACTIVE
-    ) {
+    if (subscriber.status !== PopulationSubscriberStatus.ACTIVE) {
       throw new BadRequestException(
         'Cette inscription ne peut pas être modifiée',
       );
@@ -5680,9 +5664,7 @@ export class PopulationService {
       );
     }
 
-    if (
-      subscriber.preferredLanguage === dto.preferredLanguage
-    ) {
+    if (subscriber.preferredLanguage === dto.preferredLanguage) {
       return {
         updated: false,
         preferredLanguage: subscriber.preferredLanguage,
@@ -5733,16 +5715,15 @@ export class PopulationService {
     subscriberId: string,
     dto: UnsubscribePopulationSubscriberDto,
   ) {
-    const program =
-      await this.prisma.populationProgram.findUnique({
-        where: {
-          publicSlug,
-        },
-        select: {
-          id: true,
-          consentVersion: true,
-        },
-      });
+    const program = await this.prisma.populationProgram.findUnique({
+      where: {
+        publicSlug,
+      },
+      select: {
+        id: true,
+        consentVersion: true,
+      },
+    });
 
     if (!program) {
       throw new NotFoundException(
@@ -5750,39 +5731,27 @@ export class PopulationService {
       );
     }
 
-    this.verifySubscriberAccessToken(
-      dto.accessToken,
-      subscriberId,
-      program.id,
-    );
+    this.verifySubscriberAccessToken(dto.accessToken, subscriberId, program.id);
 
-    const subscriber =
-      await this.prisma.populationSubscriber.findFirst({
-        where: {
-          id: subscriberId,
-          programId: program.id,
-        },
-      });
+    const subscriber = await this.prisma.populationSubscriber.findFirst({
+      where: {
+        id: subscriberId,
+        programId: program.id,
+      },
+    });
 
     if (!subscriber) {
-      throw new NotFoundException(
-        'Inscription introuvable',
-      );
+      throw new NotFoundException('Inscription introuvable');
     }
 
-    if (
-      subscriber.status ===
-      PopulationSubscriberStatus.UNSUBSCRIBED
-    ) {
+    if (subscriber.status === PopulationSubscriberStatus.UNSUBSCRIBED) {
       return {
         unsubscribed: true,
         status: PopulationSubscriberStatus.UNSUBSCRIBED,
       };
     }
 
-    if (
-      subscriber.status !== PopulationSubscriberStatus.ACTIVE
-    ) {
+    if (subscriber.status !== PopulationSubscriberStatus.ACTIVE) {
       throw new BadRequestException(
         'Cette inscription ne peut pas être désabonnée',
       );
@@ -5896,7 +5865,7 @@ export class PopulationService {
       },
     };
   }
-    /**
+  /**
    * Crée ou met à jour la configuration Sentinelle Population.
    *
    * Cette opération :
@@ -5908,17 +5877,15 @@ export class PopulationService {
    * Les transitions READY / ACTIVE / SUSPENDED / ARCHIVED sont gérées
    * par des opérations métier distinctes.
    */
-  private getProgramConfigurationRequirements(
-    program: {
-      publicSlug: string;
-      nameFR: string;
-      smsEnabled: boolean;
-      emailEnabled: boolean;
-      privacyTextFR?: string | null;
-      consentTextFR?: string | null;
-      consentVersion?: string | null;
-    },
-  ) {
+  private getProgramConfigurationRequirements(program: {
+    publicSlug: string;
+    nameFR: string;
+    smsEnabled: boolean;
+    emailEnabled: boolean;
+    privacyTextFR?: string | null;
+    consentTextFR?: string | null;
+    consentVersion?: string | null;
+  }) {
     const missingRequirements: string[] = [];
 
     if (!program.publicSlug?.trim()) {

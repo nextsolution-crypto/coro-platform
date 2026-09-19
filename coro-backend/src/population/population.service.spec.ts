@@ -15,117 +15,116 @@ import {
   PopulationAlertChannel,
   PopulationDeliveryStatus,
   PopulationDeliveryMode,
+  PopulationDeliverySuppressionReason,
   PopulationGovernanceMode,
   Prisma,
 } from '@prisma/client';
 import { PopulationService } from './population.service';
-import {
-  PopulationProviderError,
-} from './population-delivery.service';
+import { PopulationProviderError } from './population-delivery.service';
 
 describe('PopulationService', () => {
   let service: PopulationService;
 
   const prisma = {
-  building: {
-    findUnique: jest.fn(),
-  },
-  rueFacilityProfile: {
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-  populationProgram: {
-    upsert: jest.fn(),
-    findUnique: jest.fn(),
-    update: jest.fn(),
-  },
-  populationSubscriber: {
-    create: jest.fn(),
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-    update: jest.fn(),
-  },
-  populationVerification: {
-    create: jest.fn(),
-    findFirst: jest.fn(),
-    update: jest.fn(),
-    updateMany: jest.fn(),
-    count: jest.fn(),
-  },
-  populationConsentEvent: {
-    create: jest.fn(),
-  },
-  rueEmergencyScenario: {
-    findMany: jest.fn(),
-    findFirst: jest.fn(),
-  },
-  populationAlert: {
-    create: jest.fn(),
-    findUnique: jest.fn(),
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-    update: jest.fn(),
-    updateMany: jest.fn(),
-  },
-  incidentEvent: {
-    findFirst: jest.fn(),
-  },
-  populationAlertZone: {
-    createMany: jest.fn(),
-    deleteMany: jest.fn(),
-  },
-  populationAlertDelivery: {
-  create: jest.fn(),
-  createMany: jest.fn(),
-  findMany: jest.fn(),
-  findFirst: jest.fn(),
-  count: jest.fn(),
-  groupBy: jest.fn(),
-  updateMany: jest.fn(),
-},
-  $transaction: jest.fn(),
-};
+    building: {
+      findUnique: jest.fn(),
+    },
+    rueFacilityProfile: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    populationProgram: {
+      upsert: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    populationSubscriber: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
+    populationVerification: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      count: jest.fn(),
+    },
+    populationConsentEvent: {
+      create: jest.fn(),
+    },
+    rueEmergencyScenario: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    populationAlert: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    incidentEvent: {
+      findFirst: jest.fn(),
+    },
+    populationAlertZone: {
+      createMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    populationAlertDelivery: {
+      create: jest.fn(),
+      createMany: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
+      groupBy: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
+  };
 
-const populationGeospatialService = {
-  distanceKm: jest.fn(),
-  isPointInsideGeometry: jest.fn(),
-  isPointInsideImpactZone: jest.fn(),
-};
+  const populationGeospatialService = {
+    distanceKm: jest.fn(),
+    isPointInsideGeometry: jest.fn(),
+    isPointInsideImpactZone: jest.fn(),
+  };
 
-const populationDeliveryService = {
-  sendSms: jest.fn(),
-  sendEmail: jest.fn(),
-};
+  const populationDeliveryService = {
+    sendSms: jest.fn(),
+    sendEmail: jest.fn(),
+  };
 
-const geocodingService = {
-  geocode: jest.fn(),
-};
+  const geocodingService = {
+    geocode: jest.fn(),
+  };
 
-const readiness = {
-  assertOtpReady: jest.fn(),
-  assertAccessReady: jest.fn(),
-  assertAccessRecoveryReady: jest.fn(),
-  assertLocationTokenReady: jest.fn(),
-  assertGeocodingReady: jest.fn(),
-  assertVerificationChannelReady: jest.fn(),
-  assertAlertChannelReady: jest.fn(),
-};
+  const readiness = {
+    assertOtpReady: jest.fn(),
+    assertAccessReady: jest.fn(),
+    assertAccessRecoveryReady: jest.fn(),
+    assertLocationTokenReady: jest.fn(),
+    assertGeocodingReady: jest.fn(),
+    assertVerificationChannelReady: jest.fn(),
+    assertAlertChannelReady: jest.fn(),
+  };
 
   beforeEach(() => {
-  jest.clearAllMocks();
+    jest.clearAllMocks();
 
-  populationDeliveryService.sendSms.mockResolvedValue({
-    provider: 'BREVO',
-    providerMessageId: 'message-sms',
-  });
-  populationDeliveryService.sendEmail.mockResolvedValue({
-    provider: 'BREVO',
-    providerMessageId: 'message-email',
-  });
+    populationDeliveryService.sendSms.mockResolvedValue({
+      provider: 'BREVO',
+      providerMessageId: 'message-sms',
+    });
+    populationDeliveryService.sendEmail.mockResolvedValue({
+      provider: 'BREVO',
+      providerMessageId: 'message-email',
+    });
 
-  prisma.$transaction.mockImplementation(
-    async (callback: any) => callback(prisma),
-  );
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback(prisma),
+    );
 
     process.env.POPULATION_OTP_SECRET =
       'test-population-otp-secret-not-for-production';
@@ -134,8 +133,7 @@ const readiness = {
       'test-population-access-secret-not-for-production';
 
     prisma.$transaction.mockImplementation(
-      async (callback: (tx: typeof prisma) => unknown) =>
-        callback(prisma),
+      async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
     );
     service = new PopulationService(
       prisma as any,
@@ -148,7 +146,9 @@ const readiness = {
 
   it('keeps a PENDING subscriber unchanged when the access secret is unavailable', async () => {
     readiness.assertAccessReady.mockImplementationOnce(() => {
-      throw new ServiceUnavailableException('Accès citoyen Population indisponible');
+      throw new ServiceUnavailableException(
+        'Accès citoyen Population indisponible',
+      );
     });
 
     await expect(
@@ -223,22 +223,19 @@ const readiness = {
       RueAssessmentStatus.ASSESSMENT_IN_PROGRESS,
       RueAssessmentStatus.CONFIRMED_NOT_SUBJECT,
       RueAssessmentStatus.EXEMPT,
-    ])(
-      'refuse un site dont le statut RUE est %s',
-      async (assessmentStatus) => {
-        prisma.rueFacilityProfile.findUnique.mockResolvedValue({
-          id: 'rue-profile-1',
-          buildingId: 'building-1',
-          assessmentStatus,
-          populationEnabled: false,
-          populationProgram: null,
-        });
+    ])('refuse un site dont le statut RUE est %s', async (assessmentStatus) => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        id: 'rue-profile-1',
+        buildingId: 'building-1',
+        assessmentStatus,
+        populationEnabled: false,
+        populationProgram: null,
+      });
 
-        await expect(
-          service.assertPopulationEligible('building-1'),
-        ).rejects.toBeInstanceOf(BadRequestException);
-      },
-    );
+      await expect(
+        service.assertPopulationEligible('building-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 
   describe('assertPopulationOperational', () => {
@@ -365,9 +362,7 @@ const readiness = {
         },
       });
 
-      const result = await service.getPublicProgram(
-        'sobeys-boucherville',
-      );
+      const result = await service.getPublicProgram('sobeys-boucherville');
 
       expect(prisma.populationProgram.findUnique).toHaveBeenCalledWith({
         where: {
@@ -424,23 +419,20 @@ const readiness = {
       PopulationProgramStatus.READY,
       PopulationProgramStatus.SUSPENDED,
       PopulationProgramStatus.ARCHIVED,
-    ])(
-      'retourne 404 lorsque le programme est %s',
-      async (status) => {
-        prisma.populationProgram.findUnique.mockResolvedValue({
-          ...publicProgram,
-          status,
-          rueFacilityProfile: {
-            assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
-            populationEnabled: true,
-          },
-        });
+    ])('retourne 404 lorsque le programme est %s', async (status) => {
+      prisma.populationProgram.findUnique.mockResolvedValue({
+        ...publicProgram,
+        status,
+        rueFacilityProfile: {
+          assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
+          populationEnabled: true,
+        },
+      });
 
-        await expect(
-          service.getPublicProgram('sobeys-boucherville'),
-        ).rejects.toBeInstanceOf(NotFoundException);
-      },
-    );
+      await expect(
+        service.getPublicProgram('sobeys-boucherville'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
 
     it('retourne 404 lorsque le site n’est plus confirmé assujetti au RUE', async () => {
       prisma.populationProgram.findUnique.mockResolvedValue({
@@ -542,8 +534,7 @@ const readiness = {
         },
       });
 
-      const result =
-        await service.getProgramConfiguration('building-1');
+      const result = await service.getProgramConfiguration('building-1');
 
       expect(result).toEqual({
         configured: true,
@@ -778,10 +769,7 @@ const readiness = {
         status: PopulationProgramStatus.SUSPENDED,
       });
 
-      const result = await service.configureProgram(
-        'building-1',
-        suspendedDto,
-      );
+      const result = await service.configureProgram('building-1', suspendedDto);
 
       expect(prisma.populationProgram.upsert).toHaveBeenCalled();
       expect(result.status).toBe(PopulationProgramStatus.SUSPENDED);
@@ -806,7 +794,7 @@ const readiness = {
       expect(prisma.populationProgram.upsert).not.toHaveBeenCalled();
     });
   });
-    describe('validateProgramReadiness', () => {
+  describe('validateProgramReadiness', () => {
     const readyProgram = {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
@@ -1030,7 +1018,7 @@ const readiness = {
       );
     });
   });
-    describe('markReady', () => {
+  describe('markReady', () => {
     const readyProgram = {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
@@ -1149,8 +1137,7 @@ const readiness = {
         id: 'profile-1',
         buildingId: 'building-1',
         assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
-        populationEnabled:
-          status === PopulationProgramStatus.ACTIVE,
+        populationEnabled: status === PopulationProgramStatus.ACTIVE,
         populationProgram: program,
       });
 
@@ -1163,7 +1150,7 @@ const readiness = {
       expect(prisma.populationProgram.update).not.toHaveBeenCalled();
     });
   });
-    describe('activateProgram', () => {
+  describe('activateProgram', () => {
     const readyProgram = {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
@@ -1398,7 +1385,7 @@ const readiness = {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
-    describe('suspendProgram', () => {
+  describe('suspendProgram', () => {
     const activeProgram = {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
@@ -1559,14 +1546,14 @@ const readiness = {
 
       prisma.populationProgram.findUnique.mockResolvedValue(program);
 
-      await expect(
-        service.suspendProgram('building-1'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.suspendProgram('building-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
-    describe('archiveProgram', () => {
+  describe('archiveProgram', () => {
     const activeProgram = {
       id: 'program-1',
       rueFacilityProfileId: 'profile-1',
@@ -1759,9 +1746,9 @@ const readiness = {
 
       prisma.populationProgram.findUnique.mockResolvedValue(program);
 
-      await expect(
-        service.archiveProgram('building-1'),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.archiveProgram('building-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
@@ -1815,31 +1802,24 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
     it('crée une inscription SMS en attente de vérification et un OTP hashé', async () => {
-      const result = await service.registerSubscriber(
-        'sobeys-boucherville',
-        {
-          phone: '+14505551234',
-          preferredLanguage: PopulationPreferredLanguage.FR,
-          consentVersion: '2026-09-v1',
-        },
-      );
+      const result = await service.registerSubscriber('sobeys-boucherville', {
+        phone: '+14505551234',
+        preferredLanguage: PopulationPreferredLanguage.FR,
+        consentVersion: '2026-09-v1',
+      });
 
-      expect(
-        prisma.populationSubscriber.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationSubscriber.create).toHaveBeenCalledWith({
         data: {
           programId: 'program-1',
           phone: '+14505551234',
           email: null,
           preferredLanguage: PopulationPreferredLanguage.FR,
-          status:
-            PopulationSubscriberStatus.PENDING_VERIFICATION,
+          status: PopulationSubscriberStatus.PENDING_VERIFICATION,
         },
         select: {
           id: true,
@@ -1849,9 +1829,7 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationVerification.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationVerification.create).toHaveBeenCalledWith({
         data: {
           subscriberId: 'subscriber-1',
           channel: PopulationVerificationChannel.SMS,
@@ -1864,9 +1842,7 @@ const readiness = {
       const verificationCall =
         prisma.populationVerification.create.mock.calls[0][0];
 
-      expect(
-        verificationCall.data.codeHash,
-      ).not.toMatch(/^\d{6}$/);
+      expect(verificationCall.data.codeHash).not.toMatch(/^\d{6}$/);
 
       expect(result.verificationRequired).toBe(true);
       expect(result.verificationChannel).toBe(
@@ -1878,24 +1854,17 @@ const readiness = {
         populationDeliveryService.sendSms.mock.calls[0];
       expect(destination).toBe('+14505551234');
       expect(message).toMatch(/\d{6}/);
-      expect(JSON.stringify(result)).not.toContain(
-        message.match(/\d{6}/)?.[0],
-      );
+      expect(JSON.stringify(result)).not.toContain(message.match(/\d{6}/)?.[0]);
     });
 
     it('crée une inscription EMAIL lorsque seul le courriel est fourni', async () => {
-      await service.registerSubscriber(
-        'sobeys-boucherville',
-        {
-          email: 'Citoyen@Example.com',
-          preferredLanguage: PopulationPreferredLanguage.EN,
-          consentVersion: '2026-09-v1',
-        },
-      );
+      await service.registerSubscriber('sobeys-boucherville', {
+        email: 'Citoyen@Example.com',
+        preferredLanguage: PopulationPreferredLanguage.EN,
+        consentVersion: '2026-09-v1',
+      });
 
-      expect(
-        prisma.populationSubscriber.create,
-      ).toHaveBeenCalledWith(
+      expect(prisma.populationSubscriber.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             programId: 'program-1',
@@ -1906,9 +1875,7 @@ const readiness = {
         }),
       );
 
-      expect(
-        prisma.populationVerification.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationVerification.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           subscriberId: 'subscriber-1',
           channel: PopulationVerificationChannel.EMAIL,
@@ -1930,14 +1897,11 @@ const readiness = {
         new PopulationProviderError('BREVO_NETWORK_ERROR', 'indisponible'),
       );
 
-      const result = await service.registerSubscriber(
-        'sobeys-boucherville',
-        {
-          phone: '+14505551234',
-          preferredLanguage: PopulationPreferredLanguage.FR,
-          consentVersion: '2026-09-v1',
-        },
-      );
+      const result = await service.registerSubscriber('sobeys-boucherville', {
+        phone: '+14505551234',
+        preferredLanguage: PopulationPreferredLanguage.FR,
+        consentVersion: '2026-09-v1',
+      });
 
       expect(result.deliveryStatus).toBe('FAILED');
       expect(prisma.populationSubscriber.create).toHaveBeenCalledTimes(1);
@@ -1948,19 +1912,14 @@ const readiness = {
       prisma.populationProgram.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.registerSubscriber(
-          'programme-inexistant',
-          {
-            phone: '+14505551234',
-            preferredLanguage: PopulationPreferredLanguage.FR,
-            consentVersion: '2026-09-v1',
-          },
-        ),
+        service.registerSubscriber('programme-inexistant', {
+          phone: '+14505551234',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        }),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        prisma.populationSubscriber.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
     });
 
     it('refuse un programme qui n’est pas ACTIVE', async () => {
@@ -1970,14 +1929,11 @@ const readiness = {
       });
 
       await expect(
-        service.registerSubscriber(
-          'sobeys-boucherville',
-          {
-            phone: '+14505551234',
-            preferredLanguage: PopulationPreferredLanguage.FR,
-            consentVersion: '2026-09-v1',
-          },
-        ),
+        service.registerSubscriber('sobeys-boucherville', {
+          phone: '+14505551234',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -1988,36 +1944,26 @@ const readiness = {
       });
 
       await expect(
-        service.registerSubscriber(
-          'sobeys-boucherville',
-          {
-            phone: '+14505551234',
-            preferredLanguage: PopulationPreferredLanguage.FR,
-            consentVersion: '2026-09-v1',
-          },
-        ),
+        service.registerSubscriber('sobeys-boucherville', {
+          phone: '+14505551234',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
     });
 
     it('refuse une version de consentement périmée', async () => {
       await expect(
-        service.registerSubscriber(
-          'sobeys-boucherville',
-          {
-            phone: '+14505551234',
-            preferredLanguage: PopulationPreferredLanguage.FR,
-            consentVersion: 'ancienne-version',
-          },
-        ),
+        service.registerSubscriber('sobeys-boucherville', {
+          phone: '+14505551234',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: 'ancienne-version',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
     });
 
     it('refuse SMS lorsque le canal SMS du programme est désactivé', async () => {
@@ -2027,14 +1973,11 @@ const readiness = {
       });
 
       await expect(
-        service.registerSubscriber(
-          'sobeys-boucherville',
-          {
-            phone: '+14505551234',
-            preferredLanguage: PopulationPreferredLanguage.FR,
-            consentVersion: '2026-09-v1',
-          },
-        ),
+        service.registerSubscriber('sobeys-boucherville', {
+          phone: '+14505551234',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -2045,14 +1988,11 @@ const readiness = {
       });
 
       await expect(
-        service.registerSubscriber(
-          'sobeys-boucherville',
-          {
-            email: 'citoyen@example.com',
-            preferredLanguage: PopulationPreferredLanguage.FR,
-            consentVersion: '2026-09-v1',
-          },
-        ),
+        service.registerSubscriber('sobeys-boucherville', {
+          email: 'citoyen@example.com',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -2064,16 +2004,14 @@ const readiness = {
       smsEnabled: true,
       emailEnabled: true,
       rueFacilityProfile: {
-        assessmentStatus:
-          RueAssessmentStatus.CONFIRMED_SUBJECT,
+        assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
         populationEnabled: true,
       },
     };
 
     const pendingSubscriber = {
       id: 'subscriber-1',
-      status:
-        PopulationSubscriberStatus.PENDING_VERIFICATION,
+      status: PopulationSubscriberStatus.PENDING_VERIFICATION,
       phone: '+14505551234',
       email: 'citoyen@example.com',
     };
@@ -2087,9 +2025,7 @@ const readiness = {
         pendingSubscriber,
       );
 
-      prisma.populationVerification.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       prisma.populationVerification.count.mockResolvedValue(0);
 
@@ -2107,9 +2043,7 @@ const readiness = {
         },
       );
 
-      expect(
-        prisma.populationVerification.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationVerification.create).toHaveBeenCalledWith({
         data: {
           subscriberId: 'subscriber-1',
           channel: PopulationVerificationChannel.SMS,
@@ -2149,18 +2083,12 @@ const readiness = {
       });
 
       await expect(
-        service.resendVerification(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-          },
-        ),
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationVerification.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
     });
 
     it('refuse après 5 OTP sur 60 minutes', async () => {
@@ -2171,18 +2099,12 @@ const readiness = {
       prisma.populationVerification.count.mockResolvedValue(5);
 
       await expect(
-        service.resendVerification(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-          },
-        ),
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationVerification.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
     });
 
     it('refuse SMS si aucun téléphone n’est disponible', async () => {
@@ -2192,13 +2114,9 @@ const readiness = {
       });
 
       await expect(
-        service.resendVerification(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-          },
-        ),
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -2209,13 +2127,9 @@ const readiness = {
       });
 
       await expect(
-        service.resendVerification(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.EMAIL,
-          },
-        ),
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.EMAIL,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -2226,24 +2140,16 @@ const readiness = {
       });
 
       await expect(
-        service.resendVerification(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-          },
-        ),
+        service.resendVerification('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationVerification.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
     });
 
     it('refuse un subscriber appartenant à un autre programme', async () => {
-      prisma.populationSubscriber.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.populationSubscriber.findFirst.mockResolvedValue(null);
 
       await expect(
         service.resendVerification(
@@ -2283,10 +2189,7 @@ const readiness = {
 
     const hashCode = (code: string) =>
       require('crypto')
-        .createHmac(
-          'sha256',
-          'test-population-otp-secret-not-for-production',
-        )
+        .createHmac('sha256', 'test-population-otp-secret-not-for-production')
         .update(code)
         .digest('hex');
 
@@ -2332,8 +2235,7 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
@@ -2347,9 +2249,7 @@ const readiness = {
         },
       );
 
-      expect(
-        prisma.populationVerification.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationVerification.update).toHaveBeenCalledWith({
         where: {
           id: 'verification-1',
         },
@@ -2358,9 +2258,7 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationSubscriber.update).toHaveBeenCalledWith({
         where: {
           id: 'subscriber-1',
         },
@@ -2372,38 +2270,26 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenCalledTimes(2);
+      expect(prisma.populationConsentEvent.create).toHaveBeenCalledTimes(2);
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenNthCalledWith(
-        1,
-        {
-          data: expect.objectContaining({
-            programId: 'program-1',
-            subscriberId: 'subscriber-1',
-            type: PopulationConsentEventType.SUBSCRIBED,
-            consentVersion: '2026-09-v1',
-            smsEnabled: true,
-            emailEnabled: false,
-            source: 'PUBLIC_PORTAL',
-          }),
-        },
-      );
+      expect(prisma.populationConsentEvent.create).toHaveBeenNthCalledWith(1, {
+        data: expect.objectContaining({
+          programId: 'program-1',
+          subscriberId: 'subscriber-1',
+          type: PopulationConsentEventType.SUBSCRIBED,
+          consentVersion: '2026-09-v1',
+          smsEnabled: true,
+          emailEnabled: false,
+          source: 'PUBLIC_PORTAL',
+        }),
+      });
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenNthCalledWith(
-        2,
-        {
-          data: expect.objectContaining({
-            type: PopulationConsentEventType.VERIFIED,
-            consentVersion: '2026-09-v1',
-          }),
-        },
-      );
+      expect(prisma.populationConsentEvent.create).toHaveBeenNthCalledWith(2, {
+        data: expect.objectContaining({
+          type: PopulationConsentEventType.VERIFIED,
+          consentVersion: '2026-09-v1',
+        }),
+      });
 
       expect(result).toEqual({
         verified: true,
@@ -2418,19 +2304,13 @@ const readiness = {
 
     it('incrémente attemptCount lorsque le code est invalide', async () => {
       await expect(
-        service.verifySubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: '999999',
-          },
-        ),
+        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: '999999',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationVerification.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationVerification.update).toHaveBeenCalledWith({
         where: {
           id: 'verification-1',
         },
@@ -2441,13 +2321,9 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
     });
 
     it('refuse un OTP expiré', async () => {
@@ -2457,19 +2333,13 @@ const readiness = {
       });
 
       await expect(
-        service.verifySubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
     });
 
     it('refuse lorsque le nombre maximal de tentatives est atteint', async () => {
@@ -2480,19 +2350,13 @@ const readiness = {
       });
 
       await expect(
-        service.verifySubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
     });
 
     it('refuse un subscriber qui n’appartient pas au programme public', async () => {
@@ -2509,9 +2373,7 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        prisma.populationVerification.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.findFirst).not.toHaveBeenCalled();
     });
 
     it('refuse d’émettre un token lorsque l’abonné est déjà ACTIVE', async () => {
@@ -2523,37 +2385,25 @@ const readiness = {
       });
 
       await expect(
-        service.verifySubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationVerification.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.findFirst).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
     });
 
     it('refuse lorsqu’aucune vérification active n’existe', async () => {
       prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -2563,10 +2413,7 @@ const readiness = {
 
     const hashCode = (code: string) =>
       require('crypto')
-        .createHmac(
-          'sha256',
-          'test-population-otp-secret-not-for-production',
-        )
+        .createHmac('sha256', 'test-population-otp-secret-not-for-production')
         .update(code)
         .digest('hex');
 
@@ -2576,8 +2423,7 @@ const readiness = {
         status: PopulationProgramStatus.ACTIVE,
         consentVersion: '2026-09-v1',
         rueFacilityProfile: {
-          assessmentStatus:
-            RueAssessmentStatus.CONFIRMED_SUBJECT,
+          assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
           populationEnabled: true,
         },
       });
@@ -2618,8 +2464,7 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
@@ -2633,9 +2478,7 @@ const readiness = {
         },
       );
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationSubscriber.update).toHaveBeenCalledWith({
         where: {
           id: 'subscriber-1',
         },
@@ -2647,32 +2490,21 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenNthCalledWith(
-        1,
-        {
-          data: expect.objectContaining({
-            type:
-              PopulationConsentEventType.CONSENT_UPDATED,
-            smsEnabled: true,
-            emailEnabled: true,
-          }),
-        },
-      );
+      expect(prisma.populationConsentEvent.create).toHaveBeenNthCalledWith(1, {
+        data: expect.objectContaining({
+          type: PopulationConsentEventType.CONSENT_UPDATED,
+          smsEnabled: true,
+          emailEnabled: true,
+        }),
+      });
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenNthCalledWith(
-        2,
-        {
-          data: expect.objectContaining({
-            type: PopulationConsentEventType.VERIFIED,
-            smsEnabled: true,
-            emailEnabled: true,
-          }),
-        },
-      );
+      expect(prisma.populationConsentEvent.create).toHaveBeenNthCalledWith(2, {
+        data: expect.objectContaining({
+          type: PopulationConsentEventType.VERIFIED,
+          smsEnabled: true,
+          emailEnabled: true,
+        }),
+      });
 
       expect(result).toEqual({
         verified: true,
@@ -2684,23 +2516,15 @@ const readiness = {
 
     it('refuse un code arbitraire pour un canal SMS déjà actif', async () => {
       await expect(
-        service.verifySubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: '000000',
-          },
-        ),
+        service.verifySubscriber('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: '000000',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationVerification.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.findFirst).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
     });
   });
 
@@ -2806,11 +2630,9 @@ const readiness = {
       );
 
       await expect(
-        service.requestSubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          { channel: PopulationVerificationChannel.SMS },
-        ),
+        service.requestSubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+        }),
       ).resolves.toEqual(genericResponse);
     });
   });
@@ -2819,10 +2641,7 @@ const readiness = {
     const validCode = '246810';
     const hashCode = (code: string) =>
       require('crypto')
-        .createHmac(
-          'sha256',
-          'test-population-otp-secret-not-for-production',
-        )
+        .createHmac('sha256', 'test-population-otp-secret-not-for-production')
         .update(code)
         .digest('hex');
     const activeSubscriber = {
@@ -2853,9 +2672,7 @@ const readiness = {
       prisma.populationProgram.findUnique.mockResolvedValue({
         id: 'program-1',
       });
-      prisma.populationSubscriber.findFirst.mockResolvedValue(
-        activeSubscriber,
-      );
+      prisma.populationSubscriber.findFirst.mockResolvedValue(activeSubscriber);
       prisma.populationVerification.findFirst.mockResolvedValue(
         accessVerification,
       );
@@ -2906,27 +2723,19 @@ const readiness = {
       });
 
       await expect(
-        service.verifySubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('refuse un code invalide et incrémente les tentatives', async () => {
       await expect(
-        service.verifySubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: '999999',
-          },
-        ),
+        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: '999999',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(prisma.populationVerification.update).toHaveBeenCalledWith({
@@ -2939,14 +2748,10 @@ const readiness = {
       prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -2957,14 +2762,10 @@ const readiness = {
       });
 
       await expect(
-        service.verifySubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -2975,14 +2776,10 @@ const readiness = {
       });
 
       await expect(
-        service.verifySubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -2990,14 +2787,10 @@ const readiness = {
       prisma.populationVerification.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriberAccess(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriberAccess('sobeys-boucherville', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(prisma.populationVerification.findFirst).toHaveBeenCalledWith(
@@ -3014,14 +2807,10 @@ const readiness = {
       prisma.populationSubscriber.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.verifySubscriberAccess(
-          'autre-programme',
-          'subscriber-1',
-          {
-            channel: PopulationVerificationChannel.SMS,
-            code: validCode,
-          },
-        ),
+        service.verifySubscriberAccess('autre-programme', 'subscriber-1', {
+          channel: PopulationVerificationChannel.SMS,
+          code: validCode,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.populationVerification.findFirst).not.toHaveBeenCalled();
     });
@@ -3031,14 +2820,14 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
         deliveryMode: PopulationDeliveryMode.LIVE,
-        governanceMode: PopulationGovernanceMode.STANDARD as PopulationGovernanceMode,
+        governanceMode:
+          PopulationGovernanceMode.STANDARD as PopulationGovernanceMode,
         smsEnabled: true,
         emailEnabled: true,
       },
@@ -3080,8 +2869,8 @@ const readiness = {
     const subscribers = [
       {
         id: 'subscriber-1',
-        latitude: 45.50,
-        longitude: -73.50,
+        latitude: 45.5,
+        longitude: -73.5,
         phone: '+15145550101',
         email: 'subscriber-1@example.com',
         smsEnabled: true,
@@ -3117,65 +2906,48 @@ const readiness = {
     ];
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
       prisma.building.findUnique.mockResolvedValue({
         id: 'building-1',
-        latitude: 45.50,
-        longitude: -73.50,
+        latitude: 45.5,
+        longitude: -73.5,
       });
 
-      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(
-        scenario,
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(scenario);
+
+      prisma.populationSubscriber.findMany.mockResolvedValue(subscribers);
+
+      populationGeospatialService.isPointInsideImpactZone.mockImplementation(
+        ({ latitude, geometry }: { latitude: number; geometry: unknown }) => {
+          /*
+           * subscriber-1 :
+           *   Zone A + Zone B
+           *
+           * subscriber-2 :
+           *   Zone B seulement
+           *
+           * subscriber-3 :
+           *   hors zones
+           */
+          if (latitude === 45.5) {
+            return true;
+          }
+
+          if (latitude === 45.51 && geometry === null) {
+            return true;
+          }
+
+          return false;
+        },
       );
-
-      prisma.populationSubscriber.findMany.mockResolvedValue(
-        subscribers,
-      );
-
-      populationGeospatialService.isPointInsideImpactZone
-        .mockImplementation(
-          ({
-            latitude,
-            geometry,
-          }: {
-            latitude: number;
-            geometry: unknown;
-          }) => {
-            /*
-             * subscriber-1 :
-             *   Zone A + Zone B
-             *
-             * subscriber-2 :
-             *   Zone B seulement
-             *
-             * subscriber-3 :
-             *   hors zones
-             */
-            if (latitude === 45.50) {
-              return true;
-            }
-
-            if (
-              latitude === 45.51 &&
-              geometry === null
-            ) {
-              return true;
-            }
-
-            return false;
-          },
-        );
     });
 
     it('calcule les agrégats par zone et déduplique les citoyens présents dans plusieurs zones', async () => {
-      const result =
-        await service.getScenarioPopulationPreview(
-          'building-1',
-          'scenario-1',
-        );
+      const result = await service.getScenarioPopulationPreview(
+        'building-1',
+        'scenario-1',
+      );
 
       expect(result.population).toEqual({
         activeSubscriberCount: 4,
@@ -3263,10 +3035,9 @@ const readiness = {
           emailEnabled: true,
         },
       ]);
-      populationGeospatialService.isPointInsideImpactZone
-        .mockImplementation(({ latitude }: { latitude: number }) =>
-          latitude === 45.56821528326056,
-        );
+      populationGeospatialService.isPointInsideImpactZone.mockImplementation(
+        ({ latitude }: { latitude: number }) => latitude === 45.56821528326056,
+      );
 
       const result = await service.getScenarioPopulationPreview(
         'building-1',
@@ -3300,16 +3071,15 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-without-destinations',
-          latitude: 45.50,
-          longitude: -73.50,
+          latitude: 45.5,
+          longitude: -73.5,
           phone: null,
           email: 'present-but-program-disabled@example.invalid',
           smsEnabled: true,
           emailEnabled: true,
         },
       ]);
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       const result = await service.getScenarioPopulationPreview(
         'building-1',
@@ -3319,99 +3089,77 @@ const readiness = {
       expect(result.population.uniqueTargetCount).toBe(1);
       expect(result.population.uniqueSmsTargetCount).toBe(0);
       expect(result.population.uniqueEmailTargetCount).toBe(0);
-      expect(result.zones.every(zone => zone.targetCount === 1)).toBe(true);
-      expect(result.zones.every(zone => zone.smsTargetCount === 0)).toBe(true);
-      expect(result.zones.every(zone => zone.emailTargetCount === 0)).toBe(true);
+      expect(result.zones.every((zone) => zone.targetCount === 1)).toBe(true);
+      expect(result.zones.every((zone) => zone.smsTargetCount === 0)).toBe(
+        true,
+      );
+      expect(result.zones.every((zone) => zone.emailTargetCount === 0)).toBe(
+        true,
+      );
     });
 
     it('ne transmet au moteur spatial que les abonnés géolocalisés', async () => {
-      await service.getScenarioPopulationPreview(
-        'building-1',
-        'scenario-1',
-      );
+      await service.getScenarioPopulationPreview('building-1', 'scenario-1');
 
       expect(
-        populationGeospatialService
-          .isPointInsideImpactZone,
+        populationGeospatialService.isPointInsideImpactZone,
       ).toHaveBeenCalledTimes(6);
 
       const calls =
-        populationGeospatialService
-          .isPointInsideImpactZone.mock.calls;
+        populationGeospatialService.isPointInsideImpactZone.mock.calls;
 
       expect(
         calls.some(
           ([argument]) =>
-            argument.latitude === null ||
-            argument.longitude === null,
+            argument.latitude === null || argument.longitude === null,
         ),
       ).toBe(false);
     });
 
     it('utilise les coordonnées du bâtiment comme référence des zones radiales', async () => {
-      await service.getScenarioPopulationPreview(
-        'building-1',
-        'scenario-1',
-      );
+      await service.getScenarioPopulationPreview('building-1', 'scenario-1');
 
       expect(
-        populationGeospatialService
-          .isPointInsideImpactZone,
+        populationGeospatialService.isPointInsideImpactZone,
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          referenceLatitude: 45.50,
-          referenceLongitude: -73.50,
+          referenceLatitude: 45.5,
+          referenceLongitude: -73.5,
         }),
       );
     });
 
-        it('retourne le point du bâtiment sans exposer de donnée individuelle d’abonné', async () => {
-      const result =
-        await service.getScenarioPopulationPreview(
-          'building-1',
-          'scenario-1',
-        );
+    it('retourne le point du bâtiment sans exposer de donnée individuelle d’abonné', async () => {
+      const result = await service.getScenarioPopulationPreview(
+        'building-1',
+        'scenario-1',
+      );
 
       const serialized = JSON.stringify(result);
 
       expect(result.building).toEqual(
         expect.objectContaining({
           id: 'building-1',
-          latitude: 45.50,
-          longitude: -73.50,
+          latitude: 45.5,
+          longitude: -73.5,
         }),
       );
 
-      expect(serialized).not.toContain(
-        'subscriber-1',
-      );
+      expect(serialized).not.toContain('subscriber-1');
 
-      expect(serialized).not.toContain(
-        'subscriber-2',
-      );
+      expect(serialized).not.toContain('subscriber-2');
 
-      expect(serialized).not.toContain(
-        'subscriber-3',
-      );
+      expect(serialized).not.toContain('subscriber-3');
 
-      expect(serialized).not.toContain(
-        '"phone"',
-      );
+      expect(serialized).not.toContain('"phone"');
 
-      expect(serialized).not.toContain(
-        '"email"',
-      );
+      expect(serialized).not.toContain('"email"');
     });
 
     it('demande uniquement les abonnés ACTIVE du programme concerné', async () => {
-      await service.getScenarioPopulationPreview(
-        'building-1',
-        'scenario-1',
-      );
+      await service.getScenarioPopulationPreview('building-1', 'scenario-1');
 
-      expect(
-        prisma.populationSubscriber.findMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationSubscriber.findMany).toHaveBeenCalledWith({
         where: {
           programId: 'program-1',
           status: PopulationSubscriberStatus.ACTIVE,
@@ -3429,9 +3177,7 @@ const readiness = {
     });
 
     it('refuse un scénario qui n’appartient pas au profil RUE du bâtiment', async () => {
-      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(null);
 
       await expect(
         service.getScenarioPopulationPreview(
@@ -3440,9 +3186,7 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        prisma.rueEmergencyScenario.findFirst,
-      ).toHaveBeenCalledWith(
+      expect(prisma.rueEmergencyScenario.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             id: 'scenario-autre-site',
@@ -3452,9 +3196,7 @@ const readiness = {
         }),
       );
 
-      expect(
-        prisma.populationSubscriber.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findMany).not.toHaveBeenCalled();
     });
 
     it('refuse le calcul lorsque Sentinelle Population n’est pas opérationnel', async () => {
@@ -3464,38 +3206,24 @@ const readiness = {
       });
 
       await expect(
-        service.getScenarioPopulationPreview(
-          'building-1',
-          'scenario-1',
-        ),
+        service.getScenarioPopulationPreview('building-1', 'scenario-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.building.findUnique,
-      ).not.toHaveBeenCalled();
+      expect(prisma.building.findUnique).not.toHaveBeenCalled();
 
-      expect(
-        prisma.rueEmergencyScenario.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.rueEmergencyScenario.findFirst).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationSubscriber.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findMany).not.toHaveBeenCalled();
     });
 
-        it('refuse un bÃ¢timent introuvable aprÃ¨s validation du profil opÃ©rationnel', async () => {
+    it('refuse un bÃ¢timent introuvable aprÃ¨s validation du profil opÃ©rationnel', async () => {
       prisma.building.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.getScenarioPopulationPreview(
-          'building-1',
-          'scenario-1',
-        ),
+        service.getScenarioPopulationPreview('building-1', 'scenario-1'),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        prisma.rueEmergencyScenario.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.rueEmergencyScenario.findFirst).not.toHaveBeenCalled();
     });
   });
 
@@ -3503,8 +3231,7 @@ const readiness = {
     const eligibleProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: false,
       populationProgram: {
         id: 'program-1',
@@ -3513,17 +3240,14 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        eligibleProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(eligibleProfile);
 
       prisma.rueEmergencyScenario.findMany.mockResolvedValue([
         {
           id: 'scenario-1',
           nameFR: 'Rejet accidentel d’ammoniac',
           nameEN: 'Accidental ammonia release',
-          description:
-            'Rejet accidentel pouvant affecter le voisinage.',
+          description: 'Rejet accidentel pouvant affecter le voisinage.',
           type: 'TOXIC_RELEASE',
           eventType: 'Fuite',
           impactDistanceKm: 1.5,
@@ -3541,9 +3265,7 @@ const readiness = {
               protectiveAction: 'SHELTER_IN_PLACE',
               instructionFR: 'Mettez-vous à l’abri.',
               instructionEN: 'Shelter in place.',
-              validatedAt: new Date(
-                '2026-09-01T12:00:00.000Z',
-              ),
+              validatedAt: new Date('2026-09-01T12:00:00.000Z'),
               geometry: {
                 type: 'Polygon',
                 coordinates: [],
@@ -3568,12 +3290,9 @@ const readiness = {
     });
 
     it('retourne les scénarios RUE actifs sans exiger un programme Population opérationnel', async () => {
-      const result =
-        await service.getAvailableScenarios('building-1');
+      const result = await service.getAvailableScenarios('building-1');
 
-      expect(
-        prisma.rueEmergencyScenario.findMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.rueEmergencyScenario.findMany).toHaveBeenCalledWith({
         where: {
           facilityProfileId: 'profile-1',
           isActive: true,
@@ -3603,8 +3322,7 @@ const readiness = {
     });
 
     it('calcule séparément l’état opérationnel des zones', async () => {
-      const result =
-        await service.getAvailableScenarios('building-1');
+      const result = await service.getAvailableScenarios('building-1');
 
       expect(result.scenarios[0].impactZones).toEqual([
         expect.objectContaining({
@@ -3624,8 +3342,7 @@ const readiness = {
     });
 
     it('ne retourne pas la géométrie brute des zones', async () => {
-      const result =
-        await service.getAvailableScenarios('building-1');
+      const result = await service.getAvailableScenarios('building-1');
 
       const serialized = JSON.stringify(result);
 
@@ -3636,17 +3353,14 @@ const readiness = {
     it('refuse la lecture lorsque le site n’est pas admissible au RUE', async () => {
       prisma.rueFacilityProfile.findUnique.mockResolvedValue({
         ...eligibleProfile,
-        assessmentStatus:
-          RueAssessmentStatus.CONFIRMED_NOT_SUBJECT,
+        assessmentStatus: RueAssessmentStatus.CONFIRMED_NOT_SUBJECT,
       });
 
       await expect(
         service.getAvailableScenarios('building-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.rueEmergencyScenario.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.rueEmergencyScenario.findMany).not.toHaveBeenCalled();
     });
   });
 
@@ -3654,8 +3368,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -3752,14 +3465,10 @@ const readiness = {
       type: PopulationAlertType.EMERGENCY,
       titleFR: '  Alerte ammoniac  ',
       titleEN: '  Ammonia alert  ',
-      messageFR:
-        '  Un rejet accidentel est en cours.  ',
-      messageEN:
-        '  An accidental release is underway.  ',
-      instructionFR:
-        '  Mettez-vous immédiatement à l’abri.  ',
-      instructionEN:
-        '  Shelter in place immediately.  ',
+      messageFR: '  Un rejet accidentel est en cours.  ',
+      messageEN: '  An accidental release is underway.  ',
+      instructionFR: '  Mettez-vous immédiatement à l’abri.  ',
+      instructionEN: '  Shelter in place immediately.  ',
     };
 
     const actor = {
@@ -3768,47 +3477,29 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
+
+      prisma.building.findUnique.mockResolvedValue(building);
+
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(scenario);
+
+      prisma.populationSubscriber.findMany.mockResolvedValue(subscribers);
+
+      populationGeospatialService.isPointInsideImpactZone.mockImplementation(
+        ({ latitude, geometry }: { latitude: number; geometry: unknown }) => {
+          // subscriber-1 appartient aux zones A et B.
+          if (latitude === 45.5) {
+            return true;
+          }
+
+          // subscriber-2 appartient uniquement à la zone B.
+          if (latitude === 45.51 && geometry === null) {
+            return true;
+          }
+
+          return false;
+        },
       );
-
-      prisma.building.findUnique.mockResolvedValue(
-        building,
-      );
-
-      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(
-        scenario,
-      );
-
-      prisma.populationSubscriber.findMany.mockResolvedValue(
-        subscribers,
-      );
-
-      populationGeospatialService.isPointInsideImpactZone
-        .mockImplementation(
-          ({
-            latitude,
-            geometry,
-          }: {
-            latitude: number;
-            geometry: unknown;
-          }) => {
-            // subscriber-1 appartient aux zones A et B.
-            if (latitude === 45.5) {
-              return true;
-            }
-
-            // subscriber-2 appartient uniquement à la zone B.
-            if (
-              latitude === 45.51 &&
-              geometry === null
-            ) {
-              return true;
-            }
-
-            return false;
-          },
-        );
 
       prisma.populationAlert.create.mockResolvedValue({
         id: 'alert-1',
@@ -3841,21 +3532,14 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
     it('crée un brouillon DRAFT avec le scénario et le créateur fournis côté serveur', async () => {
-      const result = await service.createAlertDraft(
-        'building-1',
-        dto,
-        actor,
-      );
+      const result = await service.createAlertDraft('building-1', dto, actor);
 
-      expect(
-        prisma.populationAlert.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           programId: 'program-1',
           emergencyScenarioId: 'scenario-1',
@@ -3866,15 +3550,11 @@ const readiness = {
           titleFR: 'Alerte ammoniac',
           titleEN: 'Ammonia alert',
 
-          messageFR:
-            'Un rejet accidentel est en cours.',
-          messageEN:
-            'An accidental release is underway.',
+          messageFR: 'Un rejet accidentel est en cours.',
+          messageEN: 'An accidental release is underway.',
 
-          instructionFR:
-            'Mettez-vous immédiatement à l’abri.',
-          instructionEN:
-            'Shelter in place immediately.',
+          instructionFR: 'Mettez-vous immédiatement à l’abri.',
+          instructionEN: 'Shelter in place immediately.',
 
           createdByType: 'CLIENT_USER',
           createdById: 'client-user-1',
@@ -3903,9 +3583,7 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
     });
 
     it('refuse ALL_CLEAR par la création générique même sans incidentEventId', async () => {
@@ -3920,25 +3598,16 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
     });
 
     it('snapshotte les zones et leurs populations sans créer de livraison', async () => {
-      await service.createAlertDraft(
-        'building-1',
-        dto,
-        actor,
-      );
+      await service.createAlertDraft('building-1', dto, actor);
 
-      expect(
-        prisma.populationAlertZone.createMany,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlertZone.createMany).toHaveBeenCalledTimes(1);
 
       const zoneData =
-        prisma.populationAlertZone.createMany.mock
-          .calls[0][0].data;
+        prisma.populationAlertZone.createMany.mock.calls[0][0].data;
 
       expect(zoneData).toHaveLength(2);
 
@@ -3950,12 +3619,9 @@ const readiness = {
           zoneNameFRSnapshot: 'Zone immédiate',
           zoneNameENSnapshot: 'Immediate zone',
           geometrySnapshot: scenario.impactZones[0].geometry,
-          protectiveActionSnapshot:
-            'SHELTER_IN_PLACE',
-          instructionFRSnapshot:
-            'Mettez-vous à l’abri.',
-          instructionENSnapshot:
-            'Shelter in place.',
+          protectiveActionSnapshot: 'SHELTER_IN_PLACE',
+          instructionFRSnapshot: 'Mettez-vous à l’abri.',
+          instructionENSnapshot: 'Shelter in place.',
           targetedSubscriberCount: 1,
         }),
       );
@@ -3969,29 +3635,18 @@ const readiness = {
         }),
       );
 
-      expect(
-        prisma.populationAlertDelivery.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.create).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
     });
 
     it('conserve dans contextSnapshot les agrégats dédupliqués calculés par le même moteur que le preview', async () => {
-      await service.createAlertDraft(
-        'building-1',
-        dto,
-        actor,
-      );
+      await service.createAlertDraft('building-1', dto, actor);
 
       const alertCreateData =
-        prisma.populationAlert.create.mock
-          .calls[0][0].data;
+        prisma.populationAlert.create.mock.calls[0][0].data;
 
-      expect(
-        alertCreateData.contextSnapshot.population,
-      ).toEqual({
+      expect(alertCreateData.contextSnapshot.population).toEqual({
         activeSubscriberCount: 4,
         geolocatedSubscriberCount: 3,
         unlocatedSubscriberCount: 1,
@@ -4000,46 +3655,29 @@ const readiness = {
         uniqueEmailTargetCount: 1,
       });
 
-      expect(
-        alertCreateData.contextSnapshot.targeting,
-      ).toEqual({
+      expect(alertCreateData.contextSnapshot.targeting).toEqual({
         zoneCount: 2,
         calculatedAt: expect.any(String),
       });
     });
 
     it('ne place aucune donnée citoyenne nominative dans contextSnapshot', async () => {
-      await service.createAlertDraft(
-        'building-1',
-        dto,
-        actor,
-      );
+      await service.createAlertDraft('building-1', dto, actor);
 
       const snapshot =
-        prisma.populationAlert.create.mock
-          .calls[0][0].data.contextSnapshot;
+        prisma.populationAlert.create.mock.calls[0][0].data.contextSnapshot;
 
       const serialized = JSON.stringify(snapshot);
 
-      expect(serialized).not.toContain(
-        'subscriber-1',
-      );
+      expect(serialized).not.toContain('subscriber-1');
 
-      expect(serialized).not.toContain(
-        'subscriber-2',
-      );
+      expect(serialized).not.toContain('subscriber-2');
 
-      expect(serialized).not.toContain(
-        'subscriber-unlocated',
-      );
+      expect(serialized).not.toContain('subscriber-unlocated');
 
-      expect(serialized).not.toContain(
-        '+1450555',
-      );
+      expect(serialized).not.toContain('+1450555');
 
-      expect(serialized).not.toContain(
-        '@example',
-      );
+      expect(serialized).not.toContain('@example');
 
       expect(snapshot.building).toEqual({
         id: 'building-1',
@@ -4053,28 +3691,19 @@ const readiness = {
     });
 
     it('réutilise le ciblage géospatial et déduplique un citoyen présent dans plusieurs zones', async () => {
-      await service.createAlertDraft(
-        'building-1',
-        dto,
-        actor,
-      );
+      await service.createAlertDraft('building-1', dto, actor);
 
       expect(
-        populationGeospatialService
-          .isPointInsideImpactZone,
+        populationGeospatialService.isPointInsideImpactZone,
       ).toHaveBeenCalledTimes(6);
 
       const snapshot =
-        prisma.populationAlert.create.mock
-          .calls[0][0].data.contextSnapshot;
+        prisma.populationAlert.create.mock.calls[0][0].data.contextSnapshot;
 
-      expect(
-        snapshot.population.uniqueTargetCount,
-      ).toBe(2);
+      expect(snapshot.population.uniqueTargetCount).toBe(2);
 
       const zoneData =
-        prisma.populationAlertZone.createMany.mock
-          .calls[0][0].data;
+        prisma.populationAlertZone.createMany.mock.calls[0][0].data;
 
       expect(
         zoneData.map(
@@ -4110,13 +3739,9 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertZone.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.createMany).not.toHaveBeenCalled();
     });
 
     it('refuse la création lorsque Population n’est pas opérationnel', async () => {
@@ -4126,20 +3751,12 @@ const readiness = {
       });
 
       await expect(
-        service.createAlertDraft(
-          'building-1',
-          dto,
-          actor,
-        ),
+        service.createAlertDraft('building-1', dto, actor),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertZone.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.createMany).not.toHaveBeenCalled();
     });
 
     it('propage une erreur de création des zones dans la transaction', async () => {
@@ -4148,20 +3765,12 @@ const readiness = {
       );
 
       await expect(
-        service.createAlertDraft(
-          'building-1',
-          dto,
-          actor,
-        ),
+        service.createAlertDraft('building-1', dto, actor),
       ).rejects.toThrow('zone snapshot failure');
 
-      expect(
-        prisma.populationAlert.create,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlert.create).toHaveBeenCalledTimes(1);
 
-      expect(
-        prisma.populationAlert.findUnique,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.findUnique).not.toHaveBeenCalled();
     });
   });
 
@@ -4169,8 +3778,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -4200,26 +3808,17 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        draftAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(draftAlert);
     });
 
     it('retourne uniquement une alerte appartenant au programme du bâtiment', async () => {
-      await expect(
-        service.getAlert(
-          'building-1',
-          'alert-1',
-        ),
-      ).resolves.toEqual(draftAlert);
+      await expect(service.getAlert('building-1', 'alert-1')).resolves.toEqual(
+        draftAlert,
+      );
 
-      expect(
-        prisma.populationAlert.findFirst,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
           programId: 'program-1',
@@ -4235,15 +3834,10 @@ const readiness = {
     });
 
     it('retourne 404 lorsqu’une alerte ne correspond pas au programme du bâtiment', async () => {
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.getAlert(
-          'building-1',
-          'alert-other-program',
-        ),
+        service.getAlert('building-1', 'alert-other-program'),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -4255,19 +3849,13 @@ const readiness = {
         titleEN: null,
       });
 
-      await service.updateAlertDraft(
-        'building-1',
-        'alert-1',
-        {
-          titleFR: '  Nouveau titre  ',
-          messageFR: '  Nouveau message  ',
-          titleEN: '   ',
-        },
-      );
+      await service.updateAlertDraft('building-1', 'alert-1', {
+        titleFR: '  Nouveau titre  ',
+        messageFR: '  Nouveau message  ',
+        titleEN: '   ',
+      });
 
-      expect(
-        prisma.populationAlert.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.update).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
         },
@@ -4293,18 +3881,12 @@ const readiness = {
       });
 
       await expect(
-        service.updateAlertDraft(
-          'building-1',
-          'alert-1',
-          {
-            type: PopulationAlertType.TEST,
-          },
-        ),
+        service.updateAlertDraft('building-1', 'alert-1', {
+          type: PopulationAlertType.TEST,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
     });
 
     it('refuse toute modification éditoriale après DRAFT', async () => {
@@ -4314,48 +3896,30 @@ const readiness = {
       });
 
       await expect(
-        service.updateAlertDraft(
-          'building-1',
-          'alert-1',
-          {
-            titleFR: 'Titre modifié',
-          },
-        ),
+        service.updateAlertDraft('building-1', 'alert-1', {
+          titleFR: 'Titre modifié',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
     });
 
     it('refuse de vider le titre français d’un DRAFT', async () => {
       await expect(
-        service.updateAlertDraft(
-          'building-1',
-          'alert-1',
-          {
-            titleFR: '   ',
-          },
-        ),
+        service.updateAlertDraft('building-1', 'alert-1', {
+          titleFR: '   ',
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
     });
 
     it('retourne le DRAFT sans écriture lorsque aucune modification n’est fournie', async () => {
       await expect(
-        service.updateAlertDraft(
-          'building-1',
-          'alert-1',
-          {},
-        ),
+        service.updateAlertDraft('building-1', 'alert-1', {}),
       ).resolves.toEqual(draftAlert);
 
-      expect(
-        prisma.populationAlert.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
     });
   });
 
@@ -4363,8 +3927,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -4431,32 +3994,20 @@ const readiness = {
     const updateContent = {
       titleFR: '  Mise à jour de la situation  ',
       titleEN: '  Situation update  ',
-      messageFR:
-        '  Les équipes d’intervention sont sur place.  ',
-      messageEN:
-        '  Response teams are on site.  ',
-      instructionFR:
-        '  Maintenez la mise à l’abri.  ',
-      instructionEN:
-        '  Continue to shelter in place.  ',
+      messageFR: '  Les équipes d’intervention sont sur place.  ',
+      messageEN: '  Response teams are on site.  ',
+      instructionFR: '  Maintenez la mise à l’abri.  ',
+      instructionEN: '  Continue to shelter in place.  ',
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.building.findUnique.mockResolvedValue(
-        building,
-      );
+      prisma.building.findUnique.mockResolvedValue(building);
 
-      prisma.incidentEvent.findFirst.mockResolvedValue(
-        incident,
-      );
+      prisma.incidentEvent.findFirst.mockResolvedValue(incident);
 
-      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(
-        scenario,
-      );
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(scenario);
 
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
@@ -4468,8 +4019,7 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       prisma.populationAlertZone.createMany.mockResolvedValue({
         count: 1,
@@ -4500,20 +4050,13 @@ const readiness = {
         },
       ];
 
-      prisma.populationAlert.findMany.mockResolvedValue(
-        history,
-      );
+      prisma.populationAlert.findMany.mockResolvedValue(history);
 
       await expect(
-        service.getIncidentAlertHistory(
-          'building-1',
-          'incident-1',
-        ),
+        service.getIncidentAlertHistory('building-1', 'incident-1'),
       ).resolves.toEqual(history);
 
-      expect(
-        prisma.incidentEvent.findFirst,
-      ).toHaveBeenCalledWith({
+      expect(prisma.incidentEvent.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'incident-1',
           buildingId: 'building-1',
@@ -4526,9 +4069,7 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationAlert.findMany,
-      ).toHaveBeenCalledWith(
+      expect(prisma.populationAlert.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             programId: 'program-1',
@@ -4545,31 +4086,25 @@ const readiness = {
         }),
       );
 
-      const historyQuery =
-        prisma.populationAlert.findMany.mock.calls[0][0];
+      const historyQuery = prisma.populationAlert.findMany.mock.calls[0][0];
 
-      expect(
-        historyQuery.include.deliveries.select,
-      ).not.toHaveProperty('destinationSnapshot');
+      expect(historyQuery.include.deliveries.select).not.toHaveProperty(
+        'destinationSnapshot',
+      );
 
-      expect(
-        historyQuery.include.deliveries.select,
-      ).not.toHaveProperty('subscriberId');
+      expect(historyQuery.include.deliveries.select).not.toHaveProperty(
+        'subscriberId',
+      );
     });
 
     it('crée un UPDATE distinct avec son propre contenu et le même incident', async () => {
-      prisma.populationAlert.findFirst.mockImplementation(
-        async (args: any) => {
-          if (
-            args?.where?.type ===
-            PopulationAlertType.ALL_CLEAR
-          ) {
-            return null;
-          }
+      prisma.populationAlert.findFirst.mockImplementation(async (args: any) => {
+        if (args?.where?.type === PopulationAlertType.ALL_CLEAR) {
+          return null;
+        }
 
-          return sourceAlert;
-        },
-      );
+        return sourceAlert;
+      });
 
       prisma.populationAlert.create.mockResolvedValue({
         id: 'alert-update-1',
@@ -4599,9 +4134,7 @@ const readiness = {
         actor,
       );
 
-      expect(
-        prisma.populationAlert.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           programId: 'program-1',
           incidentEventId: 'incident-1',
@@ -4613,15 +4146,11 @@ const readiness = {
           titleFR: 'Mise à jour de la situation',
           titleEN: 'Situation update',
 
-          messageFR:
-            'Les équipes d’intervention sont sur place.',
-          messageEN:
-            'Response teams are on site.',
+          messageFR: 'Les équipes d’intervention sont sur place.',
+          messageEN: 'Response teams are on site.',
 
-          instructionFR:
-            'Maintenez la mise à l’abri.',
-          instructionEN:
-            'Continue to shelter in place.',
+          instructionFR: 'Maintenez la mise à l’abri.',
+          instructionEN: 'Continue to shelter in place.',
 
           createdByType: 'CLIENT_USER',
           createdById: 'client-user-1',
@@ -4630,24 +4159,17 @@ const readiness = {
         }),
       });
 
-      expect(
-        prisma.populationAlertZone.createMany,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlertZone.createMany).toHaveBeenCalledTimes(1);
     });
 
     it('crée un ALL_CLEAR distinct avec son propre contenu', async () => {
-      prisma.populationAlert.findFirst.mockImplementation(
-        async (args: any) => {
-          if (
-            args?.where?.type ===
-            PopulationAlertType.ALL_CLEAR
-          ) {
-            return null;
-          }
+      prisma.populationAlert.findFirst.mockImplementation(async (args: any) => {
+        if (args?.where?.type === PopulationAlertType.ALL_CLEAR) {
+          return null;
+        }
 
-          return sourceAlert;
-        },
-      );
+        return sourceAlert;
+      });
 
       prisma.populationAlert.create.mockResolvedValue({
         id: 'alert-all-clear-1',
@@ -4676,21 +4198,15 @@ const readiness = {
         {
           titleFR: '  Fin de l’alerte  ',
           titleEN: '  All clear  ',
-          messageFR:
-            '  La situation est maintenant maîtrisée.  ',
-          messageEN:
-            '  The situation is now under control.  ',
-          instructionFR:
-            '  La consigne de mise à l’abri est levée.  ',
-          instructionEN:
-            '  The shelter-in-place instruction is lifted.  ',
+          messageFR: '  La situation est maintenant maîtrisée.  ',
+          messageEN: '  The situation is now under control.  ',
+          instructionFR: '  La consigne de mise à l’abri est levée.  ',
+          instructionEN: '  The shelter-in-place instruction is lifted.  ',
         },
         actor,
       );
 
-      expect(
-        prisma.populationAlert.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           incidentEventId: 'incident-1',
           emergencyScenarioId: 'scenario-1',
@@ -4699,35 +4215,26 @@ const readiness = {
           titleFR: 'Fin de l’alerte',
           titleEN: 'All clear',
 
-          messageFR:
-            'La situation est maintenant maîtrisée.',
-          messageEN:
-            'The situation is now under control.',
+          messageFR: 'La situation est maintenant maîtrisée.',
+          messageEN: 'The situation is now under control.',
 
-          instructionFR:
-            'La consigne de mise à l’abri est levée.',
-          instructionEN:
-            'The shelter-in-place instruction is lifted.',
+          instructionFR: 'La consigne de mise à l’abri est levée.',
+          instructionEN: 'The shelter-in-place instruction is lifted.',
         }),
       });
     });
 
     it('refuse un deuxième ALL_CLEAR pour le même incident', async () => {
-      prisma.populationAlert.findFirst.mockImplementation(
-        async (args: any) => {
-          if (
-            args?.where?.type ===
-            PopulationAlertType.ALL_CLEAR
-          ) {
-            return {
-              id: 'existing-all-clear',
-              status: PopulationAlertStatus.DRAFT,
-            };
-          }
+      prisma.populationAlert.findFirst.mockImplementation(async (args: any) => {
+        if (args?.where?.type === PopulationAlertType.ALL_CLEAR) {
+          return {
+            id: 'existing-all-clear',
+            status: PopulationAlertStatus.DRAFT,
+          };
+        }
 
-          return sourceAlert;
-        },
-      );
+        return sourceAlert;
+      });
 
       await expect(
         service.createIncidentFollowUpDraft(
@@ -4743,27 +4250,20 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
     });
 
     it('refuse un UPDATE dès qu’un ALL_CLEAR existe, même encore DRAFT', async () => {
-      prisma.populationAlert.findFirst.mockImplementation(
-        async (args: any) => {
-          if (
-            args?.where?.type ===
-            PopulationAlertType.ALL_CLEAR
-          ) {
-            return {
-              id: 'existing-all-clear',
-              status: PopulationAlertStatus.DRAFT,
-            };
-          }
+      prisma.populationAlert.findFirst.mockImplementation(async (args: any) => {
+        if (args?.where?.type === PopulationAlertType.ALL_CLEAR) {
+          return {
+            id: 'existing-all-clear',
+            status: PopulationAlertStatus.DRAFT,
+          };
+        }
 
-          return sourceAlert;
-        },
-      );
+        return sourceAlert;
+      });
 
       await expect(
         service.createIncidentFollowUpDraft(
@@ -4776,42 +4276,31 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
     });
 
     it('transforme une collision concurrente ALL_CLEAR en erreur métier', async () => {
-      prisma.populationAlert.findFirst.mockImplementation(
-        async (args: any) => {
-          if (
-            args?.where?.type ===
-            PopulationAlertType.ALL_CLEAR
-          ) {
-            /*
-             * Simule la course :
-             * aucune autre requête n'a encore créé le
-             * ALL_CLEAR au moment du contrôle applicatif.
-             */
-            return null;
-          }
+      prisma.populationAlert.findFirst.mockImplementation(async (args: any) => {
+        if (args?.where?.type === PopulationAlertType.ALL_CLEAR) {
+          /*
+           * Simule la course :
+           * aucune autre requête n'a encore créé le
+           * ALL_CLEAR au moment du contrôle applicatif.
+           */
+          return null;
+        }
 
-          return sourceAlert;
-        },
-      );
+        return sourceAlert;
+      });
 
       prisma.populationAlert.create.mockRejectedValue(
-        new Prisma.PrismaClientKnownRequestError(
-          'Unique constraint failed',
-          {
-            code: 'P2002',
-            clientVersion: 'test',
-            meta: {
-              target:
-                'PopulationAlert_one_active_all_clear_per_incident',
-            },
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+          meta: {
+            target: 'PopulationAlert_one_active_all_clear_per_incident',
           },
-        ),
+        }),
       );
 
       await expect(
@@ -4822,43 +4311,31 @@ const readiness = {
           PopulationAlertType.ALL_CLEAR,
           {
             titleFR: 'Fin de l’alerte',
-            messageFR:
-              'La situation d’urgence est maintenant maîtrisée.',
+            messageFR: 'La situation d’urgence est maintenant maîtrisée.',
             instructionFR:
               'La population peut reprendre ses activités normales.',
           },
           actor,
         ),
-      ).rejects.toThrow(
-        'Un ALL_CLEAR existe déjà pour cet incident',
-      );
+      ).rejects.toThrow('Un ALL_CLEAR existe déjà pour cet incident');
 
-      expect(
-        prisma.populationAlert.create,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlert.create).toHaveBeenCalledTimes(1);
 
-      expect(
-        prisma.populationAlertZone.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.createMany).not.toHaveBeenCalled();
     });
 
     it('permet un nouvel UPDATE lorsque l’ancien ALL_CLEAR est CANCELLED', async () => {
-      prisma.populationAlert.findFirst.mockImplementation(
-        async (args: any) => {
-          if (
-            args?.where?.type ===
-            PopulationAlertType.ALL_CLEAR
-          ) {
-            /*
-             * La requête du service exclut les ALL_CLEAR
-             * CANCELLED. Prisma retourne donc null.
-             */
-            return null;
-          }
+      prisma.populationAlert.findFirst.mockImplementation(async (args: any) => {
+        if (args?.where?.type === PopulationAlertType.ALL_CLEAR) {
+          /*
+           * La requête du service exclut les ALL_CLEAR
+           * CANCELLED. Prisma retourne donc null.
+           */
+          return null;
+        }
 
-          return sourceAlert;
-        },
-      );
+        return sourceAlert;
+      });
 
       prisma.populationAlert.create.mockResolvedValue({
         id: 'alert-update-after-cancelled-all-clear',
@@ -4896,9 +4373,7 @@ const readiness = {
         }),
       );
 
-      expect(
-        prisma.populationAlert.create,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlert.create).toHaveBeenCalledTimes(1);
     });
 
     it('refuse un follow-up lorsque la communication source n’est pas ACTIVE ou ENDED', async () => {
@@ -4918,9 +4393,7 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).not.toHaveBeenCalled();
     });
 
     it('permet de consulter l’historique après suspension ou désactivation opérationnelle de Population', async () => {
@@ -4946,10 +4419,7 @@ const readiness = {
       ]);
 
       await expect(
-        service.getIncidentAlertHistory(
-          'building-1',
-          'incident-1',
-        ),
+        service.getIncidentAlertHistory('building-1', 'incident-1'),
       ).resolves.toEqual([
         expect.objectContaining({
           id: 'alert-emergency-1',
@@ -4957,9 +4427,7 @@ const readiness = {
         }),
       ]);
 
-      expect(
-        prisma.populationAlert.findMany,
-      ).toHaveBeenCalledWith(
+      expect(prisma.populationAlert.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             programId: 'program-1',
@@ -4970,9 +4438,7 @@ const readiness = {
     });
 
     it('refuse un incident qui n’appartient pas au bâtiment et à l’organisation', async () => {
-      prisma.incidentEvent.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.incidentEvent.findFirst.mockResolvedValue(null);
 
       await expect(
         service.getIncidentAlertHistory(
@@ -4981,16 +4447,11 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        prisma.populationAlert.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.findMany).not.toHaveBeenCalled();
     });
 
     describe('cancelAlert', () => {
-      it.each([
-        PopulationAlertStatus.DRAFT,
-        PopulationAlertStatus.READY,
-      ])(
+      it.each([PopulationAlertStatus.DRAFT, PopulationAlertStatus.READY])(
         'annule une alerte %s en conservant son historique',
         async (status) => {
           prisma.populationAlert.findFirst
@@ -5013,17 +4474,12 @@ const readiness = {
             'alert-emergency-1',
           );
 
-          expect(
-            prisma.populationAlert.updateMany,
-          ).toHaveBeenCalledWith({
+          expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
             where: {
               id: 'alert-emergency-1',
               programId: 'program-1',
               status: {
-                in: [
-                  PopulationAlertStatus.DRAFT,
-                  PopulationAlertStatus.READY,
-                ],
+                in: [PopulationAlertStatus.DRAFT, PopulationAlertStatus.READY],
               },
             },
             data: {
@@ -5039,9 +4495,7 @@ const readiness = {
             }),
           );
 
-          expect(
-            prisma.populationAlertZone.deleteMany,
-          ).not.toHaveBeenCalled();
+          expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
           expect(
             prisma.populationAlertDelivery.updateMany,
@@ -5068,9 +4522,7 @@ const readiness = {
           }),
         );
 
-        expect(
-          prisma.populationAlert.updateMany,
-        ).not.toHaveBeenCalled();
+        expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
       });
 
       it.each([
@@ -5078,28 +4530,18 @@ const readiness = {
         PopulationAlertStatus.ACTIVE,
         PopulationAlertStatus.ENDED,
         PopulationAlertStatus.FAILED,
-      ])(
-        'refuse d’annuler une alerte %s',
-        async (status) => {
-          prisma.populationAlert.findFirst.mockResolvedValue({
-            ...sourceAlert,
-            status,
-          });
+      ])('refuse d’annuler une alerte %s', async (status) => {
+        prisma.populationAlert.findFirst.mockResolvedValue({
+          ...sourceAlert,
+          status,
+        });
 
-          await expect(
-            service.cancelAlert(
-              'building-1',
-              'alert-emergency-1',
-            ),
-          ).rejects.toThrow(
-            'Seule une alerte DRAFT ou READY peut être annulée',
-          );
+        await expect(
+          service.cancelAlert('building-1', 'alert-emergency-1'),
+        ).rejects.toThrow('Seule une alerte DRAFT ou READY peut être annulée');
 
-          expect(
-            prisma.populationAlert.updateMany,
-          ).not.toHaveBeenCalled();
-        },
-      );
+        expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
+      });
 
       it('permet l’annulation après suspension et désactivation du programme', async () => {
         prisma.rueFacilityProfile.findUnique.mockResolvedValue({
@@ -5127,10 +4569,7 @@ const readiness = {
         });
 
         await expect(
-          service.cancelAlert(
-            'building-1',
-            'alert-emergency-1',
-          ),
+          service.cancelAlert('building-1', 'alert-emergency-1'),
         ).resolves.toEqual(
           expect.objectContaining({
             id: 'alert-emergency-1',
@@ -5138,9 +4577,7 @@ const readiness = {
           }),
         );
 
-        expect(
-          prisma.populationAlert.updateMany,
-        ).toHaveBeenCalledTimes(1);
+        expect(prisma.populationAlert.updateMany).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -5165,14 +4602,9 @@ const readiness = {
           endedAt: expect.anything(),
         });
 
-      await service.endAlert(
-        'building-1',
-        'alert-emergency-1',
-      );
+      await service.endAlert('building-1', 'alert-emergency-1');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'alert-emergency-1',
           programId: 'program-1',
@@ -5184,13 +4616,9 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.updateMany).not.toHaveBeenCalled();
     });
 
     it('permet de clôturer une alerte ACTIVE après suspension et désactivation du programme', async () => {
@@ -5218,14 +4646,9 @@ const readiness = {
         count: 1,
       });
 
-      const result = await service.endAlert(
-        'building-1',
-        'alert-emergency-1',
-      );
+      const result = await service.endAlert('building-1', 'alert-emergency-1');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'alert-emergency-1',
           programId: 'program-1',
@@ -5244,13 +4667,9 @@ const readiness = {
         }),
       );
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.updateMany).not.toHaveBeenCalled();
     });
 
     it('rend la clôture ENDED idempotente', async () => {
@@ -5260,14 +4679,9 @@ const readiness = {
         endedAt: new Date(),
       });
 
-      await service.endAlert(
-        'building-1',
-        'alert-emergency-1',
-      );
+      await service.endAlert('building-1', 'alert-emergency-1');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
     });
 
     it('relit l’état historique lorsqu’une autre requête clôture simultanément la même alerte', async () => {
@@ -5286,14 +4700,9 @@ const readiness = {
         count: 0,
       });
 
-      const result = await service.endAlert(
-        'building-1',
-        'alert-emergency-1',
-      );
+      const result = await service.endAlert('building-1', 'alert-emergency-1');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledTimes(1);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -5310,15 +4719,10 @@ const readiness = {
       });
 
       await expect(
-        service.endAlert(
-          'building-1',
-          'alert-emergency-1',
-        ),
+        service.endAlert('building-1', 'alert-emergency-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -5326,8 +4730,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -5370,13 +4773,9 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        draftAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(draftAlert);
 
       prisma.building.findUnique.mockResolvedValue({
         id: 'building-1',
@@ -5388,9 +4787,7 @@ const readiness = {
         longitude: -73.5,
       });
 
-      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(
-        scenario,
-      );
+      prisma.rueEmergencyScenario.findFirst.mockResolvedValue(scenario);
 
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
@@ -5404,8 +4801,7 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       prisma.populationAlertZone.deleteMany.mockResolvedValue({
         count: 1,
@@ -5430,32 +4826,23 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
     it('remplace atomiquement les anciens snapshots par le ciblage recalculé', async () => {
-      await service.refreshAlertDraftTargeting(
-        'building-1',
-        'alert-1',
-      );
+      await service.refreshAlertDraftTargeting('building-1', 'alert-1');
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertZone.deleteMany).toHaveBeenCalledWith({
         where: {
           alertId: 'alert-1',
         },
       });
 
-      expect(
-        prisma.populationAlertZone.createMany,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlertZone.createMany).toHaveBeenCalledTimes(1);
 
       const zoneData =
-        prisma.populationAlertZone.createMany.mock
-          .calls[0][0].data;
+        prisma.populationAlertZone.createMany.mock.calls[0][0].data;
 
       expect(zoneData).toEqual([
         expect.objectContaining({
@@ -5466,9 +4853,7 @@ const readiness = {
         }),
       ]);
 
-      expect(
-        prisma.populationAlert.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.update).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
         },
@@ -5499,19 +4884,12 @@ const readiness = {
       });
 
       await expect(
-        service.refreshAlertDraftTargeting(
-          'building-1',
-          'alert-1',
-        ),
+        service.refreshAlertDraftTargeting('building-1', 'alert-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
-      expect(
-        prisma.rueEmergencyScenario.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.rueEmergencyScenario.findFirst).not.toHaveBeenCalled();
     });
 
     it('refuse le recalcul lorsque le DRAFT n’est lié à aucun scénario', async () => {
@@ -5521,15 +4899,10 @@ const readiness = {
       });
 
       await expect(
-        service.refreshAlertDraftTargeting(
-          'building-1',
-          'alert-1',
-        ),
+        service.refreshAlertDraftTargeting('building-1', 'alert-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
     });
   });
 
@@ -5537,8 +4910,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -5557,13 +4929,9 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        draftAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(draftAlert);
 
       prisma.building.findUnique.mockResolvedValue({
         id: 'building-1',
@@ -5604,9 +4972,7 @@ const readiness = {
         count: 1,
       });
 
-      prisma.populationAlert.findUnique.mockResolvedValue(
-        draftAlert,
-      );
+      prisma.populationAlert.findUnique.mockResolvedValue(draftAlert);
 
       prisma.populationAlert.update.mockResolvedValue({
         ...draftAlert,
@@ -5614,29 +4980,20 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
     it('recalcule le ciblage immédiatement avant le passage DRAFT vers READY', async () => {
-      const result =
-        await service.markAlertDraftReady(
-          'building-1',
-          'alert-1',
-        );
+      const result = await service.markAlertDraftReady('building-1', 'alert-1');
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertZone.deleteMany).toHaveBeenCalledWith({
         where: {
           alertId: 'alert-1',
         },
       });
 
-      expect(
-        prisma.populationAlert.update,
-      ).toHaveBeenLastCalledWith({
+      expect(prisma.populationAlert.update).toHaveBeenLastCalledWith({
         where: {
           id: 'alert-1',
         },
@@ -5652,9 +5009,7 @@ const readiness = {
         },
       });
 
-      expect(result.status).toBe(
-        PopulationAlertStatus.READY,
-      );
+      expect(result.status).toBe(PopulationAlertStatus.READY);
     });
 
     it('est idempotent lorsqu’une alerte est déjà READY', async () => {
@@ -5663,24 +5018,15 @@ const readiness = {
         status: PopulationAlertStatus.READY,
       };
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        readyAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(readyAlert);
 
       await expect(
-        service.markAlertDraftReady(
-          'building-1',
-          'alert-1',
-        ),
+        service.markAlertDraftReady('building-1', 'alert-1'),
       ).resolves.toEqual(readyAlert);
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlert.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -5689,26 +5035,18 @@ const readiness = {
       PopulationAlertStatus.ENDED,
       PopulationAlertStatus.CANCELLED,
       PopulationAlertStatus.FAILED,
-    ])(
-      'refuse la transition %s vers READY',
-      async (status) => {
-        prisma.populationAlert.findFirst.mockResolvedValue({
-          ...draftAlert,
-          status,
-        });
+    ])('refuse la transition %s vers READY', async (status) => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...draftAlert,
+        status,
+      });
 
-        await expect(
-          service.markAlertDraftReady(
-            'building-1',
-            'alert-1',
-          ),
-        ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.markAlertDraftReady('building-1', 'alert-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
-        expect(
-          prisma.populationAlertZone.deleteMany,
-        ).not.toHaveBeenCalled();
-      },
-    );
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
+    });
 
     it('refuse READY si le titre français est vide', async () => {
       prisma.populationAlert.findFirst.mockResolvedValue({
@@ -5717,30 +5055,18 @@ const readiness = {
       });
 
       await expect(
-        service.markAlertDraftReady(
-          'building-1',
-          'alert-1',
-        ),
+        service.markAlertDraftReady('building-1', 'alert-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlertZone.deleteMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
     });
 
     it('ne crée toujours aucune livraison individuelle au passage READY', async () => {
-      await service.markAlertDraftReady(
-        'building-1',
-        'alert-1',
-      );
+      await service.markAlertDraftReady('building-1', 'alert-1');
 
-      expect(
-        prisma.populationAlertDelivery.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.create).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
     });
   });
 
@@ -5748,13 +5074,13 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
         status: PopulationProgramStatus.ACTIVE,
-        governanceMode: PopulationGovernanceMode.STANDARD as PopulationGovernanceMode,
+        governanceMode:
+          PopulationGovernanceMode.STANDARD as PopulationGovernanceMode,
       },
     };
 
@@ -5790,48 +5116,43 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        readyAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(readyAlert);
 
       prisma.populationAlert.update.mockResolvedValue({
         ...readyAlert,
         approvedByType: 'CLIENT_USER',
         approvedById: 'client-user-1',
-        approvedAt: new Date(
-          '2026-09-17T16:00:00.000Z',
-        ),
+        approvedAt: new Date('2026-09-17T16:00:00.000Z'),
       });
       prisma.populationAlert.updateMany.mockResolvedValue({ count: 1 });
-      activeProfile.populationProgram.governanceMode = PopulationGovernanceMode.STANDARD;
+      activeProfile.populationProgram.governanceMode =
+        PopulationGovernanceMode.STANDARD;
     });
 
     it('applique la separation des approbateurs en DUAL_CONTROL', async () => {
-      activeProfile.populationProgram.governanceMode = PopulationGovernanceMode.DUAL_CONTROL;
+      activeProfile.populationProgram.governanceMode =
+        PopulationGovernanceMode.DUAL_CONTROL;
 
-      await expect(service.approveAlert('building-1', 'alert-1', actor))
-        .rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.approveAlert('building-1', 'alert-1', actor),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
-      await expect(service.approveAlert('building-1', 'alert-1', {
-        type: 'CLIENT_USER',
-        id: 'client-user-2',
-      })).resolves.toEqual(expect.objectContaining({ approvedById: 'client-user-2' }));
+      await expect(
+        service.approveAlert('building-1', 'alert-1', {
+          type: 'CLIENT_USER',
+          id: 'client-user-2',
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({ approvedById: 'client-user-2' }),
+      );
     });
 
     it('enregistre l’approbation humaine d’une alerte READY', async () => {
-      const result = await service.approveAlert(
-        'building-1',
-        'alert-1',
-        actor,
-      );
+      const result = await service.approveAlert('building-1', 'alert-1', actor);
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
           status: PopulationAlertStatus.READY,
@@ -5844,13 +5165,9 @@ const readiness = {
         },
       });
 
-      expect(result.approvedById).toBe(
-        'client-user-1',
-      );
+      expect(result.approvedById).toBe('client-user-1');
 
-      expect(result.approvedAt).toEqual(
-        expect.any(Date),
-      );
+      expect(result.approvedAt).toEqual(expect.any(Date));
     });
 
     it('est idempotent lorsqu’une alerte READY est déjà approuvée', async () => {
@@ -5858,37 +5175,25 @@ const readiness = {
         ...readyAlert,
         approvedByType: 'CLIENT_USER',
         approvedById: 'client-user-original',
-        approvedAt: new Date(
-          '2026-09-17T15:00:00.000Z',
-        ),
+        approvedAt: new Date('2026-09-17T15:00:00.000Z'),
       };
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        approvedAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(approvedAlert);
 
-      const result = await service.approveAlert(
-        'building-1',
-        'alert-1',
-        {
-          type: 'CLIENT_USER',
-          id: 'client-user-other',
-        },
-      );
+      const result = await service.approveAlert('building-1', 'alert-1', {
+        type: 'CLIENT_USER',
+        id: 'client-user-other',
+      });
 
       expect(result).toEqual(approvedAlert);
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
 
       /*
        * Une seconde requête ne remplace jamais
        * l'approbateur historique.
        */
-      expect(result.approvedById).toBe(
-        'client-user-original',
-      );
+      expect(result.approvedById).toBe('client-user-original');
     });
 
     it.each([
@@ -5898,44 +5203,27 @@ const readiness = {
       PopulationAlertStatus.ENDED,
       PopulationAlertStatus.CANCELLED,
       PopulationAlertStatus.FAILED,
-    ])(
-      'refuse l’approbation d’une alerte %s',
-      async (status) => {
-        prisma.populationAlert.findFirst.mockResolvedValue({
-          ...readyAlert,
-          status,
-        });
-
-        await expect(
-          service.approveAlert(
-            'building-1',
-            'alert-1',
-            actor,
-          ),
-        ).rejects.toBeInstanceOf(BadRequestException);
-
-        expect(
-          prisma.populationAlert.update,
-        ).not.toHaveBeenCalled();
-      },
-    );
-
-    it('refuse implicitement une alerte appartenant à un autre programme', async () => {
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        null,
-      );
+    ])('refuse l’approbation d’une alerte %s', async (status) => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...readyAlert,
+        status,
+      });
 
       await expect(
-        service.approveAlert(
-          'building-1',
-          'alert-other-program',
-          actor,
-        ),
+        service.approveAlert('building-1', 'alert-1', actor),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
+    });
+
+    it('refuse implicitement une alerte appartenant à un autre programme', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.approveAlert('building-1', 'alert-other-program', actor),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        prisma.populationAlert.findFirst,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'alert-other-program',
           programId: 'program-1',
@@ -5949,25 +5237,15 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationAlert.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
     });
 
     it('ne crée aucune livraison lors de l’approbation', async () => {
-      await service.approveAlert(
-        'building-1',
-        'alert-1',
-        actor,
-      );
+      await service.approveAlert('building-1', 'alert-1', actor);
 
-      expect(
-        prisma.populationAlertDelivery.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.create).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
     });
   });
 
@@ -5975,8 +5253,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -6003,9 +5280,7 @@ const readiness = {
 
       approvedByType: 'CLIENT_USER',
       approvedById: 'client-user-1',
-      approvedAt: new Date(
-        '2026-09-17T16:00:00.000Z',
-      ),
+      approvedAt: new Date('2026-09-17T16:00:00.000Z'),
 
       recipientsFrozenAt: null,
 
@@ -6045,18 +5320,13 @@ const readiness = {
     };
 
     beforeEach(() => {
-      activeProfile.populationProgram.deliveryMode = PopulationDeliveryMode.LIVE;
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      activeProfile.populationProgram.deliveryMode =
+        PopulationDeliveryMode.LIVE;
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        approvedAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(approvedAlert);
 
-      prisma.populationSubscriber.findMany.mockResolvedValue(
-        [],
-      );
+      prisma.populationSubscriber.findMany.mockResolvedValue([]);
 
       prisma.populationAlert.updateMany.mockResolvedValue({
         count: 1,
@@ -6066,16 +5336,15 @@ const readiness = {
         count: 0,
       });
 
-      prisma.$transaction.mockImplementation(
-        async (callback: any) => callback(prisma),
+      prisma.$transaction.mockImplementation(async (callback: any) =>
+        callback(prisma),
       );
 
-      prisma.populationAlertDelivery.findMany.mockResolvedValue(
-        [],
-      );
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(false);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(
+        false,
+      );
     });
 
     it.each([
@@ -6100,35 +5369,40 @@ const readiness = {
         status: PopulationDeliveryStatus.QUEUED,
         reason: null,
       },
-    ])('$label materialise le statut attendu', async ({ mode, isSynthetic, status, reason }) => {
-      activeProfile.populationProgram.deliveryMode = mode;
-      prisma.populationSubscriber.findMany.mockResolvedValue([
-        {
-          id: 'subscriber-security',
-          preferredLanguage: PopulationPreferredLanguage.FR,
-          phone: '+15145550199',
-          email: null,
-          smsEnabled: true,
-          emailEnabled: false,
-          latitude: 45.5,
-          longitude: -73.5,
-          isSynthetic,
-        },
-      ]);
-      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
+    ])(
+      '$label materialise le statut attendu',
+      async ({ mode, isSynthetic, status, reason }) => {
+        activeProfile.populationProgram.deliveryMode = mode;
+        prisma.populationSubscriber.findMany.mockResolvedValue([
+          {
+            id: 'subscriber-security',
+            preferredLanguage: PopulationPreferredLanguage.FR,
+            phone: '+15145550199',
+            email: null,
+            smsEnabled: true,
+            emailEnabled: false,
+            latitude: 45.5,
+            longitude: -73.5,
+            isSynthetic,
+          },
+        ]);
+        populationGeospatialService.isPointInsideImpactZone.mockReturnValue(
+          true,
+        );
 
-      await service.freezeAlertRecipients('building-1', 'alert-1');
+        await service.freezeAlertRecipients('building-1', 'alert-1');
 
-      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
-        data: expect.arrayContaining([
-          expect.objectContaining({ status, suppressionReason: reason }),
-        ]),
-        skipDuplicates: true,
-      });
-      if (status === PopulationDeliveryStatus.SUPPRESSED) {
-        expect(readiness.assertAlertChannelReady).not.toHaveBeenCalled();
-      }
-    });
+        expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
+          data: expect.arrayContaining([
+            expect.objectContaining({ status, suppressionReason: reason }),
+          ]),
+          skipDuplicates: true,
+        });
+        if (status === PopulationDeliveryStatus.SUPPRESSED) {
+          expect(readiness.assertAlertChannelReady).not.toHaveBeenCalled();
+        }
+      },
+    );
 
     it('refuse de figer les destinataires avant approbation humaine', async () => {
       prisma.populationAlert.findFirst.mockResolvedValue({
@@ -6139,19 +5413,12 @@ const readiness = {
       });
 
       await expect(
-        service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        ),
+        service.freezeAlertRecipients('building-1', 'alert-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findMany).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -6161,33 +5428,24 @@ const readiness = {
       PopulationAlertStatus.ENDED,
       PopulationAlertStatus.CANCELLED,
       PopulationAlertStatus.FAILED,
-    ])(
-      'refuse le freeze pour une alerte %s',
-      async (status) => {
-        prisma.populationAlert.findFirst.mockResolvedValue({
-          ...approvedAlert,
-          status,
-        });
+    ])('refuse le freeze pour une alerte %s', async (status) => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        status,
+      });
 
-        await expect(
-          service.freezeAlertRecipients(
-            'building-1',
-            'alert-1',
-          ),
-        ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.freezeAlertRecipients('building-1', 'alert-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
-        expect(
-          prisma.populationAlertDelivery.createMany,
-        ).not.toHaveBeenCalled();
-      },
-    );
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
+    });
 
     it('cible un citoyen présent dans plusieurs zones une seule fois par canal', async () => {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-1',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550101',
           email: 'citoyen@example.com',
           smsEnabled: true,
@@ -6200,8 +5458,7 @@ const readiness = {
       /*
        * Le même citoyen correspond aux deux zones.
        */
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       prisma.populationAlertDelivery.findMany.mockResolvedValue([
         {
@@ -6226,15 +5483,13 @@ const readiness = {
         },
       ]);
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
 
       const createCall =
-        prisma.populationAlertDelivery.createMany.mock
-          .calls[0][0];
+        prisma.populationAlertDelivery.createMany.mock.calls[0][0];
 
       expect(createCall.skipDuplicates).toBe(true);
 
@@ -6243,14 +5498,12 @@ const readiness = {
       expect(createCall.data).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            idempotencyKey:
-              'alert-1:subscriber-1:SMS',
+            idempotencyKey: 'alert-1:subscriber-1:SMS',
             subscriberId: 'subscriber-1',
             channel: PopulationAlertChannel.SMS,
           }),
           expect.objectContaining({
-            idempotencyKey:
-              'alert-1:subscriber-1:EMAIL',
+            idempotencyKey: 'alert-1:subscriber-1:EMAIL',
             subscriberId: 'subscriber-1',
             channel: PopulationAlertChannel.EMAIL,
           }),
@@ -6267,8 +5520,7 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-en',
-          preferredLanguage:
-            PopulationPreferredLanguage.EN,
+          preferredLanguage: PopulationPreferredLanguage.EN,
           phone: '+15145550102',
           email: null,
           smsEnabled: true,
@@ -6278,23 +5530,15 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
-      await service.freezeAlertRecipients(
-        'building-1',
-        'alert-1',
-      );
+      await service.freezeAlertRecipients('building-1', 'alert-1');
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({
-            language:
-              PopulationPreferredLanguage.EN,
-            messageSnapshot:
-              'Shelter in place immediately.',
+            language: PopulationPreferredLanguage.EN,
+            messageSnapshot: 'Shelter in place immediately.',
           }),
         ],
         skipDuplicates: true,
@@ -6310,8 +5554,7 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-en',
-          preferredLanguage:
-            PopulationPreferredLanguage.EN,
+          preferredLanguage: PopulationPreferredLanguage.EN,
           phone: '+15145550102',
           email: null,
           smsEnabled: true,
@@ -6321,23 +5564,15 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
-      await service.freezeAlertRecipients(
-        'building-1',
-        'alert-1',
-      );
+      await service.freezeAlertRecipients('building-1', 'alert-1');
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({
-            language:
-              PopulationPreferredLanguage.FR,
-            messageSnapshot:
-              'Mettez-vous immédiatement à l’abri.',
+            language: PopulationPreferredLanguage.FR,
+            messageSnapshot: 'Mettez-vous immédiatement à l’abri.',
           }),
         ],
         skipDuplicates: true,
@@ -6348,8 +5583,7 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-unlocated',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550103',
           email: null,
           smsEnabled: true,
@@ -6359,19 +5593,16 @@ const readiness = {
         },
       ]);
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
 
       expect(
         populationGeospatialService.isPointInsideImpactZone,
       ).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
 
       expect(result.targeting.subscriberCount).toBe(0);
       expect(result.targeting.deliveryCount).toBe(0);
@@ -6390,8 +5621,7 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-1',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550101',
           email: 'citoyen@example.com',
           smsEnabled: true,
@@ -6401,25 +5631,19 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
-      await service.freezeAlertRecipients(
-        'building-1',
-        'alert-1',
-      );
+      await service.freezeAlertRecipients('building-1', 'alert-1');
 
       const deliveries =
-        prisma.populationAlertDelivery.createMany.mock
-          .calls[0][0].data;
+        prisma.populationAlertDelivery.createMany.mock.calls[0][0].data;
 
       expect(deliveries).toHaveLength(1);
 
       expect(deliveries[0]).toEqual(
         expect.objectContaining({
           channel: PopulationAlertChannel.EMAIL,
-          destinationSnapshot:
-            'citoyen@example.com',
+          destinationSnapshot: 'citoyen@example.com',
         }),
       );
     });
@@ -6428,8 +5652,7 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-1',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550101',
           email: null,
           smsEnabled: true,
@@ -6439,24 +5662,17 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
-      await service.freezeAlertRecipients(
-        'building-1',
-        'alert-1',
-      );
+      await service.freezeAlertRecipients('building-1', 'alert-1');
 
       expect(
         populationGeospatialService.isPointInsideImpactZone,
       ).toHaveBeenCalledWith({
         latitude: 45.51,
         longitude: -73.51,
-        geometry:
-          approvedAlert.zones[0].geometrySnapshot,
-        maxDistanceKm:
-          approvedAlert.zones[0]
-            .maxDistanceKmSnapshot,
+        geometry: approvedAlert.zones[0].geometrySnapshot,
+        maxDistanceKm: approvedAlert.zones[0].maxDistanceKmSnapshot,
         referenceLatitude: 45.5,
         referenceLongitude: -73.5,
       });
@@ -6464,17 +5680,14 @@ const readiness = {
       /*
        * Le freeze ne consulte pas le scénario RUE courant.
        */
-      expect(
-        prisma.rueEmergencyScenario.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.rueEmergencyScenario.findFirst).not.toHaveBeenCalled();
     });
 
     it('rend le freeze idempotent grâce aux clés déterministes et skipDuplicates', async () => {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-1',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550101',
           email: null,
           smsEnabled: true,
@@ -6484,8 +5697,7 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       prisma.populationAlertDelivery.findMany.mockResolvedValue([
         {
@@ -6500,18 +5712,12 @@ const readiness = {
         },
       ]);
 
-      await service.freezeAlertRecipients(
-        'building-1',
-        'alert-1',
-      );
+      await service.freezeAlertRecipients('building-1', 'alert-1');
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({
-            idempotencyKey:
-              'alert-1:subscriber-1:SMS',
+            idempotencyKey: 'alert-1:subscriber-1:SMS',
           }),
         ],
         skipDuplicates: true,
@@ -6522,8 +5728,7 @@ const readiness = {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-secret',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550999',
           email: 'secret@example.com',
           smsEnabled: true,
@@ -6533,8 +5738,7 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       prisma.populationAlertDelivery.findMany.mockResolvedValue([
         {
@@ -6549,33 +5753,25 @@ const readiness = {
         },
       ]);
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
 
       const serialized = JSON.stringify(result);
 
-      expect(serialized).not.toContain(
-        'subscriber-secret',
-      );
-      expect(serialized).not.toContain(
-        '+15145550999',
-      );
-      expect(serialized).not.toContain(
-        'secret@example.com',
-      );
+      expect(serialized).not.toContain('subscriber-secret');
+      expect(serialized).not.toContain('+15145550999');
+      expect(serialized).not.toContain('secret@example.com');
       expect(serialized).not.toContain('45.51');
       expect(serialized).not.toContain('-73.51');
     });
 
-        it('ne crÃ©e rien lorsquâ€™aucun citoyen ne correspond aux zones', async () => {
+    it('ne crÃ©e rien lorsquâ€™aucun citoyen ne correspond aux zones', async () => {
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-outside',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550104',
           email: null,
           smsEnabled: true,
@@ -6585,18 +5781,16 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(false);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(
+        false,
+      );
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
 
       expect(result.targeting).toEqual({
         subscriberCount: 0,
@@ -6611,27 +5805,18 @@ const readiness = {
     });
 
     it('enregistre le freeze même lorsqu’il n’existe aucun destinataire', async () => {
-      prisma.populationSubscriber.findMany.mockResolvedValue(
-        [],
+      prisma.populationSubscriber.findMany.mockResolvedValue([]);
+
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([]);
+
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
       );
 
-      prisma.populationAlertDelivery.findMany.mockResolvedValue(
-        [],
-      );
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
-
-      expect(
-        prisma.$transaction,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
           programId: 'program-1',
@@ -6644,13 +5829,9 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
 
-      expect(
-        result.recipientsFrozenAt,
-      ).toBeInstanceOf(Date);
+      expect(result.recipientsFrozenAt).toBeInstanceOf(Date);
 
       expect(result.targeting).toEqual({
         subscriberCount: 0,
@@ -6665,9 +5846,7 @@ const readiness = {
     });
 
     it('ne recalcule jamais les destinataires d’une alerte déjà figée', async () => {
-      const frozenAt = new Date(
-        '2026-09-17T16:05:00.000Z',
-      );
+      const frozenAt = new Date('2026-09-17T16:05:00.000Z');
 
       prisma.populationAlert.findFirst.mockResolvedValue({
         ...approvedAlert,
@@ -6680,8 +5859,7 @@ const readiness = {
             id: 'delivery-existing',
             channel: PopulationAlertChannel.SMS,
             status: PopulationDeliveryStatus.QUEUED,
-            language:
-              PopulationPreferredLanguage.FR,
+            language: PopulationPreferredLanguage.FR,
             queuedAt: new Date(),
             sentAt: null,
             deliveredAt: null,
@@ -6694,31 +5872,22 @@ const readiness = {
           },
         ]);
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
 
-      expect(
-        prisma.populationSubscriber.findMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findMany).not.toHaveBeenCalled();
 
       expect(
         populationGeospatialService.isPointInsideImpactZone,
       ).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
 
-      expect(result.recipientsFrozenAt).toEqual(
-        frozenAt,
-      );
+      expect(result.recipientsFrozenAt).toEqual(frozenAt);
 
       expect(result.targeting).toEqual({
         subscriberCount: 1,
@@ -6733,15 +5902,12 @@ const readiness = {
     });
 
     it('un second processus qui perd le claim retourne le roster déjà figé sans créer de deliveries', async () => {
-      const frozenAt = new Date(
-        '2026-09-17T16:05:00.000Z',
-      );
+      const frozenAt = new Date('2026-09-17T16:05:00.000Z');
 
       prisma.populationSubscriber.findMany.mockResolvedValue([
         {
           id: 'subscriber-racing',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
+          preferredLanguage: PopulationPreferredLanguage.FR,
           phone: '+15145550101',
           email: null,
           smsEnabled: true,
@@ -6751,8 +5917,7 @@ const readiness = {
         },
       ]);
 
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
+      populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
 
       prisma.populationAlert.updateMany.mockResolvedValue({
         count: 0,
@@ -6774,8 +5939,7 @@ const readiness = {
             id: 'delivery-winner',
             channel: PopulationAlertChannel.SMS,
             status: PopulationDeliveryStatus.QUEUED,
-            language:
-              PopulationPreferredLanguage.FR,
+            language: PopulationPreferredLanguage.FR,
             queuedAt: new Date(),
             sentAt: null,
             deliveredAt: null,
@@ -6788,27 +5952,18 @@ const readiness = {
           },
         ]);
 
-      const result =
-        await service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        );
-
-      expect(
-        prisma.$transaction,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
-
-      expect(result.recipientsFrozenAt).toEqual(
-        frozenAt,
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
       );
 
-      expect(result.targeting.subscriberCount).toBe(
-        1,
-      );
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
+
+      expect(result.recipientsFrozenAt).toEqual(frozenAt);
+
+      expect(result.targeting.subscriberCount).toBe(1);
 
       expect(result.targeting.deliveryCount).toBe(1);
     });
@@ -6825,80 +5980,62 @@ const readiness = {
         });
 
       await expect(
-        service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        ),
-      ).rejects.toThrow(
-        'Impossible de confirmer le freeze des destinataires',
-      );
+        service.freezeAlertRecipients('building-1', 'alert-1'),
+      ).rejects.toThrow('Impossible de confirmer le freeze des destinataires');
 
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.createMany).not.toHaveBeenCalled();
     });
   });
 
-      it('ne valide pas un freeze lorsque la matérialisation du roster échoue', async () => {
-      prisma.populationAlert.updateMany.mockResolvedValue({
-        count: 1,
-      });
-
-      prisma.$transaction.mockImplementation(
-        async (callback: any) => callback(prisma),
-      );
-
-      prisma.populationSubscriber.findMany.mockResolvedValue([
-        {
-          id: 'subscriber-rollback',
-          preferredLanguage:
-            PopulationPreferredLanguage.FR,
-          phone: '+15145550105',
-          email: null,
-          smsEnabled: true,
-          emailEnabled: false,
-          latitude: 45.51,
-          longitude: -73.51,
-        },
-      ]);
-
-      populationGeospatialService.isPointInsideImpactZone
-        .mockReturnValue(true);
-
-      prisma.populationAlertDelivery.createMany.mockRejectedValue(
-        new Error('database write failed'),
-      );
-
-      await expect(
-        service.freezeAlertRecipients(
-          'building-1',
-          'alert-1',
-        ),
-      ).rejects.toThrow('database write failed');
-
-      expect(
-        prisma.$transaction,
-      ).toHaveBeenCalledTimes(1);
-
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenCalledWith({
-        where: {
-          id: 'alert-1',
-          programId: 'program-1',
-          status: PopulationAlertStatus.READY,
-          recipientsFrozenAt: null,
-        },
-        data: {
-          recipientsFrozenAt: expect.any(Date),
-          deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
-        },
-      });
-
-      expect(
-        prisma.populationAlertDelivery.createMany,
-      ).toHaveBeenCalledTimes(1);
+  it('ne valide pas un freeze lorsque la matérialisation du roster échoue', async () => {
+    prisma.populationAlert.updateMany.mockResolvedValue({
+      count: 1,
     });
+
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback(prisma),
+    );
+
+    prisma.populationSubscriber.findMany.mockResolvedValue([
+      {
+        id: 'subscriber-rollback',
+        preferredLanguage: PopulationPreferredLanguage.FR,
+        phone: '+15145550105',
+        email: null,
+        smsEnabled: true,
+        emailEnabled: false,
+        latitude: 45.51,
+        longitude: -73.51,
+      },
+    ]);
+
+    populationGeospatialService.isPointInsideImpactZone.mockReturnValue(true);
+
+    prisma.populationAlertDelivery.createMany.mockRejectedValue(
+      new Error('database write failed'),
+    );
+
+    await expect(
+      service.freezeAlertRecipients('building-1', 'alert-1'),
+    ).rejects.toThrow('database write failed');
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+
+    expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'alert-1',
+        programId: 'program-1',
+        status: PopulationAlertStatus.READY,
+        recipientsFrozenAt: null,
+      },
+      data: {
+        recipientsFrozenAt: expect.any(Date),
+        deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+      },
+    });
+
+    expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledTimes(1);
+  });
 
   describe('sendAlert', () => {
     it('rejects an unavailable transport before claiming the alert', async () => {
@@ -6926,8 +6063,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -6943,7 +6079,8 @@ const readiness = {
       id: 'alert-send-1',
       programId: 'program-1',
       status: PopulationAlertStatus.READY,
-      deliveryModeSnapshot: PopulationDeliveryMode.LIVE as PopulationDeliveryMode,
+      deliveryModeSnapshot:
+        PopulationDeliveryMode.LIVE as PopulationDeliveryMode,
       createdByType: 'CLIENT_USER',
       createdById: 'client-user-1',
 
@@ -6952,30 +6089,20 @@ const readiness = {
 
       approvedByType: 'CLIENT_USER',
       approvedById: 'client-user-1',
-      approvedAt: new Date(
-        '2026-09-17T16:00:00.000Z',
-      ),
+      approvedAt: new Date('2026-09-17T16:00:00.000Z'),
 
-      recipientsFrozenAt: new Date(
-        '2026-09-17T16:01:00.000Z',
-      ),
+      recipientsFrozenAt: new Date('2026-09-17T16:01:00.000Z'),
 
       zones: [],
     };
 
     beforeEach(() => {
       readyAlert.deliveryModeSnapshot = PopulationDeliveryMode.LIVE;
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        readyAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(readyAlert);
 
-      prisma.populationAlertDelivery.count.mockResolvedValue(
-        1,
-      );
+      prisma.populationAlertDelivery.count.mockResolvedValue(1);
 
       prisma.populationAlert.updateMany.mockResolvedValue({
         count: 1,
@@ -7001,6 +6128,42 @@ const readiness = {
       ] as any);
     });
 
+    it('reprend explicitement une alerte déjà SENDING', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...readyAlert,
+        status: PopulationAlertStatus.SENDING,
+      });
+      const resume = jest
+        .spyOn(service as any, 'resumeSendingAlert')
+        .mockResolvedValue({
+          id: 'alert-send-1',
+          status: PopulationAlertStatus.SENDING,
+        });
+
+      await service.sendAlert('building-1', 'alert-send-1');
+
+      expect(resume).toHaveBeenCalledWith(
+        'building-1',
+        'alert-send-1',
+        'program-1',
+      );
+    });
+
+    it('ne reprend rien lorsque le programme est suspendu', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        ...activeProfile,
+        populationProgram: {
+          ...activeProfile.populationProgram,
+          status: PopulationProgramStatus.SUSPENDED,
+        },
+      });
+      await expect(
+        service.sendAlert('building-1', 'alert-send-1'),
+      ).rejects.toThrow('Le programme Sentinelle Population n’est pas actif');
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+    });
+
     it('termine une diffusion SANDBOX sans appel fournisseur', async () => {
       readyAlert.deliveryModeSnapshot = PopulationDeliveryMode.SANDBOX;
       prisma.populationAlertDelivery.findMany.mockResolvedValue([]);
@@ -7014,7 +6177,9 @@ const readiness = {
       expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
       expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: PopulationAlertStatus.ACTIVE }),
+          data: expect.objectContaining({
+            status: PopulationAlertStatus.ACTIVE,
+          }),
         }),
       );
     });
@@ -7036,33 +6201,25 @@ const readiness = {
           status: PopulationDeliveryStatus.SENT,
         } as any);
 
-      await service.sendAlert(
-        'building-1',
-        'alert-send-1',
-      );
+      await service.sendAlert('building-1', 'alert-send-1');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenNthCalledWith(
-        1,
-        {
-          where: {
-            id: 'alert-send-1',
-            programId: 'program-1',
-            status: PopulationAlertStatus.READY,
-            recipientsFrozenAt: {
-              not: null,
-            },
-            approvedAt: {
-              not: null,
-            },
+      expect(prisma.populationAlert.updateMany).toHaveBeenNthCalledWith(1, {
+        where: {
+          id: 'alert-send-1',
+          programId: 'program-1',
+          status: PopulationAlertStatus.READY,
+          recipientsFrozenAt: {
+            not: null,
           },
-          data: {
-            status: PopulationAlertStatus.SENDING,
-            sendingAt: expect.any(Date),
+          approvedAt: {
+            not: null,
           },
         },
-      );
+        data: {
+          status: PopulationAlertStatus.SENDING,
+          sendingAt: expect.any(Date),
+        },
+      });
 
       expect(claimSpy).toHaveBeenCalledWith(
         'building-1',
@@ -7078,61 +6235,64 @@ const readiness = {
     });
 
     it('passe ACTIVE lorsqu’au moins une livraison est SENT', async () => {
-      jest
-        .spyOn(service, 'claimAlertDelivery')
-        .mockResolvedValue({
-          claimed: true,
-          delivery: {
-            id: 'delivery-send-1',
-          },
-        } as any);
-
-      jest
-        .spyOn(service, 'dispatchAlertDelivery')
-        .mockResolvedValue({
-          deliveryId: 'delivery-send-1',
-          status: PopulationDeliveryStatus.SENT,
-        } as any);
-
-      await service.sendAlert(
-        'building-1',
-        'alert-send-1',
-      );
-
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenNthCalledWith(
-        2,
-        {
-          where: {
-            id: 'alert-send-1',
-            programId: 'program-1',
-            status: PopulationAlertStatus.SENDING,
-          },
-          data: {
-            status: PopulationAlertStatus.ACTIVE,
-            activatedAt: expect.any(Date),
-          },
+      jest.spyOn(service, 'claimAlertDelivery').mockResolvedValue({
+        claimed: true,
+        delivery: {
+          id: 'delivery-send-1',
         },
+      } as any);
+
+      jest.spyOn(service, 'dispatchAlertDelivery').mockResolvedValue({
+        deliveryId: 'delivery-send-1',
+        status: PopulationDeliveryStatus.SENT,
+      } as any);
+
+      await service.sendAlert('building-1', 'alert-send-1');
+
+      expect(prisma.populationAlert.updateMany).toHaveBeenNthCalledWith(2, {
+        where: {
+          id: 'alert-send-1',
+          programId: 'program-1',
+          status: PopulationAlertStatus.SENDING,
+        },
+        data: {
+          status: PopulationAlertStatus.ACTIVE,
+          activatedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('reste SENDING tant qu’une livraison demeure en attente', async () => {
+      jest.spyOn(service, 'claimAlertDelivery').mockResolvedValue({
+        claimed: false,
+        delivery: null,
+      } as any);
+      prisma.populationAlertDelivery.groupBy.mockResolvedValue([
+        { status: PopulationDeliveryStatus.SENT, _count: { _all: 1 } },
+        { status: PopulationDeliveryStatus.QUEUED, _count: { _all: 1 } },
+      ] as any);
+
+      await service.sendAlert('building-1', 'alert-send-1');
+
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: PopulationAlertStatus.ACTIVE }),
+        }),
       );
     });
 
     it('passe FAILED lorsque toutes les livraisons ont échoué', async () => {
-      jest
-        .spyOn(service, 'claimAlertDelivery')
-        .mockResolvedValue({
-          claimed: true,
-          delivery: {
-            id: 'delivery-send-1',
-          },
-        } as any);
+      jest.spyOn(service, 'claimAlertDelivery').mockResolvedValue({
+        claimed: true,
+        delivery: {
+          id: 'delivery-send-1',
+        },
+      } as any);
 
-      jest
-        .spyOn(service, 'dispatchAlertDelivery')
-        .mockResolvedValue({
-          deliveryId: 'delivery-send-1',
-          status: PopulationDeliveryStatus.FAILED,
-        } as any);
+      jest.spyOn(service, 'dispatchAlertDelivery').mockResolvedValue({
+        deliveryId: 'delivery-send-1',
+        status: PopulationDeliveryStatus.FAILED,
+      } as any);
 
       prisma.populationAlertDelivery.groupBy.mockResolvedValue([
         {
@@ -7143,26 +6303,18 @@ const readiness = {
         },
       ] as any);
 
-      await service.sendAlert(
-        'building-1',
-        'alert-send-1',
-      );
+      await service.sendAlert('building-1', 'alert-send-1');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).toHaveBeenNthCalledWith(
-        2,
-        {
-          where: {
-            id: 'alert-send-1',
-            programId: 'program-1',
-            status: PopulationAlertStatus.SENDING,
-          },
-          data: {
-            status: PopulationAlertStatus.FAILED,
-          },
+      expect(prisma.populationAlert.updateMany).toHaveBeenNthCalledWith(2, {
+        where: {
+          id: 'alert-send-1',
+          programId: 'program-1',
+          status: PopulationAlertStatus.SENDING,
         },
-      );
+        data: {
+          status: PopulationAlertStatus.FAILED,
+        },
+      });
     });
 
     it('refuse l’envoi lorsque les destinataires ne sont pas figés', async () => {
@@ -7172,40 +6324,22 @@ const readiness = {
       });
 
       await expect(
-        service.sendAlert(
-          'building-1',
-          'alert-send-1',
-        ),
-      ).rejects.toThrow(
-        'Les destinataires doivent être figés avant l’envoi',
-      );
+        service.sendAlert('building-1', 'alert-send-1'),
+      ).rejects.toThrow('Les destinataires doivent être figés avant l’envoi');
 
-      expect(
-        prisma.populationAlertDelivery.count,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.count).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
     });
 
     it('refuse l’envoi lorsque le roster figé est vide', async () => {
-      prisma.populationAlertDelivery.count.mockResolvedValue(
-        0,
-      );
+      prisma.populationAlertDelivery.count.mockResolvedValue(0);
 
       await expect(
-        service.sendAlert(
-          'building-1',
-          'alert-send-1',
-        ),
-      ).rejects.toThrow(
-        'Aucun destinataire figé pour cette alerte',
-      );
+        service.sendAlert('building-1', 'alert-send-1'),
+      ).rejects.toThrow('Aucun destinataire figé pour cette alerte');
 
-      expect(
-        prisma.populationAlert.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
     });
 
     it('un second orchestrateur ne diffuse rien lorsqu’il perd le claim de l’alerte', async () => {
@@ -7213,28 +6347,17 @@ const readiness = {
         count: 0,
       });
 
-      const claimSpy = jest.spyOn(
-        service,
-        'claimAlertDelivery',
-      );
+      const claimSpy = jest.spyOn(service, 'claimAlertDelivery');
 
-      const dispatchSpy = jest.spyOn(
-        service,
-        'dispatchAlertDelivery',
-      );
+      const dispatchSpy = jest.spyOn(service, 'dispatchAlertDelivery');
 
-      await service.sendAlert(
-        'building-1',
-        'alert-send-1',
-      );
+      await service.sendAlert('building-1', 'alert-send-1');
 
       expect(claimSpy).not.toHaveBeenCalled();
 
       expect(dispatchSpy).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.findMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.findMany).toHaveBeenCalledWith({
         where: {
           alertId: 'alert-send-1',
           status: PopulationDeliveryStatus.QUEUED,
@@ -7253,8 +6376,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -7271,20 +6393,14 @@ const readiness = {
       deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
       approvedByType: 'CLIENT_USER',
       approvedById: 'client-user-1',
-      approvedAt: new Date(
-        '2026-09-17T16:00:00.000Z',
-      ),
+      approvedAt: new Date('2026-09-17T16:00:00.000Z'),
       zones: [],
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        approvedAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(approvedAlert);
 
       prisma.populationAlertDelivery.updateMany.mockResolvedValue({
         count: 1,
@@ -7297,31 +6413,28 @@ const readiness = {
         language: PopulationPreferredLanguage.FR,
         messageSnapshot: 'Mettez-vous à l’abri.',
         destinationSnapshot: '+15145550101',
-        queuedAt: new Date(
-          '2026-09-17T16:01:00.000Z',
-        ),
+        queuedAt: new Date('2026-09-17T16:01:00.000Z'),
       });
     });
 
     it('claim atomiquement une livraison QUEUED en SENDING', async () => {
-      const result =
-        await service.claimAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        );
+      const result = await service.claimAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledWith({
-        where: {
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
           id: 'delivery-1',
           alertId: 'alert-1',
           status: PopulationDeliveryStatus.QUEUED,
-        },
-        data: {
+        }),
+        data: expect.objectContaining({
           status: PopulationDeliveryStatus.SENDING,
-        },
+          claimedAt: expect.any(Date),
+          leaseExpiresAt: expect.any(Date),
+        }),
       });
 
       expect(result).toEqual({
@@ -7338,21 +6451,18 @@ const readiness = {
         count: 0,
       });
 
-      const result =
-        await service.claimAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        );
+      const result = await service.claimAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
 
       expect(result).toEqual({
         claimed: false,
         delivery: null,
       });
 
-      expect(
-        prisma.populationAlertDelivery.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.findFirst).not.toHaveBeenCalled();
     });
 
     it('le claim est lié à alertId et ne peut pas capturer une livraison d’une autre alerte', async () => {
@@ -7366,17 +6476,15 @@ const readiness = {
         'delivery-other-alert',
       );
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledWith({
-        where: {
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({
           id: 'delivery-other-alert',
           alertId: 'alert-1',
           status: PopulationDeliveryStatus.QUEUED,
-        },
-        data: {
+        }),
+        data: expect.objectContaining({
           status: PopulationDeliveryStatus.SENDING,
-        },
+        }),
       });
     });
 
@@ -7389,16 +6497,10 @@ const readiness = {
       });
 
       await expect(
-        service.claimAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        ),
+        service.claimAlertDelivery('building-1', 'alert-1', 'delivery-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.updateMany).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -7408,81 +6510,59 @@ const readiness = {
       PopulationAlertStatus.ENDED,
       PopulationAlertStatus.CANCELLED,
       PopulationAlertStatus.FAILED,
-    ])(
-      'refuse le claim lorsque l’alerte est %s',
-      async (status) => {
-        prisma.populationAlert.findFirst.mockResolvedValue({
-          ...approvedAlert,
-          status,
-        });
+    ])('refuse le claim lorsque l’alerte est %s', async (status) => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        status,
+      });
 
-        await expect(
-          service.claimAlertDelivery(
-            'building-1',
-            'alert-1',
-            'delivery-1',
-          ),
-        ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.claimAlertDelivery('building-1', 'alert-1', 'delivery-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
-        expect(
-          prisma.populationAlertDelivery.updateMany,
-        ).not.toHaveBeenCalled();
-      },
-    );
+      expect(prisma.populationAlertDelivery.updateMany).not.toHaveBeenCalled();
+    });
 
     it('ne modifie aucun horodatage SENT lors du claim', async () => {
-      await service.claimAlertDelivery(
-        'building-1',
-        'alert-1',
-        'delivery-1',
-      );
+      await service.claimAlertDelivery('building-1', 'alert-1', 'delivery-1');
 
       const update =
-        prisma.populationAlertDelivery.updateMany.mock
-          .calls[0][0].data;
+        prisma.populationAlertDelivery.updateMany.mock.calls[0][0].data;
 
-      expect(update).toEqual({
-        status: PopulationDeliveryStatus.SENDING,
-      });
+      expect(update).toEqual(
+        expect.objectContaining({
+          status: PopulationDeliveryStatus.SENDING,
+          claimedAt: expect.any(Date),
+          leaseExpiresAt: expect.any(Date),
+        }),
+      );
 
       expect(update).not.toHaveProperty('sentAt');
       expect(update).not.toHaveProperty('deliveredAt');
     });
 
     it('échoue explicitement si le delivery disparaît après un claim réussi', async () => {
-      prisma.populationAlertDelivery.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.claimAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        ),
+        service.claimAlertDelivery('building-1', 'alert-1', 'delivery-1'),
       ).rejects.toThrow(
         'La livraison réclamée est introuvable après le claim atomique',
       );
     });
 
     it('ne déclenche toujours aucun fournisseur pendant le claim', async () => {
-      await service.claimAlertDelivery(
-        'building-1',
-        'alert-1',
-        'delivery-1',
-      );
+      await service.claimAlertDelivery('building-1', 'alert-1', 'delivery-1');
 
       /*
        * À ce stade, le seul effet métier doit être
        * QUEUED -> SENDING.
        */
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledTimes(1);
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledTimes(
+        1,
+      );
 
-      expect(
-        prisma.populationAlertDelivery.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlertDelivery.create).not.toHaveBeenCalled();
     });
   });
 
@@ -7490,8 +6570,7 @@ const readiness = {
     const activeProfile = {
       id: 'profile-1',
       buildingId: 'building-1',
-      assessmentStatus:
-        RueAssessmentStatus.CONFIRMED_SUBJECT,
+      assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
       populationEnabled: true,
       populationProgram: {
         id: 'program-1',
@@ -7512,9 +6591,7 @@ const readiness = {
       titleEN: 'Ammonia alert',
       approvedByType: 'CLIENT_USER',
       approvedById: 'client-user-1',
-      approvedAt: new Date(
-        '2026-09-17T16:00:00.000Z',
-      ),
+      approvedAt: new Date('2026-09-17T16:00:00.000Z'),
       zones: [],
     };
 
@@ -7524,25 +6601,30 @@ const readiness = {
       channel: PopulationAlertChannel.SMS,
       status: PopulationDeliveryStatus.SENDING,
       language: PopulationPreferredLanguage.FR,
-      messageSnapshot:
-        'Mettez-vous immédiatement à l’abri.',
+      messageSnapshot: 'Mettez-vous immédiatement à l’abri.',
       destinationSnapshot: '+15145550101',
       suppressionReason: null,
-      subscriber: { isSynthetic: false },
+      providerIdempotencyKey: '11111111-1111-4111-8111-111111111111',
+      attemptCount: 0,
+      claimedAt: new Date('2026-09-17T16:01:00.000Z'),
+      leaseExpiresAt: new Date('2026-09-17T16:02:00.000Z'),
+      outcomeUnknownAt: null,
+      subscriber: {
+        status: PopulationSubscriberStatus.ACTIVE,
+        isSynthetic: false,
+        smsEnabled: true,
+        emailEnabled: true,
+        phone: '+15145550101',
+        email: 'citizen@example.com',
+      },
     };
 
     beforeEach(() => {
-      prisma.rueFacilityProfile.findUnique.mockResolvedValue(
-        activeProfile,
-      );
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue(activeProfile);
 
-      prisma.populationAlert.findFirst.mockResolvedValue(
-        approvedAlert,
-      );
+      prisma.populationAlert.findFirst.mockResolvedValue(approvedAlert);
 
-      prisma.populationAlertDelivery.findFirst.mockResolvedValue(
-        sendingSms,
-      );
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue(sendingSms);
 
       prisma.populationAlertDelivery.updateMany.mockResolvedValue({
         count: 1,
@@ -7560,23 +6642,18 @@ const readiness = {
     });
 
     it('diffuse un SMS SENDING et le marque SENT', async () => {
-      const result =
-        await service.dispatchAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        );
+      const result = await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
 
-      expect(
-        populationDeliveryService.sendSms,
-      ).toHaveBeenCalledWith(
+      expect(populationDeliveryService.sendSms).toHaveBeenCalledWith(
         '+15145550101',
         'Mettez-vous immédiatement à l’abri.',
       );
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'delivery-1',
           alertId: 'alert-1',
@@ -7608,10 +6685,8 @@ const readiness = {
         ...sendingSms,
         channel: PopulationAlertChannel.EMAIL,
         language: PopulationPreferredLanguage.EN,
-        destinationSnapshot:
-          'citizen@example.com',
-        messageSnapshot:
-          'Shelter in place immediately.',
+        destinationSnapshot: 'citizen@example.com',
+        messageSnapshot: 'Shelter in place immediately.',
       });
 
       await service.dispatchAlertDelivery(
@@ -7620,17 +6695,14 @@ const readiness = {
         'delivery-1',
       );
 
-      expect(
-        populationDeliveryService.sendEmail,
-      ).toHaveBeenCalledWith({
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith({
         destination: 'citizen@example.com',
         subject: 'Ammonia alert',
         html: '<p>Shelter in place immediately.</p>',
+        providerIdempotencyKey: '11111111-1111-4111-8111-111111111111',
       });
 
-      expect(
-        populationDeliveryService.sendSms,
-      ).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
     });
 
     it('retombe sur le titre FR pour un EMAIL EN sans titleEN', async () => {
@@ -7643,10 +6715,8 @@ const readiness = {
         ...sendingSms,
         channel: PopulationAlertChannel.EMAIL,
         language: PopulationPreferredLanguage.EN,
-        destinationSnapshot:
-          'citizen@example.com',
-        messageSnapshot:
-          'Shelter in place immediately.',
+        destinationSnapshot: 'citizen@example.com',
+        messageSnapshot: 'Shelter in place immediately.',
       });
 
       await service.dispatchAlertDelivery(
@@ -7655,9 +6725,7 @@ const readiness = {
         'delivery-1',
       );
 
-      expect(
-        populationDeliveryService.sendEmail,
-      ).toHaveBeenCalledWith(
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: 'Alerte ammoniac',
         }),
@@ -7668,10 +6736,8 @@ const readiness = {
       prisma.populationAlertDelivery.findFirst.mockResolvedValue({
         ...sendingSms,
         channel: PopulationAlertChannel.EMAIL,
-        destinationSnapshot:
-          'citizen@example.com',
-        messageSnapshot:
-          '<script>alert("x")</script>\nRestez à l’abri.',
+        destinationSnapshot: 'citizen@example.com',
+        messageSnapshot: '<script>alert("x")</script>\nRestez à l’abri.',
       });
 
       await service.dispatchAlertDelivery(
@@ -7680,12 +6746,9 @@ const readiness = {
         'delivery-1',
       );
 
-      expect(
-        populationDeliveryService.sendEmail,
-      ).toHaveBeenCalledWith(
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          html:
-            '<p>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;<br>Restez à l’abri.</p>',
+          html: '<p>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;<br>Restez à l’abri.</p>',
         }),
       );
     });
@@ -7697,20 +6760,12 @@ const readiness = {
       });
 
       await expect(
-        service.dispatchAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        ),
+        service.dispatchAlertDelivery('building-1', 'alert-1', 'delivery-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        populationDeliveryService.sendSms,
-      ).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
 
-      expect(
-        populationDeliveryService.sendEmail,
-      ).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -7718,99 +6773,86 @@ const readiness = {
       PopulationDeliveryStatus.DELIVERED,
       PopulationDeliveryStatus.FAILED,
       PopulationDeliveryStatus.CANCELLED,
-    ])(
-      'refuse de rediffuser une livraison %s',
-      async (status) => {
-        prisma.populationAlertDelivery.findFirst.mockResolvedValue({
-          ...sendingSms,
-          status,
-        });
+    ])('refuse de rediffuser une livraison %s', async (status) => {
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+        ...sendingSms,
+        status,
+      });
 
-        await expect(
-          service.dispatchAlertDelivery(
-            'building-1',
-            'alert-1',
-            'delivery-1',
-          ),
-        ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.dispatchAlertDelivery('building-1', 'alert-1', 'delivery-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
-        expect(
-          populationDeliveryService.sendSms,
-        ).not.toHaveBeenCalled();
-      },
-    );
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+    });
 
-    it('marque FAILED lorsqu’une destination est absente sans appeler Brevo', async () => {
+    it('supprime une destination figée devenue incohérente sans appeler Brevo', async () => {
       prisma.populationAlertDelivery.findFirst.mockResolvedValue({
         ...sendingSms,
         destinationSnapshot: null,
       });
 
-      const result =
-        await service.dispatchAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        );
+      const result = await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
 
-      expect(
-        populationDeliveryService.sendSms,
-      ).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'delivery-1',
           alertId: 'alert-1',
           status: PopulationDeliveryStatus.SENDING,
         },
         data: expect.objectContaining({
-          status: PopulationDeliveryStatus.FAILED,
-          failedAt: expect.any(Date),
-          errorCode: 'DESTINATION_MISSING',
+          status: PopulationDeliveryStatus.SUPPRESSED,
+          suppressionReason:
+            PopulationDeliverySuppressionReason.DESTINATION_CHANGED,
+          errorCode: 'DESTINATION_CHANGED',
         }),
       });
 
-      expect(result.status).toBe(
-        PopulationDeliveryStatus.FAILED,
-      );
+      expect(result.status).toBe(PopulationDeliveryStatus.SUPPRESSED);
     });
 
-    it('marque FAILED lors d’une erreur fournisseur contrôlée', async () => {
-      populationDeliveryService.sendSms.mockRejectedValue(
-        new PopulationProviderError(
-          'BREVO_HTTP_429',
-          'Too many requests',
-        ),
+    it('planifie un retry borné lors d’une erreur fournisseur 429 confirmée', async () => {
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+        ...sendingSms,
+        channel: PopulationAlertChannel.EMAIL,
+        destinationSnapshot: 'citizen@example.com',
+      });
+      populationDeliveryService.sendEmail.mockRejectedValue(
+        new PopulationProviderError('BREVO_HTTP_429', 'Too many requests'),
       );
 
-      const result =
-        await service.dispatchAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        );
+      const result = await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
 
       expect(
         prisma.populationAlertDelivery.updateMany,
-      ).toHaveBeenCalledWith({
+      ).toHaveBeenLastCalledWith({
         where: {
           id: 'delivery-1',
           alertId: 'alert-1',
           status: PopulationDeliveryStatus.SENDING,
         },
         data: expect.objectContaining({
-          status: PopulationDeliveryStatus.FAILED,
-          failedAt: expect.any(Date),
+          status: PopulationDeliveryStatus.QUEUED,
+          failedAt: null,
+          nextAttemptAt: expect.any(Date),
           errorCode: 'BREVO_HTTP_429',
-          errorMessage: 'Too many requests',
+          errorMessage: 'Échec fournisseur temporaire confirmé',
         }),
       });
 
       expect(result).toEqual(
         expect.objectContaining({
-          status: PopulationDeliveryStatus.FAILED,
+          status: PopulationDeliveryStatus.QUEUED,
           errorCode: 'BREVO_HTTP_429',
         }),
       );
@@ -7818,8 +6860,78 @@ const readiness = {
 
     it('ne conserve pas le détail d’une erreur interne arbitraire', async () => {
       populationDeliveryService.sendSms.mockRejectedValue(
-        new Error(
-          'secret +15145550999 citizen@example.com',
+        new Error('secret +15145550999 citizen@example.com'),
+      );
+
+      await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
+
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
+        where: expect.any(Object),
+        data: expect.objectContaining({
+          status: PopulationDeliveryStatus.FAILED,
+          errorCode: 'DELIVERY_INTERNAL_ERROR',
+          errorMessage: 'Échec fournisseur permanent confirmé',
+        }),
+      });
+
+      const serialized = JSON.stringify(
+        prisma.populationAlertDelivery.updateMany.mock.calls[0][0],
+      );
+
+      expect(serialized).not.toContain('+15145550999');
+
+      expect(serialized).not.toContain('citizen@example.com');
+    });
+
+    it('conserve SENDING et exige une réconciliation lorsque le résultat est inconnu', async () => {
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+        ...sendingSms,
+        channel: PopulationAlertChannel.EMAIL,
+        destinationSnapshot: 'citizen@example.com',
+      });
+      populationDeliveryService.sendEmail.mockRejectedValue(
+        new PopulationProviderError(
+          'BREVO_NETWORK_ERROR',
+          'Le résultat de la tentative est inconnu',
+          'OUTCOME_UNKNOWN',
+        ),
+      );
+      const result = await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
+      expect(
+        prisma.populationAlertDelivery.updateMany,
+      ).toHaveBeenLastCalledWith({
+        where: expect.objectContaining({
+          status: PopulationDeliveryStatus.SENDING,
+        }),
+        data: expect.objectContaining({
+          outcomeUnknownAt: expect.any(Date),
+          leaseExpiresAt: null,
+          errorCode: 'BREVO_NETWORK_ERROR',
+        }),
+      });
+      expect(result.status).toBe(PopulationDeliveryStatus.SENDING);
+      expect(result.outcomeUnknown).toBe(true);
+    });
+
+    it('ne rappelle pas Brevo après une erreur réseau ambiguë déjà matérialisée', async () => {
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+        ...sendingSms,
+        channel: PopulationAlertChannel.EMAIL,
+        destinationSnapshot: 'citizen@example.com',
+      });
+      populationDeliveryService.sendEmail.mockRejectedValue(
+        new PopulationProviderError(
+          'BREVO_NETWORK_ERROR',
+          'Le résultat de la tentative est inconnu',
+          'OUTCOME_UNKNOWN',
         ),
       );
 
@@ -7829,36 +6941,140 @@ const readiness = {
         'delivery-1',
       );
 
+      prisma.populationAlertDelivery.findMany
+        .mockResolvedValueOnce([{ channel: PopulationAlertChannel.EMAIL }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      prisma.populationAlertDelivery.groupBy.mockResolvedValue([
+        {
+          status: PopulationDeliveryStatus.SENDING,
+          _count: { _all: 1 },
+        },
+      ]);
+      jest.spyOn(service as any, 'getAlert').mockResolvedValue({
+        id: 'alert-1',
+        status: PopulationAlertStatus.SENDING,
+      });
+
+      await (service as any).resumeSendingAlert(
+        'building-1',
+        'alert-1',
+        'program-1',
+      );
+
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledTimes(1);
       expect(
         prisma.populationAlertDelivery.updateMany,
       ).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          id: 'delivery-1',
+          status: PopulationDeliveryStatus.SENDING,
+        }),
+        data: expect.objectContaining({
+          outcomeUnknownAt: expect.any(Date),
+          leaseExpiresAt: null,
+        }),
+      });
+    });
+
+    it('arrête définitivement après la troisième tentative', async () => {
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+        ...sendingSms,
+        channel: PopulationAlertChannel.EMAIL,
+        destinationSnapshot: 'citizen@example.com',
+        attemptCount: 2,
+      });
+      populationDeliveryService.sendEmail.mockRejectedValue(
+        new PopulationProviderError('BREVO_HTTP_429', 'Too many requests'),
+      );
+      const result = await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
+      );
+      expect(result.status).toBe(PopulationDeliveryStatus.FAILED);
+      expect(
+        prisma.populationAlertDelivery.updateMany,
+      ).toHaveBeenLastCalledWith({
         where: expect.any(Object),
         data: expect.objectContaining({
           status: PopulationDeliveryStatus.FAILED,
-          errorCode: 'DELIVERY_INTERNAL_ERROR',
-          errorMessage:
-            'Erreur interne lors de la diffusion',
+          nextAttemptAt: null,
         }),
       });
+    });
 
-      const serialized = JSON.stringify(
-        prisma.populationAlertDelivery.updateMany.mock
-          .calls[0][0],
+    it.each([
+      [
+        { status: PopulationSubscriberStatus.UNSUBSCRIBED },
+        PopulationDeliverySuppressionReason.SUBSCRIBER_INACTIVE,
+      ],
+      [
+        { emailEnabled: false },
+        PopulationDeliverySuppressionReason.CHANNEL_DISABLED,
+      ],
+      [
+        { email: 'nouvelle@example.com' },
+        PopulationDeliverySuppressionReason.DESTINATION_CHANGED,
+      ],
+    ])(
+      'supprime avant Brevo lorsque le citoyen change après freeze',
+      async (changes, reason) => {
+        prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+          ...sendingSms,
+          channel: PopulationAlertChannel.EMAIL,
+          destinationSnapshot: 'citizen@example.com',
+          subscriber: { ...sendingSms.subscriber, ...changes },
+        });
+        const result = await service.dispatchAlertDelivery(
+          'building-1',
+          'alert-1',
+          'delivery-1',
+        );
+        expect(result).toEqual(
+          expect.objectContaining({
+            status: PopulationDeliveryStatus.SUPPRESSED,
+            suppressionReason: reason,
+          }),
+        );
+        expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+      },
+    );
+
+    it('accepte casse et espaces équivalents sans modifier le snapshot email', async () => {
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue({
+        ...sendingSms,
+        channel: PopulationAlertChannel.EMAIL,
+        destinationSnapshot: 'Citizen@Example.com',
+        subscriber: {
+          ...sendingSms.subscriber,
+          email: '  citizen@example.com  ',
+        },
+      });
+
+      await service.dispatchAlertDelivery(
+        'building-1',
+        'alert-1',
+        'delivery-1',
       );
 
-      expect(serialized).not.toContain(
-        '+15145550999',
+      expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ destination: 'Citizen@Example.com' }),
       );
-
-      expect(serialized).not.toContain(
-        'citizen@example.com',
+      expect(
+        prisma.populationAlertDelivery.updateMany,
+      ).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            suppressionReason:
+              PopulationDeliverySuppressionReason.DESTINATION_CHANGED,
+          }),
+        }),
       );
     });
 
     it('refuse une livraison appartenant à une autre alerte', async () => {
-      prisma.populationAlertDelivery.findFirst.mockResolvedValue(
-        null,
-      );
+      prisma.populationAlertDelivery.findFirst.mockResolvedValue(null);
 
       await expect(
         service.dispatchAlertDelivery(
@@ -7868,9 +7084,7 @@ const readiness = {
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(
-        populationDeliveryService.sendSms,
-      ).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
     });
 
     it('refuse toute diffusion avant approbation humaine', async () => {
@@ -7882,16 +7096,49 @@ const readiness = {
       });
 
       await expect(
-        service.dispatchAlertDelivery(
-          'building-1',
-          'alert-1',
-          'delivery-1',
-        ),
+        service.dispatchAlertDelivery('building-1', 'alert-1', 'delivery-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        populationDeliveryService.sendSms,
-      ).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delivery lease recovery', () => {
+    it('remet QUEUED un claim expiré avant le début de tentative', async () => {
+      const claimedAt = new Date('2026-09-19T10:00:00.000Z');
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([
+        { id: 'delivery-1', claimedAt, lastAttemptAt: null },
+      ]);
+      await (service as any).recoverExpiredDeliveryLeases('alert-1');
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({ id: 'delivery-1', claimedAt }),
+        data: expect.objectContaining({
+          status: PopulationDeliveryStatus.QUEUED,
+          claimedAt: null,
+          leaseExpiresAt: null,
+        }),
+      });
+    });
+
+    it('ne resend jamais lorsque la tentative fournisseur avait commencé', async () => {
+      const claimedAt = new Date('2026-09-19T10:00:00.000Z');
+      prisma.populationAlertDelivery.findMany.mockResolvedValue([
+        {
+          id: 'delivery-1',
+          claimedAt,
+          lastAttemptAt: new Date('2026-09-19T10:00:01.000Z'),
+        },
+      ]);
+      await (service as any).recoverExpiredDeliveryLeases('alert-1');
+      expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
+        where: expect.objectContaining({ id: 'delivery-1', claimedAt }),
+        data: expect.objectContaining({
+          outcomeUnknownAt: expect.any(Date),
+          leaseExpiresAt: null,
+          errorCode: 'PROVIDER_OUTCOME_UNKNOWN_AFTER_LEASE',
+        }),
+      });
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
     });
   });
 
@@ -8017,41 +7264,26 @@ const readiness = {
 
     it('refuse un jeton appartenant à un autre abonné', async () => {
       await expect(
-        service.getSubscriberProfile(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(
-              'subscriber-2',
-              'program-1',
-            ),
-          },
-        ),
+        service.getSubscriberProfile('sobeys-boucherville', 'subscriber-1', {
+          accessToken: createAccessToken('subscriber-2', 'program-1'),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findFirst).not.toHaveBeenCalled();
     });
 
     it('refuse un jeton expiré', async () => {
       await expect(
-        service.getSubscriberProfile(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(
-              'subscriber-1',
-              'program-1',
-              Date.now() - 1000,
-            ),
-          },
-        ),
+        service.getSubscriberProfile('sobeys-boucherville', 'subscriber-1', {
+          accessToken: createAccessToken(
+            'subscriber-1',
+            'program-1',
+            Date.now() - 1000,
+          ),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findFirst).not.toHaveBeenCalled();
     });
   });
 
@@ -8100,9 +7332,7 @@ const readiness = {
         consentVersion: '2026-09-v1',
       });
 
-      prisma.populationSubscriber.findFirst.mockResolvedValue(
-        activeSubscriber,
-      );
+      prisma.populationSubscriber.findFirst.mockResolvedValue(activeSubscriber);
 
       prisma.populationSubscriber.update.mockResolvedValue({
         ...activeSubscriber,
@@ -8114,43 +7344,34 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
     it('modifie la langue et crée une preuve CONSENT_UPDATED', async () => {
-      const result =
-        await service.updateSubscriberPreferences(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(),
-            preferredLanguage:
-              PopulationPreferredLanguage.EN,
-          },
-        );
+      const result = await service.updateSubscriberPreferences(
+        'sobeys-boucherville',
+        'subscriber-1',
+        {
+          accessToken: createAccessToken(),
+          preferredLanguage: PopulationPreferredLanguage.EN,
+        },
+      );
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationSubscriber.update).toHaveBeenCalledWith({
         where: {
           id: 'subscriber-1',
         },
         data: {
-          preferredLanguage:
-            PopulationPreferredLanguage.EN,
+          preferredLanguage: PopulationPreferredLanguage.EN,
         },
       });
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationConsentEvent.create).toHaveBeenCalledWith({
         data: {
           programId: 'program-1',
           subscriberId: 'subscriber-1',
-          type:
-            PopulationConsentEventType.CONSENT_UPDATED,
+          type: PopulationConsentEventType.CONSENT_UPDATED,
           consentVersion: '2026-09-v1',
           smsEnabled: true,
           emailEnabled: false,
@@ -8161,43 +7382,34 @@ const readiness = {
 
       expect(result).toEqual({
         updated: true,
-        preferredLanguage:
-          PopulationPreferredLanguage.EN,
+        preferredLanguage: PopulationPreferredLanguage.EN,
       });
     });
 
     it('est idempotent lorsque la langue ne change pas', async () => {
-      const result =
-        await service.updateSubscriberPreferences(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(),
-            preferredLanguage:
-              PopulationPreferredLanguage.FR,
-          },
-        );
+      const result = await service.updateSubscriberPreferences(
+        'sobeys-boucherville',
+        'subscriber-1',
+        {
+          accessToken: createAccessToken(),
+          preferredLanguage: PopulationPreferredLanguage.FR,
+        },
+      );
 
       expect(result).toEqual({
         updated: false,
-        preferredLanguage:
-          PopulationPreferredLanguage.FR,
+        preferredLanguage: PopulationPreferredLanguage.FR,
       });
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
     });
 
     it('refuse la modification pour un abonné non ACTIVE', async () => {
       prisma.populationSubscriber.findFirst.mockResolvedValue({
         ...activeSubscriber,
-        status:
-          PopulationSubscriberStatus.PENDING_VERIFICATION,
+        status: PopulationSubscriberStatus.PENDING_VERIFICATION,
       });
 
       await expect(
@@ -8206,19 +7418,14 @@ const readiness = {
           'subscriber-1',
           {
             accessToken: createAccessToken(),
-            preferredLanguage:
-              PopulationPreferredLanguage.EN,
+            preferredLanguage: PopulationPreferredLanguage.EN,
           },
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
     });
 
     it('refuse un jeton appartenant à un autre programme', async () => {
@@ -8227,23 +7434,15 @@ const readiness = {
           'sobeys-boucherville',
           'subscriber-1',
           {
-            accessToken: createAccessToken(
-              'subscriber-1',
-              'program-2',
-            ),
-            preferredLanguage:
-              PopulationPreferredLanguage.EN,
+            accessToken: createAccessToken('subscriber-1', 'program-2'),
+            preferredLanguage: PopulationPreferredLanguage.EN,
           },
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.findFirst,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.findFirst).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
     });
   });
 
@@ -8289,13 +7488,9 @@ const readiness = {
     };
 
     beforeEach(() => {
-      prisma.populationProgram.findUnique.mockResolvedValue(
-        program,
-      );
+      prisma.populationProgram.findUnique.mockResolvedValue(program);
 
-      prisma.populationSubscriber.findFirst.mockResolvedValue(
-        activeSubscriber,
-      );
+      prisma.populationSubscriber.findFirst.mockResolvedValue(activeSubscriber);
 
       prisma.populationSubscriber.update.mockResolvedValue({
         ...activeSubscriber,
@@ -8310,8 +7505,7 @@ const readiness = {
       });
 
       prisma.$transaction.mockImplementation(
-        async (callback: (tx: typeof prisma) => unknown) =>
-          callback(prisma),
+        async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
     });
 
@@ -8324,9 +7518,7 @@ const readiness = {
         },
       );
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationSubscriber.update).toHaveBeenCalledWith({
         where: {
           id: 'subscriber-1',
         },
@@ -8338,9 +7530,7 @@ const readiness = {
         },
       });
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).toHaveBeenCalledWith({
+      expect(prisma.populationConsentEvent.create).toHaveBeenCalledWith({
         data: {
           programId: 'program-1',
           subscriberId: 'subscriber-1',
@@ -8364,71 +7554,43 @@ const readiness = {
       const [payload] = validToken.split('.');
 
       await expect(
-        service.unsubscribeSubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: `${payload}.signature-invalide`,
-          },
-        ),
+        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+          accessToken: `${payload}.signature-invalide`,
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
     });
 
     it('refuse un jeton expiré', async () => {
       await expect(
-        service.unsubscribeSubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(
-              'subscriber-1',
-              'program-1',
-              Date.now() - 1000,
-            ),
-          },
-        ),
+        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+          accessToken: createAccessToken(
+            'subscriber-1',
+            'program-1',
+            Date.now() - 1000,
+          ),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
     });
 
     it('refuse un jeton appartenant à un autre abonné', async () => {
       await expect(
-        service.unsubscribeSubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(
-              'subscriber-2',
-              'program-1',
-            ),
-          },
-        ),
+        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+          accessToken: createAccessToken('subscriber-2', 'program-1'),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
     });
 
     it('refuse un jeton appartenant à un autre programme', async () => {
       await expect(
-        service.unsubscribeSubscriber(
-          'sobeys-boucherville',
-          'subscriber-1',
-          {
-            accessToken: createAccessToken(
-              'subscriber-1',
-              'program-2',
-            ),
-          },
-        ),
+        service.unsubscribeSubscriber('sobeys-boucherville', 'subscriber-1', {
+          accessToken: createAccessToken('subscriber-1', 'program-2'),
+        }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -8454,13 +7616,9 @@ const readiness = {
         status: PopulationSubscriberStatus.UNSUBSCRIBED,
       });
 
-      expect(
-        prisma.populationSubscriber.update,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
 
-      expect(
-        prisma.populationConsentEvent.create,
-      ).not.toHaveBeenCalled();
+      expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
     });
   });
 });

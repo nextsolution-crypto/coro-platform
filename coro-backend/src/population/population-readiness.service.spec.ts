@@ -13,6 +13,7 @@ function configuredEnvironment(): NodeJS.ProcessEnv {
     POPULATION_LOCATION_TOKEN_SECRET: aes(2),
     BREVO_API_KEY: 'brevo-test-key',
     BREVO_SENDER_EMAIL: 'alerts@example.test',
+    POPULATION_EMAIL_TIMEOUT_MS: '10000',
     BREVO_SMS_SENDER: 'CORO',
     POPULATION_SMS_PRODUCTION_VALIDATED: 'true',
     GEOCODING_PROVIDER: 'mapbox',
@@ -70,6 +71,25 @@ describe('PopulationReadinessService', () => {
         PopulationVerificationChannel.SMS,
       ),
     ).toThrow(ServiceUnavailableException);
+  });
+
+  it.each(['0', '-1', 'abc', '1.5', '30001'])(
+    'rejects invalid email timeout %s',
+    (timeout) => {
+      const env = configuredEnvironment();
+      env.POPULATION_EMAIL_TIMEOUT_MS = timeout;
+      expect(
+        new PopulationReadinessService(env).getReadiness().population.email,
+      ).toBe('INVALID');
+    },
+  );
+
+  it('uses a safe default when the email timeout is omitted', () => {
+    const env = configuredEnvironment();
+    delete env.POPULATION_EMAIL_TIMEOUT_MS;
+    expect(
+      new PopulationReadinessService(env).getReadiness().population.email,
+    ).toBe('READY');
   });
 
   it.each([

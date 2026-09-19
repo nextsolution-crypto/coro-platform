@@ -1478,6 +1478,17 @@ model PopulationAlertDelivery {
 
   provider String?
 
+  // UUID stable transmis au fournisseur pour dédupliquer les reprises.
+  providerIdempotencyKey String? @unique
+
+  // État de la tentative courante et planification des reprises confirmées.
+  attemptCount    Int       @default(0)
+  lastAttemptAt   DateTime?
+  nextAttemptAt   DateTime?
+  claimedAt       DateTime?
+  leaseExpiresAt  DateTime?
+  outcomeUnknownAt DateTime?
+
   queuedAt    DateTime  @default(now())
   sentAt      DateTime?
   deliveredAt DateTime?
@@ -1494,6 +1505,8 @@ model PopulationAlertDelivery {
   @@index([subscriberId])
   @@index([status])
   @@index([providerMessageId])
+  @@index([status, nextAttemptAt])
+  @@index([status, leaseExpiresAt])
 }
 
 enum RueAuthorityType {
@@ -1605,6 +1618,9 @@ enum PopulationDeliveryStatus {
 enum PopulationDeliverySuppressionReason {
   SYNTHETIC_RECIPIENT
   SANDBOX_MODE
+  SUBSCRIBER_INACTIVE
+  CHANNEL_DISABLED
+  DESTINATION_CHANGED
 }
 
 enum PopulationDeliveryMode {
