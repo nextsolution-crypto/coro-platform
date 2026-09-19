@@ -2430,7 +2430,82 @@ export class PopulationService {
         uniqueSmsTargetCount: uniqueSmsTargetIds.size,
         uniqueEmailTargetCount: uniqueEmailTargetIds.size,
       },
+      targetedSubscriberIds: [...uniqueTargetIds],
       zones,
+    };
+  }
+
+  /**
+   * Retourne le roster historique admissible d'un evenement, par identite
+   * d'abonne et jamais par destination. Une tentative FAILED est conservee:
+   * elle prouve qu'une communication a reellement ete tentee et la destination
+   * courante devra de toute facon etre revalidee au freeze.
+   */
+  private async getAllClearHistoricalRoster(
+    programId: string,
+    operationalEventId: string,
+    excludeAlertId?: string,
+  ) {
+    const rows =
+      (await this.prisma.populationAlertDelivery.findMany({
+        where: {
+          subscriberId: { not: null },
+          status: {
+            in: [
+              PopulationDeliveryStatus.SENT,
+              PopulationDeliveryStatus.DELIVERED,
+              PopulationDeliveryStatus.FAILED,
+            ],
+          },
+          alert: {
+            programId,
+            operationalEventId,
+            type: {
+              in: [
+                PopulationAlertType.EMERGENCY,
+                PopulationAlertType.TEST,
+                PopulationAlertType.UPDATE,
+              ],
+            },
+            status: {
+              in: [
+                PopulationAlertStatus.ACTIVE,
+                PopulationAlertStatus.ENDED,
+                PopulationAlertStatus.FAILED,
+              ],
+            },
+            ...(excludeAlertId ? { id: { not: excludeAlertId } } : {}),
+          },
+        },
+        select: { subscriberId: true, channel: true },
+      })) ?? [];
+
+    const channelsBySubscriber = new Map<string, Set<PopulationAlertChannel>>();
+    for (const row of rows) {
+      if (!row.subscriberId) continue;
+      const channels =
+        channelsBySubscriber.get(row.subscriberId) ??
+        new Set<PopulationAlertChannel>();
+      channels.add(row.channel);
+      channelsBySubscriber.set(row.subscriberId, channels);
+    }
+    return channelsBySubscriber;
+  }
+
+  private buildAllClearTargetingSnapshot(
+    currentTargetIds: Iterable<string>,
+    historicalTargetIds: Iterable<string>,
+  ) {
+    const current = new Set(currentTargetIds);
+    const historical = new Set(historicalTargetIds);
+    const union = new Set([...historical, ...current]);
+    return {
+      strategy: 'HISTORICAL_UNION_CURRENT',
+      currentZoneSubscriberCount: current.size,
+      historicalSubscriberCount: historical.size,
+      unionBeforeDeduplicationCount: current.size + historical.size,
+      uniqueTargetCount: union.size,
+      overlapSubscriberCount: current.size + historical.size - union.size,
     };
   }
 
@@ -3261,6 +3336,17 @@ export class PopulationService {
       sourceAlert.emergencyScenarioId,
     );
 
+    const allClearHistoricalRoster =
+      type === PopulationAlertType.ALL_CLEAR
+        ? await this.getAllClearHistoricalRoster(program.id, event.id)
+        : null;
+    const allClearTargeting = allClearHistoricalRoster
+      ? this.buildAllClearTargetingSnapshot(
+          targeting.targetedSubscriberIds,
+          allClearHistoricalRoster.keys(),
+        )
+      : null;
+
     const createdAt = new Date();
 
     const contextSnapshot = {
@@ -3287,6 +3373,7 @@ export class PopulationService {
       targeting: {
         zoneCount: targeting.zones.length,
         calculatedAt: createdAt.toISOString(),
+        ...(allClearTargeting ?? {}),
       },
 
       communication: {
@@ -3992,6 +4079,21 @@ export class PopulationService {
       alert.emergencyScenarioId,
     );
 
+    const allClearHistoricalRoster =
+      alert.type === PopulationAlertType.ALL_CLEAR && alert.operationalEventId
+        ? await this.getAllClearHistoricalRoster(
+            alert.programId,
+            alert.operationalEventId,
+            alert.id,
+          )
+        : null;
+    const allClearTargeting = allClearHistoricalRoster
+      ? this.buildAllClearTargetingSnapshot(
+          targeting.targetedSubscriberIds,
+          allClearHistoricalRoster.keys(),
+        )
+      : null;
+
     const calculatedAt = new Date();
 
     const contextSnapshot = {
@@ -4018,7 +4120,19 @@ export class PopulationService {
       targeting: {
         zoneCount: targeting.zones.length,
         calculatedAt: calculatedAt.toISOString(),
+        ...(allClearTargeting ?? {}),
       },
+
+      ...(alert.operationalEventId
+        ? {
+            communication: {
+              operationalEventId: alert.operationalEventId,
+              incidentEventId: alert.incidentEventId,
+              cycleSequence: alert.cycleSequence,
+              type: alert.type,
+            },
+          }
+        : {}),
     };
 
     return this.prisma.$transaction(async (tx) => {
@@ -4342,13 +4456,32 @@ export class PopulationService {
       };
     }
 
+    const isEventAllClear =
+      alert.type === PopulationAlertType.ALL_CLEAR &&
+      Boolean(alert.operationalEventId);
+    const historicalRoster = isEventAllClear
+      ? await this.getAllClearHistoricalRoster(
+          program.id,
+          alert.operationalEventId!,
+          alert.id,
+        )
+      : new Map<string, Set<PopulationAlertChannel>>();
+
     const subscribers = await this.prisma.populationSubscriber.findMany({
       where: {
         programId: program.id,
-        status: PopulationSubscriberStatus.ACTIVE,
+        ...(isEventAllClear
+          ? {
+              OR: [
+                { status: PopulationSubscriberStatus.ACTIVE },
+                { id: { in: [...historicalRoster.keys()] } },
+              ],
+            }
+          : { status: PopulationSubscriberStatus.ACTIVE }),
       },
       select: {
         id: true,
+        status: true,
         preferredLanguage: true,
         phone: true,
         email: true,
@@ -4382,10 +4515,12 @@ export class PopulationService {
         ? buildingSnapshot.longitude
         : null;
 
-    const targetedSubscriberIds = new Set<string>();
+    const currentZoneSubscriberIds = new Set<string>();
 
     for (const subscriber of subscribers) {
       if (
+        (isEventAllClear &&
+          subscriber.status !== PopulationSubscriberStatus.ACTIVE) ||
         subscriber.latitude === null ||
         subscriber.longitude === null ||
         !Number.isFinite(subscriber.latitude) ||
@@ -4406,9 +4541,14 @@ export class PopulationService {
       );
 
       if (isTargeted) {
-        targetedSubscriberIds.add(subscriber.id);
+        currentZoneSubscriberIds.add(subscriber.id);
       }
     }
+
+    const targetedSubscriberIds = new Set([
+      ...historicalRoster.keys(),
+      ...currentZoneSubscriberIds,
+    ]);
 
     const targetedSubscribers = subscribers.filter((subscriber) =>
       targetedSubscriberIds.has(subscriber.id),
@@ -4424,19 +4564,10 @@ export class PopulationService {
       providerIdempotencyKey: string | null;
       language: PopulationPreferredLanguage;
       messageSnapshot: string;
-      destinationSnapshot: string;
+      destinationSnapshot: string | null;
     }> = [];
 
     for (const subscriber of targetedSubscribers) {
-      const suppressionReason =
-        program.deliveryMode === PopulationDeliveryMode.SANDBOX
-          ? PopulationDeliverySuppressionReason.SANDBOX_MODE
-          : subscriber.isSynthetic
-            ? PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT
-            : null;
-      const deliveryStatus = suppressionReason
-        ? PopulationDeliveryStatus.SUPPRESSED
-        : PopulationDeliveryStatus.QUEUED;
       const language =
         subscriber.preferredLanguage === PopulationPreferredLanguage.EN &&
         alert.messageEN?.trim()
@@ -4448,36 +4579,74 @@ export class PopulationService {
           ? alert.messageEN!.trim()
           : alert.messageFR.trim();
 
-      if (this.canReceiveSms(program, subscriber)) {
-        deliveries.push({
-          idempotencyKey: `${alert.id}:${subscriber.id}:SMS`,
-          alertId: alert.id,
-          subscriberId: subscriber.id,
-          channel: PopulationAlertChannel.SMS,
-          status: deliveryStatus,
-          suppressionReason,
-          providerIdempotencyKey: null,
-          language,
-          messageSnapshot,
-          destinationSnapshot: subscriber.phone!,
-        });
+      const historicalChannels =
+        historicalRoster.get(subscriber.id) ??
+        new Set<PopulationAlertChannel>();
+      const candidateChannels = new Set<PopulationAlertChannel>();
+      if (isEventAllClear) {
+        if (
+          this.canReceiveSms(program, subscriber) ||
+          historicalChannels.has(PopulationAlertChannel.SMS)
+        ) {
+          candidateChannels.add(PopulationAlertChannel.SMS);
+        }
+        if (
+          this.canReceiveEmail(program, subscriber) ||
+          historicalChannels.has(PopulationAlertChannel.EMAIL)
+        ) {
+          candidateChannels.add(PopulationAlertChannel.EMAIL);
+        }
+      } else {
+        if (this.canReceiveSms(program, subscriber)) {
+          candidateChannels.add(PopulationAlertChannel.SMS);
+        }
+        if (this.canReceiveEmail(program, subscriber)) {
+          candidateChannels.add(PopulationAlertChannel.EMAIL);
+        }
       }
 
-      if (this.canReceiveEmail(program, subscriber)) {
+      for (const channel of candidateChannels) {
+        const channelEnabled =
+          channel === PopulationAlertChannel.SMS
+            ? this.canReceiveSms(program, subscriber)
+            : this.canReceiveEmail(program, subscriber);
+        const destination =
+          channel === PopulationAlertChannel.SMS
+            ? subscriber.phone
+            : subscriber.email;
+        const suppressionReason =
+          program.deliveryMode === PopulationDeliveryMode.SANDBOX
+            ? PopulationDeliverySuppressionReason.SANDBOX_MODE
+            : isEventAllClear &&
+                subscriber.status !== PopulationSubscriberStatus.ACTIVE
+              ? PopulationDeliverySuppressionReason.SUBSCRIBER_INACTIVE
+              : subscriber.isSynthetic
+                ? PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT
+                : !channelEnabled
+                  ? PopulationDeliverySuppressionReason.CHANNEL_DISABLED
+                  : null;
+        const deliveryStatus = suppressionReason
+          ? PopulationDeliveryStatus.SUPPRESSED
+          : PopulationDeliveryStatus.QUEUED;
+
         deliveries.push({
-          idempotencyKey: `${alert.id}:${subscriber.id}:EMAIL`,
+          idempotencyKey: `${alert.id}:${subscriber.id}:${channel}`,
           alertId: alert.id,
           subscriberId: subscriber.id,
-          channel: PopulationAlertChannel.EMAIL,
+          channel,
           status: deliveryStatus,
           suppressionReason,
           providerIdempotencyKey:
-            deliveryStatus === PopulationDeliveryStatus.QUEUED
+            deliveryStatus === PopulationDeliveryStatus.QUEUED &&
+            channel === PopulationAlertChannel.EMAIL
               ? randomUUID()
               : null,
           language,
           messageSnapshot,
-          destinationSnapshot: subscriber.email!,
+          destinationSnapshot:
+            deliveryStatus === PopulationDeliveryStatus.QUEUED
+              ? destination
+              : null,
         });
       }
     }
@@ -4491,6 +4660,32 @@ export class PopulationService {
     )) {
       this.readiness.assertAlertChannelReady(channel);
     }
+
+    const deliverableSubscriberIds = new Set(
+      deliveries
+        .filter(
+          (delivery) => delivery.status === PopulationDeliveryStatus.QUEUED,
+        )
+        .map((delivery) => delivery.subscriberId),
+    );
+    const suppressedSubscriberIds = new Set(
+      deliveries
+        .filter(
+          (delivery) => delivery.status === PopulationDeliveryStatus.SUPPRESSED,
+        )
+        .map((delivery) => delivery.subscriberId),
+    );
+    const allClearFreezeTargeting = isEventAllClear
+      ? {
+          ...this.buildAllClearTargetingSnapshot(
+            currentZoneSubscriberIds,
+            historicalRoster.keys(),
+          ),
+          revalidatedAt: new Date().toISOString(),
+          revalidationSuppressedSubscriberCount: suppressedSubscriberIds.size,
+          deliverableSubscriberCount: deliverableSubscriberIds.size,
+        }
+      : null;
 
     const recipientsFrozenAt = new Date();
 
@@ -4515,6 +4710,17 @@ export class PopulationService {
             : {}),
           ...(program.deliveryMode
             ? { deliveryModeSnapshot: program.deliveryMode }
+            : {}),
+          ...(allClearFreezeTargeting
+            ? {
+                contextSnapshot: {
+                  ...(contextSnapshot ?? {}),
+                  targeting: {
+                    ...(contextSnapshot?.targeting ?? {}),
+                    ...allClearFreezeTargeting,
+                  },
+                },
+              }
             : {}),
         },
       });
@@ -4656,6 +4862,7 @@ export class PopulationService {
       deliveryMode: program.deliveryMode,
       targeting: {
         subscriberCount: targetedSubscriberIds.size,
+        ...(allClearFreezeTargeting ?? {}),
         deliveryCount: frozenDeliveries.length,
         smsDeliveryCount: frozenDeliveries.filter(
           (delivery) => delivery.channel === PopulationAlertChannel.SMS,

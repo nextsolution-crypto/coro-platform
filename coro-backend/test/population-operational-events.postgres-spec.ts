@@ -1,9 +1,13 @@
 import {
   CoroActorType,
   PopulationAlertStatus,
+  PopulationAlertChannel,
   PopulationAlertType,
+  PopulationDeliveryStatus,
   PopulationOperationalEventStatus,
+  PopulationPreferredLanguage,
   PopulationProgramStatus,
+  PopulationSubscriberStatus,
   Prisma,
   PrismaClient,
   RueAssessmentStatus,
@@ -169,7 +173,13 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
   });
 
   afterEach(async () => {
+    await prisma.populationAlertDelivery.deleteMany({
+      where: { alert: { programId: ids.program } },
+    });
     await prisma.populationAlert.deleteMany({
+      where: { programId: ids.program },
+    });
+    await prisma.populationSubscriber.deleteMany({
       where: { programId: ids.program },
     });
     await prisma.populationOperationalEvent.deleteMany({
@@ -392,5 +402,114 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
       status: PopulationOperationalEventStatus.ENDED,
       endedById: 'postgres-tests',
     });
+  });
+
+  it('K: isole le roster historique ALL_CLEAR aux communications diffusees du meme event', async () => {
+    const event = await createEvent();
+    const otherEvent = await createEvent({
+      status: PopulationOperationalEventStatus.ENDED,
+    });
+    const subscribers = await Promise.all(
+      ['sent', 'failed', 'suppressed', 'other-event', 'all-clear'].map((key) =>
+        prisma.populationSubscriber.create({
+          data: {
+            id: `history-${key}-${suffix}`,
+            programId: ids.program,
+            status: PopulationSubscriberStatus.ACTIVE,
+            preferredLanguage: PopulationPreferredLanguage.FR,
+            email: `${key}-${suffix}@example.invalid`,
+            emailEnabled: true,
+          },
+        }),
+      ),
+    );
+    const initial = await createAlert(`history-initial-${suffix}`, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      type: PopulationAlertType.TEST,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const update = await createAlert(`history-update-${suffix}`, {
+      operationalEventId: event.id,
+      cycleSequence: 2,
+      type: PopulationAlertType.UPDATE,
+      status: PopulationAlertStatus.FAILED,
+    });
+    const allClear = await createAlert(`history-all-clear-${suffix}`, {
+      operationalEventId: event.id,
+      cycleSequence: 3,
+      type: PopulationAlertType.ALL_CLEAR,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const other = await createAlert(`history-other-${suffix}`, {
+      operationalEventId: otherEvent.id,
+      cycleSequence: 1,
+      type: PopulationAlertType.TEST,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const delivery = (
+      alertId: string,
+      subscriberId: string,
+      status: PopulationDeliveryStatus,
+    ) =>
+      prisma.populationAlertDelivery.create({
+        data: {
+          idempotencyKey: `${alertId}:${subscriberId}:EMAIL`,
+          alertId,
+          subscriberId,
+          channel: PopulationAlertChannel.EMAIL,
+          status,
+          language: PopulationPreferredLanguage.FR,
+          messageSnapshot: 'Test PostgreSQL',
+          destinationSnapshot: 'masked@example.invalid',
+        },
+      });
+    await Promise.all([
+      delivery(initial.id, subscribers[0].id, PopulationDeliveryStatus.SENT),
+      delivery(update.id, subscribers[1].id, PopulationDeliveryStatus.FAILED),
+      delivery(
+        initial.id,
+        subscribers[2].id,
+        PopulationDeliveryStatus.SUPPRESSED,
+      ),
+      delivery(other.id, subscribers[3].id, PopulationDeliveryStatus.SENT),
+      delivery(allClear.id, subscribers[4].id, PopulationDeliveryStatus.SENT),
+    ]);
+
+    const historical = await prisma.populationAlertDelivery.findMany({
+      where: {
+        subscriberId: { not: null },
+        status: {
+          in: [
+            PopulationDeliveryStatus.SENT,
+            PopulationDeliveryStatus.DELIVERED,
+            PopulationDeliveryStatus.FAILED,
+          ],
+        },
+        alert: {
+          programId: ids.program,
+          operationalEventId: event.id,
+          type: {
+            in: [
+              PopulationAlertType.EMERGENCY,
+              PopulationAlertType.TEST,
+              PopulationAlertType.UPDATE,
+            ],
+          },
+          status: {
+            in: [
+              PopulationAlertStatus.ACTIVE,
+              PopulationAlertStatus.ENDED,
+              PopulationAlertStatus.FAILED,
+            ],
+          },
+        },
+      },
+      select: { subscriberId: true },
+    });
+
+    expect(new Set(historical.map((row) => row.subscriberId))).toEqual(
+      new Set([subscribers[0].id, subscribers[1].id]),
+    );
   });
 });

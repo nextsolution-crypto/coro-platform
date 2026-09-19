@@ -4296,6 +4296,14 @@ describe('PopulationService', () => {
 
           instructionFR: 'La consigne de mise à l’abri est levée.',
           instructionEN: 'The shelter-in-place instruction is lifted.',
+
+          contextSnapshot: expect.objectContaining({
+            targeting: expect.objectContaining({
+              strategy: 'HISTORICAL_UNION_CURRENT',
+              historicalSubscriberCount: 0,
+              uniqueTargetCount: 1,
+            }),
+          }),
         }),
       });
     });
@@ -5806,6 +5814,274 @@ describe('PopulationService', () => {
        * Le freeze ne consulte pas le scénario RUE courant.
        */
       expect(prisma.rueEmergencyScenario.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('ALL_CLEAR unit historique et zone actuelle en dedupliquant par subscriberId', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        type: PopulationAlertType.ALL_CLEAR,
+        operationalEventId: 'event-1',
+      });
+      prisma.populationAlertDelivery.findMany
+        .mockResolvedValueOnce([
+          {
+            subscriberId: 'subscriber-historical',
+            channel: PopulationAlertChannel.EMAIL,
+          },
+          {
+            subscriberId: 'subscriber-both',
+            channel: PopulationAlertChannel.EMAIL,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-historical',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'historical-current@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: 46,
+          longitude: -74,
+          isSynthetic: false,
+        },
+        {
+          id: 'subscriber-both',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'both@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: 45.51,
+          longitude: -73.51,
+          isSynthetic: false,
+        },
+        {
+          id: 'subscriber-current',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'current@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: 45.52,
+          longitude: -73.52,
+          isSynthetic: false,
+        },
+      ]);
+      populationGeospatialService.isPointInsideImpactZone.mockImplementation(
+        ({ latitude }: { latitude: number }) => latitude < 45.6,
+      );
+
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
+      const deliveries =
+        prisma.populationAlertDelivery.createMany.mock.calls[0][0].data;
+
+      expect(deliveries).toHaveLength(3);
+      expect(
+        new Set(deliveries.map((delivery: any) => delivery.subscriberId)),
+      ).toEqual(
+        new Set([
+          'subscriber-historical',
+          'subscriber-both',
+          'subscriber-current',
+        ]),
+      );
+      expect(result.targeting).toEqual(
+        expect.objectContaining({
+          strategy: 'HISTORICAL_UNION_CURRENT',
+          currentZoneSubscriberCount: 2,
+          historicalSubscriberCount: 2,
+          unionBeforeDeduplicationCount: 4,
+          uniqueTargetCount: 3,
+          overlapSubscriberCount: 1,
+          deliverableSubscriberCount: 3,
+        }),
+      );
+      expect(prisma.populationAlertDelivery.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            alert: expect.objectContaining({
+              programId: 'program-1',
+              operationalEventId: 'event-1',
+              type: {
+                in: [
+                  PopulationAlertType.EMERGENCY,
+                  PopulationAlertType.TEST,
+                  PopulationAlertType.UPDATE,
+                ],
+              },
+            }),
+          }),
+        }),
+      );
+    });
+
+    it('ALL_CLEAR supprime un historique desabonne sans reutiliser sa destination', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        type: PopulationAlertType.ALL_CLEAR,
+        operationalEventId: 'event-1',
+      });
+      prisma.populationAlertDelivery.findMany
+        .mockResolvedValueOnce([
+          {
+            subscriberId: 'subscriber-unsubscribed',
+            channel: PopulationAlertChannel.EMAIL,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-unsubscribed',
+          status: PopulationSubscriberStatus.UNSUBSCRIBED,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'new-address@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: null,
+          longitude: null,
+          isSynthetic: false,
+        },
+      ]);
+
+      const result = await service.freezeAlertRecipients(
+        'building-1',
+        'alert-1',
+      );
+
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            subscriberId: 'subscriber-unsubscribed',
+            channel: PopulationAlertChannel.EMAIL,
+            status: PopulationDeliveryStatus.SUPPRESSED,
+            suppressionReason:
+              PopulationDeliverySuppressionReason.SUBSCRIBER_INACTIVE,
+            destinationSnapshot: null,
+          }),
+        ],
+        skipDuplicates: true,
+      });
+      expect(result.targeting).toEqual(
+        expect.objectContaining({
+          revalidationSuppressedSubscriberCount: 1,
+        }),
+      );
+      expect(readiness.assertAlertChannelReady).not.toHaveBeenCalled();
+    });
+
+    it('ALL_CLEAR utilise la destination actuelle et jamais une destination historique', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        type: PopulationAlertType.ALL_CLEAR,
+        operationalEventId: 'event-1',
+      });
+      prisma.populationAlertDelivery.findMany
+        .mockResolvedValueOnce([
+          {
+            subscriberId: 'subscriber-changed',
+            channel: PopulationAlertChannel.EMAIL,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-changed',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'current@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: null,
+          longitude: null,
+          isSynthetic: false,
+        },
+      ]);
+
+      await service.freezeAlertRecipients('building-1', 'alert-1');
+
+      const serialized = JSON.stringify(
+        prisma.populationAlertDelivery.createMany.mock.calls[0][0].data,
+      );
+      expect(serialized).toContain('current@example.com');
+      expect(serialized).not.toContain('historical@example.com');
+    });
+
+    it('ALL_CLEAR audite un canal historique desactive et bloque synthetic en LIVE', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...approvedAlert,
+        type: PopulationAlertType.ALL_CLEAR,
+        operationalEventId: 'event-1',
+      });
+      prisma.populationAlertDelivery.findMany
+        .mockResolvedValueOnce([
+          {
+            subscriberId: 'subscriber-disabled',
+            channel: PopulationAlertChannel.EMAIL,
+          },
+          {
+            subscriberId: 'subscriber-synthetic',
+            channel: PopulationAlertChannel.EMAIL,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+      prisma.populationSubscriber.findMany.mockResolvedValue([
+        {
+          id: 'subscriber-disabled',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'disabled@example.com',
+          smsEnabled: false,
+          emailEnabled: false,
+          latitude: null,
+          longitude: null,
+          isSynthetic: false,
+        },
+        {
+          id: 'subscriber-synthetic',
+          status: PopulationSubscriberStatus.ACTIVE,
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          phone: null,
+          email: 'synthetic@example.com',
+          smsEnabled: false,
+          emailEnabled: true,
+          latitude: null,
+          longitude: null,
+          isSynthetic: true,
+        },
+      ]);
+
+      await service.freezeAlertRecipients('building-1', 'alert-1');
+
+      expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            subscriberId: 'subscriber-disabled',
+            status: PopulationDeliveryStatus.SUPPRESSED,
+            suppressionReason:
+              PopulationDeliverySuppressionReason.CHANNEL_DISABLED,
+            destinationSnapshot: null,
+          }),
+          expect.objectContaining({
+            subscriberId: 'subscriber-synthetic',
+            status: PopulationDeliveryStatus.SUPPRESSED,
+            suppressionReason:
+              PopulationDeliverySuppressionReason.SYNTHETIC_RECIPIENT,
+            destinationSnapshot: null,
+          }),
+        ]),
+        skipDuplicates: true,
+      });
     });
 
     it('rend le freeze idempotent grâce aux clés déterministes et skipDuplicates', async () => {
