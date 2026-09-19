@@ -7,6 +7,7 @@ import { GeocodingModule } from '../geocoding/geocoding.module';
 import { PopulationReadinessController } from './population-readiness.controller';
 import { PopulationBrevoWebhookController } from './population-brevo-webhook.controller';
 import { PopulationBrevoWebhookService } from './population-brevo-webhook.service';
+import { PopulationOperationalEventsService } from './population-operational-events.service';
 import {
   POPULATION_ENVIRONMENT,
   PopulationReadinessService,
@@ -29,7 +30,12 @@ import {
     },
     PopulationReadinessService,
     PopulationBrevoWebhookService,
+    PopulationOperationalEventsService,
   ],
-  exports: [PopulationService, PopulationReadinessService],
+  exports: [
+    PopulationService,
+    PopulationReadinessService,
+    PopulationOperationalEventsService,
+  ],
 })
 export class PopulationModule {}

@@ -41,6 +41,7 @@ model Organization {
   exerciseReports        ExerciseReport[]
   complianceRequirements ComplianceRequirement[]
   complianceEvidence     ComplianceEvidence[]
+  populationOperationalEvents PopulationOperationalEvent[]
   // Programme de recommandation
   referralsSent          Referral[]                   @relation("ReferralReferrer")
   referralReceived       Referral?                    @relation("ReferralReferred")
@@ -1190,9 +1191,10 @@ model PopulationProgram {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  subscribers   PopulationSubscriber[]
-  consentEvents PopulationConsentEvent[]
-  alerts        PopulationAlert[]
+  subscribers       PopulationSubscriber[]
+  consentEvents     PopulationConsentEvent[]
+  alerts            PopulationAlert[]
+  operationalEvents PopulationOperationalEvent[]
 
   @@index([status])
   @@index([registrationEnabled])
@@ -1330,6 +1332,15 @@ model PopulationAlert {
   emergencyScenarioId String?
   emergencyScenario   RueEmergencyScenario? @relation(fields: [emergencyScenarioId], references: [id], onDelete: SetNull)
 
+  // Agrégat opérationnel parent. Nullable afin que toutes les
+  // communications historiques restent valides sans rattachement spéculatif.
+  operationalEventId String?
+  operationalEvent   PopulationOperationalEvent? @relation(fields: [operationalEventId], references: [id], onDelete: Restrict)
+
+  // Ordre de la communication dans son événement. L'attribution
+  // transactionnelle sera prise en charge par le workflow opérationnel.
+  cycleSequence Int?
+
   type   PopulationAlertType
   status PopulationAlertStatus @default(DRAFT)
 
@@ -1393,9 +1404,11 @@ model PopulationAlert {
   zones      PopulationAlertZone[]
   deliveries PopulationAlertDelivery[]
 
+  @@unique([operationalEventId, cycleSequence])
   @@index([programId])
   @@index([incidentEventId])
   @@index([emergencyScenarioId])
+  @@index([operationalEventId])
   @@index([status])
   @@index([type])
   @@index([createdAt])
@@ -1618,6 +1631,15 @@ enum PopulationProgramStatus {
   ACTIVE
   SUSPENDED
   ARCHIVED
+}
+
+// Le statut d'un événement est distinct du statut d'une communication.
+// PopulationAlert.ACTIVE signifie qu'une communication a été acceptée ou
+// livrée; ACTIVE ci-dessous signifie que la situation opérationnelle perdure.
+enum PopulationOperationalEventStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
 }
 
 enum PopulationAlertType {
@@ -1877,7 +1899,8 @@ model RueEmergencyScenario {
   // Alertes Population ayant utilisé ce scénario comme contexte source.
   // La relation peut ensuite être détachée sans perdre l'historique,
   // puisque l'alerte conserve son propre snapshot.
-  populationAlerts PopulationAlert[]
+  populationAlerts            PopulationAlert[]
+  populationOperationalEvents PopulationOperationalEvent[]
 
   // Mesures prévues pour prévenir, se préparer, intervenir
   // et se rétablir relativement à ce scénario.
@@ -2426,11 +2449,55 @@ model IncidentEvent {
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
 
-  tasks             IncidentTask[]
-  logs              IncidentLog[]
-  exerciseReports   ExerciseReport[]
-  correctiveActions CorrectiveAction[]
-  populationAlerts  PopulationAlert[]
+  tasks                       IncidentTask[]
+  logs                        IncidentLog[]
+  exerciseReports             ExerciseReport[]
+  correctiveActions           CorrectiveAction[]
+  populationAlerts            PopulationAlert[]
+  populationOperationalEvents PopulationOperationalEvent[]
+}
+
+model PopulationOperationalEvent {
+  id String @id @default(uuid())
+
+  // Portée locataire explicite, même si elle peut être dérivée du programme.
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  emergencyScenarioId String
+  emergencyScenario   RueEmergencyScenario @relation(fields: [emergencyScenarioId], references: [id], onDelete: Restrict)
+
+  // Un incident CORO peut encadrer plusieurs événements Population historiques.
+  // Le rattachement reste facultatif afin que Population fonctionne seul.
+  incidentEventId String?
+  incidentEvent   IncidentEvent? @relation(fields: [incidentEventId], references: [id], onDelete: SetNull)
+
+  status PopulationOperationalEventStatus @default(ACTIVE)
+
+  startedAt     DateTime      @default(now())
+  startedByType CoroActorType
+  startedById   String
+
+  endedAt     DateTime?
+  endedByType CoroActorType?
+  endedById   String?
+  closeReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  alerts PopulationAlert[]
+
+  @@index([organizationId])
+  @@index([programId])
+  @@index([emergencyScenarioId])
+  @@index([incidentEventId])
+  @@index([status])
+  @@index([startedAt])
+  @@index([organizationId, programId])
 }
 
 model IncidentTask {
