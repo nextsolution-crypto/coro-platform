@@ -22,6 +22,10 @@ import {
 import { apiGet, apiPost, apiPut, getUser } from "../../../store/auth";
 import PortalLayout from "../../../components/PortalLayout";
 import PopulationOperationalMap from "./PopulationOperationalMap";
+import {
+  normalizeOperationalEvent,
+  selectLegacyActiveAlerts,
+} from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
 const inter = Inter({
@@ -579,7 +583,13 @@ export default function PopulationPage() {
             : Promise.resolve(null),
         ]);
         setDeliverySummary(deliveryResult);
-        if (eventResult) setActiveEvent(eventResult);
+        if (eventResult) {
+          setActiveEvent(
+            normalizeOperationalEvent(
+              eventResult,
+            ) as PopulationOperationalEvent | null,
+          );
+        }
       } catch {
         // Le statut courant reste affiché; le polling est borné et non bloquant.
       }
@@ -730,9 +740,12 @@ export default function PopulationPage() {
     setEventLoading(true);
     setEventError(null);
     try {
-      const result = (await apiGet(
+      const response = await apiGet(
         `/client-portal/buildings/${buildingId}/population/operational-events/active`,
-      )) as PopulationOperationalEvent | null;
+      );
+      const result = normalizeOperationalEvent(
+        response,
+      ) as PopulationOperationalEvent | null;
       setActiveEvent(result);
       if (result) {
         setLastClosedEvent(null);
@@ -1875,10 +1888,7 @@ export default function PopulationPage() {
         )}
 
         {!activeEvent &&
-          incidentAlerts
-            .filter(
-              (alert) => alert.status === "ACTIVE" && !alert.operationalEventId,
-            )
+          selectLegacyActiveAlerts(incidentAlerts)
             .map((alert) => (
               <LegacyCommunicationNotice
                 key={alert.id}
@@ -3799,7 +3809,7 @@ function EventCockpit({
   onConfirmIncompleteChange: (value: boolean) => void;
   onConfirmClose: () => void;
 }) {
-  const allClear = event?.alerts.find(
+  const allClear = (event?.alerts ?? []).find(
     (alert) => alert.type === "ALL_CLEAR" && alert.status !== "CANCELLED",
   );
   const canFollowUp = Boolean(event && !allClear && canPrepare);
