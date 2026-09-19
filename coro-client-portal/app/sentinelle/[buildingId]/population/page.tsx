@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { Inter } from 'next/font/google';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -21,6 +22,11 @@ import { apiGet, apiPost, apiPut, getUser } from '../../../store/auth';
 import PortalLayout from '../../../components/PortalLayout';
 import PopulationOperationalMap from './PopulationOperationalMap';
 import styles from './population.module.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 type PopulationStatus = {
   eligible: boolean;
@@ -1351,7 +1357,7 @@ export default function PopulationPage() {
 
   return (
     <PortalLayout>
-      <div className={styles.page}>
+      <div className={`${styles.page} ${inter.className}`}>
       {/* Header */}
       <header className={styles.header} style={{ marginBottom: 24 }}>
         <button
@@ -2103,6 +2109,8 @@ export default function PopulationPage() {
             className={`${styles.deliveryModeNotice} ${
               status.deliveryMode === 'LIVE' ? styles.deliveryModeLive : ''
             }`}
+            role="status"
+            aria-live="polite"
           >
             <strong>MODE {status.deliveryMode}</strong>
             <span>
@@ -3835,6 +3843,7 @@ function IncidentCommunicationEntry({
   total: number;
 }) {
   const deliveries = alert.deliveries || [];
+  const isSandbox = alert.deliveryModeSnapshot === 'SANDBOX';
 
   const delivered = deliveries.filter(
     (delivery) => delivery.status === 'DELIVERED',
@@ -3846,6 +3855,10 @@ function IncidentCommunicationEntry({
 
   const failed = deliveries.filter(
     (delivery) => delivery.status === 'FAILED',
+  ).length;
+
+  const suppressed = deliveries.filter(
+    (delivery) => delivery.status === 'SUPPRESSED',
   ).length;
 
   const pending = deliveries.filter(
@@ -3999,6 +4012,21 @@ function IncidentCommunicationEntry({
                 ? new Date(alert.createdAt).toLocaleString('fr-CA')
                 : 'Horodatage non disponible'}
             </p>
+
+            {alert.deliveryModeSnapshot && (
+              <p
+                style={{
+                  margin: '7px 0 0',
+                  color: isSandbox ? '#496A63' : '#922B21',
+                  fontWeight: 800,
+                }}
+              >
+                MODE {alert.deliveryModeSnapshot} ·{' '}
+                {isSandbox
+                  ? 'Simulation, aucun transport externe'
+                  : 'Diffusion réelle'}
+              </p>
+            )}
           </div>
 
           <span
@@ -4058,7 +4086,7 @@ function IncidentCommunicationEntry({
                 textTransform: 'uppercase',
               }}
             >
-              Preuve de diffusion
+              {isSandbox ? 'Preuve de simulation' : 'Preuve de diffusion'}
             </p>
 
             <div
@@ -4074,16 +4102,20 @@ function IncidentCommunicationEntry({
                 value={deliveries.length}
               />
 
-              <IncidentDeliveryMetric
-                label="Livrées"
-                value={delivered}
-                success
-              />
+              {!isSandbox && (
+                <IncidentDeliveryMetric
+                  label="Livrées"
+                  value={delivered}
+                  success
+                />
+              )}
 
-              <IncidentDeliveryMetric
-                label="Acceptées"
-                value={sent}
-              />
+              {!isSandbox && (
+                <IncidentDeliveryMetric
+                  label="Acceptées"
+                  value={sent}
+                />
+              )}
 
               <IncidentDeliveryMetric
                 label="En traitement"
@@ -4095,6 +4127,14 @@ function IncidentCommunicationEntry({
                 value={failed}
                 warning={failed > 0}
               />
+
+              {isSandbox && (
+                <IncidentDeliveryMetric
+                  label="Supprimées SANDBOX"
+                  value={suppressed}
+                  success
+                />
+              )}
             </div>
 
             <p
@@ -4322,6 +4362,16 @@ function AlertStepIndicator({
         overflowX: 'auto',
       }}
     >
+      <p
+        style={{
+          gridColumn: '1 / -1',
+          margin: 0,
+          color: '#6C757D',
+          fontWeight: 800,
+        }}
+      >
+        Préparation du message · 6 étapes
+      </p>
       {steps.map((step, index) => {
         const number = index + 1;
         const active = currentStep === number;
@@ -4956,6 +5006,8 @@ function AlertDraftWorkspace({
   return (
     <div>
       <div
+        role="status"
+        aria-live="polite"
         style={{
           marginBottom: 16,
           padding: 14,
@@ -4978,7 +5030,9 @@ function AlertDraftWorkspace({
         eyebrow="06 · Contrôle"
         title={
           alert.status === 'ACTIVE'
-            ? 'Diffusion déclenchée'
+            ? deliveryMode === 'SANDBOX'
+              ? 'Simulation de diffusion exécutée'
+              : 'Diffusion déclenchée'
             : alert.status === 'SENDING'
               ? 'Diffusion en cours'
               : alert.status === 'FAILED'
@@ -4993,7 +5047,9 @@ function AlertDraftWorkspace({
         }
         detail={
           alert.status === 'ACTIVE'
-            ? 'Au moins une communication a été acceptée par le fournisseur ou confirmée livrée. Cela ne signifie pas que toutes les communications ont été livrées.'
+            ? deliveryMode === 'SANDBOX'
+              ? 'La simulation est terminée. Aucune communication externe n’a été transmise.'
+              : 'Au moins une communication a été acceptée par le fournisseur ou confirmée livrée. Cela ne signifie pas que toutes les communications ont été livrées.'
             : alert.status === 'SENDING'
               ? 'La diffusion a été déclenchée et des communications sont encore en traitement.'
               : alert.status === 'FAILED'
@@ -5126,9 +5182,8 @@ function AlertDraftWorkspace({
               lineHeight: 1.55,
             }}
           >
-            Le passage à READY demande au serveur de recalculer le
-            ciblage à partir de l’état courant du scénario, des zones et
-            des abonnés. Cette opération ne diffuse aucun message.
+            <strong>Passer à READY :</strong> recalcule le ciblage et soumet
+            le contenu à approbation. Aucune communication n’est transmise.
           </div>
         </div>
       )}
@@ -5246,9 +5301,8 @@ function AlertDraftWorkspace({
           >
             <strong>Validation humaine requise.</strong>
             <br />
-            En approuvant cette communication, vous confirmez le
-            contenu préparé pour la prochaine étape opérationnelle.
-            L’approbation ne déclenche pas la diffusion.
+            <strong>Approuver :</strong> valide le contenu préparé pour la
+            prochaine étape. Aucune communication n’est transmise.
           </div>
 
           <div
@@ -5381,10 +5435,10 @@ function AlertDraftWorkspace({
                   lineHeight: 1.55,
                 }}
               >
-                CORO va déterminer les abonnés réellement compris dans
-                les zones approuvées et créer leur roster de diffusion.
-                Ce roster deviendra immuable pour cette alerte.
-                Aucun SMS ni courriel ne sera envoyé à cette étape.
+                <strong>Confirmer et figer :</strong> détermine les abonnés
+                compris dans les zones approuvées et rend leurs canaux
+                immuables pour cette alerte. Aucune communication n’est
+                transmise.
               </p>
 
               <div
@@ -5508,9 +5562,9 @@ function AlertDraftWorkspace({
                     lineHeight: 1.55,
                   }}
                 >
-                  Le contenu est approuvé et le roster est figé.
-                  La prochaine confirmation déclenchera réellement
-                  les communications préparées.
+                  {deliveryMode === 'LIVE'
+                    ? 'DIFFUSION RÉELLE — La prochaine action transmettra réellement les communications admissibles.'
+                    : 'SIMULATION — La prochaine action exécutera la simulation. Aucune communication externe ne sera transmise.'}
                 </p>
               </div>
             </div>
@@ -5662,55 +5716,43 @@ function AlertDraftWorkspace({
                     lineHeight: 1.55,
                   }}
                 >
-                  Vous êtes sur le point de déclencher une{' '}
+                  {deliveryMode === 'LIVE' ? (
+                    <>
+                      <strong>DIFFUSION RÉELLE.</strong> La prochaine action
+                      transmettra réellement les communications admissibles.
+                    </>
+                  ) : (
+                    <>
+                      Vous êtes sur le point d’exécuter une simulation de
+                      diffusion. <strong>Aucune communication externe ne sera
+                      transmise.</strong>
+                    </>
+                  )}
+                  <br />
+                  <br />
                   <strong>
-                    {alert.type === 'EMERGENCY'
-                      ? 'URGENCE RÉELLE'
-                      : alert.type === 'TEST'
-                        ? 'COMMUNICATION DE TEST'
-                        : alert.type === 'UPDATE'
-                          ? 'MISE À JOUR'
-                          : alert.type === 'ALL_CLEAR'
-                            ? 'FIN D’ALERTE'
-                            : 'COMMUNICATION'}
-                  </strong>.
+                    {freezeResult.targeting.subscriberCount.toLocaleString(
+                      'fr-CA',
+                    )}
+                  </strong>{' '}abonné(s) ciblé(s)
                   <br />
+                  <strong>
+                    {freezeResult.targeting.deliveryCount.toLocaleString(
+                      'fr-CA',
+                    )}
+                  </strong>{' '}communication(s) matérialisée(s)
                   <br />
-                  {deliveryMode === 'LIVE'
-                    ? 'Cette action transmettra réellement '
-                    : 'Cette simulation traitera '}
                   <strong>
                     {freezeResult.targeting.deliverableCount.toLocaleString(
                       'fr-CA',
                     )}
-                  </strong>{' '}
-                  communication
-                  {freezeResult.targeting.deliverableCount > 1 ? 's' : ''} aux
-                  destinataires du roster figé, dont{' '}
-                  <strong>
-                    {freezeResult.targeting.deliverableSmsCount.toLocaleString(
-                      'fr-CA',
-                    )}{' '}
-                    SMS
-                  </strong>{' '}
-                  et{' '}
-                  <strong>
-                    {freezeResult.targeting.deliverableEmailCount.toLocaleString(
-                      'fr-CA',
-                    )}{' '}
-                    courriel
-                    {freezeResult.targeting.deliverableEmailCount > 1
-                      ? 's'
-                      : ''}
-                  </strong>.
-                  <br />
+                  </strong>{' '}délivrable(s)
                   <br />
                   <strong>
                     {freezeResult.targeting.suppressedCount.toLocaleString(
                       'fr-CA',
                     )}
-                  </strong>{' '}
-                  communication(s) supprimée(s) ne seront jamais transmises.
+                  </strong>{' '}communication(s) supprimée(s)
                   {deliveryMode === 'LIVE' && (
                     <>
                       <br />
@@ -5757,7 +5799,7 @@ function AlertDraftWorkspace({
       {(alert.status === 'SENDING' ||
         alert.status === 'ACTIVE' ||
         alert.status === 'FAILED') && (
-        <PopulationDiffusionResult alert={alert} />
+        <PopulationDiffusionResult alert={alert} freezeResult={freezeResult} />
       )}
 
       <div
@@ -5804,16 +5846,25 @@ function AlertDraftWorkspace({
 
 function PopulationDiffusionResult({
   alert,
+  freezeResult,
 }: {
   alert: CreatedPopulationAlert;
+  freezeResult: PopulationFreezeResult | null;
 }) {
   const isActive = alert.status === 'ACTIVE';
   const isSending = alert.status === 'SENDING';
   const isFailed = alert.status === 'FAILED';
   const isSandbox = alert.deliveryModeSnapshot === 'SANDBOX';
+  const sandboxSuppressedCount = freezeResult?.deliveries.filter(
+    (delivery) =>
+      delivery.status === 'SUPPRESSED' &&
+      delivery.suppressionReason === 'SANDBOX_MODE',
+  ).length;
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       style={{
         marginTop: 18,
         padding: 18,
@@ -5864,7 +5915,7 @@ function PopulationDiffusionResult({
           >
             {isActive
               ? isSandbox
-                ? 'Simulation terminée'
+                ? 'Simulation de diffusion exécutée'
                 : 'Diffusion déclenchée'
               : isSending
                 ? 'Diffusion en cours'
@@ -5887,6 +5938,23 @@ function PopulationDiffusionResult({
                 ? 'CORO traite actuellement les communications du roster figé.'
                 : 'Aucune communication n’a été acceptée ou confirmée livrée et aucun traitement n’est encore en attente.'}
           </p>
+
+          {isActive && isSandbox && sandboxSuppressedCount !== undefined && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: 10,
+                borderRadius: 8,
+                backgroundColor: '#FFFFFF',
+                color: '#496A63',
+                lineHeight: 1.5,
+              }}
+            >
+              {sandboxSuppressedCount.toLocaleString('fr-CA')} communication(s)
+              ont été supprimée(s) du transport externe conformément au mode
+              SANDBOX.
+            </div>
+          )}
 
           {isActive && !isSandbox && (
             <div
@@ -5939,9 +6007,12 @@ function FrozenRecipientsPanel({
   result: PopulationFreezeResult;
 }) {
   const hasRecipients = result.targeting.deliveryCount > 0;
+  const isSandbox = result.deliveryMode === 'SANDBOX';
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       style={{
         marginTop: 18,
         overflow: 'hidden',
@@ -6041,9 +6112,26 @@ function FrozenRecipientsPanel({
                 Aucune diffusion n’a encore été déclenchée.
               </strong>
               <br />
-              Les {result.targeting.deliveryCount.toLocaleString('fr-CA')}{' '}
-              communications sont actuellement préparées avec le statut
-              QUEUED.
+              {isSandbox ? (
+                <>
+                  Les {result.targeting.deliveryCount.toLocaleString('fr-CA')}{' '}
+                  communications sont figées en mode simulation. Aucune n’est
+                  placée en file de diffusion externe.
+                  <br />
+                  Communications matérialisées :{' '}
+                  {result.targeting.deliveryCount.toLocaleString('fr-CA')} ·{' '}
+                  Délivrables :{' '}
+                  {result.targeting.deliverableCount.toLocaleString('fr-CA')} ·{' '}
+                  Supprimées SANDBOX :{' '}
+                  {result.targeting.suppressedCount.toLocaleString('fr-CA')}
+                </>
+              ) : (
+                <>
+                  Les {result.targeting.deliveryCount.toLocaleString('fr-CA')}{' '}
+                  communications sont matérialisées. Leur état de transport
+                  est celui retourné par le backend.
+                </>
+              )}
             </>
           ) : (
             <>
@@ -6163,6 +6251,16 @@ function AlertWorkflowBar({
         overflowX: 'auto',
       }}
     >
+      <p
+        style={{
+          gridColumn: '1 / -1',
+          margin: 0,
+          color: '#6C757D',
+          fontWeight: 800,
+        }}
+      >
+        Cycle de diffusion · état serveur
+      </p>
       {stages.map((stage) => (
         <div key={stage.label}>
           <div
