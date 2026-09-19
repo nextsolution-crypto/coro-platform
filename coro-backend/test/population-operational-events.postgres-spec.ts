@@ -62,6 +62,62 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
       },
     });
 
+  const allocateSequence = (eventId: string) =>
+    prisma.$transaction(async (tx) => {
+      const claimed = await tx.populationOperationalEvent.updateMany({
+        where: {
+          id: eventId,
+          status: PopulationOperationalEventStatus.ACTIVE,
+        },
+        data: { nextSequence: { increment: 1 } },
+      });
+      if (claimed.count !== 1) throw new Error('EVENT_NOT_ACTIVE');
+      const event = await tx.populationOperationalEvent.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { nextSequence: true },
+      });
+      return event.nextSequence - 1;
+    });
+
+  const createFollowUp = (eventId: string, type: PopulationAlertType) =>
+    prisma.$transaction(async (tx) => {
+      const claimed = await tx.populationOperationalEvent.updateMany({
+        where: {
+          id: eventId,
+          status: PopulationOperationalEventStatus.ACTIVE,
+        },
+        data: { nextSequence: { increment: 1 } },
+      });
+      if (claimed.count !== 1) throw new Error('EVENT_NOT_ACTIVE');
+      const event = await tx.populationOperationalEvent.findUniqueOrThrow({
+        where: { id: eventId },
+        select: { nextSequence: true },
+      });
+      const existingAllClear = await tx.populationAlert.findFirst({
+        where: {
+          operationalEventId: eventId,
+          type: PopulationAlertType.ALL_CLEAR,
+          status: { not: PopulationAlertStatus.CANCELLED },
+        },
+      });
+      if (existingAllClear) throw new Error('ALL_CLEAR_EXISTS');
+      return tx.populationAlert.create({
+        data: {
+          id: 'follow-up-' + randomUUID(),
+          programId: ids.program,
+          emergencyScenarioId: ids.scenario,
+          operationalEventId: eventId,
+          cycleSequence: event.nextSequence - 1,
+          type,
+          status: PopulationAlertStatus.DRAFT,
+          titleFR: 'Test PostgreSQL',
+          messageFR: 'Test PostgreSQL',
+          createdByType: CoroActorType.SYSTEM,
+          createdById: 'postgres-tests',
+        },
+      });
+    });
+
   beforeAll(async () => {
     await prisma.$connect();
     await prisma.organization.create({
@@ -189,5 +245,152 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
     await expect(
       prisma.populationProgram.delete({ where: { id: ids.program } }),
     ).rejects.toThrow();
+  });
+
+  it('B/C: alloue deux séquences concurrentes distinctes', async () => {
+    const event = await createEvent();
+    const sequences = await Promise.all([
+      allocateSequence(event.id),
+      allocateSequence(event.id),
+    ]);
+    expect(sequences.sort()).toEqual([2, 3]);
+  });
+
+  it('D: sérialise UPDATE et ALL_CLEAR concurrents sans UPDATE postérieur', async () => {
+    const event = await createEvent();
+    await createAlert('initial-race-' + suffix, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const results = await Promise.allSettled([
+      createFollowUp(event.id, PopulationAlertType.UPDATE),
+      createFollowUp(event.id, PopulationAlertType.ALL_CLEAR),
+    ]);
+    const alerts = await prisma.populationAlert.findMany({
+      where: { operationalEventId: event.id },
+      orderBy: { cycleSequence: 'asc' },
+    });
+    expect(alerts[0].cycleSequence).toBe(1);
+    const allClearIndex = alerts.findIndex(
+      (alert) => alert.type === PopulationAlertType.ALL_CLEAR,
+    );
+    const updateIndex = alerts.findIndex(
+      (alert) => alert.type === PopulationAlertType.UPDATE,
+    );
+    expect(allClearIndex).toBeGreaterThan(0);
+    expect(updateIndex === -1 || updateIndex < allClearIndex).toBe(true);
+    expect(results.some((result) => result.status === 'fulfilled')).toBe(true);
+  });
+
+  it('E: deux ALL_CLEAR simultanés n’en créent qu’un', async () => {
+    const event = await createEvent();
+    await createAlert('initial-all-clear-' + suffix, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const results = await Promise.allSettled([
+      createFollowUp(event.id, PopulationAlertType.ALL_CLEAR),
+      createFollowUp(event.id, PopulationAlertType.ALL_CLEAR),
+    ]);
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      await prisma.populationAlert.count({
+        where: {
+          operationalEventId: event.id,
+          type: PopulationAlertType.ALL_CLEAR,
+        },
+      }),
+    ).toBe(1);
+  });
+
+  it('F: une clôture concurrente ne gagne qu’une fois', async () => {
+    const event = await createEvent();
+    const close = () =>
+      prisma.populationOperationalEvent.updateMany({
+        where: {
+          id: event.id,
+          status: PopulationOperationalEventStatus.ACTIVE,
+        },
+        data: {
+          status: PopulationOperationalEventStatus.ENDED,
+          endedAt: new Date(),
+          endedByType: CoroActorType.SYSTEM,
+          endedById: 'postgres-tests',
+        },
+      });
+    const results = await Promise.all([close(), close()]);
+    expect(results.map((result) => result.count).sort()).toEqual([0, 1]);
+  });
+
+  it('H: rejette les clés étrangères inexistantes', async () => {
+    await expect(
+      createEvent({ organizationId: 'missing-' + suffix }),
+    ).rejects.toThrow();
+    await expect(
+      createEvent({ emergencyScenarioId: 'missing-' + suffix }),
+    ).rejects.toThrow();
+  });
+
+  it('J: conserve un cycle complet 1/2/3 puis une clôture explicite', async () => {
+    const event = await createEvent();
+    const initial = await createAlert('full-cycle-initial-' + suffix, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      status: PopulationAlertStatus.ACTIVE,
+      type: PopulationAlertType.TEST,
+    });
+    const update = await createFollowUp(event.id, PopulationAlertType.UPDATE);
+    await prisma.populationAlert.update({
+      where: { id: update.id },
+      data: { status: PopulationAlertStatus.ACTIVE },
+    });
+    const allClear = await createFollowUp(
+      event.id,
+      PopulationAlertType.ALL_CLEAR,
+    );
+    await prisma.populationAlert.update({
+      where: { id: allClear.id },
+      data: { status: PopulationAlertStatus.ACTIVE },
+    });
+
+    const beforeClose =
+      await prisma.populationOperationalEvent.findUniqueOrThrow({
+        where: { id: event.id },
+        include: { alerts: { orderBy: { cycleSequence: 'asc' } } },
+      });
+    expect(beforeClose.status).toBe(PopulationOperationalEventStatus.ACTIVE);
+    expect(
+      beforeClose.alerts.map((alert) => [
+        alert.id,
+        alert.type,
+        alert.cycleSequence,
+      ]),
+    ).toEqual([
+      [initial.id, PopulationAlertType.TEST, 1],
+      [update.id, PopulationAlertType.UPDATE, 2],
+      [allClear.id, PopulationAlertType.ALL_CLEAR, 3],
+    ]);
+
+    await prisma.populationOperationalEvent.update({
+      where: { id: event.id },
+      data: {
+        status: PopulationOperationalEventStatus.ENDED,
+        endedAt: new Date(),
+        endedByType: CoroActorType.SYSTEM,
+        endedById: 'postgres-tests',
+      },
+    });
+    await expect(
+      prisma.populationOperationalEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      }),
+    ).resolves.toMatchObject({
+      status: PopulationOperationalEventStatus.ENDED,
+      endedById: 'postgres-tests',
+    });
   });
 });

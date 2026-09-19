@@ -2477,6 +2477,10 @@ model PopulationOperationalEvent {
 
   status PopulationOperationalEventStatus @default(ACTIVE)
 
+  // Prochaine séquence à attribuer sous verrou transactionnel.
+  // La communication initiale utilise toujours la séquence 1.
+  nextSequence Int @default(2)
+
   startedAt     DateTime      @default(now())
   startedByType CoroActorType
   startedById   String

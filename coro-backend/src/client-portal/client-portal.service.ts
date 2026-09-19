@@ -15,6 +15,7 @@ import { CreatePopulationFollowUpDto } from '../population/dto/create-population
 import { ConfigurePopulationProgramDto } from '../population/dto/population-program.dto';
 import { CreatePopulationAlertDraftDto } from '../population/dto/create-population-alert-draft.dto';
 import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
+import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
 
 @Injectable()
 export class ClientPortalService {
@@ -51,7 +52,7 @@ export class ClientPortalService {
     }
   }
 
-    /**
+  /**
    * Vérifie qu'un utilisateur du portail client peut accéder à un bâtiment.
    *
    * Sécurité :
@@ -156,13 +157,17 @@ export class ClientPortalService {
       populationEnabled: profile.populationEnabled,
       programStatus:
         profile.populationProgram?.status ?? ('NOT_CONFIGURED' as const),
-      deliveryMode: profile.populationProgram?.deliveryMode ?? ('SANDBOX' as const),
-      governanceMode: profile.populationProgram?.governanceMode ?? ('STANDARD' as const),
+      deliveryMode:
+        profile.populationProgram?.deliveryMode ?? ('SANDBOX' as const),
+      governanceMode:
+        profile.populationProgram?.governanceMode ?? ('STANDARD' as const),
       populationPermissions: actor.sub
-        ? (await this.prisma.clientUser.findUnique({
-            where: { id: actor.sub },
-            select: { populationPermissions: true },
-          }))?.populationPermissions ?? []
+        ? ((
+            await this.prisma.clientUser.findUnique({
+              where: { id: actor.sub },
+              select: { populationPermissions: true },
+            })
+          )?.populationPermissions ?? [])
         : [],
     };
   }
@@ -174,7 +179,7 @@ export class ClientPortalService {
    * L'autorisation du bâtiment est vérifiée ici avant toute délégation
    * au domaine Population.
    */
-    async getPopulationConfiguration(
+  async getPopulationConfiguration(
     buildingId: string,
     actor: {
       clientId: string;
@@ -314,7 +319,10 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
 
     if (!actor.sub) {
       throw new ForbiddenException(
@@ -322,14 +330,10 @@ export class ClientPortalService {
       );
     }
 
-    return this.populationService.createAlertDraft(
-      buildingId,
-      dto,
-      {
-        type: 'CLIENT_USER',
-        id: actor.sub,
-      },
-    );
+    return this.populationService.createAlertDraft(buildingId, dto, {
+      type: 'CLIENT_USER',
+      id: actor.sub,
+    });
   }
 
   async getPopulationAlert(
@@ -344,10 +348,7 @@ export class ClientPortalService {
   ) {
     await this.assertBuildingAccess(buildingId, actor);
 
-    return this.populationService.getAlert(
-      buildingId,
-      alertId,
-    );
+    return this.populationService.getAlert(buildingId, alertId);
   }
 
   async getPopulationAlertDeliveryStatus(
@@ -362,10 +363,7 @@ export class ClientPortalService {
   ) {
     await this.assertBuildingAccess(buildingId, actor);
 
-    return this.populationService.getAlertDeliveryStatus(
-      buildingId,
-      alertId,
-    );
+    return this.populationService.getAlertDeliveryStatus(buildingId, alertId);
   }
 
   async getPopulationAlertLivePreflight(
@@ -400,13 +398,12 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
-
-    return this.populationService.updateAlertDraft(
-      buildingId,
-      alertId,
-      dto,
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
     );
+
+    return this.populationService.updateAlertDraft(buildingId, alertId, dto);
   }
 
   async refreshPopulationAlertDraftTargeting(
@@ -421,7 +418,10 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
 
     return this.populationService.refreshAlertDraftTargeting(
       buildingId,
@@ -441,13 +441,15 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
-
-    return this.populationService.markAlertDraftReady(
-      buildingId,
-      alertId,
-      { type: 'CLIENT_USER', id: actor.sub! },
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
     );
+
+    return this.populationService.markAlertDraftReady(buildingId, alertId, {
+      type: 'CLIENT_USER',
+      id: actor.sub!,
+    });
   }
 
   async approvePopulationAlert(
@@ -462,7 +464,10 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_APPROVE);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_APPROVE,
+    );
 
     if (!actor.sub) {
       throw new ForbiddenException(
@@ -470,14 +475,10 @@ export class ClientPortalService {
       );
     }
 
-    return this.populationService.approveAlert(
-      buildingId,
-      alertId,
-      {
-        type: 'CLIENT_USER',
-        id: actor.sub,
-      },
-    );
+    return this.populationService.approveAlert(buildingId, alertId, {
+      type: 'CLIENT_USER',
+      id: actor.sub,
+    });
   }
 
   async freezePopulationAlertRecipients(
@@ -492,16 +493,18 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_SEND);
-
-    return this.populationService.freezeAlertRecipients(
-      buildingId,
-      alertId,
-      { type: 'CLIENT_USER', id: actor.sub! },
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_SEND,
     );
+
+    return this.populationService.freezeAlertRecipients(buildingId, alertId, {
+      type: 'CLIENT_USER',
+      id: actor.sub!,
+    });
   }
 
-    /**
+  /**
    * DÃ©clenche la diffusion d'une alerte Sentinelle Population.
    *
    * SÃ©curitÃ© :
@@ -523,13 +526,15 @@ export class ClientPortalService {
     },
   ) {
     await this.assertBuildingAccess(buildingId, actor);
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_SEND);
-
-    return this.populationService.sendAlert(
-      buildingId,
-      alertId,
-      { type: 'CLIENT_USER', id: actor.sub! },
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_SEND,
     );
+
+    return this.populationService.sendAlert(buildingId, alertId, {
+      type: 'CLIENT_USER',
+      id: actor.sub!,
+    });
   }
 
   /**
@@ -548,20 +553,19 @@ export class ClientPortalService {
       buildingIds?: string[];
     },
   ) {
-    await this.assertBuildingAccess(
-      buildingId,
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
       actor,
+      PopulationPermission.POPULATION_PREPARE,
     );
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     if (!actor.sub) {
-      throw new ForbiddenException(
-        'Identité utilisateur requise',
-      );
+      throw new ForbiddenException('Identité utilisateur requise');
     }
 
     return this.populationService.createIncidentFollowUpDraft(
       buildingId,
+      actor.organizationId,
       incidentEventId,
       dto.sourceAlertId,
       PopulationAlertType.UPDATE,
@@ -595,20 +599,19 @@ export class ClientPortalService {
       buildingIds?: string[];
     },
   ) {
-    await this.assertBuildingAccess(
-      buildingId,
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
       actor,
+      PopulationPermission.POPULATION_PREPARE,
     );
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
     if (!actor.sub) {
-      throw new ForbiddenException(
-        'Identité utilisateur requise',
-      );
+      throw new ForbiddenException('Identité utilisateur requise');
     }
 
     return this.populationService.createIncidentFollowUpDraft(
       buildingId,
+      actor.organizationId,
       incidentEventId,
       dto.sourceAlertId,
       PopulationAlertType.ALL_CLEAR,
@@ -627,6 +630,119 @@ export class ClientPortalService {
     );
   }
 
+  async createPopulationOperationalEventFollowUpDraft(
+    buildingId: string,
+    eventId: string,
+    type: PopulationAlertType,
+    dto: CreatePopulationFollowUpDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    if (!actor.sub) {
+      throw new ForbiddenException('Identité utilisateur requise');
+    }
+    return this.populationService.createOperationalFollowUpDraft(
+      buildingId,
+      actor.organizationId,
+      eventId,
+      dto.sourceAlertId,
+      type,
+      dto,
+      { type: 'CLIENT_USER', id: actor.sub },
+    );
+  }
+
+  async getActivePopulationOperationalEvent(
+    buildingId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.getActiveOperationalEvent(
+      buildingId,
+      actor.organizationId,
+    );
+  }
+
+  async getPopulationOperationalEvent(
+    buildingId: string,
+    eventId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.getOperationalEvent(
+      buildingId,
+      actor.organizationId,
+      eventId,
+    );
+  }
+
+  async getPopulationOperationalEventAlerts(
+    buildingId: string,
+    eventId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.listOperationalEventAlerts(
+      buildingId,
+      actor.organizationId,
+      eventId,
+    );
+  }
+
+  async closePopulationOperationalEvent(
+    buildingId: string,
+    eventId: string,
+    dto: ClosePopulationOperationalEventDto,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    if (!actor.sub) {
+      throw new ForbiddenException('Identité utilisateur requise');
+    }
+    return this.populationService.closeOperationalEvent(
+      buildingId,
+      actor.organizationId,
+      eventId,
+      dto,
+      { type: 'CLIENT_USER', id: actor.sub },
+    );
+  }
+
   /**
    * Retourne la chronologie Population d'un incident.
    */
@@ -640,10 +756,7 @@ export class ClientPortalService {
       buildingIds?: string[];
     },
   ) {
-    await this.assertBuildingAccess(
-      buildingId,
-      actor,
-    );
+    await this.assertBuildingAccess(buildingId, actor);
 
     return this.populationService.getIncidentAlertHistory(
       buildingId,
@@ -665,17 +778,16 @@ export class ClientPortalService {
       buildingIds?: string[];
     },
   ) {
-    await this.assertBuildingAccess(
-      buildingId,
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
       actor,
+      PopulationPermission.POPULATION_PREPARE,
     );
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
-    return this.populationService.endAlert(
-      buildingId,
-      alertId,
-      { type: 'CLIENT_USER', id: actor.sub! },
-    );
+    return this.populationService.endAlert(buildingId, alertId, {
+      type: 'CLIENT_USER',
+      id: actor.sub!,
+    });
   }
 
   /**
@@ -693,20 +805,24 @@ export class ClientPortalService {
       buildingIds?: string[];
     },
   ) {
-    await this.assertBuildingAccess(
-      buildingId,
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
       actor,
+      PopulationPermission.POPULATION_PREPARE,
     );
-    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
 
-    return this.populationService.cancelAlert(
-      buildingId,
-      alertId,
-      { type: 'CLIENT_USER', id: actor.sub! },
-    );
+    return this.populationService.cancelAlert(buildingId, alertId, {
+      type: 'CLIENT_USER',
+      id: actor.sub!,
+    });
   }
 
-  async getProjects(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+  async getProjects(
+    clientId: string,
+    organizationId: string,
+    role: string,
+    buildingIds?: string[],
+  ) {
     const where: any = { organizationId };
 
     if (role === 'CLIENT_MANAGER' && buildingIds && buildingIds.length > 0) {
@@ -724,7 +840,9 @@ export class ClientPortalService {
         approvedBy: { select: { firstName: true, lastName: true } },
         signatures: {
           include: {
-            clientUser: { select: { firstName: true, lastName: true, email: true } },
+            clientUser: {
+              select: { firstName: true, lastName: true, email: true },
+            },
           },
           orderBy: { signedAt: 'desc' },
         },
@@ -735,7 +853,12 @@ export class ClientPortalService {
     return projects;
   }
 
-  async getProject(projectId: string, clientId: string, organizationId: string, role: string) {
+  async getProject(
+    projectId: string,
+    clientId: string,
+    organizationId: string,
+    role: string,
+  ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
@@ -749,7 +872,9 @@ export class ClientPortalService {
         approvedBy: { select: { firstName: true, lastName: true } },
         signatures: {
           include: {
-            clientUser: { select: { firstName: true, lastName: true, email: true } },
+            clientUser: {
+              select: { firstName: true, lastName: true, email: true },
+            },
           },
           orderBy: { signedAt: 'desc' },
         },
@@ -759,16 +884,25 @@ export class ClientPortalService {
     return project;
   }
 
-  async getActivities(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+  async getActivities(
+    clientId: string,
+    organizationId: string,
+    role: string,
+    buildingIds?: string[],
+  ) {
     const projects = await this.prisma.project.findMany({
       where: {
         organizationId,
-        ...(role === 'CLIENT_MANAGER' && buildingIds?.length ? { buildingId: { in: buildingIds } } : role === 'CLIENT_MANAGER' ? { clientId } : {}),
+        ...(role === 'CLIENT_MANAGER' && buildingIds?.length
+          ? { buildingId: { in: buildingIds } }
+          : role === 'CLIENT_MANAGER'
+            ? { clientId }
+            : {}),
       },
       select: { id: true },
     });
 
-    const projectIds = projects.map(p => p.id);
+    const projectIds = projects.map((p) => p.id);
 
     return this.prisma.projectActivity.findMany({
       where: { projectId: { in: projectIds } },
@@ -957,7 +1091,9 @@ export class ClientPortalService {
     });
 
     if (!latestVersion) {
-      throw new Error('Aucune version approuvée n’est disponible pour ce document.');
+      throw new Error(
+        'Aucune version approuvée n’est disponible pour ce document.',
+      );
     }
 
     const signature = await this.prisma.documentSignature.findFirst({
@@ -969,7 +1105,9 @@ export class ClientPortalService {
     });
 
     if (!signature) {
-      throw new Error('Le document doit être signé avant de générer le PDF officiel.');
+      throw new Error(
+        'Le document doit être signé avant de générer le PDF officiel.',
+      );
     }
 
     const current = await this.getSignatureStatus(projectId, clientUser);
@@ -1016,7 +1154,9 @@ export class ClientPortalService {
     });
 
     if (!latestVersion) {
-      throw new Error('Aucune version approuvée n’est disponible pour ce document.');
+      throw new Error(
+        'Aucune version approuvée n’est disponible pour ce document.',
+      );
     }
 
     const signature = await this.prisma.documentSignature.findFirst({
@@ -1036,8 +1176,14 @@ export class ClientPortalService {
     const result = await this.exportService.generatePdf(
       projectId,
       {
-        selectedModules: project.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8],
-        moduleOrder: project.documentType === 'PCA' ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 6, 7, 8],
+        selectedModules:
+          project.documentType === 'PCA'
+            ? [1, 2, 3, 4, 5, 6, 7, 8]
+            : [1, 2, 3, 4, 6, 7, 8],
+        moduleOrder:
+          project.documentType === 'PCA'
+            ? [1, 2, 3, 4, 5, 6, 7, 8]
+            : [1, 2, 3, 4, 6, 7, 8],
         language: 'both',
         isPreview: false,
       },
@@ -1045,7 +1191,9 @@ export class ClientPortalService {
     );
 
     if (!result.fr || !result.en) {
-      throw new Error('La génération officielle doit produire les versions FR et EN.');
+      throw new Error(
+        'La génération officielle doit produire les versions FR et EN.',
+      );
     }
 
     const timestamp = Date.now();
@@ -1082,11 +1230,7 @@ export class ClientPortalService {
     };
   }
 
-  async refuseDocument(
-    projectId: string,
-    clientUser: any,
-    comment: string,
-  ) {
+  async refuseDocument(projectId: string, clientUser: any, comment: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: { client: true, building: true, user: true },
@@ -1169,9 +1313,24 @@ export class ClientPortalService {
     });
   }
 
-    async getDashboard(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
-    const projects = await this.getProjects(clientId, organizationId, role, buildingIds);
-    const activities = await this.getActivities(clientId, organizationId, role, buildingIds);
+  async getDashboard(
+    clientId: string,
+    organizationId: string,
+    role: string,
+    buildingIds?: string[],
+  ) {
+    const projects = await this.getProjects(
+      clientId,
+      organizationId,
+      role,
+      buildingIds,
+    );
+    const activities = await this.getActivities(
+      clientId,
+      organizationId,
+      role,
+      buildingIds,
+    );
 
     // Récupérer les bâtiments accessibles
     const buildingWhere: any = { clientId };
@@ -1193,33 +1352,46 @@ export class ClientPortalService {
     });
 
     // Enrichir chaque bâtiment avec ses projets
-    const buildingsWithProjects = buildings.map(building => {
-      const buildingProjects = projects.filter(p => p.buildingId === building.id);
+    const buildingsWithProjects = buildings.map((building) => {
+      const buildingProjects = projects.filter(
+        (p) => p.buildingId === building.id,
+      );
       return {
         ...building,
         projectCount: buildingProjects.length,
-        validatedCount: buildingProjects.filter(p => p.status === 'VALIDATED' || p.status === 'EXPORTED').length,
-        activeCount: buildingProjects.filter(p => p.status === 'IN_PROGRESS' || p.status === 'REVIEW').length,
+        validatedCount: buildingProjects.filter(
+          (p) => p.status === 'VALIDATED' || p.status === 'EXPORTED',
+        ).length,
+        activeCount: buildingProjects.filter(
+          (p) => p.status === 'IN_PROGRESS' || p.status === 'REVIEW',
+        ).length,
       };
     });
 
     const now = new Date();
-    const upcoming = activities.filter(a => {
-      if (!a.scheduledDate) return false;
-      const date = new Date(a.scheduledDate);
-      return date >= now && a.status !== 'fait';
-    }).slice(0, 5);
+    const upcoming = activities
+      .filter((a) => {
+        if (!a.scheduledDate) return false;
+        const date = new Date(a.scheduledDate);
+        return date >= now && a.status !== 'fait';
+      })
+      .slice(0, 5);
     const stats = {
       total: projects.length,
-      validated: projects.filter(p => p.status === 'VALIDATED').length,
-      inProgress: projects.filter(p => p.status === 'IN_PROGRESS').length,
-      review: projects.filter(p => p.status === 'REVIEW').length,
-      signed: projects.filter(p => p.signatures.length > 0).length,
+      validated: projects.filter((p) => p.status === 'VALIDATED').length,
+      inProgress: projects.filter((p) => p.status === 'IN_PROGRESS').length,
+      review: projects.filter((p) => p.status === 'REVIEW').length,
+      signed: projects.filter((p) => p.signatures.length > 0).length,
     };
-    return { stats, projects: projects.slice(0, 5), upcomingActivities: upcoming, buildings: buildingsWithProjects };
+    return {
+      stats,
+      projects: projects.slice(0, 5),
+      upcomingActivities: upcoming,
+      buildings: buildingsWithProjects,
+    };
   }
 
-    async trackEngagement(data: {
+  async trackEngagement(data: {
     projectId: string;
     clientUserId: string;
     event: string;
@@ -1241,26 +1413,37 @@ export class ClientPortalService {
     const engagements = await this.prisma.documentEngagement.findMany({
       where: { projectId },
       include: {
-        clientUser: { select: { firstName: true, lastName: true, email: true } },
+        clientUser: {
+          select: { firstName: true, lastName: true, email: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    const opened = engagements.filter(e => e.event === 'opened');
-    const viewed = engagements.filter(e => e.event === 'viewed');
-    const downloaded = engagements.filter(e => e.event === 'downloaded');
+    const opened = engagements.filter((e) => e.event === 'opened');
+    const viewed = engagements.filter((e) => e.event === 'viewed');
+    const downloaded = engagements.filter((e) => e.event === 'downloaded');
 
-    const firstOpen = opened.length > 0 ? opened[opened.length - 1].createdAt : null;
+    const firstOpen =
+      opened.length > 0 ? opened[opened.length - 1].createdAt : null;
     const lastOpen = opened.length > 0 ? opened[0].createdAt : null;
     const totalDuration = viewed.reduce((acc, e) => acc + (e.duration || 0), 0);
-    const devices = engagements.map(e => e.device).filter(Boolean);
-    const dominantDevice = devices.length > 0
-      ? Object.entries(devices.reduce((acc: any, d) => { acc[d!] = (acc[d!] || 0) + 1; return acc; }, {}))
-          .sort((a: any, b: any) => b[1] - a[1])[0][0]
-      : null;
+    const devices = engagements.map((e) => e.device).filter(Boolean);
+    const dominantDevice =
+      devices.length > 0
+        ? Object.entries(
+            devices.reduce((acc: any, d) => {
+              acc[d!] = (acc[d!] || 0) + 1;
+              return acc;
+            }, {}),
+          ).sort((a: any, b: any) => b[1] - a[1])[0][0]
+        : null;
 
     const daysSinceExport = firstOpen
-      ? Math.floor((new Date().getTime() - new Date(firstOpen).getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.floor(
+          (new Date().getTime() - new Date(firstOpen).getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
       : null;
 
     const signature = await this.prisma.documentSignature.findFirst({
@@ -1278,21 +1461,27 @@ export class ClientPortalService {
       dominantDevice,
       daysSinceFirstOpen: daysSinceExport,
       engagements: engagements.slice(0, 10),
-      status: signature ? 'signed'
-        : opened.length === 0 ? 'not_opened'
-        : downloaded.length > 0 ? 'downloaded'
-        : viewed.length > 0 ? 'viewed'
-        : 'opened',
-      signature: signature ? {
-        fullName: signature.fullName,
-        email: signature.email,
-        signedAt: signature.signedAt,
-        comment: signature.comment,
-      } : null,
+      status: signature
+        ? 'signed'
+        : opened.length === 0
+          ? 'not_opened'
+          : downloaded.length > 0
+            ? 'downloaded'
+            : viewed.length > 0
+              ? 'viewed'
+              : 'opened',
+      signature: signature
+        ? {
+            fullName: signature.fullName,
+            email: signature.email,
+            signedAt: signature.signedAt,
+            comment: signature.comment,
+          }
+        : null,
     };
   }
 
-    async createBookingFromClient(data: {
+  async createBookingFromClient(data: {
     projectId: string;
     clientUserId: string;
     activityType: string;
@@ -1316,26 +1505,31 @@ export class ClientPortalService {
       orderBy: { versionNumber: 'desc' },
     });
 
-    return versions.map(v => {
+    return versions.map((v) => {
       const snap = (v.snapshot as any) || {};
       return {
         versionNumber: v.versionNumber,
-        label:         v.label || `v${v.versionNumber}`,
-        createdAt:     v.createdAt,
+        label: v.label || `v${v.versionNumber}`,
+        createdAt: v.createdAt,
         // Approbation
-        approvedBy:    snap.approvedBy    ?? null,
-        approvedAt:    snap.approvedAt    ?? null,
+        approvedBy: snap.approvedBy ?? null,
+        approvedAt: snap.approvedAt ?? null,
         // Signature
-        signedBy:      snap.signedBy      ?? null,
-        signedAt:      snap.signedAt      ?? null,
-        signedEmail:   snap.signedEmail   ?? null,
+        signedBy: snap.signedBy ?? null,
+        signedAt: snap.signedAt ?? null,
+        signedEmail: snap.signedEmail ?? null,
         // Statut lisible
         status: snap.signedAt ? 'SIGNÉ' : 'EN ATTENTE DE SIGNATURE',
       };
     });
   }
 
-  async getBuildings(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+  async getBuildings(
+    clientId: string,
+    organizationId: string,
+    role: string,
+    buildingIds?: string[],
+  ) {
     const where: any = { organizationId };
     if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
       where.id = { in: buildingIds };
@@ -1360,7 +1554,7 @@ export class ClientPortalService {
       },
       orderBy: { name: 'asc' },
     });
-    return buildings.map(b => ({
+    return buildings.map((b) => ({
       id: b.id,
       name: b.name,
       address: b.address,
@@ -1375,13 +1569,20 @@ export class ClientPortalService {
       buildingType: b.buildingType,
       floors: b.floors,
       projectCount: b.projects.length,
-      validatedCount: b.projects.filter(p => p.status === 'VALIDATED').length,
-      activeCount: b.projects.filter(p => ['DRAFT', 'IN_PROGRESS'].includes(p.status)).length,
+      validatedCount: b.projects.filter((p) => p.status === 'VALIDATED').length,
+      activeCount: b.projects.filter((p) =>
+        ['DRAFT', 'IN_PROGRESS'].includes(p.status),
+      ).length,
       projects: b.projects,
     }));
   }
 
-  async getBuildingsReadiness(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+  async getBuildingsReadiness(
+    clientId: string,
+    organizationId: string,
+    role: string,
+    buildingIds?: string[],
+  ) {
     const where: any = { organizationId };
     if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
       where.id = { in: buildingIds };
@@ -1394,11 +1595,15 @@ export class ClientPortalService {
       select: { id: true, name: true },
     });
 
-    const buildingIdsList = buildings.map(b => b.id);
+    const buildingIdsList = buildings.map((b) => b.id);
 
     const [allMembers, presentRecords] = await Promise.all([
       this.prisma.buildingEmployee.findMany({
-        where: { buildingId: { in: buildingIdsList }, isActive: true, isEmergencyMember: true },
+        where: {
+          buildingId: { in: buildingIdsList },
+          isActive: true,
+          isEmergencyMember: true,
+        },
         include: { emergencyRoles: { orderBy: { priority: 'asc' } } },
       }),
       this.prisma.occupancyRecord.findMany({
@@ -1406,41 +1611,83 @@ export class ClientPortalService {
           buildingId: { in: buildingIdsList },
           status: 'IN',
           type: 'EMPLOYE',
-          checkedInAt: { gte: (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })() },
+          checkedInAt: {
+            gte: (() => {
+              const d = new Date();
+              d.setHours(0, 0, 0, 0);
+              return d;
+            })(),
+          },
         },
         select: { buildingId: true, employeeId: true },
       }),
     ]);
 
-    const ROLE_TYPES = ['COORDINATOR','EPI','ASSEMBLY_WARDEN','SEARCHER','EXIT_WARDEN','PNA_ESCORT','FIRST_AIDER'];
+    const ROLE_TYPES = [
+      'COORDINATOR',
+      'EPI',
+      'ASSEMBLY_WARDEN',
+      'SEARCHER',
+      'EXIT_WARDEN',
+      'PNA_ESCORT',
+      'FIRST_AIDER',
+    ];
 
-    return buildings.map(building => {
-      const members = allMembers.filter(m => m.buildingId === building.id);
+    return buildings.map((building) => {
+      const members = allMembers.filter((m) => m.buildingId === building.id);
       const presentIds = new Set(
-        presentRecords.filter(r => r.buildingId === building.id).map(r => r.employeeId).filter(Boolean)
+        presentRecords
+          .filter((r) => r.buildingId === building.id)
+          .map((r) => r.employeeId)
+          .filter(Boolean),
       );
 
       if (members.length === 0) {
-        return { buildingId: building.id, status: 'NO_TEAM', readinessIndex: null, presentMembers: 0, totalMembers: 0 };
+        return {
+          buildingId: building.id,
+          status: 'NO_TEAM',
+          readinessIndex: null,
+          presentMembers: 0,
+          totalMembers: 0,
+        };
       }
 
-      const rolesConfigured = ROLE_TYPES.filter(rt => members.some(m => m.emergencyRoles.some(r => r.role === rt)));
-      const rolesCovered = rolesConfigured.filter(rt => members.filter(m => m.emergencyRoles.some(r => r.role === rt)).some(m => presentIds.has(m.id)));
+      const rolesConfigured = ROLE_TYPES.filter((rt) =>
+        members.some((m) => m.emergencyRoles.some((r) => r.role === rt)),
+      );
+      const rolesCovered = rolesConfigured.filter((rt) =>
+        members
+          .filter((m) => m.emergencyRoles.some((r) => r.role === rt))
+          .some((m) => presentIds.has(m.id)),
+      );
 
-      const readinessIndex = rolesConfigured.length > 0 ? Math.round((rolesCovered.length / rolesConfigured.length) * 100) : 100;
-      const status = readinessIndex === 100 ? 'READY' : readinessIndex >= 60 ? 'REDUCED' : 'CRITICAL';
+      const readinessIndex =
+        rolesConfigured.length > 0
+          ? Math.round((rolesCovered.length / rolesConfigured.length) * 100)
+          : 100;
+      const status =
+        readinessIndex === 100
+          ? 'READY'
+          : readinessIndex >= 60
+            ? 'REDUCED'
+            : 'CRITICAL';
 
       return {
         buildingId: building.id,
         status,
         readinessIndex,
-        presentMembers: members.filter(m => presentIds.has(m.id)).length,
+        presentMembers: members.filter((m) => presentIds.has(m.id)).length,
         totalMembers: members.length,
       };
     });
   }
 
-  async getClientNotifications(clientId: string, organizationId: string, role: string, buildingIds?: string[]) {
+  async getClientNotifications(
+    clientId: string,
+    organizationId: string,
+    role: string,
+    buildingIds?: string[],
+  ) {
     const where: any = { organizationId };
     if (role === 'CLIENT_MANAGER' && buildingIds?.length) {
       where.buildingId = { in: buildingIds };
@@ -1463,9 +1710,7 @@ export class ClientPortalService {
     for (const p of projects) {
       // Document validé et non signé
       if (p.status === 'VALIDATED') {
-        const isSigned = p.signatures?.some(
-          (s: any) => s.clientUser
-        );
+        const isSigned = p.signatures?.some((s: any) => s.clientUser);
         if (!isSigned) {
           notifications.push({
             id: `sign-${p.id}`,
@@ -1482,7 +1727,10 @@ export class ClientPortalService {
 
       // Document récemment validé (moins de 7 jours)
       if (p.status === 'VALIDATED' && p.approvedAt) {
-        const daysSince = Math.floor((now.getTime() - new Date(p.approvedAt).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSince = Math.floor(
+          (now.getTime() - new Date(p.approvedAt).getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
         if (daysSince <= 7) {
           notifications.push({
             id: `new-${p.id}`,
@@ -1499,7 +1747,10 @@ export class ClientPortalService {
 
       // Document en révision depuis plus de 30 jours
       if (p.status === 'IN_PROGRESS') {
-        const daysSince = Math.floor((now.getTime() - new Date(p.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSince = Math.floor(
+          (now.getTime() - new Date(p.updatedAt).getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
         if (daysSince >= 30) {
           notifications.push({
             id: `stale-${p.id}`,
@@ -1517,7 +1768,10 @@ export class ClientPortalService {
 
     return notifications.sort((a, b) => {
       const priority = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-      return (priority[a.priority as keyof typeof priority] || 0) - (priority[b.priority as keyof typeof priority] || 0);
+      return (
+        (priority[a.priority as keyof typeof priority] || 0) -
+        (priority[b.priority as keyof typeof priority] || 0)
+      );
     });
   }
 }

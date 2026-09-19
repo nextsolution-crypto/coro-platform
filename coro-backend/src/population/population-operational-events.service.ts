@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   CoroActorType,
+  IncidentStatus,
   PopulationOperationalEventStatus,
   Prisma,
 } from '@prisma/client';
@@ -26,7 +27,16 @@ export class PopulationOperationalEventsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createOperationalEvent(input: CreatePopulationOperationalEventInput) {
-    const context = await this.prisma.populationProgram.findFirst({
+    return this.prisma.$transaction((tx) =>
+      this.createOperationalEventInTransaction(tx, input),
+    );
+  }
+
+  async createOperationalEventInTransaction(
+    tx: Prisma.TransactionClient,
+    input: CreatePopulationOperationalEventInput,
+  ) {
+    const context = await tx.populationProgram.findFirst({
       where: {
         id: input.programId,
         rueFacilityProfile: {
@@ -45,7 +55,7 @@ export class PopulationOperationalEventsService {
       throw new NotFoundException('Programme Population introuvable');
     }
 
-    const scenario = await this.prisma.rueEmergencyScenario.findFirst({
+    const scenario = await tx.rueEmergencyScenario.findFirst({
       where: {
         id: input.emergencyScenarioId,
         facilityProfileId: context.rueFacilityProfile.id,
@@ -60,11 +70,15 @@ export class PopulationOperationalEventsService {
     }
 
     if (input.incidentEventId) {
-      const incident = await this.prisma.incidentEvent.findFirst({
+      const incident = await tx.incidentEvent.findFirst({
         where: {
           id: input.incidentEventId,
           organizationId: input.organizationId,
           buildingId: context.rueFacilityProfile.buildingId,
+          isActive: true,
+          status: {
+            in: [IncidentStatus.ACTIVE, IncidentStatus.CONTAINED],
+          },
         },
         select: { id: true },
       });
@@ -77,7 +91,7 @@ export class PopulationOperationalEventsService {
     }
 
     try {
-      return await this.prisma.populationOperationalEvent.create({
+      return await tx.populationOperationalEvent.create({
         data: {
           organizationId: input.organizationId,
           programId: input.programId,
@@ -99,6 +113,36 @@ export class PopulationOperationalEventsService {
       }
       throw error;
     }
+  }
+
+  async allocateNextSequence(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    programId: string,
+    eventId: string,
+  ) {
+    const claimed = await tx.populationOperationalEvent.updateMany({
+      where: {
+        id: eventId,
+        organizationId,
+        programId,
+        status: PopulationOperationalEventStatus.ACTIVE,
+      },
+      data: { nextSequence: { increment: 1 } },
+    });
+
+    if (claimed.count !== 1) {
+      throw new BadRequestException(
+        'L’événement Population est introuvable ou n’est plus actif',
+      );
+    }
+
+    const event = await tx.populationOperationalEvent.findFirstOrThrow({
+      where: { id: eventId, organizationId, programId },
+      select: { nextSequence: true },
+    });
+
+    return event.nextSequence - 1;
   }
 
   async getOperationalEvent(

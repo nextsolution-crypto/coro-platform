@@ -21,6 +21,8 @@ import {
   PopulationDeliveryMode,
   PopulationDeliverySuppressionReason,
   PopulationGovernanceMode,
+  PopulationOperationalEventStatus,
+  CoroActorType,
 } from '@prisma/client';
 import {
   createCipheriv,
@@ -42,6 +44,8 @@ import { UpdatePopulationPreferencesDto } from './dto/update-population-preferen
 import { CreatePopulationAlertDraftDto } from './dto/create-population-alert-draft.dto';
 import { UpdatePopulationAlertDraftDto } from './dto/update-population-alert-draft.dto';
 import { PopulationGeospatialService } from './population-geospatial.service';
+import { PopulationOperationalEventsService } from './population-operational-events.service';
+import { ClosePopulationOperationalEventDto } from './dto/close-population-operational-event.dto';
 import {
   PopulationDeliveryService,
   PopulationProviderError,
@@ -123,6 +127,7 @@ export class PopulationService {
     private readonly populationDeliveryService: PopulationDeliveryService,
     private readonly geocodingService: GeocodingService,
     private readonly readiness: PopulationReadinessService,
+    private readonly operationalEvents: PopulationOperationalEventsService,
   ) {}
 
   private canReceiveSms(
@@ -2261,6 +2266,7 @@ export class PopulationService {
         province: true,
         latitude: true,
         longitude: true,
+        organizationId: true,
       },
     });
 
@@ -2557,11 +2563,29 @@ export class PopulationService {
     };
 
     return this.prisma.$transaction(async (tx) => {
+      const startsOperationalEvent =
+        dto.type === PopulationAlertType.EMERGENCY ||
+        dto.type === PopulationAlertType.TEST;
+
+      const operationalEvent = startsOperationalEvent
+        ? await this.operationalEvents.createOperationalEventInTransaction(tx, {
+            organizationId: targeting.building.organizationId,
+            programId: targeting.program.id,
+            emergencyScenarioId: targeting.scenario.id,
+            incidentEventId: incidentEventId ?? undefined,
+            startedByType: actor.type as CoroActorType,
+            startedById: actor.id,
+            startedAt: createdAt,
+          })
+        : null;
+
       const alert = await tx.populationAlert.create({
         data: {
           programId: targeting.program.id,
           incidentEventId,
           emergencyScenarioId: targeting.scenario.id,
+          operationalEventId: operationalEvent?.id,
+          cycleSequence: operationalEvent ? 1 : null,
 
           type: dto.type,
           status: PopulationAlertStatus.DRAFT,
@@ -2578,7 +2602,16 @@ export class PopulationService {
           createdByType: actor.type as any,
           createdById: actor.id,
 
-          contextSnapshot,
+          contextSnapshot: operationalEvent
+            ? {
+                ...contextSnapshot,
+                communication: {
+                  ...contextSnapshot.communication,
+                  operationalEventId: operationalEvent.id,
+                  cycleSequence: 1,
+                },
+              }
+            : contextSnapshot,
         },
       });
 
@@ -3080,6 +3113,7 @@ export class PopulationService {
    */
   async createIncidentFollowUpDraft(
     buildingId: string,
+    organizationId: string,
     incidentEventId: string,
     sourceAlertId: string,
     type: PopulationAlertType,
@@ -3095,6 +3129,58 @@ export class PopulationService {
       type: string;
       id: string;
     },
+  ) {
+    const { alert, program } =
+      await this.getPopulationAlertHistoricalForBuilding(
+        buildingId,
+        sourceAlertId,
+      );
+    if (!alert.operationalEventId) {
+      throw new BadRequestException(
+        'Cette communication historique n’appartient à aucun événement Population',
+      );
+    }
+    if (alert.incidentEventId !== incidentEventId) {
+      throw new BadRequestException(
+        'La communication ne correspond pas à cet incident',
+      );
+    }
+    const event = await this.operationalEvents.getOperationalEvent(
+      organizationId,
+      program.id,
+      alert.operationalEventId,
+    );
+    if (event.incidentEventId !== incidentEventId) {
+      throw new BadRequestException(
+        'L’événement Population ne correspond pas à cet incident',
+      );
+    }
+    return this.createOperationalFollowUpDraft(
+      buildingId,
+      organizationId,
+      event.id,
+      sourceAlertId,
+      type,
+      content,
+      actor,
+    );
+  }
+
+  async createOperationalFollowUpDraft(
+    buildingId: string,
+    organizationId: string,
+    operationalEventId: string,
+    sourceAlertId: string,
+    type: PopulationAlertType,
+    content: {
+      titleFR: string;
+      titleEN?: string;
+      messageFR: string;
+      messageEN?: string;
+      instructionFR?: string;
+      instructionEN?: string;
+    },
+    actor: { type: string; id: string },
   ) {
     if (
       type !== PopulationAlertType.UPDATE &&
@@ -3116,17 +3202,24 @@ export class PopulationService {
       throw new BadRequestException('Le message français est obligatoire');
     }
 
-    const { program, incident } =
-      await this.getPopulationAlertContextForIncident(
-        buildingId,
-        incidentEventId,
+    const profile = await this.assertPopulationOperational(buildingId);
+    const program = profile.populationProgram;
+    if (!program) {
+      throw new BadRequestException(
+        'Le programme Sentinelle Population n’est pas actif',
       );
+    }
+    const event = await this.operationalEvents.assertOperationalEventActive(
+      organizationId,
+      program.id,
+      operationalEventId,
+    );
 
     const sourceAlert = await this.prisma.populationAlert.findFirst({
       where: {
         id: sourceAlertId,
         programId: program.id,
-        incidentEventId,
+        operationalEventId,
       },
       include: {
         zones: {
@@ -3139,7 +3232,7 @@ export class PopulationService {
 
     if (!sourceAlert) {
       throw new NotFoundException(
-        'Alerte source introuvable pour cet incident',
+        'Alerte source introuvable pour cet événement',
       );
     }
 
@@ -3155,41 +3248,6 @@ export class PopulationService {
     if (!sourceAlert.emergencyScenarioId) {
       throw new BadRequestException(
         'L’alerte source n’est liée à aucun scénario RUE',
-      );
-    }
-
-    /*
-     * Dès qu'un ALL_CLEAR non annulé existe pour l'incident,
-     * aucun second ALL_CLEAR ni nouvel UPDATE ne peut être créé.
-     *
-     * Cette vérification protège le workflow normal.
-     * L'index unique partiel PostgreSQL protège en complément
-     * contre les créations ALL_CLEAR concurrentes.
-     */
-    const existingAllClear = await this.prisma.populationAlert.findFirst({
-      where: {
-        programId: program.id,
-        incidentEventId,
-        type: PopulationAlertType.ALL_CLEAR,
-        status: {
-          not: PopulationAlertStatus.CANCELLED,
-        },
-      },
-      select: {
-        id: true,
-        status: true,
-      },
-    });
-
-    if (type === PopulationAlertType.ALL_CLEAR && existingAllClear) {
-      throw new BadRequestException(
-        'Un ALL_CLEAR existe déjà pour cet incident',
-      );
-    }
-
-    if (type === PopulationAlertType.UPDATE && existingAllClear) {
-      throw new BadRequestException(
-        'Une mise à jour ne peut plus être créée dès qu’un ALL_CLEAR existe pour cet incident',
       );
     }
 
@@ -3232,21 +3290,65 @@ export class PopulationService {
       },
 
       communication: {
-        incidentEventId,
+        incidentEventId: event.incidentEventId,
+        operationalEventId: event.id,
         sourceAlertId: sourceAlert.id,
         type,
       },
     };
 
     return this.prisma.$transaction(async (tx) => {
+      const cycleSequence = await this.operationalEvents.allocateNextSequence(
+        tx,
+        organizationId,
+        program.id,
+        event.id,
+      );
+
+      const transactionalSource = await tx.populationAlert.findFirst({
+        where: {
+          id: sourceAlertId,
+          programId: program.id,
+          operationalEventId: event.id,
+          status: {
+            in: [PopulationAlertStatus.ACTIVE, PopulationAlertStatus.ENDED],
+          },
+        },
+        select: { id: true },
+      });
+      if (!transactionalSource) {
+        throw new BadRequestException(
+          'La communication source n’est pas une communication diffusée de cet événement',
+        );
+      }
+
+      const existingAllClear = await tx.populationAlert.findFirst({
+        where: {
+          programId: program.id,
+          operationalEventId: event.id,
+          type: PopulationAlertType.ALL_CLEAR,
+          status: { not: PopulationAlertStatus.CANCELLED },
+        },
+        select: { id: true },
+      });
+      if (existingAllClear) {
+        throw new BadRequestException(
+          type === PopulationAlertType.UPDATE
+            ? 'Une mise à jour ne peut plus être créée après un ALL_CLEAR'
+            : 'Un ALL_CLEAR existe déjà pour cet événement',
+        );
+      }
+
       let alert;
 
       try {
         alert = await tx.populationAlert.create({
           data: {
             programId: program.id,
-            incidentEventId,
+            incidentEventId: event.incidentEventId,
             emergencyScenarioId: targeting.scenario.id,
+            operationalEventId: event.id,
+            cycleSequence,
 
             type,
             status: PopulationAlertStatus.DRAFT,
@@ -3264,7 +3366,13 @@ export class PopulationService {
             createdByType: actor.type as any,
             createdById: actor.id,
 
-            contextSnapshot,
+            contextSnapshot: {
+              ...contextSnapshot,
+              communication: {
+                ...contextSnapshot.communication,
+                cycleSequence,
+              },
+            },
           },
         });
       } catch (error) {
@@ -3282,7 +3390,7 @@ export class PopulationService {
           error.code === 'P2002'
         ) {
           throw new BadRequestException(
-            'Un ALL_CLEAR existe déjà pour cet incident',
+            'Un ALL_CLEAR existe déjà pour cet événement',
           );
         }
 
@@ -3330,6 +3438,271 @@ export class PopulationService {
         },
       });
     });
+  }
+
+  private async getOperationalEventProgramContext(
+    buildingId: string,
+    organizationId: string,
+  ) {
+    const profile = await this.prisma.rueFacilityProfile.findUnique({
+      where: { buildingId },
+      select: {
+        building: { select: { organizationId: true } },
+        populationProgram: { select: { id: true } },
+      },
+    });
+    if (
+      !profile ||
+      profile.building.organizationId !== organizationId ||
+      !profile.populationProgram
+    ) {
+      throw new NotFoundException('Événement Population introuvable');
+    }
+    return profile.populationProgram;
+  }
+
+  private async getOperationalEventView(
+    organizationId: string,
+    programId: string,
+    eventId: string,
+  ) {
+    const event = await this.prisma.populationOperationalEvent.findFirst({
+      where: { id: eventId, organizationId, programId },
+      select: {
+        id: true,
+        status: true,
+        programId: true,
+        emergencyScenarioId: true,
+        incidentEventId: true,
+        startedAt: true,
+        startedByType: true,
+        startedById: true,
+        endedAt: true,
+        endedByType: true,
+        endedById: true,
+        closeReason: true,
+        createdAt: true,
+        updatedAt: true,
+        emergencyScenario: {
+          select: { id: true, nameFR: true, nameEN: true },
+        },
+        alerts: {
+          select: {
+            id: true,
+            type: true,
+            status: true,
+            cycleSequence: true,
+            titleFR: true,
+            titleEN: true,
+            createdAt: true,
+            readyAt: true,
+            approvedAt: true,
+            recipientsFrozenAt: true,
+            sendingAt: true,
+            activatedAt: true,
+            endedAt: true,
+            cancelledAt: true,
+            deliveries: {
+              select: { status: true, channel: true },
+            },
+          },
+          orderBy: [{ cycleSequence: 'asc' }, { createdAt: 'asc' }],
+        },
+      },
+    });
+    if (!event) {
+      throw new NotFoundException('Événement Population introuvable');
+    }
+
+    const alerts = event.alerts.map(({ deliveries, ...alert }) => {
+      const deliveryCounts = deliveries.reduce<Record<string, number>>(
+        (counts, delivery) => {
+          counts[delivery.status] = (counts[delivery.status] ?? 0) + 1;
+          return counts;
+        },
+        {},
+      );
+      return { ...alert, deliveryCounts };
+    });
+
+    return {
+      ...event,
+      alerts,
+      communicationCount: alerts.length,
+      latestCommunication: alerts.at(-1) ?? null,
+    };
+  }
+
+  async getActiveOperationalEvent(buildingId: string, organizationId: string) {
+    const program = await this.getOperationalEventProgramContext(
+      buildingId,
+      organizationId,
+    );
+    const event = await this.operationalEvents.getActiveOperationalEvent(
+      organizationId,
+      program.id,
+    );
+    return event
+      ? this.getOperationalEventView(organizationId, program.id, event.id)
+      : null;
+  }
+
+  async getOperationalEvent(
+    buildingId: string,
+    organizationId: string,
+    eventId: string,
+  ) {
+    const program = await this.getOperationalEventProgramContext(
+      buildingId,
+      organizationId,
+    );
+    return this.getOperationalEventView(organizationId, program.id, eventId);
+  }
+
+  async listOperationalEventAlerts(
+    buildingId: string,
+    organizationId: string,
+    eventId: string,
+  ) {
+    const event = await this.getOperationalEvent(
+      buildingId,
+      organizationId,
+      eventId,
+    );
+    return event.alerts;
+  }
+
+  async closeOperationalEvent(
+    buildingId: string,
+    organizationId: string,
+    eventId: string,
+    dto: ClosePopulationOperationalEventDto,
+    actor: { type: string; id: string },
+  ) {
+    const program = await this.getOperationalEventProgramContext(
+      buildingId,
+      organizationId,
+    );
+    const reason = dto.closeReason?.trim() || null;
+
+    await this.prisma.$transaction(async (tx) => {
+      const event = await tx.populationOperationalEvent.findFirst({
+        where: { id: eventId, organizationId, programId: program.id },
+        select: { id: true, status: true },
+      });
+      if (!event) {
+        throw new NotFoundException('Événement Population introuvable');
+      }
+      if (event.status === PopulationOperationalEventStatus.ENDED) {
+        return;
+      }
+      if (event.status !== PopulationOperationalEventStatus.ACTIVE) {
+        throw new BadRequestException(
+          'Seul un événement Population ACTIVE peut être clôturé',
+        );
+      }
+
+      const allClear = await tx.populationAlert.findFirst({
+        where: {
+          operationalEventId: event.id,
+          type: PopulationAlertType.ALL_CLEAR,
+          status: { not: PopulationAlertStatus.CANCELLED },
+        },
+        select: {
+          id: true,
+          status: true,
+          deliveries: {
+            select: { status: true, outcomeUnknownAt: true },
+          },
+        },
+        orderBy: { cycleSequence: 'desc' },
+      });
+
+      if (dto.forceClose) {
+        if (!reason) {
+          throw new BadRequestException(
+            'Un motif est obligatoire pour une clôture exceptionnelle',
+          );
+        }
+      } else {
+        if (!allClear) {
+          throw new BadRequestException(
+            'Un ALL_CLEAR diffusé est requis avant la clôture',
+          );
+        }
+        if (
+          allClear.status !== PopulationAlertStatus.ACTIVE &&
+          allClear.status !== PopulationAlertStatus.ENDED
+        ) {
+          throw new BadRequestException(
+            'Le ALL_CLEAR doit avoir été diffusé avant la clôture',
+          );
+        }
+        const pending = allClear.deliveries.some(
+          (delivery) =>
+            delivery.status === PopulationDeliveryStatus.QUEUED ||
+            delivery.status === PopulationDeliveryStatus.SENDING ||
+            delivery.outcomeUnknownAt !== null,
+        );
+        if (pending) {
+          throw new BadRequestException(
+            'La diffusion ALL_CLEAR comporte encore des traitements ou réconciliations en attente',
+          );
+        }
+        const successful = allClear.deliveries.some(
+          (delivery) =>
+            delivery.status === PopulationDeliveryStatus.SENT ||
+            delivery.status === PopulationDeliveryStatus.DELIVERED,
+        );
+        if (!successful) {
+          throw new BadRequestException(
+            'Le ALL_CLEAR n’a aucune livraison confirmée',
+          );
+        }
+        const incompleteStatuses: PopulationDeliveryStatus[] = [
+          PopulationDeliveryStatus.FAILED,
+          PopulationDeliveryStatus.SUPPRESSED,
+          PopulationDeliveryStatus.CANCELLED,
+        ];
+        const incomplete = allClear.deliveries.some((delivery) =>
+          incompleteStatuses.includes(delivery.status),
+        );
+        if (incomplete && (!dto.confirmIncompleteDelivery || !reason)) {
+          throw new BadRequestException(
+            'La confirmation et un motif sont requis pour une diffusion incomplète',
+          );
+        }
+      }
+
+      const closed = await tx.populationOperationalEvent.updateMany({
+        where: {
+          id: event.id,
+          organizationId,
+          programId: program.id,
+          status: PopulationOperationalEventStatus.ACTIVE,
+        },
+        data: {
+          status: PopulationOperationalEventStatus.ENDED,
+          endedAt: new Date(),
+          endedByType: actor.type as CoroActorType,
+          endedById: actor.id,
+          closeReason: reason,
+        },
+      });
+      if (closed.count !== 1) {
+        const current = await tx.populationOperationalEvent.findFirst({
+          where: { id: event.id, organizationId, programId: program.id },
+          select: { status: true },
+        });
+        if (current?.status !== PopulationOperationalEventStatus.ENDED) {
+          throw new ConflictException(
+            'L’événement Population a changé pendant sa clôture',
+          );
+        }
+      }
+    });
+
+    return this.getOperationalEventView(organizationId, program.id, eventId);
   }
 
   /**

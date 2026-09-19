@@ -48,6 +48,11 @@ describe('ClientPortalService - Sentinelle Population', () => {
     freezeAlertRecipients: jest.fn(),
     sendAlert: jest.fn(),
     createIncidentFollowUpDraft: jest.fn(),
+    createOperationalFollowUpDraft: jest.fn(),
+    getActiveOperationalEvent: jest.fn(),
+    getOperationalEvent: jest.fn(),
+    listOperationalEventAlerts: jest.fn(),
+    closeOperationalEvent: jest.fn(),
     getIncidentAlertHistory: jest.fn(),
     endAlert: jest.fn(),
     cancelAlert: jest.fn(),
@@ -1169,6 +1174,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         populationService.createIncidentFollowUpDraft,
       ).toHaveBeenCalledWith(
         'building-1',
+        'org-1',
         'incident-1',
         'alert-emergency-1',
         'UPDATE',
@@ -1223,6 +1229,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
         populationService.createIncidentFollowUpDraft,
       ).toHaveBeenCalledWith(
         'building-1',
+        'org-1',
         'incident-1',
         'alert-update-1',
         'ALL_CLEAR',
@@ -1467,6 +1474,57 @@ describe('ClientPortalService - Sentinelle Population', () => {
       await expect(
         service.createPopulationAlertDraft('building-1', {} as any, actor),
       ).resolves.toEqual({ id: 'alert-1' });
+    });
+  });
+
+  describe('Population operational events security', () => {
+    const actor = {
+      sub: 'client-user-1',
+      clientId: 'client-1',
+      organizationId: 'org-1',
+      role: 'CLIENT_MANAGER',
+      buildingIds: ['building-1'],
+    };
+
+    it('refuse un event demandé via un bâtiment hors scope avant lecture métier', async () => {
+      prisma.building.findFirst.mockResolvedValue(null);
+      await expect(
+        service.getPopulationOperationalEvent(
+          'building-other',
+          'event-1',
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(populationService.getOperationalEvent).not.toHaveBeenCalled();
+    });
+
+    it('exige POPULATION_PREPARE pour UPDATE et CLOSE', async () => {
+      prisma.building.findFirst.mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      });
+      prisma.clientUser.findFirst.mockResolvedValue(null);
+      await expect(
+        service.createPopulationOperationalEventFollowUpDraft(
+          'building-1',
+          'event-1',
+          'UPDATE',
+          {} as any,
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(
+        service.closePopulationOperationalEvent(
+          'building-1',
+          'event-1',
+          {},
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(
+        populationService.createOperationalFollowUpDraft,
+      ).not.toHaveBeenCalled();
+      expect(populationService.closeOperationalEvent).not.toHaveBeenCalled();
     });
   });
 });

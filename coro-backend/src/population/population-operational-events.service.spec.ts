@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   CoroActorType,
+  IncidentStatus,
   PopulationOperationalEventStatus,
   Prisma,
 } from '@prisma/client';
@@ -12,12 +13,15 @@ import { PopulationOperationalEventsService } from './population-operational-eve
 
 describe('PopulationOperationalEventsService', () => {
   const prisma = {
+    $transaction: jest.fn(),
     populationProgram: { findFirst: jest.fn() },
     rueEmergencyScenario: { findFirst: jest.fn() },
     incidentEvent: { findFirst: jest.fn() },
     populationOperationalEvent: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findFirstOrThrow: jest.fn(),
+      updateMany: jest.fn(),
     },
     populationAlert: { findMany: jest.fn() },
   };
@@ -34,6 +38,9 @@ describe('PopulationOperationalEventsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     service = new PopulationOperationalEventsService(prisma as any);
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback(prisma),
+    );
     prisma.populationProgram.findFirst.mockResolvedValue({
       id: 'program-1',
       rueFacilityProfile: { id: 'profile-1', buildingId: 'building-1' },
@@ -103,6 +110,10 @@ describe('PopulationOperationalEventsService', () => {
         id: 'incident-1',
         organizationId: 'org-1',
         buildingId: 'building-1',
+        isActive: true,
+        status: {
+          in: [IncidentStatus.ACTIVE, IncidentStatus.CONTAINED],
+        },
       },
       select: { id: true },
     });
@@ -170,6 +181,32 @@ describe('PopulationOperationalEventsService', () => {
         operationalEvent: { organizationId: 'org-1' },
       },
       orderBy: [{ cycleSequence: 'asc' }, { createdAt: 'asc' }],
+    });
+  });
+
+  it('alloue la séquence par incrément atomique sur l’événement ACTIVE', async () => {
+    prisma.populationOperationalEvent.updateMany.mockResolvedValue({
+      count: 1,
+    });
+    prisma.populationOperationalEvent.findFirstOrThrow.mockResolvedValue({
+      nextSequence: 4,
+    });
+    await expect(
+      service.allocateNextSequence(
+        prisma as any,
+        'org-1',
+        'program-1',
+        'event-1',
+      ),
+    ).resolves.toBe(3);
+    expect(prisma.populationOperationalEvent.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'event-1',
+        organizationId: 'org-1',
+        programId: 'program-1',
+        status: PopulationOperationalEventStatus.ACTIVE,
+      },
+      data: { nextSequence: { increment: 1 } },
     });
   });
 });

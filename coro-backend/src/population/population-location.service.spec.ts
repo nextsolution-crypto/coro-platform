@@ -145,6 +145,7 @@ describe('PopulationService location resolution', () => {
       {} as any,
       geocoding as any,
       readiness as any,
+      {} as any,
     );
   });
 

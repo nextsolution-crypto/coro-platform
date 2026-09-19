@@ -16,6 +16,8 @@ import { ConfigurePopulationProgramDto } from '../population/dto/population-prog
 import { CreatePopulationAlertDraftDto } from '../population/dto/create-population-alert-draft.dto';
 import { CreatePopulationFollowUpDto } from '../population/dto/create-population-follow-up.dto';
 import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
+import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
+import { PopulationAlertType } from '@prisma/client';
 import { ClientJwtGuard } from './client-jwt.guard';
 import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
@@ -383,7 +385,7 @@ export class ClientPortalController {
     );
   }
 
-    /**
+  /**
    * Scénarios RUE disponibles pour Sentinelle Population.
    *
    * Cette route est accessible pendant la préparation du programme :
@@ -432,9 +434,7 @@ export class ClientPortalController {
     );
   }
 
-  @Get(
-    'buildings/:buildingId/population/alerts/:alertId/delivery-status',
-  )
+  @Get('buildings/:buildingId/population/alerts/:alertId/delivery-status')
   async getPopulationAlertDeliveryStatus(
     @Param('buildingId') buildingId: string,
     @Param('alertId') alertId: string,
@@ -540,7 +540,7 @@ export class ClientPortalController {
     );
   }
 
-    /**
+  /**
    * DÃ©clenche la diffusion d'une alerte Population approuvÃ©e
    * dont les destinataires ont dÃ©jÃ  Ã©tÃ© figÃ©s.
    *
@@ -584,6 +584,94 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings/:buildingId/population/operational-events/active')
+  getActivePopulationOperationalEvent(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getActivePopulationOperationalEvent(
+      buildingId,
+      req.clientUser,
+    );
+  }
+
+  @Get('buildings/:buildingId/population/operational-events/:eventId')
+  getPopulationOperationalEvent(
+    @Param('buildingId') buildingId: string,
+    @Param('eventId') eventId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationOperationalEvent(
+      buildingId,
+      eventId,
+      req.clientUser,
+    );
+  }
+
+  @Get('buildings/:buildingId/population/operational-events/:eventId/alerts')
+  getPopulationOperationalEventAlerts(
+    @Param('buildingId') buildingId: string,
+    @Param('eventId') eventId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationOperationalEventAlerts(
+      buildingId,
+      eventId,
+      req.clientUser,
+    );
+  }
+
+  @Post(
+    'buildings/:buildingId/population/operational-events/:eventId/updates/draft',
+  )
+  createPopulationOperationalEventUpdateDraft(
+    @Param('buildingId') buildingId: string,
+    @Param('eventId') eventId: string,
+    @Body() dto: CreatePopulationFollowUpDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.createPopulationOperationalEventFollowUpDraft(
+      buildingId,
+      eventId,
+      PopulationAlertType.UPDATE,
+      dto,
+      req.clientUser,
+    );
+  }
+
+  @Post(
+    'buildings/:buildingId/population/operational-events/:eventId/all-clear/draft',
+  )
+  createPopulationOperationalEventAllClearDraft(
+    @Param('buildingId') buildingId: string,
+    @Param('eventId') eventId: string,
+    @Body() dto: CreatePopulationFollowUpDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.createPopulationOperationalEventFollowUpDraft(
+      buildingId,
+      eventId,
+      PopulationAlertType.ALL_CLEAR,
+      dto,
+      req.clientUser,
+    );
+  }
+
+  @Post('buildings/:buildingId/population/operational-events/:eventId/close')
+  closePopulationOperationalEvent(
+    @Param('buildingId') buildingId: string,
+    @Param('eventId') eventId: string,
+    @Body() dto: ClosePopulationOperationalEventDto,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.closePopulationOperationalEvent(
+      buildingId,
+      eventId,
+      dto,
+      req.clientUser,
+    );
+  }
+
   /**
    * Crée la communication ALL_CLEAR d'un incident.
    *
@@ -611,9 +699,7 @@ export class ClientPortalController {
    * Retourne la chronologie des communications Population
    * rattachées à un incident.
    */
-  @Get(
-    'buildings/:buildingId/population/incidents/:incidentEventId/alerts',
-  )
+  @Get('buildings/:buildingId/population/incidents/:incidentEventId/alerts')
   async getPopulationIncidentAlertHistory(
     @Param('buildingId') buildingId: string,
     @Param('incidentEventId') incidentEventId: string,
@@ -632,9 +718,7 @@ export class ClientPortalController {
    * Cette opération ne supprime ni les snapshots,
    * ni les destinataires figés, ni les preuves de livraison.
    */
-  @Post(
-    'buildings/:buildingId/population/alerts/:alertId/end',
-  )
+  @Post('buildings/:buildingId/population/alerts/:alertId/end')
   async endPopulationAlert(
     @Param('buildingId') buildingId: string,
     @Param('alertId') alertId: string,
@@ -653,9 +737,7 @@ export class ClientPortalController {
    *
    * La communication reste conservée dans l'historique.
    */
-  @Post(
-    'buildings/:buildingId/population/alerts/:alertId/cancel',
-  )
+  @Post('buildings/:buildingId/population/alerts/:alertId/cancel')
   async cancelPopulationAlert(
     @Param('buildingId') buildingId: string,
     @Param('alertId') alertId: string,

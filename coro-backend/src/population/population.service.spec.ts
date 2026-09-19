@@ -17,6 +17,8 @@ import {
   PopulationDeliveryMode,
   PopulationDeliverySuppressionReason,
   PopulationGovernanceMode,
+  PopulationOperationalEventStatus,
+  CoroActorType,
   Prisma,
 } from '@prisma/client';
 import { PopulationService } from './population.service';
@@ -66,6 +68,10 @@ describe('PopulationService', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    populationOperationalEvent: {
+      findFirst: jest.fn(),
+      updateMany: jest.fn(),
+    },
     incidentEvent: {
       findFirst: jest.fn(),
     },
@@ -110,6 +116,14 @@ describe('PopulationService', () => {
     assertAlertChannelReady: jest.fn(),
   };
 
+  const operationalEvents = {
+    createOperationalEventInTransaction: jest.fn(),
+    allocateNextSequence: jest.fn(),
+    getOperationalEvent: jest.fn(),
+    getActiveOperationalEvent: jest.fn(),
+    assertOperationalEventActive: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -141,6 +155,7 @@ describe('PopulationService', () => {
       populationDeliveryService as any,
       geocodingService as any,
       readiness as any,
+      operationalEvents as any,
     );
   });
 
@@ -3380,6 +3395,7 @@ describe('PopulationService', () => {
 
     const building = {
       id: 'building-1',
+      organizationId: 'organization-1',
       name: 'Installation Boucherville',
       address: '1234 rue Industrielle',
       city: 'Boucherville',
@@ -3534,6 +3550,13 @@ describe('PopulationService', () => {
       prisma.$transaction.mockImplementation(
         async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
       );
+      operationalEvents.createOperationalEventInTransaction.mockResolvedValue({
+        id: 'event-1',
+        organizationId: 'organization-1',
+        programId: 'program-1',
+        emergencyScenarioId: 'scenario-1',
+        status: PopulationOperationalEventStatus.ACTIVE,
+      });
     });
 
     it('crée un brouillon DRAFT avec le scénario et le créateur fournis côté serveur', async () => {
@@ -3569,6 +3592,42 @@ describe('PopulationService', () => {
           status: PopulationAlertStatus.DRAFT,
         }),
       );
+      expect(
+        operationalEvents.createOperationalEventInTransaction,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('fait également démarrer TEST à la séquence 1', async () => {
+      await service.createAlertDraft(
+        'building-1',
+        { ...dto, type: PopulationAlertType.TEST },
+        actor,
+      );
+      expect(prisma.populationAlert.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: PopulationAlertType.TEST,
+          operationalEventId: 'event-1',
+          cycleSequence: 1,
+        }),
+      });
+    });
+
+    it('laisse PRE_ALERT hors du cycle opérationnel MVP', async () => {
+      await service.createAlertDraft(
+        'building-1',
+        { ...dto, type: PopulationAlertType.PRE_ALERT },
+        actor,
+      );
+      expect(
+        operationalEvents.createOperationalEventInTransaction,
+      ).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: PopulationAlertType.PRE_ALERT,
+          operationalEventId: undefined,
+          cycleSequence: null,
+        }),
+      });
     });
 
     it('refuse UPDATE par la création générique même sans incidentEventId', async () => {
@@ -3976,6 +4035,8 @@ describe('PopulationService', () => {
       programId: 'program-1',
       incidentEventId: 'incident-1',
       emergencyScenarioId: 'scenario-1',
+      operationalEventId: 'event-1',
+      cycleSequence: 1,
       type: PopulationAlertType.EMERGENCY,
       status: PopulationAlertStatus.ACTIVE,
       titleFR: 'Alerte ammoniac',
@@ -4024,6 +4085,19 @@ describe('PopulationService', () => {
       prisma.populationAlertZone.createMany.mockResolvedValue({
         count: 1,
       });
+      operationalEvents.getOperationalEvent.mockResolvedValue({
+        id: 'event-1',
+        programId: 'program-1',
+        incidentEventId: 'incident-1',
+        status: PopulationOperationalEventStatus.ACTIVE,
+      });
+      operationalEvents.assertOperationalEventActive.mockResolvedValue({
+        id: 'event-1',
+        programId: 'program-1',
+        incidentEventId: 'incident-1',
+        status: PopulationOperationalEventStatus.ACTIVE,
+      });
+      operationalEvents.allocateNextSequence.mockResolvedValue(2);
     });
 
     it('retourne l’historique chronologique et uniquement des preuves de livraison sans PII', async () => {
@@ -4127,6 +4201,7 @@ describe('PopulationService', () => {
 
       await service.createIncidentFollowUpDraft(
         'building-1',
+        'organization-1',
         'incident-1',
         'alert-emergency-1',
         PopulationAlertType.UPDATE,
@@ -4192,6 +4267,7 @@ describe('PopulationService', () => {
 
       await service.createIncidentFollowUpDraft(
         'building-1',
+        'organization-1',
         'incident-1',
         'alert-emergency-1',
         PopulationAlertType.ALL_CLEAR,
@@ -4239,6 +4315,7 @@ describe('PopulationService', () => {
       await expect(
         service.createIncidentFollowUpDraft(
           'building-1',
+          'organization-1',
           'incident-1',
           'alert-emergency-1',
           PopulationAlertType.ALL_CLEAR,
@@ -4268,6 +4345,7 @@ describe('PopulationService', () => {
       await expect(
         service.createIncidentFollowUpDraft(
           'building-1',
+          'organization-1',
           'incident-1',
           'alert-emergency-1',
           PopulationAlertType.UPDATE,
@@ -4306,6 +4384,7 @@ describe('PopulationService', () => {
       await expect(
         service.createIncidentFollowUpDraft(
           'building-1',
+          'organization-1',
           'incident-1',
           'alert-emergency-1',
           PopulationAlertType.ALL_CLEAR,
@@ -4317,7 +4396,7 @@ describe('PopulationService', () => {
           },
           actor,
         ),
-      ).rejects.toThrow('Un ALL_CLEAR existe déjà pour cet incident');
+      ).rejects.toThrow('Un ALL_CLEAR existe déjà pour cet événement');
 
       expect(prisma.populationAlert.create).toHaveBeenCalledTimes(1);
 
@@ -4359,6 +4438,7 @@ describe('PopulationService', () => {
       await expect(
         service.createIncidentFollowUpDraft(
           'building-1',
+          'organization-1',
           'incident-1',
           'alert-emergency-1',
           PopulationAlertType.UPDATE,
@@ -4385,6 +4465,7 @@ describe('PopulationService', () => {
       await expect(
         service.createIncidentFollowUpDraft(
           'building-1',
+          'organization-1',
           'incident-1',
           'alert-emergency-1',
           PopulationAlertType.UPDATE,
@@ -4395,6 +4476,48 @@ describe('PopulationService', () => {
 
       expect(prisma.populationAlert.create).not.toHaveBeenCalled();
     });
+
+    it('refuse une communication legacy sans événement parent', async () => {
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        ...sourceAlert,
+        operationalEventId: null,
+        cycleSequence: null,
+      });
+      await expect(
+        service.createIncidentFollowUpDraft(
+          'building-1',
+          'organization-1',
+          'incident-1',
+          'alert-emergency-1',
+          PopulationAlertType.UPDATE,
+          updateContent,
+          actor,
+        ),
+      ).rejects.toThrow(
+        'Cette communication historique n’appartient à aucun événement Population',
+      );
+    });
+
+    it.each([PopulationAlertType.UPDATE, PopulationAlertType.ALL_CLEAR])(
+      'refuse %s lorsque l’événement est ENDED',
+      async (type) => {
+        prisma.populationAlert.findFirst.mockResolvedValue(sourceAlert);
+        operationalEvents.assertOperationalEventActive.mockRejectedValue(
+          new BadRequestException('L’événement Population n’est pas actif'),
+        );
+        await expect(
+          service.createOperationalFollowUpDraft(
+            'building-1',
+            'organization-1',
+            'event-1',
+            'alert-emergency-1',
+            type,
+            updateContent,
+            actor,
+          ),
+        ).rejects.toBeInstanceOf(BadRequestException);
+      },
+    );
 
     it('permet de consulter l’historique après suspension ou désactivation opérationnelle de Population', async () => {
       prisma.rueFacilityProfile.findUnique.mockResolvedValue({
@@ -4922,6 +5045,8 @@ describe('PopulationService', () => {
       id: 'alert-1',
       programId: 'program-1',
       emergencyScenarioId: 'scenario-1',
+      operationalEventId: 'event-1',
+      cycleSequence: 1,
       status: PopulationAlertStatus.DRAFT,
       titleFR: 'Alerte ammoniac',
       messageFR: 'Un rejet est en cours.',
@@ -7740,6 +7865,140 @@ describe('PopulationService', () => {
       expect(prisma.populationSubscriber.update).not.toHaveBeenCalled();
 
       expect(prisma.populationConsentEvent.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Population operational event close', () => {
+    const eventRecord = {
+      id: 'event-1',
+      status: PopulationOperationalEventStatus.ACTIVE,
+      programId: 'program-1',
+      emergencyScenarioId: 'scenario-1',
+      incidentEventId: null,
+      startedAt: new Date(),
+      startedByType: CoroActorType.CLIENT_USER,
+      startedById: 'client-user-1',
+      endedAt: null,
+      endedByType: null,
+      endedById: null,
+      closeReason: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      emergencyScenario: {
+        id: 'scenario-1',
+        nameFR: 'Test',
+        nameEN: null,
+      },
+      alerts: [],
+    };
+
+    beforeEach(() => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      prisma.populationOperationalEvent.updateMany.mockResolvedValue({
+        count: 1,
+      });
+    });
+
+    it('clôture explicitement après un ALL_CLEAR diffusé', async () => {
+      prisma.populationOperationalEvent.findFirst
+        .mockResolvedValueOnce(eventRecord)
+        .mockResolvedValueOnce({
+          ...eventRecord,
+          status: PopulationOperationalEventStatus.ENDED,
+          endedAt: new Date(),
+        });
+      prisma.populationAlert.findFirst.mockResolvedValue({
+        id: 'all-clear-1',
+        status: PopulationAlertStatus.ACTIVE,
+        deliveries: [
+          {
+            status: PopulationDeliveryStatus.DELIVERED,
+            outcomeUnknownAt: null,
+          },
+        ],
+      });
+
+      await expect(
+        service.closeOperationalEvent(
+          'building-1',
+          'organization-1',
+          'event-1',
+          {},
+          { type: 'CLIENT_USER', id: 'client-user-2' },
+        ),
+      ).resolves.toMatchObject({
+        id: 'event-1',
+        status: PopulationOperationalEventStatus.ENDED,
+      });
+      expect(prisma.populationOperationalEvent.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: PopulationOperationalEventStatus.ENDED,
+            endedById: 'client-user-2',
+          }),
+        }),
+      );
+    });
+
+    it('refuse une clôture normale sans ALL_CLEAR', async () => {
+      prisma.populationOperationalEvent.findFirst.mockResolvedValue(
+        eventRecord,
+      );
+      prisma.populationAlert.findFirst.mockResolvedValue(null);
+      await expect(
+        service.closeOperationalEvent(
+          'building-1',
+          'organization-1',
+          'event-1',
+          {},
+          { type: 'CLIENT_USER', id: 'client-user-2' },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(
+        prisma.populationOperationalEvent.updateMany,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('exige un motif puis permet une clôture exceptionnelle', async () => {
+      prisma.populationOperationalEvent.findFirst
+        .mockResolvedValueOnce(eventRecord)
+        .mockResolvedValueOnce({
+          ...eventRecord,
+          status: PopulationOperationalEventStatus.ENDED,
+          closeReason: 'Exercice interrompu',
+        });
+      prisma.populationAlert.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.closeOperationalEvent(
+          'building-1',
+          'organization-1',
+          'event-1',
+          { forceClose: true },
+          { type: 'CLIENT_USER', id: 'client-user-2' },
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      prisma.populationOperationalEvent.findFirst.mockReset();
+      prisma.populationOperationalEvent.findFirst
+        .mockResolvedValueOnce(eventRecord)
+        .mockResolvedValueOnce({
+          ...eventRecord,
+          status: PopulationOperationalEventStatus.ENDED,
+          closeReason: 'Exercice interrompu',
+        });
+      await expect(
+        service.closeOperationalEvent(
+          'building-1',
+          'organization-1',
+          'event-1',
+          { forceClose: true, closeReason: 'Exercice interrompu' },
+          { type: 'CLIENT_USER', id: 'client-user-2' },
+        ),
+      ).resolves.toMatchObject({ closeReason: 'Exercice interrompu' });
     });
   });
 });
