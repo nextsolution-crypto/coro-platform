@@ -19,12 +19,12 @@ export const metadata: Metadata = {
 
   title: {
     default:
-      'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
+      'CORO — Plateforme de résilience opérationnelle et mesures d’urgence',
     template: '%s | CORO',
   },
 
   description:
-    'CORO est une plateforme SaaS canadienne pour créer, structurer et gérer les plans de mesures d’urgence, plans de sécurité incendie, plans de continuité et documents de conformité opérationnelle.',
+    'CORO relie la planification, les bâtiments, les incidents, l’intervention et les communications à la population dans une plateforme canadienne de résilience opérationnelle.',
 
   keywords: [
     'CORO',
@@ -83,10 +83,10 @@ export const metadata: Metadata = {
   url: 'https://getcoro.io/',
 
   title:
-    'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
+    'CORO — Plateforme de résilience opérationnelle et mesures d’urgence',
 
   description:
-    'Créez et gérez vos PMU, PSI, PCA et autres documents de conformité avec une plateforme conçue pour les professionnels du terrain.',
+    'Reliez la planification, les bâtiments, les incidents, l’intervention et les communications à la population dans une même plateforme.',
 
   siteName: 'CORO',
 
@@ -97,9 +97,9 @@ export const metadata: Metadata = {
   images: [
     {
       url: '/og-coro.jpg',
-      width: 1200,
-      height: 630,
-      alt: 'CORO — Plateforme SaaS de conformité opérationnelle',
+      width: 1728,
+      height: 910,
+      alt: 'CORO — Plateforme de résilience opérationnelle reliant planification, intervention et communication à la population',
     },
   ],
 },
@@ -108,10 +108,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
 
     title:
-      'CORO — Plateforme SaaS de conformité opérationnelle et mesures d’urgence',
+      'CORO — Plateforme de résilience opérationnelle et mesures d’urgence',
 
     description:
-      'Plateforme SaaS canadienne pour la création et la gestion des PMU, PSI, PCA et documents de conformité opérationnelle.',
+      'Plateforme canadienne reliant planification d’urgence, bâtiments, incidents, intervention et communication à la population.',
 
     images: ['/og-coro.jpg'],
   },

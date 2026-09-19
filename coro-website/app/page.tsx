@@ -27,10 +27,10 @@ export async function generateMetadata({
 
   if (isEnglish) {
     const title =
-      'CORO | Emergency Management & Compliance SaaS Platform';
+      'CORO | Operational Resilience & Emergency Management Platform';
 
     const description =
-      'CORO is a Canadian SaaS platform for creating, structuring and managing emergency response plans, fire safety plans, business continuity plans and operational compliance documents.';
+      'CORO connects planning, facilities, incidents, response and public communications in a Canadian operational resilience platform.';
 
     return {
       metadataBase: new URL(SITE_URL),
@@ -65,14 +65,14 @@ export async function generateMetadata({
         title,
 
         description:
-          'Create, structure and manage emergency response, fire safety, business continuity and compliance documents with a SaaS platform designed for field professionals.',
+          'CORO connects planning, facilities, incidents, response and public communications in a Canadian operational resilience platform.',
 
         images: [
           {
             url: '/og-coro.jpg',
-            width: 1200,
-            height: 630,
-            alt: 'CORO — Emergency management and compliance SaaS platform',
+            width: 1728,
+            height: 910,
+            alt: 'CORO — Operational resilience platform connecting planning, response and public communication',
           },
         ],
       },
@@ -83,7 +83,7 @@ export async function generateMetadata({
         title,
 
         description:
-          'Canadian SaaS platform for emergency management, fire safety, business continuity and operational compliance documentation.',
+          'Canadian platform connecting emergency planning, facilities, incidents, response and public communications.',
 
         images: [
           '/og-coro.jpg',
@@ -107,10 +107,10 @@ export async function generateMetadata({
 
 
   const title =
-    'CORO | Plateforme SaaS de conformité et mesures d’urgence';
+    'CORO | Plateforme de résilience opérationnelle et mesures d’urgence';
 
   const description =
-    'CORO est une plateforme SaaS canadienne pour créer, structurer et gérer des plans de mesures d’urgence, de sécurité incendie, de continuité des activités et de conformité documentaire.';
+    'CORO relie la planification, les bâtiments, les incidents, l’intervention et les communications à la population dans une plateforme canadienne de résilience opérationnelle.';
 
 
   return {
@@ -146,14 +146,14 @@ export async function generateMetadata({
       title,
 
       description:
-        'Créez, structurez et gérez vos documents de conformité avec une plateforme SaaS conçue pour les professionnels des mesures d’urgence, de la sécurité incendie et de la continuité.',
+        'CORO relie la planification, les bâtiments, les incidents, l’intervention et les communications à la population dans une plateforme canadienne de résilience opérationnelle.',
 
       images: [
         {
           url: '/og-coro.jpg',
-          width: 1200,
-          height: 630,
-          alt: 'CORO — Plateforme SaaS de conformité et mesures d’urgence',
+          width: 1728,
+          height: 910,
+          alt: 'CORO — Plateforme de résilience opérationnelle reliant planification, intervention et communication à la population',
         },
       ],
     },
@@ -164,7 +164,7 @@ export async function generateMetadata({
       title,
 
       description:
-        'Plateforme SaaS canadienne pour la création et la gestion de documents de conformité, de mesures d’urgence et de continuité.',
+        'Plateforme canadienne reliant planification d’urgence, bâtiments, incidents, intervention et communication à la population.',
 
       images: [
         '/og-coro.jpg',
