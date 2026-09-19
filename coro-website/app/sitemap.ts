@@ -357,6 +357,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       {
         path:
+          '/sentinelle-population',
+
+        priority:
+          0.9,
+      },
+
+      {
+        path:
           '/gestion-documentaire',
 
         priority:

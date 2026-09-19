@@ -4706,6 +4706,18 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
                 </span>
               </div>
             </a>
+
+            <a
+              href={lang === 'fr' ? '/sentinelle-population' : '/sentinelle-population?lang=en'}
+              className="coro-nav-dropdown-item"
+              onClick={() => setPlatformMenuOpen(false)}
+            >
+              <Globe size={18} />
+              <div>
+                <strong>Sentinelle Population</strong>
+                <span>{lang === 'fr' ? 'Alerte à la population et urgences environnementales.' : 'Public alerting and environmental emergencies.'}</span>
+              </div>
+            </a>
           </div>
         )}
       </div>
@@ -4924,6 +4936,13 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
           {lang === 'fr'
             ? 'Gestion des incidents'
             : 'Incident management'}
+        </a>
+
+        <a
+          href={lang === 'fr' ? '/sentinelle-population' : '/sentinelle-population?lang=en'}
+          onClick={() => setMenuOpen(false)}
+        >
+          Sentinelle Population
         </a>
       </div>
 
@@ -6303,6 +6322,50 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
       >
         {lang === 'fr' ? 'Découvrir Sentinelle' : 'Discover Sentinel'}
         <ArrowRight size={16} />
+      </a>
+
+      <a
+        href={lang === 'fr' ? '/sentinelle-population' : '/sentinelle-population?lang=en'}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '44px minmax(0, 1fr) 20px',
+          gap: 14,
+          alignItems: 'center',
+          marginTop: 28,
+          padding: 18,
+          color: '#FFFFFF',
+          backgroundColor: '#173F46',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 6,
+          textDecoration: 'none',
+          boxShadow: '0 14px 32px rgba(23,63,70,0.14)',
+        }}
+      >
+        <span
+          style={{
+            width: 44,
+            height: 44,
+            display: 'grid',
+            placeItems: 'center',
+            backgroundColor: '#C0392B',
+            borderRadius: 4,
+          }}
+        >
+          <Globe size={22} aria-hidden="true" />
+        </span>
+
+        <span style={{ minWidth: 0 }}>
+          <strong style={{ display: 'block', fontSize: 15, marginBottom: 4 }}>
+            Sentinelle Population
+          </strong>
+          <span style={{ display: 'block', color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 1.45 }}>
+            {lang === 'fr'
+              ? 'Pour préparer et mettre en œuvre les communications aux populations autour de l’installation.'
+              : 'Prepare and implement communications to populations around the facility.'}
+          </span>
+        </span>
+
+        <ArrowRight size={18} aria-hidden="true" />
       </a>
     </div>
   </div>

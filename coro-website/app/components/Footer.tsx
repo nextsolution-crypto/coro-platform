@@ -125,6 +125,12 @@ export default function Footer() {
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
                 {t.footer.links.pricing}
               </a>
+              <a href={lang === 'fr' ? '/sentinelle-population' : '/sentinelle-population?lang=en'}
+                style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                Sentinelle Population
+              </a>
               <a href="https://getcoro.io/#documents"
                 style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none' }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#FFFFFF'; }}
