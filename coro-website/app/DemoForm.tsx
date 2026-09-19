@@ -140,10 +140,7 @@ privacyLink: 'Privacy Policy',
 
   if (status === 'success') {
     return (
-      <div style={{
-        backgroundColor: '#EAFAF1', border: '1px solid #A9DFBF',
-        borderRadius: 12, padding: 48, textAlign: 'center',
-      }}>
+      <div className="coro-demo-form-success">
         <p style={{ fontSize: 48, marginBottom: 16 }}>🎉</p>
         <p style={{ fontSize: 20, fontWeight: 700, color: '#27AE60', marginBottom: 8 }}>
           {t.success}
@@ -153,11 +150,8 @@ privacyLink: 'Privacy Policy',
   }
 
   return (
-    <div style={{
-      backgroundColor: '#FFFFFF', borderRadius: 16, padding: 48,
-      border: '1px solid #E9ECEF', boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-    }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+    <form className="coro-demo-form-body" onSubmit={handleSubmit}>
+      <div className="coro-demo-form-row">
         <div>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.firstName} *
@@ -200,7 +194,7 @@ privacyLink: 'Privacy Policy',
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="coro-demo-form-row">
         <div>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.organization} *
@@ -270,7 +264,7 @@ privacyLink: 'Privacy Policy',
       )}
 
       <button
-        onClick={handleSubmit}
+        type="submit"
         disabled={status === 'sending'}
         style={{
           width: '100%', padding: '16px 32px',
@@ -305,6 +299,6 @@ privacyLink: 'Privacy Policy',
     {t.privacyLink}
   </a>
 </p>
-    </div>
+    </form>
   );
 }

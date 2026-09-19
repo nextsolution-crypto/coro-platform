@@ -2838,6 +2838,30 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
     0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
+.coro-demo-form-body {
+  width: 100%;
+  min-width: 0;
+}
+
+.coro-demo-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.coro-demo-form-row > div {
+  min-width: 0;
+}
+
+.coro-demo-form-success {
+  padding: 40px 24px;
+  border: 1px solid #a9dfbf;
+  border-radius: 12px;
+  background: #eafaf1;
+  text-align: center;
+}
+
 .coro-demo-form-top {
   display: flex;
   align-items: flex-start;
@@ -2984,12 +3008,21 @@ const [solutionsMenuOpen, setSolutionsMenuOpen] = useState(false);
   }
 
   .coro-demo-form-shell {
-    padding: 25px 20px;
-    border-radius: 16px;
+    padding: 24px 18px;
+    border-radius: 12px;
   }
 
   .coro-demo-form-top {
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .coro-demo-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .coro-demo-form-success {
+    padding: 30px 16px;
   }
 
   .coro-demo-final-statement {
