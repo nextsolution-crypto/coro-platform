@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Inter } from 'next/font/google';
+import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Inter } from "next/font/google";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -13,43 +13,42 @@ import {
   Map,
   MessageSquareText,
   RadioTower,
+  RefreshCw,
   Settings,
   ShieldCheck,
   Users,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { apiGet, apiPost, apiPut, getUser } from '../../../store/auth';
-import PortalLayout from '../../../components/PortalLayout';
-import PopulationOperationalMap from './PopulationOperationalMap';
-import styles from './population.module.css';
+import { apiGet, apiPost, apiPut, getUser } from "../../../store/auth";
+import PortalLayout from "../../../components/PortalLayout";
+import PopulationOperationalMap from "./PopulationOperationalMap";
+import styles from "./population.module.css";
 
 const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
+  subsets: ["latin"],
+  display: "swap",
 });
 
 type PopulationStatus = {
   eligible: boolean;
   rueStatus:
-    | 'NOT_ASSESSED'
-    | 'ASSESSMENT_IN_PROGRESS'
-    | 'CONFIRMED_SUBJECT'
-    | 'CONFIRMED_NOT_SUBJECT'
-    | 'EXEMPT';
+    | "NOT_ASSESSED"
+    | "ASSESSMENT_IN_PROGRESS"
+    | "CONFIRMED_SUBJECT"
+    | "CONFIRMED_NOT_SUBJECT"
+    | "EXEMPT";
   populationEnabled: boolean;
   programStatus:
-    | 'NOT_CONFIGURED'
-    | 'CONFIGURING'
-    | 'READY'
-    | 'ACTIVE'
-    | 'SUSPENDED'
-    | 'ARCHIVED';
-  deliveryMode: 'SANDBOX' | 'LIVE';
-  governanceMode: 'STANDARD' | 'DUAL_CONTROL';
+    | "NOT_CONFIGURED"
+    | "CONFIGURING"
+    | "READY"
+    | "ACTIVE"
+    | "SUSPENDED"
+    | "ARCHIVED";
+  deliveryMode: "SANDBOX" | "LIVE";
+  governanceMode: "STANDARD" | "DUAL_CONTROL";
   populationPermissions: Array<
-    | 'POPULATION_PREPARE'
-    | 'POPULATION_APPROVE'
-    | 'POPULATION_SEND'
+    "POPULATION_PREPARE" | "POPULATION_APPROVE" | "POPULATION_SEND"
   >;
 };
 
@@ -76,14 +75,14 @@ type PopulationProgram = {
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  deliveryMode: 'SANDBOX' | 'LIVE';
-  governanceMode: 'STANDARD' | 'DUAL_CONTROL';
+  deliveryMode: "SANDBOX" | "LIVE";
+  governanceMode: "STANDARD" | "DUAL_CONTROL";
 };
 
 type PopulationConfiguration = {
   configured: boolean;
   rueFacilityProfileId: string;
-  status: PopulationStatus['programStatus'];
+  status: PopulationStatus["programStatus"];
   program: PopulationProgram | null;
 };
 
@@ -123,46 +122,46 @@ type PopulationScenarioList = {
 };
 
 type PopulationPreview = {
-    building: {
-      id: string;
-      name: string;
-      address: string | null;
-      city: string | null;
-      province: string | null;
-      latitude: number | null;
-      longitude: number | null;
-    };
-    scenario: {
-      id: string;
-      nameFR: string;
-      nameEN: string | null;
-    };
-    population: {
-      activeSubscriberCount: number;
-      geolocatedSubscriberCount: number;
-      unlocatedSubscriberCount: number;
-      uniqueTargetCount: number;
-      uniqueSmsTargetCount: number;
-      uniqueEmailTargetCount: number;
-    };
-    zones: Array<{
-      id: string;
-      code: string;
-      nameFR: string;
-      nameEN: string | null;
-      geometry: unknown | null;
-      maxDistanceKm: number | null;
-      protectiveAction: string | null;
-      instructionFR: string | null;
-      instructionEN: string | null;
-      targetCount: number;
-      smsTargetCount: number;
-      emailTargetCount: number;
-    }>;
+  building: {
+    id: string;
+    name: string;
+    address: string | null;
+    city: string | null;
+    province: string | null;
+    latitude: number | null;
+    longitude: number | null;
   };
+  scenario: {
+    id: string;
+    nameFR: string;
+    nameEN: string | null;
+  };
+  population: {
+    activeSubscriberCount: number;
+    geolocatedSubscriberCount: number;
+    unlocatedSubscriberCount: number;
+    uniqueTargetCount: number;
+    uniqueSmsTargetCount: number;
+    uniqueEmailTargetCount: number;
+  };
+  zones: Array<{
+    id: string;
+    code: string;
+    nameFR: string;
+    nameEN: string | null;
+    geometry: unknown | null;
+    maxDistanceKm: number | null;
+    protectiveAction: string | null;
+    instructionFR: string | null;
+    instructionEN: string | null;
+    targetCount: number;
+    smsTargetCount: number;
+    emailTargetCount: number;
+  }>;
+};
 
 type PopulationAlertDraftForm = {
-  type: 'EMERGENCY' | 'TEST' | 'UPDATE' | 'ALL_CLEAR';
+  type: "EMERGENCY" | "TEST" | "UPDATE" | "ALL_CLEAR";
   titleFR: string;
   titleEN: string;
   messageFR: string;
@@ -192,7 +191,7 @@ type CreatedPopulationAlert = {
   recipientsFrozenAt?: string | null;
   frozenByType?: string | null;
   frozenById?: string | null;
-  deliveryModeSnapshot?: 'SANDBOX' | 'LIVE' | null;
+  deliveryModeSnapshot?: "SANDBOX" | "LIVE" | null;
   sendingAt?: string | null;
   sentByType?: string | null;
   sentById?: string | null;
@@ -202,18 +201,62 @@ type CreatedPopulationAlert = {
   endedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  operationalEventId?: string | null;
+  cycleSequence?: number | null;
+  contextSnapshot?: { targeting?: PopulationEventTargeting | null } | null;
+};
+
+type PopulationEventTargeting = {
+  strategy?: "HISTORICAL_UNION_CURRENT";
+  currentZoneSubscriberCount?: number;
+  historicalSubscriberCount?: number;
+  uniqueTargetCount?: number;
+  overlapSubscriberCount?: number;
+  revalidationSuppressedSubscriberCount?: number;
+  deliverableSubscriberCount?: number;
+};
+
+type PopulationOperationalEventAlert = {
+  id: string;
+  type: "EMERGENCY" | "TEST" | "UPDATE" | "ALL_CLEAR";
+  status: string;
+  cycleSequence: number | null;
+  titleFR: string;
+  createdAt: string;
+  activatedAt: string | null;
+  endedAt: string | null;
+  cancelledAt: string | null;
+  deliveryCounts: Record<string, number>;
+  targetedSubscriberCount: number;
+  deliverableDeliveryCount: number;
+  targeting: PopulationEventTargeting | null;
+};
+
+type PopulationOperationalEvent = {
+  id: string;
+  status: "ACTIVE" | "ENDED" | "CANCELLED";
+  emergencyScenarioId: string;
+  incidentEventId: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  endedById: string | null;
+  closeReason: string | null;
+  emergencyScenario: { id: string; nameFR: string; nameEN: string | null };
+  alerts: PopulationOperationalEventAlert[];
+  communicationCount: number;
+  latestCommunication: PopulationOperationalEventAlert | null;
 };
 
 type FrozenPopulationDelivery = {
   id: string;
-  channel: 'SMS' | 'EMAIL';
+  channel: "SMS" | "EMAIL";
   status: string;
   language: string;
   queuedAt: string | null;
   sentAt: string | null;
   deliveredAt: string | null;
   failedAt: string | null;
-  suppressionReason?: 'SYNTHETIC_RECIPIENT' | 'SANDBOX_MODE' | null;
+  suppressionReason?: "SYNTHETIC_RECIPIENT" | "SANDBOX_MODE" | null;
 };
 
 type PopulationIncident = {
@@ -228,15 +271,15 @@ type PopulationIncident = {
 
 type PopulationIncidentAlertDelivery = {
   id: string;
-  channel: 'SMS' | 'EMAIL';
+  channel: "SMS" | "EMAIL";
   status:
-    | 'QUEUED'
-    | 'SENDING'
-    | 'SENT'
-    | 'DELIVERED'
-    | 'FAILED'
-    | 'CANCELLED'
-    | 'SUPPRESSED';
+    | "QUEUED"
+    | "SENDING"
+    | "SENT"
+    | "DELIVERED"
+    | "FAILED"
+    | "CANCELLED"
+    | "SUPPRESSED";
   language: string;
   queuedAt: string | null;
   sentAt: string | null;
@@ -264,6 +307,7 @@ type PopulationIncidentAlert = CreatedPopulationAlert & {
   cancelledAt?: string | null;
   zones?: PopulationIncidentAlertZone[];
   deliveries?: PopulationIncidentAlertDelivery[];
+  operationalEventId?: string | null;
 };
 
 type PopulationFreezeResult = {
@@ -271,7 +315,7 @@ type PopulationFreezeResult = {
   status: string;
   approvedAt: string | null;
   recipientsFrozenAt: string;
-  deliveryMode: 'SANDBOX' | 'LIVE';
+  deliveryMode: "SANDBOX" | "LIVE";
   targeting: {
     subscriberCount: number;
     deliveryCount: number;
@@ -281,6 +325,13 @@ type PopulationFreezeResult = {
     deliverableSmsCount: number;
     deliverableEmailCount: number;
     suppressedCount: number;
+    strategy?: "HISTORICAL_UNION_CURRENT";
+    currentZoneSubscriberCount?: number;
+    historicalSubscriberCount?: number;
+    uniqueTargetCount?: number;
+    overlapSubscriberCount?: number;
+    revalidationSuppressedSubscriberCount?: number;
+    deliverableSubscriberCount?: number;
   };
   deliveries: FrozenPopulationDelivery[];
 };
@@ -288,7 +339,7 @@ type PopulationFreezeResult = {
 type PopulationLivePreflight = {
   ready: boolean;
   blockingReasons: string[];
-  mode: 'SANDBOX' | 'LIVE' | null;
+  mode: "SANDBOX" | "LIVE" | null;
   targetedPeople: number;
   materialized: number;
   deliverable: number;
@@ -336,55 +387,52 @@ type PopulationConfigurationForm = {
 };
 
 const EMPTY_CONFIGURATION_FORM: PopulationConfigurationForm = {
-  publicSlug: '',
-  nameFR: '',
-  nameEN: '',
-  descriptionFR: '',
-  descriptionEN: '',
-  publicPhone: '',
-  publicEmail: '',
-  websiteUrl: '',
+  publicSlug: "",
+  nameFR: "",
+  nameEN: "",
+  descriptionFR: "",
+  descriptionEN: "",
+  publicPhone: "",
+  publicEmail: "",
+  websiteUrl: "",
   registrationEnabled: true,
   smsEnabled: true,
   emailEnabled: true,
-  privacyTextFR: '',
-  privacyTextEN: '',
-  consentTextFR: '',
-  consentTextEN: '',
-  consentVersion: '1.0',
+  privacyTextFR: "",
+  privacyTextEN: "",
+  consentTextFR: "",
+  consentTextEN: "",
+  consentVersion: "1.0",
 };
 
-const STATUS_LABELS: Record<PopulationStatus['programStatus'], string> = {
-  NOT_CONFIGURED: 'À configurer',
-  CONFIGURING: 'Configuration',
-  READY: 'Prêt à activer',
-  ACTIVE: 'Actif',
-  SUSPENDED: 'Suspendu',
-  ARCHIVED: 'Archivé',
+const STATUS_LABELS: Record<PopulationStatus["programStatus"], string> = {
+  NOT_CONFIGURED: "À configurer",
+  CONFIGURING: "Configuration",
+  READY: "Prêt à activer",
+  ACTIVE: "Actif",
+  SUSPENDED: "Suspendu",
+  ARCHIVED: "Archivé",
 };
 
-const RUE_LABELS: Record<PopulationStatus['rueStatus'], string> = {
-  NOT_ASSESSED: 'Non évalué',
-  ASSESSMENT_IN_PROGRESS: 'Évaluation en cours',
-  CONFIRMED_SUBJECT: 'Site assujetti',
-  CONFIRMED_NOT_SUBJECT: 'Non assujetti',
-  EXEMPT: 'Exempté',
+const RUE_LABELS: Record<PopulationStatus["rueStatus"], string> = {
+  NOT_ASSESSED: "Non évalué",
+  ASSESSMENT_IN_PROGRESS: "Évaluation en cours",
+  CONFIRMED_SUBJECT: "Site assujetti",
+  CONFIRMED_NOT_SUBJECT: "Non assujetti",
+  EXEMPT: "Exempté",
 };
 
 const READINESS_LABELS: Record<string, string> = {
-  PROGRAM_NOT_CONFIGURED: 'Le programme doit être configuré.',
-  PUBLIC_SLUG_REQUIRED: 'L’identifiant public du programme est requis.',
-  NAME_FR_REQUIRED: 'Le nom français du programme est requis.',
+  PROGRAM_NOT_CONFIGURED: "Le programme doit être configuré.",
+  PUBLIC_SLUG_REQUIRED: "L’identifiant public du programme est requis.",
+  NAME_FR_REQUIRED: "Le nom français du programme est requis.",
   DELIVERY_CHANNEL_REQUIRED:
-    'Au moins un canal de diffusion SMS ou courriel doit être activé.',
-  PRIVACY_TEXT_FR_REQUIRED:
-    'Le texte français de confidentialité est requis.',
-  CONSENT_TEXT_FR_REQUIRED:
-    'Le texte français de consentement est requis.',
-  CONSENT_VERSION_REQUIRED:
-    'Une version du consentement doit être définie.',
+    "Au moins un canal de diffusion SMS ou courriel doit être activé.",
+  PRIVACY_TEXT_FR_REQUIRED: "Le texte français de confidentialité est requis.",
+  CONSENT_TEXT_FR_REQUIRED: "Le texte français de consentement est requis.",
+  CONSENT_VERSION_REQUIRED: "Une version du consentement doit être définie.",
   OPERATIONAL_SCENARIO_REQUIRED:
-    'Au moins un scénario RUE actif et validé avec une zone d’impact opérationnelle est requis.',
+    "Au moins un scénario RUE actif et validé avec une zone d’impact opérationnelle est requis.",
 };
 
 export default function PopulationPage() {
@@ -403,10 +451,12 @@ export default function PopulationPage() {
 
   const [configurationOpen, setConfigurationOpen] = useState(false);
   const [configurationSaving, setConfigurationSaving] = useState(false);
-  const [configurationMessage, setConfigurationMessage] =
-    useState<string | null>(null);
-  const [configurationError, setConfigurationError] =
-    useState<string | null>(null);
+  const [configurationMessage, setConfigurationMessage] = useState<
+    string | null
+  >(null);
+  const [configurationError, setConfigurationError] = useState<string | null>(
+    null,
+  );
 
   const [configurationForm, setConfigurationForm] =
     useState<PopulationConfigurationForm>(EMPTY_CONFIGURATION_FORM);
@@ -415,8 +465,9 @@ export default function PopulationPage() {
   const [scenariosLoading, setScenariosLoading] = useState(false);
   const [scenariosError, setScenariosError] = useState<string | null>(null);
 
-  const [selectedScenarioId, setSelectedScenarioId] =
-    useState<string | null>(null);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(
+    null,
+  );
 
   const [preview, setPreview] = useState<PopulationPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -431,14 +482,12 @@ export default function PopulationPage() {
   const [createdAlert, setCreatedAlert] =
     useState<CreatedPopulationAlert | null>(null);
 
-  const [freezeConfirmationOpen, setFreezeConfirmationOpen] =
-    useState(false);
+  const [freezeConfirmationOpen, setFreezeConfirmationOpen] = useState(false);
 
   const [freezeResult, setFreezeResult] =
     useState<PopulationFreezeResult | null>(null);
 
-  const [sendConfirmationOpen, setSendConfirmationOpen] =
-    useState(false);
+  const [sendConfirmationOpen, setSendConfirmationOpen] = useState(false);
   const [livePreflight, setLivePreflight] =
     useState<PopulationLivePreflight | null>(null);
   const [deliverySummary, setDeliverySummary] =
@@ -448,46 +497,59 @@ export default function PopulationPage() {
   const [incidentsLoading, setIncidentsLoading] = useState(false);
   const [incidentsError, setIncidentsError] = useState<string | null>(null);
 
-  const [incidentHistory, setIncidentHistory] =
-    useState<PopulationIncident[]>([]);
+  const [incidentHistory, setIncidentHistory] = useState<PopulationIncident[]>(
+    [],
+  );
 
-  const [incidentHistoryLoading, setIncidentHistoryLoading] =
-    useState(false);
+  const [incidentHistoryLoading, setIncidentHistoryLoading] = useState(false);
 
-  const [incidentHistoryError, setIncidentHistoryError] =
-    useState<string | null>(null);
+  const [incidentHistoryError, setIncidentHistoryError] = useState<
+    string | null
+  >(null);
 
-  const [selectedIncidentId, setSelectedIncidentId] =
-    useState<string | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    null,
+  );
 
-  const [incidentAlerts, setIncidentAlerts] =
-    useState<PopulationIncidentAlert[]>([]);
+  const [incidentAlerts, setIncidentAlerts] = useState<
+    PopulationIncidentAlert[]
+  >([]);
 
-  const [incidentAlertsLoading, setIncidentAlertsLoading] =
-    useState(false);
+  const [incidentAlertsLoading, setIncidentAlertsLoading] = useState(false);
 
-  const [incidentAlertsError, setIncidentAlertsError] =
-    useState<string | null>(null);
+  const [incidentAlertsError, setIncidentAlertsError] = useState<string | null>(
+    null,
+  );
 
   const [communicationsOpen, setCommunicationsOpen] = useState(false);
 
   const [followUpCreating, setFollowUpCreating] = useState(false);
+  const [activeEvent, setActiveEvent] =
+    useState<PopulationOperationalEvent | null>(null);
+  const [lastClosedEvent, setLastClosedEvent] =
+    useState<PopulationOperationalEvent | null>(null);
+  const [eventLoading, setEventLoading] = useState(false);
+  const [eventError, setEventError] = useState<string | null>(null);
+  const [closeEventOpen, setCloseEventOpen] = useState(false);
+  const [closeEventReason, setCloseEventReason] = useState("");
+  const [confirmIncompleteClose, setConfirmIncompleteClose] = useState(false);
+  const [legacyEndingId, setLegacyEndingId] = useState<string | null>(null);
 
   const [alertForm, setAlertForm] = useState<PopulationAlertDraftForm>({
-    type: 'EMERGENCY',
-    titleFR: '',
-    titleEN: '',
-    messageFR: '',
-    messageEN: '',
-    instructionFR: '',
-    instructionEN: '',
+    type: "EMERGENCY",
+    titleFR: "",
+    titleEN: "",
+    messageFR: "",
+    messageEN: "",
+    instructionFR: "",
+    instructionEN: "",
   });
 
   useEffect(() => {
     const user = getUser();
 
     if (!user) {
-      router.replace('/login');
+      router.replace("/login");
       return;
     }
 
@@ -497,8 +559,8 @@ export default function PopulationPage() {
   useEffect(() => {
     if (
       !createdAlert?.id ||
-      createdAlert.deliveryModeSnapshot !== 'LIVE' ||
-      !['SENDING', 'ACTIVE'].includes(createdAlert.status)
+      createdAlert.deliveryModeSnapshot !== "LIVE" ||
+      !["SENDING", "ACTIVE"].includes(createdAlert.status)
     ) {
       return;
     }
@@ -506,10 +568,18 @@ export default function PopulationPage() {
     const refresh = async () => {
       polls += 1;
       try {
-        const result = (await apiGet(
-          `/client-portal/buildings/${buildingId}/population/alerts/${createdAlert.id}/delivery-status`,
-        )) as PopulationDeliverySummary;
-        setDeliverySummary(result);
+        const [deliveryResult, eventResult] = await Promise.all([
+          apiGet(
+            `/client-portal/buildings/${buildingId}/population/alerts/${createdAlert.id}/delivery-status`,
+          ) as Promise<PopulationDeliverySummary>,
+          createdAlert.operationalEventId
+            ? (apiGet(
+                `/client-portal/buildings/${buildingId}/population/operational-events/${createdAlert.operationalEventId}`,
+              ) as Promise<PopulationOperationalEvent>)
+            : Promise.resolve(null),
+        ]);
+        setDeliverySummary(deliveryResult);
+        if (eventResult) setActiveEvent(eventResult);
       } catch {
         // Le statut courant reste affiché; le polling est borné et non bloquant.
       }
@@ -552,9 +622,9 @@ export default function PopulationPage() {
       setIncidentAlerts([]);
 
       setIncidentAlertsError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'L’historique des communications de l’incident n’a pas pu être chargé.',
+          : "L’historique des communications de l’incident n’a pas pu être chargé.",
       );
     } finally {
       setIncidentAlertsLoading(false);
@@ -581,9 +651,9 @@ export default function PopulationPage() {
       setIncidentHistory([]);
 
       setIncidentHistoryError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'L’historique des incidents du bâtiment n’a pas pu être chargé.',
+          : "L’historique des incidents du bâtiment n’a pas pu être chargé.",
       );
     } finally {
       setIncidentHistoryLoading(false);
@@ -612,9 +682,9 @@ export default function PopulationPage() {
        */
       const operationalIncidents = receivedIncidents.filter(
         (incident) =>
-          incident.status !== 'PRE_ALERT' &&
-          incident.status !== 'RESOLVED' &&
-          incident.status !== 'CANCELLED',
+          incident.status !== "PRE_ALERT" &&
+          incident.status !== "RESOLVED" &&
+          incident.status !== "CANCELLED",
       );
 
       setIncidents(operationalIncidents);
@@ -635,9 +705,9 @@ export default function PopulationPage() {
       setIncidentAlerts([]);
 
       setIncidentsError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'Les incidents actifs du bâtiment n’ont pas pu être chargés.',
+          : "Les incidents actifs du bâtiment n’ont pas pu être chargés.",
       );
     } finally {
       setIncidentsLoading(false);
@@ -654,6 +724,30 @@ export default function PopulationPage() {
     setSelectedIncidentId(incidentId);
     setCommunicationsOpen(true);
     await loadIncidentAlertHistory(incidentId);
+  };
+
+  const loadActiveOperationalEvent = async () => {
+    setEventLoading(true);
+    setEventError(null);
+    try {
+      const result = (await apiGet(
+        `/client-portal/buildings/${buildingId}/population/operational-events/active`,
+      )) as PopulationOperationalEvent | null;
+      setActiveEvent(result);
+      if (result) {
+        setLastClosedEvent(null);
+      }
+      return result;
+    } catch (error: any) {
+      setEventError(
+        typeof error?.message === "string"
+          ? error.message
+          : "L’événement Population n’a pas pu être chargé.",
+      );
+      return null;
+    } finally {
+      setEventLoading(false);
+    }
   };
 
   const fetchStatus = async () => {
@@ -684,9 +778,7 @@ export default function PopulationPage() {
           setSelectedScenarioId((current) => {
             if (
               current &&
-              scenarioRes.scenarios.some(
-                (scenario) => scenario.id === current,
-              )
+              scenarioRes.scenarios.some((scenario) => scenario.id === current)
             ) {
               return current;
             }
@@ -701,9 +793,9 @@ export default function PopulationPage() {
           setScenarios([]);
 
           setScenariosError(
-            typeof error?.message === 'string'
+            typeof error?.message === "string"
               ? error.message
-              : 'Les scénarios RUE n’ont pas pu être chargés.',
+              : "Les scénarios RUE n’ont pas pu être chargés.",
           );
         } finally {
           setScenariosLoading(false);
@@ -713,11 +805,12 @@ export default function PopulationPage() {
 
         if (
           statusRes.populationEnabled &&
-          statusRes.programStatus === 'ACTIVE'
+          statusRes.programStatus === "ACTIVE"
         ) {
           await Promise.all([
             loadActiveIncidents(),
             loadIncidentHistory(),
+            loadActiveOperationalEvent(),
           ]);
         } else {
           setIncidents([]);
@@ -727,28 +820,29 @@ export default function PopulationPage() {
           setIncidentsError(null);
           setIncidentHistoryError(null);
           setIncidentAlertsError(null);
+          setActiveEvent(null);
         }
 
         const program = configurationRes.program;
 
         if (program) {
           setConfigurationForm({
-            publicSlug: program.publicSlug || '',
-            nameFR: program.nameFR || '',
-            nameEN: program.nameEN || '',
-            descriptionFR: program.descriptionFR || '',
-            descriptionEN: program.descriptionEN || '',
-            publicPhone: program.publicPhone || '',
-            publicEmail: program.publicEmail || '',
-            websiteUrl: program.websiteUrl || '',
+            publicSlug: program.publicSlug || "",
+            nameFR: program.nameFR || "",
+            nameEN: program.nameEN || "",
+            descriptionFR: program.descriptionFR || "",
+            descriptionEN: program.descriptionEN || "",
+            publicPhone: program.publicPhone || "",
+            publicEmail: program.publicEmail || "",
+            websiteUrl: program.websiteUrl || "",
             registrationEnabled: program.registrationEnabled,
             smsEnabled: program.smsEnabled,
             emailEnabled: program.emailEnabled,
-            privacyTextFR: program.privacyTextFR || '',
-            privacyTextEN: program.privacyTextEN || '',
-            consentTextFR: program.consentTextFR || '',
-            consentTextEN: program.consentTextEN || '',
-            consentVersion: program.consentVersion || '',
+            privacyTextFR: program.privacyTextFR || "",
+            privacyTextEN: program.privacyTextEN || "",
+            consentTextFR: program.consentTextFR || "",
+            consentTextEN: program.consentTextEN || "",
+            consentVersion: program.consentVersion || "",
           });
         } else {
           setConfigurationForm(EMPTY_CONFIGURATION_FORM);
@@ -766,6 +860,7 @@ export default function PopulationPage() {
         setIncidentsError(null);
         setIncidentHistoryError(null);
         setIncidentAlertsError(null);
+        setActiveEvent(null);
       }
     } catch {
       setStatus(null);
@@ -776,10 +871,10 @@ export default function PopulationPage() {
   };
 
   const loadScenarioPreview = async (scenarioId: string) => {
-    if (!status?.populationEnabled || status.programStatus !== 'ACTIVE') {
+    if (!status?.populationEnabled || status.programStatus !== "ACTIVE") {
       setPreview(null);
       setPreviewError(
-        'Le programme doit être actif pour calculer la population ciblée.',
+        "Le programme doit être actif pour calculer la population ciblée.",
       );
       return;
     }
@@ -797,30 +892,30 @@ export default function PopulationPage() {
       setPreview(result);
     } catch (error: any) {
       setPreviewError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'Le calcul de la population ciblée n’a pas pu être effectué.',
+          : "Le calcul de la population ciblée n’a pas pu être effectué.",
       );
     } finally {
       setPreviewLoading(false);
     }
   };
 
-  const openAlertComposer = () => {
-    if (!selectedScenario || !preview) {
+  const openAlertComposer = (previewOverride?: PopulationPreview) => {
+    if (!selectedScenario || !(previewOverride ?? preview)) {
       return;
     }
 
     setAlertForm({
-      type: 'EMERGENCY',
+      type: "EMERGENCY",
       titleFR: `Alerte – ${selectedScenario.nameFR}`,
       titleEN: selectedScenario.nameEN
         ? `Alert – ${selectedScenario.nameEN}`
-        : '',
-      messageFR: '',
-      messageEN: '',
-      instructionFR: selectedScenario.publicInstructionFR || '',
-      instructionEN: selectedScenario.publicInstructionEN || '',
+        : "",
+      messageFR: "",
+      messageEN: "",
+      instructionFR: selectedScenario.publicInstructionFR || "",
+      instructionEN: selectedScenario.publicInstructionEN || "",
     });
 
     setAlertStep(1);
@@ -832,20 +927,43 @@ export default function PopulationPage() {
     setAlertComposerOpen(true);
   };
 
+  const prepareInitialFromCockpit = async () => {
+    if (!selectedScenario || activeEvent) return;
+    if (preview) {
+      openAlertComposer();
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const result = (await apiGet(
+        `/client-portal/buildings/${buildingId}/population/scenarios/${selectedScenario.id}/preview`,
+      )) as PopulationPreview;
+      setPreview(result);
+      openAlertComposer(result);
+    } catch (error: any) {
+      setPreviewError(
+        typeof error?.message === "string"
+          ? error.message
+          : "Le calcul de la population ciblée a échoué.",
+      );
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!alertComposerOpen) {
       return;
     }
 
     alertComposerRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
+      behavior: "smooth",
+      block: "start",
     });
   }, [alertComposerOpen]);
 
-  const updateAlertField = <
-    K extends keyof PopulationAlertDraftForm,
-  >(
+  const updateAlertField = <K extends keyof PopulationAlertDraftForm>(
     field: K,
     value: PopulationAlertDraftForm[K],
   ) => {
@@ -857,32 +975,24 @@ export default function PopulationPage() {
     setAlertError(null);
   };
 
-  const createIncidentFollowUpDraft = async (
-    type: 'UPDATE' | 'ALL_CLEAR',
-  ) => {
-    if (!selectedIncidentId) {
-      setAlertError(
-        'Aucun incident opérationnel n’est sélectionné.',
-      );
+  const createIncidentFollowUpDraft = async (type: "UPDATE" | "ALL_CLEAR") => {
+    if (!activeEvent) {
+      setAlertError("Aucun événement Population actif n’est disponible.");
       return;
     }
 
-    const sourceAlerts = incidentAlerts
+    const sourceAlerts = activeEvent.alerts
       .filter(
         (alert) =>
-          alert.status !== 'DRAFT' &&
-          alert.status !== 'READY' &&
-          alert.status !== 'CANCELLED' &&
-          alert.type !== 'ALL_CLEAR',
+          alert.status !== "DRAFT" &&
+          alert.status !== "READY" &&
+          alert.status !== "CANCELLED" &&
+          alert.type !== "ALL_CLEAR",
       )
       .sort((a, b) => {
-        const aTime = a.createdAt
-          ? new Date(a.createdAt).getTime()
-          : 0;
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
 
-        const bTime = b.createdAt
-          ? new Date(b.createdAt).getTime()
-          : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 
         return bTime - aTime;
       });
@@ -891,39 +1001,30 @@ export default function PopulationPage() {
 
     if (!sourceAlert) {
       setAlertError(
-        'Une communication déjà diffusée est requise avant de créer un suivi.',
+        "Une communication déjà diffusée est requise avant de créer un suivi.",
       );
       return;
     }
 
     if (
-      type === 'ALL_CLEAR' &&
-      incidentAlerts.some(
-        (alert) =>
-          alert.type === 'ALL_CLEAR' &&
-          alert.status !== 'CANCELLED',
+      type === "ALL_CLEAR" &&
+      activeEvent.alerts.some(
+        (alert) => alert.type === "ALL_CLEAR" && alert.status !== "CANCELLED",
       )
     ) {
-      setAlertError(
-        'Une fin d’alerte existe déjà pour cet incident.',
-      );
+      setAlertError("Une fin d’alerte existe déjà pour cet incident.");
       return;
     }
 
     const nextForm: PopulationAlertDraftForm = {
       type,
       titleFR:
-        type === 'UPDATE'
-          ? 'Mise à jour de la situation'
-          : 'Fin d’alerte',
-      titleEN:
-        type === 'UPDATE'
-          ? 'Situation update'
-          : 'All clear',
-      messageFR: '',
-      messageEN: '',
-      instructionFR: '',
-      instructionEN: '',
+        type === "UPDATE" ? "Mise à jour de la situation" : "Fin d’alerte",
+      titleEN: type === "UPDATE" ? "Situation update" : "All clear",
+      messageFR: "",
+      messageEN: "",
+      instructionFR: "",
+      instructionEN: "",
     };
 
     setAlertForm(nextForm);
@@ -931,47 +1032,54 @@ export default function PopulationPage() {
     setFollowUpCreating(true);
 
     try {
+      setSelectedScenarioId(activeEvent.emergencyScenarioId);
+      const currentPreview = (await apiGet(
+        `/client-portal/buildings/${buildingId}/population/scenarios/${activeEvent.emergencyScenarioId}/preview`,
+      )) as PopulationPreview;
+      setPreview(currentPreview);
+
       const route =
-        type === 'UPDATE'
-          ? `/client-portal/buildings/${buildingId}/population/incidents/${selectedIncidentId}/updates/draft`
-          : `/client-portal/buildings/${buildingId}/population/incidents/${selectedIncidentId}/all-clear/draft`;
+        type === "UPDATE"
+          ? `/client-portal/buildings/${buildingId}/population/operational-events/${activeEvent.id}/updates/draft`
+          : `/client-portal/buildings/${buildingId}/population/operational-events/${activeEvent.id}/all-clear/draft`;
 
       const result = (await apiPost(route, {
         sourceAlertId: sourceAlert.id,
         titleFR: nextForm.titleFR,
         titleEN: nextForm.titleEN || undefined,
         messageFR:
-          type === 'UPDATE'
-            ? 'Mise à jour de la situation en cours.'
-            : 'La situation ne nécessite plus le maintien de l’alerte à la population.',
+          type === "UPDATE"
+            ? "Mise à jour de la situation en cours."
+            : "La situation ne nécessite plus le maintien de l’alerte à la population.",
         messageEN:
-          type === 'UPDATE'
-            ? 'Update regarding the ongoing situation.'
-            : 'The situation no longer requires the public alert to remain in effect.',
+          type === "UPDATE"
+            ? "Update regarding the ongoing situation."
+            : "The situation no longer requires the public alert to remain in effect.",
         instructionFR: undefined,
         instructionEN: undefined,
       })) as CreatedPopulationAlert;
 
       setAlertForm({
         ...nextForm,
-        messageFR: result.messageFR || '',
-        messageEN: result.messageEN || '',
-        instructionFR: result.instructionFR || '',
-        instructionEN: result.instructionEN || '',
+        messageFR: result.messageFR || "",
+        messageEN: result.messageEN || "",
+        instructionFR: result.instructionFR || "",
+        instructionEN: result.instructionEN || "",
       });
 
       setCreatedAlert(result);
       setAlertStep(6);
+      setAlertComposerOpen(true);
       setCommunicationsOpen(false);
 
-      await loadIncidentAlertHistory(selectedIncidentId);
+      await loadActiveOperationalEvent();
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : type === 'UPDATE'
-            ? 'Le brouillon de mise à jour n’a pas pu être créé.'
-            : 'Le brouillon de fin d’alerte n’a pas pu être créé.',
+          : type === "UPDATE"
+            ? "Le brouillon de mise à jour n’a pas pu être créé."
+            : "Le brouillon de fin d’alerte n’a pas pu être créé.",
       );
     } finally {
       setFollowUpCreating(false);
@@ -981,7 +1089,7 @@ export default function PopulationPage() {
   const createPopulationAlertDraft = async () => {
     if (!selectedScenario || !preview) {
       setAlertError(
-        'Le scénario et le calcul de population doivent être confirmés.',
+        "Le scénario et le calcul de population doivent être confirmés.",
       );
       return;
     }
@@ -990,9 +1098,7 @@ export default function PopulationPage() {
     const messageFR = alertForm.messageFR.trim();
 
     if (!titleFR || !messageFR) {
-      setAlertError(
-        'Le titre et le message français sont requis.',
-      );
+      setAlertError("Le titre et le message français sont requis.");
       return;
     }
 
@@ -1005,7 +1111,7 @@ export default function PopulationPage() {
         {
           scenarioId: selectedScenario.id,
           incidentEventId:
-            alertForm.type === 'EMERGENCY' && selectedIncidentId
+            alertForm.type === "EMERGENCY" && selectedIncidentId
               ? selectedIncidentId
               : undefined,
           type: alertForm.type,
@@ -1013,10 +1119,8 @@ export default function PopulationPage() {
           titleEN: alertForm.titleEN.trim() || undefined,
           messageFR,
           messageEN: alertForm.messageEN.trim() || undefined,
-          instructionFR:
-            alertForm.instructionFR.trim() || undefined,
-          instructionEN:
-            alertForm.instructionEN.trim() || undefined,
+          instructionFR: alertForm.instructionFR.trim() || undefined,
+          instructionEN: alertForm.instructionEN.trim() || undefined,
         },
       )) as CreatedPopulationAlert;
 
@@ -1024,9 +1128,9 @@ export default function PopulationPage() {
       setAlertStep(6);
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'Le brouillon d’alerte n’a pas pu être créé.',
+          : "Le brouillon d’alerte n’a pas pu être créé.",
       );
     } finally {
       setAlertCreating(false);
@@ -1034,7 +1138,7 @@ export default function PopulationPage() {
   };
 
   const savePopulationAlertDraft = async () => {
-    if (!createdAlert || createdAlert.status !== 'DRAFT') {
+    if (!createdAlert || createdAlert.status !== "DRAFT") {
       return;
     }
 
@@ -1042,7 +1146,7 @@ export default function PopulationPage() {
     const messageFR = alertForm.messageFR.trim();
 
     if (!titleFR || !messageFR) {
-      setAlertError('Le titre et le message français sont requis.');
+      setAlertError("Le titre et le message français sont requis.");
       return;
     }
 
@@ -1066,9 +1170,9 @@ export default function PopulationPage() {
       setCreatedAlert(result);
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'Le brouillon n’a pas pu être enregistré.',
+          : "Le brouillon n’a pas pu être enregistré.",
       );
     } finally {
       setAlertWorkflowLoading(false);
@@ -1076,7 +1180,7 @@ export default function PopulationPage() {
   };
 
   const markPopulationAlertReady = async () => {
-    if (!createdAlert || createdAlert.status !== 'DRAFT') {
+    if (!createdAlert || createdAlert.status !== "DRAFT") {
       return;
     }
 
@@ -1097,9 +1201,9 @@ export default function PopulationPage() {
       setCreatedAlert(result);
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'L’alerte n’a pas pu passer à READY.',
+          : "L’alerte n’a pas pu passer à READY.",
       );
     } finally {
       setAlertWorkflowLoading(false);
@@ -1109,7 +1213,7 @@ export default function PopulationPage() {
   const approvePopulationAlert = async () => {
     if (
       !createdAlert ||
-      createdAlert.status !== 'READY' ||
+      createdAlert.status !== "READY" ||
       createdAlert.approvedAt
     ) {
       return;
@@ -1127,9 +1231,9 @@ export default function PopulationPage() {
       setCreatedAlert(result);
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'L’approbation de l’alerte a échoué.',
+          : "L’approbation de l’alerte a échoué.",
       );
     } finally {
       setAlertWorkflowLoading(false);
@@ -1139,7 +1243,7 @@ export default function PopulationPage() {
   const freezePopulationAlertRecipients = async () => {
     if (
       !createdAlert ||
-      createdAlert.status !== 'READY' ||
+      createdAlert.status !== "READY" ||
       !createdAlert.approvedAt
     ) {
       return;
@@ -1165,14 +1269,14 @@ export default function PopulationPage() {
             }
           : current,
       );
-      if (result.deliveryMode === 'LIVE') {
+      if (result.deliveryMode === "LIVE") {
         await loadLivePreflight(result.alertId);
       }
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'Les destinataires n’ont pas pu être figés.',
+          : "Les destinataires n’ont pas pu être figés.",
       );
     } finally {
       setAlertWorkflowLoading(false);
@@ -1182,7 +1286,7 @@ export default function PopulationPage() {
   const sendPopulationAlert = async () => {
     if (
       !createdAlert ||
-      createdAlert.status !== 'READY' ||
+      createdAlert.status !== "READY" ||
       !createdAlert.approvedAt ||
       !createdAlert.recipientsFrozenAt ||
       !freezeResult ||
@@ -1195,11 +1299,11 @@ export default function PopulationPage() {
     setAlertError(null);
 
     try {
-      if (freezeResult.deliveryMode === 'LIVE') {
+      if (freezeResult.deliveryMode === "LIVE") {
         const preflight = await loadLivePreflight(createdAlert.id);
         if (!preflight.ready) {
           throw new Error(
-            'Le preflight LIVE a changé. Vérifiez le roster avant de diffuser.',
+            "Le preflight LIVE a changé. Vérifiez le roster avant de diffuser.",
           );
         }
       }
@@ -1211,6 +1315,10 @@ export default function PopulationPage() {
       setCreatedAlert(result);
       setSendConfirmationOpen(false);
 
+      if (result.operationalEventId) {
+        await loadActiveOperationalEvent();
+      }
+
       if (result.incidentEventId) {
         await loadIncidentAlertHistory(result.incidentEventId);
         setSelectedIncidentId(result.incidentEventId);
@@ -1218,12 +1326,66 @@ export default function PopulationPage() {
       }
     } catch (error: any) {
       setAlertError(
-        typeof error?.message === 'string'
+        typeof error?.message === "string"
           ? error.message
-          : 'La diffusion de l’alerte n’a pas pu être déclenchée.',
+          : "La diffusion de l’alerte n’a pas pu être déclenchée.",
       );
     } finally {
       setAlertWorkflowLoading(false);
+    }
+  };
+
+  const closeOperationalEvent = async () => {
+    if (!activeEvent) return;
+    setActionLoading("close-event");
+    setEventError(null);
+    try {
+      const result = (await apiPost(
+        `/client-portal/buildings/${buildingId}/population/operational-events/${activeEvent.id}/close`,
+        {
+          confirmIncompleteDelivery: confirmIncompleteClose || undefined,
+          closeReason: closeEventReason.trim() || undefined,
+        },
+      )) as PopulationOperationalEvent;
+      setLastClosedEvent(result);
+      setActiveEvent(null);
+      setCloseEventOpen(false);
+      setCloseEventReason("");
+      setConfirmIncompleteClose(false);
+    } catch (error: any) {
+      setEventError(
+        typeof error?.message === "string"
+          ? error.message
+          : "L’événement n’a pas pu être clos.",
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const endLegacyCommunication = async (alertId: string) => {
+    const confirmed = window.confirm(
+      "Cette action marque uniquement cette communication comme terminée. Aucune communication de fin d’alerte ne sera envoyée.",
+    );
+    if (!confirmed) return;
+    setLegacyEndingId(alertId);
+    setEventError(null);
+    try {
+      await apiPost(
+        `/client-portal/buildings/${buildingId}/population/alerts/${alertId}/end`,
+        {},
+      );
+      if (selectedIncidentId) {
+        await loadIncidentAlertHistory(selectedIncidentId);
+      }
+    } catch (error: any) {
+      setEventError(
+        typeof error?.message === "string"
+          ? error.message
+          : "La communication historique n’a pas pu être terminée.",
+      );
+    } finally {
+      setLegacyEndingId(null);
     }
   };
 
@@ -1257,7 +1419,7 @@ export default function PopulationPage() {
 
       await fetchStatus();
 
-      setConfigurationMessage('Configuration enregistrée avec succès.');
+      setConfigurationMessage("Configuration enregistrée avec succès.");
     } catch (error: any) {
       const payload = error?.data || error?.response?.data;
 
@@ -1271,11 +1433,11 @@ export default function PopulationPage() {
       }
 
       const message =
-        typeof payload?.message === 'string'
+        typeof payload?.message === "string"
           ? payload.message
-          : typeof error?.message === 'string'
+          : typeof error?.message === "string"
             ? error.message
-            : 'La configuration n’a pas pu être enregistrée.';
+            : "La configuration n’a pas pu être enregistrée.";
 
       setConfigurationError(message);
     } finally {
@@ -1284,7 +1446,7 @@ export default function PopulationPage() {
   };
 
   const runLifecycleAction = async (
-    action: 'ready' | 'activate' | 'suspend',
+    action: "ready" | "activate" | "suspend",
   ) => {
     setActionLoading(action);
     setActionError(null);
@@ -1310,11 +1472,11 @@ export default function PopulationPage() {
       }
 
       const message =
-        typeof payload?.message === 'string'
+        typeof payload?.message === "string"
           ? payload.message
-          : typeof error?.message === 'string'
+          : typeof error?.message === "string"
             ? error.message
-            : 'L’opération n’a pas pu être complétée.';
+            : "L’opération n’a pas pu être complétée.";
 
       setActionError(message);
     } finally {
@@ -1328,16 +1490,16 @@ export default function PopulationPage() {
         <div
           style={{
             minHeight: 320,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <p
             className="animate-pulse"
             style={{
               margin: 0,
-              color: '#ADB5BD',
+              color: "#ADB5BD",
               fontSize: 14,
             }}
           >
@@ -1355,15 +1517,15 @@ export default function PopulationPage() {
           type="button"
           onClick={() => router.push(`/sentinelle/${buildingId}`)}
           style={{
-            display: 'flex',
-            alignItems: 'center',
+            display: "flex",
+            alignItems: "center",
             gap: 5,
             marginBottom: 20,
             padding: 0,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            color: '#ADB5BD',
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "#ADB5BD",
             fontSize: 13,
           }}
         >
@@ -1375,21 +1537,17 @@ export default function PopulationPage() {
           style={{
             maxWidth: 680,
             padding: 32,
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E9ECEF",
             borderRadius: 14,
           }}
         >
-          <ShieldCheck
-            size={34}
-            color="#ADB5BD"
-            style={{ marginBottom: 16 }}
-          />
+          <ShieldCheck size={34} color="#ADB5BD" style={{ marginBottom: 16 }} />
 
           <h1
             style={{
-              margin: '0 0 8px',
-              color: '#2C3E50',
+              margin: "0 0 8px",
+              color: "#2C3E50",
               fontSize: 22,
               fontWeight: 800,
             }}
@@ -1399,8 +1557,8 @@ export default function PopulationPage() {
 
           <p
             style={{
-              margin: '0 0 16px',
-              color: '#6C757D',
+              margin: "0 0 16px",
+              color: "#6C757D",
               fontSize: 14,
               lineHeight: 1.6,
             }}
@@ -1411,11 +1569,11 @@ export default function PopulationPage() {
           {status?.rueStatus && (
             <span
               style={{
-                display: 'inline-block',
-                padding: '5px 10px',
+                display: "inline-block",
+                padding: "5px 10px",
                 borderRadius: 20,
-                backgroundColor: '#F1F3F5',
-                color: '#6C757D',
+                backgroundColor: "#F1F3F5",
+                color: "#6C757D",
                 fontSize: 11,
                 fontWeight: 700,
               }}
@@ -1428,1365 +1586,1382 @@ export default function PopulationPage() {
     );
   }
 
-    const programStatus = STATUS_LABELS[status.programStatus];
+  const programStatus = STATUS_LABELS[status.programStatus];
 
   const isConfigured = configuration?.configured === true;
   const program = configuration?.program ?? null;
 
   const isActive =
-    status.populationEnabled && status.programStatus === 'ACTIVE';
+    status.populationEnabled && status.programStatus === "ACTIVE";
   const canPrepare =
-    status.populationPermissions?.includes('POPULATION_PREPARE') ?? false;
+    status.populationPermissions?.includes("POPULATION_PREPARE") ?? false;
 
-  const canMarkReady =
-    isConfigured && status.programStatus === 'CONFIGURING';
+  const canMarkReady = isConfigured && status.programStatus === "CONFIGURING";
 
   const canActivate =
     isConfigured &&
-    (status.programStatus === 'READY' ||
-      status.programStatus === 'SUSPENDED');
+    (status.programStatus === "READY" || status.programStatus === "SUSPENDED");
 
-  const canSuspend =
-    isConfigured && status.programStatus === 'ACTIVE';
+  const canSuspend = isConfigured && status.programStatus === "ACTIVE";
 
   const selectedScenario =
-    scenarios.find(
-      (scenario) => scenario.id === selectedScenarioId,
-    ) ?? null;
+    scenarios.find((scenario) => scenario.id === selectedScenarioId) ?? null;
 
   return (
     <PortalLayout>
       <div className={`${styles.page} ${inter.className}`}>
-      {/* Header */}
-      <header className={styles.header} style={{ marginBottom: 24 }}>
-        <button
-          type="button"
-          onClick={() => router.push(`/sentinelle/${buildingId}`)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            padding: 0,
-            marginBottom: 10,
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            color: '#ADB5BD',
-            fontSize: 13,
-          }}
-        >
-          <ArrowLeft size={14} />
-          Retour à Sentinelle
-        </button>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                marginBottom: 5,
-              }}
-            >
-              <RadioTower size={17} color="#167D6A" />
-
-              <p
-                style={{
-                  margin: 0,
-                  color: '#167D6A',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                CORO Sentinelle Population
-              </p>
-
-              <span
-                style={{
-                  padding: '3px 7px',
-                  borderRadius: 20,
-                  backgroundColor: '#FDEDEC',
-                  color: '#C0392B',
-                  fontSize: 9,
-                  fontWeight: 900,
-                  letterSpacing: '0.06em',
-                }}
-              >
-                RUE / E2
-              </span>
-            </div>
-
-            <h1
-              style={{
-                margin: 0,
-                color: '#2C3E50',
-                fontSize: 'clamp(22px, 5vw, 30px)',
-                fontWeight: 900,
-              }}
-            >
-              Centre de communication d&apos;urgence
-            </h1>
-
-            <p
-              style={{
-                margin: '6px 0 0',
-                color: '#6C757D',
-                fontSize: 13,
-              }}
-            >
-              De la zone d&apos;impact à la preuve de diffusion.
-            </p>
-          </div>
+        {/* Header */}
+        <header className={styles.header} style={{ marginBottom: 24 }}>
+          <button
+            type="button"
+            onClick={() => router.push(`/sentinelle/${buildingId}`)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              padding: 0,
+              marginBottom: 10,
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              color: "#ADB5BD",
+              fontSize: 13,
+            }}
+          >
+            <ArrowLeft size={14} />
+            Retour à Sentinelle
+          </button>
 
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '7px 11px',
-              borderRadius: 20,
-              backgroundColor: isActive ? '#E8F5F1' : '#FEF9E7',
-              color: isActive ? '#167D6A' : '#B9770E',
-              fontSize: 11,
-              fontWeight: 800,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
             }}
           >
-            <CircleDot size={12} />
-            {programStatus}
-          </div>
-        </div>
-      </header>
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 5,
+                }}
+              >
+                <RadioTower size={17} color="#167D6A" />
 
-      {/* Bandeau de commandement */}
-      <section
-        className={styles.situation}
-        style={{
-          position: 'relative',
-          overflow: 'hidden',
-          marginBottom: 18,
-          padding: '26px 28px',
-          borderRadius: 16,
-          background:
-            'linear-gradient(115deg, #20363A 0%, #244C4B 58%, #167D6A 100%)',
-          color: '#FFFFFF',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            width: 260,
-            height: 260,
-            borderRadius: '50%',
-            border: '1px solid rgba(255,255,255,0.08)',
-            right: -70,
-            top: -120,
-          }}
-        />
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#167D6A",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  CORO Sentinelle Population
+                </p>
 
-        <div
-          style={{
-            position: 'relative',
-            maxWidth: 720,
-          }}
-        >
-          <p
-            style={{
-              margin: '0 0 7px',
-              color: '#A9D8CF',
-              fontSize: 11,
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-            }}
-          >
-            Situation opérationnelle
-          </p>
+                <span
+                  style={{
+                    padding: "3px 7px",
+                    borderRadius: 20,
+                    backgroundColor: "#FDEDEC",
+                    color: "#C0392B",
+                    fontSize: 9,
+                    fontWeight: 900,
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  RUE / E2
+                </span>
+              </div>
 
-          <h2
-            style={{
-              margin: '0 0 8px',
-              fontSize: 21,
-              fontWeight: 800,
-            }}
-          >
-            {isActive
-              ? 'Système prêt pour une communication d’urgence'
-              : 'Programme Population non actif'}
-          </h2>
+              <h1
+                style={{
+                  margin: 0,
+                  color: "#2C3E50",
+                  fontSize: "clamp(22px, 5vw, 30px)",
+                  fontWeight: 900,
+                }}
+              >
+                Centre de communication d&apos;urgence
+              </h1>
 
-          <p
-            style={{
-              margin: 0,
-              maxWidth: 620,
-              color: '#D5E5E2',
-              fontSize: 13,
-              lineHeight: 1.6,
-            }}
-          >
-            {isActive
-              ? 'Les scénarios, zones d’impact et paramètres de communication du site peuvent être utilisés pour préparer une alerte.'
-              : 'La configuration doit être complétée et le programme activé avant toute diffusion à la population.'}
-          </p>
-        </div>
-      </section>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: "#6C757D",
+                  fontSize: 13,
+                }}
+              >
+                De la zone d&apos;impact à la preuve de diffusion.
+              </p>
+            </div>
 
-      {/* État système */}
-      <section
-        className={styles.statusGrid}
-        style={{
-          marginBottom: 18,
-        }}
-      >
-        <StatusCard
-          icon={<Building2 size={18} />}
-          label="Assujettissement"
-          value={RUE_LABELS[status.rueStatus] || status.rueStatus || '—'}
-          detail="Profil environnemental du site"
-        />
-
-        <StatusCard
-          icon={<RadioTower size={18} />}
-          label="Programme"
-          value={programStatus}
-          detail={
-            status.populationEnabled
-              ? 'Sentinelle Population autorisé'
-              : 'Activation requise'
-          }
-        />
-
-                <StatusCard
-          icon={<Users size={18} />}
-          label="Population ciblée"
-          value={
-            preview
-              ? preview.population.uniqueTargetCount.toLocaleString('fr-CA')
-              : '—'
-          }
-          detail={
-            preview
-              ? `${preview.population.uniqueSmsTargetCount} SMS · ${preview.population.uniqueEmailTargetCount} courriels`
-              : 'Calculée selon la zone d’impact'
-          }
-        />
-
-        <StatusCard
-          icon={<MessageSquareText size={18} />}
-          label="Communication"
-          value="Aucune active"
-          detail="SMS · Courriel"
-        />
-      </section>
-
-      {/* Scénarios RUE */}
-      <section
-        className={styles.scenarios}
-        style={{
-          marginBottom: 18,
-          padding: '18px 20px',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E9ECEF',
-          borderRadius: 14,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: 16,
-            marginBottom: 15,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <p
+            <div
               style={{
-                margin: '0 0 4px',
-                color: '#167D6A',
-                fontSize: 9,
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "7px 11px",
+                borderRadius: 20,
+                backgroundColor: isActive ? "#E8F5F1" : "#FEF9E7",
+                color: isActive ? "#167D6A" : "#B9770E",
+                fontSize: 11,
+                fontWeight: 800,
               }}
             >
-              Planification RUE
+              <CircleDot size={12} />
+              {programStatus}
+            </div>
+          </div>
+        </header>
+
+        {/* Bandeau de commandement */}
+        <section
+          className={styles.situation}
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            marginBottom: 18,
+            padding: "26px 28px",
+            borderRadius: 16,
+            background:
+              "linear-gradient(115deg, #20363A 0%, #244C4B 58%, #167D6A 100%)",
+            color: "#FFFFFF",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: 260,
+              height: 260,
+              borderRadius: "50%",
+              border: "1px solid rgba(255,255,255,0.08)",
+              right: -70,
+              top: -120,
+            }}
+          />
+
+          <div
+            style={{
+              position: "relative",
+              maxWidth: 720,
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 7px",
+                color: "#A9D8CF",
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+              }}
+            >
+              Situation opérationnelle
             </p>
 
             <h2
               style={{
-                margin: '0 0 4px',
-                color: '#2C3E50',
-                fontSize: 15,
-                fontWeight: 900,
+                margin: "0 0 8px",
+                fontSize: 21,
+                fontWeight: 800,
               }}
             >
-              Scénarios d’urgence
+              {isActive
+                ? "Système prêt pour une communication d’urgence"
+                : "Programme Population non actif"}
             </h2>
 
             <p
               style={{
                 margin: 0,
-                color: '#ADB5BD',
-                fontSize: 10,
-                lineHeight: 1.5,
+                maxWidth: 620,
+                color: "#D5E5E2",
+                fontSize: 13,
+                lineHeight: 1.6,
               }}
             >
-              Sélectionnez le scénario correspondant à la situation observée.
+              {isActive
+                ? "Les scénarios, zones d’impact et paramètres de communication du site peuvent être utilisés pour préparer une alerte."
+                : "La configuration doit être complétée et le programme activé avant toute diffusion à la population."}
             </p>
           </div>
+        </section>
 
-          <span
-            style={{
-              padding: '5px 9px',
-              borderRadius: 20,
-              backgroundColor: '#F1F3F5',
-              color: '#6C757D',
-              fontSize: 9,
-              fontWeight: 800,
-            }}
-          >
-            {scenarios.length} scénario{scenarios.length > 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {scenariosLoading ? (
-          <p
-            className="animate-pulse"
-            style={{
-              margin: 0,
-              color: '#ADB5BD',
-              fontSize: 11,
-            }}
-          >
-            Chargement des scénarios RUE...
-          </p>
-        ) : scenariosError ? (
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 9,
-              backgroundColor: '#FDEDEC',
-              color: '#922B21',
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            {scenariosError}
-          </div>
-        ) : scenarios.length === 0 ? (
-          <div
-            style={{
-              padding: 14,
-              borderRadius: 9,
-              backgroundColor: '#FEF9E7',
-              border: '1px solid #F7DC6F',
-            }}
-          >
-            <p
-              style={{
-                margin: '0 0 4px',
-                color: '#7D6608',
-                fontSize: 11,
-                fontWeight: 800,
-              }}
-            >
-              Aucun scénario RUE disponible
-            </p>
-
-            <p
-              style={{
-                margin: 0,
-                color: '#9A7D0A',
-                fontSize: 10,
-                lineHeight: 1.5,
-              }}
-            >
-              Un scénario actif doit être défini dans le profil d’urgence
-              environnementale du site.
-            </p>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                'repeat(auto-fit, minmax(min(250px, 100%), 1fr))',
-              gap: 10,
-            }}
-          >
-            {scenarios.map((scenario) => {
-              const selected = scenario.id === selectedScenarioId;
-
-              return (
-                <button
-                  key={scenario.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedScenarioId(scenario.id);
-                    setPreview(null);
-                    setPreviewError(null);
-                    setAlertComposerOpen(false);
-                    setAlertStep(1);
-                    setAlertError(null);
-                    setCreatedAlert(null);
-                    setFreezeConfirmationOpen(false);
-                    setFreezeResult(null);
-                    setSendConfirmationOpen(false);
-                  }}
-                  style={{
-                    padding: 14,
-                    borderRadius: 10,
-                    border: selected
-                      ? '2px solid #167D6A'
-                      : '1px solid #E9ECEF',
-                    backgroundColor: selected ? '#F3FAF8' : '#FFFFFF',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 10,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: '#2C3E50',
-                        fontSize: 12,
-                        fontWeight: 900,
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {scenario.nameFR}
-                    </span>
-
-                    <span
-                      style={{
-                        flexShrink: 0,
-                        padding: '3px 6px',
-                        borderRadius: 20,
-                        backgroundColor: scenario.operational
-                          ? '#E8F5F1'
-                          : '#FEF9E7',
-                        color: scenario.operational
-                          ? '#167D6A'
-                          : '#B9770E',
-                        fontSize: 8,
-                        fontWeight: 900,
-                      }}
-                    >
-                      {scenario.operational ? 'OPÉRATIONNEL' : 'À COMPLÉTER'}
-                    </span>
-                  </div>
-
-                  <p
-                    style={{
-                      margin: '0 0 7px',
-                      color: '#6C757D',
-                      fontSize: 10,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {scenario.eventType ||
-                      scenario.description ||
-                      'Scénario d’urgence environnementale'}
-                  </p>
-
-                  <span
-                    style={{
-                      color: '#ADB5BD',
-                      fontSize: 9,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {scenario.impactZones.length} zone
-                    {scenario.impactZones.length > 1 ? 's' : ''} d’impact
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Poste de commandement */}
-      <section
-        className={styles.commandGrid}
-        style={{
-          marginBottom: 18,
-        }}
-      >
-        {/* Carte */}
-        <div
-          className={styles.mapCard}
-          style={{
-            minHeight: 330,
-            overflow: 'hidden',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
-            borderRadius: 14,
-          }}
-        >
-          <div
-            style={{
-              padding: '16px 18px',
-              borderBottom: '1px solid #E9ECEF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-            }}
-          >
-            <div>
-              <h2
-                style={{
-                  margin: 0,
-                  color: '#2C3E50',
-                  fontSize: 14,
-                  fontWeight: 800,
-                }}
-              >
-                Zone opérationnelle
-              </h2>
-
-                            <p
-                style={{
-                  margin: '3px 0 0',
-                  color: '#ADB5BD',
-                  fontSize: 11,
-                }}
-              >
-                Zones d&apos;impact et population potentiellement touchée
-              </p>
-
-              {selectedScenario && (
-                <p
-                  style={{
-                    margin: '5px 0 0',
-                    color: '#167D6A',
-                    fontSize: 10,
-                    fontWeight: 800,
-                  }}
-                >
-                  {selectedScenario.nameFR}
-                </p>
-              )}
-            </div>
-
-            <Map size={18} color="#167D6A" />
-          </div>
-
-          {preview ? (
-            <PopulationOperationalMap
-              building={preview.building}
-              zones={preview.zones}
-            />
-          ) : (
-            <div
-              style={{
-                minHeight: 265,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 24,
-                background:
-                  'radial-gradient(circle at center, #F4F8F7 0%, #EEF3F2 55%, #E8EFED 100%)',
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: 330,
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 54,
-                    height: 54,
-                    margin: '0 auto 13px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 6px 20px rgba(44,62,80,0.08)',
-                  }}
-                >
-                  <Map size={23} color="#167D6A" />
-                </div>
-
-                <p
-                  style={{
-                    margin: '0 0 5px',
-                    color: '#2C3E50',
-                    fontSize: 14,
-                    fontWeight: 800,
-                  }}
-                >
-                  Carte opérationnelle
-                </p>
-
-                <p
-                  style={{
-                    margin: 0,
-                    color: '#6C757D',
-                    fontSize: 12,
-                    lineHeight: 1.55,
-                  }}
-                >
-                  Sélectionnez un scénario et calculez la population ciblée
-                  pour afficher les zones d&apos;impact sur la carte.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div
-          className={styles.controlCenter}
-          style={{
-            padding: 18,
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
-            borderRadius: 14,
-          }}
-        >
-          <p
-            style={{
-              margin: '0 0 4px',
-              color: '#ADB5BD',
-              fontSize: 10,
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}
-          >
-            Actions
-          </p>
-
-                    <h2
-            style={{
-              margin: '0 0 16px',
-              color: '#2C3E50',
-              fontSize: 15,
-              fontWeight: 800,
-            }}
-          >
-            Centre de contrôle
-          </h2>
-
-          {!isConfigured && (
-            <div
-              style={{
-                marginBottom: 14,
-                padding: 13,
-                borderRadius: 9,
-                backgroundColor: '#FEF9E7',
-                border: '1px solid #F7DC6F',
-              }}
-            >
-              <p
-                style={{
-                  margin: '0 0 4px',
-                  color: '#7D6608',
-                  fontSize: 12,
-                  fontWeight: 800,
-                }}
-              >
-                Programme à configurer
-              </p>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: '#9A7D0A',
-                  fontSize: 10,
-                  lineHeight: 1.5,
-                }}
-              >
-                Les paramètres publics, les canaux de communication et les
-                textes de consentement doivent être configurés avant la mise
-                en service.
-              </p>
-            </div>
-          )}
-
-          {canMarkReady && (
-            <LifecycleButton
-              title="Valider la préparation"
-              detail="Vérifier la configuration, les scénarios et les zones"
-              loading={actionLoading === 'ready'}
-              disabled={actionLoading !== null}
-              onClick={() => runLifecycleAction('ready')}
-            />
-          )}
-
-          {canActivate && (
-            <LifecycleButton
-              title={
-                status.programStatus === 'SUSPENDED'
-                  ? 'Réactiver le programme'
-                  : 'Activer le programme'
-              }
-              detail="Autoriser Sentinelle Population pour ce site"
-              loading={actionLoading === 'activate'}
-              disabled={actionLoading !== null}
-              onClick={() => runLifecycleAction('activate')}
-              primary
-            />
-          )}
-
-          {canSuspend && (
-            <LifecycleButton
-              title="Suspendre le programme"
-              detail="Désactiver temporairement les opérations Population"
-              loading={actionLoading === 'suspend'}
-              disabled={actionLoading !== null}
-              onClick={() => runLifecycleAction('suspend')}
-              warning
-            />
-          )}
-
-          {(actionError || missingRequirements.length > 0) && (
-            <div
-              style={{
-                marginBottom: 14,
-                padding: 12,
-                borderRadius: 9,
-                backgroundColor: '#FDEDEC',
-                border: '1px solid #F5B7B1',
-              }}
-            >
-              {actionError && (
-                <p
-                  style={{
-                    margin: missingRequirements.length ? '0 0 8px' : 0,
-                    color: '#922B21',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {actionError}
-                </p>
-              )}
-
-              {missingRequirements.map((requirement) => (
-                <p
-                  key={requirement}
-                  style={{
-                    margin: '4px 0 0',
-                    color: '#922B21',
-                    fontSize: 10,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  • {READINESS_LABELS[requirement] || requirement}
-                </p>
-              ))}
-            </div>
-          )}
-
-          <div
-            className={`${styles.deliveryModeNotice} ${
-              status.deliveryMode === 'LIVE' ? styles.deliveryModeLive : ''
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            <strong>MODE {status.deliveryMode}</strong>
-            <span>
-              {status.deliveryMode === 'SANDBOX'
-                ? 'Simulation — aucune communication externe ne sera transmise.'
-                : 'Diffusion réelle — les communications admissibles seront transmises aux destinataires.'}
-            </span>
-          </div>
-
-          <ActionButton
-            icon={<AlertTriangle size={17} />}
-            title={
-              preview
-                ? 'Préparer l’alerte'
-                : 'Calculer la population ciblée'
-            }
-            detail={
-              preview && !canPrepare
-                ? 'Permission POPULATION_PREPARE requise'
-                : preview
-                ? `${preview.population.uniqueTargetCount} personne${
-                    preview.population.uniqueTargetCount > 1 ? 's' : ''
-                  } ciblée${
-                    preview.population.uniqueTargetCount > 1 ? 's' : ''
-                  }`
-                : selectedScenario
-                  ? 'Analyser les zones d’impact du scénario'
-                  : 'Sélectionnez d’abord un scénario RUE'
-            }
-            primary
-            disabled={
-              !isActive ||
-              !selectedScenario ||
-              !selectedScenario.operational ||
-              previewLoading ||
-              (Boolean(preview) && !canPrepare)
-            }
-            onClick={() => {
-              if (!selectedScenario) {
-                return;
-              }
-
-              if (!preview) {
-                loadScenarioPreview(selectedScenario.id);
-                return;
-              }
-
-              openAlertComposer();
-            }}
-          />
-
-          <ActionButton
-            icon={<MessageSquareText size={17} />}
-            title={
-              communicationsOpen
-                ? 'Fermer les communications'
-                : 'Communications'
-            }
-            detail={
-              incidentsLoading
-                ? 'Recherche des incidents actifs...'
-                : selectedIncidentId
-                  ? `${incidentAlerts.length} communication${
-                      incidentAlerts.length > 1 ? 's' : ''
-                    } liée${
-                      incidentAlerts.length > 1 ? 's' : ''
-                    } à l’incident`
-                  : 'Aucun incident opérationnel actif'
-            }
-            disabled={!isActive || !selectedIncidentId}
-            onClick={() =>
-              setCommunicationsOpen((current) => !current)
-            }
-          />
-
-          {isActive && incidentsError && (
-            <div
-              style={{
-                marginBottom: 9,
-                padding: 10,
-                borderRadius: 8,
-                backgroundColor: '#FDEDEC',
-                color: '#922B21',
-                fontSize: 9,
-                lineHeight: 1.5,
-              }}
-            >
-              {incidentsError}
-            </div>
-          )}
-
-          {isActive && incidents.length > 0 && (
-            <div
-              style={{
-                marginBottom: 9,
-                padding: 12,
-                border: '1px solid #D5EDE7',
-                borderRadius: 9,
-                backgroundColor: '#F3FAF8',
-              }}
-            >
-              <p
-                style={{
-                  margin: '0 0 7px',
-                  color: '#167D6A',
-                  fontSize: 8,
-                  fontWeight: 900,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                Incident opérationnel
-              </p>
-
-              {incidents.length === 1 ? (
-                <div>
-                  <strong
-                    style={{
-                      display: 'block',
-                      marginBottom: 3,
-                      color: '#2C3E50',
-                      fontSize: 10,
-                    }}
-                  >
-                    {incidents[0].type}
-                  </strong>
-
-                  <span
-                    style={{
-                      color: '#6C757D',
-                      fontSize: 9,
-                    }}
-                  >
-                    {incidents[0].status} ·{' '}
-                    {new Date(
-                      incidents[0].triggeredAt,
-                    ).toLocaleString('fr-CA')}
-                  </span>
-                </div>
-              ) : (
-                <select
-                  value={selectedIncidentId || ''}
-                  onChange={(event) =>
-                    selectPopulationIncident(event.target.value)
-                  }
-                  style={{
-                    width: '100%',
-                    padding: '8px 9px',
-                    border: '1px solid #D5EDE7',
-                    borderRadius: 7,
-                    backgroundColor: '#FFFFFF',
-                    color: '#2C3E50',
-                    fontSize: 9,
-                  }}
-                >
-                  {incidents.map((incident) => (
-                    <option
-                      key={incident.id}
-                      value={incident.id}
-                    >
-                      {incident.type} · {incident.status}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <div
-                style={{
-                  marginTop: 8,
-                  paddingTop: 8,
-                  borderTop: '1px solid #D5EDE7',
-                  color: '#6C757D',
-                  fontSize: 8,
-                  lineHeight: 1.5,
-                }}
-              >
-                {incidentAlertsLoading
-                  ? 'Chargement des communications...'
-                  : incidentAlertsError
-                    ? incidentAlertsError
-                    : `${incidentAlerts.length} communication${
-                        incidentAlerts.length > 1 ? 's' : ''
-                      } Population dans cet incident.`}
-              </div>
-            </div>
-          )}
-
-          <ActionButton
-            icon={<Settings size={17} />}
-            title={
-              configurationOpen
-                ? 'Fermer la configuration'
-                : 'Configuration'
-            }
-            detail={
-              program
-                ? `${program.smsEnabled ? 'SMS' : ''}${
-                    program.smsEnabled && program.emailEnabled ? ' · ' : ''
-                  }${program.emailEnabled ? 'Courriel' : ''}`
-                : 'Programme non configuré'
-            }
-            onClick={() => {
-              setConfigurationOpen((current) => !current);
-              setConfigurationMessage(null);
-              setConfigurationError(null);
-            }}
-            disabled={status.programStatus === 'ARCHIVED'}
-          />
-        </div>
-      </section>
-
-      {isActive && (
+        {/* État système */}
         <section
-          className={styles.incidentRegistry}
+          className={styles.statusGrid}
           style={{
             marginBottom: 18,
-            padding: 18,
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
+          }}
+        >
+          <StatusCard
+            icon={<Building2 size={18} />}
+            label="Assujettissement"
+            value={RUE_LABELS[status.rueStatus] || status.rueStatus || "—"}
+            detail="Profil environnemental du site"
+          />
+
+          <StatusCard
+            icon={<RadioTower size={18} />}
+            label="Programme"
+            value={programStatus}
+            detail={
+              status.populationEnabled
+                ? "Sentinelle Population autorisé"
+                : "Activation requise"
+            }
+          />
+
+          <StatusCard
+            icon={<Users size={18} />}
+            label="Population ciblée"
+            value={
+              preview
+                ? preview.population.uniqueTargetCount.toLocaleString("fr-CA")
+                : "—"
+            }
+            detail={
+              preview
+                ? `${preview.population.uniqueSmsTargetCount} SMS · ${preview.population.uniqueEmailTargetCount} courriels`
+                : "Calculée selon la zone d’impact"
+            }
+          />
+
+          <StatusCard
+            icon={<MessageSquareText size={18} />}
+            label="Communication"
+            value={activeEvent ? "Événement en cours" : "Aucun événement"}
+            detail={
+              activeEvent?.latestCommunication
+                ? formatPopulationCommunicationType(
+                    activeEvent.latestCommunication.type,
+                    activeEvent.latestCommunication.cycleSequence,
+                  )
+                : "SMS · Courriel"
+            }
+          />
+        </section>
+
+        {isActive && (
+          <EventCockpit
+            event={activeEvent}
+            closedEvent={lastClosedEvent}
+            loading={eventLoading}
+            error={eventError}
+            mode={status.deliveryMode}
+            canPrepare={canPrepare}
+            followUpCreating={followUpCreating}
+            closeOpen={closeEventOpen}
+            closeReason={closeEventReason}
+            confirmIncomplete={confirmIncompleteClose}
+            closeLoading={actionLoading === "close-event"}
+            onPrepareInitial={() => void prepareInitialFromCockpit()}
+            onCreateUpdate={() => createIncidentFollowUpDraft("UPDATE")}
+            onCreateAllClear={() => createIncidentFollowUpDraft("ALL_CLEAR")}
+            onRefresh={() => void loadActiveOperationalEvent()}
+            onOpenClose={() => setCloseEventOpen(true)}
+            onCancelClose={() => setCloseEventOpen(false)}
+            onCloseReasonChange={setCloseEventReason}
+            onConfirmIncompleteChange={setConfirmIncompleteClose}
+            onConfirmClose={() => void closeOperationalEvent()}
+          />
+        )}
+
+        {!activeEvent &&
+          incidentAlerts
+            .filter(
+              (alert) => alert.status === "ACTIVE" && !alert.operationalEventId,
+            )
+            .map((alert) => (
+              <LegacyCommunicationNotice
+                key={alert.id}
+                alert={alert}
+                canPrepare={canPrepare}
+                loading={legacyEndingId === alert.id}
+                onEnd={() => void endLegacyCommunication(alert.id)}
+              />
+            ))}
+
+        {/* Scénarios RUE */}
+        <section
+          className={styles.scenarios}
+          style={{
+            marginBottom: 18,
+            padding: "18px 20px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E9ECEF",
             borderRadius: 14,
           }}
         >
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: 12,
-              marginBottom: 14,
-              flexWrap: 'wrap',
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 16,
+              marginBottom: 15,
+              flexWrap: "wrap",
             }}
           >
             <div>
               <p
                 style={{
-                  margin: '0 0 4px',
-                  color: '#ADB5BD',
-                  fontSize: 8,
+                  margin: "0 0 4px",
+                  color: "#167D6A",
+                  fontSize: 9,
                   fontWeight: 900,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.07em',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
                 }}
               >
-                Prouver · Audit · REX
+                Planification RUE
               </p>
 
               <h2
                 style={{
-                  margin: '0 0 4px',
-                  color: '#2C3E50',
+                  margin: "0 0 4px",
+                  color: "#2C3E50",
                   fontSize: 15,
                   fontWeight: 900,
                 }}
               >
-                Registre des incidents
+                Scénarios d’urgence
               </h2>
 
               <p
                 style={{
                   margin: 0,
-                  color: '#6C757D',
-                  fontSize: 9,
+                  color: "#ADB5BD",
+                  fontSize: 10,
                   lineHeight: 1.5,
                 }}
               >
-                Consultez les dossiers de communication des incidents
-                actifs, résolus ou annulés.
+                Sélectionnez le scénario correspondant à la situation observée.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={loadIncidentHistory}
-              disabled={incidentHistoryLoading}
+            <span
               style={{
-                padding: '7px 10px',
-                border: '1px solid #DEE2E6',
-                borderRadius: 8,
-                backgroundColor: '#FFFFFF',
-                color: '#495057',
-                cursor: incidentHistoryLoading
-                  ? 'not-allowed'
-                  : 'pointer',
-                opacity: incidentHistoryLoading ? 0.55 : 1,
+                padding: "5px 9px",
+                borderRadius: 20,
+                backgroundColor: "#F1F3F5",
+                color: "#6C757D",
                 fontSize: 9,
                 fontWeight: 800,
               }}
             >
-              {incidentHistoryLoading
-                ? 'Actualisation...'
-                : 'Actualiser le registre'}
-            </button>
+              {scenarios.length} scénario{scenarios.length > 1 ? "s" : ""}
+            </span>
           </div>
 
-          {incidentHistoryError ? (
-            <div
-              style={{
-                padding: 11,
-                borderRadius: 8,
-                backgroundColor: '#FDEDEC',
-                color: '#922B21',
-                fontSize: 9,
-                lineHeight: 1.5,
-              }}
-            >
-              {incidentHistoryError}
-            </div>
-          ) : incidentHistoryLoading &&
-            incidentHistory.length === 0 ? (
+          {scenariosLoading ? (
             <p
               className="animate-pulse"
               style={{
                 margin: 0,
-                color: '#ADB5BD',
-                fontSize: 10,
+                color: "#ADB5BD",
+                fontSize: 11,
               }}
             >
-              Chargement du registre...
+              Chargement des scénarios RUE...
             </p>
-          ) : incidentHistory.length === 0 ? (
+          ) : scenariosError ? (
             <div
               style={{
-                padding: 13,
+                padding: 12,
                 borderRadius: 9,
-                backgroundColor: '#F8F9FA',
-                color: '#6C757D',
-                fontSize: 9,
+                backgroundColor: "#FDEDEC",
+                color: "#922B21",
+                fontSize: 11,
+                fontWeight: 700,
               }}
             >
-              Aucun incident enregistré pour ce bâtiment.
+              {scenariosError}
+            </div>
+          ) : scenarios.length === 0 ? (
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 9,
+                backgroundColor: "#FEF9E7",
+                border: "1px solid #F7DC6F",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 4px",
+                  color: "#7D6608",
+                  fontSize: 11,
+                  fontWeight: 800,
+                }}
+              >
+                Aucun scénario RUE disponible
+              </p>
+
+              <p
+                style={{
+                  margin: 0,
+                  color: "#9A7D0A",
+                  fontSize: 10,
+                  lineHeight: 1.5,
+                }}
+              >
+                Un scénario actif doit être défini dans le profil d’urgence
+                environnementale du site.
+              </p>
             </div>
           ) : (
             <div
               style={{
-                display: 'grid',
-                gap: 7,
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(250px, 100%), 1fr))",
+                gap: 10,
               }}
             >
-              {incidentHistory.map((incident) => {
-                const operational =
-                  incident.status !== 'PRE_ALERT' &&
-                  incident.status !== 'RESOLVED' &&
-                  incident.status !== 'CANCELLED';
-
-                const selected =
-                  incident.id === selectedIncidentId;
+              {scenarios.map((scenario) => {
+                const selected = scenario.id === selectedScenarioId;
 
                 return (
                   <button
-                    key={incident.id}
+                    key={scenario.id}
                     type="button"
-                    onClick={() =>
-                      openHistoricalIncident(incident.id)
-                    }
+                    onClick={() => {
+                      setSelectedScenarioId(scenario.id);
+                      setPreview(null);
+                      setPreviewError(null);
+                      setAlertComposerOpen(false);
+                      setAlertStep(1);
+                      setAlertError(null);
+                      setCreatedAlert(null);
+                      setFreezeConfirmationOpen(false);
+                      setFreezeResult(null);
+                      setSendConfirmationOpen(false);
+                    }}
                     style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      display: 'grid',
-                      gridTemplateColumns:
-                        'minmax(0, 1fr) auto',
-                      gap: 12,
-                      alignItems: 'center',
+                      padding: 14,
+                      borderRadius: 10,
                       border: selected
-                        ? '1px solid #167D6A'
-                        : '1px solid #E9ECEF',
-                      borderRadius: 9,
-                      backgroundColor: selected
-                        ? '#F3FAF8'
-                        : '#FFFFFF',
-                      textAlign: 'left',
-                      cursor: 'pointer',
+                        ? "2px solid #167D6A"
+                        : "1px solid #E9ECEF",
+                      backgroundColor: selected ? "#F3FAF8" : "#FFFFFF",
+                      cursor: "pointer",
+                      textAlign: "left",
                     }}
                   >
                     <div
                       style={{
-                        minWidth: 0,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginBottom: 8,
                       }}
                     >
-                      <div
+                      <span
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          marginBottom: 3,
-                          flexWrap: 'wrap',
+                          color: "#2C3E50",
+                          fontSize: 12,
+                          fontWeight: 900,
+                          lineHeight: 1.35,
                         }}
                       >
-                        <strong
-                          style={{
-                            color: '#2C3E50',
-                            fontSize: 10,
-                          }}
-                        >
-                          {incident.type}
-                        </strong>
-
-                        <span
-                          style={{
-                            padding: '2px 6px',
-                            borderRadius: 20,
-                            backgroundColor: operational
-                              ? '#E8F5F1'
-                              : '#F1F3F5',
-                            color: operational
-                              ? '#167D6A'
-                              : '#6C757D',
-                            fontSize: 7,
-                            fontWeight: 900,
-                          }}
-                        >
-                          {incident.status}
-                        </span>
-                      </div>
+                        {scenario.nameFR}
+                      </span>
 
                       <span
                         style={{
-                          color: '#ADB5BD',
+                          flexShrink: 0,
+                          padding: "3px 6px",
+                          borderRadius: 20,
+                          backgroundColor: scenario.operational
+                            ? "#E8F5F1"
+                            : "#FEF9E7",
+                          color: scenario.operational ? "#167D6A" : "#B9770E",
                           fontSize: 8,
+                          fontWeight: 900,
                         }}
                       >
-                        {new Date(
-                          incident.triggeredAt,
-                        ).toLocaleString('fr-CA')}
+                        {scenario.operational ? "OPÉRATIONNEL" : "À COMPLÉTER"}
                       </span>
                     </div>
 
-                    <span
+                    <p
                       style={{
-                        color: selected
-                          ? '#167D6A'
-                          : '#6C757D',
-                        fontSize: 8,
-                        fontWeight: 900,
+                        margin: "0 0 7px",
+                        color: "#6C757D",
+                        fontSize: 10,
+                        lineHeight: 1.45,
                       }}
                     >
-                      {operational
-                        ? 'Ouvrir'
-                        : 'Consulter'}
+                      {scenario.eventType ||
+                        scenario.description ||
+                        "Scénario d’urgence environnementale"}
+                    </p>
+
+                    <span
+                      style={{
+                        color: "#ADB5BD",
+                        fontSize: 9,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {scenario.impactZones.length} zone
+                      {scenario.impactZones.length > 1 ? "s" : ""} d’impact
                     </span>
                   </button>
                 );
               })}
             </div>
           )}
-
-          <div
-            style={{
-              marginTop: 11,
-              paddingTop: 10,
-              borderTop: '1px solid #F1F3F5',
-              color: '#ADB5BD',
-              fontSize: 8,
-              lineHeight: 1.5,
-            }}
-          >
-            Les 50 incidents les plus récents du bâtiment sont
-            disponibles dans ce registre.
-          </div>
         </section>
-      )}
 
-      {communicationsOpen && selectedIncidentId && (
-        <IncidentCommunicationsPanel
-          incident={
-            incidents.find(
-              (incident) => incident.id === selectedIncidentId,
-            ) ??
-            incidentHistory.find(
-              (incident) => incident.id === selectedIncidentId,
-            ) ??
-            null
-          }
-          alerts={incidentAlerts}
-          loading={incidentAlertsLoading}
-          error={incidentAlertsError}
-          followUpCreating={followUpCreating}
-          onRefresh={() =>
-            loadIncidentAlertHistory(selectedIncidentId)
-          }
-          onCreateUpdate={() =>
-            createIncidentFollowUpDraft('UPDATE')
-          }
-          onCreateAllClear={() =>
-            createIncidentFollowUpDraft('ALL_CLEAR')
-          }
-        />
-      )}
-
-      {(previewLoading || previewError || preview) && (
+        {/* Poste de commandement */}
         <section
+          className={styles.commandGrid}
           style={{
             marginBottom: 18,
-            padding: '20px 22px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
-            borderRadius: 14,
           }}
         >
-          <p
+          {/* Carte */}
+          <div
+            className={styles.mapCard}
             style={{
-              margin: '0 0 5px',
-              color: '#167D6A',
-              fontSize: 9,
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              minHeight: 330,
+              overflow: "hidden",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              borderRadius: 14,
             }}
           >
-            Analyse géospatiale
-          </p>
-
-          <h2
-            style={{
-              margin: '0 0 14px',
-              color: '#2C3E50',
-              fontSize: 15,
-              fontWeight: 900,
-            }}
-          >
-            Population potentiellement touchée
-          </h2>
-
-          {previewLoading && (
-            <p
-              className="animate-pulse"
-              style={{
-                margin: 0,
-                color: '#ADB5BD',
-                fontSize: 11,
-              }}
-            >
-              Calcul des zones et des destinataires...
-            </p>
-          )}
-
-          {previewError && (
             <div
               style={{
-                padding: 12,
-                borderRadius: 9,
-                backgroundColor: '#FDEDEC',
-                color: '#922B21',
-                fontSize: 11,
-                fontWeight: 700,
+                padding: "16px 18px",
+                borderBottom: "1px solid #E9ECEF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
               }}
             >
-              {previewError}
-            </div>
-          )}
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    color: "#2C3E50",
+                    fontSize: 14,
+                    fontWeight: 800,
+                  }}
+                >
+                  Zone opérationnelle
+                </h2>
 
-          {preview && !previewLoading && (
-            <>
+                <p
+                  style={{
+                    margin: "3px 0 0",
+                    color: "#ADB5BD",
+                    fontSize: 11,
+                  }}
+                >
+                  Zones d&apos;impact et population potentiellement touchée
+                </p>
+
+                {selectedScenario && (
+                  <p
+                    style={{
+                      margin: "5px 0 0",
+                      color: "#167D6A",
+                      fontSize: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {selectedScenario.nameFR}
+                  </p>
+                )}
+              </div>
+
+              <Map size={18} color="#167D6A" />
+            </div>
+
+            {preview ? (
+              <PopulationOperationalMap
+                building={preview.building}
+                zones={preview.zones}
+              />
+            ) : (
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
-                  gap: 10,
-                  marginBottom: 16,
+                  minHeight: 265,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 24,
+                  background:
+                    "radial-gradient(circle at center, #F4F8F7 0%, #EEF3F2 55%, #E8EFED 100%)",
                 }}
               >
-                <PreviewMetric
-                  label="Population ciblée"
-                  value={preview.population.uniqueTargetCount}
-                />
+                <div
+                  style={{
+                    maxWidth: 330,
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 54,
+                      height: 54,
+                      margin: "0 auto 13px",
+                      borderRadius: "50%",
+                      backgroundColor: "#FFFFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 6px 20px rgba(44,62,80,0.08)",
+                    }}
+                  >
+                    <Map size={23} color="#167D6A" />
+                  </div>
 
-                <PreviewMetric
-                  label="SMS"
-                  value={preview.population.uniqueSmsTargetCount}
-                />
+                  <p
+                    style={{
+                      margin: "0 0 5px",
+                      color: "#2C3E50",
+                      fontSize: 14,
+                      fontWeight: 800,
+                    }}
+                  >
+                    Carte opérationnelle
+                  </p>
 
-                <PreviewMetric
-                  label="Courriels"
-                  value={preview.population.uniqueEmailTargetCount}
-                />
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#6C757D",
+                      fontSize: 12,
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    Sélectionnez un scénario et calculez la population ciblée
+                    pour afficher les zones d&apos;impact sur la carte.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
-                                  <PreviewMetric
+          {/* Actions */}
+          <div
+            className={styles.controlCenter}
+            style={{
+              padding: 18,
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              borderRadius: 14,
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 4px",
+                color: "#ADB5BD",
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Actions
+            </p>
+
+            <h2
+              style={{
+                margin: "0 0 16px",
+                color: "#2C3E50",
+                fontSize: 15,
+                fontWeight: 800,
+              }}
+            >
+              Centre de contrôle
+            </h2>
+
+            {!isConfigured && (
+              <div
+                style={{
+                  marginBottom: 14,
+                  padding: 13,
+                  borderRadius: 9,
+                  backgroundColor: "#FEF9E7",
+                  border: "1px solid #F7DC6F",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 4px",
+                    color: "#7D6608",
+                    fontSize: 12,
+                    fontWeight: 800,
+                  }}
+                >
+                  Programme à configurer
+                </p>
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#9A7D0A",
+                    fontSize: 10,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Les paramètres publics, les canaux de communication et les
+                  textes de consentement doivent être configurés avant la mise
+                  en service.
+                </p>
+              </div>
+            )}
+
+            {canMarkReady && (
+              <LifecycleButton
+                title="Valider la préparation"
+                detail="Vérifier la configuration, les scénarios et les zones"
+                loading={actionLoading === "ready"}
+                disabled={actionLoading !== null}
+                onClick={() => runLifecycleAction("ready")}
+              />
+            )}
+
+            {canActivate && (
+              <LifecycleButton
+                title={
+                  status.programStatus === "SUSPENDED"
+                    ? "Réactiver le programme"
+                    : "Activer le programme"
+                }
+                detail="Autoriser Sentinelle Population pour ce site"
+                loading={actionLoading === "activate"}
+                disabled={actionLoading !== null}
+                onClick={() => runLifecycleAction("activate")}
+                primary
+              />
+            )}
+
+            {canSuspend && (
+              <LifecycleButton
+                title="Suspendre le programme"
+                detail="Désactiver temporairement les opérations Population"
+                loading={actionLoading === "suspend"}
+                disabled={actionLoading !== null}
+                onClick={() => runLifecycleAction("suspend")}
+                warning
+              />
+            )}
+
+            {(actionError || missingRequirements.length > 0) && (
+              <div
+                style={{
+                  marginBottom: 14,
+                  padding: 12,
+                  borderRadius: 9,
+                  backgroundColor: "#FDEDEC",
+                  border: "1px solid #F5B7B1",
+                }}
+              >
+                {actionError && (
+                  <p
+                    style={{
+                      margin: missingRequirements.length ? "0 0 8px" : 0,
+                      color: "#922B21",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {actionError}
+                  </p>
+                )}
+
+                {missingRequirements.map((requirement) => (
+                  <p
+                    key={requirement}
+                    style={{
+                      margin: "4px 0 0",
+                      color: "#922B21",
+                      fontSize: 10,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    • {READINESS_LABELS[requirement] || requirement}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            <div
+              className={`${styles.deliveryModeNotice} ${
+                status.deliveryMode === "LIVE" ? styles.deliveryModeLive : ""
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              <strong>MODE {status.deliveryMode}</strong>
+              <span>
+                {status.deliveryMode === "SANDBOX"
+                  ? "Simulation — aucune communication externe ne sera transmise."
+                  : "Diffusion réelle — les communications admissibles seront transmises aux destinataires."}
+              </span>
+            </div>
+
+            <ActionButton
+              icon={<AlertTriangle size={17} />}
+              title={
+                activeEvent
+                  ? "Événement déjà en cours"
+                  : preview
+                    ? "Préparer l’alerte"
+                    : "Calculer la population ciblée"
+              }
+              detail={
+                activeEvent
+                  ? "Utilisez les actions de mise à jour ou de fin d’alerte ci-dessus."
+                  : preview && !canPrepare
+                    ? "Permission POPULATION_PREPARE requise"
+                    : preview
+                      ? `${preview.population.uniqueTargetCount} personne${
+                          preview.population.uniqueTargetCount > 1 ? "s" : ""
+                        } ciblée${
+                          preview.population.uniqueTargetCount > 1 ? "s" : ""
+                        }`
+                      : selectedScenario
+                        ? "Analyser les zones d’impact du scénario"
+                        : "Sélectionnez d’abord un scénario RUE"
+              }
+              primary
+              disabled={
+                !isActive ||
+                !selectedScenario ||
+                !selectedScenario.operational ||
+                Boolean(activeEvent) ||
+                previewLoading ||
+                (Boolean(preview) && !canPrepare)
+              }
+              onClick={() => {
+                if (!selectedScenario) {
+                  return;
+                }
+
+                if (!preview) {
+                  loadScenarioPreview(selectedScenario.id);
+                  return;
+                }
+
+                openAlertComposer();
+              }}
+            />
+
+            <ActionButton
+              icon={<MessageSquareText size={17} />}
+              title={
+                communicationsOpen
+                  ? "Fermer les communications"
+                  : "Communications"
+              }
+              detail={
+                incidentsLoading
+                  ? "Recherche des incidents actifs..."
+                  : selectedIncidentId
+                    ? `${incidentAlerts.length} communication${
+                        incidentAlerts.length > 1 ? "s" : ""
+                      } liée${
+                        incidentAlerts.length > 1 ? "s" : ""
+                      } à l’incident`
+                    : "Aucun incident opérationnel actif"
+              }
+              disabled={!isActive || !selectedIncidentId}
+              onClick={() => setCommunicationsOpen((current) => !current)}
+            />
+
+            {isActive && incidentsError && (
+              <div
+                style={{
+                  marginBottom: 9,
+                  padding: 10,
+                  borderRadius: 8,
+                  backgroundColor: "#FDEDEC",
+                  color: "#922B21",
+                  fontSize: 9,
+                  lineHeight: 1.5,
+                }}
+              >
+                {incidentsError}
+              </div>
+            )}
+
+            {isActive && incidents.length > 0 && (
+              <div
+                style={{
+                  marginBottom: 9,
+                  padding: 12,
+                  border: "1px solid #D5EDE7",
+                  borderRadius: 9,
+                  backgroundColor: "#F3FAF8",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 7px",
+                    color: "#167D6A",
+                    fontSize: 8,
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Incident opérationnel
+                </p>
+
+                {incidents.length === 1 ? (
+                  <div>
+                    <strong
+                      style={{
+                        display: "block",
+                        marginBottom: 3,
+                        color: "#2C3E50",
+                        fontSize: 10,
+                      }}
+                    >
+                      {incidents[0].type}
+                    </strong>
+
+                    <span
+                      style={{
+                        color: "#6C757D",
+                        fontSize: 9,
+                      }}
+                    >
+                      {incidents[0].status} ·{" "}
+                      {new Date(incidents[0].triggeredAt).toLocaleString(
+                        "fr-CA",
+                      )}
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedIncidentId || ""}
+                    onChange={(event) =>
+                      selectPopulationIncident(event.target.value)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "8px 9px",
+                      border: "1px solid #D5EDE7",
+                      borderRadius: 7,
+                      backgroundColor: "#FFFFFF",
+                      color: "#2C3E50",
+                      fontSize: 9,
+                    }}
+                  >
+                    {incidents.map((incident) => (
+                      <option key={incident.id} value={incident.id}>
+                        {incident.type} · {incident.status}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: "1px solid #D5EDE7",
+                    color: "#6C757D",
+                    fontSize: 8,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {incidentAlertsLoading
+                    ? "Chargement des communications..."
+                    : incidentAlertsError
+                      ? incidentAlertsError
+                      : `${incidentAlerts.length} communication${
+                          incidentAlerts.length > 1 ? "s" : ""
+                        } Population dans cet incident.`}
+                </div>
+              </div>
+            )}
+
+            <ActionButton
+              icon={<Settings size={17} />}
+              title={
+                configurationOpen ? "Fermer la configuration" : "Configuration"
+              }
+              detail={
+                program
+                  ? `${program.smsEnabled ? "SMS" : ""}${
+                      program.smsEnabled && program.emailEnabled ? " · " : ""
+                    }${program.emailEnabled ? "Courriel" : ""}`
+                  : "Programme non configuré"
+              }
+              onClick={() => {
+                setConfigurationOpen((current) => !current);
+                setConfigurationMessage(null);
+                setConfigurationError(null);
+              }}
+              disabled={status.programStatus === "ARCHIVED"}
+            />
+          </div>
+        </section>
+
+        {isActive && (
+          <section
+            className={styles.incidentRegistry}
+            style={{
+              marginBottom: 18,
+              padding: 18,
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              borderRadius: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+                marginBottom: 14,
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    margin: "0 0 4px",
+                    color: "#ADB5BD",
+                    fontSize: 8,
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
+                  }}
+                >
+                  Prouver · Audit · REX
+                </p>
+
+                <h2
+                  style={{
+                    margin: "0 0 4px",
+                    color: "#2C3E50",
+                    fontSize: 15,
+                    fontWeight: 900,
+                  }}
+                >
+                  Registre des incidents
+                </h2>
+
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#6C757D",
+                    fontSize: 9,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Consultez les dossiers de communication des incidents actifs,
+                  résolus ou annulés.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadIncidentHistory}
+                disabled={incidentHistoryLoading}
+                style={{
+                  padding: "7px 10px",
+                  border: "1px solid #DEE2E6",
+                  borderRadius: 8,
+                  backgroundColor: "#FFFFFF",
+                  color: "#495057",
+                  cursor: incidentHistoryLoading ? "not-allowed" : "pointer",
+                  opacity: incidentHistoryLoading ? 0.55 : 1,
+                  fontSize: 9,
+                  fontWeight: 800,
+                }}
+              >
+                {incidentHistoryLoading
+                  ? "Actualisation..."
+                  : "Actualiser le registre"}
+              </button>
+            </div>
+
+            {incidentHistoryError ? (
+              <div
+                style={{
+                  padding: 11,
+                  borderRadius: 8,
+                  backgroundColor: "#FDEDEC",
+                  color: "#922B21",
+                  fontSize: 9,
+                  lineHeight: 1.5,
+                }}
+              >
+                {incidentHistoryError}
+              </div>
+            ) : incidentHistoryLoading && incidentHistory.length === 0 ? (
+              <p
+                className="animate-pulse"
+                style={{
+                  margin: 0,
+                  color: "#ADB5BD",
+                  fontSize: 10,
+                }}
+              >
+                Chargement du registre...
+              </p>
+            ) : incidentHistory.length === 0 ? (
+              <div
+                style={{
+                  padding: 13,
+                  borderRadius: 9,
+                  backgroundColor: "#F8F9FA",
+                  color: "#6C757D",
+                  fontSize: 9,
+                }}
+              >
+                Aucun incident enregistré pour ce bâtiment.
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 7,
+                }}
+              >
+                {incidentHistory.map((incident) => {
+                  const operational =
+                    incident.status !== "PRE_ALERT" &&
+                    incident.status !== "RESOLVED" &&
+                    incident.status !== "CANCELLED";
+
+                  const selected = incident.id === selectedIncidentId;
+
+                  return (
+                    <button
+                      key={incident.id}
+                      type="button"
+                      onClick={() => openHistoricalIncident(incident.id)}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        gap: 12,
+                        alignItems: "center",
+                        border: selected
+                          ? "1px solid #167D6A"
+                          : "1px solid #E9ECEF",
+                        borderRadius: 9,
+                        backgroundColor: selected ? "#F3FAF8" : "#FFFFFF",
+                        textAlign: "left",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          minWidth: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            marginBottom: 3,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <strong
+                            style={{
+                              color: "#2C3E50",
+                              fontSize: 10,
+                            }}
+                          >
+                            {incident.type}
+                          </strong>
+
+                          <span
+                            style={{
+                              padding: "2px 6px",
+                              borderRadius: 20,
+                              backgroundColor: operational
+                                ? "#E8F5F1"
+                                : "#F1F3F5",
+                              color: operational ? "#167D6A" : "#6C757D",
+                              fontSize: 7,
+                              fontWeight: 900,
+                            }}
+                          >
+                            {incident.status}
+                          </span>
+                        </div>
+
+                        <span
+                          style={{
+                            color: "#ADB5BD",
+                            fontSize: 8,
+                          }}
+                        >
+                          {new Date(incident.triggeredAt).toLocaleString(
+                            "fr-CA",
+                          )}
+                        </span>
+                      </div>
+
+                      <span
+                        style={{
+                          color: selected ? "#167D6A" : "#6C757D",
+                          fontSize: 8,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {operational ? "Ouvrir" : "Consulter"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: 11,
+                paddingTop: 10,
+                borderTop: "1px solid #F1F3F5",
+                color: "#ADB5BD",
+                fontSize: 8,
+                lineHeight: 1.5,
+              }}
+            >
+              Les 50 incidents les plus récents du bâtiment sont disponibles
+              dans ce registre.
+            </div>
+          </section>
+        )}
+
+        {communicationsOpen && selectedIncidentId && (
+          <IncidentCommunicationsPanel
+            incident={
+              incidents.find(
+                (incident) => incident.id === selectedIncidentId,
+              ) ??
+              incidentHistory.find(
+                (incident) => incident.id === selectedIncidentId,
+              ) ??
+              null
+            }
+            alerts={incidentAlerts}
+            loading={incidentAlertsLoading}
+            error={incidentAlertsError}
+            followUpCreating={followUpCreating}
+            onRefresh={() => loadIncidentAlertHistory(selectedIncidentId)}
+            onCreateUpdate={() => createIncidentFollowUpDraft("UPDATE")}
+            onCreateAllClear={() => createIncidentFollowUpDraft("ALL_CLEAR")}
+          />
+        )}
+
+        {(previewLoading || previewError || preview) && (
+          <section
+            style={{
+              marginBottom: 18,
+              padding: "20px 22px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              borderRadius: 14,
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 5px",
+                color: "#167D6A",
+                fontSize: 9,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              Analyse géospatiale
+            </p>
+
+            <h2
+              style={{
+                margin: "0 0 14px",
+                color: "#2C3E50",
+                fontSize: 15,
+                fontWeight: 900,
+              }}
+            >
+              Population potentiellement touchée
+            </h2>
+
+            {previewLoading && (
+              <p
+                className="animate-pulse"
+                style={{
+                  margin: 0,
+                  color: "#ADB5BD",
+                  fontSize: 11,
+                }}
+              >
+                Calcul des zones et des destinataires...
+              </p>
+            )}
+
+            {previewError && (
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 9,
+                  backgroundColor: "#FDEDEC",
+                  color: "#922B21",
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                {previewError}
+              </div>
+            )}
+
+            {preview && !previewLoading && (
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(min(150px, 100%), 1fr))",
+                    gap: 10,
+                    marginBottom: 16,
+                  }}
+                >
+                  <PreviewMetric
+                    label="Population ciblée"
+                    value={preview.population.uniqueTargetCount}
+                  />
+
+                  <PreviewMetric
+                    label="SMS"
+                    value={preview.population.uniqueSmsTargetCount}
+                  />
+
+                  <PreviewMetric
+                    label="Courriels"
+                    value={preview.population.uniqueEmailTargetCount}
+                  />
+
+                  <PreviewMetric
                     label="Sans localisation"
                     value={preview.population.unlocatedSubscriberCount}
                     warning={preview.population.unlocatedSubscriberCount > 0}
@@ -2806,774 +2981,1105 @@ export default function PopulationPage() {
 
                 <div
                   style={{
-                    display: 'grid',
+                    display: "grid",
                     gap: 8,
                   }}
                 >
                   {preview.zones.map((zone) => (
-                  <div
-                    key={zone.id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns:
-                        'minmax(0, 1fr) auto',
-                      gap: 12,
-                      alignItems: 'center',
-                      padding: '11px 13px',
-                      border: '1px solid #E9ECEF',
-                      borderRadius: 9,
-                    }}
-                  >
-                    <div>
-                      <p
-                        style={{
-                          margin: '0 0 3px',
-                          color: '#2C3E50',
-                          fontSize: 11,
-                          fontWeight: 900,
-                        }}
-                      >
-                        Zone {zone.code} · {zone.nameFR}
-                      </p>
-
-                      <p
-                        style={{
-                          margin: 0,
-                          color: '#ADB5BD',
-                          fontSize: 9,
-                        }}
-                      >
-                        {zone.protectiveAction || 'Action à confirmer'}
-                      </p>
-                    </div>
-
                     <div
+                      key={zone.id}
                       style={{
-                        textAlign: 'right',
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) auto",
+                        gap: 12,
+                        alignItems: "center",
+                        padding: "11px 13px",
+                        border: "1px solid #E9ECEF",
+                        borderRadius: 9,
                       }}
                     >
-                      <strong
-                        style={{
-                          display: 'block',
-                          color: '#2C3E50',
-                          fontSize: 15,
-                        }}
-                      >
-                        {zone.targetCount.toLocaleString('fr-CA')}
-                      </strong>
+                      <div>
+                        <p
+                          style={{
+                            margin: "0 0 3px",
+                            color: "#2C3E50",
+                            fontSize: 11,
+                            fontWeight: 900,
+                          }}
+                        >
+                          Zone {zone.code} · {zone.nameFR}
+                        </p>
 
-                      <span
+                        <p
+                          style={{
+                            margin: 0,
+                            color: "#ADB5BD",
+                            fontSize: 9,
+                          }}
+                        >
+                          {zone.protectiveAction || "Action à confirmer"}
+                        </p>
+                      </div>
+
+                      <div
                         style={{
-                          color: '#ADB5BD',
-                          fontSize: 8,
+                          textAlign: "right",
                         }}
                       >
-                        personnes
-                      </span>
+                        <strong
+                          style={{
+                            display: "block",
+                            color: "#2C3E50",
+                            fontSize: 15,
+                          }}
+                        >
+                          {zone.targetCount.toLocaleString("fr-CA")}
+                        </strong>
+
+                        <span
+                          style={{
+                            color: "#ADB5BD",
+                            fontSize: 8,
+                          }}
+                        >
+                          personnes
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
-              <p
-                style={{
-                  margin: '13px 0 0',
-                  color: '#ADB5BD',
-                  fontSize: 9,
-                  lineHeight: 1.5,
-                }}
-              >
-                Les résultats sont agrégés. Aucune identité ni position
-                individuelle de citoyen n’est affichée dans le cockpit.
-              </p>
-            </>
-          )}
-        </section>
-      )}
+                <p
+                  style={{
+                    margin: "13px 0 0",
+                    color: "#ADB5BD",
+                    fontSize: 9,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Les résultats sont agrégés. Aucune identité ni position
+                  individuelle de citoyen n’est affichée dans le cockpit.
+                </p>
+              </>
+            )}
+          </section>
+        )}
 
-      {alertComposerOpen && selectedScenario && preview && (
-        <section
-          ref={alertComposerRef}
-          style={{
-            marginBottom: 18,
-            overflow: 'hidden',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
-            borderRadius: 14,
-          }}
-        >
-          <div
+        {alertComposerOpen && selectedScenario && preview && (
+          <section
+            ref={alertComposerRef}
             style={{
-              padding: '20px 22px 16px',
-              borderBottom: '1px solid #E9ECEF',
+              marginBottom: 18,
+              overflow: "hidden",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              borderRadius: 14,
             }}
           >
             <div
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
+                padding: "20px 22px 16px",
+                borderBottom: "1px solid #E9ECEF",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      margin: "0 0 5px",
+                      color: "#C0392B",
+                      fontSize: 9,
+                      fontWeight: 900,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    Communication d’urgence
+                  </p>
+
+                  <h2
+                    style={{
+                      margin: "0 0 4px",
+                      color: "#2C3E50",
+                      fontSize: 17,
+                      fontWeight: 900,
+                    }}
+                  >
+                    {alertForm.type === "UPDATE"
+                      ? "Mise à jour d’un événement en cours"
+                      : alertForm.type === "ALL_CLEAR"
+                        ? "Fin d’alerte"
+                        : "Préparer une alerte à la population"}
+                  </h2>
+
+                  {alertForm.type === "ALL_CLEAR" && (
+                    <p style={{ margin: "6px 0 0", color: "#6C757D" }}>
+                      Cette communication réelle informe les personnes
+                      concernées que la situation ou les mesures de protection
+                      prennent fin.
+                    </p>
+                  )}
+
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#ADB5BD",
+                      fontSize: 10,
+                    }}
+                  >
+                    {selectedScenario.nameFR}
+                  </p>
+                </div>
+
+                {!createdAlert && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAlertComposerOpen(false);
+                      setAlertError(null);
+                    }}
+                    style={{
+                      padding: "7px 10px",
+                      border: "1px solid #E9ECEF",
+                      borderRadius: 8,
+                      backgroundColor: "#FFFFFF",
+                      color: "#6C757D",
+                      cursor: "pointer",
+                      fontSize: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    Fermer
+                  </button>
+                )}
+              </div>
+
+              <AlertStepIndicator currentStep={alertStep} />
+            </div>
+
+            <div style={{ padding: "20px 22px" }}>
+              {alertStep === 1 && (
+                <AlertSituationStep
+                  type={alertForm.type}
+                  scenario={selectedScenario}
+                  onChange={(value) => updateAlertField("type", value)}
+                />
+              )}
+
+              {alertStep === 2 && (
+                <AlertZoneStep scenario={selectedScenario} preview={preview} />
+              )}
+
+              {alertStep === 3 && <AlertPopulationStep preview={preview} />}
+
+              {alertStep === 4 && (
+                <AlertMessageStep
+                  form={alertForm}
+                  onChange={updateAlertField}
+                />
+              )}
+
+              {alertStep === 5 && (
+                <AlertValidationStep
+                  form={alertForm}
+                  scenario={selectedScenario}
+                  preview={preview}
+                />
+              )}
+
+              {alertStep === 6 && createdAlert && (
+                <AlertDraftWorkspace
+                  alert={createdAlert}
+                  form={alertForm}
+                  loading={alertWorkflowLoading}
+                  freezeConfirmationOpen={freezeConfirmationOpen}
+                  freezeResult={freezeResult}
+                  livePreflight={livePreflight}
+                  deliverySummary={deliverySummary}
+                  sendConfirmationOpen={sendConfirmationOpen}
+                  deliveryMode={
+                    freezeResult?.deliveryMode ?? status.deliveryMode
+                  }
+                  permissions={status.populationPermissions}
+                  scenarioName={
+                    selectedScenario?.nameFR ?? "Scénario non précisé"
+                  }
+                  onChange={updateAlertField}
+                  onSave={savePopulationAlertDraft}
+                  onReady={markPopulationAlertReady}
+                  onApprove={approvePopulationAlert}
+                  onRequestFreeze={() => setFreezeConfirmationOpen(true)}
+                  onCancelFreeze={() => setFreezeConfirmationOpen(false)}
+                  onConfirmFreeze={freezePopulationAlertRecipients}
+                  onRequestSend={() => setSendConfirmationOpen(true)}
+                  onCancelSend={() => setSendConfirmationOpen(false)}
+                  onConfirmSend={sendPopulationAlert}
+                  onClose={() => {
+                    setAlertComposerOpen(false);
+                    setAlertStep(1);
+                    setCreatedAlert(null);
+                    setAlertError(null);
+                    setFreezeConfirmationOpen(false);
+                    setFreezeResult(null);
+                    setLivePreflight(null);
+                    setDeliverySummary(null);
+                    setSendConfirmationOpen(false);
+                  }}
+                />
+              )}
+
+              {alertError && (
+                <div
+                  style={{
+                    marginTop: 14,
+                    padding: 12,
+                    borderRadius: 9,
+                    backgroundColor: "#FDEDEC",
+                    color: "#922B21",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {alertError}
+                </div>
+              )}
+
+              {!createdAlert && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    marginTop: 20,
+                    paddingTop: 16,
+                    borderTop: "1px solid #E9ECEF",
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={alertStep === 1 || alertCreating}
+                    onClick={() =>
+                      setAlertStep((current) => Math.max(1, current - 1))
+                    }
+                    style={{
+                      padding: "9px 13px",
+                      border: "1px solid #E9ECEF",
+                      borderRadius: 8,
+                      backgroundColor: "#FFFFFF",
+                      color: "#6C757D",
+                      cursor:
+                        alertStep === 1 || alertCreating
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity: alertStep === 1 || alertCreating ? 0.45 : 1,
+                      fontSize: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    Précédent
+                  </button>
+
+                  {alertStep < 5 ? (
+                    <button
+                      type="button"
+                      disabled={
+                        alertCreating ||
+                        (alertStep === 4 &&
+                          (!alertForm.titleFR.trim() ||
+                            !alertForm.messageFR.trim()))
+                      }
+                      onClick={() =>
+                        setAlertStep((current) => Math.min(5, current + 1))
+                      }
+                      style={{
+                        padding: "9px 15px",
+                        border: "none",
+                        borderRadius: 8,
+                        backgroundColor: "#167D6A",
+                        color: "#FFFFFF",
+                        cursor: "pointer",
+                        fontSize: 10,
+                        fontWeight: 900,
+                      }}
+                    >
+                      Continuer
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={alertCreating}
+                      onClick={createPopulationAlertDraft}
+                      style={{
+                        padding: "9px 15px",
+                        border: "none",
+                        borderRadius: 8,
+                        backgroundColor: "#C0392B",
+                        color: "#FFFFFF",
+                        cursor: alertCreating ? "not-allowed" : "pointer",
+                        opacity: alertCreating ? 0.65 : 1,
+                        fontSize: 10,
+                        fontWeight: 900,
+                      }}
+                    >
+                      {alertCreating ? "Création..." : "Créer le brouillon"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {configurationOpen && (
+          <section
+            style={{
+              marginBottom: 18,
+              padding: "22px 24px",
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E9ECEF",
+              borderRadius: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
                 gap: 16,
-                flexWrap: 'wrap',
+                marginBottom: 22,
+                flexWrap: "wrap",
               }}
             >
               <div>
                 <p
                   style={{
-                    margin: '0 0 5px',
-                    color: '#C0392B',
-                    fontSize: 9,
+                    margin: "0 0 5px",
+                    color: "#167D6A",
+                    fontSize: 10,
                     fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
                   }}
                 >
-                  Communication d’urgence
+                  Préparation
                 </p>
 
                 <h2
                   style={{
-                    margin: '0 0 4px',
-                    color: '#2C3E50',
-                    fontSize: 17,
+                    margin: "0 0 5px",
+                    color: "#2C3E50",
+                    fontSize: 18,
                     fontWeight: 900,
                   }}
                 >
-                  Préparer une alerte à la population
+                  Configuration du programme
                 </h2>
 
                 <p
                   style={{
                     margin: 0,
-                    color: '#ADB5BD',
-                    fontSize: 10,
+                    color: "#6C757D",
+                    fontSize: 12,
+                    lineHeight: 1.5,
                   }}
                 >
-                  {selectedScenario.nameFR}
+                  Paramètres publics, canaux de communication et consentement
+                  citoyen.
                 </p>
               </div>
 
-              {!createdAlert && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAlertComposerOpen(false);
-                    setAlertError(null);
-                  }}
-                  style={{
-                    padding: '7px 10px',
-                    border: '1px solid #E9ECEF',
-                    borderRadius: 8,
-                    backgroundColor: '#FFFFFF',
-                    color: '#6C757D',
-                    cursor: 'pointer',
-                    fontSize: 10,
-                    fontWeight: 800,
-                  }}
-                >
-                  Fermer
-                </button>
-              )}
+              <span
+                style={{
+                  padding: "5px 9px",
+                  borderRadius: 20,
+                  backgroundColor: "#F1F3F5",
+                  color: "#6C757D",
+                  fontSize: 10,
+                  fontWeight: 800,
+                }}
+              >
+                {programStatus}
+              </span>
             </div>
 
-            <AlertStepIndicator currentStep={alertStep} />
-          </div>
-
-          <div style={{ padding: '20px 22px' }}>
-            {alertStep === 1 && (
-              <AlertSituationStep
-                type={alertForm.type}
-                scenario={selectedScenario}
+            <ConfigurationSection title="Identité publique">
+              <ConfigurationField
+                label="Identifiant public"
+                value={configurationForm.publicSlug}
+                placeholder="ex. sobeys-boucherville"
+                required
                 onChange={(value) =>
-                  updateAlertField('type', value)
+                  updateConfigurationField("publicSlug", value)
                 }
               />
-            )}
 
-            {alertStep === 2 && (
-              <AlertZoneStep
-                scenario={selectedScenario}
-                preview={preview}
+              <ConfigurationField
+                label="Nom du programme"
+                value={configurationForm.nameFR}
+                placeholder="Sentinelle Population — Boucherville"
+                required
+                onChange={(value) => updateConfigurationField("nameFR", value)}
               />
-            )}
 
-            {alertStep === 3 && (
-              <AlertPopulationStep preview={preview} />
-            )}
-
-            {alertStep === 4 && (
-              <AlertMessageStep
-                form={alertForm}
-                onChange={updateAlertField}
+              <ConfigurationField
+                label="Nom anglais"
+                value={configurationForm.nameEN}
+                onChange={(value) => updateConfigurationField("nameEN", value)}
               />
-            )}
 
-            {alertStep === 5 && (
-              <AlertValidationStep
-                form={alertForm}
-                scenario={selectedScenario}
-                preview={preview}
+              <ConfigurationField
+                label="Téléphone public"
+                value={configurationForm.publicPhone}
+                placeholder="450 000-0000"
+                onChange={(value) =>
+                  updateConfigurationField("publicPhone", value)
+                }
               />
-            )}
 
-            {alertStep === 6 && createdAlert && (
-              <AlertDraftWorkspace
-                alert={createdAlert}
-                form={alertForm}
-                loading={alertWorkflowLoading}
-                freezeConfirmationOpen={freezeConfirmationOpen}
-                freezeResult={freezeResult}
-                livePreflight={livePreflight}
-                deliverySummary={deliverySummary}
-                sendConfirmationOpen={sendConfirmationOpen}
-                deliveryMode={freezeResult?.deliveryMode ?? status.deliveryMode}
-                permissions={status.populationPermissions}
-                scenarioName={selectedScenario?.nameFR ?? 'Scénario non précisé'}
-                onChange={updateAlertField}
-                onSave={savePopulationAlertDraft}
-                onReady={markPopulationAlertReady}
-                onApprove={approvePopulationAlert}
-                onRequestFreeze={() =>
-                  setFreezeConfirmationOpen(true)
+              <ConfigurationField
+                label="Courriel public"
+                value={configurationForm.publicEmail}
+                placeholder="urgence@exemple.ca"
+                onChange={(value) =>
+                  updateConfigurationField("publicEmail", value)
                 }
-                onCancelFreeze={() =>
-                  setFreezeConfirmationOpen(false)
-                }
-                onConfirmFreeze={freezePopulationAlertRecipients}
-                onRequestSend={() =>
-                  setSendConfirmationOpen(true)
-                }
-                onCancelSend={() =>
-                  setSendConfirmationOpen(false)
-                }
-                onConfirmSend={sendPopulationAlert}
-                onClose={() => {
-                  setAlertComposerOpen(false);
-                  setAlertStep(1);
-                  setCreatedAlert(null);
-                  setAlertError(null);
-                  setFreezeConfirmationOpen(false);
-                  setFreezeResult(null);
-                  setLivePreflight(null);
-                  setDeliverySummary(null);
-                  setSendConfirmationOpen(false);
-                }}
               />
-            )}
 
-            {alertError && (
+              <ConfigurationField
+                label="Site Web"
+                value={configurationForm.websiteUrl}
+                placeholder="https://..."
+                onChange={(value) =>
+                  updateConfigurationField("websiteUrl", value)
+                }
+              />
+
+              <ConfigurationTextarea
+                label="Description française"
+                value={configurationForm.descriptionFR}
+                onChange={(value) =>
+                  updateConfigurationField("descriptionFR", value)
+                }
+              />
+
+              <ConfigurationTextarea
+                label="Description anglaise"
+                value={configurationForm.descriptionEN}
+                onChange={(value) =>
+                  updateConfigurationField("descriptionEN", value)
+                }
+              />
+            </ConfigurationSection>
+
+            <ConfigurationSection title="Diffusion et inscription">
+              <ConfigurationToggle
+                label="Inscription citoyenne"
+                detail="Permettre au public de s’inscrire volontairement au programme."
+                checked={configurationForm.registrationEnabled}
+                onChange={(value) =>
+                  updateConfigurationField("registrationEnabled", value)
+                }
+              />
+
+              <ConfigurationToggle
+                label="Alertes SMS"
+                detail="Autoriser la diffusion des communications par message texte."
+                checked={configurationForm.smsEnabled}
+                onChange={(value) =>
+                  updateConfigurationField("smsEnabled", value)
+                }
+              />
+
+              <ConfigurationToggle
+                label="Alertes par courriel"
+                detail="Autoriser la diffusion des communications par courriel."
+                checked={configurationForm.emailEnabled}
+                onChange={(value) =>
+                  updateConfigurationField("emailEnabled", value)
+                }
+              />
+            </ConfigurationSection>
+
+            <ConfigurationSection title="Confidentialité et consentement">
+              <ConfigurationField
+                label="Version du consentement"
+                value={configurationForm.consentVersion}
+                placeholder="1.0"
+                required
+                onChange={(value) =>
+                  updateConfigurationField("consentVersion", value)
+                }
+              />
+
+              <ConfigurationTextarea
+                label="Confidentialité — français"
+                value={configurationForm.privacyTextFR}
+                required
+                rows={5}
+                onChange={(value) =>
+                  updateConfigurationField("privacyTextFR", value)
+                }
+              />
+
+              <ConfigurationTextarea
+                label="Consentement — français"
+                value={configurationForm.consentTextFR}
+                required
+                rows={5}
+                onChange={(value) =>
+                  updateConfigurationField("consentTextFR", value)
+                }
+              />
+
+              <ConfigurationTextarea
+                label="Confidentialité — anglais"
+                value={configurationForm.privacyTextEN}
+                rows={5}
+                onChange={(value) =>
+                  updateConfigurationField("privacyTextEN", value)
+                }
+              />
+
+              <ConfigurationTextarea
+                label="Consentement — anglais"
+                value={configurationForm.consentTextEN}
+                rows={5}
+                onChange={(value) =>
+                  updateConfigurationField("consentTextEN", value)
+                }
+              />
+            </ConfigurationSection>
+
+            {(configurationError || configurationMessage) && (
               <div
                 style={{
-                  marginTop: 14,
-                  padding: 12,
-                  borderRadius: 9,
-                  backgroundColor: '#FDEDEC',
-                  color: '#922B21',
+                  marginBottom: 16,
+                  padding: "11px 13px",
+                  borderRadius: 8,
+                  backgroundColor: configurationError ? "#FDEDEC" : "#E8F5F1",
+                  color: configurationError ? "#922B21" : "#167D6A",
                   fontSize: 11,
                   fontWeight: 700,
                   lineHeight: 1.5,
                 }}
               >
-                {alertError}
+                {configurationError || configurationMessage}
               </div>
             )}
 
-            {!createdAlert && (
-              <div
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 9,
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setConfigurationOpen(false)}
+                disabled={configurationSaving}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 10,
-                  marginTop: 20,
-                  paddingTop: 16,
-                  borderTop: '1px solid #E9ECEF',
+                  padding: "10px 15px",
+                  border: "1px solid #E9ECEF",
+                  borderRadius: 8,
+                  backgroundColor: "#FFFFFF",
+                  color: "#6C757D",
+                  cursor: configurationSaving ? "not-allowed" : "pointer",
+                  fontSize: 11,
+                  fontWeight: 800,
                 }}
               >
-                <button
-                  type="button"
-                  disabled={alertStep === 1 || alertCreating}
-                  onClick={() =>
-                    setAlertStep((current) =>
-                      Math.max(1, current - 1),
-                    )
-                  }
-                  style={{
-                    padding: '9px 13px',
-                    border: '1px solid #E9ECEF',
-                    borderRadius: 8,
-                    backgroundColor: '#FFFFFF',
-                    color: '#6C757D',
-                    cursor:
-                      alertStep === 1 || alertCreating
-                        ? 'not-allowed'
-                        : 'pointer',
-                    opacity:
-                      alertStep === 1 || alertCreating ? 0.45 : 1,
-                    fontSize: 10,
-                    fontWeight: 800,
-                  }}
-                >
-                  Précédent
-                </button>
+                Fermer
+              </button>
 
-                {alertStep < 5 ? (
-                  <button
-                    type="button"
-                    disabled={
-                      alertCreating ||
-                      (alertStep === 4 &&
-                        (!alertForm.titleFR.trim() ||
-                          !alertForm.messageFR.trim()))
-                    }
-                    onClick={() =>
-                      setAlertStep((current) =>
-                        Math.min(5, current + 1),
-                      )
-                    }
-                    style={{
-                      padding: '9px 15px',
-                      border: 'none',
-                      borderRadius: 8,
-                      backgroundColor: '#167D6A',
-                      color: '#FFFFFF',
-                      cursor: 'pointer',
-                      fontSize: 10,
-                      fontWeight: 900,
-                    }}
-                  >
-                    Continuer
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={alertCreating}
-                    onClick={createPopulationAlertDraft}
-                    style={{
-                      padding: '9px 15px',
-                      border: 'none',
-                      borderRadius: 8,
-                      backgroundColor: '#C0392B',
-                      color: '#FFFFFF',
-                      cursor: alertCreating
-                        ? 'not-allowed'
-                        : 'pointer',
-                      opacity: alertCreating ? 0.65 : 1,
-                      fontSize: 10,
-                      fontWeight: 900,
-                    }}
-                  >
-                    {alertCreating
-                      ? 'Création...'
-                      : 'Créer le brouillon'}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+              <button
+                type="button"
+                onClick={saveConfiguration}
+                disabled={
+                  configurationSaving || status.programStatus === "ARCHIVED"
+                }
+                style={{
+                  padding: "10px 17px",
+                  border: "none",
+                  borderRadius: 8,
+                  backgroundColor: "#167D6A",
+                  color: "#FFFFFF",
+                  cursor:
+                    configurationSaving || status.programStatus === "ARCHIVED"
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity:
+                    configurationSaving || status.programStatus === "ARCHIVED"
+                      ? 0.55
+                      : 1,
+                  fontSize: 11,
+                  fontWeight: 900,
+                }}
+              >
+                {configurationSaving
+                  ? "Enregistrement..."
+                  : "Enregistrer la configuration"}
+              </button>
+            </div>
+          </section>
+        )}
 
-      {configurationOpen && (
+        {/* ChaÃ®ne opÃ©rationnelle */}
         <section
+          className={styles.communicationChain}
           style={{
-            marginBottom: 18,
-            padding: '22px 24px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E9ECEF',
+            padding: "18px 20px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E9ECEF",
             borderRadius: 14,
           }}
         >
-          <div
+          <p
             style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'space-between',
-              gap: 16,
-              marginBottom: 22,
-              flexWrap: 'wrap',
+              margin: "0 0 14px",
+              color: "#ADB5BD",
+              fontSize: 10,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
             }}
           >
-            <div>
-              <p
+            Chaîne de communication
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            {[
+              "Situation",
+              "Zone",
+              "Population",
+              "Message",
+              "Validation humaine",
+              "Diffusion",
+              "Preuve",
+            ].map((step, index, arr) => (
+              <div
+                key={step}
                 style={{
-                  margin: '0 0 5px',
-                  color: '#167D6A',
-                  fontSize: 10,
-                  fontWeight: 900,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                Préparation
-              </p>
+                <span
+                  style={{
+                    padding: "7px 10px",
+                    borderRadius: 7,
+                    backgroundColor:
+                      step === "Validation humaine" ? "#E8F5F1" : "#F8F9FA",
+                    color:
+                      step === "Validation humaine" ? "#167D6A" : "#6C757D",
+                    fontSize: 11,
+                    fontWeight: step === "Validation humaine" ? 800 : 600,
+                  }}
+                >
+                  {index + 1}. {step}
+                </span>
 
-              <h2
-                style={{
-                  margin: '0 0 5px',
-                  color: '#2C3E50',
-                  fontSize: 18,
-                  fontWeight: 900,
-                }}
-              >
-                Configuration du programme
-              </h2>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: '#6C757D',
-                  fontSize: 12,
-                  lineHeight: 1.5,
-                }}
-              >
-                Paramètres publics, canaux de communication et consentement
-                citoyen.
-              </p>
-            </div>
-
-            <span
-              style={{
-                padding: '5px 9px',
-                borderRadius: 20,
-                backgroundColor: '#F1F3F5',
-                color: '#6C757D',
-                fontSize: 10,
-                fontWeight: 800,
-              }}
-            >
-              {programStatus}
-            </span>
+                {index < arr.length - 1 && (
+                  <ChevronRight size={12} color="#CED4DA" />
+                )}
+              </div>
+            ))}
           </div>
 
-          <ConfigurationSection title="Identité publique">
-            <ConfigurationField
-              label="Identifiant public"
-              value={configurationForm.publicSlug}
-              placeholder="ex. sobeys-boucherville"
-              required
-              onChange={(value) =>
-                updateConfigurationField('publicSlug', value)
-              }
-            />
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 14,
+              borderTop: "1px solid #F1F3F5",
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              color: "#167D6A",
+            }}
+          >
+            <CheckCircle2 size={14} />
 
-            <ConfigurationField
-              label="Nom du programme"
-              value={configurationForm.nameFR}
-              placeholder="Sentinelle Population — Boucherville"
-              required
-              onChange={(value) =>
-                updateConfigurationField('nameFR', value)
-              }
-            />
-
-            <ConfigurationField
-              label="Nom anglais"
-              value={configurationForm.nameEN}
-              onChange={(value) =>
-                updateConfigurationField('nameEN', value)
-              }
-            />
-
-            <ConfigurationField
-              label="Téléphone public"
-              value={configurationForm.publicPhone}
-              placeholder="450 000-0000"
-              onChange={(value) =>
-                updateConfigurationField('publicPhone', value)
-              }
-            />
-
-            <ConfigurationField
-              label="Courriel public"
-              value={configurationForm.publicEmail}
-              placeholder="urgence@exemple.ca"
-              onChange={(value) =>
-                updateConfigurationField('publicEmail', value)
-              }
-            />
-
-            <ConfigurationField
-              label="Site Web"
-              value={configurationForm.websiteUrl}
-              placeholder="https://..."
-              onChange={(value) =>
-                updateConfigurationField('websiteUrl', value)
-              }
-            />
-
-            <ConfigurationTextarea
-              label="Description française"
-              value={configurationForm.descriptionFR}
-              onChange={(value) =>
-                updateConfigurationField('descriptionFR', value)
-              }
-            />
-
-            <ConfigurationTextarea
-              label="Description anglaise"
-              value={configurationForm.descriptionEN}
-              onChange={(value) =>
-                updateConfigurationField('descriptionEN', value)
-              }
-            />
-          </ConfigurationSection>
-
-          <ConfigurationSection title="Diffusion et inscription">
-            <ConfigurationToggle
-              label="Inscription citoyenne"
-              detail="Permettre au public de s’inscrire volontairement au programme."
-              checked={configurationForm.registrationEnabled}
-              onChange={(value) =>
-                updateConfigurationField('registrationEnabled', value)
-              }
-            />
-
-            <ConfigurationToggle
-              label="Alertes SMS"
-              detail="Autoriser la diffusion des communications par message texte."
-              checked={configurationForm.smsEnabled}
-              onChange={(value) =>
-                updateConfigurationField('smsEnabled', value)
-              }
-            />
-
-            <ConfigurationToggle
-              label="Alertes par courriel"
-              detail="Autoriser la diffusion des communications par courriel."
-              checked={configurationForm.emailEnabled}
-              onChange={(value) =>
-                updateConfigurationField('emailEnabled', value)
-              }
-            />
-          </ConfigurationSection>
-
-          <ConfigurationSection title="Confidentialité et consentement">
-            <ConfigurationField
-              label="Version du consentement"
-              value={configurationForm.consentVersion}
-              placeholder="1.0"
-              required
-              onChange={(value) =>
-                updateConfigurationField('consentVersion', value)
-              }
-            />
-
-            <ConfigurationTextarea
-              label="Confidentialité — français"
-              value={configurationForm.privacyTextFR}
-              required
-              rows={5}
-              onChange={(value) =>
-                updateConfigurationField('privacyTextFR', value)
-              }
-            />
-
-            <ConfigurationTextarea
-              label="Consentement — français"
-              value={configurationForm.consentTextFR}
-              required
-              rows={5}
-              onChange={(value) =>
-                updateConfigurationField('consentTextFR', value)
-              }
-            />
-
-            <ConfigurationTextarea
-              label="Confidentialité — anglais"
-              value={configurationForm.privacyTextEN}
-              rows={5}
-              onChange={(value) =>
-                updateConfigurationField('privacyTextEN', value)
-              }
-            />
-
-            <ConfigurationTextarea
-              label="Consentement — anglais"
-              value={configurationForm.consentTextEN}
-              rows={5}
-              onChange={(value) =>
-                updateConfigurationField('consentTextEN', value)
-              }
-            />
-          </ConfigurationSection>
-
-          {(configurationError || configurationMessage) && (
-            <div
+            <p
               style={{
-                marginBottom: 16,
-                padding: '11px 13px',
-                borderRadius: 8,
-                backgroundColor: configurationError
-                  ? '#FDEDEC'
-                  : '#E8F5F1',
-                color: configurationError ? '#922B21' : '#167D6A',
+                margin: 0,
                 fontSize: 11,
                 fontWeight: 700,
-                lineHeight: 1.5,
               }}
             >
-              {configurationError || configurationMessage}
+              La diffusion publique demeure soumise à une validation humaine.
+            </p>
+          </div>
+        </section>
+      </div>
+    </PortalLayout>
+  );
+}
+
+function formatPopulationCommunicationType(
+  type: PopulationOperationalEventAlert["type"],
+  sequence: number | null,
+) {
+  if (type === "EMERGENCY") return "ALERTE INITIALE";
+  if (type === "TEST") return sequence === 1 ? "TEST INITIAL" : "TEST";
+  if (type === "UPDATE") return "MISE À JOUR";
+  return "FIN D’ALERTE";
+}
+
+function formatPopulationCommunicationStatus(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "BROUILLON",
+    READY: "PRÊTE À DIFFUSER",
+    SENDING: "DIFFUSION EN COURS",
+    ACTIVE: "DIFFUSÉE",
+    ENDED: "TERMINÉE",
+    FAILED: "ÉCHEC",
+    CANCELLED: "ANNULÉE",
+  };
+  return labels[status] ?? status;
+}
+
+function EventCockpit({
+  event,
+  closedEvent,
+  loading,
+  error,
+  mode,
+  canPrepare,
+  followUpCreating,
+  closeOpen,
+  closeReason,
+  confirmIncomplete,
+  closeLoading,
+  onPrepareInitial,
+  onCreateUpdate,
+  onCreateAllClear,
+  onRefresh,
+  onOpenClose,
+  onCancelClose,
+  onCloseReasonChange,
+  onConfirmIncompleteChange,
+  onConfirmClose,
+}: {
+  event: PopulationOperationalEvent | null;
+  closedEvent: PopulationOperationalEvent | null;
+  loading: boolean;
+  error: string | null;
+  mode: "SANDBOX" | "LIVE";
+  canPrepare: boolean;
+  followUpCreating: boolean;
+  closeOpen: boolean;
+  closeReason: string;
+  confirmIncomplete: boolean;
+  closeLoading: boolean;
+  onPrepareInitial: () => void;
+  onCreateUpdate: () => void;
+  onCreateAllClear: () => void;
+  onRefresh: () => void;
+  onOpenClose: () => void;
+  onCancelClose: () => void;
+  onCloseReasonChange: (value: string) => void;
+  onConfirmIncompleteChange: (value: boolean) => void;
+  onConfirmClose: () => void;
+}) {
+  const allClear = event?.alerts.find(
+    (alert) => alert.type === "ALL_CLEAR" && alert.status !== "CANCELLED",
+  );
+  const canFollowUp = Boolean(event && !allClear && canPrepare);
+  const canClose = Boolean(
+    event &&
+    allClear &&
+    ["ACTIVE", "ENDED"].includes(allClear.status) &&
+    canPrepare,
+  );
+  const initialType = event?.alerts[0]?.type === "TEST" ? "TEST" : "URGENCE";
+
+  return (
+    <section className={styles.eventCockpit} aria-live="polite">
+      <div className={styles.eventHeader}>
+        <div>
+          <p className={styles.eventEyebrow}>
+            {event
+              ? "ÉVÉNEMENT EN COURS"
+              : closedEvent
+                ? "ÉVÉNEMENT TERMINÉ"
+                : "AUCUN ÉVÉNEMENT EN COURS"}
+          </p>
+          <h2>
+            {event?.emergencyScenario.nameFR ??
+              closedEvent?.emergencyScenario.nameFR ??
+              "Centre de contrôle disponible"}
+          </h2>
+          <p>
+            {event
+              ? `${initialType} · Début ${new Date(event.startedAt).toLocaleString("fr-CA")} · ${event.communicationCount} communication${event.communicationCount > 1 ? "s" : ""}`
+              : closedEvent
+                ? `Clos le ${new Date(closedEvent.endedAt!).toLocaleString("fr-CA")}${closedEvent.closeReason ? ` · ${closedEvent.closeReason}` : ""}`
+                : "Préparez une alerte initiale pour ouvrir un nouveau cycle de communication."}
+          </p>
+        </div>
+        <div
+          className={`${styles.eventMode} ${mode === "LIVE" ? styles.eventModeLive : ""}`}
+        >
+          <strong>{mode === "LIVE" ? "DIFFUSION RÉELLE" : "SIMULATION"}</strong>
+          <span>
+            {mode === "LIVE"
+              ? "Communications externes actives"
+              : "Aucune communication externe"}
+          </span>
+        </div>
+      </div>
+
+      {error && <div className={styles.eventError}>{error}</div>}
+      {loading && !event ? (
+        <p className="animate-pulse">Chargement de l’événement...</p>
+      ) : event ? (
+        <>
+          <div className={styles.eventActions}>
+            {!allClear && (
+              <button
+                className={styles.secondaryEventAction}
+                disabled={!canFollowUp || followUpCreating}
+                onClick={onCreateUpdate}
+              >
+                PUBLIER UNE MISE À JOUR
+              </button>
+            )}
+            {!allClear && (
+              <button
+                className={styles.primaryEventAction}
+                disabled={!canFollowUp || followUpCreating}
+                onClick={onCreateAllClear}
+              >
+                PRÉPARER LA FIN D’ALERTE
+              </button>
+            )}
+            {allClear && (
+              <button
+                className={styles.primaryEventAction}
+                disabled={!canClose}
+                onClick={onOpenClose}
+              >
+                CLORE L’ÉVÉNEMENT
+              </button>
+            )}
+            <button
+              className={styles.iconEventAction}
+              onClick={onRefresh}
+              disabled={loading}
+              title="Actualiser l’événement"
+              aria-label="Actualiser l’événement"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </div>
+
+          {allClear && (
+            <div className={styles.allClearNotice}>
+              <strong>
+                FIN D’ALERTE{" "}
+                {["ACTIVE", "ENDED"].includes(allClear.status)
+                  ? "DIFFUSÉE"
+                  : "EN PRÉPARATION"}
+              </strong>
+              <span>
+                La communication de fin d’alerte est distincte de la clôture
+                interne. L’événement demeure ouvert jusqu’à sa clôture
+                explicite.
+              </span>
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 9,
-              flexWrap: 'wrap',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setConfigurationOpen(false)}
-              disabled={configurationSaving}
-              style={{
-                padding: '10px 15px',
-                border: '1px solid #E9ECEF',
-                borderRadius: 8,
-                backgroundColor: '#FFFFFF',
-                color: '#6C757D',
-                cursor: configurationSaving ? 'not-allowed' : 'pointer',
-                fontSize: 11,
-                fontWeight: 800,
-              }}
-            >
-              Fermer
-            </button>
-
-            <button
-              type="button"
-              onClick={saveConfiguration}
-              disabled={
-                configurationSaving ||
-                status.programStatus === 'ARCHIVED'
-              }
-              style={{
-                padding: '10px 17px',
-                border: 'none',
-                borderRadius: 8,
-                backgroundColor: '#167D6A',
-                color: '#FFFFFF',
-                cursor:
-                  configurationSaving ||
-                  status.programStatus === 'ARCHIVED'
-                    ? 'not-allowed'
-                    : 'pointer',
-                opacity:
-                  configurationSaving ||
-                  status.programStatus === 'ARCHIVED'
-                    ? 0.55
-                    : 1,
-                fontSize: 11,
-                fontWeight: 900,
-              }}
-            >
-              {configurationSaving
-                ? 'Enregistrement...'
-                : 'Enregistrer la configuration'}
-            </button>
+          <div className={styles.timeline}>
+            {event.alerts.map((alert) => {
+              const counts = alert.deliveryCounts ?? {};
+              return (
+                <article key={alert.id} className={styles.timelineEntry}>
+                  <div className={styles.timelineTitle}>
+                    <strong>
+                      #{alert.cycleSequence ?? "—"}{" "}
+                      {formatPopulationCommunicationType(
+                        alert.type,
+                        alert.cycleSequence,
+                      )}
+                    </strong>
+                    <span>
+                      {new Date(alert.createdAt).toLocaleString("fr-CA")} ·{" "}
+                      {formatPopulationCommunicationStatus(alert.status)}
+                    </span>
+                  </div>
+                  <div className={styles.timelineMetrics}>
+                    <PreviewMetric
+                      label="Ciblés"
+                      value={alert.targetedSubscriberCount ?? 0}
+                    />
+                    <PreviewMetric
+                      label="Délivrables"
+                      value={alert.deliverableDeliveryCount ?? 0}
+                    />
+                    <PreviewMetric label="Acceptées" value={counts.SENT ?? 0} />
+                    <PreviewMetric
+                      label="Livrées"
+                      value={counts.DELIVERED ?? 0}
+                    />
+                    <PreviewMetric
+                      label="Échecs"
+                      value={counts.FAILED ?? 0}
+                      warning={(counts.FAILED ?? 0) > 0}
+                    />
+                  </div>
+                  {alert.type === "ALL_CLEAR" &&
+                    alert.targeting?.strategy ===
+                      "HISTORICAL_UNION_CURRENT" && (
+                      <div className={styles.allClearMetrics}>
+                        <PreviewMetric
+                          label="Population actuelle"
+                          value={
+                            alert.targeting.currentZoneSubscriberCount ?? 0
+                          }
+                        />
+                        <PreviewMetric
+                          label="Historique événement"
+                          value={alert.targeting.historicalSubscriberCount ?? 0}
+                        />
+                        <PreviewMetric
+                          label="Chevauchement"
+                          value={alert.targeting.overlapSubscriberCount ?? 0}
+                        />
+                        <PreviewMetric
+                          label="Personnes uniques"
+                          value={alert.targeting.uniqueTargetCount ?? 0}
+                        />
+                        <PreviewMetric
+                          label="Supprimées"
+                          value={
+                            alert.targeting
+                              .revalidationSuppressedSubscriberCount ?? 0
+                          }
+                        />
+                        <PreviewMetric
+                          label="Délivrables"
+                          value={
+                            alert.targeting.deliverableSubscriberCount ?? 0
+                          }
+                        />
+                        <p>
+                          La fin d’alerte tient compte des personnes
+                          précédemment concernées ainsi que de la population
+                          actuellement ciblée. Les abonnements et canaux sont
+                          revalidés avant diffusion.
+                        </p>
+                      </div>
+                    )}
+                </article>
+              );
+            })}
           </div>
-        </section>
-      )}
 
-      {/* ChaÃ®ne opÃ©rationnelle */}
-      <section
-        className={styles.communicationChain}
-        style={{
-          padding: '18px 20px',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E9ECEF',
-          borderRadius: 14,
-        }}
-      >
-        <p
-          style={{
-            margin: '0 0 14px',
-            color: '#ADB5BD',
-            fontSize: 10,
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
-          Chaîne de communication
-        </p>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            flexWrap: 'wrap',
-          }}
-        >
-          {[
-            'Situation',
-            'Zone',
-            'Population',
-            'Message',
-            'Validation humaine',
-            'Diffusion',
-            'Preuve',
-          ].map((step, index, arr) => (
+          {closeOpen && (
             <div
-              key={step}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
+              className={styles.closePanel}
+              role="dialog"
+              aria-label="Clore l’événement"
             >
-              <span
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: 7,
-                  backgroundColor:
-                    step === 'Validation humaine' ? '#E8F5F1' : '#F8F9FA',
-                  color:
-                    step === 'Validation humaine' ? '#167D6A' : '#6C757D',
-                  fontSize: 11,
-                  fontWeight:
-                    step === 'Validation humaine' ? 800 : 600,
-                }}
-              >
-                {index + 1}. {step}
-              </span>
-
-              {index < arr.length - 1 && (
-                <ChevronRight size={12} color="#CED4DA" />
-              )}
+              <h3>Clore l’événement</h3>
+              <p>
+                Début: {new Date(event.startedAt).toLocaleString("fr-CA")} ·{" "}
+                {event.communicationCount} communications. Vérifiez les
+                livraisons de la fin d’alerte avant de confirmer.
+              </p>
+              <label className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  checked={confirmIncomplete}
+                  onChange={(e) => onConfirmIncompleteChange(e.target.checked)}
+                />
+                Confirmer une diffusion incomplète, le cas échéant
+              </label>
+              <textarea
+                value={closeReason}
+                onChange={(e) => onCloseReasonChange(e.target.value)}
+                placeholder="Motif requis si la diffusion est incomplète"
+                rows={3}
+              />
+              <div className={styles.eventActions}>
+                <button
+                  className={styles.secondaryEventAction}
+                  onClick={onCancelClose}
+                >
+                  ANNULER
+                </button>
+                <button
+                  className={styles.primaryEventAction}
+                  disabled={
+                    closeLoading || (confirmIncomplete && !closeReason.trim())
+                  }
+                  onClick={onConfirmClose}
+                >
+                  {closeLoading ? "CLÔTURE..." : "CONFIRMER LA CLÔTURE"}
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            marginTop: 14,
-            paddingTop: 14,
-            borderTop: '1px solid #F1F3F5',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            color: '#167D6A',
-          }}
+          )}
+        </>
+      ) : (
+        <button
+          className={styles.primaryEventAction}
+          disabled={!canPrepare}
+          onClick={onPrepareInitial}
         >
-          <CheckCircle2 size={14} />
+          PRÉPARER UNE ALERTE
+        </button>
+      )}
+    </section>
+  );
+}
 
-          <p
-            style={{
-              margin: 0,
-              fontSize: 11,
-              fontWeight: 700,
-            }}
-          >
-            La diffusion publique demeure soumise à une validation humaine.
-          </p>
-        </div>
-      </section>
+function LegacyCommunicationNotice({
+  alert,
+  canPrepare,
+  loading,
+  onEnd,
+}: {
+  alert: PopulationIncidentAlert;
+  canPrepare: boolean;
+  loading: boolean;
+  onEnd: () => void;
+}) {
+  return (
+    <section className={styles.legacyNotice} aria-live="polite">
+      <div>
+        <strong>COMMUNICATION HISTORIQUE ACTIVE</strong>
+        <p>
+          Cette communication a été créée avant le cycle événementiel actuel.
+          Terminer cette communication n’envoie aucun nouveau message.
+        </p>
       </div>
-    </PortalLayout>
+      <button
+        className={styles.secondaryEventAction}
+        disabled={!canPrepare || loading}
+        onClick={onEnd}
+      >
+        {loading ? "TRAITEMENT..." : "TERMINER LA COMMUNICATION"}
+      </button>
+    </section>
   );
 }
 
@@ -3597,93 +4103,87 @@ function IncidentCommunicationsPanel({
   onCreateAllClear: () => void;
 }) {
   const orderedAlerts = [...alerts].sort((a, b) => {
-    const aTime = a.createdAt
-      ? new Date(a.createdAt).getTime()
-      : 0;
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
 
-    const bTime = b.createdAt
-      ? new Date(b.createdAt).getTime()
-      : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 
     return aTime - bTime;
   });
 
   const emergencyAlert = orderedAlerts.find(
-    (alert) => alert.type === 'EMERGENCY',
+    (alert) => alert.type === "EMERGENCY",
   );
 
   const updateCount = orderedAlerts.filter(
-    (alert) => alert.type === 'UPDATE',
+    (alert) => alert.type === "UPDATE",
   ).length;
 
-      const allClearAlert = orderedAlerts.find(
-      (alert) =>
-        alert.type === 'ALL_CLEAR' &&
-        alert.status !== 'CANCELLED',
-    );
+  const allClearAlert = orderedAlerts.find(
+    (alert) => alert.type === "ALL_CLEAR" && alert.status !== "CANCELLED",
+  );
 
-    const hasDiffusedCommunication = orderedAlerts.some(
-      (alert) =>
-        alert.status !== 'DRAFT' &&
-        alert.status !== 'READY' &&
-        alert.status !== 'CANCELLED' &&
-        alert.type !== 'ALL_CLEAR',
-    );
+  const hasDiffusedCommunication = orderedAlerts.some(
+    (alert) =>
+      alert.status !== "DRAFT" &&
+      alert.status !== "READY" &&
+      alert.status !== "CANCELLED" &&
+      alert.type !== "ALL_CLEAR",
+  );
 
-    const incidentOperational =
-      Boolean(incident) &&
-      incident?.status !== 'PRE_ALERT' &&
-      incident?.status !== 'RESOLVED' &&
-      incident?.status !== 'CANCELLED';
+  const incidentOperational =
+    Boolean(incident) &&
+    incident?.status !== "PRE_ALERT" &&
+    incident?.status !== "RESOLVED" &&
+    incident?.status !== "CANCELLED";
 
-    const canCreateUpdate =
-      incidentOperational &&
-      hasDiffusedCommunication &&
-      !allClearAlert &&
-      !followUpCreating;
+  const canCreateUpdate =
+    incidentOperational &&
+    hasDiffusedCommunication &&
+    !allClearAlert &&
+    !followUpCreating;
 
-    const canCreateAllClear =
-      incidentOperational &&
-      hasDiffusedCommunication &&
-      !allClearAlert &&
-      !followUpCreating;
+  const canCreateAllClear =
+    incidentOperational &&
+    hasDiffusedCommunication &&
+    !allClearAlert &&
+    !followUpCreating;
 
-    return (
+  return (
     <section
       style={{
         marginBottom: 18,
-        overflow: 'hidden',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E9ECEF',
+        overflow: "hidden",
+        backgroundColor: "#FFFFFF",
+        border: "1px solid #E9ECEF",
         borderRadius: 14,
       }}
     >
       <div
         style={{
-          padding: '20px 22px',
+          padding: "20px 22px",
           background:
-            'linear-gradient(115deg, #20363A 0%, #244C4B 65%, #167D6A 100%)',
-          color: '#FFFFFF',
+            "linear-gradient(115deg, #20363A 0%, #244C4B 65%, #167D6A 100%)",
+          color: "#FFFFFF",
         }}
       >
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
             gap: 16,
-            flexWrap: 'wrap',
+            flexWrap: "wrap",
           }}
         >
           <div>
             <p
               style={{
-                margin: '0 0 5px',
-                color: '#A9D8CF',
+                margin: "0 0 5px",
+                color: "#A9D8CF",
                 fontSize: 9,
                 fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
               }}
             >
               Dossier de communication
@@ -3691,18 +4191,18 @@ function IncidentCommunicationsPanel({
 
             <h2
               style={{
-                margin: '0 0 5px',
+                margin: "0 0 5px",
                 fontSize: 17,
                 fontWeight: 900,
               }}
             >
-              Incident · {incident?.type || 'Situation active'}
+              Incident · {incident?.type || "Situation active"}
             </h2>
 
             <p
               style={{
                 margin: 0,
-                color: '#D5E5E2',
+                color: "#D5E5E2",
                 fontSize: 10,
                 lineHeight: 1.5,
               }}
@@ -3710,95 +4210,87 @@ function IncidentCommunicationsPanel({
               {incident
                 ? `${incident.status} · Déclenché le ${new Date(
                     incident.triggeredAt,
-                  ).toLocaleString('fr-CA')}`
-                : 'Contexte incident en cours de chargement'}
+                  ).toLocaleString("fr-CA")}`
+                : "Contexte incident en cours de chargement"}
             </p>
           </div>
 
-                      <div
+          <div
+            style={{
+              display: "flex",
+              gap: 7,
+              flexWrap: "wrap",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              type="button"
+              onClick={onCreateUpdate}
+              disabled={!canCreateUpdate}
               style={{
-                display: 'flex',
-                gap: 7,
-                flexWrap: 'wrap',
-                justifyContent: 'flex-end',
+                padding: "7px 10px",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: 8,
+                backgroundColor: canCreateUpdate
+                  ? "#2980B9"
+                  : "rgba(255,255,255,0.06)",
+                color: "#FFFFFF",
+                cursor: canCreateUpdate ? "pointer" : "not-allowed",
+                opacity: canCreateUpdate ? 1 : 0.45,
+                fontSize: 9,
+                fontWeight: 900,
               }}
             >
-              <button
-                type="button"
-                onClick={onCreateUpdate}
-                disabled={!canCreateUpdate}
-                style={{
-                  padding: '7px 10px',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: 8,
-                  backgroundColor: canCreateUpdate
-                    ? '#2980B9'
-                    : 'rgba(255,255,255,0.06)',
-                  color: '#FFFFFF',
-                  cursor: canCreateUpdate
-                    ? 'pointer'
-                    : 'not-allowed',
-                  opacity: canCreateUpdate ? 1 : 0.45,
-                  fontSize: 9,
-                  fontWeight: 900,
-                }}
-              >
-                {followUpCreating
-                  ? 'Création...'
-                  : 'Nouvelle mise à jour'}
-              </button>
+              {followUpCreating ? "Création..." : "Nouvelle mise à jour"}
+            </button>
 
-              <button
-                type="button"
-                onClick={onCreateAllClear}
-                disabled={!canCreateAllClear}
-                style={{
-                  padding: '7px 10px',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: 8,
-                  backgroundColor: canCreateAllClear
-                    ? '#167D6A'
-                    : 'rgba(255,255,255,0.06)',
-                  color: '#FFFFFF',
-                  cursor: canCreateAllClear
-                    ? 'pointer'
-                    : 'not-allowed',
-                  opacity: canCreateAllClear ? 1 : 0.45,
-                  fontSize: 9,
-                  fontWeight: 900,
-                }}
-              >
-                {followUpCreating
-                  ? 'Création...'
-                  : 'Fin d’alerte'}
-              </button>
+            <button
+              type="button"
+              onClick={onCreateAllClear}
+              disabled={!canCreateAllClear}
+              style={{
+                padding: "7px 10px",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: 8,
+                backgroundColor: canCreateAllClear
+                  ? "#167D6A"
+                  : "rgba(255,255,255,0.06)",
+                color: "#FFFFFF",
+                cursor: canCreateAllClear ? "pointer" : "not-allowed",
+                opacity: canCreateAllClear ? 1 : 0.45,
+                fontSize: 9,
+                fontWeight: 900,
+              }}
+            >
+              {followUpCreating ? "Création..." : "Fin d’alerte"}
+            </button>
 
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={loading}
-                style={{
-                  padding: '7px 10px',
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(255,255,255,0.08)',
-                  color: '#FFFFFF',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.55 : 1,
-                  fontSize: 9,
-                  fontWeight: 800,
-                }}
-              >
-                {loading ? 'Actualisation...' : 'Actualiser'}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              style={{
+                padding: "7px 10px",
+                border: "1px solid rgba(255,255,255,0.25)",
+                borderRadius: 8,
+                backgroundColor: "rgba(255,255,255,0.08)",
+                color: "#FFFFFF",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.55 : 1,
+                fontSize: 9,
+                fontWeight: 800,
+              }}
+            >
+              {loading ? "Actualisation..." : "Actualiser"}
+            </button>
+          </div>
         </div>
 
         <div
           style={{
-            display: 'grid',
+            display: "grid",
             gridTemplateColumns:
-              'repeat(auto-fit, minmax(min(120px, 100%), 1fr))',
+              "repeat(auto-fit, minmax(min(120px, 100%), 1fr))",
             gap: 8,
             marginTop: 16,
           }}
@@ -3810,7 +4302,7 @@ function IncidentCommunicationsPanel({
 
           <IncidentHeaderMetric
             label="Alerte initiale"
-            value={emergencyAlert ? 'Oui' : 'Non'}
+            value={emergencyAlert ? "Oui" : "Non"}
           />
 
           <IncidentHeaderMetric
@@ -3820,18 +4312,18 @@ function IncidentCommunicationsPanel({
 
           <IncidentHeaderMetric
             label="Fin d’alerte"
-            value={allClearAlert ? 'Émise' : 'Non émise'}
+            value={allClearAlert ? "Émise" : "Non émise"}
           />
         </div>
       </div>
 
-      <div style={{ padding: '20px 22px' }}>
+      <div style={{ padding: "20px 22px" }}>
         {loading && orderedAlerts.length === 0 ? (
           <p
             className="animate-pulse"
             style={{
               margin: 0,
-              color: '#ADB5BD',
+              color: "#ADB5BD",
               fontSize: 11,
             }}
           >
@@ -3842,8 +4334,8 @@ function IncidentCommunicationsPanel({
             style={{
               padding: 12,
               borderRadius: 9,
-              backgroundColor: '#FDEDEC',
-              color: '#922B21',
+              backgroundColor: "#FDEDEC",
+              color: "#922B21",
               fontSize: 10,
               fontWeight: 700,
               lineHeight: 1.5,
@@ -3856,15 +4348,15 @@ function IncidentCommunicationsPanel({
             style={{
               padding: 16,
               borderRadius: 10,
-              backgroundColor: '#F8F9FA',
-              border: '1px solid #E9ECEF',
+              backgroundColor: "#F8F9FA",
+              border: "1px solid #E9ECEF",
             }}
           >
             <strong
               style={{
-                display: 'block',
+                display: "block",
                 marginBottom: 4,
-                color: '#2C3E50',
+                color: "#2C3E50",
                 fontSize: 11,
               }}
             >
@@ -3874,7 +4366,7 @@ function IncidentCommunicationsPanel({
             <p
               style={{
                 margin: 0,
-                color: '#6C757D',
+                color: "#6C757D",
                 fontSize: 10,
                 lineHeight: 1.5,
               }}
@@ -3892,18 +4384,18 @@ function IncidentCommunicationsPanel({
             >
               <p
                 style={{
-                  margin: '0 0 11px',
-                  color: '#ADB5BD',
+                  margin: "0 0 11px",
+                  color: "#ADB5BD",
                   fontSize: 9,
                   fontWeight: 900,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.07em',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
                 }}
               >
                 Chronologie opérationnelle
               </p>
 
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ display: "grid", gap: 10 }}>
                 {orderedAlerts.map((alert, index) => (
                   <IncidentCommunicationEntry
                     key={alert.id}
@@ -3919,15 +4411,15 @@ function IncidentCommunicationsPanel({
               style={{
                 padding: 12,
                 borderRadius: 9,
-                backgroundColor: '#F8F9FA',
-                color: '#6C757D',
+                backgroundColor: "#F8F9FA",
+                color: "#6C757D",
                 fontSize: 9,
                 lineHeight: 1.55,
               }}
             >
               Le dossier présente des données de diffusion opérationnelles
-              agrégées. Aucune identité ni destination individuelle de
-              citoyen n’est affichée.
+              agrégées. Aucune identité ni destination individuelle de citoyen
+              n’est affichée.
             </div>
           </>
         )}
@@ -3946,81 +4438,79 @@ function IncidentCommunicationEntry({
   total: number;
 }) {
   const deliveries = alert.deliveries || [];
-  const isSandbox = alert.deliveryModeSnapshot === 'SANDBOX';
+  const isSandbox = alert.deliveryModeSnapshot === "SANDBOX";
 
   const delivered = deliveries.filter(
-    (delivery) => delivery.status === 'DELIVERED',
+    (delivery) => delivery.status === "DELIVERED",
   ).length;
 
   const sent = deliveries.filter(
-    (delivery) => delivery.status === 'SENT',
+    (delivery) => delivery.status === "SENT",
   ).length;
 
   const failed = deliveries.filter(
-    (delivery) => delivery.status === 'FAILED',
+    (delivery) => delivery.status === "FAILED",
   ).length;
 
   const suppressed = deliveries.filter(
-    (delivery) => delivery.status === 'SUPPRESSED',
+    (delivery) => delivery.status === "SUPPRESSED",
   ).length;
 
   const pending = deliveries.filter(
-    (delivery) =>
-      delivery.status === 'QUEUED' ||
-      delivery.status === 'SENDING',
+    (delivery) => delivery.status === "QUEUED" || delivery.status === "SENDING",
   ).length;
 
   const sms = deliveries.filter(
-    (delivery) => delivery.channel === 'SMS',
+    (delivery) => delivery.channel === "SMS",
   ).length;
 
   const email = deliveries.filter(
-    (delivery) => delivery.channel === 'EMAIL',
+    (delivery) => delivery.channel === "EMAIL",
   ).length;
 
   const typeLabel =
-    alert.type === 'EMERGENCY'
-      ? 'ALERTE INITIALE'
-      : alert.type === 'UPDATE'
-        ? 'MISE À JOUR'
-        : alert.type === 'ALL_CLEAR'
-          ? 'FIN D’ALERTE'
+    alert.type === "EMERGENCY"
+      ? "ALERTE INITIALE"
+      : alert.type === "UPDATE"
+        ? "MISE À JOUR"
+        : alert.type === "ALL_CLEAR"
+          ? "FIN D’ALERTE"
           : alert.type;
 
   const typeColor =
-    alert.type === 'EMERGENCY'
-      ? '#C0392B'
-      : alert.type === 'UPDATE'
-        ? '#2980B9'
-        : alert.type === 'ALL_CLEAR'
-          ? '#167D6A'
-          : '#6C757D';
+    alert.type === "EMERGENCY"
+      ? "#C0392B"
+      : alert.type === "UPDATE"
+        ? "#2980B9"
+        : alert.type === "ALL_CLEAR"
+          ? "#167D6A"
+          : "#6C757D";
 
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: '24px minmax(0, 1fr)',
+        display: "grid",
+        gridTemplateColumns: "24px minmax(0, 1fr)",
         gap: 10,
       }}
     >
       <div
         style={{
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'center',
+          position: "relative",
+          display: "flex",
+          justifyContent: "center",
         }}
       >
         <div
           style={{
-            position: 'relative',
+            position: "relative",
             zIndex: 2,
             width: 11,
             height: 11,
             marginTop: 6,
-            borderRadius: '50%',
+            borderRadius: "50%",
             backgroundColor: typeColor,
-            border: '3px solid #FFFFFF',
+            border: "3px solid #FFFFFF",
             boxShadow: `0 0 0 1px ${typeColor}`,
           }}
         />
@@ -4028,11 +4518,11 @@ function IncidentCommunicationEntry({
         {index < total - 1 && (
           <div
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 17,
               bottom: -16,
               width: 1,
-              backgroundColor: '#DEE2E6',
+              backgroundColor: "#DEE2E6",
             }}
           />
         )}
@@ -4041,33 +4531,33 @@ function IncidentCommunicationEntry({
       <div
         style={{
           padding: 14,
-          border: '1px solid #E9ECEF',
+          border: "1px solid #E9ECEF",
           borderRadius: 10,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: "#FFFFFF",
         }}
       >
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
             gap: 12,
-            flexWrap: 'wrap',
+            flexWrap: "wrap",
           }}
         >
           <div>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: 7,
                 marginBottom: 5,
-                flexWrap: 'wrap',
+                flexWrap: "wrap",
               }}
             >
               <span
                 style={{
-                  padding: '3px 7px',
+                  padding: "3px 7px",
                   borderRadius: 20,
                   backgroundColor: `${typeColor}12`,
                   color: typeColor,
@@ -4080,10 +4570,10 @@ function IncidentCommunicationEntry({
 
               <span
                 style={{
-                  padding: '3px 7px',
+                  padding: "3px 7px",
                   borderRadius: 20,
-                  backgroundColor: '#F1F3F5',
-                  color: '#6C757D',
+                  backgroundColor: "#F1F3F5",
+                  color: "#6C757D",
                   fontSize: 8,
                   fontWeight: 900,
                 }}
@@ -4094,8 +4584,8 @@ function IncidentCommunicationEntry({
 
             <h3
               style={{
-                margin: '0 0 5px',
-                color: '#2C3E50',
+                margin: "0 0 5px",
+                color: "#2C3E50",
                 fontSize: 12,
                 fontWeight: 900,
               }}
@@ -4106,35 +4596,35 @@ function IncidentCommunicationEntry({
             <p
               style={{
                 margin: 0,
-                color: '#6C757D',
+                color: "#6C757D",
                 fontSize: 9,
                 lineHeight: 1.5,
               }}
             >
               {alert.createdAt
-                ? new Date(alert.createdAt).toLocaleString('fr-CA')
-                : 'Horodatage non disponible'}
+                ? new Date(alert.createdAt).toLocaleString("fr-CA")
+                : "Horodatage non disponible"}
             </p>
 
             {alert.deliveryModeSnapshot && (
               <p
                 style={{
-                  margin: '7px 0 0',
-                  color: isSandbox ? '#496A63' : '#922B21',
+                  margin: "7px 0 0",
+                  color: isSandbox ? "#496A63" : "#922B21",
                   fontWeight: 800,
                 }}
               >
-                MODE {alert.deliveryModeSnapshot} ·{' '}
+                MODE {alert.deliveryModeSnapshot} ·{" "}
                 {isSandbox
-                  ? 'Simulation, aucun transport externe'
-                  : 'Diffusion réelle'}
+                  ? "Simulation, aucun transport externe"
+                  : "Diffusion réelle"}
               </p>
             )}
           </div>
 
           <span
             style={{
-              color: '#ADB5BD',
+              color: "#ADB5BD",
               fontSize: 8,
             }}
           >
@@ -4144,11 +4634,11 @@ function IncidentCommunicationEntry({
 
         <p
           style={{
-            margin: '11px 0 0',
-            color: '#495057',
+            margin: "11px 0 0",
+            color: "#495057",
             fontSize: 10,
             lineHeight: 1.55,
-            whiteSpace: 'pre-wrap',
+            whiteSpace: "pre-wrap",
           }}
         >
           {alert.messageFR}
@@ -4160,12 +4650,12 @@ function IncidentCommunicationEntry({
               marginTop: 9,
               padding: 9,
               borderRadius: 8,
-              backgroundColor: '#FEF9E7',
-              color: '#7D6608',
+              backgroundColor: "#FEF9E7",
+              color: "#7D6608",
               fontSize: 9,
               fontWeight: 700,
               lineHeight: 1.5,
-              whiteSpace: 'pre-wrap',
+              whiteSpace: "pre-wrap",
             }}
           >
             {alert.instructionFR}
@@ -4177,33 +4667,30 @@ function IncidentCommunicationEntry({
             style={{
               marginTop: 12,
               paddingTop: 11,
-              borderTop: '1px solid #F1F3F5',
+              borderTop: "1px solid #F1F3F5",
             }}
           >
             <p
               style={{
-                margin: '0 0 8px',
-                color: '#ADB5BD',
+                margin: "0 0 8px",
+                color: "#ADB5BD",
                 fontSize: 8,
                 fontWeight: 900,
-                textTransform: 'uppercase',
+                textTransform: "uppercase",
               }}
             >
-              {isSandbox ? 'Preuve de simulation' : 'Preuve de diffusion'}
+              {isSandbox ? "Preuve de simulation" : "Preuve de diffusion"}
             </p>
 
             <div
               style={{
-                display: 'grid',
+                display: "grid",
                 gridTemplateColumns:
-                  'repeat(auto-fit, minmax(min(90px, 100%), 1fr))',
+                  "repeat(auto-fit, minmax(min(90px, 100%), 1fr))",
                 gap: 7,
               }}
             >
-              <IncidentDeliveryMetric
-                label="Total"
-                value={deliveries.length}
-              />
+              <IncidentDeliveryMetric label="Total" value={deliveries.length} />
 
               {!isSandbox && (
                 <IncidentDeliveryMetric
@@ -4214,16 +4701,10 @@ function IncidentCommunicationEntry({
               )}
 
               {!isSandbox && (
-                <IncidentDeliveryMetric
-                  label="Acceptées"
-                  value={sent}
-                />
+                <IncidentDeliveryMetric label="Acceptées" value={sent} />
               )}
 
-              <IncidentDeliveryMetric
-                label="En traitement"
-                value={pending}
-              />
+              <IncidentDeliveryMetric label="En traitement" value={pending} />
 
               <IncidentDeliveryMetric
                 label="Échecs"
@@ -4242,14 +4723,14 @@ function IncidentCommunicationEntry({
 
             <p
               style={{
-                margin: '8px 0 0',
-                color: '#ADB5BD',
+                margin: "8px 0 0",
+                color: "#ADB5BD",
                 fontSize: 8,
               }}
             >
-              {sms.toLocaleString('fr-CA')} SMS ·{' '}
-              {email.toLocaleString('fr-CA')} courriel
-              {email > 1 ? 's' : ''}
+              {sms.toLocaleString("fr-CA")} SMS ·{" "}
+              {email.toLocaleString("fr-CA")} courriel
+              {email > 1 ? "s" : ""}
             </p>
           </div>
         )}
@@ -4260,14 +4741,13 @@ function IncidentCommunicationEntry({
               marginTop: 11,
               padding: 9,
               borderRadius: 8,
-              backgroundColor: '#F8F9FA',
-              color: '#ADB5BD',
+              backgroundColor: "#F8F9FA",
+              color: "#ADB5BD",
               fontSize: 8,
               lineHeight: 1.5,
             }}
           >
-            Aucune donnée de diffusion enregistrée pour cette
-            communication.
+            Aucune donnée de diffusion enregistrée pour cette communication.
           </div>
         )}
       </div>
@@ -4285,20 +4765,20 @@ function IncidentHeaderMetric({
   return (
     <div
       style={{
-        padding: '9px 10px',
+        padding: "9px 10px",
         borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        border: '1px solid rgba(255,255,255,0.1)',
+        backgroundColor: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.1)",
       }}
     >
       <span
         style={{
-          display: 'block',
+          display: "block",
           marginBottom: 3,
-          color: '#A9D8CF',
+          color: "#A9D8CF",
           fontSize: 7,
           fontWeight: 900,
-          textTransform: 'uppercase',
+          textTransform: "uppercase",
         }}
       >
         {label}
@@ -4306,7 +4786,7 @@ function IncidentHeaderMetric({
 
       <strong
         style={{
-          color: '#FFFFFF',
+          color: "#FFFFFF",
           fontSize: 12,
           fontWeight: 900,
         }}
@@ -4333,35 +4813,23 @@ function IncidentDeliveryMetric({
       style={{
         padding: 8,
         borderRadius: 7,
-        backgroundColor: warning
-          ? '#FDEDEC'
-          : success
-            ? '#E8F5F1'
-            : '#F8F9FA',
+        backgroundColor: warning ? "#FDEDEC" : success ? "#E8F5F1" : "#F8F9FA",
       }}
     >
       <strong
         style={{
-          display: 'block',
+          display: "block",
           marginBottom: 2,
-          color: warning
-            ? '#C0392B'
-            : success
-              ? '#167D6A'
-              : '#2C3E50',
+          color: warning ? "#C0392B" : success ? "#167D6A" : "#2C3E50",
           fontSize: 13,
         }}
       >
-        {value.toLocaleString('fr-CA')}
+        {value.toLocaleString("fr-CA")}
       </strong>
 
       <span
         style={{
-          color: warning
-            ? '#C0392B'
-            : success
-              ? '#167D6A'
-              : '#ADB5BD',
+          color: warning ? "#C0392B" : success ? "#167D6A" : "#ADB5BD",
           fontSize: 7,
           fontWeight: 800,
         }}
@@ -4386,30 +4854,30 @@ function StatusCard({
   return (
     <div
       style={{
-        padding: '17px 18px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E9ECEF',
+        padding: "17px 18px",
+        backgroundColor: "#FFFFFF",
+        border: "1px solid #E9ECEF",
         borderRadius: 12,
       }}
     >
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
+          display: "flex",
+          alignItems: "center",
           gap: 7,
           marginBottom: 10,
-          color: '#167D6A',
+          color: "#167D6A",
         }}
       >
         {icon}
 
         <span
           style={{
-            color: '#ADB5BD',
+            color: "#ADB5BD",
             fontSize: 10,
             fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
           }}
         >
           {label}
@@ -4418,8 +4886,8 @@ function StatusCard({
 
       <p
         style={{
-          margin: '0 0 3px',
-          color: '#2C3E50',
+          margin: "0 0 3px",
+          color: "#2C3E50",
           fontSize: 16,
           fontWeight: 800,
         }}
@@ -4430,7 +4898,7 @@ function StatusCard({
       <p
         style={{
           margin: 0,
-          color: '#ADB5BD',
+          color: "#ADB5BD",
           fontSize: 11,
         }}
       >
@@ -4440,36 +4908,31 @@ function StatusCard({
   );
 }
 
-function AlertStepIndicator({
-  currentStep,
-}: {
-  currentStep: number;
-}) {
+function AlertStepIndicator({ currentStep }: { currentStep: number }) {
   const steps = [
-    'Situation',
-    'Zone',
-    'Population',
-    'Message',
-    'Validation',
-    'Contrôle',
+    "Situation",
+    "Zone",
+    "Population",
+    "Message",
+    "Validation",
+    "Contrôle",
   ];
 
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns:
-          'repeat(6, minmax(70px, 1fr))',
+        display: "grid",
+        gridTemplateColumns: "repeat(6, minmax(70px, 1fr))",
         gap: 5,
         marginTop: 17,
-        overflowX: 'auto',
+        overflowX: "auto",
       }}
     >
       <p
         style={{
-          gridColumn: '1 / -1',
+          gridColumn: "1 / -1",
           margin: 0,
-          color: '#6C757D',
+          color: "#6C757D",
           fontWeight: 800,
         }}
       >
@@ -4487,18 +4950,13 @@ function AlertStepIndicator({
                 height: 3,
                 marginBottom: 6,
                 borderRadius: 3,
-                backgroundColor:
-                  active || completed ? '#167D6A' : '#E9ECEF',
+                backgroundColor: active || completed ? "#167D6A" : "#E9ECEF",
               }}
             />
 
             <span
               style={{
-                color: active
-                  ? '#167D6A'
-                  : completed
-                    ? '#6C757D'
-                    : '#ADB5BD',
+                color: active ? "#167D6A" : completed ? "#6C757D" : "#ADB5BD",
                 fontSize: 8,
                 fontWeight: active ? 900 : 700,
               }}
@@ -4517,9 +4975,9 @@ function AlertSituationStep({
   scenario,
   onChange,
 }: {
-  type: PopulationAlertDraftForm['type'];
+  type: PopulationAlertDraftForm["type"];
   scenario: PopulationScenario;
-  onChange: (value: PopulationAlertDraftForm['type']) => void;
+  onChange: (value: PopulationAlertDraftForm["type"]) => void;
 }) {
   return (
     <div>
@@ -4533,16 +4991,16 @@ function AlertSituationStep({
         style={{
           marginBottom: 15,
           padding: 14,
-          border: '1px solid #E9ECEF',
+          border: "1px solid #E9ECEF",
           borderRadius: 10,
-          backgroundColor: '#F8F9FA',
+          backgroundColor: "#F8F9FA",
         }}
       >
         <strong
           style={{
-            display: 'block',
+            display: "block",
             marginBottom: 4,
-            color: '#2C3E50',
+            color: "#2C3E50",
             fontSize: 12,
           }}
         >
@@ -4551,38 +5009,38 @@ function AlertSituationStep({
 
         <span
           style={{
-            color: '#6C757D',
+            color: "#6C757D",
             fontSize: 10,
             lineHeight: 1.5,
           }}
         >
           {scenario.eventType ||
             scenario.description ||
-            'Scénario d’urgence environnementale'}
+            "Scénario d’urgence environnementale"}
         </span>
       </div>
 
       <div
         style={{
-          display: 'grid',
+          display: "grid",
           gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
+            "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
           gap: 10,
         }}
       >
         <AlertTypeOption
           title="Urgence réelle"
           detail="Communication liée à une situation réelle."
-          selected={type === 'EMERGENCY'}
-          onClick={() => onChange('EMERGENCY')}
+          selected={type === "EMERGENCY"}
+          onClick={() => onChange("EMERGENCY")}
           warning
         />
 
         <AlertTypeOption
           title="Test"
           detail="Exercice ou validation du dispositif."
-          selected={type === 'TEST'}
-          onClick={() => onChange('TEST')}
+          selected={type === "TEST"}
+          onClick={() => onChange("TEST")}
         />
       </div>
     </div>
@@ -4610,22 +5068,22 @@ function AlertTypeOption({
         padding: 14,
         borderRadius: 10,
         border: selected
-          ? `2px solid ${warning ? '#C0392B' : '#167D6A'}`
-          : '1px solid #E9ECEF',
+          ? `2px solid ${warning ? "#C0392B" : "#167D6A"}`
+          : "1px solid #E9ECEF",
         backgroundColor: selected
           ? warning
-            ? '#FDF2F0'
-            : '#F3FAF8'
-          : '#FFFFFF',
-        cursor: 'pointer',
-        textAlign: 'left',
+            ? "#FDF2F0"
+            : "#F3FAF8"
+          : "#FFFFFF",
+        cursor: "pointer",
+        textAlign: "left",
       }}
     >
       <strong
         style={{
-          display: 'block',
+          display: "block",
           marginBottom: 4,
-          color: warning ? '#C0392B' : '#2C3E50',
+          color: warning ? "#C0392B" : "#2C3E50",
           fontSize: 11,
         }}
       >
@@ -4634,7 +5092,7 @@ function AlertTypeOption({
 
       <span
         style={{
-          color: '#6C757D',
+          color: "#6C757D",
           fontSize: 9,
           lineHeight: 1.45,
         }}
@@ -4660,26 +5118,26 @@ function AlertZoneStep({
         detail="Les zones sont déterminées par le scénario sélectionné et calculées par CORO."
       />
 
-      <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: "grid", gap: 8 }}>
         {preview.zones.map((zone) => (
           <div
             key={zone.id}
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
               gap: 14,
               padding: 13,
-              border: '1px solid #E9ECEF',
+              border: "1px solid #E9ECEF",
               borderRadius: 9,
             }}
           >
             <div>
               <strong
                 style={{
-                  display: 'block',
+                  display: "block",
                   marginBottom: 3,
-                  color: '#2C3E50',
+                  color: "#2C3E50",
                   fontSize: 11,
                 }}
               >
@@ -4688,23 +5146,23 @@ function AlertZoneStep({
 
               <span
                 style={{
-                  color: '#6C757D',
+                  color: "#6C757D",
                   fontSize: 9,
                 }}
               >
                 {zone.protectiveAction ||
                   scenario.defaultProtectiveAction ||
-                  'Mesure de protection à confirmer'}
+                  "Mesure de protection à confirmer"}
               </span>
             </div>
 
             <strong
               style={{
-                color: '#167D6A',
+                color: "#167D6A",
                 fontSize: 15,
               }}
             >
-              {zone.targetCount.toLocaleString('fr-CA')}
+              {zone.targetCount.toLocaleString("fr-CA")}
             </strong>
           </div>
         ))}
@@ -4713,11 +5171,7 @@ function AlertZoneStep({
   );
 }
 
-function AlertPopulationStep({
-  preview,
-}: {
-  preview: PopulationPreview;
-}) {
+function AlertPopulationStep({ preview }: { preview: PopulationPreview }) {
   return (
     <div>
       <StepTitle
@@ -4728,9 +5182,9 @@ function AlertPopulationStep({
 
       <div
         style={{
-          display: 'grid',
+          display: "grid",
           gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(150px, 100%), 1fr))',
+            "repeat(auto-fit, minmax(min(150px, 100%), 1fr))",
           gap: 10,
         }}
       >
@@ -4761,14 +5215,14 @@ function AlertPopulationStep({
           marginTop: 12,
           padding: 12,
           borderRadius: 9,
-          backgroundColor: '#F8F9FA',
-          color: '#6C757D',
+          backgroundColor: "#F8F9FA",
+          color: "#6C757D",
           fontSize: 9,
           lineHeight: 1.55,
         }}
       >
-        Le nombre de SMS et de courriels représente les canaux disponibles.
-        Une même personne peut disposer des deux canaux.
+        Le nombre de SMS et de courriels représente les canaux disponibles. Une
+        même personne peut disposer des deux canaux.
       </div>
     </div>
   );
@@ -4794,7 +5248,7 @@ function AlertMessageStep({
 
       <div
         style={{
-          display: 'grid',
+          display: "grid",
           gap: 13,
         }}
       >
@@ -4802,7 +5256,7 @@ function AlertMessageStep({
           label="Titre français"
           value={form.titleFR}
           required
-          onChange={(value) => onChange('titleFR', value)}
+          onChange={(value) => onChange("titleFR", value)}
         />
 
         <ConfigurationTextarea
@@ -4810,55 +5264,53 @@ function AlertMessageStep({
           value={form.messageFR}
           required
           rows={4}
-          onChange={(value) => onChange('messageFR', value)}
+          onChange={(value) => onChange("messageFR", value)}
         />
 
         <ConfigurationTextarea
           label="Consigne de protection"
           value={form.instructionFR}
           rows={3}
-          onChange={(value) => onChange('instructionFR', value)}
+          onChange={(value) => onChange("instructionFR", value)}
         />
 
         <div
           style={{
             paddingTop: 13,
-            borderTop: '1px solid #E9ECEF',
+            borderTop: "1px solid #E9ECEF",
           }}
         >
           <p
             style={{
-              margin: '0 0 10px',
-              color: '#ADB5BD',
+              margin: "0 0 10px",
+              color: "#ADB5BD",
               fontSize: 9,
               fontWeight: 800,
-              textTransform: 'uppercase',
+              textTransform: "uppercase",
             }}
           >
             Version anglaise · optionnelle
           </p>
 
-          <div style={{ display: 'grid', gap: 13 }}>
+          <div style={{ display: "grid", gap: 13 }}>
             <ConfigurationField
               label="Titre anglais"
               value={form.titleEN}
-              onChange={(value) => onChange('titleEN', value)}
+              onChange={(value) => onChange("titleEN", value)}
             />
 
             <ConfigurationTextarea
               label="Message anglais"
               value={form.messageEN}
               rows={4}
-              onChange={(value) => onChange('messageEN', value)}
+              onChange={(value) => onChange("messageEN", value)}
             />
 
             <ConfigurationTextarea
               label="Consigne anglaise"
               value={form.instructionEN}
               rows={3}
-              onChange={(value) =>
-                onChange('instructionEN', value)
-              }
+              onChange={(value) => onChange("instructionEN", value)}
             />
           </div>
         </div>
@@ -4886,24 +5338,24 @@ function AlertValidationStep({
 
       <div
         style={{
-          display: 'grid',
+          display: "grid",
           gridTemplateColumns:
-            'minmax(min(280px, 100%), 1fr) minmax(min(230px, 100%), 0.7fr)',
+            "minmax(min(280px, 100%), 1fr) minmax(min(230px, 100%), 0.7fr)",
           gap: 14,
         }}
       >
         <div
           style={{
             padding: 16,
-            border: '1px solid #E9ECEF',
+            border: "1px solid #E9ECEF",
             borderRadius: 11,
           }}
         >
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
               gap: 10,
               marginBottom: 7,
             }}
@@ -4911,22 +5363,22 @@ function AlertValidationStep({
             <p
               style={{
                 margin: 0,
-                color: '#ADB5BD',
+                color: "#ADB5BD",
                 fontSize: 8,
                 fontWeight: 900,
-                textTransform: 'uppercase',
+                textTransform: "uppercase",
               }}
             >
               Aperçu citoyen
             </p>
 
-            {form.type === 'TEST' && (
+            {form.type === "TEST" && (
               <span
                 style={{
-                  padding: '3px 7px',
+                  padding: "3px 7px",
                   borderRadius: 20,
-                  backgroundColor: '#FEF9E7',
-                  color: '#B9770E',
+                  backgroundColor: "#FEF9E7",
+                  color: "#B9770E",
                   fontSize: 8,
                   fontWeight: 900,
                 }}
@@ -4938,8 +5390,8 @@ function AlertValidationStep({
 
           <h3
             style={{
-              margin: '0 0 10px',
-              color: '#2C3E50',
+              margin: "0 0 10px",
+              color: "#2C3E50",
               fontSize: 14,
               fontWeight: 900,
             }}
@@ -4949,11 +5401,11 @@ function AlertValidationStep({
 
           <p
             style={{
-              margin: '0 0 12px',
-              color: '#495057',
+              margin: "0 0 12px",
+              color: "#495057",
               fontSize: 11,
               lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
+              whiteSpace: "pre-wrap",
             }}
           >
             {form.messageFR}
@@ -4964,12 +5416,12 @@ function AlertValidationStep({
               style={{
                 padding: 11,
                 borderRadius: 8,
-                backgroundColor: '#FEF9E7',
-                color: '#7D6608',
+                backgroundColor: "#FEF9E7",
+                color: "#7D6608",
                 fontSize: 10,
                 fontWeight: 800,
                 lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
+                whiteSpace: "pre-wrap",
               }}
             >
               {form.instructionFR}
@@ -4981,46 +5433,34 @@ function AlertValidationStep({
           style={{
             padding: 16,
             borderRadius: 11,
-            backgroundColor: '#F8F9FA',
+            backgroundColor: "#F8F9FA",
           }}
         >
           <ValidationRow
             label="Type"
-            value={
-              form.type === 'TEST'
-                ? 'Test'
-                : 'Urgence réelle'
-            }
+            value={form.type === "TEST" ? "Test" : "Urgence réelle"}
           />
 
-          <ValidationRow
-            label="Scénario"
-            value={scenario.nameFR}
-          />
+          <ValidationRow label="Scénario" value={scenario.nameFR} />
 
-          <ValidationRow
-            label="Zones"
-            value={String(preview.zones.length)}
-          />
+          <ValidationRow label="Zones" value={String(preview.zones.length)} />
 
           <ValidationRow
             label="Population"
-            value={preview.population.uniqueTargetCount.toLocaleString(
-              'fr-CA',
-            )}
+            value={preview.population.uniqueTargetCount.toLocaleString("fr-CA")}
           />
 
           <ValidationRow
             label="SMS"
             value={preview.population.uniqueSmsTargetCount.toLocaleString(
-              'fr-CA',
+              "fr-CA",
             )}
           />
 
           <ValidationRow
             label="Courriels"
             value={preview.population.uniqueEmailTargetCount.toLocaleString(
-              'fr-CA',
+              "fr-CA",
             )}
           />
 
@@ -5029,8 +5469,8 @@ function AlertValidationStep({
               marginTop: 13,
               padding: 10,
               borderRadius: 8,
-              backgroundColor: '#E8F5F1',
-              color: '#167D6A',
+              backgroundColor: "#E8F5F1",
+              color: "#167D6A",
               fontSize: 9,
               fontWeight: 800,
               lineHeight: 1.5,
@@ -5077,8 +5517,8 @@ function AlertDraftWorkspace({
   livePreflight: PopulationLivePreflight | null;
   deliverySummary: PopulationDeliverySummary | null;
   sendConfirmationOpen: boolean;
-  deliveryMode: 'SANDBOX' | 'LIVE';
-  permissions: PopulationStatus['populationPermissions'];
+  deliveryMode: "SANDBOX" | "LIVE";
+  permissions: PopulationStatus["populationPermissions"];
   scenarioName: string;
   onChange: <K extends keyof PopulationAlertDraftForm>(
     field: K,
@@ -5095,22 +5535,22 @@ function AlertDraftWorkspace({
   onConfirmSend: () => void;
   onClose: () => void;
 }) {
-  const isDraft = alert.status === 'DRAFT';
-  const isReady = alert.status === 'READY';
+  const isDraft = alert.status === "DRAFT";
+  const isReady = alert.status === "READY";
   const isApproved = Boolean(alert.approvedAt);
   const recipientsFrozen = Boolean(
     alert.recipientsFrozenAt || freezeResult?.recipientsFrozenAt,
   );
-  const canPrepare = permissions.includes('POPULATION_PREPARE');
-  const canApprove = permissions.includes('POPULATION_APPROVE');
-  const canSend = permissions.includes('POPULATION_SEND');
+  const canPrepare = permissions.includes("POPULATION_PREPARE");
+  const canApprove = permissions.includes("POPULATION_APPROVE");
+  const canSend = permissions.includes("POPULATION_SEND");
   const liveSendReady =
-    deliveryMode !== 'LIVE' || livePreflight?.ready === true;
+    deliveryMode !== "LIVE" || livePreflight?.ready === true;
 
   const diffusionStarted =
-    alert.status === 'SENDING' ||
-    alert.status === 'ACTIVE' ||
-    alert.status === 'FAILED';
+    alert.status === "SENDING" ||
+    alert.status === "ACTIVE" ||
+    alert.status === "FAILED";
 
   return (
     <div>
@@ -5120,56 +5560,56 @@ function AlertDraftWorkspace({
         style={{
           marginBottom: 16,
           padding: 14,
-          border: '1px solid #CBD5E1',
+          border: "1px solid #CBD5E1",
           borderRadius: 8,
-          backgroundColor: deliveryMode === 'LIVE' ? '#FFF4F2' : '#F4F8FB',
-          color: '#2C3E50',
+          backgroundColor: deliveryMode === "LIVE" ? "#FFF4F2" : "#F4F8FB",
+          color: "#2C3E50",
           fontSize: 11,
           lineHeight: 1.5,
         }}
       >
         <strong>MODE {deliveryMode}</strong>
         <div>
-          {deliveryMode === 'LIVE'
-            ? 'Diffusion réelle — les communications admissibles seront transmises aux destinataires.'
-            : 'Simulation — aucune communication externe ne sera transmise.'}
+          {deliveryMode === "LIVE"
+            ? "Diffusion réelle — les communications admissibles seront transmises aux destinataires."
+            : "Simulation — aucune communication externe ne sera transmise."}
         </div>
       </div>
       <StepTitle
         eyebrow="06 · Contrôle"
         title={
-          alert.status === 'ACTIVE'
-            ? deliveryMode === 'SANDBOX'
-              ? 'Simulation de diffusion exécutée'
-              : 'Diffusion déclenchée'
-            : alert.status === 'SENDING'
-              ? 'Diffusion en cours'
-              : alert.status === 'FAILED'
-                ? 'Diffusion en échec'
+          alert.status === "ACTIVE"
+            ? deliveryMode === "SANDBOX"
+              ? "Simulation de diffusion exécutée"
+              : "Diffusion déclenchée"
+            : alert.status === "SENDING"
+              ? "Diffusion en cours"
+              : alert.status === "FAILED"
+                ? "Diffusion en échec"
                 : recipientsFrozen
-                  ? 'Destinataires figés'
+                  ? "Destinataires figés"
                   : isApproved
-                    ? 'Alerte approuvée'
+                    ? "Alerte approuvée"
                     : isReady
-                      ? 'Alerte prête pour approbation'
-                      : 'Brouillon enregistré'
+                      ? "Alerte prête pour approbation"
+                      : "Brouillon enregistré"
         }
         detail={
-          alert.status === 'ACTIVE'
-            ? deliveryMode === 'SANDBOX'
-              ? 'La simulation est terminée. Aucune communication externe n’a été transmise.'
-              : 'Au moins une communication a été acceptée par le fournisseur ou confirmée livrée. Cela ne signifie pas que toutes les communications ont été livrées.'
-            : alert.status === 'SENDING'
-              ? 'La diffusion a été déclenchée et des communications sont encore en traitement.'
-              : alert.status === 'FAILED'
-                ? 'Aucune communication n’a été acceptée ou confirmée livrée et aucun traitement n’est encore en attente.'
+          alert.status === "ACTIVE"
+            ? deliveryMode === "SANDBOX"
+              ? "La simulation est terminée. Aucune communication externe n’a été transmise."
+              : "Au moins une communication a été acceptée par le fournisseur ou confirmée livrée. Cela ne signifie pas que toutes les communications ont été livrées."
+            : alert.status === "SENDING"
+              ? "La diffusion a été déclenchée et des communications sont encore en traitement."
+              : alert.status === "FAILED"
+                ? "Aucune communication n’a été acceptée ou confirmée livrée et aucun traitement n’est encore en attente."
                 : recipientsFrozen
-                  ? 'Le roster de diffusion est maintenant immuable. Aucun message n’a encore été envoyé.'
+                  ? "Le roster de diffusion est maintenant immuable. Aucun message n’a encore été envoyé."
                   : isApproved
-                    ? 'L’approbation humaine est enregistrée. Les destinataires doivent maintenant être figés avant toute diffusion.'
+                    ? "L’approbation humaine est enregistrée. Les destinataires doivent maintenant être figés avant toute diffusion."
                     : isReady
-                      ? 'Le contenu est verrouillé pour cette étape. Une approbation humaine explicite est maintenant requise.'
-                      : 'Le brouillon peut encore être corrigé avant de passer à READY.'
+                      ? "Le contenu est verrouillé pour cette étape. Une approbation humaine explicite est maintenant requise."
+                      : "Le brouillon peut encore être corrigé avant de passer à READY."
         }
       />
 
@@ -5184,7 +5624,7 @@ function AlertDraftWorkspace({
         <div
           style={{
             marginTop: 18,
-            display: 'grid',
+            display: "grid",
             gap: 13,
           }}
         >
@@ -5192,7 +5632,7 @@ function AlertDraftWorkspace({
             label="Titre français"
             value={form.titleFR}
             required
-            onChange={(value) => onChange('titleFR', value)}
+            onChange={(value) => onChange("titleFR", value)}
           />
 
           <ConfigurationTextarea
@@ -5200,65 +5640,63 @@ function AlertDraftWorkspace({
             value={form.messageFR}
             required
             rows={4}
-            onChange={(value) => onChange('messageFR', value)}
+            onChange={(value) => onChange("messageFR", value)}
           />
 
           <ConfigurationTextarea
             label="Consigne de protection"
             value={form.instructionFR}
             rows={3}
-            onChange={(value) => onChange('instructionFR', value)}
+            onChange={(value) => onChange("instructionFR", value)}
           />
 
           <div
             style={{
               paddingTop: 13,
-              borderTop: '1px solid #E9ECEF',
+              borderTop: "1px solid #E9ECEF",
             }}
           >
             <p
               style={{
-                margin: '0 0 10px',
-                color: '#ADB5BD',
+                margin: "0 0 10px",
+                color: "#ADB5BD",
                 fontSize: 9,
                 fontWeight: 800,
-                textTransform: 'uppercase',
+                textTransform: "uppercase",
               }}
             >
               Version anglaise · optionnelle
             </p>
 
-            <div style={{ display: 'grid', gap: 13 }}>
+            <div style={{ display: "grid", gap: 13 }}>
               <ConfigurationField
                 label="Titre anglais"
                 value={form.titleEN}
-                onChange={(value) => onChange('titleEN', value)}
+                onChange={(value) => onChange("titleEN", value)}
               />
 
               <ConfigurationTextarea
                 label="Message anglais"
                 value={form.messageEN}
                 rows={4}
-                onChange={(value) => onChange('messageEN', value)}
+                onChange={(value) => onChange("messageEN", value)}
               />
 
               <ConfigurationTextarea
                 label="Consigne anglaise"
                 value={form.instructionEN}
                 rows={3}
-                onChange={(value) =>
-                  onChange('instructionEN', value)
-                }
+                onChange={(value) => onChange("instructionEN", value)}
               />
             </div>
           </div>
 
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
+              display: "flex",
+              justifyContent: "flex-end",
               gap: 9,
-              flexWrap: 'wrap',
+              flexWrap: "wrap",
               marginTop: 4,
             }}
           >
@@ -5285,14 +5723,14 @@ function AlertDraftWorkspace({
             style={{
               padding: 11,
               borderRadius: 9,
-              backgroundColor: '#FEF9E7',
-              color: '#7D6608',
+              backgroundColor: "#FEF9E7",
+              color: "#7D6608",
               fontSize: 9,
               lineHeight: 1.55,
             }}
           >
-            <strong>Passer à READY :</strong> recalcule le ciblage et soumet
-            le contenu à approbation. Aucune communication n’est transmise.
+            <strong>Passer à READY :</strong> recalcule le ciblage et soumet le
+            contenu à approbation. Aucune communication n’est transmise.
           </div>
         </div>
       )}
@@ -5302,27 +5740,27 @@ function AlertDraftWorkspace({
           style={{
             marginTop: 18,
             padding: 18,
-            border: '1px solid #E9ECEF',
+            border: "1px solid #E9ECEF",
             borderRadius: 11,
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           }}
         >
           <div
             style={{
-              display: 'grid',
+              display: "grid",
               gridTemplateColumns:
-                'minmax(min(280px, 100%), 1fr) minmax(min(190px, 100%), 0.55fr)',
+                "minmax(min(280px, 100%), 1fr) minmax(min(190px, 100%), 0.55fr)",
               gap: 16,
             }}
           >
             <div>
               <p
                 style={{
-                  margin: '0 0 6px',
-                  color: '#ADB5BD',
+                  margin: "0 0 6px",
+                  color: "#ADB5BD",
                   fontSize: 8,
                   fontWeight: 900,
-                  textTransform: 'uppercase',
+                  textTransform: "uppercase",
                 }}
               >
                 Communication prête
@@ -5330,8 +5768,8 @@ function AlertDraftWorkspace({
 
               <h3
                 style={{
-                  margin: '0 0 10px',
-                  color: '#2C3E50',
+                  margin: "0 0 10px",
+                  color: "#2C3E50",
                   fontSize: 14,
                   fontWeight: 900,
                 }}
@@ -5341,11 +5779,11 @@ function AlertDraftWorkspace({
 
               <p
                 style={{
-                  margin: '0 0 12px',
-                  color: '#495057',
+                  margin: "0 0 12px",
+                  color: "#495057",
                   fontSize: 11,
                   lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
+                  whiteSpace: "pre-wrap",
                 }}
               >
                 {alert.messageFR}
@@ -5356,12 +5794,12 @@ function AlertDraftWorkspace({
                   style={{
                     padding: 11,
                     borderRadius: 8,
-                    backgroundColor: '#FEF9E7',
-                    color: '#7D6608',
+                    backgroundColor: "#FEF9E7",
+                    color: "#7D6608",
                     fontSize: 10,
                     fontWeight: 800,
                     lineHeight: 1.5,
-                    whiteSpace: 'pre-wrap',
+                    whiteSpace: "pre-wrap",
                   }}
                 >
                   {alert.instructionFR}
@@ -5369,31 +5807,67 @@ function AlertDraftWorkspace({
               )}
             </div>
 
+            {freezeResult &&
+              alert.type === "ALL_CLEAR" &&
+              freezeResult.targeting.strategy ===
+                "HISTORICAL_UNION_CURRENT" && (
+                <div className={styles.allClearMetrics}>
+                  <FrozenMetric
+                    label="Population actuelle"
+                    value={
+                      freezeResult.targeting.currentZoneSubscriberCount ?? 0
+                    }
+                  />
+                  <FrozenMetric
+                    label="Historique événement"
+                    value={
+                      freezeResult.targeting.historicalSubscriberCount ?? 0
+                    }
+                  />
+                  <FrozenMetric
+                    label="Chevauchement"
+                    value={freezeResult.targeting.overlapSubscriberCount ?? 0}
+                  />
+                  <FrozenMetric
+                    label="Personnes uniques"
+                    value={freezeResult.targeting.uniqueTargetCount ?? 0}
+                  />
+                  <FrozenMetric
+                    label="Supprimées"
+                    value={
+                      freezeResult.targeting
+                        .revalidationSuppressedSubscriberCount ?? 0
+                    }
+                  />
+                  <FrozenMetric
+                    label="Délivrables"
+                    value={
+                      freezeResult.targeting.deliverableSubscriberCount ?? 0
+                    }
+                  />
+                  <p>
+                    La fin d’alerte tient compte des personnes précédemment
+                    concernées ainsi que de la population actuellement ciblée.
+                    Les abonnements et canaux sont revalidés avant diffusion.
+                  </p>
+                </div>
+              )}
+
             <div
               style={{
                 padding: 14,
                 borderRadius: 10,
-                backgroundColor: '#F8F9FA',
+                backgroundColor: "#F8F9FA",
               }}
             >
-              <ValidationRow
-                label="Statut"
-                value="READY"
-              />
+              <ValidationRow label="Statut" value="READY" />
 
               <ValidationRow
                 label="Type"
-                value={
-                  alert.type === 'TEST'
-                    ? 'Test'
-                    : 'Urgence réelle'
-                }
+                value={alert.type === "TEST" ? "Test" : "Urgence réelle"}
               />
 
-              <ValidationRow
-                label="Référence"
-                value={alert.id.slice(0, 8)}
-              />
+              <ValidationRow label="Référence" value={alert.id.slice(0, 8)} />
             </div>
           </div>
 
@@ -5402,8 +5876,8 @@ function AlertDraftWorkspace({
               marginTop: 16,
               padding: 13,
               borderRadius: 9,
-              backgroundColor: '#FDEDEC',
-              color: '#922B21',
+              backgroundColor: "#FDEDEC",
+              color: "#922B21",
               fontSize: 10,
               lineHeight: 1.55,
             }}
@@ -5416,17 +5890,13 @@ function AlertDraftWorkspace({
 
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
+              display: "flex",
+              justifyContent: "flex-end",
               marginTop: 14,
             }}
           >
             <WorkflowButton
-              title={
-                loading
-                  ? 'Approbation...'
-                  : 'Approuver l’alerte'
-              }
+              title={loading ? "Approbation..." : "Approuver l’alerte"}
               disabled={loading || !canApprove}
               onClick={onApprove}
               danger
@@ -5441,28 +5911,24 @@ function AlertDraftWorkspace({
             marginTop: 18,
             padding: 20,
             borderRadius: 11,
-            border: '1px solid #D5EDE7',
-            backgroundColor: '#F3FAF8',
+            border: "1px solid #D5EDE7",
+            backgroundColor: "#F3FAF8",
           }}
         >
           <div
             style={{
-              display: 'flex',
+              display: "flex",
               gap: 12,
-              alignItems: 'flex-start',
+              alignItems: "flex-start",
             }}
           >
-            <CheckCircle2
-              size={24}
-              color="#167D6A"
-              style={{ flexShrink: 0 }}
-            />
+            <CheckCircle2 size={24} color="#167D6A" style={{ flexShrink: 0 }} />
 
             <div style={{ flex: 1 }}>
               <h3
                 style={{
-                  margin: '0 0 5px',
-                  color: '#167D6A',
+                  margin: "0 0 5px",
+                  color: "#167D6A",
                   fontSize: 14,
                   fontWeight: 900,
                 }}
@@ -5473,28 +5939,25 @@ function AlertDraftWorkspace({
               <p
                 style={{
                   margin: 0,
-                  color: '#496A63',
+                  color: "#496A63",
                   fontSize: 10,
                   lineHeight: 1.55,
                 }}
               >
-                La validation humaine est enregistrée. L’étape suivante
-                consiste à matérialiser et figer le roster exact des
-                destinataires.
+                La validation humaine est enregistrée. L’étape suivante consiste
+                à matérialiser et figer le roster exact des destinataires.
               </p>
 
               {alert.approvedAt && (
                 <p
                   style={{
-                    margin: '8px 0 0',
-                    color: '#6C757D',
+                    margin: "8px 0 0",
+                    color: "#6C757D",
                     fontSize: 9,
                   }}
                 >
-                  Approbation :{' '}
-                  {new Date(alert.approvedAt).toLocaleString(
-                    'fr-CA',
-                  )}
+                  Approbation :{" "}
+                  {new Date(alert.approvedAt).toLocaleString("fr-CA")}
                 </p>
               )}
             </div>
@@ -5503,8 +5966,8 @@ function AlertDraftWorkspace({
           {!freezeConfirmationOpen ? (
             <div
               style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
+                display: "flex",
+                justifyContent: "flex-end",
                 marginTop: 16,
               }}
             >
@@ -5520,16 +5983,16 @@ function AlertDraftWorkspace({
               style={{
                 marginTop: 16,
                 padding: 15,
-                border: '1px solid #F5CBA7',
+                border: "1px solid #F5CBA7",
                 borderRadius: 10,
-                backgroundColor: '#FEF5E7',
+                backgroundColor: "#FEF5E7",
               }}
             >
               <strong
                 style={{
-                  display: 'block',
+                  display: "block",
                   marginBottom: 6,
-                  color: '#935116',
+                  color: "#935116",
                   fontSize: 11,
                 }}
               >
@@ -5538,24 +6001,23 @@ function AlertDraftWorkspace({
 
               <p
                 style={{
-                  margin: '0 0 12px',
-                  color: '#7E5109',
+                  margin: "0 0 12px",
+                  color: "#7E5109",
                   fontSize: 9,
                   lineHeight: 1.55,
                 }}
               >
                 <strong>Confirmer et figer :</strong> détermine les abonnés
-                compris dans les zones approuvées et rend leurs canaux
-                immuables pour cette alerte. Aucune communication n’est
-                transmise.
+                compris dans les zones approuvées et rend leurs canaux immuables
+                pour cette alerte. Aucune communication n’est transmise.
               </p>
 
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
+                  display: "flex",
+                  justifyContent: "flex-end",
                   gap: 8,
-                  flexWrap: 'wrap',
+                  flexWrap: "wrap",
                 }}
               >
                 <WorkflowButton
@@ -5565,11 +6027,7 @@ function AlertDraftWorkspace({
                 />
 
                 <WorkflowButton
-                  title={
-                    loading
-                      ? 'Préparation...'
-                      : 'Confirmer et figer'
-                  }
+                  title={loading ? "Préparation..." : "Confirmer et figer"}
                   disabled={loading}
                   onClick={onConfirmFreeze}
                   danger
@@ -5586,44 +6044,40 @@ function AlertDraftWorkspace({
 
       {recipientsFrozen &&
         freezeResult &&
-        alert.status === 'READY' &&
+        alert.status === "READY" &&
         freezeResult.targeting.deliveryCount > 0 && (
           <div
             style={{
               marginTop: 18,
               padding: 20,
-              border: '1px solid #F5CBA7',
+              border: "1px solid #F5CBA7",
               borderRadius: 11,
-              backgroundColor: '#FFFBF5',
+              backgroundColor: "#FFFBF5",
             }}
           >
             <div
               style={{
-                display: 'flex',
-                alignItems: 'flex-start',
+                display: "flex",
+                alignItems: "flex-start",
                 gap: 12,
               }}
             >
-              <RadioTower
-                size={24}
-                color="#C0392B"
-                style={{ flexShrink: 0 }}
-              />
+              <RadioTower size={24} color="#C0392B" style={{ flexShrink: 0 }} />
 
               <div style={{ flex: 1 }}>
                 <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 8,
                     marginBottom: 5,
-                    flexWrap: 'wrap',
+                    flexWrap: "wrap",
                   }}
                 >
                   <h3
                     style={{
                       margin: 0,
-                      color: '#2C3E50',
+                      color: "#2C3E50",
                       fontSize: 14,
                       fontWeight: 900,
                     }}
@@ -5633,56 +6087,56 @@ function AlertDraftWorkspace({
 
                   <span
                     style={{
-                      padding: '3px 7px',
+                      padding: "3px 7px",
                       borderRadius: 20,
                       backgroundColor:
-                        alert.type === 'EMERGENCY'
-                          ? '#FDEDEC'
-                          : alert.type === 'TEST'
-                            ? '#FEF9E7'
-                            : '#F1F3F5',
+                        alert.type === "EMERGENCY"
+                          ? "#FDEDEC"
+                          : alert.type === "TEST"
+                            ? "#FEF9E7"
+                            : "#F1F3F5",
                       color:
-                        alert.type === 'EMERGENCY'
-                          ? '#C0392B'
-                          : alert.type === 'TEST'
-                            ? '#B9770E'
-                            : '#6C757D',
+                        alert.type === "EMERGENCY"
+                          ? "#C0392B"
+                          : alert.type === "TEST"
+                            ? "#B9770E"
+                            : "#6C757D",
                       fontSize: 8,
                       fontWeight: 900,
                     }}
                   >
-                    {alert.type === 'EMERGENCY'
-                      ? 'URGENCE RÉELLE'
-                      : alert.type === 'TEST'
-                        ? 'TEST'
-                        : alert.type === 'UPDATE'
-                          ? 'MISE À JOUR'
-                          : alert.type === 'ALL_CLEAR'
-                            ? 'FIN D’ALERTE'
-                            : 'DIFFUSION'}
+                    {alert.type === "EMERGENCY"
+                      ? "URGENCE RÉELLE"
+                      : alert.type === "TEST"
+                        ? "TEST"
+                        : alert.type === "UPDATE"
+                          ? "MISE À JOUR"
+                          : alert.type === "ALL_CLEAR"
+                            ? "FIN D’ALERTE"
+                            : "DIFFUSION"}
                   </span>
                 </div>
 
                 <p
                   style={{
                     margin: 0,
-                    color: '#6C757D',
+                    color: "#6C757D",
                     fontSize: 10,
                     lineHeight: 1.55,
                   }}
                 >
-                  {deliveryMode === 'LIVE'
-                    ? 'DIFFUSION RÉELLE — La prochaine action transmettra réellement les communications admissibles.'
-                    : 'SIMULATION — La prochaine action exécutera la simulation. Aucune communication externe ne sera transmise.'}
+                  {deliveryMode === "LIVE"
+                    ? "DIFFUSION RÉELLE — La prochaine action transmettra réellement les communications admissibles."
+                    : "SIMULATION — La prochaine action exécutera la simulation. Aucune communication externe ne sera transmise."}
                 </p>
               </div>
             </div>
 
             <div
               style={{
-                display: 'grid',
+                display: "grid",
                 gridTemplateColumns:
-                  'repeat(auto-fit, minmax(min(130px, 100%), 1fr))',
+                  "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
                 gap: 9,
                 marginTop: 15,
               }}
@@ -5711,7 +6165,7 @@ function AlertDraftWorkspace({
                 label="Supprimés / démo"
                 value={freezeResult.targeting.suppressedCount}
               />
-              {deliveryMode === 'LIVE' && livePreflight && (
+              {deliveryMode === "LIVE" && livePreflight && (
                 <>
                   <FrozenMetric
                     label="Synthétiques"
@@ -5733,16 +6187,16 @@ function AlertDraftWorkspace({
               style={{
                 marginTop: 15,
                 padding: 14,
-                border: '1px solid #E9ECEF',
+                border: "1px solid #E9ECEF",
                 borderRadius: 9,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: "#FFFFFF",
               }}
             >
               <strong
                 style={{
-                  display: 'block',
+                  display: "block",
                   marginBottom: 7,
-                  color: '#2C3E50',
+                  color: "#2C3E50",
                   fontSize: 11,
                 }}
               >
@@ -5751,22 +6205,22 @@ function AlertDraftWorkspace({
 
               <p
                 style={{
-                  margin: '0 0 8px',
-                  color: '#6C757D',
+                  margin: "0 0 8px",
+                  color: "#6C757D",
                   fontSize: 9,
                 }}
               >
-                Scénario : {scenarioName} · Type : {alert.type} · Mode :{' '}
+                Scénario : {scenarioName} · Type : {alert.type} · Mode :{" "}
                 {deliveryMode}
               </p>
 
               <p
                 style={{
                   margin: 0,
-                  color: '#495057',
+                  color: "#495057",
                   fontSize: 10,
                   lineHeight: 1.55,
-                  whiteSpace: 'pre-wrap',
+                  whiteSpace: "pre-wrap",
                 }}
               >
                 {alert.messageFR}
@@ -5778,12 +6232,12 @@ function AlertDraftWorkspace({
                     marginTop: 10,
                     padding: 10,
                     borderRadius: 8,
-                    backgroundColor: '#FEF9E7',
-                    color: '#7D6608',
+                    backgroundColor: "#FEF9E7",
+                    color: "#7D6608",
                     fontSize: 9,
                     fontWeight: 800,
                     lineHeight: 1.5,
-                    whiteSpace: 'pre-wrap',
+                    whiteSpace: "pre-wrap",
                   }}
                 >
                   {alert.instructionFR}
@@ -5794,16 +6248,16 @@ function AlertDraftWorkspace({
             {!sendConfirmationOpen ? (
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
+                  display: "flex",
+                  justifyContent: "flex-end",
                   marginTop: 16,
                 }}
               >
                 <WorkflowButton
                   title={
-                    deliveryMode === 'LIVE'
-                      ? 'Préparer la diffusion'
-                      : 'Préparer la simulation'
+                    deliveryMode === "LIVE"
+                      ? "Préparer la diffusion"
+                      : "Préparer la simulation"
                   }
                   disabled={loading || !canSend || !liveSendReady}
                   onClick={onRequestSend}
@@ -5815,33 +6269,33 @@ function AlertDraftWorkspace({
                 style={{
                   marginTop: 16,
                   padding: 15,
-                  border: '1px solid #E6B0AA',
+                  border: "1px solid #E6B0AA",
                   borderRadius: 10,
-                  backgroundColor: '#FDEDEC',
+                  backgroundColor: "#FDEDEC",
                 }}
               >
                 <strong
                   style={{
-                    display: 'block',
+                    display: "block",
                     marginBottom: 6,
-                    color: '#922B21',
+                    color: "#922B21",
                     fontSize: 11,
                   }}
                 >
-                  {deliveryMode === 'LIVE'
-                    ? 'Confirmer la diffusion LIVE ?'
-                    : 'Confirmer la simulation ?'}
+                  {deliveryMode === "LIVE"
+                    ? "Confirmer la diffusion LIVE ?"
+                    : "Confirmer la simulation ?"}
                 </strong>
 
                 <p
                   style={{
-                    margin: '0 0 12px',
-                    color: '#922B21',
+                    margin: "0 0 12px",
+                    color: "#922B21",
                     fontSize: 9,
                     lineHeight: 1.55,
                   }}
                 >
-                  {deliveryMode === 'LIVE' ? (
+                  {deliveryMode === "LIVE" ? (
                     <>
                       <strong>DIFFUSION RÉELLE.</strong> La prochaine action
                       transmettra réellement les communications admissibles.
@@ -5849,50 +6303,56 @@ function AlertDraftWorkspace({
                   ) : (
                     <>
                       Vous êtes sur le point d’exécuter une simulation de
-                      diffusion. <strong>Aucune communication externe ne sera
-                      transmise.</strong>
+                      diffusion.{" "}
+                      <strong>
+                        Aucune communication externe ne sera transmise.
+                      </strong>
                     </>
                   )}
                   <br />
                   <br />
                   <strong>
                     {freezeResult.targeting.subscriberCount.toLocaleString(
-                      'fr-CA',
+                      "fr-CA",
                     )}
-                  </strong>{' '}abonné(s) ciblé(s)
+                  </strong>{" "}
+                  abonné(s) ciblé(s)
                   <br />
                   <strong>
                     {freezeResult.targeting.deliveryCount.toLocaleString(
-                      'fr-CA',
+                      "fr-CA",
                     )}
-                  </strong>{' '}communication(s) matérialisée(s)
+                  </strong>{" "}
+                  communication(s) matérialisée(s)
                   <br />
                   <strong>
                     {freezeResult.targeting.deliverableCount.toLocaleString(
-                      'fr-CA',
+                      "fr-CA",
                     )}
-                  </strong>{' '}délivrable(s)
+                  </strong>{" "}
+                  délivrable(s)
                   <br />
                   <strong>
                     {freezeResult.targeting.suppressedCount.toLocaleString(
-                      'fr-CA',
+                      "fr-CA",
                     )}
-                  </strong>{' '}communication(s) supprimée(s)
-                  {deliveryMode === 'LIVE' && (
+                  </strong>{" "}
+                  communication(s) supprimée(s)
+                  {deliveryMode === "LIVE" && (
                     <>
                       <br />
                       <strong>{livePreflight?.email ?? 0}</strong> courriel(s)
-                      {' · '}
+                      {" · "}
                       <strong>{livePreflight?.sms ?? 0}</strong> SMS
                       <br />
                       <strong>{livePreflight?.retryPending ?? 0}</strong> retry
-                      pending {' · '}
-                      <strong>{livePreflight?.reconciliation ?? 0}</strong>{' '}
+                      pending {" · "}
+                      <strong>{livePreflight?.reconciliation ?? 0}</strong>{" "}
                       réconciliation(s)
                       <br />
                       <br />
-                      Cette confirmation déclenche la diffusion réelle. Elle
-                      ne pourra pas être annulée pour les communications déjà
+                      Cette confirmation déclenche la diffusion réelle. Elle ne
+                      pourra pas être annulée pour les communications déjà
                       transmises au fournisseur.
                     </>
                   )}
@@ -5900,10 +6360,10 @@ function AlertDraftWorkspace({
 
                 <div
                   style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
+                    display: "flex",
+                    justifyContent: "flex-end",
                     gap: 8,
-                    flexWrap: 'wrap',
+                    flexWrap: "wrap",
                   }}
                 >
                   <WorkflowButton
@@ -5915,10 +6375,10 @@ function AlertDraftWorkspace({
                   <WorkflowButton
                     title={
                       loading
-                        ? 'Diffusion...'
-                        : deliveryMode === 'LIVE'
-                          ? 'DIFFUSER L’ALERTE'
-                          : 'SIMULER LA DIFFUSION'
+                        ? "Diffusion..."
+                        : deliveryMode === "LIVE"
+                          ? "DIFFUSER L’ALERTE"
+                          : "SIMULER LA DIFFUSION"
                     }
                     disabled={loading || !canSend || !liveSendReady}
                     onClick={onConfirmSend}
@@ -5930,9 +6390,9 @@ function AlertDraftWorkspace({
           </div>
         )}
 
-      {(alert.status === 'SENDING' ||
-        alert.status === 'ACTIVE' ||
-        alert.status === 'FAILED') && (
+      {(alert.status === "SENDING" ||
+        alert.status === "ACTIVE" ||
+        alert.status === "FAILED") && (
         <PopulationDiffusionResult
           alert={alert}
           freezeResult={freezeResult}
@@ -5942,18 +6402,18 @@ function AlertDraftWorkspace({
 
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           gap: 10,
           marginTop: 18,
           paddingTop: 14,
-          borderTop: '1px solid #E9ECEF',
+          borderTop: "1px solid #E9ECEF",
         }}
       >
         <span
           style={{
-            color: '#ADB5BD',
+            color: "#ADB5BD",
             fontSize: 8,
           }}
         >
@@ -5965,12 +6425,12 @@ function AlertDraftWorkspace({
           onClick={onClose}
           disabled={loading}
           style={{
-            padding: '8px 12px',
-            border: '1px solid #E9ECEF',
+            padding: "8px 12px",
+            border: "1px solid #E9ECEF",
             borderRadius: 8,
-            backgroundColor: '#FFFFFF',
-            color: '#6C757D',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            backgroundColor: "#FFFFFF",
+            color: "#6C757D",
+            cursor: loading ? "not-allowed" : "pointer",
             fontSize: 9,
             fontWeight: 800,
           }}
@@ -5991,21 +6451,46 @@ function PopulationDiffusionResult({
   freezeResult: PopulationFreezeResult | null;
   deliverySummary: PopulationDeliverySummary | null;
 }) {
-  const isActive = alert.status === 'ACTIVE';
-  const isSending = alert.status === 'SENDING';
+  const isActive = alert.status === "ACTIVE";
+  const isSending = alert.status === "SENDING";
   const proofSteps = [
-    { label: 'Créée', actorType: alert.createdByType, actorId: alert.createdById, at: alert.createdAt },
-    { label: 'READY', actorType: alert.readyByType, actorId: alert.readyById, at: alert.readyAt },
-    { label: 'Approuvée', actorType: alert.approvedByType, actorId: alert.approvedById, at: alert.approvedAt },
-    { label: 'Roster figé', actorType: alert.frozenByType, actorId: alert.frozenById, at: alert.recipientsFrozenAt },
-    { label: 'Diffusée', actorType: alert.sentByType, actorId: alert.sentById, at: alert.sendingAt },
+    {
+      label: "Créée",
+      actorType: alert.createdByType,
+      actorId: alert.createdById,
+      at: alert.createdAt,
+    },
+    {
+      label: "READY",
+      actorType: alert.readyByType,
+      actorId: alert.readyById,
+      at: alert.readyAt,
+    },
+    {
+      label: "Approuvée",
+      actorType: alert.approvedByType,
+      actorId: alert.approvedById,
+      at: alert.approvedAt,
+    },
+    {
+      label: "Roster figé",
+      actorType: alert.frozenByType,
+      actorId: alert.frozenById,
+      at: alert.recipientsFrozenAt,
+    },
+    {
+      label: "Diffusée",
+      actorType: alert.sentByType,
+      actorId: alert.sentById,
+      at: alert.sendingAt,
+    },
   ].filter((step) => step.at);
-  const isFailed = alert.status === 'FAILED';
-  const isSandbox = alert.deliveryModeSnapshot === 'SANDBOX';
+  const isFailed = alert.status === "FAILED";
+  const isSandbox = alert.deliveryModeSnapshot === "SANDBOX";
   const sandboxSuppressedCount = freezeResult?.deliveries.filter(
     (delivery) =>
-      delivery.status === 'SUPPRESSED' &&
-      delivery.suppressionReason === 'SANDBOX_MODE',
+      delivery.status === "SUPPRESSED" &&
+      delivery.suppressionReason === "SANDBOX_MODE",
   ).length;
 
   return (
@@ -6017,73 +6502,63 @@ function PopulationDiffusionResult({
         padding: 18,
         borderRadius: 11,
         border: isFailed
-          ? '1px solid #F5B7B1'
+          ? "1px solid #F5B7B1"
           : isSending
-            ? '1px solid #AED6F1'
-            : '1px solid #D5EDE7',
+            ? "1px solid #AED6F1"
+            : "1px solid #D5EDE7",
         backgroundColor: isFailed
-          ? '#FDEDEC'
+          ? "#FDEDEC"
           : isSending
-            ? '#F4F9FC'
-            : '#F3FAF8',
+            ? "#F4F9FC"
+            : "#F3FAF8",
       }}
     >
       <div
         style={{
-          display: 'flex',
-          alignItems: 'flex-start',
+          display: "flex",
+          alignItems: "flex-start",
           gap: 12,
         }}
       >
         <RadioTower
           size={25}
-          color={
-            isFailed
-              ? '#C0392B'
-              : isSending
-                ? '#2980B9'
-                : '#167D6A'
-          }
+          color={isFailed ? "#C0392B" : isSending ? "#2980B9" : "#167D6A"}
           style={{ flexShrink: 0 }}
         />
 
         <div style={{ flex: 1 }}>
           <h3
             style={{
-              margin: '0 0 5px',
-              color: isFailed
-                ? '#922B21'
-                : isSending
-                  ? '#1F618D'
-                  : '#167D6A',
+              margin: "0 0 5px",
+              color: isFailed ? "#922B21" : isSending ? "#1F618D" : "#167D6A",
               fontSize: 14,
               fontWeight: 900,
             }}
           >
             {isActive
               ? isSandbox
-                ? 'Simulation de diffusion exécutée'
-                : 'Diffusion déclenchée'
+                ? "Simulation de diffusion exécutée"
+                : "Diffusion déclenchée"
               : isSending
-                ? 'Diffusion en cours'
-                : 'Diffusion en échec'}
+                ? "Diffusion en cours"
+                : "Diffusion en échec"}
           </h3>
 
           <p
             style={{
               margin: 0,
-              color: '#6C757D',
+              color: "#6C757D",
               fontSize: 10,
               lineHeight: 1.55,
             }}
           >
             {isActive
               ? isSandbox
-                ? 'Simulation terminée — aucune communication externe n’a été transmise.'
-                : 'Au moins une communication a été acceptée par le fournisseur ou confirmée livrée.'
+                ? "Simulation terminée — aucune communication externe n’a été transmise."
+                : "Au moins une communication a été acceptée par le fournisseur ou confirmée livrée."
               : isSending
-                ? 'CORO traite actuellement les communications du roster figé.'
-                : 'Aucune communication n’a été acceptée ou confirmée livrée et aucun traitement n’est encore en attente.'}
+                ? "CORO traite actuellement les communications du roster figé."
+                : "Aucune communication n’a été acceptée ou confirmée livrée et aucun traitement n’est encore en attente."}
           </p>
 
           {isActive && isSandbox && sandboxSuppressedCount !== undefined && (
@@ -6092,12 +6567,12 @@ function PopulationDiffusionResult({
                 marginTop: 10,
                 padding: 10,
                 borderRadius: 8,
-                backgroundColor: '#FFFFFF',
-                color: '#496A63',
+                backgroundColor: "#FFFFFF",
+                color: "#496A63",
                 lineHeight: 1.5,
               }}
             >
-              {sandboxSuppressedCount.toLocaleString('fr-CA')} communication(s)
+              {sandboxSuppressedCount.toLocaleString("fr-CA")} communication(s)
               ont été supprimée(s) du transport externe conformément au mode
               SANDBOX.
             </div>
@@ -6109,49 +6584,108 @@ function PopulationDiffusionResult({
                 marginTop: 10,
                 padding: 10,
                 borderRadius: 8,
-                backgroundColor: '#FFFFFF',
-                color: '#6C757D',
+                backgroundColor: "#FFFFFF",
+                color: "#6C757D",
                 fontSize: 9,
                 lineHeight: 1.5,
               }}
             >
-              <strong>Important :</strong> le statut ACTIVE signifie
-              qu’au moins une communication possède le statut SENT ou
-              DELIVERED. SENT signifie que le fournisseur a accepté la
-              communication; seul DELIVERED confirme sa livraison.
-              ACTIVE ne signifie donc pas que toutes les communications
-              ont été livrées.
+              <strong>Important :</strong> le statut ACTIVE signifie qu’au moins
+              une communication possède le statut SENT ou DELIVERED. SENT
+              signifie que le fournisseur a accepté la communication; seul
+              DELIVERED confirme sa livraison. ACTIVE ne signifie donc pas que
+              toutes les communications ont été livrées.
             </div>
           )}
 
           {!isSandbox && deliverySummary && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(115px, 100%), 1fr))', gap: 8, marginTop: 12 }}>
-              <FrozenMetric label="Matérialisées" value={deliverySummary.counts.total} />
-              <FrozenMetric label="Supprimées" value={deliverySummary.counts.suppressed} />
-              <FrozenMetric label="En attente" value={deliverySummary.counts.queued} />
-              <FrozenMetric label="En traitement" value={deliverySummary.counts.sending} />
-              <FrozenMetric label="Acceptées fournisseur" value={deliverySummary.counts.sent} />
-              <FrozenMetric label="Livrées destinataire" value={deliverySummary.counts.delivered} />
-              <FrozenMetric label="Échecs" value={deliverySummary.counts.failed} />
-              <FrozenMetric label="Retry pending" value={deliverySummary.counts.retryPending} />
-              <FrozenMetric label="Réconciliation" value={deliverySummary.counts.reconciliationRequired} />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(115px, 100%), 1fr))",
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              <FrozenMetric
+                label="Matérialisées"
+                value={deliverySummary.counts.total}
+              />
+              <FrozenMetric
+                label="Supprimées"
+                value={deliverySummary.counts.suppressed}
+              />
+              <FrozenMetric
+                label="En attente"
+                value={deliverySummary.counts.queued}
+              />
+              <FrozenMetric
+                label="En traitement"
+                value={deliverySummary.counts.sending}
+              />
+              <FrozenMetric
+                label="Acceptées fournisseur"
+                value={deliverySummary.counts.sent}
+              />
+              <FrozenMetric
+                label="Livrées destinataire"
+                value={deliverySummary.counts.delivered}
+              />
+              <FrozenMetric
+                label="Échecs"
+                value={deliverySummary.counts.failed}
+              />
+              <FrozenMetric
+                label="Retry pending"
+                value={deliverySummary.counts.retryPending}
+              />
+              <FrozenMetric
+                label="Réconciliation"
+                value={deliverySummary.counts.reconciliationRequired}
+              />
             </div>
           )}
 
           {proofSteps.length > 0 && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #DEE2E6' }}>
-              <p style={{ margin: '0 0 8px', color: '#6C757D', fontSize: 9, fontWeight: 900, textTransform: 'uppercase' }}>
+            <div
+              style={{
+                marginTop: 14,
+                paddingTop: 12,
+                borderTop: "1px solid #DEE2E6",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  color: "#6C757D",
+                  fontSize: 9,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                }}
+              >
                 Preuve opérateur
               </p>
-              <div style={{ display: 'grid', gap: 6 }}>
+              <div style={{ display: "grid", gap: 6 }}>
                 {proofSteps.map((step) => (
-                  <div key={step.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: '#495057', fontSize: 9 }}>
+                  <div
+                    key={step.label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      color: "#495057",
+                      fontSize: 9,
+                    }}
+                  >
                     <span>
                       <strong>{step.label}</strong>
-                      {step.actorId ? ` · ${step.actorType ?? 'ACTOR'} ${step.actorId}` : ''}
+                      {step.actorId
+                        ? ` · ${step.actorType ?? "ACTOR"} ${step.actorId}`
+                        : ""}
                     </span>
                     <time dateTime={step.at ?? undefined}>
-                      {step.at ? new Date(step.at).toLocaleString('fr-CA') : ''}
+                      {step.at ? new Date(step.at).toLocaleString("fr-CA") : ""}
                     </time>
                   </div>
                 ))}
@@ -6161,16 +6695,12 @@ function PopulationDiffusionResult({
 
           <span
             style={{
-              display: 'inline-block',
+              display: "inline-block",
               marginTop: 10,
-              padding: '4px 8px',
+              padding: "4px 8px",
               borderRadius: 20,
-              backgroundColor: '#FFFFFF',
-              color: isFailed
-                ? '#C0392B'
-                : isSending
-                  ? '#2980B9'
-                  : '#167D6A',
+              backgroundColor: "#FFFFFF",
+              color: isFailed ? "#C0392B" : isSending ? "#2980B9" : "#167D6A",
               fontSize: 8,
               fontWeight: 900,
             }}
@@ -6183,13 +6713,9 @@ function PopulationDiffusionResult({
   );
 }
 
-function FrozenRecipientsPanel({
-  result,
-}: {
-  result: PopulationFreezeResult;
-}) {
+function FrozenRecipientsPanel({ result }: { result: PopulationFreezeResult }) {
   const hasRecipients = result.targeting.deliveryCount > 0;
-  const isSandbox = result.deliveryMode === 'SANDBOX';
+  const isSandbox = result.deliveryMode === "SANDBOX";
 
   return (
     <div
@@ -6197,33 +6723,29 @@ function FrozenRecipientsPanel({
       aria-live="polite"
       style={{
         marginTop: 18,
-        overflow: 'hidden',
-        border: '1px solid #D5EDE7',
+        overflow: "hidden",
+        border: "1px solid #D5EDE7",
         borderRadius: 11,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: "#FFFFFF",
       }}
     >
       <div
         style={{
-          display: 'flex',
-          alignItems: 'flex-start',
+          display: "flex",
+          alignItems: "flex-start",
           gap: 12,
           padding: 17,
-          backgroundColor: '#F3FAF8',
-          borderBottom: '1px solid #D5EDE7',
+          backgroundColor: "#F3FAF8",
+          borderBottom: "1px solid #D5EDE7",
         }}
       >
-        <CheckCircle2
-          size={24}
-          color="#167D6A"
-          style={{ flexShrink: 0 }}
-        />
+        <CheckCircle2 size={24} color="#167D6A" style={{ flexShrink: 0 }} />
 
         <div>
           <h3
             style={{
-              margin: '0 0 4px',
-              color: '#167D6A',
+              margin: "0 0 4px",
+              color: "#167D6A",
               fontSize: 14,
               fontWeight: 900,
             }}
@@ -6234,13 +6756,13 @@ function FrozenRecipientsPanel({
           <p
             style={{
               margin: 0,
-              color: '#496A63',
+              color: "#496A63",
               fontSize: 10,
               lineHeight: 1.5,
             }}
           >
-            Les destinataires et leurs canaux sont maintenant
-            matérialisés pour cette communication.
+            Les destinataires et leurs canaux sont maintenant matérialisés pour
+            cette communication.
           </p>
         </div>
       </div>
@@ -6248,9 +6770,9 @@ function FrozenRecipientsPanel({
       <div style={{ padding: 17 }}>
         <div
           style={{
-            display: 'grid',
+            display: "grid",
             gridTemplateColumns:
-              'repeat(auto-fit, minmax(min(130px, 100%), 1fr))',
+              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
             gap: 9,
           }}
         >
@@ -6264,10 +6786,7 @@ function FrozenRecipientsPanel({
             value={result.targeting.deliveryCount}
           />
 
-          <FrozenMetric
-            label="SMS"
-            value={result.targeting.smsDeliveryCount}
-          />
+          <FrozenMetric label="SMS" value={result.targeting.smsDeliveryCount} />
 
           <FrozenMetric
             label="Courriels"
@@ -6280,38 +6799,35 @@ function FrozenRecipientsPanel({
             marginTop: 13,
             padding: 11,
             borderRadius: 9,
-            backgroundColor: hasRecipients
-              ? '#F8F9FA'
-              : '#FDEDEC',
-            color: hasRecipients ? '#6C757D' : '#922B21',
+            backgroundColor: hasRecipients ? "#F8F9FA" : "#FDEDEC",
+            color: hasRecipients ? "#6C757D" : "#922B21",
             fontSize: 9,
             lineHeight: 1.55,
           }}
         >
           {hasRecipients ? (
             <>
-              <strong>
-                Aucune diffusion n’a encore été déclenchée.
-              </strong>
+              <strong>Aucune diffusion n’a encore été déclenchée.</strong>
               <br />
               {isSandbox ? (
                 <>
-                  Les {result.targeting.deliveryCount.toLocaleString('fr-CA')}{' '}
+                  Les {result.targeting.deliveryCount.toLocaleString("fr-CA")}{" "}
                   communications sont figées en mode simulation. Aucune n’est
                   placée en file de diffusion externe.
                   <br />
-                  Communications matérialisées :{' '}
-                  {result.targeting.deliveryCount.toLocaleString('fr-CA')} ·{' '}
-                  Délivrables :{' '}
-                  {result.targeting.deliverableCount.toLocaleString('fr-CA')} ·{' '}
-                  Supprimées SANDBOX :{' '}
-                  {result.targeting.suppressedCount.toLocaleString('fr-CA')}
+                  Communications matérialisées :{" "}
+                  {result.targeting.deliveryCount.toLocaleString(
+                    "fr-CA",
+                  )} · Délivrables :{" "}
+                  {result.targeting.deliverableCount.toLocaleString("fr-CA")} ·{" "}
+                  Supprimées SANDBOX :{" "}
+                  {result.targeting.suppressedCount.toLocaleString("fr-CA")}
                 </>
               ) : (
                 <>
-                  Les {result.targeting.deliveryCount.toLocaleString('fr-CA')}{' '}
-                  communications sont matérialisées. Leur état de transport
-                  est celui retourné par le backend.
+                  Les {result.targeting.deliveryCount.toLocaleString("fr-CA")}{" "}
+                  communications sont matérialisées. Leur état de transport est
+                  celui retourné par le backend.
                 </>
               )}
             </>
@@ -6327,44 +6843,36 @@ function FrozenRecipientsPanel({
         <div
           style={{
             marginTop: 11,
-            color: '#ADB5BD',
+            color: "#ADB5BD",
             fontSize: 8,
           }}
         >
-          Roster figé le{' '}
-          {new Date(result.recipientsFrozenAt).toLocaleString(
-            'fr-CA',
-          )}
+          Roster figé le{" "}
+          {new Date(result.recipientsFrozenAt).toLocaleString("fr-CA")}
         </div>
       </div>
     </div>
   );
 }
 
-function FrozenMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function FrozenMetric({ label, value }: { label: string; value: number }) {
   return (
     <div
       style={{
         padding: 12,
-        border: '1px solid #E9ECEF',
+        border: "1px solid #E9ECEF",
         borderRadius: 9,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: "#FFFFFF",
       }}
     >
       <span
         style={{
-          display: 'block',
+          display: "block",
           marginBottom: 4,
-          color: '#ADB5BD',
+          color: "#ADB5BD",
           fontSize: 8,
           fontWeight: 800,
-          textTransform: 'uppercase',
+          textTransform: "uppercase",
         }}
       >
         {label}
@@ -6372,12 +6880,12 @@ function FrozenMetric({
 
       <strong
         style={{
-          color: '#2C3E50',
+          color: "#2C3E50",
           fontSize: 18,
           fontWeight: 900,
         }}
       >
-        {value.toLocaleString('fr-CA')}
+        {value.toLocaleString("fr-CA")}
       </strong>
     </div>
   );
@@ -6396,27 +6904,27 @@ function AlertWorkflowBar({
 }) {
   const stages = [
     {
-      label: 'Brouillon',
-      active: status === 'DRAFT',
-      completed: status !== 'DRAFT',
+      label: "Brouillon",
+      active: status === "DRAFT",
+      completed: status !== "DRAFT",
     },
     {
-      label: 'READY',
-      active: status === 'READY' && !approved,
+      label: "READY",
+      active: status === "READY" && !approved,
       completed: approved,
     },
     {
-      label: 'Approuvée',
+      label: "Approuvée",
       active: approved && !recipientsFrozen,
       completed: recipientsFrozen,
     },
     {
-      label: 'Destinataires',
+      label: "Destinataires",
       active: recipientsFrozen && !diffusionStarted,
       completed: diffusionStarted,
     },
     {
-      label: 'Diffusion',
+      label: "Diffusion",
       active: diffusionStarted,
       completed: false,
     },
@@ -6425,19 +6933,18 @@ function AlertWorkflowBar({
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns:
-          'repeat(5, minmax(90px, 1fr))',
+        display: "grid",
+        gridTemplateColumns: "repeat(5, minmax(90px, 1fr))",
         gap: 5,
         marginTop: 14,
-        overflowX: 'auto',
+        overflowX: "auto",
       }}
     >
       <p
         style={{
-          gridColumn: '1 / -1',
+          gridColumn: "1 / -1",
           margin: 0,
-          color: '#6C757D',
+          color: "#6C757D",
           fontWeight: 800,
         }}
       >
@@ -6451,19 +6958,17 @@ function AlertWorkflowBar({
               marginBottom: 6,
               borderRadius: 4,
               backgroundColor:
-                stage.active || stage.completed
-                  ? '#167D6A'
-                  : '#E9ECEF',
+                stage.active || stage.completed ? "#167D6A" : "#E9ECEF",
             }}
           />
 
           <span
             style={{
               color: stage.active
-                ? '#167D6A'
+                ? "#167D6A"
                 : stage.completed
-                  ? '#6C757D'
-                  : '#ADB5BD',
+                  ? "#6C757D"
+                  : "#ADB5BD",
               fontSize: 8,
               fontWeight: stage.active ? 900 : 700,
             }}
@@ -6489,14 +6994,9 @@ function WorkflowButton({
   primary?: boolean;
   danger?: boolean;
 }) {
-  const backgroundColor = danger
-    ? '#C0392B'
-    : primary
-      ? '#167D6A'
-      : '#FFFFFF';
+  const backgroundColor = danger ? "#C0392B" : primary ? "#167D6A" : "#FFFFFF";
 
-  const color =
-    danger || primary ? '#FFFFFF' : '#495057';
+  const color = danger || primary ? "#FFFFFF" : "#495057";
 
   return (
     <button
@@ -6504,15 +7004,12 @@ function WorkflowButton({
       disabled={disabled}
       onClick={onClick}
       style={{
-        padding: '9px 14px',
-        border:
-          danger || primary
-            ? 'none'
-            : '1px solid #E9ECEF',
+        padding: "9px 14px",
+        border: danger || primary ? "none" : "1px solid #E9ECEF",
         borderRadius: 8,
         backgroundColor,
         color,
-        cursor: disabled ? 'not-allowed' : 'pointer',
+        cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.55 : 1,
         fontSize: 9,
         fontWeight: 900,
@@ -6536,12 +7033,12 @@ function StepTitle({
     <div style={{ marginBottom: 16 }}>
       <p
         style={{
-          margin: '0 0 4px',
-          color: '#167D6A',
+          margin: "0 0 4px",
+          color: "#167D6A",
           fontSize: 9,
           fontWeight: 900,
-          textTransform: 'uppercase',
-          letterSpacing: '0.07em',
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
         }}
       >
         {eyebrow}
@@ -6549,8 +7046,8 @@ function StepTitle({
 
       <h3
         style={{
-          margin: '0 0 4px',
-          color: '#2C3E50',
+          margin: "0 0 4px",
+          color: "#2C3E50",
           fontSize: 15,
           fontWeight: 900,
         }}
@@ -6561,7 +7058,7 @@ function StepTitle({
       <p
         style={{
           margin: 0,
-          color: '#ADB5BD',
+          color: "#ADB5BD",
           fontSize: 10,
           lineHeight: 1.5,
         }}
@@ -6572,26 +7069,20 @@ function StepTitle({
   );
 }
 
-function ValidationRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function ValidationRow({ label, value }: { label: string; value: string }) {
   return (
     <div
       style={{
-        display: 'flex',
-        justifyContent: 'space-between',
+        display: "flex",
+        justifyContent: "space-between",
         gap: 12,
-        padding: '8px 0',
-        borderBottom: '1px solid #E9ECEF',
+        padding: "8px 0",
+        borderBottom: "1px solid #E9ECEF",
       }}
     >
       <span
         style={{
-          color: '#ADB5BD',
+          color: "#ADB5BD",
           fontSize: 9,
         }}
       >
@@ -6600,9 +7091,9 @@ function ValidationRow({
 
       <strong
         style={{
-          color: '#2C3E50',
+          color: "#2C3E50",
           fontSize: 9,
-          textAlign: 'right',
+          textAlign: "right",
         }}
       >
         {value}
@@ -6625,27 +7116,25 @@ function PreviewMetric({
       style={{
         padding: 13,
         borderRadius: 9,
-        backgroundColor: warning ? '#FEF9E7' : '#F8F9FA',
-        border: warning
-          ? '1px solid #F7DC6F'
-          : '1px solid #F1F3F5',
+        backgroundColor: warning ? "#FEF9E7" : "#F8F9FA",
+        border: warning ? "1px solid #F7DC6F" : "1px solid #F1F3F5",
       }}
     >
       <strong
         style={{
-          display: 'block',
+          display: "block",
           marginBottom: 3,
-          color: warning ? '#B9770E' : '#2C3E50',
+          color: warning ? "#B9770E" : "#2C3E50",
           fontSize: 18,
           fontWeight: 900,
         }}
       >
-        {value.toLocaleString('fr-CA')}
+        {value.toLocaleString("fr-CA")}
       </strong>
 
       <span
         style={{
-          color: warning ? '#CA8F3D' : '#ADB5BD',
+          color: warning ? "#CA8F3D" : "#ADB5BD",
           fontSize: 9,
           fontWeight: 700,
         }}
@@ -6668,13 +7157,13 @@ function ConfigurationSection({
       style={{
         marginBottom: 20,
         paddingBottom: 20,
-        borderBottom: '1px solid #F1F3F5',
+        borderBottom: "1px solid #F1F3F5",
       }}
     >
       <h3
         style={{
-          margin: '0 0 13px',
-          color: '#2C3E50',
+          margin: "0 0 13px",
+          color: "#2C3E50",
           fontSize: 12,
           fontWeight: 900,
         }}
@@ -6684,9 +7173,9 @@ function ConfigurationSection({
 
       <div
         style={{
-          display: 'grid',
+          display: "grid",
           gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
+            "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
           gap: 12,
         }}
       >
@@ -6700,7 +7189,7 @@ function ConfigurationField({
   label,
   value,
   onChange,
-  placeholder = '',
+  placeholder = "",
   required = false,
 }: {
   label: string;
@@ -6712,20 +7201,20 @@ function ConfigurationField({
   return (
     <label
       style={{
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         gap: 5,
       }}
     >
       <span
         style={{
-          color: '#6C757D',
+          color: "#6C757D",
           fontSize: 10,
           fontWeight: 800,
         }}
       >
         {label}
-        {required && <span style={{ color: '#C0392B' }}> *</span>}
+        {required && <span style={{ color: "#C0392B" }}> *</span>}
       </span>
 
       <input
@@ -6734,15 +7223,15 @@ function ConfigurationField({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         style={{
-          width: '100%',
-          padding: '10px 11px',
-          border: '1px solid #DEE2E6',
+          width: "100%",
+          padding: "10px 11px",
+          border: "1px solid #DEE2E6",
           borderRadius: 8,
-          outline: 'none',
-          color: '#2C3E50',
-          backgroundColor: '#FFFFFF',
+          outline: "none",
+          color: "#2C3E50",
+          backgroundColor: "#FFFFFF",
           fontSize: 12,
-          boxSizing: 'border-box',
+          boxSizing: "border-box",
         }}
       />
     </label>
@@ -6765,20 +7254,20 @@ function ConfigurationTextarea({
   return (
     <label
       style={{
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
         gap: 5,
       }}
     >
       <span
         style={{
-          color: '#6C757D',
+          color: "#6C757D",
           fontSize: 10,
           fontWeight: 800,
         }}
       >
         {label}
-        {required && <span style={{ color: '#C0392B' }}> *</span>}
+        {required && <span style={{ color: "#C0392B" }}> *</span>}
       </span>
 
       <textarea
@@ -6786,18 +7275,18 @@ function ConfigurationTextarea({
         rows={rows}
         onChange={(event) => onChange(event.target.value)}
         style={{
-          width: '100%',
-          padding: '10px 11px',
-          resize: 'vertical',
-          border: '1px solid #DEE2E6',
+          width: "100%",
+          padding: "10px 11px",
+          resize: "vertical",
+          border: "1px solid #DEE2E6",
           borderRadius: 8,
-          outline: 'none',
-          color: '#2C3E50',
-          backgroundColor: '#FFFFFF',
-          fontFamily: 'inherit',
+          outline: "none",
+          color: "#2C3E50",
+          backgroundColor: "#FFFFFF",
+          fontFamily: "inherit",
           fontSize: 12,
           lineHeight: 1.5,
-          boxSizing: 'border-box',
+          boxSizing: "border-box",
         }}
       />
     </label>
@@ -6818,22 +7307,22 @@ function ConfigurationToggle({
   return (
     <label
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
         gap: 14,
         padding: 13,
-        border: '1px solid #E9ECEF',
+        border: "1px solid #E9ECEF",
         borderRadius: 9,
-        cursor: 'pointer',
+        cursor: "pointer",
       }}
     >
       <span>
         <span
           style={{
-            display: 'block',
+            display: "block",
             marginBottom: 3,
-            color: '#2C3E50',
+            color: "#2C3E50",
             fontSize: 11,
             fontWeight: 800,
           }}
@@ -6843,8 +7332,8 @@ function ConfigurationToggle({
 
         <span
           style={{
-            display: 'block',
-            color: '#ADB5BD',
+            display: "block",
+            color: "#ADB5BD",
             fontSize: 9,
             lineHeight: 1.45,
           }}
@@ -6861,8 +7350,8 @@ function ConfigurationToggle({
           width: 17,
           height: 17,
           flexShrink: 0,
-          accentColor: '#167D6A',
-          cursor: 'pointer',
+          accentColor: "#167D6A",
+          cursor: "pointer",
         }}
       />
     </label>
@@ -6886,23 +7375,11 @@ function LifecycleButton({
   primary?: boolean;
   warning?: boolean;
 }) {
-  const backgroundColor = primary
-    ? '#167D6A'
-    : warning
-      ? '#FEF5E7'
-      : '#F8F9FA';
+  const backgroundColor = primary ? "#167D6A" : warning ? "#FEF5E7" : "#F8F9FA";
 
-  const borderColor = primary
-    ? '#167D6A'
-    : warning
-      ? '#F5CBA7'
-      : '#E9ECEF';
+  const borderColor = primary ? "#167D6A" : warning ? "#F5CBA7" : "#E9ECEF";
 
-  const textColor = primary
-    ? '#FFFFFF'
-    : warning
-      ? '#B9770E'
-      : '#2C3E50';
+  const textColor = primary ? "#FFFFFF" : warning ? "#B9770E" : "#2C3E50";
 
   return (
     <button
@@ -6910,33 +7387,33 @@ function LifecycleButton({
       disabled={disabled}
       onClick={onClick}
       style={{
-        width: '100%',
+        width: "100%",
         marginBottom: 9,
-        padding: '11px 13px',
+        padding: "11px 13px",
         borderRadius: 9,
         border: `1px solid ${borderColor}`,
         backgroundColor,
         color: textColor,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'left',
+        cursor: disabled ? "not-allowed" : "pointer",
+        textAlign: "left",
         opacity: disabled ? 0.6 : 1,
       }}
     >
       <span
         style={{
-          display: 'block',
+          display: "block",
           marginBottom: 2,
           fontSize: 11,
           fontWeight: 800,
         }}
       >
-        {loading ? 'Traitement...' : title}
+        {loading ? "Traitement..." : title}
       </span>
 
       <span
         style={{
-          display: 'block',
-          color: primary ? '#CDE5DF' : warning ? '#CA8F3D' : '#ADB5BD',
+          display: "block",
+          color: primary ? "#CDE5DF" : warning ? "#CA8F3D" : "#ADB5BD",
           fontSize: 9,
           lineHeight: 1.45,
         }}
@@ -6969,30 +7446,26 @@ function ActionButton({
       disabled={disabled}
       onClick={onClick}
       style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
         gap: 11,
         marginBottom: 9,
-        padding: '12px 13px',
+        padding: "12px 13px",
         borderRadius: 9,
-        border: primary ? 'none' : '1px solid #E9ECEF',
-        backgroundColor: disabled
-          ? '#E9ECEF'
-          : primary
-            ? '#167D6A'
-            : '#FFFFFF',
-        color: disabled ? '#6C757D' : primary ? '#FFFFFF' : '#2C3E50',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        textAlign: 'left',
+        border: primary ? "none" : "1px solid #E9ECEF",
+        backgroundColor: disabled ? "#E9ECEF" : primary ? "#167D6A" : "#FFFFFF",
+        color: disabled ? "#6C757D" : primary ? "#FFFFFF" : "#2C3E50",
+        cursor: disabled ? "not-allowed" : "pointer",
+        textAlign: "left",
         opacity: disabled ? 0.45 : 1,
       }}
     >
       <span
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           flexShrink: 0,
         }}
       >
@@ -7002,7 +7475,7 @@ function ActionButton({
       <span style={{ flex: 1 }}>
         <span
           style={{
-            display: 'block',
+            display: "block",
             marginBottom: 2,
             fontSize: 12,
             fontWeight: 800,
@@ -7013,8 +7486,8 @@ function ActionButton({
 
         <span
           style={{
-            display: 'block',
-            color: disabled ? '#6C757D' : primary ? '#CDE5DF' : '#ADB5BD',
+            display: "block",
+            color: disabled ? "#6C757D" : primary ? "#CDE5DF" : "#ADB5BD",
             fontSize: 10,
             lineHeight: 1.4,
           }}
@@ -7025,7 +7498,7 @@ function ActionButton({
 
       <ChevronRight
         size={14}
-        color={disabled ? '#6C757D' : primary ? '#FFFFFF' : '#ADB5BD'}
+        color={disabled ? "#6C757D" : primary ? "#FFFFFF" : "#ADB5BD"}
       />
     </button>
   );

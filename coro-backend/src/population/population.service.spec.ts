@@ -4733,7 +4733,10 @@ describe('PopulationService', () => {
           endedAt: expect.anything(),
         });
 
-      await service.endAlert('building-1', 'alert-emergency-1');
+      await service.endAlert('building-1', 'alert-emergency-1', {
+        type: 'CLIENT_USER',
+        id: 'client-user-1',
+      });
 
       expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
         where: {
@@ -4744,12 +4747,18 @@ describe('PopulationService', () => {
         data: {
           status: PopulationAlertStatus.ENDED,
           endedAt: expect.any(Date),
+          endedByType: 'CLIENT_USER',
+          endedById: 'client-user-1',
         },
       });
 
       expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
       expect(prisma.populationAlertDelivery.updateMany).not.toHaveBeenCalled();
+
+      expect(populationDeliveryService.sendEmail).not.toHaveBeenCalled();
+
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
     });
 
     it('permet de clôturer une alerte ACTIVE après suspension et désactivation du programme', async () => {
@@ -7806,6 +7815,110 @@ describe('PopulationService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(prisma.populationSubscriber.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('operational event cockpit contract', () => {
+    it('retourne uniquement les agrégats nécessaires à la chronologie', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      operationalEvents.getActiveOperationalEvent.mockResolvedValue({
+        id: 'event-1',
+      });
+      prisma.populationOperationalEvent.findFirst.mockResolvedValue({
+        id: 'event-1',
+        status: PopulationOperationalEventStatus.ACTIVE,
+        programId: 'program-1',
+        emergencyScenarioId: 'scenario-1',
+        incidentEventId: null,
+        startedAt: new Date('2026-09-19T12:00:00Z'),
+        startedByType: CoroActorType.CLIENT_USER,
+        startedById: 'user-1',
+        endedAt: null,
+        endedByType: null,
+        endedById: null,
+        closeReason: null,
+        createdAt: new Date('2026-09-19T12:00:00Z'),
+        updatedAt: new Date('2026-09-19T12:05:00Z'),
+        emergencyScenario: {
+          id: 'scenario-1',
+          nameFR: 'Rejet test',
+          nameEN: null,
+        },
+        alerts: [
+          {
+            id: 'alert-1',
+            type: PopulationAlertType.ALL_CLEAR,
+            status: PopulationAlertStatus.ACTIVE,
+            cycleSequence: 2,
+            titleFR: 'Fin d’alerte',
+            titleEN: null,
+            createdAt: new Date('2026-09-19T12:04:00Z'),
+            readyAt: new Date(),
+            approvedAt: new Date(),
+            recipientsFrozenAt: new Date(),
+            sendingAt: new Date(),
+            activatedAt: new Date(),
+            endedAt: null,
+            cancelledAt: null,
+            contextSnapshot: {
+              targeting: {
+                strategy: 'HISTORICAL_UNION_CURRENT',
+                uniqueTargetCount: 2,
+              },
+            },
+            deliveries: [
+              {
+                status: PopulationDeliveryStatus.DELIVERED,
+                channel: PopulationAlertChannel.EMAIL,
+                subscriberId: 'subscriber-secret',
+              },
+              {
+                status: PopulationDeliveryStatus.SUPPRESSED,
+                channel: PopulationAlertChannel.EMAIL,
+                subscriberId: 'subscriber-suppressed',
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await service.getActiveOperationalEvent(
+        'building-1',
+        'organization-1',
+      );
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          communicationCount: 1,
+          latestCommunication: expect.objectContaining({ id: 'alert-1' }),
+          alerts: [
+            expect.objectContaining({
+              deliveryCounts: { DELIVERED: 1, SUPPRESSED: 1 },
+              targetedSubscriberCount: 2,
+              deliverableDeliveryCount: 1,
+              targeting: {
+                strategy: 'HISTORICAL_UNION_CURRENT',
+                uniqueTargetCount: 2,
+              },
+            }),
+          ],
+        }),
+      );
+      const serialized = JSON.stringify(result);
+      expect(serialized).not.toContain('subscriber-secret');
+      expect(serialized).not.toContain('subscriber-suppressed');
+      expect(serialized).not.toContain('contextSnapshot');
+      expect(serialized).not.toContain('subscriberId');
+      expect(serialized).not.toContain('destinationSnapshot');
+      expect(serialized).not.toContain('providerMessageId');
+      expect(serialized).not.toContain('providerIdempotencyKey');
+      expect(serialized).not.toContain('email');
+      expect(serialized).not.toContain('phone');
+      expect(serialized).not.toContain('latitude');
+      expect(serialized).not.toContain('longitude');
     });
   });
 

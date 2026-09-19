@@ -3589,8 +3589,9 @@ export class PopulationService {
             activatedAt: true,
             endedAt: true,
             cancelledAt: true,
+            contextSnapshot: true,
             deliveries: {
-              select: { status: true, channel: true },
+              select: { status: true, channel: true, subscriberId: true },
             },
           },
           orderBy: [{ cycleSequence: 'asc' }, { createdAt: 'asc' }],
@@ -3609,7 +3610,57 @@ export class PopulationService {
         },
         {},
       );
-      return { ...alert, deliveryCounts };
+      const materializedSubscriberCount = new Set(
+        deliveries
+          .map((delivery) => delivery.subscriberId)
+          .filter((subscriberId): subscriberId is string =>
+            Boolean(subscriberId),
+          ),
+      ).size;
+      const deliverableDeliveryCount = deliveries.filter(
+        (delivery) =>
+          delivery.status !== PopulationDeliveryStatus.SUPPRESSED &&
+          delivery.status !== PopulationDeliveryStatus.CANCELLED,
+      ).length;
+      const targeting =
+        alert.contextSnapshot &&
+        typeof alert.contextSnapshot === 'object' &&
+        !Array.isArray(alert.contextSnapshot) &&
+        'targeting' in alert.contextSnapshot &&
+        alert.contextSnapshot.targeting &&
+        typeof alert.contextSnapshot.targeting === 'object' &&
+        !Array.isArray(alert.contextSnapshot.targeting)
+          ? alert.contextSnapshot.targeting
+          : null;
+      const snapshotPopulation =
+        alert.contextSnapshot &&
+        typeof alert.contextSnapshot === 'object' &&
+        !Array.isArray(alert.contextSnapshot) &&
+        'population' in alert.contextSnapshot &&
+        alert.contextSnapshot.population &&
+        typeof alert.contextSnapshot.population === 'object' &&
+        !Array.isArray(alert.contextSnapshot.population)
+          ? alert.contextSnapshot.population
+          : null;
+      const targetedSubscriberCount =
+        materializedSubscriberCount ||
+        (targeting &&
+        'uniqueTargetCount' in targeting &&
+        typeof targeting.uniqueTargetCount === 'number'
+          ? targeting.uniqueTargetCount
+          : snapshotPopulation &&
+              'uniqueTargetCount' in snapshotPopulation &&
+              typeof snapshotPopulation.uniqueTargetCount === 'number'
+            ? snapshotPopulation.uniqueTargetCount
+            : 0);
+      const { contextSnapshot: _contextSnapshot, ...publicAlert } = alert;
+      return {
+        ...publicAlert,
+        deliveryCounts,
+        targetedSubscriberCount,
+        deliverableDeliveryCount,
+        targeting,
+      };
     });
 
     return {
