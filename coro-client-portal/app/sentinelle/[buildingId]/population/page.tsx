@@ -22,6 +22,7 @@ import {
 import { apiGet, apiPost, apiPut, getUser } from "../../../store/auth";
 import PortalLayout from "../../../components/PortalLayout";
 import PopulationOperationalMap from "./PopulationOperationalMap";
+import PopulationEvidenceEntry from "./evidence/PopulationEvidenceEntry";
 import {
   normalizeOperationalEvent,
   normalizeLegacyActiveAlerts,
@@ -2181,6 +2182,8 @@ export default function PopulationPage() {
             entries={populationRegistry}
             loading={populationRegistryLoading}
             error={populationRegistryError}
+            buildingId={buildingId}
+            canGenerateEvidence={canPrepare}
             onRefresh={() => void loadPopulationRegistry()}
           />
         )}
@@ -4121,11 +4124,15 @@ function PopulationUnifiedRegistry({
   entries,
   loading,
   error,
+  buildingId,
+  canGenerateEvidence,
   onRefresh,
 }: {
   entries: any[];
   loading: boolean;
   error: string | null;
+  buildingId: string;
+  canGenerateEvidence: boolean;
   onRefresh: () => void;
 }) {
   return (
@@ -4205,6 +4212,13 @@ function PopulationUnifiedRegistry({
                       </div>
                     );
                   })}
+                  {kind === "OPERATIONAL_EVENT" && item.status === "ENDED" && (
+                    <PopulationEvidenceEntry
+                      buildingId={buildingId}
+                      eventId={item.id}
+                      canGenerate={canGenerateEvidence}
+                    />
+                  )}
                 </div>
               </details>
             );
