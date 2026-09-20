@@ -16,6 +16,8 @@ import {
   confirmPopulationEventClose,
   derivePopulationEventPresentation,
   isPopulationConcurrencyConflict,
+  getOrCreatePopulationIntent,
+  clearPopulationIntent,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 const closeEvent = (overrides = {}) => ({
@@ -164,6 +166,25 @@ test("identifie uniquement les conflits HTTP multi-operateur", () => {
   assert.equal(isPopulationConcurrencyConflict({ status: 409 }), true);
   assert.equal(isPopulationConcurrencyConflict({ status: 400 }), false);
   assert.equal(isPopulationConcurrencyConflict(new Error("conflict")), false);
+});
+
+test("conserve une intention tant que la réponse serveur manque puis la libère", () => {
+  const values = new Map();
+  const storage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
+  };
+  let generated = 0;
+  const create = () => `00000000-0000-4000-8000-00000000000${++generated}`;
+  const first = getOrCreatePopulationIntent(storage, "event-1", "UPDATE", create);
+  const retry = getOrCreatePopulationIntent(storage, "event-1", "UPDATE", create);
+  assert.equal(retry.clientIntentId, first.clientIntentId);
+  assert.equal(generated, 1);
+  clearPopulationIntent(storage, first.key);
+  const next = getOrCreatePopulationIntent(storage, "event-1", "UPDATE", create);
+  assert.notEqual(next.clientIntentId, first.clientIntentId);
+  assert.equal(generated, 2);
 });
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {

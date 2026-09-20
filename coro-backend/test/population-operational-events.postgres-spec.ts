@@ -84,8 +84,17 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
       return event.nextSequence - 1;
     });
 
-  const createFollowUp = (eventId: string, type: PopulationAlertType) =>
-    prisma.$transaction(async (tx) => {
+  const createFollowUp = async (
+    eventId: string,
+    type: PopulationAlertType,
+    clientIntentId = randomUUID(),
+  ) => {
+    const existing = await prisma.populationAlert.findFirst({
+      where: { operationalEventId: eventId, clientIntentId },
+    });
+    if (existing) return existing;
+    try {
+      return await prisma.$transaction(async (tx) => {
       const claimed = await tx.populationOperationalEvent.updateMany({
         where: {
           id: eventId,
@@ -113,6 +122,7 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
           emergencyScenarioId: ids.scenario,
           operationalEventId: eventId,
           cycleSequence: event.nextSequence - 1,
+          clientIntentId,
           type,
           status: PopulationAlertStatus.DRAFT,
           titleFR: 'Test PostgreSQL',
@@ -121,7 +131,20 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
           createdById: 'postgres-tests',
         },
       });
-    });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const replay = await prisma.populationAlert.findFirst({
+          where: { operationalEventId: eventId, clientIntentId },
+        });
+        if (replay) return replay;
+      }
+      throw error;
+    }
+  };
 
   beforeAll(async () => {
     await prisma.$connect();
@@ -466,6 +489,51 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
       allocateSequence(event.id),
     ]);
     expect(sequences.sort()).toEqual([2, 3]);
+  });
+
+  it('02H: rejoue séquentiellement la même intention sans nouvelle mutation', async () => {
+    const event = await createEvent();
+    await createAlert('intent-initial-' + suffix, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const intent = randomUUID();
+    const first = await createFollowUp(event.id, PopulationAlertType.UPDATE, intent);
+    const replay = await createFollowUp(event.id, PopulationAlertType.UPDATE, intent);
+    expect(replay.id).toBe(first.id);
+    expect(await prisma.populationAlert.count({ where: { operationalEventId: event.id } })).toBe(2);
+  });
+
+  it('02H: sérialise deux requêtes concurrentes de la même intention', async () => {
+    const event = await createEvent();
+    await createAlert('intent-race-initial-' + suffix, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const intent = randomUUID();
+    const [first, second] = await Promise.all([
+      createFollowUp(event.id, PopulationAlertType.UPDATE, intent),
+      createFollowUp(event.id, PopulationAlertType.UPDATE, intent),
+    ]);
+    expect(second.id).toBe(first.id);
+    expect(await prisma.populationAlert.count({ where: { operationalEventId: event.id } })).toBe(2);
+  });
+
+  it('02H: deux intentions distinctes créent deux UPDATE distinctes', async () => {
+    const event = await createEvent();
+    await createAlert('intent-distinct-initial-' + suffix, {
+      operationalEventId: event.id,
+      cycleSequence: 1,
+      status: PopulationAlertStatus.ACTIVE,
+    });
+    const [first, second] = await Promise.all([
+      createFollowUp(event.id, PopulationAlertType.UPDATE, randomUUID()),
+      createFollowUp(event.id, PopulationAlertType.UPDATE, randomUUID()),
+    ]);
+    expect(second.id).not.toBe(first.id);
+    expect(new Set([first.cycleSequence, second.cycleSequence])).toEqual(new Set([2, 3]));
   });
 
   it('D: sérialise UPDATE et ALL_CLEAR concurrents sans UPDATE postérieur', async () => {

@@ -7649,7 +7649,7 @@ describe('PopulationService', () => {
     it('remet QUEUED un claim expiré avant le début de tentative', async () => {
       const claimedAt = new Date('2026-09-19T10:00:00.000Z');
       prisma.populationAlertDelivery.findMany.mockResolvedValue([
-        { id: 'delivery-1', claimedAt, lastAttemptAt: null },
+        { id: 'delivery-1', claimedAt, providerCallStartedAt: null },
       ]);
       await (service as any).recoverExpiredDeliveryLeases('alert-1');
       expect(prisma.populationAlertDelivery.updateMany).toHaveBeenCalledWith({
@@ -7668,7 +7668,7 @@ describe('PopulationService', () => {
         {
           id: 'delivery-1',
           claimedAt,
-          lastAttemptAt: new Date('2026-09-19T10:00:01.000Z'),
+          providerCallStartedAt: new Date('2026-09-19T10:00:01.000Z'),
         },
       ]);
       await (service as any).recoverExpiredDeliveryLeases('alert-1');

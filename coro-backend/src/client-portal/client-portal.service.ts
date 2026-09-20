@@ -570,6 +570,7 @@ export class ClientPortalService {
       dto.sourceAlertId,
       PopulationAlertType.UPDATE,
       {
+        clientIntentId: dto.clientIntentId,
         titleFR: dto.titleFR,
         titleEN: dto.titleEN,
         messageFR: dto.messageFR,
@@ -616,6 +617,7 @@ export class ClientPortalService {
       dto.sourceAlertId,
       PopulationAlertType.ALL_CLEAR,
       {
+        clientIntentId: dto.clientIntentId,
         titleFR: dto.titleFR,
         titleEN: dto.titleEN,
         messageFR: dto.messageFR,

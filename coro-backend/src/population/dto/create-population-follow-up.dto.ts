@@ -1,10 +1,14 @@
 import {
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 
 export class CreatePopulationFollowUpDto {
+  @IsUUID('4')
+  clientIntentId: string;
+
   /**
    * Communication déjà diffusée servant de point
    * de référence au nouveau suivi.

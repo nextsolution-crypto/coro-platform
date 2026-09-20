@@ -254,3 +254,21 @@ export function derivePopulationEventPresentation({
 export function isPopulationConcurrencyConflict(error) {
   return Boolean(error && typeof error === "object" && error.status === 409);
 }
+
+export function getOrCreatePopulationIntent(
+  storage,
+  eventId,
+  type,
+  uuidFactory,
+) {
+  const key = `coro:population:intent:${eventId}:${type}`;
+  const existing = storage.getItem(key);
+  if (existing) return { key, clientIntentId: existing };
+  const clientIntentId = uuidFactory();
+  storage.setItem(key, clientIntentId);
+  return { key, clientIntentId };
+}
+
+export function clearPopulationIntent(storage, key) {
+  storage.removeItem(key);
+}

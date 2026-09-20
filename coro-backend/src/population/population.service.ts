@@ -3193,6 +3193,7 @@ export class PopulationService {
     sourceAlertId: string,
     type: PopulationAlertType,
     content: {
+      clientIntentId?: string;
       titleFR: string;
       titleEN?: string;
       messageFR: string;
@@ -3248,6 +3249,7 @@ export class PopulationService {
     sourceAlertId: string,
     type: PopulationAlertType,
     content: {
+      clientIntentId?: string;
       titleFR: string;
       titleEN?: string;
       messageFR: string;
@@ -3289,6 +3291,32 @@ export class PopulationService {
       program.id,
       operationalEventId,
     );
+    const hasClientIntent = Boolean(content.clientIntentId);
+    const clientIntentId = content.clientIntentId ?? randomUUID();
+
+    const existingIntent = hasClientIntent
+      ? await this.prisma.populationAlert.findFirst({
+          where: {
+            operationalEventId: event.id,
+            clientIntentId,
+          },
+          include: { zones: { orderBy: { zoneCodeSnapshot: 'asc' } } },
+        })
+      : null;
+    if (existingIntent) {
+      if (
+        existingIntent.type !== type ||
+        existingIntent.contextSnapshot === null ||
+        (existingIntent.contextSnapshot as any)?.communication?.sourceAlertId !==
+          sourceAlertId
+      ) {
+        throw new ConflictException(
+          'Cette clé d’intention est déjà associée à une autre opération',
+        );
+      }
+      const { clientIntentId: _clientIntentId, ...alert } = existingIntent;
+      return alert;
+    }
 
     const sourceAlert = await this.prisma.populationAlert.findFirst({
       where: {
@@ -3384,7 +3412,8 @@ export class PopulationService {
       },
     };
 
-    return this.prisma.$transaction(async (tx) => {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
       const cycleSequence = await this.operationalEvents.allocateNextSequence(
         tx,
         organizationId,
@@ -3436,6 +3465,7 @@ export class PopulationService {
             emergencyScenarioId: targeting.scenario.id,
             operationalEventId: event.id,
             cycleSequence,
+            clientIntentId,
 
             type,
             status: PopulationAlertStatus.DRAFT,
@@ -3471,16 +3501,6 @@ export class PopulationService {
          * dernière barrière contre deux créations ALL_CLEAR
          * réellement concurrentes.
          */
-        if (
-          type === PopulationAlertType.ALL_CLEAR &&
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2002'
-        ) {
-          throw new ConflictException(
-            'Un ALL_CLEAR existe déjà pour cet événement',
-          );
-        }
-
         throw error;
       }
 
@@ -3512,7 +3532,7 @@ export class PopulationService {
         });
       }
 
-      return tx.populationAlert.findUnique({
+      const result = await tx.populationAlert.findUnique({
         where: {
           id: alert.id,
         },
@@ -3524,7 +3544,36 @@ export class PopulationService {
           },
         },
       });
-    });
+      if (!result) throw new Error('Communication Population introuvable');
+      const { clientIntentId: _clientIntentId, ...publicResult } = result;
+      return publicResult;
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const replay = hasClientIntent
+          ? await this.prisma.populationAlert.findFirst({
+          where: {
+            operationalEventId: event.id,
+            clientIntentId,
+          },
+          include: { zones: { orderBy: { zoneCodeSnapshot: 'asc' } } },
+            })
+          : null;
+        if (replay) {
+          const { clientIntentId: _clientIntentId, ...publicReplay } = replay;
+          return publicReplay;
+        }
+        if (type === PopulationAlertType.ALL_CLEAR) {
+          throw new ConflictException(
+            'Un ALL_CLEAR existe déjà pour cet événement',
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   private async getOperationalEventProgramContext(
@@ -5665,16 +5714,12 @@ export class PopulationService {
       select: {
         id: true,
         claimedAt: true,
-        lastAttemptAt: true,
+        providerCallStartedAt: true,
       },
     });
 
     for (const delivery of expired) {
-      const providerMayHaveStarted = Boolean(
-        delivery.claimedAt &&
-        delivery.lastAttemptAt &&
-        delivery.lastAttemptAt >= delivery.claimedAt,
-      );
+      const providerMayHaveStarted = Boolean(delivery.providerCallStartedAt);
 
       await this.prisma.populationAlertDelivery.updateMany({
         where: {
@@ -6101,6 +6146,7 @@ export class PopulationService {
         data: {
           attemptCount: { increment: 1 },
           lastAttemptAt,
+          providerCallStartedAt: lastAttemptAt,
           nextAttemptAt: null,
           errorCode: null,
           errorMessage: null,

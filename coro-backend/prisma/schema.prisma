@@ -1341,6 +1341,11 @@ model PopulationAlert {
   // transactionnelle sera prise en charge par le workflow opérationnel.
   cycleSequence Int?
 
+  // UUID fourni par le client pour identifier une intention de création.
+  // Une réponse HTTP perdue peut ainsi être rejouée sans créer une seconde
+  // communication dans le même événement opérationnel.
+  clientIntentId String?
+
   type   PopulationAlertType
   status PopulationAlertStatus @default(DRAFT)
 
@@ -1405,6 +1410,7 @@ model PopulationAlert {
   deliveries PopulationAlertDelivery[]
 
   @@unique([operationalEventId, cycleSequence])
+  @@unique([operationalEventId, clientIntentId])
   @@index([programId])
   @@index([incidentEventId])
   @@index([emergencyScenarioId])
@@ -1501,6 +1507,10 @@ model PopulationAlertDelivery {
   claimedAt       DateTime?
   leaseExpiresAt  DateTime?
   outcomeUnknownAt DateTime?
+  // Frontière persistée juste avant l'appel réseau fournisseur. Une lease
+  // expirée sans cette valeur est rejouable; avec cette valeur elle doit être
+  // réconciliée, jamais renvoyée aveuglément.
+  providerCallStartedAt DateTime?
 
   queuedAt    DateTime  @default(now())
   sentAt      DateTime?

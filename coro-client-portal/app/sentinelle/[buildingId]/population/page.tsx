@@ -37,6 +37,8 @@ import {
   confirmPopulationEventClose,
   derivePopulationEventPresentation,
   isPopulationConcurrencyConflict,
+  getOrCreatePopulationIntent,
+  clearPopulationIntent,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -1335,7 +1337,15 @@ export default function PopulationPage() {
           ? `/client-portal/buildings/${buildingId}/population/operational-events/${activeEvent.id}/updates/draft`
           : `/client-portal/buildings/${buildingId}/population/operational-events/${activeEvent.id}/all-clear/draft`;
 
+      const intent = getOrCreatePopulationIntent(
+        localStorage,
+        activeEvent.id,
+        type,
+        () => crypto.randomUUID(),
+      );
+
       const result = (await apiPost(route, {
+        clientIntentId: intent.clientIntentId,
         sourceAlertId: sourceAlert.id,
         titleFR: nextForm.titleFR,
         titleEN: nextForm.titleEN || undefined,
@@ -1350,6 +1360,7 @@ export default function PopulationPage() {
         instructionFR: undefined,
         instructionEN: undefined,
       })) as CreatedPopulationAlert;
+      clearPopulationIntent(localStorage, intent.key);
 
       setAlertForm({
         ...nextForm,

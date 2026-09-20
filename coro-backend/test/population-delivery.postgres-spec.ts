@@ -213,14 +213,14 @@ describePostgres('Population delivery PostgreSQL invariants', () => {
       status: PopulationDeliveryStatus.SENDING,
       claimedAt: new Date(Date.now() - 120_000),
       leaseExpiresAt: new Date(Date.now() - 60_000),
-      lastAttemptAt: null,
+      providerCallStartedAt: null,
     });
     const result = await prisma.populationAlertDelivery.updateMany({
       where: {
         id: delivery.id,
         status: PopulationDeliveryStatus.SENDING,
         leaseExpiresAt: { lte: new Date() },
-        lastAttemptAt: null,
+        providerCallStartedAt: null,
       },
       data: {
         status: PopulationDeliveryStatus.QUEUED,
@@ -229,6 +229,34 @@ describePostgres('Population delivery PostgreSQL invariants', () => {
       },
     });
     expect(result.count).toBe(1);
+  });
+
+  it('02H: une lease expirée après début fournisseur devient outcome unknown', async () => {
+    const providerCallStartedAt = new Date(Date.now() - 90_000);
+    const delivery = await createDelivery({
+      status: PopulationDeliveryStatus.SENDING,
+      claimedAt: new Date(Date.now() - 120_000),
+      leaseExpiresAt: new Date(Date.now() - 60_000),
+      providerCallStartedAt,
+    });
+    const outcomeUnknownAt = new Date();
+    const result = await prisma.populationAlertDelivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: PopulationDeliveryStatus.SENDING,
+        leaseExpiresAt: { lte: outcomeUnknownAt },
+        providerCallStartedAt: { not: null },
+        outcomeUnknownAt: null,
+      },
+      data: { outcomeUnknownAt, leaseExpiresAt: null },
+    });
+    expect(result.count).toBe(1);
+    await expect(
+      prisma.populationAlertDelivery.updateMany({
+        where: { id: delivery.id, outcomeUnknownAt: null },
+        data: { status: PopulationDeliveryStatus.QUEUED },
+      }),
+    ).resolves.toMatchObject({ count: 0 });
   });
 
   it('F: refuse un webhook duplicate par empreinte réelle', async () => {
