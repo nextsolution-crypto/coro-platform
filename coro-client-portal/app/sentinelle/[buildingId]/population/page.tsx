@@ -35,6 +35,7 @@ import {
   derivePopulationCloseState,
   openPopulationCloseConfirmation,
   confirmPopulationEventClose,
+  derivePopulationEventPresentation,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -575,6 +576,8 @@ export default function PopulationPage() {
   const [lastClosedEvent, setLastClosedEvent] =
     useState<PopulationOperationalEvent | null>(null);
   const [eventLoading, setEventLoading] = useState(false);
+  const [eventRefreshing, setEventRefreshing] = useState(false);
+  const eventStateKnownRef = useRef(false);
   const [eventError, setEventError] = useState<string | null>(null);
   const [closeEventOpen, setCloseEventOpen] = useState(false);
   const [closeEventReason, setCloseEventReason] = useState("");
@@ -604,6 +607,7 @@ export default function PopulationPage() {
   });
 
   useEffect(() => {
+    eventStateKnownRef.current = false;
     const user = getUser();
 
     if (!user) {
@@ -905,8 +909,10 @@ export default function PopulationPage() {
     await loadIncidentAlertHistory(incidentId);
   };
 
-  const loadActiveOperationalEvent = async () => {
-    setEventLoading(true);
+  const loadActiveOperationalEvent = async (background = false) => {
+    const refreshInBackground = background || eventStateKnownRef.current;
+    if (refreshInBackground) setEventRefreshing(true);
+    else setEventLoading(true);
     setEventError(null);
     try {
       const response = await apiGet(
@@ -936,7 +942,9 @@ export default function PopulationPage() {
       );
       return null;
     } finally {
-      setEventLoading(false);
+      eventStateKnownRef.current = true;
+      if (refreshInBackground) setEventRefreshing(false);
+      else setEventLoading(false);
     }
   };
 
@@ -950,7 +958,7 @@ export default function PopulationPage() {
         !followUpCreating &&
         createdAlert?.status !== "DRAFT"
       ) {
-        void loadActiveOperationalEvent();
+        void loadActiveOperationalEvent(true);
       }
     }, 15000);
     return () => window.clearInterval(interval);
@@ -2148,6 +2156,7 @@ export default function PopulationPage() {
             event={activeEvent}
             closedEvent={lastClosedEvent}
             loading={eventLoading}
+            refreshing={eventRefreshing}
             error={eventError}
             mode={status.deliveryMode}
             canPrepare={canPrepare}
@@ -2159,7 +2168,7 @@ export default function PopulationPage() {
             onPrepareInitial={() => void prepareInitialFromCockpit()}
             onCreateUpdate={() => createIncidentFollowUpDraft("UPDATE")}
             onCreateAllClear={() => createIncidentFollowUpDraft("ALL_CLEAR")}
-            onRefresh={() => void loadActiveOperationalEvent()}
+            onRefresh={() => void loadActiveOperationalEvent(true)}
             onOpenClose={() => setCloseEventOpen(true)}
             onCancelClose={() => setCloseEventOpen(false)}
             onCloseReasonChange={setCloseEventReason}
@@ -4176,6 +4185,7 @@ function EventCockpit({
   event,
   closedEvent,
   loading,
+  refreshing,
   error,
   mode,
   canPrepare,
@@ -4197,6 +4207,7 @@ function EventCockpit({
   event: PopulationOperationalEvent | null;
   closedEvent: PopulationOperationalEvent | null;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   mode: "SANDBOX" | "LIVE";
   canPrepare: boolean;
@@ -4221,6 +4232,11 @@ function EventCockpit({
   const allClear = closeState.allClear as PopulationOperationalEventAlert | undefined;
   const canFollowUp = Boolean(event && !allClear && canPrepare);
   const initialType = event?.alerts[0]?.type === "TEST" ? "TEST" : "URGENCE";
+  const presentation = derivePopulationEventPresentation({
+    activeEvent: event,
+    lastClosedEvent: closedEvent,
+    initialLoading: loading,
+  });
 
   useEffect(() => {
     if (closeOpen) closeDialogRef.current?.focus();
@@ -4263,9 +4279,9 @@ function EventCockpit({
       </div>
 
       {error && <div className={styles.eventError}>{error}</div>}
-      {loading && !event ? (
+      {presentation === "INITIAL_LOADING" ? (
         <p className="animate-pulse">Chargement de l’événement...</p>
-      ) : event ? (
+      ) : presentation === "EVENT_ACTIVE" && event ? (
         <>
           <div className={styles.eventActions}>
             {!allClear && (
@@ -4309,7 +4325,7 @@ function EventCockpit({
             <button
               className={styles.iconEventAction}
               onClick={onRefresh}
-              disabled={loading}
+              disabled={loading || refreshing}
               title="Actualiser l’événement"
               aria-label="Actualiser l’événement"
             >

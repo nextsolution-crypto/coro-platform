@@ -14,6 +14,7 @@ import {
   derivePopulationCloseState,
   openPopulationCloseConfirmation,
   confirmPopulationEventClose,
+  derivePopulationEventPresentation,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 const closeEvent = (overrides = {}) => ({
@@ -102,6 +103,59 @@ test("refuse la cloture READY, SENDING, sans permission ou apres cloture", () =>
   assert.equal(
     derivePopulationCloseState(closeEvent({ status: "ENDED" }), true).visible,
     false,
+  );
+});
+
+test("conserve l'evenement termine pendant les refresh de fond successifs", () => {
+  const lastClosedEvent = { id: "closed-1", status: "ENDED" };
+  const snapshot = {
+    activeEvent: null,
+    lastClosedEvent,
+    initialLoading: false,
+    backgroundRefreshing: true,
+  };
+
+  assert.equal(derivePopulationEventPresentation(snapshot), "EVENT_ENDED");
+  assert.equal(derivePopulationEventPresentation(snapshot), "EVENT_ENDED");
+  assert.equal(
+    derivePopulationEventPresentation({
+      ...snapshot,
+      backgroundRefreshing: false,
+    }),
+    "EVENT_ENDED",
+  );
+});
+
+test("remplace atomiquement l'historique par un nouvel evenement actif", () => {
+  assert.equal(
+    derivePopulationEventPresentation({
+      activeEvent: { id: "active-2", status: "ACTIVE" },
+      lastClosedEvent: null,
+      initialLoading: false,
+      backgroundRefreshing: false,
+    }),
+    "EVENT_ACTIVE",
+  );
+});
+
+test("reserve le loading au premier chargement sans etat connu", () => {
+  assert.equal(
+    derivePopulationEventPresentation({
+      activeEvent: null,
+      lastClosedEvent: null,
+      initialLoading: true,
+      backgroundRefreshing: false,
+    }),
+    "INITIAL_LOADING",
+  );
+  assert.equal(
+    derivePopulationEventPresentation({
+      activeEvent: null,
+      lastClosedEvent: { id: "closed-1", status: "ENDED" },
+      initialLoading: true,
+      backgroundRefreshing: true,
+    }),
+    "EVENT_ENDED",
   );
 });
 

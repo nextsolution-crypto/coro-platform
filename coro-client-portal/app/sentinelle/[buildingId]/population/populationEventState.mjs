@@ -239,3 +239,14 @@ export function confirmPopulationEventClose(closeState, loading, onConfirm) {
   onConfirm();
   return true;
 }
+
+export function derivePopulationEventPresentation({
+  activeEvent,
+  lastClosedEvent,
+  initialLoading,
+}) {
+  if (activeEvent) return "EVENT_ACTIVE";
+  if (lastClosedEvent) return "EVENT_ENDED";
+  if (initialLoading) return "INITIAL_LOADING";
+  return "EMPTY";
+}
