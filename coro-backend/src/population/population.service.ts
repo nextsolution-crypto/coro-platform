@@ -3727,7 +3727,10 @@ export class PopulationService {
           ),
       ).size;
       const count = (status: PopulationDeliveryStatus) =>
-        deliveries.filter((delivery) => delivery.status === status).length;
+        deliveries.filter(
+          (delivery) =>
+            (delivery.status as PopulationDeliveryStatus) === status,
+        ).length;
 
       return {
         ...alert,
@@ -3741,6 +3744,123 @@ export class PopulationService {
         delivered: count(PopulationDeliveryStatus.DELIVERED),
         failed: count(PopulationDeliveryStatus.FAILED),
         suppressed: count(PopulationDeliveryStatus.SUPPRESSED),
+      };
+    });
+  }
+
+  async listOperationalEvents(
+    buildingId: string,
+    organizationId: string,
+    limit = 50,
+  ) {
+    const program = await this.getOperationalEventProgramContext(
+      buildingId,
+      organizationId,
+    );
+    const events = await this.prisma.populationOperationalEvent.findMany({
+      where: {
+        organizationId,
+        programId: program.id,
+        status: {
+          in: [
+            PopulationOperationalEventStatus.ACTIVE,
+            PopulationOperationalEventStatus.ENDED,
+            PopulationOperationalEventStatus.CANCELLED,
+          ],
+        },
+      },
+      select: { id: true },
+      orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+      take: Math.min(Math.max(limit, 1), 50),
+    });
+    return Promise.all(
+      events.map((event) =>
+        this.getOperationalEventView(organizationId, program.id, event.id),
+      ),
+    );
+  }
+
+  async listLegacyAlertHistory(
+    buildingId: string,
+    organizationId: string,
+    limit = 50,
+  ) {
+    const program = await this.getOperationalEventProgramContext(
+      buildingId,
+      organizationId,
+    );
+    const alerts = await this.prisma.populationAlert.findMany({
+      where: {
+        programId: program.id,
+        operationalEventId: null,
+        status: {
+          in: [
+            PopulationAlertStatus.ACTIVE,
+            PopulationAlertStatus.ENDED,
+            PopulationAlertStatus.CANCELLED,
+            PopulationAlertStatus.FAILED,
+          ],
+        },
+      },
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        titleFR: true,
+        createdAt: true,
+        readyAt: true,
+        approvedAt: true,
+        recipientsFrozenAt: true,
+        activatedAt: true,
+        endedAt: true,
+        cancelledAt: true,
+        deliveryModeSnapshot: true,
+        createdByType: true,
+        approvedByType: true,
+        sentByType: true,
+        endedByType: true,
+        deliveries: {
+          select: {
+            status: true,
+            subscriberId: true,
+            nextAttemptAt: true,
+            outcomeUnknownAt: true,
+          },
+        },
+      },
+      orderBy: [{ activatedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      take: Math.min(Math.max(limit, 1), 50),
+    });
+    return alerts.map(({ deliveries, ...alert }) => {
+      const count = (status: PopulationDeliveryStatus) =>
+        deliveries.filter(
+          (delivery) =>
+            (delivery.status as PopulationDeliveryStatus) === status,
+        ).length;
+      return {
+        ...alert,
+        targeted: new Set(
+          deliveries.map((delivery) => delivery.subscriberId).filter(Boolean),
+        ).size,
+        deliverable: deliveries.filter(
+          (delivery) =>
+            delivery.status !== PopulationDeliveryStatus.SUPPRESSED &&
+            delivery.status !== PopulationDeliveryStatus.CANCELLED,
+        ).length,
+        sent: count(PopulationDeliveryStatus.SENT),
+        delivered: count(PopulationDeliveryStatus.DELIVERED),
+        failed: count(PopulationDeliveryStatus.FAILED),
+        suppressed: count(PopulationDeliveryStatus.SUPPRESSED),
+        retryPending: deliveries.filter(
+          (delivery) =>
+            delivery.status === PopulationDeliveryStatus.QUEUED &&
+            delivery.nextAttemptAt,
+        ).length,
+        reconciliation: deliveries.filter(
+          (delivery) =>
+            delivery.status === PopulationDeliveryStatus.SENDING &&
+            delivery.outcomeUnknownAt,
+        ).length,
       };
     });
   }

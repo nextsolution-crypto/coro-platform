@@ -45,3 +45,23 @@ export function normalizeLegacyActiveAlerts(value) {
 }
 
 export const selectLegacyActiveAlerts = normalizeLegacyActiveAlerts;
+
+export function mergePopulationRegistry(events, legacy) {
+  const eventItems = (Array.isArray(events) ? events : []).map((item) => ({
+    kind: "OPERATIONAL_EVENT",
+    item,
+    sortDate: item.endedAt || item.startedAt || item.createdAt || "",
+  }));
+  const legacyItems = (Array.isArray(legacy) ? legacy : []).map((item) => ({
+    kind: "LEGACY_COMMUNICATION",
+    item,
+    sortDate: item.endedAt || item.activatedAt || item.createdAt || "",
+  }));
+  return [...eventItems, ...legacyItems]
+    .sort(
+      (a, b) =>
+        new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime() ||
+        String(b.item.id).localeCompare(String(a.item.id)),
+    )
+    .slice(0, 50);
+}

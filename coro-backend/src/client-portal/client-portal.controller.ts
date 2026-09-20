@@ -445,6 +445,28 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings/:buildingId/population/alerts/legacy-history')
+  getPopulationLegacyAlertHistory(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationLegacyAlertHistory(
+      buildingId,
+      req.clientUser,
+    );
+  }
+
+  @Get('buildings/:buildingId/population/operational-events')
+  getPopulationOperationalEventHistory(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationOperationalEventHistory(
+      buildingId,
+      req.clientUser,
+    );
+  }
+
   @Get('buildings/:buildingId/population/alerts/:alertId/delivery-status')
   async getPopulationAlertDeliveryStatus(
     @Param('buildingId') buildingId: string,

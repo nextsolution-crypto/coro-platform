@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   normalizeOperationalEvent,
   normalizeLegacyActiveAlerts,
+  mergePopulationRegistry,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {
@@ -13,6 +14,44 @@ test("supporte aucun event et selectionne la communication legacy ACTIVE", () =>
       { id: "legacy-1", status: "ACTIVE", operationalEventId: null },
     ]).map((alert) => alert.id),
     ["legacy-1"],
+  );
+});
+
+test("fusionne events et legacy par date descendante et normalise les collections", () => {
+  assert.deepEqual(mergePopulationRegistry(undefined, undefined), []);
+  const result = mergePopulationRegistry(
+    [{ id: "event-ended", status: "ENDED", endedAt: "2026-09-19T12:00:00Z" }],
+    [
+      { id: "legacy-ended", status: "ENDED", endedAt: "2026-09-20T12:00:00Z" },
+      { id: "legacy-active", status: "ACTIVE", activatedAt: "2026-09-18T12:00:00Z" },
+    ],
+  );
+  assert.deepEqual(
+    result.map(({ kind, item }) => `${kind}:${item.id}`),
+    [
+      "LEGACY_COMMUNICATION:legacy-ended",
+      "OPERATIONAL_EVENT:event-ended",
+      "LEGACY_COMMUNICATION:legacy-active",
+    ],
+  );
+});
+
+test("borne le registre unifie a 50 elements", () => {
+  const events = Array.from({ length: 55 }, (_, index) => ({
+    id: `event-${index}`,
+    status: index === 0 ? "ACTIVE" : "CANCELLED",
+    startedAt: new Date(2026, 0, index + 1).toISOString(),
+    alerts: [
+      { cycleSequence: 1, type: "INITIAL" },
+      { cycleSequence: 2, type: "UPDATE" },
+      { cycleSequence: 3, type: "ALL_CLEAR" },
+    ],
+  }));
+  const result = mergePopulationRegistry(events, []);
+  assert.equal(result.length, 50);
+  assert.deepEqual(
+    result[0].item.alerts.map((alert) => alert.cycleSequence),
+    [1, 2, 3],
   );
 });
 

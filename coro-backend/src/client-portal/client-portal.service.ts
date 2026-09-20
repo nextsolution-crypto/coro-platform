@@ -730,6 +730,22 @@ export class ClientPortalService {
     );
   }
 
+  async getPopulationOperationalEventHistory(buildingId: string, actor: any) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.listOperationalEvents(
+      buildingId,
+      actor.organizationId,
+    );
+  }
+
+  async getPopulationLegacyAlertHistory(buildingId: string, actor: any) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationService.listLegacyAlertHistory(
+      buildingId,
+      actor.organizationId,
+    );
+  }
+
   async closePopulationOperationalEvent(
     buildingId: string,
     eventId: string,

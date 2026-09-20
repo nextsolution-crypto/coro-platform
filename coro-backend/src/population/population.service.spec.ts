@@ -70,6 +70,7 @@ describe('PopulationService', () => {
     },
     populationOperationalEvent: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       updateMany: jest.fn(),
     },
     incidentEvent: {
@@ -7826,6 +7827,55 @@ describe('PopulationService', () => {
   });
 
   describe('operational event cockpit contract', () => {
+    it('liste le registre legacy diffusé, borné et sans PII', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      prisma.populationAlert.findMany.mockResolvedValue([
+        {
+          id: 'legacy-ended',
+          status: PopulationAlertStatus.ENDED,
+          titleFR: 'Premier LIVE',
+          deliveries: [
+            {
+              status: PopulationDeliveryStatus.DELIVERED,
+              subscriberId: 'subscriber-secret',
+              nextAttemptAt: null,
+              outcomeUnknownAt: null,
+            },
+          ],
+        },
+      ]);
+      const result = await service.listLegacyAlertHistory(
+        'building-1',
+        'organization-1',
+        500,
+      );
+      expect(prisma.populationAlert.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            programId: 'program-1',
+            operationalEventId: null,
+            status: {
+              in: [
+                PopulationAlertStatus.ACTIVE,
+                PopulationAlertStatus.ENDED,
+                PopulationAlertStatus.CANCELLED,
+                PopulationAlertStatus.FAILED,
+              ],
+            },
+          }),
+          take: 50,
+        }),
+      );
+      expect(result[0]).toEqual(
+        expect.objectContaining({ delivered: 1, targeted: 1 }),
+      );
+      expect(JSON.stringify(result)).not.toContain('subscriber-secret');
+      expect(JSON.stringify(result)).not.toContain('subscriberId');
+    });
+
     it('retourne les legacy ACTIVE du seul programme avec des agrégats sans PII', async () => {
       prisma.rueFacilityProfile.findUnique.mockResolvedValue({
         building: { organizationId: 'organization-1' },

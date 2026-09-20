@@ -25,6 +25,7 @@ import PopulationOperationalMap from "./PopulationOperationalMap";
 import {
   normalizeOperationalEvent,
   normalizeLegacyActiveAlerts,
+  mergePopulationRegistry,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -561,6 +562,12 @@ export default function PopulationPage() {
   const [legacyActiveAlerts, setLegacyActiveAlerts] = useState<
     PopulationLegacyAlert[]
   >([]);
+  const [populationRegistry, setPopulationRegistry] = useState<any[]>([]);
+  const [populationRegistryLoading, setPopulationRegistryLoading] =
+    useState(false);
+  const [populationRegistryError, setPopulationRegistryError] = useState<
+    string | null
+  >(null);
 
   const [alertForm, setAlertForm] = useState<PopulationAlertDraftForm>({
     type: "EMERGENCY",
@@ -807,6 +814,31 @@ export default function PopulationPage() {
     }
   };
 
+  const loadPopulationRegistry = async () => {
+    setPopulationRegistryLoading(true);
+    setPopulationRegistryError(null);
+    try {
+      const [events, legacy] = await Promise.all([
+        apiGet(
+          `/client-portal/buildings/${buildingId}/population/operational-events`,
+        ),
+        apiGet(
+          `/client-portal/buildings/${buildingId}/population/alerts/legacy-history`,
+        ),
+      ]);
+      setPopulationRegistry(mergePopulationRegistry(events, legacy));
+    } catch (error: any) {
+      setPopulationRegistry([]);
+      setPopulationRegistryError(
+        typeof error?.message === "string"
+          ? error.message
+          : "Le registre Population n’a pas pu être chargé.",
+      );
+    } finally {
+      setPopulationRegistryLoading(false);
+    }
+  };
+
   const fetchStatus = async () => {
     setLoading(true);
 
@@ -869,6 +901,7 @@ export default function PopulationPage() {
             loadIncidentHistory(),
             loadActiveOperationalEvent(),
             loadLegacyActiveAlerts(),
+            loadPopulationRegistry(),
           ]);
         } else {
           setIncidents([]);
@@ -880,6 +913,7 @@ export default function PopulationPage() {
           setIncidentAlertsError(null);
           setActiveEvent(null);
           setLegacyActiveAlerts([]);
+          setPopulationRegistry([]);
         }
 
         const program = configurationRes.program;
@@ -921,6 +955,7 @@ export default function PopulationPage() {
         setIncidentAlertsError(null);
         setActiveEvent(null);
         setLegacyActiveAlerts([]);
+        setPopulationRegistry([]);
       }
     } catch {
       setStatus(null);
@@ -1436,6 +1471,7 @@ export default function PopulationPage() {
         {},
       );
       await loadLegacyActiveAlerts();
+      await loadPopulationRegistry();
       if (selectedIncidentId) {
         await loadIncidentAlertHistory(selectedIncidentId);
       }
@@ -1909,6 +1945,15 @@ export default function PopulationPage() {
             }
           />
         </section>
+
+        {isActive && (
+          <PopulationUnifiedRegistry
+            entries={populationRegistry}
+            loading={populationRegistryLoading}
+            error={populationRegistryError}
+            onRefresh={() => void loadPopulationRegistry()}
+          />
+        )}
 
         {isActive && (
           <EventCockpit
@@ -2677,7 +2722,7 @@ export default function PopulationPage() {
           </div>
         </section>
 
-        {isActive && (
+        {false && isActive && (
           <section
             className={styles.incidentRegistry}
             style={{
@@ -3814,6 +3859,104 @@ function formatPopulationCommunicationStatus(status: string) {
     CANCELLED: "ANNULÉE",
   };
   return labels[status] ?? status;
+}
+
+function PopulationUnifiedRegistry({
+  entries,
+  loading,
+  error,
+  onRefresh,
+}: {
+  entries: any[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className={styles.incidentRegistry} style={{ marginBottom: 18 }}>
+      <div className={styles.registryHeader}>
+        <div>
+          <p className={styles.registryEyebrow}>PROUVER · AUDIT · REX</p>
+          <h2>Historique des événements et communications</h2>
+          <p>
+            Consultez les événements Population, leurs communications et les
+            preuves de diffusion.
+          </p>
+        </div>
+        <button type="button" onClick={onRefresh} disabled={loading}>
+          {loading ? "ACTUALISATION..." : "ACTUALISER"}
+        </button>
+      </div>
+      {error ? (
+        <p className={styles.registryError}>{error}</p>
+      ) : loading && entries.length === 0 ? (
+        <p>Chargement du registre...</p>
+      ) : entries.length === 0 ? (
+        <p>Aucun événement ou communication historique pour ce bâtiment.</p>
+      ) : (
+        <div className={styles.registryList}>
+          {entries.map(({ kind, item }) => {
+            const communications =
+              kind === "OPERATIONAL_EVENT" ? item.alerts ?? [] : [item];
+            const title =
+              kind === "OPERATIONAL_EVENT"
+                ? item.emergencyScenario?.nameFR || "Événement Population"
+                : item.titleFR;
+            return (
+              <details key={`${kind}-${item.id}`} className={styles.registryItem}>
+                <summary>
+                  <span>
+                    <strong>{title}</strong>
+                    <small>
+                      {kind === "OPERATIONAL_EVENT"
+                        ? "ÉVÉNEMENT POPULATION"
+                        : "COMMUNICATION HISTORIQUE"}{" "}
+                      · {item.status}
+                    </small>
+                  </span>
+                  <span>{communications.length} communication(s) · CONSULTER</span>
+                </summary>
+                <div className={styles.registryDetail}>
+                  <p>
+                    Début/diffusion :{" "}
+                    {new Date(
+                      item.startedAt || item.activatedAt || item.createdAt,
+                    ).toLocaleString("fr-CA")}
+                    {item.endedAt
+                      ? ` · Fin : ${new Date(item.endedAt).toLocaleString("fr-CA")}`
+                      : ""}
+                  </p>
+                  {item.incidentEventId && <p>Lié à un incident CORO</p>}
+                  {item.closeReason && <p>Motif : {item.closeReason}</p>}
+                  {communications.map((communication: any, index: number) => {
+                    const counts = communication.deliveryCounts ?? communication;
+                    return (
+                      <div key={communication.id} className={styles.registryCommunication}>
+                        <strong>
+                          #{communication.cycleSequence ?? index + 1} ·{" "}
+                          {formatPopulationCommunicationType(
+                            communication.type,
+                            communication.cycleSequence,
+                          )}
+                        </strong>
+                        <span>
+                          {communication.deliveryModeSnapshot === "LIVE"
+                            ? "DIFFUSION RÉELLE"
+                            : "SIMULATION"}{" "}
+                          · Livrées {counts.DELIVERED ?? counts.delivered ?? 0} ·
+                          Échecs {counts.FAILED ?? counts.failed ?? 0}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function EventCockpit({
