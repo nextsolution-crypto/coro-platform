@@ -2,12 +2,17 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { CoroActorType, ExerciseReportStatus, IncidentStatus, OperationalReviewConfidentiality, OperationalReviewPermission, OperationalReviewStatus, PopulationOperationalEventStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOperationalReviewDto, UpdateOperationalReviewDto } from './dto/operational-review.dto';
+import { ChangeReviewFindingStatusDto, CreateReviewFindingDto, CreateReviewRecommendationDto, DecideReviewRecommendationDto, UpdateReviewFindingDto, UpdateReviewRecommendationDto } from './dto/review-content.dto';
 
 export interface ReviewActor { sub: string; organizationId: string; clientId?: string; role: string; buildingIds?: string[] }
 
 const reviewInclude = {
   populationEvidenceRecord: { select: { reference: true, version: true } },
   auditEvents: { orderBy: { createdAt: 'asc' as const } },
+  findings: {
+    orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }],
+    include: { recommendations: { orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }] } },
+  },
 };
 
 @Injectable()
@@ -62,6 +67,7 @@ export class OperationalReviewsService {
       submittedAt: review.submittedAt, submittedByType: review.submittedByType, submittedById: review.submittedById,
       finalizedAt: review.finalizedAt, finalizedByType: review.finalizedByType, finalizedById: review.finalizedById,
       createdAt: review.createdAt, updatedAt: review.updatedAt, auditEvents: review.auditEvents,
+      findings: review.findings ?? [],
     };
   }
 
@@ -165,6 +171,120 @@ export class OperationalReviewsService {
       include: reviewInclude,
     });
     return this.publicRecord(review);
+  }
+
+  async createFinding(reviewId: string, dto: CreateReviewFindingDto, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.DRAFT) throw new ConflictException('Les constats sont editables uniquement en brouillon');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'finding-order:' + reviewId}))`;
+      const aggregate = await tx.reviewFinding.aggregate({ where: { operationalReviewId: reviewId }, _max: { displayOrder: true } });
+      const finding = await tx.reviewFinding.create({ data: { ...dto, organizationId: actor.organizationId, operationalReviewId: reviewId, displayOrder: (aggregate._max.displayOrder ?? 0) + 1, createdByType: CoroActorType.CLIENT_USER, createdById: actor.sub } });
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'FINDING_CREATED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { findingId: finding.id, category: finding.category } } });
+      return finding;
+    });
+  }
+
+  async updateFinding(reviewId: string, findingId: string, dto: UpdateReviewFindingDto, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.DRAFT) throw new ConflictException('Les constats sont editables uniquement en brouillon');
+    await this.assertFinding(reviewId, findingId, actor.organizationId);
+    return this.prisma.$transaction(async (tx) => {
+      const finding = await tx.reviewFinding.update({ where: { id: findingId }, data: dto });
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'FINDING_UPDATED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { findingId, fields: Object.keys(dto) } } });
+      return finding;
+    });
+  }
+
+  async changeFindingStatus(reviewId: string, findingId: string, dto: ChangeReviewFindingStatusDto, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_REVIEW);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.IN_REVIEW) throw new ConflictException('La decision sur un constat exige un REX en revue');
+    const current = await this.assertFinding(reviewId, findingId, actor.organizationId);
+    const now = new Date();
+    const decided = dto.status === 'ACCEPTED' || dto.status === 'CLOSED';
+    return this.prisma.$transaction(async (tx) => {
+      const finding = await tx.reviewFinding.update({ where: { id: findingId }, data: { status: dto.status, ...(dto.status === 'ACCEPTED' ? { acceptedAt: now, acceptedByType: CoroActorType.CLIENT_USER, acceptedById: actor.sub } : {}), ...(dto.status === 'CLOSED' ? { closedAt: now, closedByType: CoroActorType.CLIENT_USER, closedById: actor.sub } : {}) } });
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'FINDING_STATUS_CHANGED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { findingId, previousStatus: current.status, newStatus: dto.status, decided } } });
+      return finding;
+    });
+  }
+
+  async deleteFinding(reviewId: string, findingId: string, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.DRAFT) throw new ConflictException('Suppression permise uniquement en brouillon');
+    await this.assertFinding(reviewId, findingId, actor.organizationId);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'FINDING_DELETED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { findingId } } });
+      await tx.reviewFinding.delete({ where: { id: findingId } });
+      return { deleted: true };
+    });
+  }
+
+  async createRecommendation(reviewId: string, findingId: string, dto: CreateReviewRecommendationDto, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.DRAFT) throw new ConflictException('Les recommandations sont editables uniquement en brouillon');
+    await this.assertFinding(reviewId, findingId, actor.organizationId);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'recommendation-order:' + reviewId}))`;
+      const aggregate = await tx.reviewRecommendation.aggregate({ where: { operationalReviewId: reviewId }, _max: { displayOrder: true } });
+      const recommendation = await tx.reviewRecommendation.create({ data: { ...dto, organizationId: actor.organizationId, operationalReviewId: reviewId, reviewFindingId: findingId, displayOrder: (aggregate._max.displayOrder ?? 0) + 1, createdByType: CoroActorType.CLIENT_USER, createdById: actor.sub } });
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'RECOMMENDATION_CREATED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { findingId, recommendationId: recommendation.id } } });
+      return recommendation;
+    });
+  }
+
+  async updateRecommendation(reviewId: string, recommendationId: string, dto: UpdateReviewRecommendationDto, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.DRAFT) throw new ConflictException('Les recommandations sont editables uniquement en brouillon');
+    await this.assertRecommendation(reviewId, recommendationId, actor.organizationId);
+    return this.prisma.$transaction(async (tx) => {
+      const recommendation = await tx.reviewRecommendation.update({ where: { id: recommendationId }, data: dto });
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'RECOMMENDATION_UPDATED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { recommendationId, fields: Object.keys(dto) } } });
+      return recommendation;
+    });
+  }
+
+  async decideRecommendation(reviewId: string, recommendationId: string, dto: DecideReviewRecommendationDto, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_REVIEW);
+    if (dto.status === 'PROPOSED') throw new BadRequestException('PROPOSED est un etat initial, pas une decision');
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.IN_REVIEW) throw new ConflictException('La decision exige un REX en revue');
+    const current = await this.assertRecommendation(reviewId, recommendationId, actor.organizationId);
+    return this.prisma.$transaction(async (tx) => {
+      const recommendation = await tx.reviewRecommendation.update({ where: { id: recommendationId }, data: { status: dto.status, decisionComment: dto.decisionComment, decidedAt: new Date(), decidedByType: CoroActorType.CLIENT_USER, decidedById: actor.sub } });
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'RECOMMENDATION_DECIDED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { recommendationId, previousStatus: current.status, newStatus: dto.status } } });
+      return recommendation;
+    });
+  }
+
+  async deleteRecommendation(reviewId: string, recommendationId: string, actor: ReviewActor) {
+    await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
+    const review = await this.scoped(reviewId, actor);
+    if (review.status !== OperationalReviewStatus.DRAFT) throw new ConflictException('Suppression permise uniquement en brouillon');
+    await this.assertRecommendation(reviewId, recommendationId, actor.organizationId);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.operationalReviewAuditEvent.create({ data: { reviewId, type: 'RECOMMENDATION_DELETED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { recommendationId } } });
+      await tx.reviewRecommendation.delete({ where: { id: recommendationId } });
+      return { deleted: true };
+    });
+  }
+
+  private async assertFinding(reviewId: string, findingId: string, organizationId: string) {
+    const finding = await this.prisma.reviewFinding.findFirst({ where: { id: findingId, operationalReviewId: reviewId, organizationId } });
+    if (!finding) throw new NotFoundException('Constat REX introuvable');
+    return finding;
+  }
+
+  private async assertRecommendation(reviewId: string, recommendationId: string, organizationId: string) {
+    const recommendation = await this.prisma.reviewRecommendation.findFirst({ where: { id: recommendationId, operationalReviewId: reviewId, organizationId } });
+    if (!recommendation) throw new NotFoundException('Recommandation REX introuvable');
+    return recommendation;
   }
 
   private async scoped(id: string, actor: ReviewActor) {

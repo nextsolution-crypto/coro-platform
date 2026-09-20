@@ -8,6 +8,9 @@ import {
   PopulationProgramStatus,
   PrismaClient,
   RueAssessmentStatus,
+  ReviewFindingCategory,
+  ReviewFindingSeverity,
+  ReviewRecommendationStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { OperationalReviewsService } from '../src/operational-reviews/operational-reviews.service';
@@ -32,6 +35,7 @@ describePostgres('OperationalReview PostgreSQL invariants', () => {
     scenario: `review-scenario-${suffix}`,
     event: `review-event-${suffix}`,
     secondEvent: `review-event-2-${suffix}`,
+    thirdEvent: `review-event-3-${suffix}`,
     user: `review-user-${suffix}`,
   };
   const actor = {
@@ -51,7 +55,7 @@ describePostgres('OperationalReview PostgreSQL invariants', () => {
     await prisma.rueFacilityProfile.create({ data: { id: ids.profile, buildingId: ids.building, assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT, populationEnabled: true } });
     await prisma.populationProgram.create({ data: { id: ids.program, rueFacilityProfileId: ids.profile, status: PopulationProgramStatus.ACTIVE, deliveryMode: PopulationDeliveryMode.SANDBOX, publicSlug: `review-${suffix}`, nameFR: 'REX program' } });
     await prisma.rueEmergencyScenario.create({ data: { id: ids.scenario, facilityProfileId: ids.profile, nameFR: 'REX scenario' } });
-    await prisma.populationOperationalEvent.createMany({ data: [ids.event, ids.secondEvent].map((id) => ({ id, organizationId: ids.organization, programId: ids.program, emergencyScenarioId: ids.scenario, status: PopulationOperationalEventStatus.ENDED, startedByType: CoroActorType.SYSTEM, startedById: 'postgres-test', endedByType: CoroActorType.SYSTEM, endedById: 'postgres-test', endedAt: new Date() })) });
+    await prisma.populationOperationalEvent.createMany({ data: [ids.event, ids.secondEvent, ids.thirdEvent].map((id) => ({ id, organizationId: ids.organization, programId: ids.program, emergencyScenarioId: ids.scenario, status: PopulationOperationalEventStatus.ENDED, startedByType: CoroActorType.SYSTEM, startedById: 'postgres-test', endedByType: CoroActorType.SYSTEM, endedById: 'postgres-test', endedAt: new Date() })) });
   });
 
   afterAll(async () => prisma.$disconnect());
@@ -98,5 +102,29 @@ describePostgres('OperationalReview PostgreSQL invariants', () => {
     await expect(prisma.operationalReview.create({ data: { organizationId: ids.otherOrganization, title: 'Tenant mismatch', populationOperationalEventId: ids.secondEvent, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test', confidentiality: OperationalReviewConfidentiality.RESTRICTED } })).rejects.toThrow('tenant mismatch');
     const review = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.secondEvent } });
     await expect(service.get(review.id, { ...actor, organizationId: ids.otherOrganization })).rejects.toThrow();
+  });
+
+  it('garantit tenant et meme Review pour Finding/Recommendation', async () => {
+    const parent = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.secondEvent } });
+    const other = await service.create({ title: 'Other review', populationOperationalEventId: ids.thirdEvent }, actor);
+    await expect(prisma.reviewFinding.create({ data: { organizationId: ids.otherOrganization, operationalReviewId: parent.id, category: ReviewFindingCategory.GAP, title: 'Invalid tenant', description: 'Invalid', severity: ReviewFindingSeverity.HIGH, displayOrder: 1, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } })).rejects.toThrow();
+    const finding = await prisma.reviewFinding.create({ data: { organizationId: ids.organization, operationalReviewId: parent.id, category: ReviewFindingCategory.GAP, title: 'Finding', description: 'Description', severity: ReviewFindingSeverity.HIGH, displayOrder: 1, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } });
+    await expect(prisma.reviewRecommendation.create({ data: { organizationId: ids.organization, operationalReviewId: other.id, reviewFindingId: finding.id, description: 'Wrong review', displayOrder: 1, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } })).rejects.toThrow();
+    await expect(prisma.reviewRecommendation.create({ data: { organizationId: ids.otherOrganization, operationalReviewId: parent.id, reviewFindingId: finding.id, description: 'Wrong tenant', displayOrder: 1, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } })).rejects.toThrow();
+  });
+
+  it('fige Finding et Recommendation lorsque le Review est FINALIZED', async () => {
+    const parent = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.secondEvent } });
+    const finding = await prisma.reviewFinding.findFirstOrThrow({ where: { operationalReviewId: parent.id } });
+    const recommendation = await prisma.reviewRecommendation.create({ data: { organizationId: ids.organization, operationalReviewId: parent.id, reviewFindingId: finding.id, description: 'Recommendation', status: ReviewRecommendationStatus.PROPOSED, displayOrder: 1, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } });
+    await prisma.operationalReview.update({ where: { id: parent.id }, data: { status: OperationalReviewStatus.IN_REVIEW } });
+    await prisma.operationalReview.update({ where: { id: parent.id }, data: { status: OperationalReviewStatus.FINALIZED, finalizedAt: new Date(), finalizedByType: CoroActorType.SYSTEM, finalizedById: 'postgres-test' } });
+    const findingData = { organizationId: ids.organization, operationalReviewId: parent.id, category: ReviewFindingCategory.OBSERVATION, title: 'Late', description: 'Late', severity: ReviewFindingSeverity.LOW, displayOrder: 2, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' };
+    await expect(prisma.reviewFinding.create({ data: findingData })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewFinding.update({ where: { id: finding.id }, data: { title: 'Mutation' } })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewFinding.delete({ where: { id: finding.id } })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewRecommendation.create({ data: { organizationId: ids.organization, operationalReviewId: parent.id, reviewFindingId: finding.id, description: 'Late', displayOrder: 2, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewRecommendation.update({ where: { id: recommendation.id }, data: { description: 'Mutation' } })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewRecommendation.delete({ where: { id: recommendation.id } })).rejects.toThrow('children are immutable');
   });
 });

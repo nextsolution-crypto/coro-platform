@@ -1097,6 +1097,52 @@ enum OperationalReviewAuditEventType {
   UPDATED
   SUBMITTED
   FINALIZED
+  FINDING_CREATED
+  FINDING_UPDATED
+  FINDING_STATUS_CHANGED
+  FINDING_DELETED
+  RECOMMENDATION_CREATED
+  RECOMMENDATION_UPDATED
+  RECOMMENDATION_DECIDED
+  RECOMMENDATION_DELETED
+}
+
+enum ReviewFindingCategory {
+  STRENGTH
+  GAP
+  OBSERVATION
+  NON_COMPLIANCE
+  RISK
+  IMPROVEMENT_OPPORTUNITY
+}
+
+enum ReviewFindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFORMATIONAL
+}
+
+enum ReviewFindingStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+  MONITORED
+  CLOSED
+}
+
+enum ReviewRecommendationPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ReviewRecommendationStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+  DEFERRED
 }
 
 model RueFacilityProfile {
@@ -3184,6 +3230,8 @@ model OperationalReview {
   supersedes OperationalReview? @relation("OperationalReviewSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
   supersededBy OperationalReview? @relation("OperationalReviewSupersession")
   auditEvents OperationalReviewAuditEvent[]
+  findings ReviewFinding[]
+  recommendations ReviewRecommendation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3193,6 +3241,7 @@ model OperationalReview {
   @@index([incidentEventId])
   @@index([exerciseReportId])
   @@index([status])
+  @@unique([id, organizationId])
 }
 
 model OperationalReviewAuditEvent {
@@ -3206,6 +3255,63 @@ model OperationalReviewAuditEvent {
   createdAt DateTime @default(now())
 
   @@index([reviewId, createdAt])
+}
+
+model ReviewFinding {
+  id String @id @default(uuid())
+  organizationId String
+  operationalReviewId String
+  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  category ReviewFindingCategory
+  title String
+  description String
+  severity ReviewFindingSeverity
+  impact String?
+  status ReviewFindingStatus @default(OPEN)
+  displayOrder Int
+  createdByType CoroActorType
+  createdById String
+  acceptedAt DateTime?
+  acceptedByType CoroActorType?
+  acceptedById String?
+  closedAt DateTime?
+  closedByType CoroActorType?
+  closedById String?
+  recommendations ReviewRecommendation[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, operationalReviewId, organizationId])
+  @@unique([operationalReviewId, displayOrder])
+  @@index([organizationId])
+  @@index([operationalReviewId, status])
+}
+
+model ReviewRecommendation {
+  id String @id @default(uuid())
+  organizationId String
+  operationalReviewId String
+  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewFindingId String
+  reviewFinding ReviewFinding @relation(fields: [reviewFindingId, operationalReviewId, organizationId], references: [id, operationalReviewId, organizationId], onDelete: Restrict)
+  title String?
+  description String
+  priority ReviewRecommendationPriority?
+  status ReviewRecommendationStatus @default(PROPOSED)
+  rationale String?
+  displayOrder Int
+  createdByType CoroActorType
+  createdById String
+  decidedAt DateTime?
+  decidedByType CoroActorType?
+  decidedById String?
+  decisionComment String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([operationalReviewId, displayOrder])
+  @@index([organizationId])
+  @@index([reviewFindingId, status])
 }
 
 model VisitorInvitation {
