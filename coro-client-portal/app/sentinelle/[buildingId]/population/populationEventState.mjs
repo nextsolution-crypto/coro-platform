@@ -102,11 +102,7 @@ export function derivePopulationWorkflowState({ event = null, alert = null }) {
   if (alert.status === "SENDING") return "WAIT";
   if (alert.status === "ACTIVE") {
     const counts = alert.deliveryCounts ?? {};
-    if (
-      alert.type === "ALL_CLEAR" &&
-      event?.status === "ACTIVE" &&
-      (counts.DELIVERED ?? 0) > 0
-    ) {
+    if (derivePopulationCloseState({ ...event, alerts: [alert] }, true).eligible) {
       return "EVENT_CLOSE_REQUIRED";
     }
     if ((counts.DELIVERED ?? 0) > 0) return "DELIVERED";
@@ -178,4 +174,68 @@ export function canCompletePopulationResumeMount(state) {
       state?.createdAlertId === state?.pendingAlertId &&
       state?.targetMounted,
   );
+}
+
+export function derivePopulationCloseState(event, canPrepare) {
+  const allClear = [...(event?.alerts ?? [])]
+    .reverse()
+    .find(
+      (alert) => alert.type === "ALL_CLEAR" && alert.status !== "CANCELLED",
+    );
+  const counts = allClear?.deliveryCounts ?? {};
+  const queued = Number(counts.QUEUED ?? 0);
+  const sending = Number(counts.SENDING ?? 0);
+  const sent = Number(counts.SENT ?? 0);
+  const delivered = Number(counts.DELIVERED ?? 0);
+  const reconciliation = Number(
+    allClear?.reconciliationRequiredCount ?? counts.RECONCILIATION_REQUIRED ?? 0,
+  );
+  const failed = Number(counts.FAILED ?? 0);
+  const suppressed = Number(counts.SUPPRESSED ?? 0);
+  const cancelled = Number(counts.CANCELLED ?? 0);
+  const eventActive = event?.status === "ACTIVE";
+  const allClearPublished = Boolean(
+    allClear && ["ACTIVE", "ENDED"].includes(allClear.status),
+  );
+  const transportComplete = queued === 0 && sending === 0 && reconciliation === 0;
+  const hasConfirmedDelivery = sent + delivered > 0;
+  const eligible = Boolean(
+    eventActive &&
+      allClearPublished &&
+      transportComplete &&
+      hasConfirmedDelivery,
+  );
+
+  return {
+    allClear,
+    visible: Boolean(eventActive && allClear),
+    eligible,
+    permitted: Boolean(canPrepare),
+    enabled: eligible && Boolean(canPrepare),
+    incomplete: failed + suppressed + cancelled > 0,
+    summary: {
+      communications: Array.isArray(event?.alerts) ? event.alerts.length : 0,
+      delivered: (event?.alerts ?? []).reduce(
+        (total, alert) => total + Number(alert.deliveryCounts?.DELIVERED ?? 0),
+        0,
+      ),
+      failed: (event?.alerts ?? []).reduce(
+        (total, alert) => total + Number(alert.deliveryCounts?.FAILED ?? 0),
+        0,
+      ),
+      reconciliation,
+    },
+  };
+}
+
+export function openPopulationCloseConfirmation(closeState, onOpen) {
+  if (!closeState?.enabled) return false;
+  onOpen();
+  return true;
+}
+
+export function confirmPopulationEventClose(closeState, loading, onConfirm) {
+  if (!closeState?.enabled || loading) return false;
+  onConfirm();
+  return true;
 }

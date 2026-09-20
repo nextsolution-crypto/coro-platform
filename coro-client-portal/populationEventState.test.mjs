@@ -11,7 +11,99 @@ import {
   getPopulationResumeAction,
   buildPopulationResumePlan,
   canCompletePopulationResumeMount,
+  derivePopulationCloseState,
+  openPopulationCloseConfirmation,
+  confirmPopulationEventClose,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
+
+const closeEvent = (overrides = {}) => ({
+  id: "event-1",
+  status: "ACTIVE",
+  alerts: [
+    {
+      id: "alert-1",
+      type: "ALL_CLEAR",
+      status: "ACTIVE",
+      deliveryCounts: { DELIVERED: 1 },
+    },
+  ],
+  ...overrides,
+});
+
+test("active la cloture depuis un ALL_CLEAR livre et le snapshot serveur seul", () => {
+  const event = closeEvent();
+  const state = derivePopulationCloseState(event, true);
+
+  assert.equal(state.enabled, true);
+  assert.equal(
+    derivePopulationWorkflowState({ event, alert: event.alerts[0] }),
+    "EVENT_CLOSE_REQUIRED",
+  );
+});
+
+test("le premier clic ouvre une seule confirmation sans confirmer", () => {
+  const state = derivePopulationCloseState(closeEvent(), true);
+  let opened = 0;
+  let confirmed = 0;
+
+  assert.equal(
+    openPopulationCloseConfirmation(state, () => {
+      opened += 1;
+    }),
+    true,
+  );
+  assert.equal(opened, 1);
+  assert.equal(confirmed, 0);
+
+  assert.equal(
+    confirmPopulationEventClose(state, false, () => {
+      confirmed += 1;
+    }),
+    true,
+  );
+  assert.equal(confirmed, 1);
+});
+
+test("le chargement bloque une seconde confirmation", () => {
+  const state = derivePopulationCloseState(closeEvent(), true);
+  let confirmed = 0;
+  assert.equal(
+    confirmPopulationEventClose(state, true, () => {
+      confirmed += 1;
+    }),
+    false,
+  );
+  assert.equal(confirmed, 0);
+});
+
+test("refuse la cloture READY, SENDING, sans permission ou apres cloture", () => {
+  const ready = closeEvent({
+    alerts: [
+      {
+        type: "ALL_CLEAR",
+        status: "READY",
+        deliveryCounts: { DELIVERED: 1 },
+      },
+    ],
+  });
+  const sending = closeEvent({
+    alerts: [
+      {
+        type: "ALL_CLEAR",
+        status: "ACTIVE",
+        deliveryCounts: { DELIVERED: 1, SENDING: 1 },
+      },
+    ],
+  });
+
+  assert.equal(derivePopulationCloseState(ready, true).enabled, false);
+  assert.equal(derivePopulationCloseState(sending, true).enabled, false);
+  assert.equal(derivePopulationCloseState(closeEvent(), false).enabled, false);
+  assert.equal(
+    derivePopulationCloseState(closeEvent({ status: "ENDED" }), true).visible,
+    false,
+  );
+});
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {
   assert.equal(normalizeOperationalEvent(null), null);

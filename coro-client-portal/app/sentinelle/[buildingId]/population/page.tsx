@@ -32,6 +32,9 @@ import {
   getPopulationResumeAction,
   buildPopulationResumePlan,
   canCompletePopulationResumeMount,
+  derivePopulationCloseState,
+  openPopulationCloseConfirmation,
+  confirmPopulationEventClose,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -4212,17 +4215,16 @@ function EventCockpit({
   onConfirmIncompleteChange: (value: boolean) => void;
   onConfirmClose: () => void;
 }) {
-  const allClear = (event?.alerts ?? []).find(
-    (alert) => alert.type === "ALL_CLEAR" && alert.status !== "CANCELLED",
-  );
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const closeDialogRef = useRef<HTMLDivElement>(null);
+  const closeState = derivePopulationCloseState(event, canPrepare);
+  const allClear = closeState.allClear as PopulationOperationalEventAlert | undefined;
   const canFollowUp = Boolean(event && !allClear && canPrepare);
-  const canClose = Boolean(
-    event &&
-    allClear &&
-    ["ACTIVE", "ENDED"].includes(allClear.status) &&
-    canPrepare,
-  );
   const initialType = event?.alerts[0]?.type === "TEST" ? "TEST" : "URGENCE";
+
+  useEffect(() => {
+    if (closeOpen) closeDialogRef.current?.focus();
+  }, [closeOpen]);
 
   return (
     <section className={styles.eventCockpit} aria-live="polite">
@@ -4286,9 +4288,20 @@ function EventCockpit({
             )}
             {allClear && (
               <button
+                ref={closeButtonRef}
+                type="button"
                 className={styles.primaryEventAction}
-                disabled={!canClose}
-                onClick={onOpenClose}
+                disabled={!closeState.enabled}
+                onClick={() =>
+                  openPopulationCloseConfirmation(closeState, onOpenClose)
+                }
+                title={
+                  !closeState.permitted
+                    ? "Permission POPULATION_PREPARE requise"
+                    : !closeState.eligible
+                      ? "La diffusion de fin d’alerte doit être terminée avant la clôture"
+                      : undefined
+                }
               >
                 CLORE L’ÉVÉNEMENT
               </button>
@@ -4407,17 +4420,27 @@ function EventCockpit({
           </div>
 
           {closeOpen && (
-            <div
-              className={styles.closePanel}
-              role="dialog"
-              aria-label="Clore l’événement"
-            >
-              <h3>Clore l’événement</h3>
+            <div className={styles.closeOverlay} role="presentation">
+              <div
+                ref={closeDialogRef}
+                className={styles.closePanel}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="population-close-title"
+                tabIndex={-1}
+              >
+              <h3 id="population-close-title">Clore l’événement?</h3>
+              <p><strong>La FIN D’ALERTE a été diffusée.</strong></p>
               <p>
-                Début: {new Date(event.startedAt).toLocaleString("fr-CA")} ·{" "}
-                {event.communicationCount} communications. Vérifiez les
-                livraisons de la fin d’alerte avant de confirmer.
+                Cette action clôture le dossier opérationnel dans CORO. Aucune
+                nouvelle communication ne sera envoyée à la population.
               </p>
+              <dl className={styles.closeMetrics}>
+                <div><dt>Communications</dt><dd>{closeState.summary.communications}</dd></div>
+                <div><dt>Livrées</dt><dd>{closeState.summary.delivered}</dd></div>
+                <div><dt>Échecs</dt><dd>{closeState.summary.failed}</dd></div>
+                <div><dt>Réconciliation</dt><dd>{closeState.summary.reconciliation}</dd></div>
+              </dl>
               <label className={styles.checkboxRow}>
                 <input
                   type="checkbox"
@@ -4434,20 +4457,32 @@ function EventCockpit({
               />
               <div className={styles.eventActions}>
                 <button
+                  type="button"
                   className={styles.secondaryEventAction}
                   onClick={onCancelClose}
+                  disabled={closeLoading}
                 >
                   ANNULER
                 </button>
                 <button
+                  type="button"
                   className={styles.primaryEventAction}
                   disabled={
-                    closeLoading || (confirmIncomplete && !closeReason.trim())
+                    closeLoading ||
+                    !closeState.enabled ||
+                    (confirmIncomplete && !closeReason.trim())
                   }
-                  onClick={onConfirmClose}
+                  onClick={() =>
+                    confirmPopulationEventClose(
+                      closeState,
+                      closeLoading,
+                      onConfirmClose,
+                    )
+                  }
                 >
-                  {closeLoading ? "CLÔTURE..." : "CONFIRMER LA CLÔTURE"}
+                  {closeLoading ? "CLÔTURE..." : "CLORE L’ÉVÉNEMENT"}
                 </button>
+              </div>
               </div>
             </div>
           )}
