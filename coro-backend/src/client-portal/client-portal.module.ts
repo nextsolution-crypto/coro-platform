@@ -11,6 +11,7 @@ import { StorageModule } from '../storage/storage.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { OccupancyModule } from '../occupancy/occupancy.module';
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
+import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-evidence.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PopulationModule } from '../population/population.module';
 
@@ -29,7 +30,7 @@ import { PopulationModule } from '../population/population.module';
     }),
   ],
   controllers: [ClientPortalController, ClientAuthController],
-  providers: [ClientPortalService, ClientAuthService, EmailService, CorrectiveActionsService],
+  providers: [ClientPortalService, ClientAuthService, EmailService, CorrectiveActionsService, CorrectiveActionEvidenceService],
   exports: [ClientPortalService, EmailService],
 })
 export class ClientPortalModule {}

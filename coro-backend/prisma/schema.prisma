@@ -1099,6 +1099,29 @@ enum CorrectiveActionAuditEventType {
   STATUS_CHANGED
   CANCELLED
   SOURCE_LINKED
+  EVIDENCE_ADDED
+  EVIDENCE_WITHDRAWN
+  COMPLETED
+}
+
+enum CorrectiveActionEvidenceType {
+  NOTE
+  DOCUMENT
+  PHOTO
+  LINK
+  SYSTEM_REFERENCE
+}
+
+enum CorrectiveActionEvidenceStatus {
+  PENDING
+  ACTIVE
+  WITHDRAWN
+}
+
+enum CorrectiveActionSystemReferenceType {
+  POPULATION_EVIDENCE
+  EXERCISE_REPORT
+  INCIDENT
 }
 
 enum OperationalReviewStatus {
@@ -3216,6 +3239,9 @@ model CorrectiveAction {
   updatedById    String?
   dueDate        DateTime?
   completedAt    DateTime?
+  completedByType CoroActorType?
+  completedById   String?
+  completionComment String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -3230,12 +3256,49 @@ model CorrectiveAction {
   exerciseActionItemId   String?                 @unique
   actionItem             ExerciseActionItem?     @relation(fields: [exerciseActionItemId], references: [id], onDelete: SetNull)
   auditEvents            CorrectiveActionAuditEvent[]
+  evidence               CorrectiveActionEvidence[]
+
+  @@unique([id, organizationId])
 
   @@index([organizationId])
   @@index([buildingId])
   @@index([incidentId])
   @@index([exerciseReportId])
   @@index([reviewRecommendationId])
+}
+
+model CorrectiveActionEvidence {
+  id                 String                         @id @default(uuid())
+  organizationId     String
+  correctiveActionId String
+  correctiveAction   CorrectiveAction               @relation(fields: [correctiveActionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  clientIntentId     String
+  type               CorrectiveActionEvidenceType
+  title              String
+  description        String?
+  status             CorrectiveActionEvidenceStatus @default(PENDING)
+  storageKey          String?                        @unique
+  originalFileName    String?
+  mimeType            String?
+  fileSize            Int?
+  sha256              String?
+  externalUrl         String?
+  systemReferenceType CorrectiveActionSystemReferenceType?
+  systemReferenceId   String?
+  noteText            String?
+  submittedAt         DateTime                       @default(now())
+  submittedByType     CoroActorType
+  submittedById       String
+  withdrawnAt         DateTime?
+  withdrawnByType     CoroActorType?
+  withdrawnById       String?
+  withdrawalReason    String?
+  createdAt            DateTime                       @default(now())
+
+  @@unique([organizationId, clientIntentId])
+  @@index([correctiveActionId, status, submittedAt])
+  @@index([organizationId])
+  @@index([systemReferenceType, systemReferenceId])
 }
 
 model CorrectiveActionAuditEvent {

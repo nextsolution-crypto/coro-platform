@@ -13,6 +13,7 @@ import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
+import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-evidence.service';
 
 describe('ClientPortalController routing', () => {
   let app: INestApplication;
@@ -38,6 +39,7 @@ describe('ClientPortalController routing', () => {
         { provide: OccupancyEmployeesService, useValue: {} },
         { provide: OccupancyService, useValue: {} },
         { provide: CorrectiveActionsService, useValue: {} },
+        { provide: CorrectiveActionEvidenceService, useValue: {} },
       ],
     })
       .overrideGuard(ClientJwtGuard)

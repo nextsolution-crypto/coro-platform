@@ -9,7 +9,10 @@ import {
   UseGuards,
   Request,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { ClientPortalService } from './client-portal.service';
 import { ConfigurePopulationProgramDto } from '../population/dto/population-program.dto';
@@ -28,6 +31,8 @@ import {
   UpdateCorrectiveActionDto,
 } from '../occupancy/dto/corrective-action.dto';
 import { CorrectiveActionActor } from '../occupancy/corrective-actions.service';
+import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-evidence.service';
+import { CompleteCorrectiveActionDto, CreateFileEvidenceDto, CreateLinkEvidenceDto, CreateNoteEvidenceDto, CreateSystemReferenceEvidenceDto, WithdrawEvidenceDto } from '../occupancy/dto/corrective-action-evidence.dto';
 
 interface CorrectiveActionRequest {
   clientUser: CorrectiveActionActor;
@@ -42,6 +47,7 @@ export class ClientPortalController {
     private occupancyEmployeesService: OccupancyEmployeesService,
     private occupancyService: OccupancyService,
     private correctiveActionsService: CorrectiveActionsService,
+    private correctiveActionEvidenceService: CorrectiveActionEvidenceService,
   ) {}
 
   @Get('dashboard')
@@ -994,6 +1000,52 @@ export class ClientPortalController {
     @Request() req: CorrectiveActionRequest,
   ) {
     return this.correctiveActionsService.delete(id, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/complete')
+  completeCorrectiveAction(@Param('id') id: string, @Body() body: CompleteCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionsService.complete(id, body, req.clientUser);
+  }
+
+  @Get('corrective-actions/:id/evidence')
+  getCorrectiveActionEvidence(@Param('id') id: string, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionEvidenceService.list(id, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/evidence/note')
+  addCorrectiveActionNote(@Param('id') id: string, @Body() body: CreateNoteEvidenceDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionEvidenceService.addNote(id, body, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/evidence/link')
+  addCorrectiveActionLink(@Param('id') id: string, @Body() body: CreateLinkEvidenceDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionEvidenceService.addLink(id, body, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/evidence/system-reference')
+  addCorrectiveActionSystemReference(@Param('id') id: string, @Body() body: CreateSystemReferenceEvidenceDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionEvidenceService.addSystemReference(id, body, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/evidence/file')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  addCorrectiveActionFile(@Param('id') id: string, @Body() body: CreateFileEvidenceDto, @UploadedFile() file: Express.Multer.File, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionEvidenceService.addFile(id, body, file, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/evidence/:evidenceId/withdraw')
+  withdrawCorrectiveActionEvidence(@Param('id') id: string, @Param('evidenceId') evidenceId: string, @Body() body: WithdrawEvidenceDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionEvidenceService.withdraw(id, evidenceId, body, req.clientUser);
+  }
+
+  @Get('corrective-actions/:id/evidence/:evidenceId/download')
+  async downloadCorrectiveActionEvidence(@Param('id') id: string, @Param('evidenceId') evidenceId: string, @Request() req: CorrectiveActionRequest, @Res() res: Response) {
+    const file = await this.correctiveActionEvidenceService.download(id, evidenceId, req.clientUser);
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.fileName.replace(/["\\\r\n]/g, '_')}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(file.bytes);
   }
 
   @Put('incidents/tasks/:taskId/uncomplete')

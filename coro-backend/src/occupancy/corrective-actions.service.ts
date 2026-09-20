@@ -10,6 +10,7 @@ import {
   CreateCorrectiveActionDto,
   UpdateCorrectiveActionDto,
 } from './dto/corrective-action.dto';
+import { CompleteCorrectiveActionDto } from './dto/corrective-action-evidence.dto';
 
 export interface CorrectiveActionActor {
   sub?: string;
@@ -41,6 +42,7 @@ export class CorrectiveActionsService {
 
   async create(body: CreateCorrectiveActionDto, actor: CorrectiveActionActor) {
     await this.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_CREATE);
+    if (body.status === 'COMPLETED') throw new BadRequestException('Utilisez la transition explicite de realisation');
     if (body.buildingId) this.assertBuildingAccess(actor, body.buildingId);
     if (body.buildingId) {
       const building = await this.prisma.building.findFirst({
@@ -154,6 +156,9 @@ export class CorrectiveActionsService {
     body: UpdateCorrectiveActionDto,
     actor: CorrectiveActionActor,
   ) {
+    if (body.status === 'COMPLETED') {
+      return this.complete(id, {}, actor);
+    }
     const permission = body.status === 'COMPLETED' || body.status === 'IN_PROGRESS'
       ? CorrectiveActionPermission.CORRECTIVE_ACTION_COMPLETE
       : CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT;
@@ -187,7 +192,10 @@ export class CorrectiveActionsService {
             : body.dueDate
               ? new Date(body.dueDate)
               : action.dueDate,
-        completedAt: body.status === 'COMPLETED' ? (action.completedAt || new Date()) : action.status === 'COMPLETED' && body.status === 'IN_PROGRESS' ? null : action.completedAt,
+        completedAt: action.status === 'COMPLETED' && body.status === 'IN_PROGRESS' ? null : action.completedAt,
+        completedByType: action.status === 'COMPLETED' && body.status === 'IN_PROGRESS' ? null : action.completedByType,
+        completedById: action.status === 'COMPLETED' && body.status === 'IN_PROGRESS' ? null : action.completedById,
+        completionComment: action.status === 'COMPLETED' && body.status === 'IN_PROGRESS' ? null : action.completionComment,
       } });
       if (actor.sub) {
         const statusChanged = body.status && body.status !== action.status;
@@ -196,6 +204,32 @@ export class CorrectiveActionsService {
       }
       return this.safeAction(updated, actor);
     });
+  }
+
+  async complete(id: string, body: CompleteCorrectiveActionDto, actor: CorrectiveActionActor) {
+    await this.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_COMPLETE);
+    const action = await this.findAccessibleAction(id, actor);
+    this.assertTransition(action.status, 'COMPLETED');
+    const comment = body.completionComment?.trim() || null;
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'corrective-action-completion:' + id}))`;
+      const activeEvidence = await tx.correctiveActionEvidence.count({ where: { correctiveActionId: id, organizationId: actor.organizationId, status: 'ACTIVE' } });
+      if (!activeEvidence && !comment) throw new BadRequestException('Une preuve active ou un commentaire de realisation est requis');
+      const result = await tx.correctiveAction.updateMany({
+        where: { id, organizationId: actor.organizationId, status: 'IN_PROGRESS' },
+        data: { status: 'COMPLETED', completedAt: new Date(), completedByType: actor.sub ? CoroActorType.CLIENT_USER : CoroActorType.SYSTEM, completedById: actor.sub || 'system', completionComment: comment, updatedByType: actor.sub ? CoroActorType.CLIENT_USER : CoroActorType.SYSTEM, updatedById: actor.sub || 'system' },
+      });
+      if (result.count !== 1) throw new BadRequestException('Action deja modifiee par un autre operateur');
+      await tx.correctiveActionAuditEvent.create({ data: { organizationId: actor.organizationId, correctiveActionId: id, eventType: 'COMPLETED', actorType: actor.sub ? CoroActorType.CLIENT_USER : CoroActorType.SYSTEM, actorId: actor.sub || 'system', metadata: { hasCompletionComment: Boolean(comment), activeEvidenceCount: activeEvidence } } });
+      return this.safeAction(await tx.correctiveAction.findUniqueOrThrow({ where: { id } }), actor);
+    });
+  }
+
+  async findAccessibleAction(id: string, actor: CorrectiveActionActor) {
+    const visibilityScope = await this.visibilityScope(actor);
+    const action = await this.prisma.correctiveAction.findFirst({ where: { id, organizationId: actor.organizationId, ...this.accessScope(actor), ...visibilityScope } });
+    if (!action) throw new NotFoundException('Action introuvable');
+    return action;
   }
 
   async delete(id: string, actor: CorrectiveActionActor) {
@@ -225,7 +259,7 @@ export class CorrectiveActionsService {
     if (!(allowed[current] || []).includes(next)) throw new BadRequestException(`Transition ${current} vers ${next} interdite`);
   }
 
-  private async requirePermission(actor: CorrectiveActionActor, permission: CorrectiveActionPermission) {
+  async requirePermission(actor: CorrectiveActionActor, permission: CorrectiveActionPermission) {
     if (!actor.sub) return;
     const user = await this.prisma.clientUser.findFirst({ where: { id: actor.sub, organizationId: actor.organizationId, isActive: true }, select: { correctiveActionPermissions: true } });
     if (!user) throw new ForbiddenException('Utilisateur client invalide');

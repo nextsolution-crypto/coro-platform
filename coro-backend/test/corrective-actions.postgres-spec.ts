@@ -2,6 +2,7 @@ import { CoroActorType, OperationalReviewPermission, PopulationDeliveryMode, Pop
 import { randomUUID } from 'crypto';
 import { OperationalReviewsService } from '../src/operational-reviews/operational-reviews.service';
 import { CorrectiveActionsService } from '../src/occupancy/corrective-actions.service';
+import { CorrectiveActionEvidenceService } from '../src/occupancy/corrective-action-evidence.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error('TEST_DATABASE_URL est obligatoire en CI');
@@ -11,6 +12,8 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
   const prisma = databaseUrl ? new PrismaClient({ datasources: { db: { url: databaseUrl } } }) : new PrismaClient();
   const reviews = new OperationalReviewsService(prisma as any);
   const actions = new CorrectiveActionsService(prisma as any);
+  const storage = { downloadPrivate: jest.fn(), uploadPrivateImmutable: jest.fn() };
+  const evidence = new CorrectiveActionEvidenceService(prisma as any, storage as any, actions);
   const suffix = randomUUID();
   const ids = { org: `ac-org-${suffix}`, otherOrg: `ac-other-${suffix}`, client: `ac-client-${suffix}`, building: `ac-building-${suffix}`, profile: `ac-profile-${suffix}`, program: `ac-program-${suffix}`, scenario: `ac-scenario-${suffix}`, event: `ac-event-${suffix}`, user: `ac-user-${suffix}` };
   const actor = { sub: ids.user, organizationId: ids.org, clientId: ids.client, role: 'CLIENT_MANAGER', buildingIds: [ids.building] };
@@ -73,5 +76,36 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
     const action = await actions.create({ title: 'Cancel', buildingId: ids.building }, actor);
     await actions.delete(action.id, actor);
     await expect(prisma.correctiveAction.findUniqueOrThrow({ where: { id: action.id } })).resolves.toMatchObject({ status: 'CANCELLED', buildingId: ids.building });
+  });
+
+  it('cree une preuve NOTE idempotente puis complete avec acteur', async () => {
+    const action = await actions.create({ title: 'Completion', buildingId: ids.building }, actor);
+    await actions.update(action.id, { status: 'IN_PROGRESS' }, actor);
+    const clientIntentId = randomUUID();
+    const first = await evidence.addNote(action.id, { clientIntentId, title: 'Compte rendu', noteText: 'Travaux realises' }, actor);
+    const replay = await evidence.addNote(action.id, { clientIntentId, title: 'Compte rendu', noteText: 'Travaux realises' }, actor);
+    expect(replay.id).toBe(first.id);
+    const completed = await actions.complete(action.id, {}, actor);
+    expect(completed).toMatchObject({ status: 'COMPLETED', completedById: ids.user });
+  });
+
+  it('impose les invariants de type Evidence en PostgreSQL', async () => {
+    const action = await actions.create({ title: 'Checks', buildingId: ids.building }, actor);
+    await expect(prisma.correctiveActionEvidence.create({ data: { organizationId: ids.org, correctiveActionId: action.id, clientIntentId: randomUUID(), type: 'NOTE', title: 'Invalid', status: 'ACTIVE', submittedByType: CoroActorType.CLIENT_USER, submittedById: ids.user } })).rejects.toThrow();
+  });
+
+  it('interdit mutation de contenu et DELETE mais autorise ACTIVE vers WITHDRAWN', async () => {
+    const action = await actions.create({ title: 'Immutable', buildingId: ids.building }, actor);
+    const created = await evidence.addNote(action.id, { clientIntentId: randomUUID(), title: 'Initial', noteText: 'Texte immuable' }, actor);
+    await expect(prisma.correctiveActionEvidence.update({ where: { id: created.id }, data: { noteText: 'Modifie' } })).rejects.toThrow('immutable');
+    await evidence.withdraw(action.id, created.id, { withdrawalReason: 'Remplacee' }, actor);
+    await expect(prisma.correctiveActionEvidence.delete({ where: { id: created.id } })).rejects.toThrow('append-only');
+  });
+
+  it('refuse la completion sans preuve active ni commentaire', async () => {
+    const action = await actions.create({ title: 'No justification', buildingId: ids.building }, actor);
+    await actions.update(action.id, { status: 'IN_PROGRESS' }, actor);
+    await expect(actions.complete(action.id, {}, actor)).rejects.toThrow('preuve active ou un commentaire');
+    await expect(actions.complete(action.id, { completionComment: 'Realisation declaree' }, actor)).resolves.toMatchObject({ status: 'COMPLETED' });
   });
 });

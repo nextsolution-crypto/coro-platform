@@ -23,11 +23,14 @@ function harness() {
     findMany: jest.fn().mockResolvedValue([]),
     findFirst: jest.fn(),
     update: jest.fn().mockResolvedValue({ id: 'action-a' }),
+    updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'action-a', status: 'COMPLETED' }),
   };
   const prisma: any = {
     building: { findFirst: jest.fn() },
     incidentEvent: { findFirst: jest.fn() },
     correctiveAction,
+    correctiveActionEvidence: { count: jest.fn().mockResolvedValue(0) },
     correctiveActionAuditEvent: { create: jest.fn(), createMany: jest.fn() },
     clientUser: { findFirst: jest.fn() },
     user: { findFirst: jest.fn() },
@@ -204,6 +207,32 @@ describe('CorrectiveActionsService D1 workflow', () => {
     h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedAt: new Date() });
     await h.service.update('action-a', { status: 'IN_PROGRESS' }, actor);
     expect(h.prisma.correctiveAction.update.mock.calls[0][0].data.completedAt).toBeNull();
+    expect(h.prisma.correctiveAction.update.mock.calls[0][0].data.completedById).toBeNull();
+    expect(h.prisma.correctiveAction.update.mock.calls[0][0].data.completionComment).toBeNull();
+  });
+
+  it('refuse COMPLETED sans preuve active ni commentaire', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'IN_PROGRESS' });
+    await expect(h.service.complete('action-a', {}, actor)).rejects.toThrow('preuve active ou un commentaire');
+  });
+
+  it('complete avec commentaire et conserve l acteur reel', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'IN_PROGRESS' });
+    await h.service.complete('action-a', { completionComment: 'Travaux termines' }, actor);
+    expect(h.prisma.correctiveAction.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'COMPLETED', completedByType: 'CLIENT_USER', completedById: 'user-a', completionComment: 'Travaux termines' }) }));
+    expect(h.prisma.correctiveActionAuditEvent.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ eventType: 'COMPLETED', actorId: 'user-a' }) }));
+  });
+
+  it('complete avec une preuve ACTIVE sans commentaire', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'IN_PROGRESS' });
+    h.prisma.correctiveActionEvidence.count.mockResolvedValue(1);
+    await expect(h.service.complete('action-a', {}, actor)).resolves.toMatchObject({ status: 'COMPLETED' });
   });
 
   it('refuse VERIFIED et CLOSED en D1', async () => {
