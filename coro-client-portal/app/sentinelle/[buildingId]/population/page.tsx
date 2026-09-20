@@ -26,6 +26,9 @@ import {
   normalizeOperationalEvent,
   normalizeLegacyActiveAlerts,
   mergePopulationRegistry,
+  getPopulationAlertWorkflowStage,
+  getPopulationDeliveryModeLabel,
+  derivePopulationWorkflowState,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -209,6 +212,7 @@ type CreatedPopulationAlert = {
   operationalEventId?: string | null;
   cycleSequence?: number | null;
   contextSnapshot?: { targeting?: PopulationEventTargeting | null } | null;
+  deliveryCounts?: Record<string, number>;
 };
 
 type PopulationEventTargeting = {
@@ -227,11 +231,21 @@ type PopulationOperationalEventAlert = {
   status: string;
   cycleSequence: number | null;
   titleFR: string;
+  titleEN: string | null;
+  messageFR: string;
+  messageEN: string | null;
+  instructionFR: string | null;
+  instructionEN: string | null;
+  readyAt: string | null;
+  approvedAt: string | null;
+  recipientsFrozenAt: string | null;
+  deliveryModeSnapshot: "SANDBOX" | "LIVE" | null;
   createdAt: string;
   activatedAt: string | null;
   endedAt: string | null;
   cancelledAt: string | null;
   deliveryCounts: Record<string, number>;
+  deliveryChannelCounts: Record<string, number>;
   targetedSubscriberCount: number;
   deliverableDeliveryCount: number;
   targeting: PopulationEventTargeting | null;
@@ -779,6 +793,58 @@ export default function PopulationPage() {
       setActiveEvent(result);
       if (result) {
         setLastClosedEvent(null);
+        const resumable = [...result.alerts]
+          .reverse()
+          .find((alert) =>
+            ["DRAFT", "READY"].includes(alert.status),
+          );
+        if (resumable) {
+          setCreatedAlert(resumable as CreatedPopulationAlert);
+          setAlertForm({
+            type: resumable.type,
+            titleFR: resumable.titleFR || "",
+            titleEN: resumable.titleEN || "",
+            messageFR: resumable.messageFR || "",
+            messageEN: resumable.messageEN || "",
+            instructionFR: resumable.instructionFR || "",
+            instructionEN: resumable.instructionEN || "",
+          });
+          setFreezeResult(null);
+          setLivePreflight(null);
+          setAlertStep(6);
+          setAlertComposerOpen(true);
+          if (
+            derivePopulationWorkflowState({ event: result, alert: resumable }) ===
+            "SEND_READY"
+          ) {
+            const deliveryCount = Object.values(
+              resumable.deliveryCounts ?? {},
+            ).reduce((sum, count) => sum + count, 0);
+            setFreezeResult({
+              alertId: resumable.id,
+              status: resumable.status,
+              approvedAt: resumable.approvedAt,
+              recipientsFrozenAt: resumable.recipientsFrozenAt!,
+              deliveryMode: resumable.deliveryModeSnapshot!,
+              targeting: {
+                subscriberCount: resumable.targetedSubscriberCount ?? 0,
+                deliveryCount,
+                smsDeliveryCount: resumable.deliveryChannelCounts?.SMS ?? 0,
+                emailDeliveryCount:
+                  resumable.deliveryChannelCounts?.EMAIL ?? 0,
+                deliverableCount: resumable.deliverableDeliveryCount ?? 0,
+                deliverableSmsCount: 0,
+                deliverableEmailCount: 0,
+                suppressedCount: resumable.deliveryCounts?.SUPPRESSED ?? 0,
+                ...(resumable.targeting ?? {}),
+              },
+              deliveries: [],
+            });
+            if (resumable.deliveryModeSnapshot === "LIVE") {
+              await loadLivePreflight(resumable.id);
+            }
+          }
+        }
       }
       return result;
     } catch (error: any) {
@@ -792,6 +858,29 @@ export default function PopulationPage() {
       setEventLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!status?.populationEnabled || status.programStatus !== "ACTIVE") {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      if (
+        !alertWorkflowLoading &&
+        !followUpCreating &&
+        createdAlert?.status !== "DRAFT"
+      ) {
+        void loadActiveOperationalEvent();
+      }
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, [
+    buildingId,
+    status?.populationEnabled,
+    status?.programStatus,
+    alertWorkflowLoading,
+    followUpCreating,
+    createdAlert?.status,
+  ]);
 
   const loadLegacyActiveAlerts = async () => {
     try {
@@ -1361,6 +1450,8 @@ export default function PopulationPage() {
           ? {
               ...current,
               recipientsFrozenAt: result.recipientsFrozenAt,
+              deliveryModeSnapshot: result.deliveryMode,
+              deliveryCounts: { QUEUED: result.targeting.deliveryCount },
             }
           : current,
       );
@@ -3848,7 +3939,16 @@ function formatPopulationCommunicationType(
   return "FIN D’ALERTE";
 }
 
-function formatPopulationCommunicationStatus(status: string) {
+function formatPopulationCommunicationStatus(
+  status: string,
+  alert?: PopulationOperationalEventAlert,
+) {
+  if (status === "READY" && alert) {
+    const stage = getPopulationAlertWorkflowStage(alert);
+    if (stage === "READY_FOR_APPROVAL") return "À APPROUVER";
+    if (stage === "APPROVED_NEEDS_FREEZE") return "APPROUVÉE · ROSTER À FIGER";
+    if (stage === "RECIPIENTS_FROZEN") return "DESTINATAIRES FIGÉS";
+  }
   const labels: Record<string, string> = {
     DRAFT: "BROUILLON",
     READY: "PRÊTE À DIFFUSER",
@@ -3940,9 +4040,9 @@ function PopulationUnifiedRegistry({
                           )}
                         </strong>
                         <span>
-                          {communication.deliveryModeSnapshot === "LIVE"
-                            ? "DIFFUSION RÉELLE"
-                            : "SIMULATION"}{" "}
+                          {getPopulationDeliveryModeLabel(
+                            communication.deliveryModeSnapshot,
+                          )}{" "}
                           · Livrées {counts.DELIVERED ?? counts.delivered ?? 0} ·
                           Échecs {counts.FAILED ?? counts.failed ?? 0}
                         </span>
@@ -4125,7 +4225,7 @@ function EventCockpit({
                     </strong>
                     <span>
                       {new Date(alert.createdAt).toLocaleString("fr-CA")} ·{" "}
-                      {formatPopulationCommunicationStatus(alert.status)}
+                      {formatPopulationCommunicationStatus(alert.status, alert)}
                     </span>
                   </div>
                   <div className={styles.timelineMetrics}>
@@ -5752,12 +5852,11 @@ function AlertDraftWorkspace({
   onConfirmSend: () => void;
   onClose: () => void;
 }) {
-  const isDraft = alert.status === "DRAFT";
+  const workflowStage = getPopulationAlertWorkflowStage(alert);
+  const isDraft = workflowStage === "DRAFT";
   const isReady = alert.status === "READY";
   const isApproved = Boolean(alert.approvedAt);
-  const recipientsFrozen = Boolean(
-    alert.recipientsFrozenAt || freezeResult?.recipientsFrozenAt,
-  );
+  const recipientsFrozen = workflowStage === "RECIPIENTS_FROZEN";
   const canPrepare = permissions.includes("POPULATION_PREPARE");
   const canApprove = permissions.includes("POPULATION_APPROVE");
   const canSend = permissions.includes("POPULATION_SEND");

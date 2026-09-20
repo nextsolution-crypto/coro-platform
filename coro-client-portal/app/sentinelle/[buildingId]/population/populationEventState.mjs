@@ -65,3 +65,60 @@ export function mergePopulationRegistry(events, legacy) {
     )
     .slice(0, 50);
 }
+
+export function getPopulationAlertWorkflowStage(alert) {
+  const state = derivePopulationWorkflowState({ alert });
+  const legacyNames = {
+    EDIT: "DRAFT",
+    APPROVAL_REQUIRED: "READY_FOR_APPROVAL",
+    FREEZE_REQUIRED: "APPROVED_NEEDS_FREEZE",
+    SEND_READY: "RECIPIENTS_FROZEN",
+    WAIT: "SENDING",
+    PROVIDER_ACCEPTED: "ACTIVE",
+    DELIVERED: "ACTIVE",
+  };
+  return legacyNames[state] ?? state;
+}
+
+/** @param {{ event?: any, alert?: any }} serverState */
+export function derivePopulationWorkflowState({ event = null, alert = null }) {
+  if (event?.status === "ENDED" || event?.status === "CANCELLED") {
+    return "READ_ONLY_HISTORY";
+  }
+  if (!alert || typeof alert !== "object") return "NONE";
+  if (alert.status === "DRAFT") return "EDIT";
+  if (alert.status === "READY") {
+    if (!alert.approvedAt) return "APPROVAL_REQUIRED";
+    if (!alert.recipientsFrozenAt || !alert.deliveryModeSnapshot) {
+      return "FREEZE_REQUIRED";
+    }
+    const counts = alert.deliveryCounts ?? {};
+    const materialized = Object.values(counts).reduce(
+      (sum, value) => sum + (Number(value) || 0),
+      0,
+    );
+    return materialized > 0 ? "SEND_READY" : "FREEZE_REQUIRED";
+  }
+  if (alert.status === "SENDING") return "WAIT";
+  if (alert.status === "ACTIVE") {
+    const counts = alert.deliveryCounts ?? {};
+    if (
+      alert.type === "ALL_CLEAR" &&
+      event?.status === "ACTIVE" &&
+      (counts.DELIVERED ?? 0) > 0
+    ) {
+      return "EVENT_CLOSE_REQUIRED";
+    }
+    if ((counts.DELIVERED ?? 0) > 0) return "DELIVERED";
+    if ((counts.SENT ?? 0) > 0) return "PROVIDER_ACCEPTED";
+    return "WAIT";
+  }
+  if (alert.status === "FAILED") return "FAILED";
+  return alert.status || "NONE";
+}
+
+export function getPopulationDeliveryModeLabel(mode) {
+  if (mode === "LIVE") return "DIFFUSION RÉELLE";
+  if (mode === "SANDBOX") return "SIMULATION";
+  return "MODE NON FIGÉ";
+}

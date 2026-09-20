@@ -3610,6 +3610,13 @@ export class PopulationService {
         },
         {},
       );
+      const deliveryChannelCounts = deliveries.reduce<Record<string, number>>(
+        (counts, delivery) => {
+          counts[delivery.channel] = (counts[delivery.channel] ?? 0) + 1;
+          return counts;
+        },
+        {},
+      );
       const materializedSubscriberCount = new Set(
         deliveries
           .map((delivery) => delivery.subscriberId)
@@ -3657,6 +3664,7 @@ export class PopulationService {
       return {
         ...publicAlert,
         deliveryCounts,
+        deliveryChannelCounts,
         targetedSubscriberCount,
         deliverableDeliveryCount,
         targeting,

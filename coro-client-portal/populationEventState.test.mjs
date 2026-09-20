@@ -5,6 +5,9 @@ import {
   normalizeOperationalEvent,
   normalizeLegacyActiveAlerts,
   mergePopulationRegistry,
+  getPopulationAlertWorkflowStage,
+  getPopulationDeliveryModeLabel,
+  derivePopulationWorkflowState,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {
@@ -15,6 +18,113 @@ test("supporte aucun event et selectionne la communication legacy ACTIVE", () =>
     ]).map((alert) => alert.id),
     ["legacy-1"],
   );
+});
+
+test("reconstruit tout le workflow depuis deux snapshots serveur sans etat client", () => {
+  const event = { status: "ACTIVE" };
+  const approvedAllClear = {
+    type: "ALL_CLEAR",
+    status: "READY",
+    approvedAt: "2026-09-20T10:00:00Z",
+    recipientsFrozenAt: null,
+    deliveryModeSnapshot: null,
+    deliveryCounts: {},
+  };
+  assert.equal(
+    derivePopulationWorkflowState({ event, alert: approvedAllClear }),
+    "FREEZE_REQUIRED",
+  );
+
+  const frozenReload = {
+    ...approvedAllClear,
+    recipientsFrozenAt: "2026-09-20T10:05:00Z",
+    deliveryModeSnapshot: "LIVE",
+    deliveryCounts: { QUEUED: 1 },
+  };
+  assert.equal(
+    derivePopulationWorkflowState({ event, alert: frozenReload }),
+    "SEND_READY",
+  );
+});
+
+test("derive les etats transport et la cloture depuis le serveur", () => {
+  assert.equal(
+    derivePopulationWorkflowState({ alert: { status: "DRAFT" } }),
+    "EDIT",
+  );
+  assert.equal(
+    derivePopulationWorkflowState({
+      alert: { status: "READY", approvedAt: null },
+    }),
+    "APPROVAL_REQUIRED",
+  );
+  assert.equal(
+    derivePopulationWorkflowState({ alert: { status: "SENDING" } }),
+    "WAIT",
+  );
+  assert.equal(
+    derivePopulationWorkflowState({
+      alert: { status: "ACTIVE", deliveryCounts: { SENT: 1 } },
+    }),
+    "PROVIDER_ACCEPTED",
+  );
+  assert.equal(
+    derivePopulationWorkflowState({
+      alert: { status: "ACTIVE", deliveryCounts: { DELIVERED: 1 } },
+    }),
+    "DELIVERED",
+  );
+  assert.equal(
+    derivePopulationWorkflowState({
+      event: { status: "ACTIVE" },
+      alert: {
+        type: "ALL_CLEAR",
+        status: "ACTIVE",
+        deliveryCounts: { DELIVERED: 1 },
+      },
+    }),
+    "EVENT_CLOSE_REQUIRED",
+  );
+  assert.equal(
+    derivePopulationWorkflowState({
+      event: { status: "ENDED" },
+      alert: { status: "ACTIVE" },
+    }),
+    "READ_ONLY_HISTORY",
+  );
+});
+
+test("reconstruit READY approuve non fige comme freeze requis", () => {
+  const alert = {
+    status: "READY",
+    approvedAt: "2026-09-20T10:00:00Z",
+    recipientsFrozenAt: null,
+    deliveryModeSnapshot: null,
+  };
+  assert.equal(
+    getPopulationAlertWorkflowStage(alert),
+    "APPROVED_NEEDS_FREEZE",
+  );
+  assert.equal(getPopulationAlertWorkflowStage({ ...alert }), "APPROVED_NEEDS_FREEZE");
+});
+
+test("reconstruit un roster fige LIVE comme pret au preflight", () => {
+  assert.equal(
+    getPopulationAlertWorkflowStage({
+      status: "READY",
+      approvedAt: "2026-09-20T10:00:00Z",
+      recipientsFrozenAt: "2026-09-20T10:05:00Z",
+      deliveryModeSnapshot: "LIVE",
+      deliveryCounts: { QUEUED: 1 },
+    }),
+    "RECIPIENTS_FROZEN",
+  );
+});
+
+test("n'invente jamais le mode historique", () => {
+  assert.equal(getPopulationDeliveryModeLabel("LIVE"), "DIFFUSION RÉELLE");
+  assert.equal(getPopulationDeliveryModeLabel("SANDBOX"), "SIMULATION");
+  assert.equal(getPopulationDeliveryModeLabel(null), "MODE NON FIGÉ");
 });
 
 test("fusionne events et legacy par date descendante et normalise les collections", () => {

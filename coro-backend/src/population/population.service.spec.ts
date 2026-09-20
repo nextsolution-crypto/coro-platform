@@ -8043,6 +8043,7 @@ describe('PopulationService', () => {
             activatedAt: new Date(),
             endedAt: null,
             cancelledAt: null,
+            deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
             contextSnapshot: {
               targeting: {
                 strategy: 'HISTORICAL_UNION_CURRENT',
@@ -8077,6 +8078,8 @@ describe('PopulationService', () => {
           alerts: [
             expect.objectContaining({
               deliveryCounts: { DELIVERED: 1, SUPPRESSED: 1 },
+              deliveryChannelCounts: { EMAIL: 2 },
+              deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
               targetedSubscriberCount: 2,
               deliverableDeliveryCount: 1,
               targeting: {
