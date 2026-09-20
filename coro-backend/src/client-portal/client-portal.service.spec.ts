@@ -66,6 +66,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
     getManifest: jest.fn(),
     verify: jest.fn(),
   };
+  const populationEvidenceReportService = {
+    generate: jest.fn(), get: jest.fn(), download: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -83,6 +86,7 @@ describe('ClientPortalService - Sentinelle Population', () => {
       {} as any,
       populationService as any,
       populationEvidenceService as any,
+      populationEvidenceReportService as any,
     );
   });
 

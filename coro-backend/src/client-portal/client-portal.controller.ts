@@ -732,6 +732,30 @@ export class ClientPortalController {
     );
   }
 
+  @Post('buildings/:buildingId/population/evidence/:evidenceId/report')
+  generatePopulationEvidenceReport(@Param('buildingId') buildingId: string, @Param('evidenceId') evidenceId: string, @Request() req: any) {
+    return this.clientPortalService.generatePopulationEvidenceReport(buildingId, evidenceId, req.clientUser);
+  }
+
+  @Get('buildings/:buildingId/population/evidence/:evidenceId/report')
+  getPopulationEvidenceReport(@Param('buildingId') buildingId: string, @Param('evidenceId') evidenceId: string, @Request() req: any) {
+    return this.clientPortalService.getPopulationEvidenceReport(buildingId, evidenceId, req.clientUser);
+  }
+
+  @Get('buildings/:buildingId/population/evidence/:evidenceId/report/download')
+  async downloadPopulationEvidenceReport(@Param('buildingId') buildingId: string, @Param('evidenceId') evidenceId: string, @Request() req: any, @Res() res: Response) {
+    const report = await this.clientPortalService.downloadPopulationEvidenceReport(buildingId, evidenceId, req.clientUser);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': String(report.bytes.length),
+      'Content-Disposition': this.buildContentDisposition(report.filename),
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Expose-Headers': 'Content-Disposition',
+    });
+    return res.send(report.bytes);
+  }
+
   @Post(
     'buildings/:buildingId/population/operational-events/:eventId/updates/draft',
   )

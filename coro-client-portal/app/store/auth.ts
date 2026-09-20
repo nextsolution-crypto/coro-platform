@@ -171,3 +171,16 @@ export async function apiPut(path: string, body: unknown) {
   }
   return data;
 }
+
+export async function apiDownload(path: string) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Non autorise"); }
+  if (!res.ok) {
+    const data = await parseResponse(res);
+    throw new ApiError(typeof data === "string" ? data : data?.message || "Erreur API", res.status);
+  }
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="([^"]+)"/i);
+  return { blob: await res.blob(), filename: match?.[1] ?? "rapport-evidence.pdf" };
+}

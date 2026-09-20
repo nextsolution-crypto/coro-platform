@@ -25,29 +25,30 @@ model Organization {
   employeeCount  Int? // Nombre d'employés
   operatingHours String? // Heures d'opération
 
-  users                  User[]
-  clients                Client[]
-  buildings              Building[]
-  projects               Project[]
-  procedureOverrides     ProcedureOverride[]
-  feedbacks              Feedback[]
-  projectTemplates       ProjectTemplate[]
-  auditLogs              AuditLog[]
-  customProcedures       CustomProcedure[]
-  clientUsers            ClientUser[]
-  module1Template        OrganizationModule1Template?
-  bookings               Booking[]
-  files                  ProjectFile[]
-  exerciseReports        ExerciseReport[]
-  complianceRequirements ComplianceRequirement[]
-  complianceEvidence     ComplianceEvidence[]
+  users                       User[]
+  clients                     Client[]
+  buildings                   Building[]
+  projects                    Project[]
+  procedureOverrides          ProcedureOverride[]
+  feedbacks                   Feedback[]
+  projectTemplates            ProjectTemplate[]
+  auditLogs                   AuditLog[]
+  customProcedures            CustomProcedure[]
+  clientUsers                 ClientUser[]
+  module1Template             OrganizationModule1Template?
+  bookings                    Booking[]
+  files                       ProjectFile[]
+  exerciseReports             ExerciseReport[]
+  complianceRequirements      ComplianceRequirement[]
+  complianceEvidence          ComplianceEvidence[]
   populationOperationalEvents PopulationOperationalEvent[]
-  populationEvidenceRecords PopulationEvidenceRecord[]
+  populationEvidenceRecords   PopulationEvidenceRecord[]
   populationEvidenceManifests PopulationEvidenceManifest[]
+  populationEvidenceReports   PopulationEvidenceReport[]
   // Programme de recommandation
-  referralsSent          Referral[]                   @relation("ReferralReferrer")
-  referralReceived       Referral?                    @relation("ReferralReferred")
-  referralCredits        ReferralCredit[]             @relation("ReferralCreditOrganization")
+  referralsSent               Referral[]                   @relation("ReferralReferrer")
+  referralReceived            Referral?                    @relation("ReferralReferred")
+  referralCredits             ReferralCredit[]             @relation("ReferralCreditOrganization")
 }
 
 model User {
@@ -202,9 +203,10 @@ model Building {
   // Profil réglementaire et opérationnel de l'installation.
   // Cette relation reste optionnelle : un bâtiment standard n'a pas
   // automatiquement de profil RUE.
-  rueFacilityProfile RueFacilityProfile?
-  populationEvidenceRecords PopulationEvidenceRecord[]
+  rueFacilityProfile          RueFacilityProfile?
+  populationEvidenceRecords   PopulationEvidenceRecord[]
   populationEvidenceManifests PopulationEvidenceManifest[]
+  populationEvidenceReports   PopulationEvidenceReport[]
 }
 
 model Project {
@@ -770,29 +772,29 @@ model Notification {
 }
 
 model ClientUser {
-  id             String                @id @default(uuid())
-  email          String                @unique
-  password       String
-  firstName      String
-  lastName       String
-  role           ClientUserRole        @default(CLIENT_MANAGER)
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  password              String
+  firstName             String
+  lastName              String
+  role                  ClientUserRole         @default(CLIENT_MANAGER)
   populationPermissions PopulationPermission[] @default([])
-  buildingIds    String[]
-  isActive       Boolean               @default(true)
-  clientId       String
-  client         Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  organizationId String
-  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  signatures     DocumentSignature[]
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  magicLinks     MagicLink[]
-  engagements    DocumentEngagement[]
-  bookings       Booking[]
-  mfaCode        String?
-  mfaCodeExpiry  DateTime?
-  uploadedFiles  ProjectFile[]         @relation("ClientFileUploader")
-  trustedDevices ClientTrustedDevice[]
+  buildingIds           String[]
+  isActive              Boolean                @default(true)
+  clientId              String
+  client                Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  organizationId        String
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  signatures            DocumentSignature[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  magicLinks            MagicLink[]
+  engagements           DocumentEngagement[]
+  bookings              Booking[]
+  mfaCode               String?
+  mfaCodeExpiry         DateTime?
+  uploadedFiles         ProjectFile[]          @relation("ClientFileUploader")
+  trustedDevices        ClientTrustedDevice[]
 }
 
 model DocumentSignature {
@@ -1145,7 +1147,7 @@ model PopulationProgram {
   rueFacilityProfileId String             @unique
   rueFacilityProfile   RueFacilityProfile @relation(fields: [rueFacilityProfileId], references: [id], onDelete: Restrict)
 
-  status PopulationProgramStatus @default(NOT_CONFIGURED)
+  status         PopulationProgramStatus  @default(NOT_CONFIGURED)
   deliveryMode   PopulationDeliveryMode   @default(SANDBOX)
   governanceMode PopulationGovernanceMode @default(STANDARD)
 
@@ -1199,8 +1201,9 @@ model PopulationProgram {
   consentEvents     PopulationConsentEvent[]
   alerts            PopulationAlert[]
   operationalEvents PopulationOperationalEvent[]
-  evidenceRecords    PopulationEvidenceRecord[]
-  evidenceManifests  PopulationEvidenceManifest[]
+  evidenceRecords   PopulationEvidenceRecord[]
+  evidenceManifests PopulationEvidenceManifest[]
+  evidenceReports   PopulationEvidenceReport[]
 
   @@index([status])
   @@index([registrationEnabled])
@@ -1212,8 +1215,8 @@ model PopulationSubscriber {
   programId String
   program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
 
-  status PopulationSubscriberStatus @default(PENDING_VERIFICATION)
-  isSynthetic Boolean @default(false)
+  status      PopulationSubscriberStatus @default(PENDING_VERIFICATION)
+  isSynthetic Boolean                    @default(false)
 
   // Langue utilisée pour les communications d'urgence.
   preferredLanguage PopulationPreferredLanguage @default(FR)
@@ -1393,13 +1396,13 @@ model PopulationAlert {
 
   // ── Cycle de vie ───────────────────────────────────────────────────────
 
-  scheduledAt        DateTime?
-  recipientsFrozenAt DateTime?
+  scheduledAt          DateTime?
+  recipientsFrozenAt   DateTime?
   deliveryModeSnapshot PopulationDeliveryMode?
-  sendingAt          DateTime?
-  activatedAt        DateTime?
-  endedAt            DateTime?
-  cancelledAt DateTime?
+  sendingAt            DateTime?
+  activatedAt          DateTime?
+  endedAt              DateTime?
+  cancelledAt          DateTime?
 
   // ── Preuve / snapshot ──────────────────────────────────────────────────
   //
@@ -1449,8 +1452,8 @@ model PopulationAlertZone {
   zoneNameFRSnapshot String
   zoneNameENSnapshot String?
 
-  geometrySnapshot      Json?
-  maxDistanceKmSnapshot Float?
+  geometrySnapshot         Json?
+  maxDistanceKmSnapshot    Float?
   protectiveActionSnapshot RueProtectiveAction?
 
   instructionFRSnapshot String?
@@ -1481,8 +1484,8 @@ model PopulationAlertDelivery {
   subscriberId String?
   subscriber   PopulationSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
 
-  channel PopulationAlertChannel
-  status  PopulationDeliveryStatus @default(QUEUED)
+  channel           PopulationAlertChannel
+  status            PopulationDeliveryStatus             @default(QUEUED)
   suppressionReason PopulationDeliverySuppressionReason?
 
   // Langue réellement utilisée pour cette transmission.
@@ -1507,12 +1510,12 @@ model PopulationAlertDelivery {
   providerIdempotencyKey String? @unique
 
   // État de la tentative courante et planification des reprises confirmées.
-  attemptCount    Int       @default(0)
-  lastAttemptAt   DateTime?
-  nextAttemptAt   DateTime?
-  claimedAt       DateTime?
-  leaseExpiresAt  DateTime?
-  outcomeUnknownAt DateTime?
+  attemptCount          Int       @default(0)
+  lastAttemptAt         DateTime?
+  nextAttemptAt         DateTime?
+  claimedAt             DateTime?
+  leaseExpiresAt        DateTime?
+  outcomeUnknownAt      DateTime?
   // Frontière persistée juste avant l'appel réseau fournisseur. Une lease
   // expirée sans cette valeur est rejouable; avec cette valeur elle doit être
   // réconciliée, jamais renvoyée aveuglément.
@@ -1546,11 +1549,11 @@ model PopulationDeliveryProviderEvent {
   deliveryId String
   delivery   PopulationAlertDelivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict)
 
-  provider         String
-  providerMessageId String
-  eventType        PopulationDeliveryProviderEventType
+  provider           String
+  providerMessageId  String
+  eventType          PopulationDeliveryProviderEventType
   providerOccurredAt DateTime
-  receivedAt       DateTime @default(now())
+  receivedAt         DateTime                            @default(now())
 
   // Empreintes SHA-256 de valeurs techniques minimales. Aucun payload brut,
   // contenu de message ou destination citoyenne n'est conservé ici.
@@ -2509,9 +2512,10 @@ model PopulationOperationalEvent {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  alerts PopulationAlert[]
-  evidenceRecords PopulationEvidenceRecord[]
+  alerts            PopulationAlert[]
+  evidenceRecords   PopulationEvidenceRecord[]
   evidenceManifests PopulationEvidenceManifest[]
+  evidenceReports   PopulationEvidenceReport[]
 
   @@index([organizationId])
   @@index([programId])
@@ -2537,25 +2541,26 @@ model PopulationEvidenceRecord {
   operationalEventId String
   operationalEvent   PopulationOperationalEvent @relation(fields: [operationalEventId], references: [id], onDelete: Restrict)
 
-  reference     String @unique @default(dbgenerated("population_evidence_reference()"))
+  reference     String                   @unique @default(dbgenerated("population_evidence_reference()"))
   schemaVersion String
-  version       Int    @default(1)
+  version       Int                      @default(1)
   status        PopulationEvidenceStatus @default(FINALIZED)
 
-  generatedAt     DateTime @default(now())
+  generatedAt     DateTime      @default(now())
   generatedByType CoroActorType
   generatedById   String
-  finalizedAt     DateTime @default(now())
+  finalizedAt     DateTime      @default(now())
   finalizedByType CoroActorType
   finalizedById   String
 
   snapshot       Json
   snapshotSha256 String
 
-  supersedesId String? @unique
-  supersedes   PopulationEvidenceRecord? @relation("PopulationEvidenceSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
-  supersededBy PopulationEvidenceRecord? @relation("PopulationEvidenceSupersession")
+  supersedesId String?                      @unique
+  supersedes   PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession")
   manifests    PopulationEvidenceManifest[]
+  reports      PopulationEvidenceReport[]
 
   createdAt DateTime @default(now())
 
@@ -2585,9 +2590,9 @@ model PopulationEvidenceManifest {
   evidenceRecord   PopulationEvidenceRecord @relation(fields: [evidenceRecordId], references: [id], onDelete: Restrict)
 
   schemaVersion String
-  version       Int @default(1)
+  version       Int    @default(1)
 
-  generatedAt     DateTime @default(now())
+  generatedAt     DateTime      @default(now())
   generatedByType CoroActorType
   generatedById   String
 
@@ -2596,6 +2601,8 @@ model PopulationEvidenceManifest {
 
   createdAt DateTime @default(now())
 
+  reports PopulationEvidenceReport[]
+
   @@unique([evidenceRecordId, version])
   @@index([organizationId, buildingId])
   @@index([programId])
@@ -2603,9 +2610,55 @@ model PopulationEvidenceManifest {
   @@index([createdAt])
 }
 
+model PopulationEvidenceReport {
+  id String @id @default(uuid())
+
+  organizationId     String
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  buildingId         String
+  building           Building                   @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  programId          String
+  program            PopulationProgram          @relation(fields: [programId], references: [id], onDelete: Restrict)
+  operationalEventId String
+  operationalEvent   PopulationOperationalEvent @relation(fields: [operationalEventId], references: [id], onDelete: Restrict)
+  evidenceRecordId   String
+  evidenceRecord     PopulationEvidenceRecord   @relation(fields: [evidenceRecordId], references: [id], onDelete: Restrict)
+  manifestId         String
+  manifest           PopulationEvidenceManifest @relation(fields: [manifestId], references: [id], onDelete: Restrict)
+
+  version  Int                            @default(1)
+  format   String                         @default("PDF")
+  language String                         @default("FR")
+  status   PopulationEvidenceReportStatus @default(GENERATING)
+
+  generationStartedAt  DateTime      @default(now())
+  generationLeaseUntil DateTime
+  generatedAt          DateTime
+  generatedByType      CoroActorType
+  generatedById        String
+  generatorVersion     String
+
+  storageKey   String    @unique
+  fileSize     Int?
+  reportSha256 String?
+  finalizedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([evidenceRecordId, version, language, format])
+  @@index([organizationId, buildingId])
+  @@index([programId])
+  @@index([operationalEventId])
+  @@index([status, generationLeaseUntil])
+}
+
 enum PopulationEvidenceStatus {
   FINALIZED
   SUPERSEDED
+}
+
+enum PopulationEvidenceReportStatus {
+  GENERATING
+  FINALIZED
 }
 
 model IncidentTask {

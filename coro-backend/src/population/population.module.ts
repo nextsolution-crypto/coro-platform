@@ -9,13 +9,15 @@ import { PopulationBrevoWebhookController } from './population-brevo-webhook.con
 import { PopulationBrevoWebhookService } from './population-brevo-webhook.service';
 import { PopulationOperationalEventsService } from './population-operational-events.service';
 import { PopulationEvidenceService } from './population-evidence.service';
+import { PopulationEvidenceReportService } from './population-evidence-report.service';
+import { StorageModule } from '../storage/storage.module';
 import {
   POPULATION_ENVIRONMENT,
   PopulationReadinessService,
 } from './population-readiness.service';
 
 @Module({
-  imports: [GeocodingModule],
+  imports: [GeocodingModule, StorageModule],
   controllers: [
     PopulationPublicController,
     PopulationReadinessController,
@@ -33,12 +35,14 @@ import {
     PopulationBrevoWebhookService,
     PopulationOperationalEventsService,
     PopulationEvidenceService,
+    PopulationEvidenceReportService,
   ],
   exports: [
     PopulationService,
     PopulationReadinessService,
     PopulationOperationalEventsService,
     PopulationEvidenceService,
+    PopulationEvidenceReportService,
   ],
 })
 export class PopulationModule {}

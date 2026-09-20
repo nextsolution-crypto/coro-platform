@@ -15,6 +15,7 @@ import {
   hashEvidenceSnapshot,
   PopulationEvidenceService,
 } from '../src/population/population-evidence.service';
+import { PopulationEvidenceReportService } from '../src/population/population-evidence-report.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error('TEST_DATABASE_URL est obligatoire en CI');
@@ -25,6 +26,16 @@ describePostgres('Population evidence PostgreSQL invariants', () => {
     ? new PrismaClient({ datasources: { db: { url: databaseUrl } } })
     : new PrismaClient();
   const service = new PopulationEvidenceService(prisma as any);
+  const privateObjects = new Map<string, Buffer>();
+  const reportService = new PopulationEvidenceReportService(prisma as any, {
+    uploadPrivateImmutable: jest.fn(async (bytes: Buffer, key: string) => {
+      if (privateObjects.has(key)) throw new Error('PRIVATE_OBJECT_ALREADY_EXISTS');
+      privateObjects.set(key, Buffer.from(bytes)); return { storageKey: key };
+    }),
+    downloadPrivate: jest.fn(async (key: string) => {
+      const bytes = privateObjects.get(key); if (!bytes) throw new Error('PRIVATE_OBJECT_NOT_FOUND'); return Buffer.from(bytes);
+    }),
+  } as any);
   const suffix = randomUUID();
   const ids = {
     organization: `evidence-org-${suffix}`,
@@ -254,6 +265,25 @@ describePostgres('Population evidence PostgreSQL invariants', () => {
     await expect(
       prisma.populationEvidenceRecord.delete({ where: { id: evidence.id } }),
     ).rejects.toThrow();
+  });
+
+  it('genere un report v1 concurrent unique, tenant-safe, hash-verifie et immuable', async () => {
+    const evidence = await service.getForEvent(ids.building, ids.organization, ids.event);
+    const generate = () => reportService.generate(ids.building, ids.organization, evidence.id, { type: CoroActorType.SYSTEM, id: 'postgres-test' });
+    const [first, second] = await Promise.all([generate(), generate()]);
+    expect(second.id).toBe(first.id);
+    expect(first.status).toBe('FINALIZED');
+    expect(first.reportSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.fileSize).toBeGreaterThan(1000);
+    expect((first as any).storageKey).toBeUndefined();
+    expect(await prisma.populationEvidenceReport.count({ where: { evidenceRecordId: evidence.id } })).toBe(1);
+    const downloaded = await reportService.download(ids.building, ids.organization, evidence.id);
+    expect(downloaded.bytes.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    expect(downloaded.filename).toBe(`${evidence.reference}_v1.pdf`);
+    await expect(reportService.get(ids.building, ids.otherOrganization, evidence.id)).rejects.toThrow();
+    await expect(reportService.download('other-building', ids.organization, evidence.id)).rejects.toThrow();
+    await expect(prisma.populationEvidenceReport.update({ where: { id: first.id }, data: { reportSha256: '0'.repeat(64) } })).rejects.toThrow('immutable');
+    await expect(prisma.populationEvidenceReport.delete({ where: { id: first.id } })).rejects.toThrow('immutable');
   });
 
   it('impose event/version unique et refuse UPDATE/DELETE FINALIZED', async () => {

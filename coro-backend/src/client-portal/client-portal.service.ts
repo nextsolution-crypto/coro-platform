@@ -21,6 +21,7 @@ import { CreatePopulationAlertDraftDto } from '../population/dto/create-populati
 import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
 import { PopulationEvidenceService } from '../population/population-evidence.service';
+import { PopulationEvidenceReportService } from '../population/population-evidence-report.service';
 
 @Injectable()
 export class ClientPortalService {
@@ -33,6 +34,7 @@ export class ClientPortalService {
     private notificationsService: NotificationsService,
     private populationService: PopulationService,
     private populationEvidenceService: PopulationEvidenceService,
+    private populationEvidenceReportService: PopulationEvidenceReportService,
   ) {}
 
   async generatePopulationEvidence(
@@ -153,6 +155,22 @@ export class ClientPortalService {
       actor.organizationId,
       evidenceId,
     );
+  }
+
+  async generatePopulationEvidenceReport(buildingId: string, evidenceId: string, actor: any) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(actor, PopulationPermission.POPULATION_PREPARE);
+    return this.populationEvidenceReportService.generate(buildingId, actor.organizationId, evidenceId, { type: CoroActorType.CLIENT_USER, id: actor.sub! });
+  }
+
+  async getPopulationEvidenceReport(buildingId: string, evidenceId: string, actor: any) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationEvidenceReportService.get(buildingId, actor.organizationId, evidenceId);
+  }
+
+  async downloadPopulationEvidenceReport(buildingId: string, evidenceId: string, actor: any) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationEvidenceReportService.download(buildingId, actor.organizationId, evidenceId);
   }
 
   private async assertPopulationPermission(

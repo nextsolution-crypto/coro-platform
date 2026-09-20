@@ -24,6 +24,67 @@ export class StorageService {
     return kSigning;
   }
 
+  private privateRequest(
+    method: 'PUT' | 'GET',
+    key: string,
+    body?: Buffer,
+    contentType = 'application/octet-stream',
+  ): Promise<Buffer> {
+    const host = `${this.bucket}.tor1.digitaloceanspaces.com`;
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '').substring(0, 15) + 'Z';
+    const dateStamp = amzDate.substring(0, 8);
+    const payload = body ?? Buffer.alloc(0);
+    const payloadHash = crypto.createHash('sha256').update(payload).digest('hex');
+    const headers: Record<string, string> = {
+      host,
+      'x-amz-content-sha256': payloadHash,
+      'x-amz-date': amzDate,
+    };
+    if (method === 'PUT') {
+      headers['content-type'] = contentType;
+      headers['if-none-match'] = '*';
+    }
+    const signedHeaders = Object.keys(headers).sort().join(';');
+    const canonicalHeaders = Object.keys(headers).sort().map((name) => `${name}:${headers[name]}\n`).join('');
+    const canonicalRequest = [method, `/${key}`, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+    const credentialScope = `${dateStamp}/tor1/s3/aws4_request`;
+    const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credentialScope, crypto.createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
+    const signature = crypto.createHmac('sha256', this.getSignatureKey(dateStamp, 'tor1', 's3')).update(stringToSign).digest('hex');
+    const requestHeaders: Record<string, string | number> = {
+      ...headers,
+      Authorization: `AWS4-HMAC-SHA256 Credential=${this.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
+    };
+    if (method === 'PUT') requestHeaders['Content-Length'] = payload.length;
+
+    return new Promise((resolve, reject) => {
+      const req = https.request({ hostname: host, path: `/${key}`, method, headers: requestHeaders }, (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on('end', () => {
+          const response = Buffer.concat(chunks);
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) return resolve(response);
+          if (method === 'PUT' && [409, 412].includes(res.statusCode ?? 0)) return reject(new Error('PRIVATE_OBJECT_ALREADY_EXISTS'));
+          if (method === 'GET' && res.statusCode === 404) return reject(new Error('PRIVATE_OBJECT_NOT_FOUND'));
+          reject(new Error(`Private storage ${method} failed: ${res.statusCode}`));
+        });
+      });
+      req.on('error', reject);
+      if (body) req.write(body);
+      req.end();
+    });
+  }
+
+  async uploadPrivateImmutable(fileBuffer: Buffer, storageKey: string, contentType: string): Promise<{ storageKey: string }> {
+    await this.privateRequest('PUT', storageKey, fileBuffer, contentType);
+    this.logger.log(`Private evidence object stored: ${storageKey}`);
+    return { storageKey };
+  }
+
+  async downloadPrivate(storageKey: string): Promise<Buffer> {
+    return this.privateRequest('GET', storageKey);
+  }
+
   async uploadFile(
     fileBuffer: Buffer,
     fileName: string,

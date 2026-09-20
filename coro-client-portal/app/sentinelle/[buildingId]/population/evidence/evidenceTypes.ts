@@ -55,3 +55,9 @@ export type EvidenceVerification = {
   status: "VERIFIED" | "MISMATCH" | "UNAVAILABLE"; snapshot: boolean; manifest: boolean;
   components: Record<string, boolean>; verifiedAt: string;
 };
+
+export type PopulationEvidenceReport = {
+  id: string; version: number; format: "PDF"; language: "FR";
+  status: "GENERATING" | "FINALIZED"; generatedAt: string; generatedByType: string;
+  generatorVersion: string; fileSize: number | null; reportSha256: string | null; finalizedAt: string | null;
+};

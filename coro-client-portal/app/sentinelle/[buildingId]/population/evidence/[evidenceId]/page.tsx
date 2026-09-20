@@ -5,8 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Copy, FileCheck2, ShieldAlert } from "lucide-react";
 import PortalLayout from "../../../../../components/PortalLayout";
-import { ApiError, apiGet, apiPost, getUser } from "../../../../../store/auth";
-import type { EvidenceActor, EvidenceCommunication, EvidenceVerification, PopulationEvidenceManifest, PopulationEvidenceRecord } from "../evidenceTypes";
+import { ApiError, apiDownload, apiGet, apiPost, getUser } from "../../../../../store/auth";
+import type { EvidenceActor, EvidenceCommunication, EvidenceVerification, PopulationEvidenceManifest, PopulationEvidenceRecord, PopulationEvidenceReport } from "../evidenceTypes";
 import { communicationLabel, evidenceExceptions, formatEvidenceUtc } from "../evidenceView.mjs";
 import styles from "../evidence.module.css";
 
@@ -50,6 +50,7 @@ export default function PopulationEvidencePage() {
   const [record, setRecord] = useState<PopulationEvidenceRecord | null>(null);
   const [manifest, setManifest] = useState<PopulationEvidenceManifest | null>(null);
   const [verification, setVerification] = useState<EvidenceVerification | null>(null);
+  const [report, setReport] = useState<PopulationEvidenceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,8 @@ export default function PopulationEvidencePage() {
       setRecord(evidence);
       try { setManifest((await apiGet(`/client-portal/buildings/${buildingId}/population/evidence/${evidenceId}/manifest`)) as PopulationEvidenceManifest); }
       catch (caught) { if (!(caught instanceof ApiError && caught.status === 404)) throw caught; setManifest(null); }
+      try { setReport((await apiGet(`/client-portal/buildings/${buildingId}/population/evidence/${evidenceId}/report`)) as PopulationEvidenceReport); }
+      catch (caught) { if (!(caught instanceof ApiError && caught.status === 404)) throw caught; setReport(null); }
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Le dossier n'a pas pu etre charge."); }
     finally { setLoading(false); }
   };
@@ -78,6 +81,22 @@ export default function PopulationEvidencePage() {
     setWorking(true); setError(null);
     try { setVerification((await apiGet(`/client-portal/buildings/${buildingId}/population/evidence/${evidenceId}/verify`)) as EvidenceVerification); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "La verification n'a pas pu etre effectuee."); }
+    finally { setWorking(false); }
+  };
+  const generateReport = async () => {
+    if (!window.confirm("GENERER LE RAPPORT PDF ?\n\nLe rapport sera cree a partir du dossier de preuve fige. Une fois finalise, cet artefact ne pourra plus etre modifie. Cette action n'envoie aucune communication.")) return;
+    setWorking(true); setError(null);
+    try { setReport((await apiPost(`/client-portal/buildings/${buildingId}/population/evidence/${evidenceId}/report`, {})) as PopulationEvidenceReport); }
+    catch (caught) { await load(); setError(caught instanceof Error ? caught.message : "Le rapport PDF n'a pas pu etre genere."); }
+    finally { setWorking(false); }
+  };
+  const downloadReport = async () => {
+    setWorking(true); setError(null);
+    try {
+      const result = await apiDownload(`/client-portal/buildings/${buildingId}/population/evidence/${evidenceId}/report/download`);
+      const url = URL.createObjectURL(result.blob); const anchor = document.createElement("a");
+      anchor.href = url; anchor.download = result.filename; anchor.click(); URL.revokeObjectURL(url);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Le telechargement a echoue."); }
     finally { setWorking(false); }
   };
 
@@ -101,6 +120,9 @@ export default function PopulationEvidencePage() {
       {!manifest ? <><p>Le snapshot de preuve est fige. Aucun manifest d'integrite n'a encore ete genere.</p><p className={styles.trust}>Le manifest calcule les empreintes des composants du dossier. Il ne constitue pas une signature numerique independante.</p><div className={styles.actions}><button className={`${styles.action} ${styles.actionPrimary}`} type="button" disabled={!canGenerate || working} onClick={() => void generateManifest()}>{working ? "GENERATION..." : "GENERER LE MANIFEST D'INTEGRITE"}</button></div></> : <div className={styles.actions}><button className={`${styles.action} ${styles.actionPrimary}`} type="button" disabled={working} onClick={() => void verify()}>{working ? "VERIFICATION..." : "VERIFIER L'INTEGRITE"}</button></div>}
       {verification && <div className={`${styles.warning} ${verification.status === "MISMATCH" ? styles.critical : ""}`}>{verification.status === "VERIFIED" ? <CheckCircle2 size={20} /> : verification.status === "MISMATCH" ? <ShieldAlert size={20} /> : <FileCheck2 size={20} />}<strong>{verification.status === "VERIFIED" ? " INTEGRITE VERIFIEE" : verification.status === "MISMATCH" ? " DIVERGENCE D'INTEGRITE DETECTEE" : " VERIFICATION NON DISPONIBLE"}</strong>{verification.status === "VERIFIED" && <p>Les donnees du dossier correspondent aux empreintes enregistrees par CORO.</p>}<p>Derniere verification dans cette session : {formatEvidenceUtc(verification.verifiedAt)}</p></div>}
       <p className={styles.trust}>La verification d'integrite confirme que les donnees correspondent aux empreintes enregistrees par CORO.<br /><br />Le dossier et ses empreintes sont actuellement conserves dans la meme infrastructure CORO. Cette verification ne constitue pas une signature numerique independante.</p>
+    </section>
+    <section className={styles.section} aria-live="polite"><h2>Rapport PDF</h2>
+      {report?.status === "FINALIZED" ? <><dl className={styles.hashGrid}><Metric label="Version" value={report.version} /><Metric label="Genere le" value={formatEvidenceUtc(report.generatedAt)} /><Metric label="Genere par" value={`Acteur ${report.generatedByType} enregistre dans la piste d'audit`} /><Metric label="Taille" value={report.fileSize ? `${new Intl.NumberFormat("fr-CA").format(report.fileSize)} octets` : "-"} /><Metric label="SHA-256" value={report.reportSha256 ? <Hash value={report.reportSha256} /> : "-"} /></dl><div className={styles.actions}><button className={`${styles.action} ${styles.actionPrimary}`} type="button" disabled={working} onClick={() => void downloadReport()}>{working ? "TELECHARGEMENT..." : "TELECHARGER LE PDF"}</button></div></> : <><p>Aucun rapport PDF n'a encore ete genere.</p><p className={styles.sectionLead}>Le rapport sera produit a partir du dossier de preuve fige et de son manifest verifie.</p><div className={styles.actions}><button className={`${styles.action} ${styles.actionPrimary}`} type="button" disabled={!canGenerate || !manifest || verification?.status !== "VERIFIED" || working} onClick={() => void generateReport()} title={!canGenerate ? "Permission POPULATION_PREPARE requise" : verification?.status !== "VERIFIED" ? "Verifiez d'abord l'integrite du dossier" : undefined}>{working ? "GENERATION..." : "GENERER LE RAPPORT PDF"}</button></div></>}
     </section>
   </main></PortalLayout>;
 }
