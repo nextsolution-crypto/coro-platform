@@ -47,6 +47,7 @@ import { PcaConfiguratorModule } from './pca/pca-configurator/pca-configurator.m
 import { OccupancyModule } from './occupancy/occupancy.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { PopulationModule } from './population/population.module';
+import { OperationalReviewsModule } from './operational-reviews/operational-reviews.module';
 import { ExerciseReportsModule } from './exercise-reports/exercise-reports.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -107,7 +108,8 @@ import { APP_GUARD } from '@nestjs/core';
 PcaConfiguratorModule,
 OccupancyModule,
 ReferralsModule,
-PopulationModule,
+    PopulationModule,
+    OperationalReviewsModule,
 ExerciseReportsModule,
 ],
   controllers: [AppController],

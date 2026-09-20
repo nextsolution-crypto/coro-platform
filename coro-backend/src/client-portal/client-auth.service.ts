@@ -57,6 +57,7 @@ export class ClientAuthService {
           organizationId: clientUser.organizationId,
           buildingIds: clientUser.buildingIds,
           populationPermissions: clientUser.populationPermissions,
+          operationalReviewPermissions: clientUser.operationalReviewPermissions,
           type: 'CLIENT',
         });
         return {
@@ -71,6 +72,7 @@ export class ClientAuthService {
             clientName: clientUser.client.name,
             organizationId: clientUser.organizationId,
             populationPermissions: clientUser.populationPermissions,
+            operationalReviewPermissions: clientUser.operationalReviewPermissions,
           },
         };
       }
@@ -165,6 +167,7 @@ export class ClientAuthService {
       organizationId: clientUser.organizationId,
       buildingIds: clientUser.buildingIds,
       populationPermissions: clientUser.populationPermissions,
+      operationalReviewPermissions: clientUser.operationalReviewPermissions,
       type: 'CLIENT',
     });
 
@@ -181,6 +184,7 @@ export class ClientAuthService {
         clientName: clientUser.client?.name,
         organizationId: clientUser.organizationId,
         populationPermissions: clientUser.populationPermissions,
+        operationalReviewPermissions: clientUser.operationalReviewPermissions,
       },
     };
   }
@@ -295,6 +299,7 @@ export class ClientAuthService {
       organizationId: clientUser.organizationId,
       buildingIds: clientUser.buildingIds,
       populationPermissions: clientUser.populationPermissions,
+      operationalReviewPermissions: clientUser.operationalReviewPermissions,
       type: 'CLIENT',
     });
 
@@ -310,6 +315,7 @@ export class ClientAuthService {
         clientName: clientUser.client?.name,
         organizationId: clientUser.organizationId,
         populationPermissions: clientUser.populationPermissions,
+        operationalReviewPermissions: clientUser.operationalReviewPermissions,
       },
     };
   }

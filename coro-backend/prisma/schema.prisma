@@ -779,6 +779,7 @@ model ClientUser {
   lastName              String
   role                  ClientUserRole         @default(CLIENT_MANAGER)
   populationPermissions PopulationPermission[] @default([])
+  operationalReviewPermissions OperationalReviewPermission[] @default([])
   buildingIds           String[]
   isActive              Boolean                @default(true)
   clientId              String
@@ -1069,6 +1070,33 @@ enum CoroActorType {
   USER
   CLIENT_USER
   SYSTEM
+}
+
+enum OperationalReviewPermission {
+  REX_CREATE
+  REX_EDIT
+  REX_REVIEW
+  REX_FINALIZE
+}
+
+enum OperationalReviewStatus {
+  DRAFT
+  IN_REVIEW
+  FINALIZED
+}
+
+enum OperationalReviewConfidentiality {
+  RESTRICTED
+  BUILDING_TEAM
+  ORGANIZATION
+  ADVISOR
+}
+
+enum OperationalReviewAuditEventType {
+  CREATED
+  UPDATED
+  SUBMITTED
+  FINALIZED
 }
 
 model RueFacilityProfile {
@@ -2561,6 +2589,7 @@ model PopulationEvidenceRecord {
   supersededBy PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession")
   manifests    PopulationEvidenceManifest[]
   reports      PopulationEvidenceReport[]
+  operationalReviews OperationalReview[]
 
   createdAt DateTime @default(now())
 
@@ -3125,6 +3154,58 @@ model CorrectiveAction {
   @@index([buildingId])
   @@index([incidentId])
   @@index([exerciseReportId])
+}
+
+model OperationalReview {
+  id String @id @default(uuid())
+  organizationId String
+  reference String @unique @default(dbgenerated("operational_review_reference()"))
+  version Int @default(1)
+  status OperationalReviewStatus @default(DRAFT)
+  confidentiality OperationalReviewConfidentiality @default(RESTRICTED)
+  title String
+  summary String?
+  buildingId String?
+  projectId String?
+  populationOperationalEventId String?
+  populationEvidenceRecordId String?
+  populationEvidenceRecord PopulationEvidenceRecord? @relation(fields: [populationEvidenceRecordId], references: [id], onDelete: Restrict)
+  incidentEventId String?
+  exerciseReportId String?
+  createdByType CoroActorType
+  createdById String
+  submittedAt DateTime?
+  submittedByType CoroActorType?
+  submittedById String?
+  finalizedAt DateTime?
+  finalizedByType CoroActorType?
+  finalizedById String?
+  supersedesId String? @unique
+  supersedes OperationalReview? @relation("OperationalReviewSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy OperationalReview? @relation("OperationalReviewSupersession")
+  auditEvents OperationalReviewAuditEvent[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([buildingId])
+  @@index([populationOperationalEventId])
+  @@index([incidentEventId])
+  @@index([exerciseReportId])
+  @@index([status])
+}
+
+model OperationalReviewAuditEvent {
+  id String @id @default(uuid())
+  reviewId String
+  review OperationalReview @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+  type OperationalReviewAuditEventType
+  actorType CoroActorType
+  actorId String
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  @@index([reviewId, createdAt])
 }
 
 model VisitorInvitation {
