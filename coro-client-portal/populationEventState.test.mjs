@@ -8,6 +8,7 @@ import {
   getPopulationAlertWorkflowStage,
   getPopulationDeliveryModeLabel,
   derivePopulationWorkflowState,
+  getPopulationResumeAction,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {
@@ -18,6 +19,46 @@ test("supporte aucun event et selectionne la communication legacy ACTIVE", () =>
     ]).map((alert) => alert.id),
     ["legacy-1"],
   );
+});
+
+test("propose une reprise contextuelle avec la permission de la prochaine etape", () => {
+  const event = { status: "ACTIVE" };
+  const cases = [
+    ["DRAFT", null, null, "EDIT", "POPULATION_PREPARE"],
+    ["READY", null, null, "APPROVAL_REQUIRED", "POPULATION_APPROVE"],
+    [
+      "READY",
+      "2026-09-20T10:00:00Z",
+      null,
+      "FREEZE_REQUIRED",
+      "POPULATION_PREPARE",
+    ],
+    [
+      "READY",
+      "2026-09-20T10:00:00Z",
+      "2026-09-20T10:05:00Z",
+      "SEND_READY",
+      "POPULATION_SEND",
+    ],
+  ];
+  for (const [status, approvedAt, recipientsFrozenAt, state, permission] of cases) {
+    const alert = {
+      id: "same-alert-id",
+      type: "ALL_CLEAR",
+      status,
+      approvedAt,
+      recipientsFrozenAt,
+      deliveryModeSnapshot: recipientsFrozenAt ? "LIVE" : null,
+      deliveryCounts: recipientsFrozenAt ? { QUEUED: 1 } : {},
+    };
+    const before = structuredClone(alert);
+    const action = getPopulationResumeAction(event, alert);
+    assert.equal(action.state, state);
+    assert.equal(action.permission, permission);
+    assert.equal(action.title, "REPRENDRE LA FIN D’ALERTE");
+    assert.deepEqual(alert, before);
+    assert.equal(alert.id, "same-alert-id");
+  }
 });
 
 test("reconstruit tout le workflow depuis deux snapshots serveur sans etat client", () => {

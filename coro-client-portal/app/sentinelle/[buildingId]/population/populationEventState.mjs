@@ -122,3 +122,34 @@ export function getPopulationDeliveryModeLabel(mode) {
   if (mode === "SANDBOX") return "SIMULATION";
   return "MODE NON FIGÉ";
 }
+
+export function getPopulationResumeAction(event, alert) {
+  if (!event || event.status !== "ACTIVE" || !alert) return null;
+  const state = derivePopulationWorkflowState({ event, alert });
+  const permissionByState = {
+    EDIT: "POPULATION_PREPARE",
+    APPROVAL_REQUIRED: "POPULATION_APPROVE",
+    FREEZE_REQUIRED: "POPULATION_PREPARE",
+    SEND_READY: "POPULATION_SEND",
+  };
+  const permission = permissionByState[state];
+  if (!permission) return null;
+  const subject =
+    alert.type === "ALL_CLEAR"
+      ? "LA FIN D’ALERTE"
+      : alert.type === "UPDATE"
+        ? "LA MISE À JOUR"
+        : "L’ALERTE INITIALE";
+  const detailByState = {
+    EDIT: "Édition à terminer",
+    APPROVAL_REQUIRED: "Approbation requise",
+    FREEZE_REQUIRED: "Roster à figer",
+    SEND_READY: "Diffusion à confirmer",
+  };
+  return {
+    state,
+    permission,
+    title: `REPRENDRE ${subject}`,
+    detail: detailByState[state],
+  };
+}

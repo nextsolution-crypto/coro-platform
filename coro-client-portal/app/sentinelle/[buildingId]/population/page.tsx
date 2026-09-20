@@ -29,6 +29,7 @@ import {
   getPopulationAlertWorkflowStage,
   getPopulationDeliveryModeLabel,
   derivePopulationWorkflowState,
+  getPopulationResumeAction,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -662,6 +663,64 @@ export default function PopulationPage() {
     return result;
   };
 
+  const resumeOperationalCommunication = async (
+    event: PopulationOperationalEvent,
+    alert: PopulationOperationalEventAlert,
+  ) => {
+    setCreatedAlert(alert as CreatedPopulationAlert);
+    setAlertForm({
+      type: alert.type,
+      titleFR: alert.titleFR || "",
+      titleEN: alert.titleEN || "",
+      messageFR: alert.messageFR || "",
+      messageEN: alert.messageEN || "",
+      instructionFR: alert.instructionFR || "",
+      instructionEN: alert.instructionEN || "",
+    });
+    setFreezeResult(null);
+    setLivePreflight(null);
+    setAlertStep(6);
+    setAlertComposerOpen(true);
+
+    if (
+      derivePopulationWorkflowState({ event, alert }) === "SEND_READY"
+    ) {
+      const deliveryCount = Object.values(alert.deliveryCounts ?? {}).reduce(
+        (sum, count) => sum + count,
+        0,
+      );
+      setFreezeResult({
+        alertId: alert.id,
+        status: alert.status,
+        approvedAt: alert.approvedAt,
+        recipientsFrozenAt: alert.recipientsFrozenAt!,
+        deliveryMode: alert.deliveryModeSnapshot!,
+        targeting: {
+          subscriberCount: alert.targetedSubscriberCount ?? 0,
+          deliveryCount,
+          smsDeliveryCount: alert.deliveryChannelCounts?.SMS ?? 0,
+          emailDeliveryCount: alert.deliveryChannelCounts?.EMAIL ?? 0,
+          deliverableCount: alert.deliverableDeliveryCount ?? 0,
+          deliverableSmsCount: 0,
+          deliverableEmailCount: 0,
+          suppressedCount: alert.deliveryCounts?.SUPPRESSED ?? 0,
+          ...(alert.targeting ?? {}),
+        },
+        deliveries: [],
+      });
+      if (alert.deliveryModeSnapshot === "LIVE") {
+        await loadLivePreflight(alert.id);
+      }
+    }
+
+    window.setTimeout(() => {
+      alertComposerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  };
+
   const loadIncidentAlertHistory = async (incidentId: string) => {
     setIncidentAlertsLoading(true);
     setIncidentAlertsError(null);
@@ -799,51 +858,7 @@ export default function PopulationPage() {
             ["DRAFT", "READY"].includes(alert.status),
           );
         if (resumable) {
-          setCreatedAlert(resumable as CreatedPopulationAlert);
-          setAlertForm({
-            type: resumable.type,
-            titleFR: resumable.titleFR || "",
-            titleEN: resumable.titleEN || "",
-            messageFR: resumable.messageFR || "",
-            messageEN: resumable.messageEN || "",
-            instructionFR: resumable.instructionFR || "",
-            instructionEN: resumable.instructionEN || "",
-          });
-          setFreezeResult(null);
-          setLivePreflight(null);
-          setAlertStep(6);
-          setAlertComposerOpen(true);
-          if (
-            derivePopulationWorkflowState({ event: result, alert: resumable }) ===
-            "SEND_READY"
-          ) {
-            const deliveryCount = Object.values(
-              resumable.deliveryCounts ?? {},
-            ).reduce((sum, count) => sum + count, 0);
-            setFreezeResult({
-              alertId: resumable.id,
-              status: resumable.status,
-              approvedAt: resumable.approvedAt,
-              recipientsFrozenAt: resumable.recipientsFrozenAt!,
-              deliveryMode: resumable.deliveryModeSnapshot!,
-              targeting: {
-                subscriberCount: resumable.targetedSubscriberCount ?? 0,
-                deliveryCount,
-                smsDeliveryCount: resumable.deliveryChannelCounts?.SMS ?? 0,
-                emailDeliveryCount:
-                  resumable.deliveryChannelCounts?.EMAIL ?? 0,
-                deliverableCount: resumable.deliverableDeliveryCount ?? 0,
-                deliverableSmsCount: 0,
-                deliverableEmailCount: 0,
-                suppressedCount: resumable.deliveryCounts?.SUPPRESSED ?? 0,
-                ...(resumable.targeting ?? {}),
-              },
-              deliveries: [],
-            });
-            if (resumable.deliveryModeSnapshot === "LIVE") {
-              await loadLivePreflight(resumable.id);
-            }
-          }
+          await resumeOperationalCommunication(result, resumable);
         }
       }
       return result;
@@ -1794,6 +1809,19 @@ export default function PopulationPage() {
 
   const selectedScenario =
     scenarios.find((scenario) => scenario.id === selectedScenarioId) ?? null;
+  const resumableCommunication = activeEvent
+    ? [...activeEvent.alerts]
+        .reverse()
+        .find((alert) => ["DRAFT", "READY"].includes(alert.status)) ?? null
+    : null;
+  const resumeAction = getPopulationResumeAction(
+    activeEvent,
+    resumableCommunication,
+  );
+  const canResume = Boolean(
+    resumeAction &&
+      status.populationPermissions?.includes(resumeAction.permission),
+  );
 
   return (
     <PortalLayout>
@@ -2616,14 +2644,20 @@ export default function PopulationPage() {
             <ActionButton
               icon={<AlertTriangle size={17} />}
               title={
-                activeEvent
+                resumeAction
+                  ? resumeAction.title
+                  : activeEvent
                   ? "Événement déjà en cours"
                   : preview
                     ? "Préparer l’alerte"
                     : "Calculer la population ciblée"
               }
               detail={
-                activeEvent
+                resumeAction
+                  ? `${resumeAction.detail}${
+                      canResume ? " · Continuer" : " · Permission requise"
+                    }`
+                  : activeEvent
                   ? "Utilisez les actions de mise à jour ou de fin d’alerte ci-dessus."
                   : preview && !canPrepare
                     ? "Permission POPULATION_PREPARE requise"
@@ -2640,13 +2674,22 @@ export default function PopulationPage() {
               primary
               disabled={
                 !isActive ||
-                !selectedScenario ||
-                !selectedScenario.operational ||
-                Boolean(activeEvent) ||
-                previewLoading ||
-                (Boolean(preview) && !canPrepare)
+                (Boolean(resumeAction) && !canResume) ||
+                (!resumeAction &&
+                  (!selectedScenario ||
+                    !selectedScenario.operational ||
+                    Boolean(activeEvent) ||
+                    previewLoading ||
+                    (Boolean(preview) && !canPrepare)))
               }
               onClick={() => {
+                if (activeEvent && resumableCommunication && resumeAction) {
+                  void resumeOperationalCommunication(
+                    activeEvent,
+                    resumableCommunication,
+                  );
+                  return;
+                }
                 if (!selectedScenario) {
                   return;
                 }
@@ -3264,6 +3307,7 @@ export default function PopulationPage() {
         {alertComposerOpen && selectedScenario && preview && (
           <section
             ref={alertComposerRef}
+            data-resume-target="population-alert-composer"
             style={{
               marginBottom: 18,
               overflow: "hidden",
