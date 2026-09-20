@@ -58,6 +58,11 @@ describe('ClientPortalService - Sentinelle Population', () => {
     endAlert: jest.fn(),
     cancelAlert: jest.fn(),
   };
+  const populationEvidenceService = {
+    generateV1: jest.fn(),
+    getForEvent: jest.fn(),
+    getById: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -74,7 +79,58 @@ describe('ClientPortalService - Sentinelle Population', () => {
       {} as any,
       {} as any,
       populationService as any,
+      populationEvidenceService as any,
     );
+  });
+
+  describe('Population evidence security', () => {
+    const actor = {
+      sub: 'client-user-1',
+      clientId: 'client-1',
+      organizationId: 'org-1',
+      role: 'CLIENT_MANAGER',
+      buildingIds: ['building-1'],
+    };
+
+    beforeEach(() => {
+      prisma.building.findFirst.mockResolvedValue({
+        id: 'building-1',
+        clientId: 'client-1',
+      });
+    });
+
+    it('exige POPULATION_PREPARE pour générer', async () => {
+      prisma.clientUser.findFirst.mockResolvedValue(null);
+      await expect(
+        service.generatePopulationEvidence('building-1', 'event-1', actor),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(populationEvidenceService.generateV1).not.toHaveBeenCalled();
+    });
+
+    it('transmet toujours le tenant et le bâtiment pour générer et lire', async () => {
+      populationEvidenceService.generateV1.mockResolvedValue({ id: 'evidence-1' });
+      populationEvidenceService.getForEvent.mockResolvedValue({ id: 'evidence-1' });
+      populationEvidenceService.getById.mockResolvedValue({ id: 'evidence-1' });
+      await service.generatePopulationEvidence('building-1', 'event-1', actor);
+      await service.getPopulationEvidenceForEvent('building-1', 'event-1', actor);
+      await service.getPopulationEvidenceById('building-1', 'evidence-1', actor);
+      expect(populationEvidenceService.generateV1).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+        'event-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
+      );
+      expect(populationEvidenceService.getForEvent).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+        'event-1',
+      );
+      expect(populationEvidenceService.getById).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+        'evidence-1',
+      );
+    });
   });
 
   describe('assertBuildingAccess', () => {

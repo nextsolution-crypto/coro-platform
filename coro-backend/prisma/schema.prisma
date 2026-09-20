@@ -42,6 +42,7 @@ model Organization {
   complianceRequirements ComplianceRequirement[]
   complianceEvidence     ComplianceEvidence[]
   populationOperationalEvents PopulationOperationalEvent[]
+  populationEvidenceRecords PopulationEvidenceRecord[]
   // Programme de recommandation
   referralsSent          Referral[]                   @relation("ReferralReferrer")
   referralReceived       Referral?                    @relation("ReferralReferred")
@@ -201,6 +202,7 @@ model Building {
   // Cette relation reste optionnelle : un bâtiment standard n'a pas
   // automatiquement de profil RUE.
   rueFacilityProfile RueFacilityProfile?
+  populationEvidenceRecords PopulationEvidenceRecord[]
 }
 
 model Project {
@@ -1195,6 +1197,7 @@ model PopulationProgram {
   consentEvents     PopulationConsentEvent[]
   alerts            PopulationAlert[]
   operationalEvents PopulationOperationalEvent[]
+  evidenceRecords    PopulationEvidenceRecord[]
 
   @@index([status])
   @@index([registrationEnabled])
@@ -2504,6 +2507,7 @@ model PopulationOperationalEvent {
   updatedAt DateTime @updatedAt
 
   alerts PopulationAlert[]
+  evidenceRecords PopulationEvidenceRecord[]
 
   @@index([organizationId])
   @@index([programId])
@@ -2512,6 +2516,54 @@ model PopulationOperationalEvent {
   @@index([status])
   @@index([startedAt])
   @@index([organizationId, programId])
+}
+
+model PopulationEvidenceRecord {
+  id String @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  operationalEventId String
+  operationalEvent   PopulationOperationalEvent @relation(fields: [operationalEventId], references: [id], onDelete: Restrict)
+
+  reference     String @unique @default(dbgenerated("population_evidence_reference()"))
+  schemaVersion String
+  version       Int    @default(1)
+  status        PopulationEvidenceStatus @default(FINALIZED)
+
+  generatedAt     DateTime @default(now())
+  generatedByType CoroActorType
+  generatedById   String
+  finalizedAt     DateTime @default(now())
+  finalizedByType CoroActorType
+  finalizedById   String
+
+  snapshot       Json
+  snapshotSha256 String
+
+  supersedesId String? @unique
+  supersedes   PopulationEvidenceRecord? @relation("PopulationEvidenceSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy PopulationEvidenceRecord? @relation("PopulationEvidenceSupersession")
+
+  createdAt DateTime @default(now())
+
+  @@unique([operationalEventId, version])
+  @@index([organizationId, buildingId])
+  @@index([programId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum PopulationEvidenceStatus {
+  FINALIZED
+  SUPERSEDED
 }
 
 model IncidentTask {

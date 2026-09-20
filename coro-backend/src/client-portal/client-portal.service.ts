@@ -3,7 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PopulationAlertType, PopulationPermission } from '@prisma/client';
+import {
+  CoroActorType,
+  PopulationAlertType,
+  PopulationPermission,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
@@ -16,6 +20,7 @@ import { ConfigurePopulationProgramDto } from '../population/dto/population-prog
 import { CreatePopulationAlertDraftDto } from '../population/dto/create-population-alert-draft.dto';
 import { UpdatePopulationAlertDraftDto } from '../population/dto/update-population-alert-draft.dto';
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
+import { PopulationEvidenceService } from '../population/population-evidence.service';
 
 @Injectable()
 export class ClientPortalService {
@@ -27,7 +32,68 @@ export class ClientPortalService {
     private bookingsService: BookingsService,
     private notificationsService: NotificationsService,
     private populationService: PopulationService,
+    private populationEvidenceService: PopulationEvidenceService,
   ) {}
+
+  async generatePopulationEvidence(
+    buildingId: string,
+    eventId: string,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    return this.populationEvidenceService.generateV1(
+      buildingId,
+      actor.organizationId,
+      eventId,
+      { type: CoroActorType.CLIENT_USER, id: actor.sub! },
+    );
+  }
+
+  async getPopulationEvidenceForEvent(
+    buildingId: string,
+    eventId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationEvidenceService.getForEvent(
+      buildingId,
+      actor.organizationId,
+      eventId,
+    );
+  }
+
+  async getPopulationEvidenceById(
+    buildingId: string,
+    evidenceId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationEvidenceService.getById(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+    );
+  }
 
   private async assertPopulationPermission(
     actor: { sub?: string; organizationId: string },

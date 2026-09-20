@@ -8,6 +8,7 @@ import { PopulationReadinessController } from './population-readiness.controller
 import { PopulationBrevoWebhookController } from './population-brevo-webhook.controller';
 import { PopulationBrevoWebhookService } from './population-brevo-webhook.service';
 import { PopulationOperationalEventsService } from './population-operational-events.service';
+import { PopulationEvidenceService } from './population-evidence.service';
 import {
   POPULATION_ENVIRONMENT,
   PopulationReadinessService,
@@ -31,11 +32,13 @@ import {
     PopulationReadinessService,
     PopulationBrevoWebhookService,
     PopulationOperationalEventsService,
+    PopulationEvidenceService,
   ],
   exports: [
     PopulationService,
     PopulationReadinessService,
     PopulationOperationalEventsService,
+    PopulationEvidenceService,
   ],
 })
 export class PopulationModule {}
