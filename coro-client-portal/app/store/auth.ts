@@ -1,39 +1,45 @@
-'use client';
+"use client";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api";
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 
 export interface ClientUser {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'CLIENT_MANAGER' | 'CLIENT_CORPORATE';
+  role: "CLIENT_MANAGER" | "CLIENT_CORPORATE";
   clientId: string;
   clientName: string;
   organizationId: string;
   populationPermissions: Array<
-    | 'POPULATION_PREPARE'
-    | 'POPULATION_APPROVE'
-    | 'POPULATION_SEND'
+    "POPULATION_PREPARE" | "POPULATION_APPROVE" | "POPULATION_SEND"
   >;
 }
 
 export function getToken(): string | null {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null;
   }
 
-  return localStorage.getItem('coro_client_token');
+  return localStorage.getItem("coro_client_token");
 }
 
 export function getUser(): ClientUser | null {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null;
   }
 
-  const storedUser =
-    localStorage.getItem('coro_client_user');
+  const storedUser = localStorage.getItem("coro_client_user");
 
   if (!storedUser) {
     return null;
@@ -47,37 +53,24 @@ export function getUser(): ClientUser | null {
   }
 }
 
-export function setAuth(
-  token: string,
-  user: ClientUser
-) {
-  if (typeof window === 'undefined') {
+export function setAuth(token: string, user: ClientUser) {
+  if (typeof window === "undefined") {
     return;
   }
 
-  localStorage.setItem(
-    'coro_client_token',
-    token
-  );
+  localStorage.setItem("coro_client_token", token);
 
-  localStorage.setItem(
-    'coro_client_user',
-    JSON.stringify(user)
-  );
+  localStorage.setItem("coro_client_user", JSON.stringify(user));
 }
 
 export function clearAuth() {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
 
-  localStorage.removeItem(
-    'coro_client_token'
-  );
+  localStorage.removeItem("coro_client_token");
 
-  localStorage.removeItem(
-    'coro_client_user'
-  );
+  localStorage.removeItem("coro_client_user");
 }
 
 export function isAuthenticated(): boolean {
@@ -87,124 +80,93 @@ export function isAuthenticated(): boolean {
 function handleUnauthorized() {
   clearAuth();
 
-  if (typeof window !== 'undefined') {
-    window.location.replace('/login');
+  if (typeof window !== "undefined") {
+    window.location.replace("/login");
   }
 }
 
 async function parseResponse(res: Response) {
-  const contentType =
-    res.headers.get('content-type');
+  const contentType = res.headers.get("content-type");
 
-  if (
-    contentType?.includes(
-      'application/json'
-    )
-  ) {
+  if (contentType?.includes("application/json")) {
     return res.json();
   }
 
   return res.text();
 }
 
-export async function apiGet(
-  path: string
-) {
+export async function apiGet(path: string) {
   const token = getToken();
 
-  const res = await fetch(
-    `${API_URL}${path}`,
-    {
-      method: 'GET',
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "GET",
 
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type':
-          'application/json',
-      },
-    }
-  );
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
 
   if (res.status === 401) {
     handleUnauthorized();
-    throw new Error('Non autorisé');
+    throw new Error("Non autorisé");
   }
 
   const data = await parseResponse(res);
 
   if (!res.ok) {
-    throw new Error(
-      typeof data === 'string'
-        ? data
-        : data?.message ||
-            'Erreur API'
+    throw new ApiError(
+      typeof data === "string" ? data : data?.message || "Erreur API",
+      res.status,
     );
   }
 
   return data;
 }
 
-export async function apiPost(
-  path: string,
-  body: unknown
-) {
+export async function apiPost(path: string, body: unknown) {
   const token = getToken();
-  const res = await fetch(
-    `${API_URL}${path}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type':
-          'application/json',
-      },
-      body: JSON.stringify(body),
-    }
-  );
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
   if (res.status === 401) {
     handleUnauthorized();
-    throw new Error('Non autorisé');
+    throw new Error("Non autorisé");
   }
   const data = await parseResponse(res);
   if (!res.ok) {
-    throw new Error(
-      typeof data === 'string'
-        ? data
-        : data?.message ||
-            'Erreur API'
+    throw new ApiError(
+      typeof data === "string" ? data : data?.message || "Erreur API",
+      res.status,
     );
   }
   return data;
 }
 
-export async function apiPut(
-  path: string,
-  body: unknown
-) {
+export async function apiPut(path: string, body: unknown) {
   const token = getToken();
-  const res = await fetch(
-    `${API_URL}${path}`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type':
-          'application/json',
-      },
-      body: JSON.stringify(body),
-    }
-  );
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
   if (res.status === 401) {
     handleUnauthorized();
-    throw new Error('Non autorisé');
+    throw new Error("Non autorisé");
   }
   const data = await parseResponse(res);
   if (!res.ok) {
-    throw new Error(
-      typeof data === 'string'
-        ? data
-        : data?.message ||
-            'Erreur API'
+    throw new ApiError(
+      typeof data === "string" ? data : data?.message || "Erreur API",
+      res.status,
     );
   }
   return data;

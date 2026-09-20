@@ -4086,6 +4086,8 @@ describe('PopulationService', () => {
       prisma.populationAlertZone.createMany.mockResolvedValue({
         count: 1,
       });
+
+      prisma.populationAlert.updateMany.mockResolvedValue({ count: 1 });
       operationalEvents.getOperationalEvent.mockResolvedValue({
         id: 'event-1',
         programId: 'program-1',
@@ -4890,6 +4892,7 @@ describe('PopulationService', () => {
 
     const draftAlert = {
       id: 'alert-1',
+      updatedAt: new Date('2026-09-20T10:00:00Z'),
       programId: 'program-1',
       emergencyScenarioId: 'scenario-1',
       status: PopulationAlertStatus.DRAFT,
@@ -5001,9 +5004,11 @@ describe('PopulationService', () => {
         }),
       ]);
 
-      expect(prisma.populationAlert.update).toHaveBeenCalledWith({
+      expect(prisma.populationAlert.updateMany).toHaveBeenCalledWith({
         where: {
           id: 'alert-1',
+          status: PopulationAlertStatus.DRAFT,
+          updatedAt: draftAlert.updatedAt,
         },
         data: {
           contextSnapshot: expect.objectContaining({
@@ -5068,6 +5073,7 @@ describe('PopulationService', () => {
 
     const draftAlert = {
       id: 'alert-1',
+      updatedAt: new Date('2026-09-20T10:00:00Z'),
       programId: 'program-1',
       emergencyScenarioId: 'scenario-1',
       operationalEventId: 'event-1',
@@ -5124,6 +5130,8 @@ describe('PopulationService', () => {
 
       prisma.populationAlert.findUnique.mockResolvedValue(draftAlert);
 
+      prisma.populationAlert.updateMany.mockResolvedValue({ count: 1 });
+
       prisma.populationAlert.update.mockResolvedValue({
         ...draftAlert,
         status: PopulationAlertStatus.READY,
@@ -5143,19 +5151,14 @@ describe('PopulationService', () => {
         },
       });
 
-      expect(prisma.populationAlert.update).toHaveBeenLastCalledWith({
+      expect(prisma.populationAlert.updateMany).toHaveBeenLastCalledWith({
         where: {
           id: 'alert-1',
+          status: PopulationAlertStatus.DRAFT,
+          updatedAt: draftAlert.updatedAt,
         },
         data: {
           status: PopulationAlertStatus.READY,
-        },
-        include: {
-          zones: {
-            orderBy: {
-              zoneCodeSnapshot: 'asc',
-            },
-          },
         },
       });
 
@@ -5176,7 +5179,7 @@ describe('PopulationService', () => {
 
       expect(prisma.populationAlertZone.deleteMany).not.toHaveBeenCalled();
 
-      expect(prisma.populationAlert.update).not.toHaveBeenCalled();
+      expect(prisma.populationAlert.updateMany).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -7971,10 +7974,7 @@ describe('PopulationService', () => {
         'building-1',
         'organization-1',
       );
-      expect(result.map((alert) => alert.id)).toEqual([
-        'legacy-1',
-        'legacy-2',
-      ]);
+      expect(result.map((alert) => alert.id)).toEqual(['legacy-1', 'legacy-2']);
     });
 
     it('retourne une liste vide lorsqu’aucune legacy active n’existe', async () => {
@@ -8181,9 +8181,7 @@ describe('PopulationService', () => {
       );
 
       expect(result.status).toBe(PopulationOperationalEventStatus.ENDED);
-      expect(
-        result.alerts.map((alert) => alert.deliveryModeSnapshot),
-      ).toEqual([
+      expect(result.alerts.map((alert) => alert.deliveryModeSnapshot)).toEqual([
         PopulationDeliveryMode.LIVE,
         PopulationDeliveryMode.SANDBOX,
         null,

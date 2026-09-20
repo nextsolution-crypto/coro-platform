@@ -3476,7 +3476,7 @@ export class PopulationService {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2002'
         ) {
-          throw new BadRequestException(
+          throw new ConflictException(
             'Un ALL_CLEAR existe déjà pour cet événement',
           );
         }
@@ -3694,10 +3694,7 @@ export class PopulationService {
       : null;
   }
 
-  async listLegacyActiveAlerts(
-    buildingId: string,
-    organizationId: string,
-  ) {
+  async listLegacyActiveAlerts(buildingId: string, organizationId: string) {
     const program = await this.getOperationalEventProgramContext(
       buildingId,
       organizationId,
@@ -4376,6 +4373,20 @@ export class PopulationService {
     };
 
     return this.prisma.$transaction(async (tx) => {
+      const refreshClaim = await tx.populationAlert.updateMany({
+        where: {
+          id: alert.id,
+          status: PopulationAlertStatus.DRAFT,
+          updatedAt: alert.updatedAt,
+        },
+        data: { contextSnapshot },
+      });
+      if (refreshClaim.count !== 1) {
+        throw new ConflictException(
+          'Le brouillon a été modifié par un autre opérateur',
+        );
+      }
+
       await tx.populationAlertZone.deleteMany({
         where: {
           alertId: alert.id,
@@ -4409,15 +4420,6 @@ export class PopulationService {
           })),
         });
       }
-
-      await tx.populationAlert.update({
-        where: {
-          id: alert.id,
-        },
-        data: {
-          contextSnapshot,
-        },
-      });
 
       return tx.populationAlert.findUnique({
         where: {
@@ -4480,30 +4482,68 @@ export class PopulationService {
      * On ne se contente jamais du snapshot potentiellement
      * ancien créé avec le brouillon.
      */
-    await this.refreshAlertDraftTargeting(buildingId, alert.id);
+    let refreshedAlert;
+    try {
+      refreshedAlert = await this.refreshAlertDraftTargeting(
+        buildingId,
+        alert.id,
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        const current = await this.getPopulationAlertForBuilding(
+          buildingId,
+          alert.id,
+        );
+        if (current.alert.status === PopulationAlertStatus.READY) {
+          return current.alert;
+        }
+      }
+      throw error;
+    }
 
-    return this.prisma.populationAlert.update({
+    const readyAt = new Date();
+    const ready = await this.prisma.populationAlert.updateMany({
       where: {
         id: alert.id,
+        status: PopulationAlertStatus.DRAFT,
+        updatedAt: refreshedAlert!.updatedAt,
       },
       data: {
         status: PopulationAlertStatus.READY,
         ...(actor
           ? {
-              readyAt: new Date(),
+              readyAt,
               readyByType: actor.type as any,
               readyById: actor.id,
             }
           : {}),
       },
-      include: {
-        zones: {
-          orderBy: {
-            zoneCodeSnapshot: 'asc',
-          },
-        },
-      },
     });
+
+    if (ready.count === 1) {
+      return {
+        ...refreshedAlert!,
+        status: PopulationAlertStatus.READY,
+        ...(actor
+          ? {
+              readyAt,
+              readyByType: actor.type as any,
+              readyById: actor.id,
+            }
+          : {}),
+      };
+    }
+
+    const current = await this.getPopulationAlertForBuilding(
+      buildingId,
+      alert.id,
+    );
+    if (current.alert.status !== PopulationAlertStatus.READY) {
+      throw new ConflictException(
+        'Le brouillon a été modifié par un autre opérateur',
+      );
+    }
+    return current.alert;
   }
 
   /**
@@ -4999,6 +5039,8 @@ export class PopulationService {
         },
         select: {
           recipientsFrozenAt: true,
+          approvedAt: true,
+          deliveryModeSnapshot: true,
         },
       });
 
@@ -5041,9 +5083,9 @@ export class PopulationService {
       return {
         alertId: alert.id,
         status: alert.status,
-        approvedAt: alert.approvedAt,
+        approvedAt: currentAlert.approvedAt,
         recipientsFrozenAt: currentAlert.recipientsFrozenAt,
-        deliveryMode: alert.deliveryModeSnapshot,
+        deliveryMode: currentAlert.deliveryModeSnapshot,
         targeting: {
           subscriberCount: frozenSubscriberCount.length,
           deliveryCount: frozenDeliveries.length,

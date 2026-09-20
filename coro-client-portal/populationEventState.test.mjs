@@ -15,6 +15,7 @@ import {
   openPopulationCloseConfirmation,
   confirmPopulationEventClose,
   derivePopulationEventPresentation,
+  isPopulationConcurrencyConflict,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 const closeEvent = (overrides = {}) => ({
@@ -157,6 +158,12 @@ test("reserve le loading au premier chargement sans etat connu", () => {
     }),
     "EVENT_ENDED",
   );
+});
+
+test("identifie uniquement les conflits HTTP multi-operateur", () => {
+  assert.equal(isPopulationConcurrencyConflict({ status: 409 }), true);
+  assert.equal(isPopulationConcurrencyConflict({ status: 400 }), false);
+  assert.equal(isPopulationConcurrencyConflict(new Error("conflict")), false);
 });
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {

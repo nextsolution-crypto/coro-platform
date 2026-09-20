@@ -168,11 +168,11 @@ export function buildPopulationResumePlan(event, alert, scenarios, preview) {
 export function canCompletePopulationResumeMount(state) {
   return Boolean(
     state?.pendingAlertId &&
-      state?.composerOpen &&
-      state?.scenarioReady &&
-      state?.previewReady &&
-      state?.createdAlertId === state?.pendingAlertId &&
-      state?.targetMounted,
+    state?.composerOpen &&
+    state?.scenarioReady &&
+    state?.previewReady &&
+    state?.createdAlertId === state?.pendingAlertId &&
+    state?.targetMounted,
   );
 }
 
@@ -201,9 +201,9 @@ export function derivePopulationCloseState(event, canPrepare) {
   const hasConfirmedDelivery = sent + delivered > 0;
   const eligible = Boolean(
     eventActive &&
-      allClearPublished &&
-      transportComplete &&
-      hasConfirmedDelivery,
+    allClearPublished &&
+    transportComplete &&
+    hasConfirmedDelivery,
   );
 
   return {
@@ -249,4 +249,8 @@ export function derivePopulationEventPresentation({
   if (lastClosedEvent) return "EVENT_ENDED";
   if (initialLoading) return "INITIAL_LOADING";
   return "EMPTY";
+}
+
+export function isPopulationConcurrencyConflict(error) {
+  return Boolean(error && typeof error === "object" && error.status === 409);
 }

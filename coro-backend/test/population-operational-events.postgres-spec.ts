@@ -3,6 +3,7 @@ import {
   PopulationAlertStatus,
   PopulationAlertChannel,
   PopulationAlertType,
+  PopulationDeliveryMode,
   PopulationDeliveryStatus,
   PopulationOperationalEventStatus,
   PopulationPreferredLanguage,
@@ -209,6 +210,207 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
     ).toHaveLength(1);
   });
 
+  it('A2: deux INITIAL concurrentes ne laissent qu’un event et une communication #1', async () => {
+    const createInitial = (actorId: string) =>
+      prisma.$transaction(async (tx) => {
+        const event = await tx.populationOperationalEvent.create({
+          data: {
+            organizationId: ids.organization,
+            programId: ids.program,
+            emergencyScenarioId: ids.scenario,
+            startedByType: CoroActorType.CLIENT_USER,
+            startedById: actorId,
+          },
+        });
+        await tx.populationAlert.create({
+          data: {
+            programId: ids.program,
+            emergencyScenarioId: ids.scenario,
+            operationalEventId: event.id,
+            cycleSequence: 1,
+            type: PopulationAlertType.TEST,
+            status: PopulationAlertStatus.DRAFT,
+            titleFR: 'Initial concurrente',
+            messageFR: 'Test PostgreSQL',
+            createdByType: CoroActorType.CLIENT_USER,
+            createdById: actorId,
+          },
+        });
+      });
+
+    const results = await Promise.allSettled([
+      createInitial('operator-a'),
+      createInitial('operator-b'),
+    ]);
+    expect(results.filter((item) => item.status === 'fulfilled')).toHaveLength(
+      1,
+    );
+    const events = await prisma.populationOperationalEvent.findMany({
+      where: {
+        programId: ids.program,
+        status: PopulationOperationalEventStatus.ACTIVE,
+      },
+      include: { alerts: true },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0].alerts).toHaveLength(1);
+    expect(events[0].alerts[0].cycleSequence).toBe(1);
+  });
+
+  it('A3: READY concurrent conserve l’acteur et le timestamp gagnants', async () => {
+    const alert = await createAlert(`ready-race-${suffix}`);
+    const transition = (actorId: string, readyAt: Date) =>
+      prisma.populationAlert.updateMany({
+        where: { id: alert.id, status: PopulationAlertStatus.DRAFT },
+        data: {
+          status: PopulationAlertStatus.READY,
+          readyAt,
+          readyByType: CoroActorType.CLIENT_USER,
+          readyById: actorId,
+        },
+      });
+    const atA = new Date('2026-09-20T10:00:00Z');
+    const atB = new Date('2026-09-20T10:00:01Z');
+    const results = await Promise.all([
+      transition('operator-a', atA),
+      transition('operator-b', atB),
+    ]);
+    expect(results.map((item) => item.count).sort()).toEqual([0, 1]);
+    const current = await prisma.populationAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect([
+      ['operator-a', atA.toISOString()],
+      ['operator-b', atB.toISOString()],
+    ]).toContainEqual([current.readyById, current.readyAt?.toISOString()]);
+  });
+
+  it('A4: APPROVE concurrent conserve l’approbateur gagnant', async () => {
+    const alert = await createAlert(`approve-race-${suffix}`, {
+      status: PopulationAlertStatus.READY,
+    });
+    const approve = (actorId: string) =>
+      prisma.populationAlert.updateMany({
+        where: {
+          id: alert.id,
+          status: PopulationAlertStatus.READY,
+          approvedAt: null,
+        },
+        data: {
+          approvedAt: new Date(),
+          approvedByType: CoroActorType.CLIENT_USER,
+          approvedById: actorId,
+        },
+      });
+    const results = await Promise.all([
+      approve('approver-a'),
+      approve('approver-b'),
+    ]);
+    expect(results.map((item) => item.count).sort()).toEqual([0, 1]);
+    const current = await prisma.populationAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(['approver-a', 'approver-b']).toContain(current.approvedById);
+    expect(current.approvedAt).not.toBeNull();
+  });
+
+  it('A5/A6: FREEZE et SEND concurrents matérialisent et diffusent une seule fois', async () => {
+    const subscriber = await prisma.populationSubscriber.create({
+      data: {
+        programId: ids.program,
+        status: PopulationSubscriberStatus.ACTIVE,
+        email: `race-${suffix}@example.invalid`,
+        emailEnabled: true,
+      },
+    });
+    const alert = await createAlert(`freeze-send-race-${suffix}`, {
+      status: PopulationAlertStatus.READY,
+      approvedAt: new Date(),
+      approvedByType: CoroActorType.CLIENT_USER,
+      approvedById: 'approver',
+    });
+    const freeze = (actorId: string) =>
+      prisma.$transaction(async (tx) => {
+        const claimed = await tx.populationAlert.updateMany({
+          where: {
+            id: alert.id,
+            status: PopulationAlertStatus.READY,
+            recipientsFrozenAt: null,
+          },
+          data: {
+            recipientsFrozenAt: new Date(),
+            frozenByType: CoroActorType.CLIENT_USER,
+            frozenById: actorId,
+            deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+          },
+        });
+        if (claimed.count === 1) {
+          await tx.populationAlertDelivery.create({
+            data: {
+              idempotencyKey: `${alert.id}:${subscriber.id}:EMAIL`,
+              providerIdempotencyKey: randomUUID(),
+              alertId: alert.id,
+              subscriberId: subscriber.id,
+              channel: PopulationAlertChannel.EMAIL,
+              status: PopulationDeliveryStatus.QUEUED,
+              language: PopulationPreferredLanguage.FR,
+              messageSnapshot: 'Test concurrent',
+              destinationSnapshot: subscriber.email,
+            },
+          });
+        }
+        return claimed.count;
+      });
+    expect(
+      (await Promise.all([freeze('freezer-a'), freeze('freezer-b')])).sort(),
+    ).toEqual([0, 1]);
+    expect(
+      await prisma.populationAlertDelivery.count({
+        where: { alertId: alert.id },
+      }),
+    ).toBe(1);
+
+    let providerCalls = 0;
+    const send = async (actorId: string) => {
+      const claimed = await prisma.populationAlert.updateMany({
+        where: { id: alert.id, status: PopulationAlertStatus.READY },
+        data: {
+          status: PopulationAlertStatus.SENDING,
+          sendingAt: new Date(),
+          sentByType: CoroActorType.CLIENT_USER,
+          sentById: actorId,
+        },
+      });
+      if (claimed.count !== 1) return 0;
+      const delivery = await prisma.populationAlertDelivery.findFirstOrThrow({
+        where: { alertId: alert.id },
+      });
+      const deliveryClaim = await prisma.populationAlertDelivery.updateMany({
+        where: { id: delivery.id, status: PopulationDeliveryStatus.QUEUED },
+        data: {
+          status: PopulationDeliveryStatus.SENDING,
+          claimedAt: new Date(),
+        },
+      });
+      if (deliveryClaim.count === 1) {
+        providerCalls += 1;
+        await prisma.populationAlertDelivery.update({
+          where: { id: delivery.id },
+          data: { status: PopulationDeliveryStatus.SENT, sentAt: new Date() },
+        });
+      }
+      return 1;
+    };
+    expect(
+      (await Promise.all([send('sender-a'), send('sender-b')])).sort(),
+    ).toEqual([0, 1]);
+    expect(providerCalls).toBe(1);
+    const sent = await prisma.populationAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(['sender-a', 'sender-b']).toContain(sent.sentById);
+  });
+
   it('B/C: conserve plusieurs ENDED puis autorise un nouvel ACTIVE', async () => {
     await createEvent({ status: PopulationOperationalEventStatus.ENDED });
     await createEvent({ status: PopulationOperationalEventStatus.ENDED });
@@ -319,7 +521,7 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
 
   it('F: une clôture concurrente ne gagne qu’une fois', async () => {
     const event = await createEvent();
-    const close = () =>
+    const close = (actorId: string, endedAt: Date) =>
       prisma.populationOperationalEvent.updateMany({
         where: {
           id: event.id,
@@ -327,13 +529,25 @@ describePostgres('Population operational event PostgreSQL invariants', () => {
         },
         data: {
           status: PopulationOperationalEventStatus.ENDED,
-          endedAt: new Date(),
+          endedAt,
           endedByType: CoroActorType.SYSTEM,
-          endedById: 'postgres-tests',
+          endedById: actorId,
         },
       });
-    const results = await Promise.all([close(), close()]);
+    const closeA = new Date('2026-09-20T12:00:00Z');
+    const closeB = new Date('2026-09-20T12:00:01Z');
+    const results = await Promise.all([
+      close('closer-a', closeA),
+      close('closer-b', closeB),
+    ]);
     expect(results.map((result) => result.count).sort()).toEqual([0, 1]);
+    const current = await prisma.populationOperationalEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+    expect([
+      ['closer-a', closeA.toISOString()],
+      ['closer-b', closeB.toISOString()],
+    ]).toContainEqual([current.endedById, current.endedAt?.toISOString()]);
   });
 
   it('H: rejette les clés étrangères inexistantes', async () => {

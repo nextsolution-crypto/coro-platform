@@ -36,6 +36,7 @@ import {
   openPopulationCloseConfirmation,
   confirmPopulationEventClose,
   derivePopulationEventPresentation,
+  isPopulationConcurrencyConflict,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -761,15 +762,15 @@ export default function PopulationPage() {
   useEffect(() => {
     const target = alertComposerRef.current;
     if (!canCompletePopulationResumeMount({
-      pendingAlertId: pendingResumeAlertId,
-      composerOpen: alertComposerOpen,
-      scenarioReady: Boolean(
-        selectedScenarioId &&
+        pendingAlertId: pendingResumeAlertId,
+        composerOpen: alertComposerOpen,
+        scenarioReady: Boolean(
+          selectedScenarioId &&
           scenarios.some((scenario) => scenario.id === selectedScenarioId),
-      ),
-      previewReady: Boolean(preview),
-      createdAlertId: createdAlert?.id,
-      targetMounted: Boolean(target),
+        ),
+        previewReady: Boolean(preview),
+        createdAlertId: createdAlert?.id,
+        targetMounted: Boolean(target),
     })) {
       return;
     }
@@ -990,6 +991,21 @@ export default function PopulationPage() {
       );
       return [];
     }
+  };
+
+  const resyncAfterPopulationConflict = async (
+    error: unknown,
+    setError: (message: string) => void,
+  ) => {
+    if (!isPopulationConcurrencyConflict(error)) return false;
+    setError(
+      "Cette étape a déjà été réalisée ou modifiée par un autre opérateur. L’état de l’événement a été actualisé.",
+    );
+    await Promise.all([
+      loadActiveOperationalEvent(true),
+      loadPopulationRegistry(),
+    ]);
+    return true;
   };
 
   const loadPopulationRegistry = async () => {
@@ -1350,6 +1366,7 @@ export default function PopulationPage() {
 
       await loadActiveOperationalEvent();
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setAlertError)) return;
       setAlertError(
         typeof error?.message === "string"
           ? error.message
@@ -1403,6 +1420,7 @@ export default function PopulationPage() {
       setCreatedAlert(result);
       setAlertStep(6);
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setAlertError)) return;
       setAlertError(
         typeof error?.message === "string"
           ? error.message
@@ -1476,6 +1494,7 @@ export default function PopulationPage() {
 
       setCreatedAlert(result);
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setAlertError)) return;
       setAlertError(
         typeof error?.message === "string"
           ? error.message
@@ -1506,6 +1525,7 @@ export default function PopulationPage() {
 
       setCreatedAlert(result);
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setAlertError)) return;
       setAlertError(
         typeof error?.message === "string"
           ? error.message
@@ -1551,6 +1571,7 @@ export default function PopulationPage() {
         await loadLivePreflight(result.alertId);
       }
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setAlertError)) return;
       setAlertError(
         typeof error?.message === "string"
           ? error.message
@@ -1603,6 +1624,7 @@ export default function PopulationPage() {
         setCommunicationsOpen(true);
       }
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setAlertError)) return;
       setAlertError(
         typeof error?.message === "string"
           ? error.message
@@ -1631,6 +1653,7 @@ export default function PopulationPage() {
       setCloseEventReason("");
       setConfirmIncompleteClose(false);
     } catch (error: any) {
+      if (await resyncAfterPopulationConflict(error, setEventError)) return;
       setEventError(
         typeof error?.message === "string"
           ? error.message
@@ -1897,7 +1920,7 @@ export default function PopulationPage() {
   );
   const canResume = Boolean(
     resumeAction &&
-      status.populationPermissions?.includes(resumeAction.permission),
+    status.populationPermissions?.includes(resumeAction.permission),
   );
 
   return (
@@ -2725,10 +2748,10 @@ export default function PopulationPage() {
                 resumeAction
                   ? resumeAction.title
                   : activeEvent
-                  ? "Événement déjà en cours"
-                  : preview
-                    ? "Préparer l’alerte"
-                    : "Calculer la population ciblée"
+                    ? "Événement déjà en cours"
+                    : preview
+                      ? "Préparer l’alerte"
+                      : "Calculer la population ciblée"
               }
               detail={
                 resumeAction
@@ -2736,18 +2759,18 @@ export default function PopulationPage() {
                       canResume ? " · Continuer" : " · Permission requise"
                     }`
                   : activeEvent
-                  ? "Utilisez les actions de mise à jour ou de fin d’alerte ci-dessus."
-                  : preview && !canPrepare
-                    ? "Permission POPULATION_PREPARE requise"
-                    : preview
-                      ? `${preview.population.uniqueTargetCount} personne${
-                          preview.population.uniqueTargetCount > 1 ? "s" : ""
-                        } ciblée${
-                          preview.population.uniqueTargetCount > 1 ? "s" : ""
-                        }`
-                      : selectedScenario
-                        ? "Analyser les zones d’impact du scénario"
-                        : "Sélectionnez d’abord un scénario RUE"
+                    ? "Utilisez les actions de mise à jour ou de fin d’alerte ci-dessus."
+                    : preview && !canPrepare
+                      ? "Permission POPULATION_PREPARE requise"
+                      : preview
+                        ? `${preview.population.uniqueTargetCount} personne${
+                            preview.population.uniqueTargetCount > 1 ? "s" : ""
+                          } ciblée${
+                            preview.population.uniqueTargetCount > 1 ? "s" : ""
+                          }`
+                        : selectedScenario
+                          ? "Analyser les zones d’impact du scénario"
+                          : "Sélectionnez d’abord un scénario RUE"
               }
               primary
               disabled={
@@ -4445,60 +4468,60 @@ function EventCockpit({
                 aria-labelledby="population-close-title"
                 tabIndex={-1}
               >
-              <h3 id="population-close-title">Clore l’événement?</h3>
+                <h3 id="population-close-title">Clore l’événement?</h3>
               <p><strong>La FIN D’ALERTE a été diffusée.</strong></p>
-              <p>
-                Cette action clôture le dossier opérationnel dans CORO. Aucune
-                nouvelle communication ne sera envoyée à la population.
-              </p>
-              <dl className={styles.closeMetrics}>
+                <p>
+                  Cette action clôture le dossier opérationnel dans CORO. Aucune
+                  nouvelle communication ne sera envoyée à la population.
+                </p>
+                <dl className={styles.closeMetrics}>
                 <div><dt>Communications</dt><dd>{closeState.summary.communications}</dd></div>
                 <div><dt>Livrées</dt><dd>{closeState.summary.delivered}</dd></div>
                 <div><dt>Échecs</dt><dd>{closeState.summary.failed}</dd></div>
                 <div><dt>Réconciliation</dt><dd>{closeState.summary.reconciliation}</dd></div>
-              </dl>
-              <label className={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={confirmIncomplete}
+                </dl>
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={confirmIncomplete}
                   onChange={(e) => onConfirmIncompleteChange(e.target.checked)}
+                  />
+                  Confirmer une diffusion incomplète, le cas échéant
+                </label>
+                <textarea
+                  value={closeReason}
+                  onChange={(e) => onCloseReasonChange(e.target.value)}
+                  placeholder="Motif requis si la diffusion est incomplète"
+                  rows={3}
                 />
-                Confirmer une diffusion incomplète, le cas échéant
-              </label>
-              <textarea
-                value={closeReason}
-                onChange={(e) => onCloseReasonChange(e.target.value)}
-                placeholder="Motif requis si la diffusion est incomplète"
-                rows={3}
-              />
-              <div className={styles.eventActions}>
-                <button
-                  type="button"
-                  className={styles.secondaryEventAction}
-                  onClick={onCancelClose}
-                  disabled={closeLoading}
-                >
-                  ANNULER
-                </button>
-                <button
-                  type="button"
-                  className={styles.primaryEventAction}
-                  disabled={
-                    closeLoading ||
-                    !closeState.enabled ||
-                    (confirmIncomplete && !closeReason.trim())
-                  }
-                  onClick={() =>
-                    confirmPopulationEventClose(
-                      closeState,
-                      closeLoading,
-                      onConfirmClose,
-                    )
-                  }
-                >
-                  {closeLoading ? "CLÔTURE..." : "CLORE L’ÉVÉNEMENT"}
-                </button>
-              </div>
+                <div className={styles.eventActions}>
+                  <button
+                    type="button"
+                    className={styles.secondaryEventAction}
+                    onClick={onCancelClose}
+                    disabled={closeLoading}
+                  >
+                    ANNULER
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.primaryEventAction}
+                    disabled={
+                      closeLoading ||
+                      !closeState.enabled ||
+                      (confirmIncomplete && !closeReason.trim())
+                    }
+                    onClick={() =>
+                      confirmPopulationEventClose(
+                        closeState,
+                        closeLoading,
+                        onConfirmClose,
+                      )
+                    }
+                  >
+                    {closeLoading ? "CLÔTURE..." : "CLORE L’ÉVÉNEMENT"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
