@@ -43,6 +43,7 @@ model Organization {
   complianceEvidence     ComplianceEvidence[]
   populationOperationalEvents PopulationOperationalEvent[]
   populationEvidenceRecords PopulationEvidenceRecord[]
+  populationEvidenceManifests PopulationEvidenceManifest[]
   // Programme de recommandation
   referralsSent          Referral[]                   @relation("ReferralReferrer")
   referralReceived       Referral?                    @relation("ReferralReferred")
@@ -203,6 +204,7 @@ model Building {
   // automatiquement de profil RUE.
   rueFacilityProfile RueFacilityProfile?
   populationEvidenceRecords PopulationEvidenceRecord[]
+  populationEvidenceManifests PopulationEvidenceManifest[]
 }
 
 model Project {
@@ -1198,6 +1200,7 @@ model PopulationProgram {
   alerts            PopulationAlert[]
   operationalEvents PopulationOperationalEvent[]
   evidenceRecords    PopulationEvidenceRecord[]
+  evidenceManifests  PopulationEvidenceManifest[]
 
   @@index([status])
   @@index([registrationEnabled])
@@ -2508,6 +2511,7 @@ model PopulationOperationalEvent {
 
   alerts PopulationAlert[]
   evidenceRecords PopulationEvidenceRecord[]
+  evidenceManifests PopulationEvidenceManifest[]
 
   @@index([organizationId])
   @@index([programId])
@@ -2551,6 +2555,7 @@ model PopulationEvidenceRecord {
   supersedesId String? @unique
   supersedes   PopulationEvidenceRecord? @relation("PopulationEvidenceSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
   supersededBy PopulationEvidenceRecord? @relation("PopulationEvidenceSupersession")
+  manifests    PopulationEvidenceManifest[]
 
   createdAt DateTime @default(now())
 
@@ -2558,6 +2563,43 @@ model PopulationEvidenceRecord {
   @@index([organizationId, buildingId])
   @@index([programId])
   @@index([status])
+  @@index([createdAt])
+}
+
+model PopulationEvidenceManifest {
+  id String @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  buildingId String
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  operationalEventId String
+  operationalEvent   PopulationOperationalEvent @relation(fields: [operationalEventId], references: [id], onDelete: Restrict)
+
+  evidenceRecordId String
+  evidenceRecord   PopulationEvidenceRecord @relation(fields: [evidenceRecordId], references: [id], onDelete: Restrict)
+
+  schemaVersion String
+  version       Int @default(1)
+
+  generatedAt     DateTime @default(now())
+  generatedByType CoroActorType
+  generatedById   String
+
+  manifest       Json
+  manifestSha256 String
+
+  createdAt DateTime @default(now())
+
+  @@unique([evidenceRecordId, version])
+  @@index([organizationId, buildingId])
+  @@index([programId])
+  @@index([operationalEventId])
   @@index([createdAt])
 }
 

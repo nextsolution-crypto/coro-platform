@@ -693,6 +693,45 @@ export class ClientPortalController {
     );
   }
 
+  @Post('buildings/:buildingId/population/evidence/:evidenceId/manifest')
+  generatePopulationEvidenceManifest(
+    @Param('buildingId') buildingId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.generatePopulationEvidenceManifest(
+      buildingId,
+      evidenceId,
+      req.clientUser,
+    );
+  }
+
+  @Get('buildings/:buildingId/population/evidence/:evidenceId/manifest')
+  getPopulationEvidenceManifest(
+    @Param('buildingId') buildingId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationEvidenceManifest(
+      buildingId,
+      evidenceId,
+      req.clientUser,
+    );
+  }
+
+  @Get('buildings/:buildingId/population/evidence/:evidenceId/verify')
+  verifyPopulationEvidence(
+    @Param('buildingId') buildingId: string,
+    @Param('evidenceId') evidenceId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.verifyPopulationEvidence(
+      buildingId,
+      evidenceId,
+      req.clientUser,
+    );
+  }
+
   @Post(
     'buildings/:buildingId/population/operational-events/:eventId/updates/draft',
   )

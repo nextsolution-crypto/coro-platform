@@ -9,9 +9,14 @@ import {
 } from '@prisma/client';
 import {
   canonicalizeEvidence,
+  buildEvidenceManifestV1,
   deriveEvidenceCompletionStatus,
+  evidenceComponentHashes,
   hashEvidenceSnapshot,
+  POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION,
+  POPULATION_EVIDENCE_SCHEMA_VERSION,
   PopulationEvidenceService,
+  verifyEvidenceIntegrity,
 } from './population-evidence.service';
 
 const forbiddenKeys = new Set([
@@ -51,6 +56,146 @@ describe('PopulationEvidenceService', () => {
     expect(canonicalizeEvidence(left)).toBe(canonicalizeEvidence(right));
     expect(hashEvidenceSnapshot(left)).toBe(hashEvidenceSnapshot(right));
     expect(hashEvidenceSnapshot(left)).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  describe('manifest et vérification', () => {
+    const generatedAt = new Date('2026-09-20T15:00:00.000Z');
+    const snapshot = {
+      schemaVersion: POPULATION_EVIDENCE_SCHEMA_VERSION,
+      event: { id: 'event-1', status: 'ENDED' },
+      closure: { endedAt: '2026-09-20T14:59:00.000Z' },
+      communications: [
+        {
+          id: 'alert-1',
+          cycleSequence: 1,
+          deliverySummary: { delivered: 1 },
+          providerSummary: { counts: { DELIVERED: 1 } },
+        },
+      ],
+      summary: { communicationCount: 1, delivered: 1 },
+    };
+    const evidence = {
+      id: 'evidence-1',
+      reference: 'CORO-SP-2026-000001',
+      version: 1,
+      schemaVersion: POPULATION_EVIDENCE_SCHEMA_VERSION,
+      snapshot,
+      snapshotSha256: hashEvidenceSnapshot(snapshot),
+    };
+
+    const record = (manifest: unknown, manifestSha256 = hashEvidenceSnapshot(manifest)) => ({
+      schemaVersion: POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION,
+      version: 1,
+      manifest,
+      manifestSha256,
+    });
+
+    it('construit les component hashes exclusivement depuis le snapshot', () => {
+      const hashes = evidenceComponentHashes(snapshot);
+      expect(Object.keys(hashes)).toEqual([
+        'eventSha256',
+        'communicationsSha256',
+        'deliverySummarySha256',
+        'providerEvidenceSha256',
+      ]);
+      expect(Object.values(hashes)).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^[a-f0-9]{64}$/)]),
+      );
+    });
+
+    it('retourne VERIFIED lorsque toute la chaîne correspond', () => {
+      const manifest = buildEvidenceManifestV1(evidence, generatedAt);
+      expect(verifyEvidenceIntegrity(evidence, record(manifest), generatedAt)).toMatchObject({
+        status: 'VERIFIED',
+        snapshot: true,
+        manifest: true,
+        components: {
+          event: true,
+          communications: true,
+          deliveries: true,
+          providerEvidence: true,
+        },
+      });
+      expect(scanForbidden(manifest)).toEqual([]);
+    });
+
+    it('détecte un snapshot altéré', () => {
+      const manifest = buildEvidenceManifestV1(evidence, generatedAt);
+      const tampered = {
+        ...evidence,
+        snapshot: { ...snapshot, event: { id: 'event-1', status: 'ACTIVE' } },
+      };
+      expect(verifyEvidenceIntegrity(tampered, record(manifest), generatedAt)).toMatchObject({
+        status: 'MISMATCH',
+        snapshot: false,
+        components: { event: false },
+      });
+    });
+
+    it('détecte un manifest ou son hash de composant altéré', () => {
+      const manifest = buildEvidenceManifestV1(evidence, generatedAt);
+      const alteredManifest = { ...manifest, reference: 'CORO-SP-ALTERED' };
+      expect(
+        verifyEvidenceIntegrity(evidence, record(alteredManifest, hashEvidenceSnapshot(manifest)), generatedAt),
+      ).toMatchObject({ status: 'MISMATCH', manifest: false });
+      const alteredComponent = {
+        ...manifest,
+        components: { ...manifest.components, eventSha256: '0'.repeat(64) },
+      };
+      expect(
+        verifyEvidenceIntegrity(evidence, record(alteredComponent), generatedAt),
+      ).toMatchObject({
+        status: 'MISMATCH',
+        components: { event: false },
+      });
+    });
+
+    it('retourne UNAVAILABLE sans manifest ou pour une version non supportée', () => {
+      expect(verifyEvidenceIntegrity(evidence, null, generatedAt).status).toBe('UNAVAILABLE');
+      const manifest = buildEvidenceManifestV1(evidence, generatedAt);
+      expect(
+        verifyEvidenceIntegrity(evidence, { ...record(manifest), version: 2 }, generatedAt).status,
+      ).toBe('UNAVAILABLE');
+    });
+
+    it('refuse une evidence absente ou non FINALIZED', async () => {
+      const transaction = async (source: any) => {
+        const tx = {
+          $executeRaw: jest.fn(),
+          populationEvidenceRecord: { findFirst: jest.fn().mockResolvedValue(source) },
+          populationEvidenceManifest: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            create: jest.fn(),
+          },
+        };
+        const service = new PopulationEvidenceService({
+          $transaction: (callback: any) => callback(tx),
+        } as any);
+        return { service, tx };
+      };
+      const missing = await transaction(null);
+      await expect(
+        missing.service.generateManifestV1('building-1', 'org-1', 'missing', {
+          type: CoroActorType.SYSTEM,
+          id: 'test',
+        }),
+      ).rejects.toThrow('introuvable');
+      const nonFinal = await transaction({
+        ...evidence,
+        organizationId: 'org-1',
+        buildingId: 'building-1',
+        programId: 'program-1',
+        operationalEventId: 'event-1',
+        status: 'SUPERSEDED',
+      });
+      await expect(
+        nonFinal.service.generateManifestV1('building-1', 'org-1', evidence.id, {
+          type: CoroActorType.SYSTEM,
+          id: 'test',
+        }),
+      ).rejects.toThrow('ne peut pas recevoir');
+      expect(nonFinal.tx.populationEvidenceManifest.create).not.toHaveBeenCalled();
+    });
   });
 
   it('construit un snapshot nominal ordonné sans PII ni identifiants transport', async () => {

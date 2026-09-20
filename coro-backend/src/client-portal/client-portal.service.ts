@@ -95,6 +95,66 @@ export class ClientPortalService {
     );
   }
 
+  async generatePopulationEvidenceManifest(
+    buildingId: string,
+    evidenceId: string,
+    actor: {
+      sub?: string;
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    await this.assertPopulationPermission(
+      actor,
+      PopulationPermission.POPULATION_PREPARE,
+    );
+    return this.populationEvidenceService.generateManifestV1(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+      { type: CoroActorType.CLIENT_USER, id: actor.sub! },
+    );
+  }
+
+  async getPopulationEvidenceManifest(
+    buildingId: string,
+    evidenceId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationEvidenceService.getManifest(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+    );
+  }
+
+  async verifyPopulationEvidence(
+    buildingId: string,
+    evidenceId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    return this.populationEvidenceService.verify(
+      buildingId,
+      actor.organizationId,
+      evidenceId,
+    );
+  }
+
   private async assertPopulationPermission(
     actor: { sub?: string; organizationId: string },
     permission: PopulationPermission,

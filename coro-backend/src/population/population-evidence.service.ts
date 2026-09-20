@@ -17,6 +17,9 @@ import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const POPULATION_EVIDENCE_SCHEMA_VERSION = 'population-evidence/v1';
+export const POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION =
+  'population-evidence-manifest/v1';
+export const CORO_CANONICAL_JSON_VERSION = 'CORO-CANONICAL-JSON-V1';
 
 export function canonicalizeEvidence(value: unknown): string {
   if (value === null) return 'null';
@@ -78,6 +81,145 @@ export function deriveEvidenceCompletionStatus(input: {
     return 'COMPLETE_WITH_EXCEPTIONS' as const;
   }
   return 'COMPLETE' as const;
+}
+
+export function evidenceComponentHashes(snapshot: any) {
+  const communications = Array.isArray(snapshot?.communications)
+    ? snapshot.communications
+    : [];
+  return {
+    eventSha256: hashEvidenceSnapshot({
+      event: snapshot?.event ?? null,
+      closure: snapshot?.closure ?? null,
+    }),
+    communicationsSha256: hashEvidenceSnapshot(communications),
+    deliverySummarySha256: hashEvidenceSnapshot({
+      summary: snapshot?.summary ?? null,
+      communications: communications.map((item: any) => ({
+        id: item?.id ?? null,
+        cycleSequence: item?.cycleSequence ?? null,
+        deliverySummary: item?.deliverySummary ?? null,
+      })),
+    }),
+    providerEvidenceSha256: hashEvidenceSnapshot(
+      communications.map((item: any) => ({
+        id: item?.id ?? null,
+        cycleSequence: item?.cycleSequence ?? null,
+        providerSummary: item?.providerSummary ?? null,
+      })),
+    ),
+  };
+}
+
+export function buildEvidenceManifestV1(
+  evidence: {
+    id: string;
+    reference: string;
+    version: number;
+    schemaVersion: string;
+    snapshot: unknown;
+    snapshotSha256: string;
+  },
+  generatedAt: Date,
+) {
+  return {
+    schemaVersion: POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION,
+    canonicalization: CORO_CANONICAL_JSON_VERSION,
+    reference: evidence.reference,
+    evidenceRecordId: evidence.id,
+    evidenceVersion: evidence.version,
+    evidenceSchemaVersion: evidence.schemaVersion,
+    generatedAt: generatedAt.toISOString(),
+    integrity: {
+      algorithm: 'SHA-256',
+      snapshotSha256: evidence.snapshotSha256,
+    },
+    components: evidenceComponentHashes(evidence.snapshot),
+    trustScope:
+      'Les données correspondent aux empreintes enregistrées par CORO dans la même infrastructure.',
+  };
+}
+
+export function verifyEvidenceIntegrity(
+  evidence: {
+    id: string;
+    reference: string;
+    version: number;
+    schemaVersion: string;
+    snapshot: unknown;
+    snapshotSha256: string;
+  },
+  manifestRecord: {
+    schemaVersion: string;
+    version: number;
+    manifest: unknown;
+    manifestSha256: string;
+  } | null,
+  verifiedAt = new Date(),
+) {
+  if (
+    !manifestRecord ||
+    evidence.schemaVersion !== POPULATION_EVIDENCE_SCHEMA_VERSION ||
+    manifestRecord.schemaVersion !==
+      POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION ||
+    manifestRecord.version !== 1 ||
+    !manifestRecord.manifest ||
+    typeof manifestRecord.manifest !== 'object'
+  ) {
+    return {
+      status: 'UNAVAILABLE' as const,
+      snapshot: false,
+      manifest: false,
+      components: {
+        event: false,
+        communications: false,
+        deliveries: false,
+        providerEvidence: false,
+      },
+      verifiedAt: verifiedAt.toISOString(),
+      trustScope:
+        'La vérification d’intégrité interne CORO est indisponible.',
+    };
+  }
+
+  const manifest = manifestRecord.manifest as any;
+  const calculatedComponents = evidenceComponentHashes(evidence.snapshot);
+  const checks = {
+    event:
+      manifest.components?.eventSha256 ===
+      calculatedComponents.eventSha256,
+    communications:
+      manifest.components?.communicationsSha256 ===
+      calculatedComponents.communicationsSha256,
+    deliveries:
+      manifest.components?.deliverySummarySha256 ===
+      calculatedComponents.deliverySummarySha256,
+    providerEvidence:
+      manifest.components?.providerEvidenceSha256 ===
+      calculatedComponents.providerEvidenceSha256,
+  };
+  const snapshotValid =
+    hashEvidenceSnapshot(evidence.snapshot) === evidence.snapshotSha256 &&
+    manifest.integrity?.snapshotSha256 === evidence.snapshotSha256;
+  const manifestValid =
+    manifest.schemaVersion === POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION &&
+    manifest.canonicalization === CORO_CANONICAL_JSON_VERSION &&
+    manifest.reference === evidence.reference &&
+    manifest.evidenceRecordId === evidence.id &&
+    manifest.evidenceVersion === evidence.version &&
+    manifest.evidenceSchemaVersion === evidence.schemaVersion &&
+    hashEvidenceSnapshot(manifest) === manifestRecord.manifestSha256;
+  const verified =
+    snapshotValid && manifestValid && Object.values(checks).every(Boolean);
+  return {
+    status: verified ? ('VERIFIED' as const) : ('MISMATCH' as const),
+    snapshot: snapshotValid,
+    manifest: manifestValid,
+    components: checks,
+    verifiedAt: verifiedAt.toISOString(),
+    trustScope:
+      'Les données correspondent aux empreintes enregistrées par CORO dans la même infrastructure.',
+  };
 }
 
 @Injectable()
@@ -177,6 +319,100 @@ export class PopulationEvidenceService {
     });
     if (!record) throw new NotFoundException('Dossier de preuve introuvable');
     return record;
+  }
+
+  async generateManifestV1(
+    buildingId: string,
+    organizationId: string,
+    evidenceId: string,
+    actor: { type: CoroActorType; id: string },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'manifest:' + evidenceId}))`;
+      const evidence = await tx.populationEvidenceRecord.findFirst({
+        where: { id: evidenceId, buildingId, organizationId },
+      });
+      if (!evidence) throw new NotFoundException('Dossier de preuve introuvable');
+      const existing = await tx.populationEvidenceManifest.findFirst({
+        where: {
+          evidenceRecordId: evidence.id,
+          version: 1,
+          buildingId,
+          organizationId,
+        },
+      });
+      if (existing) return existing;
+      if (
+        evidence.status !== PopulationEvidenceStatus.FINALIZED ||
+        evidence.schemaVersion !== POPULATION_EVIDENCE_SCHEMA_VERSION ||
+        !evidence.snapshotSha256
+      ) {
+        throw new BadRequestException(
+          'Le dossier de preuve ne peut pas recevoir un manifest v1',
+        );
+      }
+      if (hashEvidenceSnapshot(evidence.snapshot) !== evidence.snapshotSha256) {
+        throw new BadRequestException(
+          'L’intégrité du snapshot doit être vérifiée avant le manifest',
+        );
+      }
+      const generatedAt = new Date();
+      const manifest = buildEvidenceManifestV1(evidence, generatedAt);
+      const manifestSha256 = hashEvidenceSnapshot(manifest);
+      return tx.populationEvidenceManifest.create({
+        data: {
+          organizationId: evidence.organizationId,
+          buildingId: evidence.buildingId,
+          programId: evidence.programId,
+          operationalEventId: evidence.operationalEventId,
+          evidenceRecordId: evidence.id,
+          schemaVersion: POPULATION_EVIDENCE_MANIFEST_SCHEMA_VERSION,
+          version: 1,
+          generatedAt,
+          generatedByType: actor.type,
+          generatedById: actor.id,
+          manifest: manifest as Prisma.InputJsonValue,
+          manifestSha256,
+        },
+      });
+    });
+  }
+
+  async getManifest(
+    buildingId: string,
+    organizationId: string,
+    evidenceId: string,
+  ) {
+    const manifest = await this.prisma.populationEvidenceManifest.findFirst({
+      where: {
+        evidenceRecordId: evidenceId,
+        buildingId,
+        organizationId,
+        version: 1,
+      },
+    });
+    if (!manifest) throw new NotFoundException('Manifest de preuve introuvable');
+    return manifest;
+  }
+
+  async verify(
+    buildingId: string,
+    organizationId: string,
+    evidenceId: string,
+  ) {
+    const evidence = await this.prisma.populationEvidenceRecord.findFirst({
+      where: { id: evidenceId, buildingId, organizationId },
+    });
+    if (!evidence) throw new NotFoundException('Dossier de preuve introuvable');
+    const manifest = await this.prisma.populationEvidenceManifest.findFirst({
+      where: {
+        evidenceRecordId: evidenceId,
+        buildingId,
+        organizationId,
+        version: 1,
+      },
+    });
+    return verifyEvidenceIntegrity(evidence, manifest);
   }
 
   private async loadEvidenceSource(

@@ -185,6 +185,77 @@ describePostgres('Population evidence PostgreSQL invariants', () => {
     await expect(service.getById('other-building', ids.organization, record.id)).rejects.toThrow();
   });
 
+  it('génère un seul manifest v1 concurrent et vérifie son intégrité', async () => {
+    const evidence = await service.getForEvent(ids.building, ids.organization, ids.event);
+    const generate = () =>
+      service.generateManifestV1(ids.building, ids.organization, evidence.id, {
+        type: CoroActorType.SYSTEM,
+        id: 'postgres-test',
+      });
+    const [first, second] = await Promise.all([generate(), generate()]);
+    expect(second.id).toBe(first.id);
+    expect(second.manifestSha256).toBe(first.manifestSha256);
+    expect(
+      await prisma.populationEvidenceManifest.count({
+        where: { evidenceRecordId: evidence.id },
+      }),
+    ).toBe(1);
+    await expect(
+      service.verify(ids.building, ids.organization, evidence.id),
+    ).resolves.toMatchObject({
+      status: 'VERIFIED',
+      snapshot: true,
+      manifest: true,
+    });
+  });
+
+  it('scope le manifest et sa vérification au tenant et au bâtiment', async () => {
+    const evidence = await service.getForEvent(ids.building, ids.organization, ids.event);
+    await expect(
+      service.getManifest(ids.building, ids.otherOrganization, evidence.id),
+    ).rejects.toThrow();
+    await expect(
+      service.verify(ids.building, ids.otherOrganization, evidence.id),
+    ).rejects.toThrow();
+    await expect(
+      service.getManifest('other-building', ids.organization, evidence.id),
+    ).rejects.toThrow();
+  });
+
+  it('impose manifest version unique et interdit UPDATE/DELETE', async () => {
+    const evidence = await service.getForEvent(ids.building, ids.organization, ids.event);
+    const manifest = await service.getManifest(ids.building, ids.organization, evidence.id);
+    await expect(
+      prisma.populationEvidenceManifest.create({
+        data: {
+          organizationId: ids.organization,
+          buildingId: ids.building,
+          programId: ids.program,
+          operationalEventId: ids.event,
+          evidenceRecordId: evidence.id,
+          schemaVersion: 'population-evidence-manifest/v1',
+          version: 1,
+          generatedByType: CoroActorType.SYSTEM,
+          generatedById: 'duplicate',
+          manifest: {},
+          manifestSha256: '0'.repeat(64),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+    await expect(
+      prisma.populationEvidenceManifest.update({
+        where: { id: manifest.id },
+        data: { manifestSha256: '1'.repeat(64) },
+      }),
+    ).rejects.toThrow('immutable');
+    await expect(
+      prisma.populationEvidenceManifest.delete({ where: { id: manifest.id } }),
+    ).rejects.toThrow('immutable');
+    await expect(
+      prisma.populationEvidenceRecord.delete({ where: { id: evidence.id } }),
+    ).rejects.toThrow();
+  });
+
   it('impose event/version unique et refuse UPDATE/DELETE FINALIZED', async () => {
     const record = await service.getForEvent(ids.building, ids.organization, ids.event);
     await expect(

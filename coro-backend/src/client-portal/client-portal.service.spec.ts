@@ -62,6 +62,9 @@ describe('ClientPortalService - Sentinelle Population', () => {
     generateV1: jest.fn(),
     getForEvent: jest.fn(),
     getById: jest.fn(),
+    generateManifestV1: jest.fn(),
+    getManifest: jest.fn(),
+    verify: jest.fn(),
   };
 
   beforeEach(() => {
@@ -126,6 +129,31 @@ describe('ClientPortalService - Sentinelle Population', () => {
         'event-1',
       );
       expect(populationEvidenceService.getById).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+        'evidence-1',
+      );
+    });
+
+    it('scope également génération, lecture et vérification du manifest', async () => {
+      populationEvidenceService.generateManifestV1.mockResolvedValue({ id: 'manifest-1' });
+      populationEvidenceService.getManifest.mockResolvedValue({ id: 'manifest-1' });
+      populationEvidenceService.verify.mockResolvedValue({ status: 'VERIFIED' });
+      await service.generatePopulationEvidenceManifest('building-1', 'evidence-1', actor);
+      await service.getPopulationEvidenceManifest('building-1', 'evidence-1', actor);
+      await service.verifyPopulationEvidence('building-1', 'evidence-1', actor);
+      expect(populationEvidenceService.generateManifestV1).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+        'evidence-1',
+        { type: 'CLIENT_USER', id: 'client-user-1' },
+      );
+      expect(populationEvidenceService.getManifest).toHaveBeenCalledWith(
+        'building-1',
+        'org-1',
+        'evidence-1',
+      );
+      expect(populationEvidenceService.verify).toHaveBeenCalledWith(
         'building-1',
         'org-1',
         'evidence-1',
