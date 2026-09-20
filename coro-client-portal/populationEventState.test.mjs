@@ -9,6 +9,8 @@ import {
   getPopulationDeliveryModeLabel,
   derivePopulationWorkflowState,
   getPopulationResumeAction,
+  buildPopulationResumePlan,
+  canCompletePopulationResumeMount,
 } from "./app/sentinelle/[buildingId]/population/populationEventState.mjs";
 
 test("supporte aucun event et selectionne la communication legacy ACTIVE", () => {
@@ -18,6 +20,56 @@ test("supporte aucun event et selectionne la communication legacy ACTIVE", () =>
       { id: "legacy-1", status: "ACTIVE", operationalEventId: null },
     ]).map((alert) => alert.id),
     ["legacy-1"],
+  );
+});
+
+test("construit une reprise vierge avec scenario, preview et meme alerte", () => {
+  const event = {
+    status: "ACTIVE",
+    emergencyScenarioId: "228ffa39-5e95-556b-b24f-31d782fefc93",
+  };
+  const alert = {
+    id: "cbef6379-c69d-4031-86f2-c843f9a17e79",
+    type: "ALL_CLEAR",
+    status: "READY",
+    approvedAt: "2026-09-20T10:00:00Z",
+    recipientsFrozenAt: null,
+  };
+  const preview = { population: { uniqueTargetCount: 1 } };
+  const plan = buildPopulationResumePlan(
+    event,
+    alert,
+    [{ id: event.emergencyScenarioId }],
+    preview,
+  );
+  assert.deepEqual(plan, {
+    alertId: alert.id,
+    scenarioId: event.emergencyScenarioId,
+    preview,
+    composerOpen: true,
+    step: 6,
+    workflowState: "FREEZE_REQUIRED",
+  });
+  assert.equal(buildPopulationResumePlan(event, alert, [], preview), null);
+  assert.equal(
+    buildPopulationResumePlan(event, alert, [{ id: event.emergencyScenarioId }], null),
+    null,
+  );
+});
+
+test("attend le montage reel avant de terminer le scroll de reprise", () => {
+  const state = {
+    pendingAlertId: "alert-1",
+    composerOpen: true,
+    scenarioReady: true,
+    previewReady: true,
+    createdAlertId: "alert-1",
+    targetMounted: false,
+  };
+  assert.equal(canCompletePopulationResumeMount(state), false);
+  assert.equal(
+    canCompletePopulationResumeMount({ ...state, targetMounted: true }),
+    true,
   );
 });
 

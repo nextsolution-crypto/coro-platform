@@ -30,6 +30,8 @@ import {
   getPopulationDeliveryModeLabel,
   derivePopulationWorkflowState,
   getPopulationResumeAction,
+  buildPopulationResumePlan,
+  canCompletePopulationResumeMount,
 } from "./populationEventState.mjs";
 import styles from "./population.module.css";
 
@@ -502,6 +504,7 @@ export default function PopulationPage() {
     useState<PopulationConfigurationForm>(EMPTY_CONFIGURATION_FORM);
 
   const [scenarios, setScenarios] = useState<PopulationScenario[]>([]);
+  const scenariosRef = useRef<PopulationScenario[]>([]);
   const [scenariosLoading, setScenariosLoading] = useState(false);
   const [scenariosError, setScenariosError] = useState<string | null>(null);
 
@@ -574,6 +577,9 @@ export default function PopulationPage() {
   const [closeEventReason, setCloseEventReason] = useState("");
   const [confirmIncompleteClose, setConfirmIncompleteClose] = useState(false);
   const [legacyEndingId, setLegacyEndingId] = useState<string | null>(null);
+  const [pendingResumeAlertId, setPendingResumeAlertId] = useState<
+    string | null
+  >(null);
   const [legacyActiveAlerts, setLegacyActiveAlerts] = useState<
     PopulationLegacyAlert[]
   >([]);
@@ -667,6 +673,35 @@ export default function PopulationPage() {
     event: PopulationOperationalEvent,
     alert: PopulationOperationalEventAlert,
   ) => {
+    let restoredPreview: PopulationPreview;
+    try {
+      restoredPreview = (await apiGet(
+        `/client-portal/buildings/${buildingId}/population/scenarios/${event.emergencyScenarioId}/preview`,
+      )) as PopulationPreview;
+    } catch {
+      setAlertError(
+        "La communication a été retrouvée, mais son contexte opérationnel n’a pas pu être restauré. Actualisez les données ou contactez l’administrateur.",
+      );
+      setPendingResumeAlertId(null);
+      return;
+    }
+
+    const plan = buildPopulationResumePlan(
+      event,
+      alert,
+      scenariosRef.current,
+      restoredPreview,
+    );
+    if (!plan) {
+      setAlertError(
+        "La communication a été retrouvée, mais son contexte opérationnel n’a pas pu être restauré. Actualisez les données ou contactez l’administrateur.",
+      );
+      setPendingResumeAlertId(null);
+      return;
+    }
+
+    setSelectedScenarioId(plan.scenarioId);
+    setPreview(plan.preview);
     setCreatedAlert(alert as CreatedPopulationAlert);
     setAlertForm({
       type: alert.type,
@@ -679,7 +714,8 @@ export default function PopulationPage() {
     });
     setFreezeResult(null);
     setLivePreflight(null);
-    setAlertStep(6);
+    setAlertStep(plan.step);
+    setPendingResumeAlertId(alert.id);
     setAlertComposerOpen(true);
 
     if (
@@ -713,13 +749,40 @@ export default function PopulationPage() {
       }
     }
 
-    window.setTimeout(() => {
-      alertComposerRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 0);
   };
+
+  useEffect(() => {
+    const target = alertComposerRef.current;
+    if (!canCompletePopulationResumeMount({
+      pendingAlertId: pendingResumeAlertId,
+      composerOpen: alertComposerOpen,
+      scenarioReady: Boolean(
+        selectedScenarioId &&
+          scenarios.some((scenario) => scenario.id === selectedScenarioId),
+      ),
+      previewReady: Boolean(preview),
+      createdAlertId: createdAlert?.id,
+      targetMounted: Boolean(target),
+    })) {
+      return;
+    }
+    target!.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    const nextAction = target!.querySelector<HTMLElement>(
+      "[data-resume-next-action] button",
+    );
+    nextAction?.focus({ preventScroll: true });
+    setPendingResumeAlertId(null);
+  }, [
+    pendingResumeAlertId,
+    alertComposerOpen,
+    selectedScenarioId,
+    scenarios,
+    preview,
+    createdAlert?.id,
+  ]);
 
   const loadIncidentAlertHistory = async (incidentId: string) => {
     setIncidentAlertsLoading(true);
@@ -857,7 +920,7 @@ export default function PopulationPage() {
           .find((alert) =>
             ["DRAFT", "READY"].includes(alert.status),
           );
-        if (resumable) {
+        if (resumable && createdAlert?.id !== resumable.id) {
           await resumeOperationalCommunication(result, resumable);
         }
       }
@@ -966,7 +1029,8 @@ export default function PopulationPage() {
             `/client-portal/buildings/${buildingId}/population/scenarios`,
           )) as PopulationScenarioList;
 
-          setScenarios(scenarioRes.scenarios || []);
+          scenariosRef.current = scenarioRes.scenarios || [];
+          setScenarios(scenariosRef.current);
 
           setSelectedScenarioId((current) => {
             if (
@@ -984,6 +1048,7 @@ export default function PopulationPage() {
           });
         } catch (error: any) {
           setScenarios([]);
+          scenariosRef.current = [];
 
           setScenariosError(
             typeof error?.message === "string"
@@ -1048,6 +1113,7 @@ export default function PopulationPage() {
         setConfiguration(null);
         setConfigurationForm(EMPTY_CONFIGURATION_FORM);
         setScenarios([]);
+        scenariosRef.current = [];
         setSelectedScenarioId(null);
         setPreview(null);
         setIncidents([]);
@@ -6331,12 +6397,14 @@ function AlertDraftWorkspace({
                 marginTop: 16,
               }}
             >
-              <WorkflowButton
-                title="Préparer le roster de diffusion"
-                disabled={loading || !canSend}
-                onClick={onRequestFreeze}
-                primary
-              />
+              <div data-resume-next-action="freeze-roster">
+                <WorkflowButton
+                  title="Préparer le roster de diffusion"
+                  disabled={loading || !canPrepare}
+                  onClick={onRequestFreeze}
+                  primary
+                />
+              </div>
             </div>
           ) : (
             <div

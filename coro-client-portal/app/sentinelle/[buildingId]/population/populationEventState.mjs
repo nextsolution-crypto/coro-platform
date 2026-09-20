@@ -153,3 +153,29 @@ export function getPopulationResumeAction(event, alert) {
     detail: detailByState[state],
   };
 }
+
+export function buildPopulationResumePlan(event, alert, scenarios, preview) {
+  const scenario = (Array.isArray(scenarios) ? scenarios : []).find(
+    (candidate) => candidate?.id === event?.emergencyScenarioId,
+  );
+  if (!scenario || !preview) return null;
+  return {
+    alertId: alert.id,
+    scenarioId: scenario.id,
+    preview,
+    composerOpen: true,
+    step: 6,
+    workflowState: derivePopulationWorkflowState({ event, alert }),
+  };
+}
+
+export function canCompletePopulationResumeMount(state) {
+  return Boolean(
+    state?.pendingAlertId &&
+      state?.composerOpen &&
+      state?.scenarioReady &&
+      state?.previewReady &&
+      state?.createdAlertId === state?.pendingAlertId &&
+      state?.targetMounted,
+  );
+}
