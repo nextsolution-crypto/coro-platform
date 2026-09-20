@@ -7,6 +7,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { CorrectiveActionAssigneeType, OperationalReviewConfidentiality } from '@prisma/client';
 
 export const CORRECTIVE_ACTION_CATEGORIES = [
   'ROLES',
@@ -29,6 +30,7 @@ export const CORRECTIVE_ACTION_PRIORITIES = [
 ] as const;
 
 export class CreateCorrectiveActionDto {
+  @IsOptional() @IsUUID() clientIntentId?: string;
   @IsOptional() @IsUUID() buildingId?: string;
   @IsOptional() @IsUUID() incidentId?: string;
   @IsOptional() @IsIn(CORRECTIVE_ACTION_CATEGORIES) category?: string;
@@ -37,6 +39,10 @@ export class CreateCorrectiveActionDto {
   @IsOptional() @IsIn(CORRECTIVE_ACTION_STATUSES) status?: string;
   @IsOptional() @IsIn(CORRECTIVE_ACTION_PRIORITIES) priority?: string;
   @IsOptional() @IsString() @MaxLength(300) assignedTo?: string;
+  @IsOptional() @IsIn(Object.values(CorrectiveActionAssigneeType)) assigneeType?: CorrectiveActionAssigneeType;
+  @IsOptional() @IsUUID() assigneeId?: string;
+  @IsOptional() @IsString() @MaxLength(300) externalAssigneeDisplayName?: string;
+  @IsOptional() @IsIn(Object.values(OperationalReviewConfidentiality)) visibility?: OperationalReviewConfidentiality;
   @IsOptional() @IsDateString() dueDate?: string;
 }
 
@@ -46,6 +52,9 @@ export class UpdateCorrectiveActionDto {
   @IsOptional() @IsIn(CORRECTIVE_ACTION_STATUSES) status?: string;
   @IsOptional() @IsIn(CORRECTIVE_ACTION_PRIORITIES) priority?: string;
   @IsOptional() @IsString() @MaxLength(300) assignedTo?: string;
+  @IsOptional() @IsIn(Object.values(CorrectiveActionAssigneeType)) assigneeType?: CorrectiveActionAssigneeType;
+  @IsOptional() @IsUUID() assigneeId?: string;
+  @IsOptional() @IsString() @MaxLength(300) externalAssigneeDisplayName?: string;
   @IsOptional()
   @Transform(({ value }) => (value === '' ? null : value))
   @IsDateString()

@@ -386,9 +386,12 @@ export default function IntelligencePage() {
                   PLANNED:     { label: 'Planifiée',   color: '#6C757D', bg: '#F8F9FA' },
                   IN_PROGRESS: { label: 'En cours',    color: '#2980B9', bg: '#EBF5FB' },
                   COMPLETED:   { label: 'Complétée',   color: '#27AE60', bg: '#EAFAF1' },
+                  VERIFIED:    { label: 'Vérifiée',    color: '#117864', bg: '#E8F8F5' },
+                  CLOSED:      { label: 'Fermée',      color: '#566573', bg: '#F2F4F4' },
                 };
                 const scfg = statusConfig[action.status] || statusConfig.PLANNED;
-                const isOverdue = action.dueDate && new Date(action.dueDate) < new Date() && action.status !== 'COMPLETED';
+                const terminalStatuses = ['COMPLETED', 'VERIFIED', 'CLOSED', 'CANCELLED'];
+                const isOverdue = action.dueDate && new Date(action.dueDate) < new Date() && !terminalStatuses.includes(action.status);
 
                 return (
                   <div key={action.id} style={{ padding: '14px 18px', borderRadius: 10, backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -396,6 +399,7 @@ export default function IntelligencePage() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#2C3E50' }}>{action.title}</span>
+                        <span style={{ fontSize: 10, color: '#ADB5BD' }}>{action.reference || 'Action historique'}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: scfg.color, backgroundColor: scfg.bg, padding: '2px 7px', borderRadius: 4 }}>{scfg.label}</span>
                         {isOverdue && <span style={{ fontSize: 11, fontWeight: 700, color: '#C0392B', backgroundColor: '#FDEDEC', padding: '2px 7px', borderRadius: 4 }}>⚠️ En retard</span>}
                       </div>
@@ -419,7 +423,7 @@ export default function IntelligencePage() {
                           ✓ Compléter
                         </button>
                       )}
-                      {action.status !== 'COMPLETED' && (
+                      {!terminalStatuses.includes(action.status) && (
                         <button type="button" onClick={() => handleUpdateActionStatus(action.id, 'CANCELLED')}
                           style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #E9ECEF', backgroundColor: '#F8F9FA', cursor: 'pointer', fontSize: 11, color: '#ADB5BD' }}>
                           ✕

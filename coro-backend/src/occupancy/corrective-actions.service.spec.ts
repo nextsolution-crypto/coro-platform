@@ -18,15 +18,22 @@ const manager = {
 };
 
 function harness() {
-  const prisma = {
+  const correctiveAction = {
+    create: jest.fn().mockResolvedValue({ id: 'action-a', status: 'PLANNED', category: 'GENERAL' }),
+    findMany: jest.fn().mockResolvedValue([]),
+    findFirst: jest.fn(),
+    update: jest.fn().mockResolvedValue({ id: 'action-a' }),
+  };
+  const prisma: any = {
     building: { findFirst: jest.fn() },
     incidentEvent: { findFirst: jest.fn() },
-    correctiveAction: {
-      create: jest.fn().mockResolvedValue({ id: 'action-a' }),
-      findMany: jest.fn().mockResolvedValue([]),
-      findFirst: jest.fn(),
-      update: jest.fn().mockResolvedValue({ id: 'action-a' }),
-    },
+    correctiveAction,
+    correctiveActionAuditEvent: { create: jest.fn(), createMany: jest.fn() },
+    clientUser: { findFirst: jest.fn() },
+    user: { findFirst: jest.fn() },
+    reviewRecommendation: { findFirst: jest.fn() },
+    $executeRaw: jest.fn(),
+    $transaction: jest.fn((callback: any) => callback(prisma)),
   };
   return { prisma, service: new CorrectiveActionsService(prisma as never) };
 }
@@ -151,12 +158,12 @@ describe('CorrectiveActionsService tenant validation', () => {
       NotFoundException,
     );
     expect(h.prisma.correctiveAction.findFirst).toHaveBeenCalledWith({
-      where: {
+      where: expect.objectContaining({
         id: 'action-b',
         organizationId: 'org-a',
         buildingId: { in: ['building-a'] },
         building: { is: { clientId: 'client-a' } },
-      },
+      }),
     });
   });
 
@@ -178,5 +185,67 @@ describe('CorrectiveActionsService tenant validation', () => {
         where: expect.not.objectContaining({ buildingId: expect.anything() }),
       }),
     );
+  });
+});
+
+describe('CorrectiveActionsService D1 workflow', () => {
+  const actor = { ...manager, sub: 'user-a' };
+
+  it('refuse une transition directe PLANNED vers COMPLETED', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'PLANNED' });
+    await expect(h.service.update('action-a', { status: 'COMPLETED' }, actor)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('reouvre COMPLETED vers IN_PROGRESS et remet completedAt a null', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedAt: new Date() });
+    await h.service.update('action-a', { status: 'IN_PROGRESS' }, actor);
+    expect(h.prisma.correctiveAction.update.mock.calls[0][0].data.completedAt).toBeNull();
+  });
+
+  it('refuse VERIFIED et CLOSED en D1', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED' });
+    await expect(h.service.update('action-a', { status: 'VERIFIED' } as any, actor)).rejects.toThrow('phase ulterieure');
+  });
+
+  it('respecte une permission explicite lorsqu elle est configuree', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_EDIT'] });
+    await expect(h.service.create({ title: 'Action', buildingId: 'building-a' }, actor)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('cree depuis une Recommendation ACCEPTED avec intention idempotente et confidentialite heritee', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.reviewRecommendation.findFirst.mockResolvedValue({ id: 'rec-a', operationalReview: { buildingId: 'building-a', confidentiality: 'BUILDING_TEAM' } });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
+    const dto = { title: 'Action', clientIntentId: '11111111-1111-4111-8111-111111111111' };
+    await h.service.createFromRecommendation('review-a', 'rec-a', dto, actor);
+    expect(h.prisma.correctiveAction.create.mock.calls[0][0].data).toEqual(expect.objectContaining({ reviewRecommendationId: 'rec-a', visibility: 'BUILDING_TEAM', status: 'PLANNED' }));
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', reviewRecommendationId: 'rec-a' });
+    await h.service.createFromRecommendation('review-a', 'rec-a', dto, actor);
+    expect(h.prisma.correctiveAction.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuse une Recommendation non acceptee ou hors tenant', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    h.prisma.reviewRecommendation.findFirst.mockResolvedValue(null);
+    await expect(h.service.createFromRecommendation('review-a', 'rec-a', { title: 'Action', clientIntentId: '11111111-1111-4111-8111-111111111111' }, actor)).rejects.toThrow('acceptee introuvable');
+  });
+
+  it('resout le snapshot d un responsable CLIENT_USER cote serveur', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst
+      .mockResolvedValueOnce({ correctiveActionPermissions: [] })
+      .mockResolvedValueOnce({ id: 'assignee-a', firstName: 'Marie', lastName: 'Tremblay' });
+    h.prisma.building.findFirst.mockResolvedValue({ id: 'building-a' });
+    await h.service.create({ title: 'Action', buildingId: 'building-a', assigneeType: 'CLIENT_USER' as any, assigneeId: '11111111-1111-4111-8111-111111111111' }, actor);
+    expect(h.prisma.correctiveAction.create.mock.calls[0][0].data).toEqual(expect.objectContaining({ assigneeDisplayNameSnapshot: 'Marie Tremblay', assignedTo: 'Marie Tremblay' }));
   });
 });

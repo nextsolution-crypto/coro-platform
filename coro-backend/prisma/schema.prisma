@@ -780,6 +780,7 @@ model ClientUser {
   role                  ClientUserRole         @default(CLIENT_MANAGER)
   populationPermissions PopulationPermission[] @default([])
   operationalReviewPermissions OperationalReviewPermission[] @default([])
+  correctiveActionPermissions CorrectiveActionPermission[] @default([])
   buildingIds           String[]
   isActive              Boolean                @default(true)
   clientId              String
@@ -1077,6 +1078,27 @@ enum OperationalReviewPermission {
   REX_EDIT
   REX_REVIEW
   REX_FINALIZE
+}
+
+enum CorrectiveActionPermission {
+  CORRECTIVE_ACTION_CREATE
+  CORRECTIVE_ACTION_EDIT
+  CORRECTIVE_ACTION_COMPLETE
+}
+
+enum CorrectiveActionAssigneeType {
+  CLIENT_USER
+  USER
+  EXTERNAL
+}
+
+enum CorrectiveActionAuditEventType {
+  CREATED
+  UPDATED
+  ASSIGNED
+  STATUS_CHANGED
+  CANCELLED
+  SOURCE_LINKED
 }
 
 enum OperationalReviewStatus {
@@ -3171,6 +3193,8 @@ model ComplianceEvidence {
 
 model CorrectiveAction {
   id             String    @id @default(uuid())
+  reference      String?   @unique @default(dbgenerated("corrective_action_reference()"))
+  clientIntentId String?   @unique
   organizationId String
   buildingId     String?
   incidentId     String?
@@ -3180,6 +3204,16 @@ model CorrectiveAction {
   status         String    @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
   priority       String    @default("WARNING") // CRITICAL | WARNING | INFO
   assignedTo     String?
+  assigneeType   CorrectiveActionAssigneeType?
+  assigneeId     String?
+  assigneeDisplayNameSnapshot String?
+  visibility     OperationalReviewConfidentiality @default(BUILDING_TEAM)
+  reviewRecommendationId String?
+  reviewRecommendation ReviewRecommendation? @relation(fields: [reviewRecommendationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdByType  CoroActorType?
+  createdById    String?
+  updatedByType  CoroActorType?
+  updatedById    String?
   dueDate        DateTime?
   completedAt    DateTime?
   createdAt      DateTime  @default(now())
@@ -3195,11 +3229,28 @@ model CorrectiveAction {
   sourceRecommendationId String?
   exerciseActionItemId   String?                 @unique
   actionItem             ExerciseActionItem?     @relation(fields: [exerciseActionItemId], references: [id], onDelete: SetNull)
+  auditEvents            CorrectiveActionAuditEvent[]
 
   @@index([organizationId])
   @@index([buildingId])
   @@index([incidentId])
   @@index([exerciseReportId])
+  @@index([reviewRecommendationId])
+}
+
+model CorrectiveActionAuditEvent {
+  id String @id @default(uuid())
+  organizationId String
+  correctiveActionId String
+  correctiveAction CorrectiveAction @relation(fields: [correctiveActionId], references: [id], onDelete: Restrict)
+  eventType CorrectiveActionAuditEventType
+  actorType CoroActorType
+  actorId String
+  occurredAt DateTime @default(now())
+  metadata Json?
+
+  @@index([correctiveActionId, occurredAt])
+  @@index([organizationId])
 }
 
 model OperationalReview {
@@ -3306,10 +3357,12 @@ model ReviewRecommendation {
   decidedByType CoroActorType?
   decidedById String?
   decisionComment String?
+  correctiveActions CorrectiveAction[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([operationalReviewId, displayOrder])
+  @@unique([id, organizationId])
   @@index([organizationId])
   @@index([reviewFindingId, status])
 }

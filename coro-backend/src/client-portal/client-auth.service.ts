@@ -58,6 +58,7 @@ export class ClientAuthService {
           buildingIds: clientUser.buildingIds,
           populationPermissions: clientUser.populationPermissions,
           operationalReviewPermissions: clientUser.operationalReviewPermissions,
+          correctiveActionPermissions: clientUser.correctiveActionPermissions,
           type: 'CLIENT',
         });
         return {
@@ -73,6 +74,7 @@ export class ClientAuthService {
             organizationId: clientUser.organizationId,
             populationPermissions: clientUser.populationPermissions,
             operationalReviewPermissions: clientUser.operationalReviewPermissions,
+            correctiveActionPermissions: clientUser.correctiveActionPermissions,
           },
         };
       }
@@ -168,6 +170,7 @@ export class ClientAuthService {
       buildingIds: clientUser.buildingIds,
       populationPermissions: clientUser.populationPermissions,
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
+      correctiveActionPermissions: clientUser.correctiveActionPermissions,
       type: 'CLIENT',
     });
 
@@ -185,6 +188,7 @@ export class ClientAuthService {
         organizationId: clientUser.organizationId,
         populationPermissions: clientUser.populationPermissions,
         operationalReviewPermissions: clientUser.operationalReviewPermissions,
+        correctiveActionPermissions: clientUser.correctiveActionPermissions,
       },
     };
   }
@@ -300,6 +304,7 @@ export class ClientAuthService {
       buildingIds: clientUser.buildingIds,
       populationPermissions: clientUser.populationPermissions,
       operationalReviewPermissions: clientUser.operationalReviewPermissions,
+      correctiveActionPermissions: clientUser.correctiveActionPermissions,
       type: 'CLIENT',
     });
 
@@ -316,6 +321,7 @@ export class ClientAuthService {
         organizationId: clientUser.organizationId,
         populationPermissions: clientUser.populationPermissions,
         operationalReviewPermissions: clientUser.operationalReviewPermissions,
+        correctiveActionPermissions: clientUser.correctiveActionPermissions,
       },
     };
   }
