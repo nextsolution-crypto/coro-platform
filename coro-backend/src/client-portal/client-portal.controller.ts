@@ -434,6 +434,17 @@ export class ClientPortalController {
     );
   }
 
+  @Get('buildings/:buildingId/population/alerts/legacy-active')
+  getPopulationLegacyActiveAlerts(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    return this.clientPortalService.getPopulationLegacyActiveAlerts(
+      buildingId,
+      req.clientUser,
+    );
+  }
+
   @Get('buildings/:buildingId/population/alerts/:alertId/delivery-status')
   async getPopulationAlertDeliveryStatus(
     @Param('buildingId') buildingId: string,
@@ -590,17 +601,6 @@ export class ClientPortalController {
     @Request() req: any,
   ) {
     return this.clientPortalService.getActivePopulationOperationalEvent(
-      buildingId,
-      req.clientUser,
-    );
-  }
-
-  @Get('buildings/:buildingId/population/alerts/legacy-active')
-  getPopulationLegacyActiveAlerts(
-    @Param('buildingId') buildingId: string,
-    @Request() req: any,
-  ) {
-    return this.clientPortalService.getPopulationLegacyActiveAlerts(
       buildingId,
       req.clientUser,
     );
