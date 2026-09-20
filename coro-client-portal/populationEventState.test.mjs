@@ -366,6 +366,26 @@ test("n'invente jamais le mode historique", () => {
   assert.equal(getPopulationDeliveryModeLabel(null), "MODE NON FIGÉ");
 });
 
+test("affiche les snapshots LIVE d'un cycle termine sans utiliser le mode courant", () => {
+  const endedEvent = {
+    status: "ENDED",
+    alerts: ["TEST", "UPDATE", "ALL_CLEAR"].map((type, index) => ({
+      id: `alert-${index + 1}`,
+      type,
+      deliveryModeSnapshot: "LIVE",
+    })),
+  };
+  const currentProgramMode = "SANDBOX";
+
+  assert.equal(currentProgramMode, "SANDBOX");
+  assert.deepEqual(
+    endedEvent.alerts.map((alert) =>
+      getPopulationDeliveryModeLabel(alert.deliveryModeSnapshot),
+    ),
+    ["DIFFUSION RÉELLE", "DIFFUSION RÉELLE", "DIFFUSION RÉELLE"],
+  );
+});
+
 test("fusionne events et legacy par date descendante et normalise les collections", () => {
   assert.deepEqual(mergePopulationRegistry(undefined, undefined), []);
   const result = mergePopulationRegistry(

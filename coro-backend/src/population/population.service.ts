@@ -3585,6 +3585,7 @@ export class PopulationService {
             readyAt: true,
             approvedAt: true,
             recipientsFrozenAt: true,
+            deliveryModeSnapshot: true,
             sendingAt: true,
             activatedAt: true,
             endedAt: true,

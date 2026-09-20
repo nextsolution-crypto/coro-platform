@@ -8071,6 +8071,18 @@ describe('PopulationService', () => {
         'organization-1',
       );
 
+      expect(prisma.populationOperationalEvent.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            alerts: expect.objectContaining({
+              select: expect.objectContaining({
+                deliveryModeSnapshot: true,
+              }),
+            }),
+          }),
+        }),
+      );
+
       expect(result).toEqual(
         expect.objectContaining({
           communicationCount: 1,
@@ -8102,6 +8114,94 @@ describe('PopulationService', () => {
       expect(serialized).not.toContain('phone');
       expect(serialized).not.toContain('latitude');
       expect(serialized).not.toContain('longitude');
+    });
+
+    it('conserve les modes figés LIVE, SANDBOX et null dans un événement terminé sans PII', async () => {
+      prisma.rueFacilityProfile.findUnique.mockResolvedValue({
+        building: { organizationId: 'organization-1' },
+        populationProgram: { id: 'program-1' },
+      });
+      prisma.populationOperationalEvent.findMany.mockResolvedValue([
+        { id: 'event-ended' },
+      ]);
+      prisma.populationOperationalEvent.findFirst.mockResolvedValue({
+        id: 'event-ended',
+        status: PopulationOperationalEventStatus.ENDED,
+        programId: 'program-1',
+        emergencyScenarioId: 'scenario-1',
+        incidentEventId: null,
+        startedAt: new Date('2026-09-19T12:00:00Z'),
+        startedByType: CoroActorType.CLIENT_USER,
+        startedById: 'user-1',
+        endedAt: new Date('2026-09-19T13:00:00Z'),
+        endedByType: CoroActorType.CLIENT_USER,
+        endedById: 'user-2',
+        closeReason: null,
+        createdAt: new Date('2026-09-19T12:00:00Z'),
+        updatedAt: new Date('2026-09-19T13:00:00Z'),
+        emergencyScenario: {
+          id: 'scenario-1',
+          nameFR: 'Validation',
+          nameEN: null,
+        },
+        alerts: [
+          {
+            id: 'alert-live',
+            type: PopulationAlertType.TEST,
+            status: PopulationAlertStatus.ACTIVE,
+            cycleSequence: 1,
+            deliveryModeSnapshot: PopulationDeliveryMode.LIVE,
+            contextSnapshot: null,
+            deliveries: [],
+          },
+          {
+            id: 'alert-sandbox',
+            type: PopulationAlertType.UPDATE,
+            status: PopulationAlertStatus.ACTIVE,
+            cycleSequence: 2,
+            deliveryModeSnapshot: PopulationDeliveryMode.SANDBOX,
+            contextSnapshot: null,
+            deliveries: [],
+          },
+          {
+            id: 'alert-unfrozen',
+            type: PopulationAlertType.ALL_CLEAR,
+            status: PopulationAlertStatus.DRAFT,
+            cycleSequence: 3,
+            deliveryModeSnapshot: null,
+            contextSnapshot: null,
+            deliveries: [],
+          },
+        ],
+      });
+
+      const [result] = await service.listOperationalEvents(
+        'building-1',
+        'organization-1',
+      );
+
+      expect(result.status).toBe(PopulationOperationalEventStatus.ENDED);
+      expect(
+        result.alerts.map((alert) => alert.deliveryModeSnapshot),
+      ).toEqual([
+        PopulationDeliveryMode.LIVE,
+        PopulationDeliveryMode.SANDBOX,
+        null,
+      ]);
+      const serialized = JSON.stringify(result);
+      for (const forbidden of [
+        'subscriberId',
+        'destinationSnapshot',
+        'providerMessageId',
+        'providerIdempotencyKey',
+        'contextSnapshot',
+        'email',
+        'phone',
+        'latitude',
+        'longitude',
+      ]) {
+        expect(serialized).not.toContain(forbidden);
+      }
     });
   });
 
