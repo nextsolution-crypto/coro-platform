@@ -1,7 +1,30 @@
 import { createHash } from 'crypto';
 import { PopulationEvidenceReportService } from './population-evidence-report.service';
 
+jest.mock('./population-evidence.service', () => ({
+  verifyEvidenceIntegrity: jest.fn(() => ({ status: 'VERIFIED', verifiedAt: '2026-09-20T17:00:00.000Z' })),
+}));
+
 describe('PopulationEvidenceReportService recovery', () => {
+  it('ne régénère jamais un report FINALIZED créé par le générateur 1.0.0', async () => {
+    const historical = { id: 'report-v1', status: 'FINALIZED', generatorVersion: 'coro-evidence-pdf/1.0.0', reportSha256: 'a'.repeat(64), storageKey: 'private/historical.pdf', fileSize: 18271 };
+    const tx = {
+      $executeRaw: jest.fn(),
+      populationEvidenceRecord: { findFirst: jest.fn().mockResolvedValue({ id: 'evidence-v1', status: 'FINALIZED' }) },
+      populationEvidenceManifest: { findFirst: jest.fn().mockResolvedValue({ id: 'manifest-v1', manifest: {} }) },
+      populationEvidenceReport: { findFirst: jest.fn().mockResolvedValue(historical), create: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((callback: any) => callback(tx)) };
+    const storage = { uploadPrivateImmutable: jest.fn() };
+    const service = new PopulationEvidenceReportService(prisma as any, storage as any);
+    const renderer = jest.spyOn((service as any).renderer, 'render');
+    const result = await service.generate('building', 'organization', 'evidence-v1', { type: 'SYSTEM' as any, id: 'actor' });
+    expect(result).toMatchObject({ id: historical.id, generatorVersion: historical.generatorVersion, reportSha256: historical.reportSha256 });
+    expect(renderer).not.toHaveBeenCalled();
+    expect(storage.uploadPrivateImmutable).not.toHaveBeenCalled();
+    expect(tx.populationEvidenceReport.create).not.toHaveBeenCalled();
+    expect(historical.storageKey).toBe('private/historical.pdf');
+  });
   it('finalise le meme report apres un crash post-upload sans second upload', async () => {
     const bytes = Buffer.from('%PDF-existing-private-object');
     const hash = createHash('sha256').update(bytes).digest('hex');

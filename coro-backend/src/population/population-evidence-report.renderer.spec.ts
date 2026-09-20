@@ -1,5 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { buildPopulationEvidenceReportText, PopulationEvidenceReportRenderer } from './population-evidence-report.renderer';
+import { buildPopulationEvidenceReportText, cleanEvidenceText, PopulationEvidenceReportRenderer } from './population-evidence-report.renderer';
 
 const communication = (sequence: number, type: string) => ({
   id: `alert-${sequence}`, cycleSequence: sequence, type, status: 'ACTIVE', deliveryMode: 'LIVE',
@@ -24,6 +24,19 @@ const input: any = {
 };
 
 describe('PopulationEvidenceReportRenderer', () => {
+  it('préserve Unicode tout en retirant uniquement les caractères de contrôle', () => {
+    const unicode = 'Référence — Bâtiment — Événement — Intégrité — Créée — Prête — Approuvée — Clôture';
+    expect(cleanEvidenceText(`${unicode}\u0000`)).toBe(unicode);
+  });
+
+  it('distingue personnes admissibles et communications matérialisées lorsque le ciblage historique est absent', () => {
+    const historical = structuredClone(input);
+    delete historical.evidence.snapshot.communications[0].targeting.deliverableSubscriberCount;
+    const text = buildPopulationEvidenceReportText(historical).join('\n');
+    expect(text).toContain('Personnes uniques ciblées : 1');
+    expect(text).toContain('Personnes admissibles après revalidation : Non disponible');
+    expect(text).toContain('Communications admissibles matérialisées : 1');
+  });
   it('produit un PDF A4 pagine valide', async () => {
     const bytes = await new PopulationEvidenceReportRenderer().render(input);
     expect(bytes.subarray(0, 5).toString('ascii')).toBe('%PDF-');
@@ -34,7 +47,7 @@ describe('PopulationEvidenceReportRenderer', () => {
 
   it('construit le contenu documentaire complet sans PII ni camelCase brut', () => {
     const text = buildPopulationEvidenceReportText(input).join('\n');
-    for (const expected of ['CORO-SP-2026-000001', 'CORO Validation', 'Installation industrielle', 'Scenario validation', '3 communications', 'livraison confirmee', "Fin d'alerte", "Mise a l'abri", 'Complet', 'INTEGRITE VERIFIEE', '1'.repeat(64), '6'.repeat(64), 'Page']) {
+    for (const expected of ['CORO-SP-2026-000001', 'CORO Validation', 'Installation industrielle', 'Scenario validation', '3 communications', 'livraison confirmée', "Fin d'alerte", "Mise à l'abri", 'Complet', 'INTÉGRITÉ', 'Vérifiée', 'Référence', 'Bâtiment', 'ÉVÉNEMENT', 'Créée', 'Prête', 'Approuvée', '1'.repeat(64), '6'.repeat(64), 'Page']) {
       if (expected !== 'Page') expect(text).toContain(expected);
     }
     for (const forbidden of ['subscriberId', 'providerMessageId', 'providerIdempotencyKey', 'clientIntentId', 'providerCallStartedAt', 'latitude', 'longitude', 'digitaloceanspaces.com']) expect(text).not.toContain(forbidden);
