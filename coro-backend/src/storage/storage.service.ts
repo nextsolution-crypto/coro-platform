@@ -43,7 +43,6 @@ export class StorageService {
     };
     if (method === 'PUT') {
       headers['content-type'] = contentType;
-      headers['if-none-match'] = '*';
     }
     const signedHeaders = Object.keys(headers).sort().join(';');
     const canonicalHeaders = Object.keys(headers).sort().map((name) => `${name}:${headers[name]}\n`).join('');
@@ -64,7 +63,6 @@ export class StorageService {
         res.on('end', () => {
           const response = Buffer.concat(chunks);
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) return resolve(response);
-          if (method === 'PUT' && [409, 412].includes(res.statusCode ?? 0)) return reject(new Error('PRIVATE_OBJECT_ALREADY_EXISTS'));
           if (method === 'GET' && res.statusCode === 404) return reject(new Error('PRIVATE_OBJECT_NOT_FOUND'));
           reject(new Error(`Private storage ${method} failed: ${res.statusCode}`));
         });
@@ -76,7 +74,22 @@ export class StorageService {
   }
 
   async uploadPrivateImmutable(fileBuffer: Buffer, storageKey: string, contentType: string): Promise<{ storageKey: string }> {
+    try {
+      await this.downloadPrivate(storageKey);
+      throw new Error('PRIVATE_OBJECT_ALREADY_EXISTS');
+    } catch (error: any) {
+      if (error?.message !== 'PRIVATE_OBJECT_NOT_FOUND') throw error;
+    }
+
     await this.privateRequest('PUT', storageKey, fileBuffer, contentType);
+
+    const stored = await this.downloadPrivate(storageKey);
+    const expectedHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    const storedHash = crypto.createHash('sha256').update(stored).digest('hex');
+    if (stored.length !== fileBuffer.length || storedHash !== expectedHash) {
+      throw new Error('PRIVATE_OBJECT_WRITE_VERIFICATION_FAILED');
+    }
+
     this.logger.log(`Private evidence object stored: ${storageKey}`);
     return { storageKey };
   }
