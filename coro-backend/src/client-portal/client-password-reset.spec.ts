@@ -118,6 +118,14 @@ describe('Client password reset', () => {
     }
   });
 
+  it('accepte les chiffres ASCII des exemples synthetiques sans modifier les espaces', () => {
+    for (const password of ['Abcd1234!', 'Test9Password!', 'Coro2026#Test', ' Abcd1234! ']) {
+      expect(() => validateClientPassword(password)).not.toThrow();
+    }
+    expect(() => validateClientPassword('TestPassword!')).toThrow('chiffre (0-9)');
+    expect(() => validateClientPassword('TestPassword١!')).toThrow('chiffre (0-9)');
+  });
+
   it('guard refuse anciens JWT et accepte la nouvelle version active', async () => {
     const h = harness();
     const guard = new ClientJwtGuard({ verify: jest.fn() } as any, h.prisma);

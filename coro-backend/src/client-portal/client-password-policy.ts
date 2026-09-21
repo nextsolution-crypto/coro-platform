@@ -8,7 +8,7 @@ export function validateClientPassword(password: string): void {
   if (!/[a-z]/.test(password))
     throw new BadRequestException('Le mot de passe doit contenir au moins une minuscule.');
   if (!/[0-9]/.test(password))
-    throw new BadRequestException('Le mot de passe doit contenir au moins un chiffre.');
+    throw new BadRequestException('Le mot de passe doit contenir au moins un chiffre (0-9).');
   if (!/[^A-Za-z0-9]/.test(password))
     throw new BadRequestException('Le mot de passe doit contenir au moins un caractere special.');
 }
