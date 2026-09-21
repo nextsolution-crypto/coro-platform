@@ -118,6 +118,10 @@
   cursor: pointer;
   background: #245e4c;
   color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .buttonSecondary {
   background: #fff;
@@ -203,6 +207,57 @@
   color: #69766f;
   font-style: italic;
 }
+.reportBadge {
+  border: 1px solid #2e7055;
+  background: #edf6f0;
+  color: #245e4c;
+  padding: 5px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.reportStatus {
+  margin: 0 0 6px;
+  font-weight: 750;
+}
+.reportReference {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.reportMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 20px 0;
+}
+.reportMetrics div { min-width: 0; }
+.reportMetrics dt, .reportHash > span {
+  color: #53635b;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.reportMetrics dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+.reportHash { min-width: 0; }
+.reportHash > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.reportHash code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+}
+.reportHash button { flex: 0 0 42px; min-height: 40px; }
+.reportNote {
+  margin: 18px 0 0;
+  color: #53635b;
+  font-size: 0.88rem;
+}
 .spinner {
   animation: spin 1s linear infinite;
 }
@@ -216,7 +271,8 @@
     padding: 18px 14px 56px;
   }
   .grid,
-  .formGrid {
+  .formGrid,
+  .reportMetrics {
     grid-template-columns: 1fr;
   }
   .fieldFull {
@@ -237,4 +293,6 @@
   .buttonDanger {
     width: 100%;
   }
+  .reportHash > div { align-items: flex-start; }
+  .reportHash button { width: 42px; }
 }

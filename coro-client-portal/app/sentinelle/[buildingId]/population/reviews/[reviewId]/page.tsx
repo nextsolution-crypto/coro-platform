@@ -20,6 +20,7 @@ import {
   severityLabel,
 } from "../reviewState";
 import styles from "./review.module.css";
+import OperationalReviewReportSection from "./OperationalReviewReportSection";
 
 const uuid = () => crypto.randomUUID();
 export default function PopulationReviewPage() {
@@ -576,6 +577,7 @@ export default function PopulationReviewPage() {
             </div> : <button type="button" className={styles.button} disabled={busy !== null} onClick={() => setFinalizeConfirming(true)}>FINALISER LE REX</button>
           )}
         </section>
+        {review.status === "FINALIZED" && <OperationalReviewReportSection key={reviewId} reviewId={reviewId} canGenerate={rex.has("REX_FINALIZE")} />}
       </main>
     </PortalLayout>
   );
