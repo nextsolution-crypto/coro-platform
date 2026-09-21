@@ -203,10 +203,6 @@ export class CorrectiveActionsService {
     if (body.status === 'COMPLETED') {
       return this.complete(id, {}, actor);
     }
-    const permission = body.status === 'COMPLETED' || body.status === 'IN_PROGRESS'
-      ? CorrectiveActionPermission.CORRECTIVE_ACTION_COMPLETE
-      : CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT;
-    await this.requirePermission(actor, permission);
     const visibilityScope = await this.visibilityScope(actor);
     const action = await this.prisma.correctiveAction.findFirst({
       where: {
@@ -217,6 +213,11 @@ export class CorrectiveActionsService {
       },
     });
     if (!action) throw new NotFoundException('Action introuvable');
+
+    const permission = body.status === 'IN_PROGRESS' && action.status === 'COMPLETED'
+      ? CorrectiveActionPermission.CORRECTIVE_ACTION_COMPLETE
+      : CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT;
+    await this.requirePermission(actor, permission);
 
     if (body.status) this.assertTransition(action.status, body.status);
     const assignee = await this.resolveAssignee(body, actor, true);

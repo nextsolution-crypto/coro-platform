@@ -1,23 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import PortalLayout from "../../../../components/PortalLayout";
-import { apiDownload, apiGet, apiPost, getUser } from "../../../../store/auth";
-import styles from "../../population/reviews/[reviewId]/review.module.css";
+import { apiDownload, apiGet, apiPost, apiPut, getUser } from "../../../../store/auth";
+import CorrectiveActionEvidenceForm from "../CorrectiveActionEvidenceForm";
+import { actionsAvailable, actionStatusLabel, evidenceTypeLabel, priorityLabel, verdictLabel } from "../actionState.mjs";
+import styles from "../action.module.css";
 
 type Action = {
   id: string; reference: string | null; buildingId: string | null;
   title: string; description: string | null; status: string; priority: string;
   assignedTo: string | null; dueDate: string | null; completionComment: string | null;
-  completedAt: string | null; verifiedAt: string | null; closedAt: string | null;
+  completedAt: string | null; verifiedAt: string | null; closedAt: string | null; closureComment: string | null;
   verificationBlockedForCurrentUser: boolean;
 };
-type Evidence = { id: string; title: string; type: string; status: string; noteText?: string | null; externalUrl?: string | null; submittedAt: string };
+type Evidence = { id: string; title: string; type: string; status: string; noteText?: string | null; externalUrl?: string | null; systemReferenceType?: string | null; submittedAt: string; withdrawnAt?: string | null; withdrawalReason?: string | null };
 type Verification = { id: string; attemptNumber: number; verdict: string; comment: string | null; verifiedAt: string };
-const formatted = (value?: string | null) => value ? new Date(value).toLocaleString("fr-CA") : "—";
-const statusLabel: Record<string, string> = { PLANNED: "Planifiée", IN_PROGRESS: "En cours", COMPLETED: "Réalisation déclarée", VERIFIED: "Vérifiée", CLOSED: "Fermée" };
+const moment = (value?: string | null) => value ? new Intl.DateTimeFormat("fr-CA", { dateStyle: "long", timeStyle: "short", timeZone: "America/Toronto" }).format(new Date(value)) : null;
+const day = (value?: string | null) => value ? new Intl.DateTimeFormat("fr-CA", { dateStyle: "long", timeZone: "UTC" }).format(new Date(value)) : "Aucune";
 
 export default function CorrectiveActionPage() {
   const { buildingId, actionId } = useParams<{ buildingId: string; actionId: string }>();
@@ -29,8 +31,14 @@ export default function CorrectiveActionPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false);
+  const [completionComment, setCompletionComment] = useState("");
+  const [verificationComment, setVerificationComment] = useState("");
+  const loadGeneration = useRef(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<boolean> => {
+    const generation = ++loadGeneration.current;
     try {
       const base = `/client-portal/corrective-actions/${actionId}`;
       const [record, proofs, history] = await Promise.all([
@@ -38,42 +46,68 @@ export default function CorrectiveActionPage() {
       ]);
       const safe = record as Action;
       if (safe.buildingId !== buildingId) throw new Error("Action introuvable pour ce bâtiment.");
+      if (generation !== loadGeneration.current) return false;
       setAction(safe);
       setEvidence(proofs as Evidence[]);
       setVerifications(history as Verification[]);
       setError(null);
+      return true;
     } catch (caught) {
+      if (generation !== loadGeneration.current) return false;
+      setAction(null);
+      setEvidence([]);
+      setVerifications([]);
       setError(caught instanceof Error ? caught.message : "Action indisponible.");
-    } finally { setLoading(false); }
+      return false;
+    } finally { if (generation === loadGeneration.current) setLoading(false); }
   }, [actionId, buildingId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    setAction(null);
+    setEvidence([]);
+    setVerifications([]);
+    setLoading(true);
+    void load();
+  }, [load]);
 
-  const verify = async (verdict: "ACCEPTED" | "REJECTED") => {
-    const comment = window.prompt(verdict === "REJECTED" ? "Motif du rejet (obligatoire)" : "Commentaire de vérification (optionnel)");
-    if (comment === null || (verdict === "REJECTED" && !comment.trim())) return;
+  const mutate = async (work: () => Promise<unknown>, message: string) => {
+    if (busy) return;
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
-      await apiPost(`/client-portal/corrective-actions/${actionId}/verify`, {
-        clientIntentId: crypto.randomUUID(), verdict, comment: comment.trim() || undefined,
-      });
-      await load();
+      await work();
+      if (await load()) {
+        setCompletionComment("");
+        setVerificationComment("");
+        setEvidenceFormOpen(false);
+        setSuccess(message);
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Vérification refusée.");
+      setError(caught instanceof Error ? caught.message : "L'opération a été refusée.");
     } finally { setBusy(false); }
+  };
+
+  const verify = (verdict: "ACCEPTED" | "REJECTED") => {
+    if (verdict === "REJECTED" && !verificationComment.trim()) {
+      setError("Un motif est requis pour rejeter la réalisation.");
+      return;
+    }
+    void mutate(() => apiPost(`/client-portal/corrective-actions/${actionId}/verify`, {
+      clientIntentId: crypto.randomUUID(), verdict, comment: verificationComment.trim() || undefined,
+    }), verdict === "ACCEPTED" ? "Réalisation acceptée." : "Réalisation rejetée. L'action est de nouveau en cours.");
   };
 
   const close = async () => {
     if (!window.confirm("Fermer cette action corrective ?")) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await apiPost(`/client-portal/corrective-actions/${actionId}/close`, {});
-      await load();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Fermeture refusée.");
-    } finally { setBusy(false); }
+    await mutate(() => apiPost(`/client-portal/corrective-actions/${actionId}/close`, {}), "Action fermée.");
+  };
+
+  const withdraw = async (evidenceId: string) => {
+    if (!window.confirm("Retirer cette preuve ? Elle restera dans l'historique.")) return;
+    const reason = window.prompt("Motif du retrait (obligatoire)");
+    if (!reason?.trim()) return;
+    await mutate(() => apiPost(`/client-portal/corrective-actions/${actionId}/evidence/${evidenceId}/withdraw`, { withdrawalReason: reason.trim() }), "Preuve retirée.");
   };
 
   const download = async (evidenceId: string) => {
@@ -88,32 +122,95 @@ export default function CorrectiveActionPage() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Téléchargement impossible."); }
   };
 
+  const available = action ? actionsAvailable(action.status, [...permissions], action.verificationBlockedForCurrentUser) : null;
+  const activeEvidence = evidence.filter((item) => item.status === "ACTIVE");
+  const lastVerification = verifications.at(-1);
+  const correctionRequested = action?.status === "IN_PROGRESS" && lastVerification?.verdict === "REJECTED";
+
   return <PortalLayout><main className={styles.page}>
-    <div className={styles.actions}>
-      <button type="button" onClick={() => router.back()} title="Retour"><ArrowLeft size={18} /></button>
-      <button type="button" onClick={() => void load()} title="Actualiser"><RefreshCw size={18} /></button>
-    </div>
-    {loading ? <p>Chargement...</p> : action ? <>
-      <header><span>{action.reference ?? "Action corrective"}</span><h1>{action.title}</h1><strong>{statusLabel[action.status] ?? action.status}</strong></header>
-      <p>{action.description}</p>
-      <div className={styles.actionMeta}><span>Priorité : {action.priority}</span><span>Responsable : {action.assignedTo || "Non assigné"}</span><span>Échéance : {formatted(action.dueDate)}</span></div>
-      <section><h2>Réalisation</h2><p>{action.completionComment || "Aucun commentaire de réalisation."}</p><p>Déclarée le {formatted(action.completedAt)}</p></section>
-      <section><h2>Preuves</h2>{evidence.length ? evidence.map((item) => <article key={item.id} className={styles.evidenceRow}>
-        <strong>{item.title}</strong><span>{item.type} · {item.status} · {formatted(item.submittedAt)}</span>
-        {item.noteText && <p>{item.noteText}</p>}
-        {item.externalUrl && <a href={item.externalUrl} target="_blank" rel="noopener noreferrer">Ouvrir le lien</a>}
-        {(item.type === "DOCUMENT" || item.type === "PHOTO") && <button type="button" onClick={() => void download(item.id)}>Télécharger</button>}
-      </article>) : <p>Aucune preuve.</p>}</section>
-      <section><h2>Vérification</h2>
-        {action.status === "COMPLETED" && action.verificationBlockedForCurrentUser && <p>Cette réalisation doit être vérifiée par un autre utilisateur autorisé.</p>}
-        {action.status === "COMPLETED" && permissions.has("CORRECTIVE_ACTION_VERIFY") && !action.verificationBlockedForCurrentUser && <div className={styles.actions}>
-          <button type="button" disabled={busy} onClick={() => void verify("ACCEPTED")}>ACCEPTER</button>
-          <button type="button" disabled={busy} onClick={() => void verify("REJECTED")}>REJETER</button>
-        </div>}
-        {action.status === "VERIFIED" && permissions.has("CORRECTIVE_ACTION_CLOSE") && <button type="button" disabled={busy} onClick={() => void close()}>FERMER L&apos;ACTION</button>}
-        {error && <p role="alert" className={styles.error}>{error}</p>}
-        <h3>Historique des vérifications</h3>{verifications.length ? verifications.map((item) => <p key={item.id}>#{item.attemptNumber} · {item.verdict} · {formatted(item.verifiedAt)}{item.comment ? ` · ${item.comment}` : ""}</p>) : <p>Aucune tentative.</p>}
+    <nav className={styles.navigation} aria-label="Navigation action corrective">
+      <button type="button" className={styles.back} onClick={() => router.back()}><ArrowLeft size={17} /> Actions correctives</button>
+      <button type="button" className={styles.refresh} onClick={() => void load()} title="Actualiser l'action"><RefreshCw size={17} /> <span>Actualiser</span></button>
+    </nav>
+    {loading ? <p>Chargement de l&apos;action...</p> : action && action.id === actionId && action.buildingId === buildingId && available ? <>
+      <header className={styles.header}>
+        <div className={styles.heading}><div><span className={styles.eyebrow}>ACTION CORRECTIVE</span><p className={styles.reference}>{action.reference ?? "Action corrective"}</p><h1>{action.title}</h1></div>
+          <span className={styles.status}>{actionStatusLabel[action.status] ?? action.status}</span></div>
+        {action.description && <p className={styles.description}>{action.description}</p>}
+        <dl className={styles.meta}>
+          <div><dt>Priorité</dt><dd>{priorityLabel[action.priority] ?? action.priority}</dd></div>
+          <div><dt>Responsable</dt><dd>{action.assignedTo || "Non assigné"}</dd></div>
+          <div><dt>Échéance</dt><dd>{day(action.dueDate)}</dd></div>
+          <div><dt>Preuves</dt><dd>{activeEvidence.length}</dd></div>
+        </dl>
+      </header>
+
+      {correctionRequested && <section className={styles.correction} aria-label="Correction demandée">
+        <strong>CORRECTION DEMANDÉE</strong>
+        <p>La dernière réalisation a été rejetée lors de la vérification. L&apos;action est retournée en cours.</p>
+        {lastVerification.comment && <p><b>Motif :</b> {lastVerification.comment}</p>}
+      </section>}
+
+      <section className={styles.next} aria-labelledby="next-action-title">
+        <span className={styles.eyebrow}>PROCHAINE ACTION</span>
+        <h2 id="next-action-title">{action.status === "PLANNED" ? "Action à démarrer" : action.status === "IN_PROGRESS" ? "Correction en cours" : action.status === "COMPLETED" ? action.verificationBlockedForCurrentUser ? "Vérification par un autre utilisateur requise" : "Vérification requise" : action.status === "VERIFIED" ? "Réalisation vérifiée" : action.status === "CLOSED" ? "Action fermée" : "Action annulée"}</h2>
+        <p>{action.status === "PLANNED" ? "Démarrez l'action pour documenter sa réalisation." : action.status === "IN_PROGRESS" ? correctionRequested ? "Apportez la correction demandée, ajoutez une preuve si nécessaire, puis soumettez de nouveau la réalisation." : "Ajoutez les preuves nécessaires puis déclarez la réalisation lorsque l'action est terminée." : action.status === "COMPLETED" ? action.verificationBlockedForCurrentUser ? "Cette réalisation doit être vérifiée par un autre utilisateur autorisé." : "La réalisation a été déclarée et doit être vérifiée par un utilisateur autorisé." : action.status === "VERIFIED" ? "La réalisation a été acceptée. L'action peut maintenant être fermée." : action.status === "CLOSED" ? "Cette action corrective a été réalisée, vérifiée et fermée." : "Cette action est en lecture seule."}</p>
+        {error && <p className={styles.error} role="alert">{error}</p>}
+        {success && <p className={styles.success} role="status">{success}</p>}
+        {available.complete && <label className={styles.commentField}>Commentaire de réalisation
+          <textarea maxLength={5000} value={completionComment} onChange={(event) => setCompletionComment(event.target.value)} placeholder={activeEvidence.length ? "Facultatif si une preuve active existe" : "Requis si aucune preuve active n'existe"} />
+        </label>}
+        {available.verify && <label className={styles.commentField}>Commentaire de vérification
+          <textarea maxLength={5000} value={verificationComment} onChange={(event) => setVerificationComment(event.target.value)} placeholder="Obligatoire pour rejeter" />
+        </label>}
+        <div className={styles.commands}>
+          {available.start && <button className={styles.primary} type="button" disabled={busy} onClick={() => void mutate(() => apiPut(`/client-portal/corrective-actions/${actionId}`, { status: "IN_PROGRESS" }), "Action démarrée.")}>DÉMARRER</button>}
+          {available.addEvidence && <button className={styles.secondary} type="button" onClick={() => setEvidenceFormOpen((current) => !current)}><Plus size={17} /> AJOUTER UNE PREUVE</button>}
+          {available.complete && <button className={styles.primary} type="button" disabled={busy} onClick={() => {
+            if (!activeEvidence.length && !completionComment.trim()) { setError("Ajoutez une preuve active ou un commentaire de réalisation."); return; }
+            void mutate(() => apiPost(`/client-portal/corrective-actions/${actionId}/complete`, { completionComment: completionComment.trim() || undefined }), "Réalisation déclarée.");
+          }}>DÉCLARER RÉALISÉE</button>}
+          {available.verify && <>
+            <button className={styles.primary} type="button" disabled={busy} onClick={() => verify("ACCEPTED")}>ACCEPTER LA RÉALISATION</button>
+            <button className={styles.danger} type="button" disabled={busy} onClick={() => verify("REJECTED")}>REJETER LA RÉALISATION</button>
+          </>}
+          {available.close && <button className={styles.primary} type="button" disabled={busy} onClick={() => void close()}>FERMER L&apos;ACTION</button>}
+        </div>
       </section>
-    </> : <p role="alert">{error || "Action introuvable."}</p>}
+
+      <section className={styles.section} aria-labelledby="evidence-title">
+        <div className={styles.sectionHeading}><h2 id="evidence-title">PREUVES DE RÉALISATION</h2><span>{activeEvidence.length} preuve{activeEvidence.length === 1 ? "" : "s"}</span></div>
+        {evidenceFormOpen && available.addEvidence && <CorrectiveActionEvidenceForm actionId={actionId} onSaved={async () => {
+          if (!(await load())) throw new Error("Preuve enregistrée, mais l'actualisation a échoué. Actualisez la page.");
+          setEvidenceFormOpen(false);
+          setSuccess("Preuve ajoutée.");
+        }} />}
+        {evidence.length ? <div className={styles.evidenceList}>{evidence.map((item) => <article key={item.id} className={styles.evidenceItem}>
+          <span className={styles.type}>{evidenceTypeLabel[item.type] ?? item.type}</span>
+          <div className={styles.evidenceMain}><strong>{item.title}</strong><span>Ajoutée le {moment(item.submittedAt)}{item.status === "WITHDRAWN" ? " · Retirée" : item.status === "PENDING" ? " · En attente" : ""}</span>
+            {item.status === "WITHDRAWN" && item.withdrawalReason && <p>Motif du retrait : {item.withdrawalReason}</p>}
+            {item.type === "NOTE" && item.noteText && <details><summary>Consulter la note</summary><p>{item.noteText}</p></details>}
+            {item.type === "SYSTEM_REFERENCE" && <p>{item.systemReferenceType === "POPULATION_EVIDENCE" ? "Dossier de preuve Population" : item.systemReferenceType === "EXERCISE_REPORT" ? "Rapport d'exercice" : "Incident CORO"}</p>}
+          </div>
+          <div className={styles.evidenceActions}>
+            {item.type === "LINK" && item.externalUrl && <a className={styles.secondary} href={item.externalUrl} target="_blank" rel="noopener noreferrer">OUVRIR LE LIEN</a>}
+            {(item.type === "DOCUMENT" || item.type === "PHOTO") && <button className={styles.secondary} type="button" onClick={() => void download(item.id)}>TÉLÉCHARGER</button>}
+            {available.withdrawEvidence && item.status === "ACTIVE" && <button className={styles.danger} type="button" disabled={busy} onClick={() => void withdraw(item.id)}>RETIRER</button>}
+          </div>
+        </article>)}</div> : <p className={styles.empty}>Aucune preuve ajoutée.</p>}
+      </section>
+
+      <section className={styles.section} aria-labelledby="completion-title"><h2 id="completion-title">RÉALISATION</h2>
+        {action.completedAt ? <><p>Déclarée le {moment(action.completedAt)}</p>{action.completionComment && <p><strong>Commentaire :</strong> {action.completionComment}</p>}</> : <p className={styles.empty}>Aucune réalisation n&apos;est actuellement soumise à vérification.</p>}
+        {action.closedAt && <p><strong>Fermée le {moment(action.closedAt)}.</strong>{action.closureComment ? ` ${action.closureComment}` : ""}</p>}
+      </section>
+
+      <section className={styles.section} aria-labelledby="verification-title"><h2 id="verification-title">HISTORIQUE DES VÉRIFICATIONS</h2>
+        {verifications.length ? <ol className={styles.timeline}>{verifications.map((item) => <li key={item.id}>
+          <strong>{verdictLabel[item.verdict] ?? item.verdict}</strong><time dateTime={item.verifiedAt}>{moment(item.verifiedAt)}</time>
+          {item.comment && <p>« {item.comment} »</p>}
+        </li>)}</ol> : <p className={styles.empty}>Aucune tentative de vérification.</p>}
+      </section>
+    </> : <p className={styles.error} role="alert">{error || "Action introuvable."}</p>}
   </main></PortalLayout>;
 }

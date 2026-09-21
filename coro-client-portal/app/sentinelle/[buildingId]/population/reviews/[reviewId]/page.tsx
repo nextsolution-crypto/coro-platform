@@ -8,15 +8,12 @@ import {
   apiGet,
   apiPost,
   apiPut,
-  apiUpload,
   getUser,
 } from "../../../../../store/auth";
 import {
   actionStatusLabel,
   confidentialityLabel,
-  evidenceTypeLabel,
   findingCategoryLabel,
-  isOverdue,
   recommendationStatusLabel,
   reviewStatusLabel,
   severityLabel,
@@ -24,9 +21,6 @@ import {
 import styles from "./review.module.css";
 
 const uuid = () => crypto.randomUUID();
-const date = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("fr-CA") : "Non disponible";
-
 export default function PopulationReviewPage() {
   const { buildingId, reviewId } = useParams<{
     buildingId: string;
@@ -41,7 +35,6 @@ export default function PopulationReviewPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState({ title: "", summary: "" });
   const [finding, setFinding] = useState({
@@ -68,16 +61,6 @@ export default function PopulationReviewPage() {
     category: "GENERAL",
     priority: "WARNING",
     dueDate: "",
-  });
-  const [openAction, setOpenAction] = useState<string | null>(null);
-  const [actionDetails, setActionDetails] = useState<
-    Record<string, { evidence: any[]; verifications: any[] }>
-  >({});
-  const [evidenceForm, setEvidenceForm] = useState({
-    type: "NOTE",
-    title: "",
-    text: "",
-    url: "",
   });
 
   const load = useCallback(
@@ -120,16 +103,10 @@ export default function PopulationReviewPage() {
     key: string,
     work: () => Promise<unknown>,
     success: string,
-    actionId?: string,
   ) => {
     setBusy(key);
     setError(null);
     setMessage(null);
-    if (actionId) setActionErrors((current) => {
-      const next = { ...current };
-      delete next[actionId];
-      return next;
-    });
     try {
       await work();
       await load(true);
@@ -140,25 +117,9 @@ export default function PopulationReviewPage() {
         : "L'opération n'a pas pu être terminée.";
       try { await load(true); } catch { /* Conserver l'erreur métier initiale. */ }
       setError(failure);
-      if (actionId) setActionErrors((current) => ({ ...current, [actionId]: failure }));
     } finally {
       setBusy(null);
     }
-  };
-
-  const loadAction = async (id: string) => {
-    setOpenAction(id);
-    const [evidence, verifications] = await Promise.all([
-      apiGet(`/client-portal/corrective-actions/${id}/evidence`),
-      apiGet(`/client-portal/corrective-actions/${id}/verifications`),
-    ]);
-    setActionDetails((current) => ({
-      ...current,
-      [id]: {
-        evidence: evidence as any[],
-        verifications: verifications as any[],
-      },
-    }));
   };
 
   if (loading)
@@ -547,25 +508,14 @@ export default function PopulationReviewPage() {
                       />
                     )}
                     {r.correctiveActions?.map((a: any) => (
-                      <ActionCard
-                        key={a.id}
-                        action={a}
-                        actionHref={`/sentinelle/${buildingId}/corrective-actions/${a.id}`}
-                        open={openAction === a.id}
-                        details={actionDetails[a.id]}
-                        canEdit={cap.has("CORRECTIVE_ACTION_EDIT")}
-                        canComplete={cap.has("CORRECTIVE_ACTION_COMPLETE")}
-                        canVerify={false}
-                        verificationBlocked={a.verificationBlockedForCurrentUser === true}
-                        actionError={actionErrors[a.id]}
-                        canClose={false}
-                        busy={busy}
-                        evidenceForm={evidenceForm}
-                        setEvidenceForm={setEvidenceForm}
-                        onOpen={() => void loadAction(a.id)}
-                        onMutate={mutate}
-                        onReloadAction={() => void loadAction(a.id)}
-                      />
+                      <article className={styles.action} key={a.id}>
+                        <div className={styles.actionHead}>
+                          <div><span className={styles.pill}>{a.reference ?? "Action corrective"}</span><h4>{a.title}</h4></div>
+                          <strong>{actionStatusLabel[a.status] ?? a.status}</strong>
+                        </div>
+                        <p>{a.description}</p>
+                        <button className={styles.buttonSecondary} type="button" onClick={() => router.push(`/sentinelle/${buildingId}/corrective-actions/${a.id}`)}>CONSULTER L&apos;ACTION</button>
+                      </article>
                     ))}
                   </div>
                 ))}
@@ -708,371 +658,5 @@ function ActionForm({
         CRÉER L&apos;ACTION
       </button>
     </div>
-  );
-}
-
-function ActionCard({
-  action: a,
-  actionHref,
-  open,
-  details,
-  canEdit,
-  canComplete,
-  canVerify,
-  verificationBlocked,
-  actionError,
-  canClose,
-  busy,
-  evidenceForm,
-  setEvidenceForm,
-  onOpen,
-  onMutate,
-  onReloadAction,
-}: any) {
-  const active =
-    details?.evidence?.filter((e: any) => e.status === "ACTIVE") ?? [];
-  const mutateThen = (
-    key: string,
-    work: () => Promise<unknown>,
-    message: string,
-  ) => onMutate(key, work, message, a.id).then(onReloadAction);
-  return (
-    <article className={styles.action}>
-      <div className={styles.actionHead}>
-        <div>
-          <span className={styles.pill}>
-            {a.reference ?? "Action corrective"}
-          </span>
-          <h4>{a.title}</h4>
-        </div>
-        <strong>{actionStatusLabel[a.status]}</strong>
-      </div>
-      <div className={styles.actionMeta}>
-        <span>{a.assignedTo || "Responsable non assigné"}</span>
-        <span>{a.priority}</span>
-        <span>
-          {a.dueDate ? `Échéance ${date(a.dueDate)}` : "Sans échéance"}
-        </span>
-        {isOverdue(a.dueDate, a.status) && <strong>EN RETARD</strong>}
-        <span>{a._count?.evidence ?? 0} preuve(s)</span>
-      </div>
-      <div className={styles.actions}>
-        <a href={actionHref} className={styles.buttonSecondary}>OUVRIR L&apos;ACTION</a>
-        <button className={styles.buttonSecondary} onClick={onOpen}>
-          {open ? "ACTUALISER" : "CONSULTER"}
-        </button>
-        {a.status === "PLANNED" && canComplete && (
-          <button
-            className={styles.button}
-            disabled={busy !== null}
-            onClick={() =>
-              void mutateThen(
-                `start-${a.id}`,
-                () =>
-                  apiPut(`/client-portal/corrective-actions/${a.id}`, {
-                    status: "IN_PROGRESS",
-                  }),
-                "Action démarrée.",
-              )
-            }
-          >
-            DÉMARRER
-          </button>
-        )}
-        {a.status === "IN_PROGRESS" && canComplete && (
-          <button
-            className={styles.button}
-            disabled={busy !== null}
-            onClick={() => {
-              const comment =
-                window.prompt(
-                  active.length
-                    ? "Commentaire de réalisation (optionnel)"
-                    : "Commentaire de réalisation requis",
-                ) || "";
-              if (!active.length && !comment) return;
-              void mutateThen(
-                `complete-${a.id}`,
-                () =>
-                  apiPost(
-                    `/client-portal/corrective-actions/${a.id}/complete`,
-                    { completionComment: comment || undefined },
-                  ),
-                "Réalisation déclarée.",
-              );
-            }}
-          >
-            DÉCLARER RÉALISÉE
-          </button>
-        )}
-        {a.status === "COMPLETED" && canVerify && !verificationBlocked && (
-          <>
-            <button
-              className={styles.button}
-              onClick={() => {
-                const comment =
-                  window.prompt(
-                    active.length
-                      ? "Commentaire de vérification (optionnel)"
-                      : "Commentaire de vérification requis",
-                  ) || "";
-                if (!active.length && !comment) return;
-                void mutateThen(
-                  `verify-${a.id}`,
-                  () =>
-                    apiPost(
-                      `/client-portal/corrective-actions/${a.id}/verify`,
-                      {
-                        clientIntentId: uuid(),
-                        verdict: "ACCEPTED",
-                        comment: comment || undefined,
-                      },
-                    ),
-                  "Réalisation vérifiée.",
-                );
-              }}
-            >
-              ACCEPTER
-            </button>
-            <button
-              className={styles.buttonDanger}
-              onClick={() => {
-                const comment =
-                  window.prompt("Motif du rejet (obligatoire)") || "";
-                if (comment)
-                  void mutateThen(
-                    `reject-${a.id}`,
-                    () =>
-                      apiPost(
-                        `/client-portal/corrective-actions/${a.id}/verify`,
-                        {
-                          clientIntentId: uuid(),
-                          verdict: "REJECTED",
-                          comment,
-                        },
-                      ),
-                    "Réalisation rejetée; l'action est de nouveau en cours.",
-                  );
-              }}
-            >
-              REJETER
-            </button>
-          </>
-        )}
-        {a.status === "VERIFIED" && canClose && (
-          <button
-            className={styles.button}
-            onClick={() =>
-              window.confirm(
-                "Fermer cette action ? Elle deviendra historiquement immuable.",
-              ) &&
-              void mutateThen(
-                `close-${a.id}`,
-                () =>
-                  apiPost(
-                    `/client-portal/corrective-actions/${a.id}/close`,
-                    {},
-                  ),
-                "Action fermée.",
-              )
-            }
-          >
-            FERMER L&apos;ACTION
-          </button>
-        )}
-      </div>
-      {a.status === "COMPLETED" && canVerify && verificationBlocked && (
-        <p className={styles.notice}>
-          Cette réalisation doit être vérifiée par un autre utilisateur autorisé.
-        </p>
-      )}
-      {actionError && (
-        <p className={styles.error} role="alert">
-          {actionError}
-        </p>
-      )}
-      {a.status === "COMPLETED" && (
-        <p className={styles.notice}>
-          <strong>RÉALISATION DÉCLARÉE</strong>
-          <br />
-          Cette action n&apos;est pas encore vérifiée.
-        </p>
-      )}
-      {a.status === "VERIFIED" && (
-        <p className={styles.notice}>
-          La réalisation a été vérifiée. L&apos;action peut maintenant être
-          fermée.
-        </p>
-      )}
-      {a.status === "CLOSED" && (
-        <p className={styles.notice}>
-          <strong>FERMÉE</strong> · Lecture seule.
-        </p>
-      )}
-      {open && (
-        <div className={styles.evidence}>
-          <strong>PREUVES DE RÉALISATION</strong>
-          {!active.length && (
-            <p className={styles.empty}>Aucune preuve active.</p>
-          )}
-          {active.map((e: any) => (
-            <div className={styles.evidenceRow} key={e.id}>
-              <span>
-                <strong>{e.title}</strong>
-                <br />
-                {evidenceTypeLabel[e.type]} · {date(e.submittedAt)}
-              </span>
-              {canEdit && !["VERIFIED", "CLOSED"].includes(a.status) && (
-                <button
-                  className={styles.buttonDanger}
-                  onClick={() => {
-                    const reason =
-                      window.prompt(
-                        "Motif du retrait. La preuve restera dans l'historique.",
-                      ) || "";
-                    if (reason)
-                      void mutateThen(
-                        `withdraw-${e.id}`,
-                        () =>
-                          apiPost(
-                            `/client-portal/corrective-actions/${a.id}/evidence/${e.id}/withdraw`,
-                            { withdrawalReason: reason },
-                          ),
-                        "Preuve retirée.",
-                      );
-                  }}
-                >
-                  RETIRER
-                </button>
-              )}
-            </div>
-          ))}
-          {canEdit && !["VERIFIED", "CLOSED"].includes(a.status) && (
-            <div className={styles.mutator}>
-              <Field label="Type">
-                <select
-                  value={evidenceForm.type}
-                  onChange={(e) =>
-                    setEvidenceForm({ ...evidenceForm, type: e.target.value })
-                  }
-                >
-                  <option value="NOTE">Note</option>
-                  <option value="LINK">Lien</option>
-                  <option value="DOCUMENT">Document</option>
-                  <option value="PHOTO">Photo</option>
-                </select>
-              </Field>
-              <Field label="Titre">
-                <input
-                  value={evidenceForm.title}
-                  onChange={(e) =>
-                    setEvidenceForm({ ...evidenceForm, title: e.target.value })
-                  }
-                />
-              </Field>
-              {evidenceForm.type === "NOTE" && (
-                <Field label="Texte">
-                  <textarea
-                    value={evidenceForm.text}
-                    onChange={(e) =>
-                      setEvidenceForm({ ...evidenceForm, text: e.target.value })
-                    }
-                  />
-                </Field>
-              )}
-              {evidenceForm.type === "LINK" && (
-                <Field label="URL HTTPS">
-                  <input
-                    type="url"
-                    value={evidenceForm.url}
-                    onChange={(e) =>
-                      setEvidenceForm({ ...evidenceForm, url: e.target.value })
-                    }
-                  />
-                </Field>
-              )}
-              {["DOCUMENT", "PHOTO"].includes(evidenceForm.type) && (
-                <Field label="Fichier (10 Mo maximum)">
-                  <input
-                    id={`file-${a.id}`}
-                    type="file"
-                    accept={
-                      evidenceForm.type === "PHOTO"
-                        ? "image/jpeg,image/png,image/webp"
-                        : ".pdf,.docx,.xlsx,.txt"
-                    }
-                  />
-                </Field>
-              )}
-              <button
-                className={styles.button}
-                disabled={!evidenceForm.title || busy !== null}
-                onClick={() => {
-                  const intent = uuid();
-                  let work: () => Promise<unknown>;
-                  if (evidenceForm.type === "NOTE")
-                    work = () =>
-                      apiPost(
-                        `/client-portal/corrective-actions/${a.id}/evidence/note`,
-                        {
-                          clientIntentId: intent,
-                          title: evidenceForm.title,
-                          noteText: evidenceForm.text,
-                        },
-                      );
-                  else if (evidenceForm.type === "LINK")
-                    work = () =>
-                      apiPost(
-                        `/client-portal/corrective-actions/${a.id}/evidence/link`,
-                        {
-                          clientIntentId: intent,
-                          title: evidenceForm.title,
-                          externalUrl: evidenceForm.url,
-                        },
-                      );
-                  else
-                    work = () => {
-                      const input = document.getElementById(
-                        `file-${a.id}`,
-                      ) as HTMLInputElement;
-                      const file = input.files?.[0];
-                      if (!file) throw new Error("Sélectionnez un fichier.");
-                      const form = new FormData();
-                      form.append("clientIntentId", intent);
-                      form.append("title", evidenceForm.title);
-                      form.append("type", evidenceForm.type);
-                      form.append("file", file);
-                      return apiUpload(
-                        `/client-portal/corrective-actions/${a.id}/evidence/file`,
-                        form,
-                      );
-                    };
-                  void mutateThen(`evidence-${a.id}`, work, "Preuve ajoutée.");
-                }}
-              >
-                AJOUTER LA PREUVE
-              </button>
-            </div>
-          )}
-          <div className={styles.evidence}>
-            <strong>HISTORIQUE DES VÉRIFICATIONS</strong>
-            {!details?.verifications?.length && (
-              <p className={styles.empty}>Aucune tentative.</p>
-            )}
-            {details?.verifications?.map((v: any) => (
-              <p key={v.id}>
-                <strong>
-                  Tentative {v.attemptNumber} ·{" "}
-                  {v.verdict === "ACCEPTED" ? "Acceptée" : "Rejetée"}
-                </strong>
-                <br />
-                {date(v.verifiedAt)}
-                {v.comment ? ` · ${v.comment}` : ""}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
-    </article>
   );
 }

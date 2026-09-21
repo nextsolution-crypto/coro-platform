@@ -201,6 +201,21 @@ describe('CorrectiveActionsService tenant validation', () => {
 describe('CorrectiveActionsService D1 workflow', () => {
   const actor = { ...manager, sub: 'user-a' };
 
+  it('demarre PLANNED avec EDIT sans exiger COMPLETE', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_EDIT'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'PLANNED' });
+    await h.service.update('action-a', { status: 'IN_PROGRESS' }, actor);
+    expect(h.prisma.correctiveAction.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'IN_PROGRESS' }) }));
+  });
+
+  it('refuse de demarrer PLANNED sans EDIT, meme avec COMPLETE', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_COMPLETE'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'PLANNED' });
+    await expect(h.service.update('action-a', { status: 'IN_PROGRESS' }, actor)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('refuse une transition directe PLANNED vers COMPLETED', async () => {
     const h = harness();
     h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_COMPLETE'] });
