@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { apiGet, getToken, getUser, setAuth, clearAuth } from '../store/auth';
+import { apiGet, getToken, setAuth, clearAuth } from '../store/auth';
 import { useToast } from '../store/useToast';
 import ToastContainer from './ToastContainer';
 import {
@@ -27,6 +27,8 @@ export default function PortalLayout({
   const pathname = usePathname();
 
   const [user, setUser]           = useState<any>(null);
+  const [sessionError, setSessionError] = useState(false);
+  const [sessionAttempt, setSessionAttempt] = useState(0);
   const [menuOpen, setMenuOpen]   = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const { toasts, showToast, removeToast } = useToast();
@@ -52,18 +54,20 @@ export default function PortalLayout({
   }, [pathname]);
 
   useEffect(() => {
-    const u = getUser();
-    if (!u) { router.replace('/login'); return; }
-    setUser(u);
     const token = getToken();
-    if (!token) return;
+    if (!token) { router.replace('/login'); return; }
+    let active = true;
+    setSessionError(false);
     void apiGet('/client-auth/me').then((freshUser) => {
+      if (!active) return;
+      if (getToken() !== token) return;
       setAuth(token, freshUser);
       setUser(freshUser);
     }).catch(() => {
-      // The shared API handler redirects only when the session is invalid.
+      if (active && getToken()) setSessionError(true);
     });
-  }, [router]);
+    return () => { active = false; };
+  }, [router, sessionAttempt]);
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);
 
@@ -90,6 +94,21 @@ export default function PortalLayout({
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(`${path}/`);
+
+  if (sessionError) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', backgroundColor: '#F8F9FA', padding: 24 }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: '#495057' }}>Impossible de vérifier vos accès actuels.</p>
+          <button type="button" onClick={() => { setUser(null); setSessionError(false); setSessionAttempt((value) => value + 1); }}
+            style={{ border: '1px solid #CED4DA', borderRadius: 4, backgroundColor: '#FFFFFF', padding: '8px 12px', cursor: 'pointer' }}>
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

@@ -27,13 +27,23 @@ export default function OperationalPermissionsPanel({ clientId, endpointBase }: 
   const applyPreset = (preset: OperationalPermissionPreset) => { const next = applyOperationalPermissionPreset(preset); setReview(next.review); setCorrective(next.corrective); };
   const save = async () => {
     if (!selectedId) return;
+    const targetId = selectedId;
     setSaving(true);
     try {
-      const { data } = await api.put(`${basePath}/client-users/${selectedId}/operational-permissions`, { operationalReviewPermissions: review, correctiveActionPermissions: corrective });
-      setUsers((current) => current.map((item) => item.id === selectedId ? { ...item, ...data } : item));
+      const requested = { operationalReviewPermissions: [...review], correctiveActionPermissions: [...corrective] };
+      await api.put(`${basePath}/client-users/${targetId}/operational-permissions`, requested);
+      const { data } = await api.get(`${basePath}/client-users/${targetId}/operational-permissions`);
+      if (data.id !== targetId ||
+        requested.operationalReviewPermissions.some((permission) => !data.operationalReviewPermissions.includes(permission)) ||
+        requested.correctiveActionPermissions.some((permission) => !data.correctiveActionPermissions.includes(permission)) ||
+        data.operationalReviewPermissions.length !== requested.operationalReviewPermissions.length ||
+        data.correctiveActionPermissions.length !== requested.correctiveActionPermissions.length) {
+        throw new Error('La relecture du serveur ne confirme pas les permissions demandées.');
+      }
+      setUsers((current) => current.map((item) => item.id === targetId ? { ...item, ...data } : item));
       toast('Permissions opérationnelles mises à jour.');
     } catch (error: any) {
-      const message = error?.response?.data?.message ?? 'La mise à jour a échoué.';
+      const message = error?.response?.data?.message ?? error?.message ?? 'La mise à jour a échoué.';
       toast(Array.isArray(message) ? message[0] : message, 'error');
     } finally { setSaving(false); }
   };

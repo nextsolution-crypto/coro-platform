@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ClientsService } from './clients.service';
+import { ClientAuthService } from '../client-portal/client-auth.service';
+import { CorrectiveActionPermission, OperationalReviewPermission } from '@prisma/client';
 
 describe('ClientsService operational permissions', () => {
   const actor = { userId: 'admin-1', role: 'SUPER_ADMIN', organizationId: 'org-1' };
@@ -114,5 +116,44 @@ describe('ClientsService operational permissions', () => {
 
   it('refuses platform endpoints to ADMIN', async () => {
     await expect(service.findPlatformClients('org-1', { ...actor, role: 'ADMIN' })).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('persists a full grant and returns it through admin GET and /me with the original session identity', async () => {
+    const stored = {
+      ...current,
+      clientId: 'client-1',
+      organizationId: 'org-1',
+      populationPermissions: [],
+      operationalReviewPermissions: [] as OperationalReviewPermission[],
+      correctiveActionPermissions: [] as CorrectiveActionPermission[],
+      client: { name: 'Client test' },
+    };
+    prisma.clientUser.findFirst.mockImplementation(({ where }: any) =>
+      where.id === stored.id && where.organizationId === stored.organizationId &&
+      (!where.clientId || where.clientId === stored.clientId) ? Promise.resolve({ ...stored }) : Promise.resolve(null),
+    );
+    prisma.clientUser.update.mockImplementation(({ data }: any) => {
+      stored.operationalReviewPermissions = data.operationalReviewPermissions;
+      stored.correctiveActionPermissions = data.correctiveActionPermissions;
+      return Promise.resolve({ ...stored });
+    });
+    const auth = new ClientAuthService(prisma, {} as any);
+    const initial = await auth.getCurrentUser(stored.id, stored.organizationId);
+    expect(initial.operationalReviewPermissions).toEqual([]);
+    expect(initial.correctiveActionPermissions).toEqual([]);
+
+    const grant = {
+      operationalReviewPermissions: Object.values(OperationalReviewPermission),
+      correctiveActionPermissions: Object.values(CorrectiveActionPermission),
+    };
+    await service.updateClientUserOperationalPermissions(stored.clientId, stored.id, grant, { ...actor, role: 'ADMIN' });
+    const adminReadback = await service.getClientUserOperationalPermissions(stored.clientId, stored.id, { ...actor, role: 'ADMIN' });
+    expect(adminReadback).toMatchObject(grant);
+
+    const refreshed = await auth.getCurrentUser(initial.id, initial.organizationId);
+    expect(refreshed.id).toBe(adminReadback.id);
+    expect(refreshed.operationalReviewPermissions).toEqual(grant.operationalReviewPermissions);
+    expect(refreshed.correctiveActionPermissions).toEqual(grant.correctiveActionPermissions);
+    expect(refreshed.operationalReviewPermissions.includes(OperationalReviewPermission.REX_CREATE)).toBe(true);
   });
 });
