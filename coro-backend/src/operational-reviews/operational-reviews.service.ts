@@ -147,6 +147,12 @@ export class OperationalReviewsService {
 
   async get(id: string, actor: ReviewActor) { return this.publicRecord(await this.scoped(id, actor), actor); }
 
+  async authorizeReport(id: string, actor: ReviewActor, generate = false) {
+    if (generate) await this.requirePermission(actor, OperationalReviewPermission.REX_FINALIZE);
+    const review = await this.scoped(id, actor, false);
+    return { id: review.id, reference: review.reference, version: review.version, status: review.status, organizationId: review.organizationId };
+  }
+
   async getForPopulationEvent(eventId: string, actor: ReviewActor) {
     const review = await this.prisma.operationalReview.findFirst({ where: { organizationId: actor.organizationId, populationOperationalEventId: eventId, version: 1, supersedesId: null }, select: { id: true } });
     return review ? this.publicRecord(await this.scoped(review.id, actor), actor) : null;
@@ -319,10 +325,10 @@ export class OperationalReviewsService {
     return recommendation;
   }
 
-  private async scoped(id: string, actor: ReviewActor) {
+  private async scoped(id: string, actor: ReviewActor, includeContent = true) {
     const permissions = await this.getPermissions(actor);
     if (permissions.length === 0) throw new ForbiddenException('Permission REX requise');
-    const review = await this.prisma.operationalReview.findFirst({ where: { id, organizationId: actor.organizationId }, include: reviewInclude });
+    const review = await this.prisma.operationalReview.findFirst({ where: { id, organizationId: actor.organizationId }, include: includeContent ? reviewInclude : undefined });
     if (!review) throw new NotFoundException('REX introuvable');
     if (review.confidentiality === OperationalReviewConfidentiality.ADVISOR) throw new ForbiddenException('REX reserve au canal conseiller');
     if (review.confidentiality === OperationalReviewConfidentiality.RESTRICTED && !permissions.includes(OperationalReviewPermission.REX_EDIT) && !permissions.includes(OperationalReviewPermission.REX_REVIEW) && !permissions.includes(OperationalReviewPermission.REX_FINALIZE)) {

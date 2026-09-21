@@ -12,8 +12,9 @@ import {
   ReviewFindingSeverity,
   ReviewRecommendationStatus,
 } from '@prisma/client';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { OperationalReviewsService } from '../src/operational-reviews/operational-reviews.service';
+import { OperationalReviewReportService } from '../src/operational-reviews/operational-review-report.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error('TEST_DATABASE_URL est obligatoire en CI');
@@ -137,5 +138,104 @@ describePostgres('OperationalReview PostgreSQL invariants', () => {
     await expect(prisma.reviewFinding.update({ where: { id: sourceFinding.id }, data: { operationalReviewId: destination.id, displayOrder: 2 } })).rejects.toThrow('children are immutable');
     await expect(prisma.reviewRecommendation.update({ where: { id: sourceRecommendation.id }, data: { operationalReviewId: destination.id, reviewFindingId: destinationFinding.id } })).rejects.toThrow('children are immutable');
     await expect(prisma.reviewFinding.create({ data: { organizationId: ids.organization, operationalReviewId: finalized.id, category: ReviewFindingCategory.GAP, title: 'Late', description: 'Test', severity: ReviewFindingSeverity.HIGH, displayOrder: 3, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } })).rejects.toThrow('children are immutable');
+  });
+
+  it('genere un seul rapport PDF prive, stable, tenant-scoped et immutable', async () => {
+    const review = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.event } });
+    const objects = new Map<string, Buffer>();
+    const storage = {
+      uploadPrivateImmutable: jest.fn(async (bytes: Buffer, key: string) => {
+        if (objects.has(key)) throw new Error('PRIVATE_OBJECT_ALREADY_EXISTS');
+        objects.set(key, Buffer.from(bytes));
+        return { storageKey: key };
+      }),
+      downloadPrivate: jest.fn(async (key: string) => {
+        const bytes = objects.get(key);
+        if (!bytes) throw new Error('PRIVATE_OBJECT_NOT_FOUND');
+        return Buffer.from(bytes);
+      }),
+    };
+    const reports = new OperationalReviewReportService(prisma as any, storage as any, service);
+    await expect(reports.generate(ids.thirdEvent, actor)).rejects.toThrow();
+    const draft = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.thirdEvent } });
+    await expect(reports.generate(draft.id, actor)).rejects.toThrow('finalisé');
+    await expect(reports.get(review.id, { ...actor, organizationId: ids.otherOrganization })).rejects.toThrow();
+    const results = await Promise.allSettled([reports.generate(review.id, actor), reports.generate(review.id, actor)]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    const first = (results.find((result) => result.status === 'fulfilled') as PromiseFulfilledResult<any>).value;
+    expect(first.status).toBe('FINALIZED');
+    expect(first).not.toHaveProperty('storageKey');
+    expect(first).not.toHaveProperty('renderData');
+    const second = await reports.generate(review.id, actor);
+    expect(second.id).toBe(first.id);
+    expect(storage.uploadPrivateImmutable).toHaveBeenCalledTimes(1);
+    expect(await prisma.operationalReviewReport.count({ where: { operationalReviewId: review.id } })).toBe(1);
+    const pdf = await reports.download(review.id, actor);
+    expect(pdf.bytes.subarray(0, 5).toString()).toBe('%PDF-');
+    await expect(reports.download(review.id, { ...actor, organizationId: ids.otherOrganization })).rejects.toThrow();
+    const record = await prisma.operationalReviewReport.findUniqueOrThrow({ where: { id: first.id } });
+    expect(record.reportSha256).toBe(createHash('sha256').update(pdf.bytes).digest('hex'));
+    expect(record.fileSize).toBe(pdf.bytes.length);
+    const forbidden = new Set(['password', 'token', 'storageKey', 'clientIntentId', 'subscriberId', 'destinationSnapshot', 'providerMessageId', 'providerIdempotencyKey', 'createdById', 'submittedById', 'finalizedById']);
+    const inspectKeys = (value: unknown) => {
+      if (!value || typeof value !== 'object') return;
+      for (const [key, nested] of Object.entries(value)) {
+        expect(forbidden.has(key)).toBe(false);
+        inspectKeys(nested);
+      }
+    };
+    inspectKeys(record.renderData);
+    objects.delete(record.storageKey);
+    await expect(reports.download(review.id, actor)).rejects.toThrow('indisponible');
+    objects.set(record.storageKey, pdf.bytes);
+    objects.set(record.storageKey, Buffer.from('corrupted'));
+    await expect(reports.download(review.id, actor)).rejects.toThrow('Intégrité');
+    objects.set(record.storageKey, pdf.bytes);
+    const limitedId = `review-limited-${suffix}`;
+    await prisma.clientUser.create({ data: {
+      id: limitedId, email: `review-limited-${suffix}@example.invalid`, password: 'not-used',
+      firstName: 'Limited', lastName: 'Tester', buildingIds: [ids.building],
+      clientId: ids.client, organizationId: ids.organization,
+      operationalReviewPermissions: [OperationalReviewPermission.REX_EDIT],
+    } });
+    const limitedActor = { ...actor, sub: limitedId };
+    expect((await reports.get(review.id, limitedActor))?.id).toBe(first.id);
+    await expect(reports.generate(review.id, limitedActor)).rejects.toThrow('Permission REX requise');
+    await expect(prisma.operationalReviewReport.update({ where: { id: first.id }, data: { fileSize: 1 } })).rejects.toThrow('immutable');
+    await expect(prisma.operationalReviewReport.delete({ where: { id: first.id } })).rejects.toThrow('write-once');
+    await expect(prisma.operationalReviewReport.create({ data: {
+      organizationId: ids.otherOrganization, operationalReviewId: review.id, reviewVersion: review.version,
+      reportVersion: 2, generatedAt: new Date(), generatedByType: CoroActorType.SYSTEM, generatedById: 'test',
+      generatorVersion: 'test', storageKey: `test-${randomUUID()}`, leaseExpiresAt: new Date(), renderData: {},
+    } })).rejects.toThrow();
+    await expect(prisma.operationalReviewReport.create({ data: {
+      organizationId: ids.organization, operationalReviewId: review.id, reviewVersion: review.version,
+      reportVersion: 1, generatedAt: new Date(), generatedByType: CoroActorType.SYSTEM, generatedById: 'test',
+      generatorVersion: 'test', storageKey: `test-${randomUUID()}`, leaseExpiresAt: new Date(), renderData: {},
+    } })).rejects.toThrow();
+  });
+
+  it('reprend apres lease expiree sans second upload si le fichier prive correspond', async () => {
+    const review = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.secondEvent } });
+    const bytes = Buffer.from('%PDF-1.7\nrecovery-test', 'utf8');
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    const storageKey = `operational-review-reports/${ids.organization}/${review.id}/${randomUUID()}/recovery.pdf`;
+    const record = await prisma.operationalReviewReport.create({ data: {
+      organizationId: ids.organization, operationalReviewId: review.id, reviewVersion: review.version,
+      reportVersion: 1, generatedAt: new Date(), generatedByType: CoroActorType.CLIENT_USER,
+      generatedById: ids.user, generatorVersion: 'coro-rex-pdf/1.0.0', storageKey,
+      leaseExpiresAt: new Date(Date.now() - 1000), renderData: { test: true },
+      reportSha256: hash, fileSize: bytes.length,
+    } });
+    const storage = {
+      uploadPrivateImmutable: jest.fn(),
+      downloadPrivate: jest.fn(async () => Buffer.from(bytes)),
+    };
+    const reports = new OperationalReviewReportService(prisma as any, storage as any, service);
+    const result = await reports.generate(review.id, actor);
+    expect(result.id).toBe(record.id);
+    expect(result.status).toBe('FINALIZED');
+    expect(storage.downloadPrivate).toHaveBeenCalledTimes(1);
+    expect(storage.uploadPrivateImmutable).not.toHaveBeenCalled();
   });
 });

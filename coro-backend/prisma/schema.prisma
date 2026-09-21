@@ -45,6 +45,7 @@ model Organization {
   populationEvidenceRecords   PopulationEvidenceRecord[]
   populationEvidenceManifests PopulationEvidenceManifest[]
   populationEvidenceReports   PopulationEvidenceReport[]
+  operationalReviewReports    OperationalReviewReport[]
   // Programme de recommandation
   referralsSent               Referral[]                   @relation("ReferralReferrer")
   referralReceived            Referral?                    @relation("ReferralReferred")
@@ -3410,6 +3411,7 @@ model OperationalReview {
   auditEvents OperationalReviewAuditEvent[]
   findings ReviewFinding[]
   recommendations ReviewRecommendation[]
+  reports OperationalReviewReport[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3420,6 +3422,39 @@ model OperationalReview {
   @@index([exerciseReportId])
   @@index([status])
   @@unique([id, organizationId])
+}
+
+enum OperationalReviewReportStatus {
+  GENERATING
+  FINALIZED
+}
+
+model OperationalReviewReport {
+  id String @id @default(uuid())
+  organizationId String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  operationalReviewId String
+  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewVersion Int
+  reportVersion Int @default(1)
+  format String @default("PDF")
+  language String @default("FR")
+  status OperationalReviewReportStatus @default(GENERATING)
+  generatedAt DateTime
+  generatedByType CoroActorType
+  generatedById String
+  generatorVersion String
+  storageKey String @unique
+  fileSize Int?
+  reportSha256 String?
+  leaseExpiresAt DateTime
+  renderData Json
+  createdAt DateTime @default(now())
+  finalizedAt DateTime?
+
+  @@unique([operationalReviewId, reviewVersion, reportVersion, language, format])
+  @@index([organizationId])
+  @@index([status, leaseExpiresAt])
 }
 
 model OperationalReviewAuditEvent {
