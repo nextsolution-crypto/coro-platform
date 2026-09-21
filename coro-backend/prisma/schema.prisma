@@ -1084,6 +1084,8 @@ enum CorrectiveActionPermission {
   CORRECTIVE_ACTION_CREATE
   CORRECTIVE_ACTION_EDIT
   CORRECTIVE_ACTION_COMPLETE
+  CORRECTIVE_ACTION_VERIFY
+  CORRECTIVE_ACTION_CLOSE
 }
 
 enum CorrectiveActionAssigneeType {
@@ -1102,6 +1104,14 @@ enum CorrectiveActionAuditEventType {
   EVIDENCE_ADDED
   EVIDENCE_WITHDRAWN
   COMPLETED
+  VERIFICATION_ACCEPTED
+  VERIFICATION_REJECTED
+  CLOSED
+}
+
+enum CorrectiveActionVerificationVerdict {
+  ACCEPTED
+  REJECTED
 }
 
 enum CorrectiveActionEvidenceType {
@@ -3242,6 +3252,13 @@ model CorrectiveAction {
   completedByType CoroActorType?
   completedById   String?
   completionComment String?
+  verifiedAt      DateTime?
+  verifiedByType  CoroActorType?
+  verifiedById    String?
+  closedAt        DateTime?
+  closedByType    CoroActorType?
+  closedById      String?
+  closureComment  String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -3257,6 +3274,7 @@ model CorrectiveAction {
   actionItem             ExerciseActionItem?     @relation(fields: [exerciseActionItemId], references: [id], onDelete: SetNull)
   auditEvents            CorrectiveActionAuditEvent[]
   evidence               CorrectiveActionEvidence[]
+  verifications          CorrectiveActionVerification[]
 
   @@unique([id, organizationId])
 
@@ -3265,6 +3283,25 @@ model CorrectiveAction {
   @@index([incidentId])
   @@index([exerciseReportId])
   @@index([reviewRecommendationId])
+}
+
+model CorrectiveActionVerification {
+  id                 String                              @id @default(uuid())
+  organizationId     String
+  correctiveActionId String
+  correctiveAction   CorrectiveAction                    @relation(fields: [correctiveActionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  clientIntentId     String
+  attemptNumber      Int
+  verdict            CorrectiveActionVerificationVerdict
+  comment            String?
+  verifiedAt         DateTime                            @default(now())
+  verifiedByType     CoroActorType
+  verifiedById       String
+  createdAt          DateTime                            @default(now())
+
+  @@unique([organizationId, clientIntentId])
+  @@unique([correctiveActionId, attemptNumber])
+  @@index([organizationId])
 }
 
 model CorrectiveActionEvidence {

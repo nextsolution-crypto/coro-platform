@@ -32,7 +32,7 @@ import {
 } from '../occupancy/dto/corrective-action.dto';
 import { CorrectiveActionActor } from '../occupancy/corrective-actions.service';
 import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-evidence.service';
-import { CompleteCorrectiveActionDto, CreateFileEvidenceDto, CreateLinkEvidenceDto, CreateNoteEvidenceDto, CreateSystemReferenceEvidenceDto, WithdrawEvidenceDto } from '../occupancy/dto/corrective-action-evidence.dto';
+import { CloseCorrectiveActionDto, CompleteCorrectiveActionDto, CreateFileEvidenceDto, CreateLinkEvidenceDto, CreateNoteEvidenceDto, CreateSystemReferenceEvidenceDto, VerifyCorrectiveActionDto, WithdrawEvidenceDto } from '../occupancy/dto/corrective-action-evidence.dto';
 
 interface CorrectiveActionRequest {
   clientUser: CorrectiveActionActor;
@@ -1005,6 +1005,21 @@ export class ClientPortalController {
   @Post('corrective-actions/:id/complete')
   completeCorrectiveAction(@Param('id') id: string, @Body() body: CompleteCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
     return this.correctiveActionsService.complete(id, body, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/verify')
+  verifyCorrectiveAction(@Param('id') id: string, @Body() body: VerifyCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionsService.verify(id, body, req.clientUser);
+  }
+
+  @Post('corrective-actions/:id/close')
+  closeCorrectiveAction(@Param('id') id: string, @Body() body: CloseCorrectiveActionDto, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionsService.close(id, body, req.clientUser);
+  }
+
+  @Get('corrective-actions/:id/verifications')
+  getCorrectiveActionVerifications(@Param('id') id: string, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionsService.getVerifications(id, req.clientUser);
   }
 
   @Get('corrective-actions/:id/evidence')

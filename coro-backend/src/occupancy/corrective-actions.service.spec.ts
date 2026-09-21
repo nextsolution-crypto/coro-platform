@@ -31,6 +31,12 @@ function harness() {
     incidentEvent: { findFirst: jest.fn() },
     correctiveAction,
     correctiveActionEvidence: { count: jest.fn().mockResolvedValue(0) },
+    correctiveActionVerification: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+      create: jest.fn().mockResolvedValue({ id: 'verification-a', attemptNumber: 1, verdict: 'ACCEPTED', verifiedAt: new Date() }),
+    },
     correctiveActionAuditEvent: { create: jest.fn(), createMany: jest.fn() },
     clientUser: { findFirst: jest.fn() },
     user: { findFirst: jest.fn() },
@@ -235,11 +241,11 @@ describe('CorrectiveActionsService D1 workflow', () => {
     await expect(h.service.complete('action-a', {}, actor)).resolves.toMatchObject({ status: 'COMPLETED' });
   });
 
-  it('refuse VERIFIED et CLOSED en D1', async () => {
+  it('refuse VERIFIED et CLOSED via le PUT generique', async () => {
     const h = harness();
     h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
     h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED' });
-    await expect(h.service.update('action-a', { status: 'VERIFIED' } as any, actor)).rejects.toThrow('phase ulterieure');
+    await expect(h.service.update('action-a', { status: 'VERIFIED' } as any, actor)).rejects.toThrow('transition explicite');
   });
 
   it('respecte une permission explicite lorsqu elle est configuree', async () => {
@@ -276,5 +282,54 @@ describe('CorrectiveActionsService D1 workflow', () => {
     h.prisma.building.findFirst.mockResolvedValue({ id: 'building-a' });
     await h.service.create({ title: 'Action', buildingId: 'building-a', assigneeType: 'CLIENT_USER' as any, assigneeId: '11111111-1111-4111-8111-111111111111' }, actor);
     expect(h.prisma.correctiveAction.create.mock.calls[0][0].data).toEqual(expect.objectContaining({ assigneeDisplayNameSnapshot: 'Marie Tremblay', assignedTo: 'Marie Tremblay' }));
+  });
+});
+
+describe('CorrectiveActionsService D3 verification and closure', () => {
+  const verifier = { ...manager, sub: 'verifier-a' };
+
+  it('exige explicitement CORRECTIVE_ACTION_VERIFY sans fallback legacy', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: [] });
+    await expect(h.service.verify('action-a', { clientIntentId: '11111111-1111-4111-8111-111111111111', verdict: 'ACCEPTED', comment: 'Conforme' } as any, verifier)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('interdit l auto-verification du dernier completer', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedByType: 'CLIENT_USER', completedById: 'verifier-a' });
+    await expect(h.service.verify('action-a', { clientIntentId: '11111111-1111-4111-8111-111111111111', verdict: 'ACCEPTED', comment: 'Conforme' } as any, verifier)).rejects.toThrow('Auto-verification');
+  });
+
+  it('ACCEPTED produit VERIFIED et une verification immutable conceptuelle', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedByType: 'CLIENT_USER', completedById: 'other' });
+    h.prisma.correctiveActionEvidence.count.mockResolvedValue(1);
+    h.prisma.correctiveAction.findUniqueOrThrow.mockResolvedValue({ id: 'action-a', status: 'VERIFIED' });
+    await expect(h.service.verify('action-a', { clientIntentId: '11111111-1111-4111-8111-111111111111', verdict: 'ACCEPTED' } as any, verifier)).resolves.toMatchObject({ status: 'VERIFIED' });
+    expect(h.prisma.correctiveAction.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'VERIFIED', verifiedById: 'verifier-a' }) }));
+  });
+
+  it('REJECTED exige un commentaire et efface la completion courante', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedById: 'other' });
+    await expect(h.service.verify('action-a', { clientIntentId: '11111111-1111-4111-8111-111111111111', verdict: 'REJECTED' } as any, verifier)).rejects.toThrow('commentaire');
+    h.prisma.correctiveActionVerification.create.mockResolvedValue({ id: 'verification-r', attemptNumber: 1, verdict: 'REJECTED', verifiedAt: new Date() });
+    h.prisma.correctiveAction.findUniqueOrThrow.mockResolvedValue({ id: 'action-a', status: 'IN_PROGRESS' });
+    await h.service.verify('action-a', { clientIntentId: '22222222-2222-4222-8222-222222222222', verdict: 'REJECTED', comment: 'Preuve insuffisante' } as any, verifier);
+    expect(h.prisma.correctiveAction.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'IN_PROGRESS', completedAt: null, completionComment: null }) }));
+  });
+
+  it('CLOSE exige sa permission et devient idempotent sans reecriture', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CLOSE'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'VERIFIED' });
+    h.prisma.correctiveAction.findUniqueOrThrow.mockResolvedValue({ id: 'action-a', status: 'CLOSED' });
+    await expect(h.service.close('action-a', {}, verifier)).resolves.toMatchObject({ status: 'CLOSED' });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'CLOSED', closedAt: new Date() });
+    await h.service.close('action-a', {}, verifier);
+    expect(h.prisma.correctiveAction.updateMany).toHaveBeenCalledTimes(1);
   });
 });

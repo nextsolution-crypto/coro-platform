@@ -15,8 +15,9 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
   const storage = { downloadPrivate: jest.fn(), uploadPrivateImmutable: jest.fn() };
   const evidence = new CorrectiveActionEvidenceService(prisma as any, storage as any, actions);
   const suffix = randomUUID();
-  const ids = { org: `ac-org-${suffix}`, otherOrg: `ac-other-${suffix}`, client: `ac-client-${suffix}`, building: `ac-building-${suffix}`, profile: `ac-profile-${suffix}`, program: `ac-program-${suffix}`, scenario: `ac-scenario-${suffix}`, event: `ac-event-${suffix}`, user: `ac-user-${suffix}` };
+  const ids = { org: `ac-org-${suffix}`, otherOrg: `ac-other-${suffix}`, client: `ac-client-${suffix}`, building: `ac-building-${suffix}`, profile: `ac-profile-${suffix}`, program: `ac-program-${suffix}`, scenario: `ac-scenario-${suffix}`, event: `ac-event-${suffix}`, user: `ac-user-${suffix}`, verifier: `ac-verifier-${suffix}` };
   const actor = { sub: ids.user, organizationId: ids.org, clientId: ids.client, role: 'CLIENT_MANAGER', buildingIds: [ids.building] };
+  const verifier = { ...actor, sub: ids.verifier };
   let reviewId: string;
   let recommendationId: string;
 
@@ -26,6 +27,7 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
     await prisma.client.create({ data: { id: ids.client, name: 'AC client', organizationId: ids.org, regulatoryRequirements: [] } });
     await prisma.building.create({ data: { id: ids.building, name: 'AC building', address: 'Test', city: 'Test', province: 'QC', organizationId: ids.org, clientId: ids.client } });
     await prisma.clientUser.create({ data: { id: ids.user, email: `ac-${suffix}@example.invalid`, password: 'unused', firstName: 'Alex', lastName: 'Test', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, operationalReviewPermissions: Object.values(OperationalReviewPermission), correctiveActionPermissions: [] } });
+    await prisma.clientUser.create({ data: { id: ids.verifier, email: `verify-${suffix}@example.invalid`, password: 'unused', firstName: 'Vera', lastName: 'Test', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY', 'CORRECTIVE_ACTION_CLOSE'] } });
     await prisma.rueFacilityProfile.create({ data: { id: ids.profile, buildingId: ids.building, assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT, populationEnabled: true } });
     await prisma.populationProgram.create({ data: { id: ids.program, rueFacilityProfileId: ids.profile, status: PopulationProgramStatus.ACTIVE, deliveryMode: PopulationDeliveryMode.SANDBOX, publicSlug: `ac-${suffix}`, nameFR: 'AC program' } });
     await prisma.rueEmergencyScenario.create({ data: { id: ids.scenario, facilityProfileId: ids.profile, nameFR: 'AC scenario' } });
@@ -107,5 +109,51 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
     await actions.update(action.id, { status: 'IN_PROGRESS' }, actor);
     await expect(actions.complete(action.id, {}, actor)).rejects.toThrow('preuve active ou un commentaire');
     await expect(actions.complete(action.id, { completionComment: 'Realisation declaree' }, actor)).resolves.toMatchObject({ status: 'COMPLETED' });
+  });
+
+  it('conserve les tentatives REJECTED puis ACCEPTED et ferme idempotemment', async () => {
+    const action = await actions.create({ title: 'Verify lifecycle', buildingId: ids.building }, actor);
+    await actions.update(action.id, { status: 'IN_PROGRESS' }, actor);
+    await actions.complete(action.id, { completionComment: 'Premiere realisation' }, actor);
+    await actions.verify(action.id, { clientIntentId: randomUUID(), verdict: 'REJECTED', comment: 'Correction requise' }, verifier);
+    await actions.complete(action.id, { completionComment: 'Correction apportee' }, actor);
+    await actions.verify(action.id, { clientIntentId: randomUUID(), verdict: 'ACCEPTED', comment: 'Verification satisfaisante' }, verifier);
+    const history = await actions.getVerifications(action.id, verifier);
+    expect(history.map((item) => [item.attemptNumber, item.verdict])).toEqual([[1, 'REJECTED'], [2, 'ACCEPTED']]);
+    const firstClose = await actions.close(action.id, { closureComment: 'Dossier ferme' }, verifier);
+    const secondClose = await actions.close(action.id, { closureComment: 'Ne doit pas reecrire' }, verifier);
+    expect(secondClose.closedAt).toEqual(firstClose.closedAt);
+    expect(secondClose.closureComment).toBe('Dossier ferme');
+  });
+
+  it('rend Verification et action CLOSED immuables et fige Evidence', async () => {
+    const action = await actions.create({ title: 'Immutable D3', buildingId: ids.building }, actor);
+    await actions.update(action.id, { status: 'IN_PROGRESS' }, actor);
+    const note = await evidence.addNote(action.id, { clientIntentId: randomUUID(), title: 'Preuve', noteText: 'Realise' }, actor);
+    await actions.complete(action.id, {}, actor);
+    await actions.verify(action.id, { clientIntentId: randomUUID(), verdict: 'ACCEPTED' }, verifier);
+    await expect(prisma.correctiveActionEvidence.update({ where: { id: note.id }, data: { status: 'WITHDRAWN', withdrawnAt: new Date(), withdrawnByType: CoroActorType.CLIENT_USER, withdrawnById: ids.user, withdrawalReason: 'Non permis' } })).rejects.toThrow('frozen');
+    const verification = await prisma.correctiveActionVerification.findFirstOrThrow({ where: { correctiveActionId: action.id } });
+    await expect(prisma.correctiveActionVerification.update({ where: { id: verification.id }, data: { comment: 'Mutation' } })).rejects.toThrow('append-only');
+    await expect(prisma.correctiveActionVerification.delete({ where: { id: verification.id } })).rejects.toThrow('append-only');
+    await actions.close(action.id, {}, verifier);
+    await expect(prisma.correctiveAction.update({ where: { id: action.id }, data: { title: 'Mutation' } })).rejects.toThrow('immutable');
+  });
+
+  it('serialize deux verdicts concurrents et deux fermetures', async () => {
+    const action = await actions.create({ title: 'Concurrent D3', buildingId: ids.building }, actor);
+    await actions.update(action.id, { status: 'IN_PROGRESS' }, actor);
+    await actions.complete(action.id, { completionComment: 'Realise' }, actor);
+    const results = await Promise.allSettled([
+      actions.verify(action.id, { clientIntentId: randomUUID(), verdict: 'ACCEPTED', comment: 'OK' }, verifier),
+      actions.verify(action.id, { clientIntentId: randomUUID(), verdict: 'REJECTED', comment: 'Non' }, verifier),
+    ]);
+    expect(results.filter((item) => item.status === 'fulfilled')).toHaveLength(1);
+    expect(await prisma.correctiveActionVerification.count({ where: { correctiveActionId: action.id } })).toBe(1);
+    const current = await prisma.correctiveAction.findUniqueOrThrow({ where: { id: action.id } });
+    if (current.status === 'VERIFIED') {
+      const [a, b] = await Promise.all([actions.close(action.id, {}, verifier), actions.close(action.id, {}, verifier)]);
+      expect(a.closedAt).toEqual(b.closedAt);
+    }
   });
 });

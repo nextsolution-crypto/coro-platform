@@ -10,7 +10,7 @@ import {
   CreateCorrectiveActionDto,
   UpdateCorrectiveActionDto,
 } from './dto/corrective-action.dto';
-import { CompleteCorrectiveActionDto } from './dto/corrective-action-evidence.dto';
+import { CloseCorrectiveActionDto, CompleteCorrectiveActionDto, VerifyCorrectiveActionDto } from './dto/corrective-action-evidence.dto';
 
 export interface CorrectiveActionActor {
   sub?: string;
@@ -35,7 +35,7 @@ export class CorrectiveActionsService {
         status: { not: 'CANCELLED' },
       },
       orderBy: [{ status: 'asc' }, { dueDate: 'asc' }, { createdAt: 'desc' }],
-      include: { reviewRecommendation: { select: { operationalReview: { select: { confidentiality: true } } } } },
+      include: { reviewRecommendation: { select: { operationalReview: { select: { confidentiality: true } } } }, _count: { select: { verifications: true, evidence: { where: { status: 'ACTIVE' } } } } },
     });
     return actions.map((action) => this.safeAction(action, actor));
   }
@@ -232,6 +232,59 @@ export class CorrectiveActionsService {
     return action;
   }
 
+  async getVerifications(id: string, actor: CorrectiveActionActor) {
+    await this.findAccessibleAction(id, actor);
+    return this.prisma.correctiveActionVerification.findMany({ where: { correctiveActionId: id, organizationId: actor.organizationId }, orderBy: { attemptNumber: 'asc' }, select: { id: true, attemptNumber: true, verdict: true, comment: true, verifiedAt: true, verifiedByType: true, verifiedById: true } });
+  }
+
+  async verify(id: string, body: VerifyCorrectiveActionDto, actor: CorrectiveActionActor) {
+    await this.requireExplicitPermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_VERIFY);
+    await this.findAccessibleAction(id, actor);
+    const comment = body.comment?.trim() || null;
+    if (body.verdict === 'REJECTED' && !comment) throw new BadRequestException('Un commentaire est requis pour rejeter la realisation');
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'corrective-action-verification:' + id}))`;
+      const replay = await tx.correctiveActionVerification.findFirst({ where: { organizationId: actor.organizationId, clientIntentId: body.clientIntentId } });
+      if (replay) {
+        if (replay.correctiveActionId !== id || replay.verdict !== body.verdict) throw new BadRequestException('Intention de verification deja utilisee');
+        return this.safeAction(await tx.correctiveAction.findUniqueOrThrow({ where: { id } }), actor);
+      }
+      const action = await tx.correctiveAction.findFirst({ where: { id, organizationId: actor.organizationId } });
+      if (!action || action.status !== 'COMPLETED') throw new BadRequestException('Seule une action COMPLETED peut etre verifiee');
+      const actorType = actor.sub ? CoroActorType.CLIENT_USER : CoroActorType.SYSTEM;
+      const actorId = actor.sub || 'system';
+      if ((action.completedByType === actorType && action.completedById === actorId) || (action.assigneeType === 'CLIENT_USER' && actorType === CoroActorType.CLIENT_USER && action.assigneeId === actorId)) throw new ForbiddenException('Auto-verification interdite');
+      const activeEvidence = await tx.correctiveActionEvidence.count({ where: { correctiveActionId: id, organizationId: actor.organizationId, status: 'ACTIVE' } });
+      if (body.verdict === 'ACCEPTED' && !activeEvidence && !comment) throw new BadRequestException('Une preuve active ou un commentaire de verification est requis');
+      const attemptNumber = (await tx.correctiveActionVerification.count({ where: { correctiveActionId: id } })) + 1;
+      const verification = await tx.correctiveActionVerification.create({ data: { organizationId: actor.organizationId, correctiveActionId: id, clientIntentId: body.clientIntentId, attemptNumber, verdict: body.verdict, comment, verifiedByType: actorType, verifiedById: actorId } });
+      const accepted = body.verdict === 'ACCEPTED';
+      const result = await tx.correctiveAction.updateMany({ where: { id, organizationId: actor.organizationId, status: 'COMPLETED' }, data: accepted ? { status: 'VERIFIED', verifiedAt: verification.verifiedAt, verifiedByType: actorType, verifiedById: actorId, updatedByType: actorType, updatedById: actorId } : { status: 'IN_PROGRESS', completedAt: null, completedByType: null, completedById: null, completionComment: null, verifiedAt: null, verifiedByType: null, verifiedById: null, updatedByType: actorType, updatedById: actorId } });
+      if (result.count !== 1) throw new BadRequestException('Action modifiee concurremment');
+      await tx.correctiveActionAuditEvent.create({ data: { organizationId: actor.organizationId, correctiveActionId: id, eventType: accepted ? 'VERIFICATION_ACCEPTED' : 'VERIFICATION_REJECTED', actorType, actorId, metadata: { verificationId: verification.id, attemptNumber, verdict: body.verdict, previousStatus: 'COMPLETED', newStatus: accepted ? 'VERIFIED' : 'IN_PROGRESS' } } });
+      return this.safeAction(await tx.correctiveAction.findUniqueOrThrow({ where: { id } }), actor);
+    });
+  }
+
+  async close(id: string, body: CloseCorrectiveActionDto, actor: CorrectiveActionActor) {
+    await this.requireExplicitPermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_CLOSE);
+    await this.findAccessibleAction(id, actor);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'corrective-action-close:' + id}))`;
+      const action = await tx.correctiveAction.findFirst({ where: { id, organizationId: actor.organizationId } });
+      if (!action) throw new NotFoundException('Action introuvable');
+      if (action.status === 'CLOSED') return this.safeAction(action, actor);
+      if (action.status !== 'VERIFIED') throw new BadRequestException('Seule une action VERIFIED peut etre fermee');
+      const actorType = actor.sub ? CoroActorType.CLIENT_USER : CoroActorType.SYSTEM;
+      const actorId = actor.sub || 'system';
+      const closedAt = new Date();
+      const result = await tx.correctiveAction.updateMany({ where: { id, organizationId: actor.organizationId, status: 'VERIFIED' }, data: { status: 'CLOSED', closedAt, closedByType: actorType, closedById: actorId, closureComment: body.closureComment?.trim() || null, updatedByType: actorType, updatedById: actorId } });
+      if (result.count !== 1) throw new BadRequestException('Action modifiee concurremment');
+      await tx.correctiveActionAuditEvent.create({ data: { organizationId: actor.organizationId, correctiveActionId: id, eventType: 'CLOSED', actorType, actorId, metadata: { previousStatus: 'VERIFIED', newStatus: 'CLOSED' } } });
+      return this.safeAction(await tx.correctiveAction.findUniqueOrThrow({ where: { id } }), actor);
+    });
+  }
+
   async delete(id: string, actor: CorrectiveActionActor) {
     await this.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT);
     const visibilityScope = await this.visibilityScope(actor);
@@ -253,9 +306,9 @@ export class CorrectiveActionsService {
   }
 
   private assertTransition(current: string, next: string) {
-    if (['VERIFIED', 'CLOSED'].includes(next)) throw new BadRequestException('Statut reserve a une phase ulterieure');
+    if (['VERIFIED', 'CLOSED'].includes(next)) throw new BadRequestException('Utilisez la transition explicite correspondante');
     if (current === next) return;
-    const allowed: Record<string, string[]> = { PLANNED: ['IN_PROGRESS', 'CANCELLED'], IN_PROGRESS: ['COMPLETED', 'CANCELLED'], COMPLETED: ['IN_PROGRESS'], CANCELLED: [] };
+    const allowed: Record<string, string[]> = { PLANNED: ['IN_PROGRESS', 'CANCELLED'], IN_PROGRESS: ['COMPLETED', 'CANCELLED'], COMPLETED: ['IN_PROGRESS'], VERIFIED: [], CLOSED: [], CANCELLED: [] };
     if (!(allowed[current] || []).includes(next)) throw new BadRequestException(`Transition ${current} vers ${next} interdite`);
   }
 
@@ -264,6 +317,12 @@ export class CorrectiveActionsService {
     const user = await this.prisma.clientUser.findFirst({ where: { id: actor.sub, organizationId: actor.organizationId, isActive: true }, select: { correctiveActionPermissions: true } });
     if (!user) throw new ForbiddenException('Utilisateur client invalide');
     if (user.correctiveActionPermissions.length > 0 && !user.correctiveActionPermissions.includes(permission)) throw new ForbiddenException('Permission action corrective requise');
+  }
+
+  private async requireExplicitPermission(actor: CorrectiveActionActor, permission: CorrectiveActionPermission) {
+    if (!actor.sub) throw new ForbiddenException('Acteur authentifie requis');
+    const user = await this.prisma.clientUser.findFirst({ where: { id: actor.sub, organizationId: actor.organizationId, isActive: true }, select: { correctiveActionPermissions: true } });
+    if (!user?.correctiveActionPermissions.includes(permission)) throw new ForbiddenException('Permission action corrective explicite requise');
   }
 
   private async assertReviewSourceAccess(actor: CorrectiveActionActor, confidentiality: OperationalReviewConfidentiality) {

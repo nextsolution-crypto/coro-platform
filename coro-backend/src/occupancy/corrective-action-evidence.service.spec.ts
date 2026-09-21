@@ -70,4 +70,10 @@ describe('CorrectiveActionEvidenceService', () => {
     expect(result.status).toBe('WITHDRAWN');
     expect(h.storage).not.toHaveProperty('deletePrivate');
   });
+
+  it.each(['VERIFIED', 'CLOSED'])('fige les preuves lorsque action est %s', async (status) => {
+    const h = harness();
+    h.actions.findAccessibleAction.mockResolvedValue({ id: 'action-a', status });
+    await expect(h.service.addNote('action-a', { clientIntentId: intent, title: 'Note', noteText: 'Texte' }, actor)).rejects.toThrow('figees');
+  });
 });

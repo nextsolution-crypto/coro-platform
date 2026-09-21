@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, IsUrl, IsUUID, MaxLength, MinLength } from 'class-validator';
-import { CorrectiveActionEvidenceType, CorrectiveActionSystemReferenceType } from '@prisma/client';
+import { CorrectiveActionEvidenceType, CorrectiveActionSystemReferenceType, CorrectiveActionVerificationVerdict } from '@prisma/client';
 
 export class EvidenceBaseDto {
   @IsUUID() clientIntentId!: string;
@@ -32,4 +32,14 @@ export class WithdrawEvidenceDto {
 
 export class CompleteCorrectiveActionDto {
   @IsOptional() @IsString() @MaxLength(5000) completionComment?: string;
+}
+
+export class VerifyCorrectiveActionDto {
+  @IsUUID() clientIntentId!: string;
+  @IsEnum(CorrectiveActionVerificationVerdict) verdict!: CorrectiveActionVerificationVerdict;
+  @IsOptional() @IsString() @MaxLength(5000) comment?: string;
+}
+
+export class CloseCorrectiveActionDto {
+  @IsOptional() @IsString() @MaxLength(5000) closureComment?: string;
 }

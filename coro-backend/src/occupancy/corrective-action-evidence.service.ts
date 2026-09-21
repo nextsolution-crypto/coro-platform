@@ -37,7 +37,7 @@ export class CorrectiveActionEvidenceService {
 
   async addFile(actionId: string, body: CreateFileEvidenceDto, file: Express.Multer.File | undefined, actor: CorrectiveActionActor) {
     await this.actions.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT);
-    await this.actions.findAccessibleAction(actionId, actor);
+    this.assertEvidenceMutable(await this.actions.findAccessibleAction(actionId, actor));
     if (!file?.buffer?.length) throw new BadRequestException('Fichier requis');
     if (body.type !== CorrectiveActionEvidenceType.DOCUMENT && body.type !== CorrectiveActionEvidenceType.PHOTO) throw new BadRequestException('Type de preuve fichier invalide');
     if (file.size > MAX_FILE_SIZE) throw new BadRequestException('Fichier trop volumineux (10 Mo maximum)');
@@ -64,7 +64,7 @@ export class CorrectiveActionEvidenceService {
 
   async withdraw(actionId: string, evidenceId: string, body: WithdrawEvidenceDto, actor: CorrectiveActionActor) {
     await this.actions.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT);
-    await this.actions.findAccessibleAction(actionId, actor);
+    this.assertEvidenceMutable(await this.actions.findAccessibleAction(actionId, actor));
     const reason = body.withdrawalReason.trim();
     if (!reason) throw new BadRequestException('Motif de retrait requis');
     return this.prisma.$transaction(async (tx) => {
@@ -87,7 +87,7 @@ export class CorrectiveActionEvidenceService {
 
   private async addStructured(actionId: string, body: { clientIntentId: string; title: string; description?: string }, actor: CorrectiveActionActor, data: any) {
     await this.actions.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT);
-    await this.actions.findAccessibleAction(actionId, actor);
+    this.assertEvidenceMutable(await this.actions.findAccessibleAction(actionId, actor));
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'corrective-evidence:' + actor.organizationId + ':' + body.clientIntentId}))`;
       const replay = await tx.correctiveActionEvidence.findFirst({ where: { organizationId: actor.organizationId, clientIntentId: body.clientIntentId } });
@@ -145,6 +145,7 @@ export class CorrectiveActionEvidenceService {
   }
 
   private safeFileName(name: string) { return (name.split(/[\\/]/).pop() || 'evidence').normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 180); }
+  private assertEvidenceMutable(action: { status: string }) { if (action.status === 'VERIFIED' || action.status === 'CLOSED') throw new ConflictException('Les preuves sont figees apres verification'); }
   private safeEvidence(evidence: any) { const { storageKey, ...safe } = evidence; return safe; }
   private audit(tx: any, actionId: string, actor: CorrectiveActionActor, eventType: 'EVIDENCE_ADDED' | 'EVIDENCE_WITHDRAWN', metadata: object) { return tx.correctiveActionAuditEvent.create({ data: { organizationId: actor.organizationId, correctiveActionId: actionId, eventType, actorType: actor.sub ? CoroActorType.CLIENT_USER : CoroActorType.SYSTEM, actorId: actor.sub || 'system', metadata } }); }
 }
