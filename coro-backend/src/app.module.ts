@@ -99,6 +99,10 @@ import { APP_GUARD } from '@nestjs/core';
       name: 'long',
       ttl: 3600000,  // 1 heure
       limit: 2000,   // max 2000 requêtes par heure par IP
+    }, {
+      name: 'reset',
+      ttl: 900000,
+      limit: 100000,
     }]),
     ChatModule,
     ScheduleModule.forRoot(),

@@ -137,7 +137,7 @@ describe('ClientsService operational permissions', () => {
       stored.correctiveActionPermissions = data.correctiveActionPermissions;
       return Promise.resolve({ ...stored });
     });
-    const auth = new ClientAuthService(prisma, {} as any);
+    const auth = new ClientAuthService(prisma, {} as any, {} as any);
     const initial = await auth.getCurrentUser(stored.id, stored.organizationId);
     expect(initial.operationalReviewPermissions).toEqual([]);
     expect(initial.correctiveActionPermissions).toEqual([]);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { setAuth } from '../store/auth';
+import Link from 'next/link';
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
@@ -226,8 +227,11 @@ export default function LoginPage() {
 
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: 13, lineHeight: 1.5, color: '#ADB5BD', margin: '24px 0 0', padding: '0 8px' }}>
-          Problème de connexion ? Contactez votre conseiller CORO.
+        <p style={{ textAlign: 'center', fontSize: 13, lineHeight: 1.5, margin: '24px 0 0', padding: '0 8px' }}>
+          <Link href="/forgot-password">Mot de passe oublié ? Réinitialiser mon mot de passe</Link>
+        </p>
+        <p style={{ textAlign: 'center', fontSize: 13, color: '#6C757D', margin: '12px 0 0' }}>
+          Autre problème d&apos;accès ? Communiquez avec votre administrateur.
         </p>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: '#CED4DA', margin: '16px 0 0' }}>

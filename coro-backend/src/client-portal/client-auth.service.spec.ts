@@ -3,7 +3,7 @@ import { ClientAuthService } from './client-auth.service';
 
 describe('ClientAuthService current user contract', () => {
   const prisma: any = { clientUser: { findFirst: jest.fn() } };
-  const service = new ClientAuthService(prisma, {} as any);
+  const service = new ClientAuthService(prisma, {} as any, {} as any);
 
   it('returns current database permissions without sensitive fields', async () => {
     prisma.clientUser.findFirst.mockResolvedValue({

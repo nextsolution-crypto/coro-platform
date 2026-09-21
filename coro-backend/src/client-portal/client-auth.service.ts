@@ -8,6 +8,16 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { EmailService } from './email.service';
+import { validateClientPassword } from './client-password-policy';
+
+const RESET_LIFETIME_MS = 30 * 60 * 1000;
+const RESET_WINDOW_MS = 15 * 60 * 1000;
+const RESET_WINDOW_LIMIT = 3;
+const RESET_RESPONSE = { message: 'Si un compte actif correspond à cette adresse, un lien de réinitialisation vous sera envoyé.' };
+const INVALID_RESET = 'Ce lien de réinitialisation est invalide ou n’est plus disponible.';
+
+
 @Injectable()
 export class ClientAuthService {
   private readonly logger = new Logger('ClientAuthService');
@@ -15,7 +25,30 @@ export class ClientAuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private emailService: EmailService,
   ) {}
+
+  private async findClientByEmail(email: string) {
+    const normalized = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (!normalized || normalized.length > 320) return null;
+    const matches = await this.prisma.clientUser.findMany({
+      where: { email: { equals: normalized, mode: 'insensitive' } },
+      take: 2,
+      include: { client: true, organization: true },
+    });
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  private clientToken(clientUser: any) {
+    return this.jwt.sign({
+      sub: clientUser.id, email: clientUser.email, role: clientUser.role,
+      clientId: clientUser.clientId, organizationId: clientUser.organizationId,
+      buildingIds: clientUser.buildingIds, populationPermissions: clientUser.populationPermissions,
+      operationalReviewPermissions: clientUser.operationalReviewPermissions,
+      correctiveActionPermissions: clientUser.correctiveActionPermissions,
+      sessionVersion: clientUser.sessionVersion, type: 'CLIENT',
+    });
+  }
 
   async getCurrentUser(clientUserId: string, organizationId: string) {
     const clientUser = await this.prisma.clientUser.findFirst({
@@ -39,21 +72,14 @@ export class ClientAuthService {
   }
 
   async login(email: string, password: string, trustedToken?: string) {
-    const clientUser = await this.prisma.clientUser.findUnique({
-      where: { email },
-      include: { client: true, organization: true },
-    });
+    const clientUser = await this.findClientByEmail(email);
     if (!clientUser || !clientUser.isActive) {
-      this.logger.warn(
-        `[CLIENT-AUTH] Tentative de connexion échouée — courriel inconnu ou inactif : ${email}`,
-      );
+      this.logger.warn('[CLIENT-AUTH] Connexion refusee');
       throw new UnauthorizedException('Email ou mot de passe invalide.');
     }
     const valid = await bcrypt.compare(password, clientUser.password);
     if (!valid) {
-      this.logger.warn(
-        `[CLIENT-AUTH] Tentative de connexion échouée — mot de passe incorrect : ${email}`,
-      );
+      this.logger.warn('[CLIENT-AUTH] Connexion refusee');
       throw new UnauthorizedException('Email ou mot de passe invalide.');
     }
 
@@ -67,21 +93,8 @@ export class ClientAuthService {
         },
       });
       if (trusted) {
-        this.logger.log(
-          `[CLIENT-AUTH] Token de confiance valide — skip MFA : ${email}`,
-        );
-        const token = this.jwt.sign({
-          sub: clientUser.id,
-          email: clientUser.email,
-          role: clientUser.role,
-          clientId: clientUser.clientId,
-          organizationId: clientUser.organizationId,
-          buildingIds: clientUser.buildingIds,
-          populationPermissions: clientUser.populationPermissions,
-          operationalReviewPermissions: clientUser.operationalReviewPermissions,
-          correctiveActionPermissions: clientUser.correctiveActionPermissions,
-          type: 'CLIENT',
-        });
+        this.logger.log('[CLIENT-AUTH] Appareil de confiance valide');
+        const token = this.clientToken(clientUser);
         return {
           token,
           user: {
@@ -101,9 +114,7 @@ export class ClientAuthService {
       }
     }
 
-    this.logger.log(
-      `[CLIENT-AUTH] Identifiants valides — envoi code MFA : ${email}`,
-    );
+    this.logger.log('[CLIENT-AUTH] Envoi code MFA');
 
     // Générer code MFA 6 chiffres
     const mfaCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -147,15 +158,12 @@ export class ClientAuthService {
       }),
     });
 
-    return { mfaRequired: true, email };
+    return { mfaRequired: true, email: clientUser.email };
   }
 
   async verifyMfa(email: string, code: string) {
-    const clientUser = await this.prisma.clientUser.findUnique({
-      where: { email },
-      include: { client: true },
-    });
-    if (!clientUser) throw new UnauthorizedException('Identifiants invalides.');
+    const clientUser = await this.findClientByEmail(email);
+    if (!clientUser || !clientUser.isActive) throw new UnauthorizedException('Identifiants invalides.');
 
     const userData = clientUser as any;
     if (!userData.mfaCode || !userData.mfaCodeExpiry)
@@ -182,18 +190,7 @@ export class ClientAuthService {
       },
     });
 
-    const token = this.jwt.sign({
-      sub: clientUser.id,
-      email: clientUser.email,
-      role: clientUser.role,
-      clientId: clientUser.clientId,
-      organizationId: clientUser.organizationId,
-      buildingIds: clientUser.buildingIds,
-      populationPermissions: clientUser.populationPermissions,
-      operationalReviewPermissions: clientUser.operationalReviewPermissions,
-      correctiveActionPermissions: clientUser.correctiveActionPermissions,
-      type: 'CLIENT',
-    });
+    const token = this.clientToken(clientUser);
 
     return {
       token,
@@ -250,36 +247,92 @@ export class ClientAuthService {
     return { clientUser, password, alreadyExists: false };
   }
 
-  private validatePasswordStrength(password: string): void {
-    if (password.length < 8)
-      throw new BadRequestException(
-        'Le mot de passe doit contenir au moins 8 caractères.',
-      );
-    if (!/[A-Z]/.test(password))
-      throw new BadRequestException(
-        'Le mot de passe doit contenir au moins une majuscule.',
-      );
-    if (!/[a-z]/.test(password))
-      throw new BadRequestException(
-        'Le mot de passe doit contenir au moins une minuscule.',
-      );
-    if (!/[0-9]/.test(password))
-      throw new BadRequestException(
-        'Le mot de passe doit contenir au moins un chiffre.',
-      );
-    if (!/[^A-Za-z0-9]/.test(password))
-      throw new BadRequestException(
-        'Le mot de passe doit contenir au moins un caractère spécial.',
-      );
-  }
-
   async changePassword(clientUserId: string, newPassword: string) {
-    this.validatePasswordStrength(newPassword);
+    validateClientPassword(newPassword);
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    return this.prisma.clientUser.update({
+    await this.prisma.clientUser.update({
       where: { id: clientUserId },
       data: { password: hashedPassword },
     });
+    return { success: true };
+  }
+
+  async forgotPassword(email: string) {
+    const startedAt = Date.now();
+    try {
+      const clientUser = await this.findClientByEmail(email);
+      if (!clientUser?.isActive) return RESET_RESPONSE;
+
+      const rawToken = crypto.randomBytes(32).toString('base64url');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const now = new Date();
+      const created = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "ClientUser" WHERE id = ${clientUser.id} FOR UPDATE`;
+        const current = await tx.clientUser.findUnique({ where: { id: clientUser.id }, select: { isActive: true } });
+        if (!current?.isActive) return false;
+        const count = await tx.clientPasswordResetToken.count({
+          where: { clientUserId: clientUser.id, createdAt: { gt: new Date(now.getTime() - RESET_WINDOW_MS) } },
+        });
+        if (count >= RESET_WINDOW_LIMIT) return false;
+        await tx.clientPasswordResetToken.updateMany({
+          where: { clientUserId: clientUser.id, usedAt: null },
+          data: { usedAt: now },
+        });
+        await tx.clientPasswordResetToken.create({
+          data: { clientUserId: clientUser.id, tokenHash, expiresAt: new Date(now.getTime() + RESET_LIFETIME_MS) },
+        });
+        await tx.clientSecurityAuditEvent.create({
+          data: { clientUserId: clientUser.id, organizationId: clientUser.organizationId, eventType: 'PASSWORD_RESET_REQUESTED' },
+        });
+        return true;
+      });
+      if (created) {
+        const resetUrl = `https://client.getcoro.io/reset-password?token=${encodeURIComponent(rawToken)}`;
+        const sent = await this.emailService.sendClientPasswordReset({
+          toEmail: clientUser.email, toName: clientUser.firstName, resetUrl,
+        });
+        if (!sent.success) this.logger.warn('[CLIENT-AUTH] Echec envoi reset');
+      }
+    } catch {
+      this.logger.warn('[CLIENT-AUTH] Demande reset non traitee');
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, 600 - (Date.now() - startedAt))));
+    }
+    return RESET_RESPONSE;
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token))
+      throw new BadRequestException(INVALID_RESET);
+    validateClientPassword(newPassword);
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction(async (tx) => {
+      const record = await tx.clientPasswordResetToken.findUnique({ where: { tokenHash } });
+      if (!record) throw new BadRequestException(INVALID_RESET);
+      const now = new Date();
+      const claim = await tx.clientPasswordResetToken.updateMany({
+        where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+      if (claim.count !== 1) throw new BadRequestException(INVALID_RESET);
+      const user = await tx.clientUser.findUnique({ where: { id: record.clientUserId }, select: { organizationId: true, isActive: true } });
+      if (!user?.isActive) throw new BadRequestException(INVALID_RESET);
+      await tx.clientUser.update({
+        where: { id: record.clientUserId },
+        data: { password: hashedPassword, sessionVersion: { increment: 1 }, mfaCode: null, mfaCodeExpiry: null },
+      });
+      await tx.clientTrustedDevice.deleteMany({ where: { userId: record.clientUserId } });
+      await tx.magicLink.updateMany({ where: { userId: record.clientUserId, usedAt: null }, data: { usedAt: now } });
+      await tx.clientPasswordResetToken.updateMany({
+        where: { clientUserId: record.clientUserId, id: { not: record.id }, usedAt: null },
+        data: { usedAt: now },
+      });
+      await tx.clientSecurityAuditEvent.create({
+        data: { clientUserId: record.clientUserId, organizationId: user.organizationId, eventType: 'PASSWORD_RESET_COMPLETED' },
+      });
+    });
+    return { success: true };
   }
 
   async generateMagicLink(clientUserId: string): Promise<string> {
@@ -316,18 +369,7 @@ export class ClientAuthService {
 
     const clientUser = magicLink.user;
 
-    const jwtToken = this.jwt.sign({
-      sub: clientUser.id,
-      email: clientUser.email,
-      role: clientUser.role,
-      clientId: clientUser.clientId,
-      organizationId: clientUser.organizationId,
-      buildingIds: clientUser.buildingIds,
-      populationPermissions: clientUser.populationPermissions,
-      operationalReviewPermissions: clientUser.operationalReviewPermissions,
-      correctiveActionPermissions: clientUser.correctiveActionPermissions,
-      type: 'CLIENT',
-    });
+    const jwtToken = this.clientToken(clientUser);
 
     return {
       token: jwtToken,

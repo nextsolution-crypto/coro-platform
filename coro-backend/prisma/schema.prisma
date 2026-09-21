@@ -797,6 +797,33 @@ model ClientUser {
   mfaCodeExpiry         DateTime?
   uploadedFiles         ProjectFile[]          @relation("ClientFileUploader")
   trustedDevices        ClientTrustedDevice[]
+  passwordResetTokens   ClientPasswordResetToken[]
+  securityAuditEvents   ClientSecurityAuditEvent[]
+  sessionVersion        Int                    @default(0)
+}
+
+model ClientPasswordResetToken {
+  id           String     @id @default(uuid())
+  clientUserId String
+  clientUser   ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Cascade)
+  tokenHash    String     @unique
+  createdAt    DateTime   @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+
+  @@index([clientUserId, createdAt])
+}
+
+model ClientSecurityAuditEvent {
+  id             String     @id @default(uuid())
+  clientUserId   String
+  clientUser     ClientUser @relation(fields: [clientUserId], references: [id], onDelete: Restrict)
+  organizationId String
+  eventType      String
+  occurredAt     DateTime   @default(now())
+
+  @@index([clientUserId, occurredAt])
+  @@index([organizationId, occurredAt])
 }
 
 model DocumentSignature {

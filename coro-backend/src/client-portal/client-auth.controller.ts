@@ -22,6 +22,18 @@ export class ClientAuthController {
     return this.clientAuthService.login(body.email, body.password, body.trustedToken);
   }
 
+  @Post('forgot-password')
+  @Throttle({ short: { ttl: 60000, limit: 3 }, reset: { ttl: 900000, limit: 5 } })
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.clientAuthService.forgotPassword(body?.email);
+  }
+
+  @Post('reset-password')
+  @Throttle({ short: { ttl: 60000, limit: 5 }, reset: { ttl: 900000, limit: 15 } })
+  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+    return this.clientAuthService.resetPassword(body?.token, body?.newPassword);
+  }
+
   @Post('verify-mfa')
   @Throttle({ short: { ttl: 60000, limit: 5 } })
   async verifyMfa(@Body() body: { email: string; code: string }) {

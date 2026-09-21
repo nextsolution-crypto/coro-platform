@@ -6,7 +6,6 @@ export class EmailService {
   private async sendEmail(to: { email: string; name: string }, subject: string, htmlContent: string) {
     try {
       const apiKey = process.env.BREVO_API_KEY || '';
-      console.log('Brevo API key length:', apiKey.length, 'starts with:', apiKey.substring(0, 10));
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
@@ -22,16 +21,28 @@ export class EmailService {
       });
 
       if (!res.ok) {
-        const err = await res.text();
-        console.error('Erreur Brevo:', err);
+        console.error('Erreur Brevo, status:', res.status);
         return { success: false };
       }
 
       return { success: true };
-    } catch (err) {
-      console.error('Erreur envoi email Brevo:', err);
+    } catch {
+      console.error('Erreur reseau Brevo');
       return { success: false };
     }
+  }
+
+  async sendClientPasswordReset(data: { toEmail: string; toName: string; resetUrl: string }) {
+    const safeName = data.toName.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+    const htmlContent = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#263238">
+      <h1 style="font-size:22px">Reinitialisation de votre mot de passe CORO</h1>
+      <p>Bonjour ${safeName},</p>
+      <p>Vous avez demande la reinitialisation de votre mot de passe du Portail Client CORO.</p>
+      <p><a href="${data.resetUrl}">Choisir un nouveau mot de passe</a></p>
+      <p>Ce lien expire dans 30 minutes et ne peut etre utilise qu'une fois.</p>
+      <p>Si vous n'avez pas fait cette demande, ignorez ce courriel.</p>
+    </div>`;
+    return this.sendEmail({ email: data.toEmail, name: data.toName }, 'Réinitialisation de votre mot de passe CORO', htmlContent);
   }
 
   async sendClientInvitation(data: {

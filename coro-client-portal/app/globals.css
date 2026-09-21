@@ -94,3 +94,13 @@ div {
 ::-webkit-scrollbar-thumb:hover {
   background: #ADB5BD;
 }
+.authReset { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; background: #f5f7f8; color: #25313a; }
+.authReset section { width: min(100%, 440px); background: white; border: 1px solid #dce2e5; padding: 32px; }
+.authReset h1 { font-size: 24px; margin: 28px 0 20px; }
+.authReset form { display: grid; gap: 12px; margin-bottom: 24px; }
+.authReset label { font-weight: 600; font-size: 14px; }
+.authReset input { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid #9aa8ad; border-radius: 4px; font-size: 16px; }
+.authReset button { min-height: 48px; margin-top: 8px; border: 0; background: #b8322d; color: white; font-weight: 700; cursor: pointer; }
+.authReset button:disabled { opacity: .55; cursor: wait; }
+.authReset a { color: #9e2524; }
+.authReset [role="alert"] { color: #a72525; }
