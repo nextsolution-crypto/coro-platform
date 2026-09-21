@@ -24,6 +24,8 @@ export interface ClientUser {
   populationPermissions: Array<
     "POPULATION_PREPARE" | "POPULATION_APPROVE" | "POPULATION_SEND"
   >;
+  operationalReviewPermissions: Array<"REX_CREATE" | "REX_EDIT" | "REX_REVIEW" | "REX_FINALIZE">;
+  correctiveActionPermissions: Array<"CORRECTIVE_ACTION_CREATE" | "CORRECTIVE_ACTION_EDIT" | "CORRECTIVE_ACTION_COMPLETE" | "CORRECTIVE_ACTION_VERIFY" | "CORRECTIVE_ACTION_CLOSE">;
 }
 
 export function getToken(): string | null {
@@ -169,6 +171,24 @@ export async function apiPut(path: string, body: unknown) {
       res.status,
     );
   }
+  return data;
+}
+
+export async function apiDelete(path: string) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Non autorise"); }
+  const data = await parseResponse(res);
+  if (!res.ok) throw new ApiError(typeof data === "string" ? data : data?.message || "Erreur API", res.status);
+  return data;
+}
+
+export async function apiUpload(path: string, body: FormData) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body });
+  if (res.status === 401) { handleUnauthorized(); throw new Error("Non autorise"); }
+  const data = await parseResponse(res);
+  if (!res.ok) throw new ApiError(typeof data === "string" ? data : data?.message || "Erreur API", res.status);
   return data;
 }
 

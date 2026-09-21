@@ -11,6 +11,7 @@ import { CreateCorrectiveActionDto } from '../occupancy/dto/corrective-action.dt
 export class OperationalReviewsController {
   constructor(private readonly service: OperationalReviewsService, private readonly correctiveActions: CorrectiveActionsService) {}
   @Post() create(@Body() dto: CreateOperationalReviewDto, @Request() req: { clientUser: ReviewActor }) { return this.service.create(dto, req.clientUser); }
+  @Get('population-events/:eventId') getForPopulationEvent(@Param('eventId') eventId: string, @Request() req: { clientUser: ReviewActor }) { return this.service.getForPopulationEvent(eventId, req.clientUser); }
   @Get(':id') get(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.service.get(id, req.clientUser); }
   @Put(':id') update(@Param('id') id: string, @Body() dto: UpdateOperationalReviewDto, @Request() req: { clientUser: ReviewActor }) { return this.service.update(id, dto, req.clientUser); }
   @Post(':id/submit') submit(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.service.submit(id, req.clientUser); }

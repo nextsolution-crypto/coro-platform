@@ -98,6 +98,19 @@ describe('OperationalReviewsService', () => {
     expect(prisma.operationalReview.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign-review', organizationId: 'org-1' } }));
   });
 
+  it('retrouve le REX depuis evenement Population et reapplique tout le scope', async () => {
+    const { service, prisma } = setup();
+    prisma.operationalReview.findFirst.mockResolvedValueOnce({ id: 'review-1' }).mockResolvedValueOnce(baseReview);
+    await expect(service.getForPopulationEvent('event-1', actor)).resolves.toMatchObject({ id: 'review-1', populationOperationalEventId: 'event-1' });
+    expect(prisma.operationalReview.findFirst.mock.calls[0][0].where).toEqual(expect.objectContaining({ organizationId: 'org-1', populationOperationalEventId: 'event-1', version: 1 }));
+  });
+
+  it('retourne null sans divulgation lorsqu aucun REX evenementiel existe', async () => {
+    const { service, prisma } = setup();
+    prisma.operationalReview.findFirst.mockResolvedValue(null);
+    await expect(service.getForPopulationEvent('event-absent', actor)).resolves.toBeNull();
+  });
+
   it('applique les restrictions batiment au portail client', async () => {
     const { service, prisma } = setup();
     prisma.building.findFirst.mockResolvedValue({ id: 'building-1', clientId: 'other-client' });

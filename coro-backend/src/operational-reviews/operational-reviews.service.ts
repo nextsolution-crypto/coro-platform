@@ -11,7 +11,7 @@ const reviewInclude = {
   auditEvents: { orderBy: { createdAt: 'asc' as const } },
   findings: {
     orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }],
-    include: { recommendations: { orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }] } },
+    include: { recommendations: { orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }], include: { correctiveActions: { where: { status: { not: 'CANCELLED' as const } }, orderBy: { createdAt: 'asc' as const }, select: { id: true, reference: true, title: true, description: true, category: true, priority: true, status: true, assignedTo: true, dueDate: true, completedAt: true, completionComment: true, verifiedAt: true, closedAt: true, closureComment: true, _count: { select: { evidence: { where: { status: 'ACTIVE' as const } } } } } } } } },
   },
 };
 
@@ -131,6 +131,11 @@ export class OperationalReviewsService {
   }
 
   async get(id: string, actor: ReviewActor) { return this.publicRecord(await this.scoped(id, actor)); }
+
+  async getForPopulationEvent(eventId: string, actor: ReviewActor) {
+    const review = await this.prisma.operationalReview.findFirst({ where: { organizationId: actor.organizationId, populationOperationalEventId: eventId, version: 1, supersedesId: null }, select: { id: true } });
+    return review ? this.publicRecord(await this.scoped(review.id, actor)) : null;
+  }
 
   async update(id: string, dto: UpdateOperationalReviewDto, actor: ReviewActor) {
     await this.requirePermission(actor, OperationalReviewPermission.REX_EDIT);
