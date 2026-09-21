@@ -1,4 +1,4 @@
-import { CoroActorType, OperationalReviewPermission, PopulationDeliveryMode, PopulationOperationalEventStatus, PopulationProgramStatus, PrismaClient, RueAssessmentStatus, ReviewFindingCategory, ReviewFindingSeverity, ReviewRecommendationStatus } from '@prisma/client';
+import { CoroActorType, CorrectiveActionPermission, OperationalReviewPermission, PopulationDeliveryMode, PopulationOperationalEventStatus, PopulationProgramStatus, PrismaClient, RueAssessmentStatus, ReviewFindingCategory, ReviewFindingSeverity, ReviewRecommendationStatus } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { OperationalReviewsService } from '../src/operational-reviews/operational-reviews.service';
 import { CorrectiveActionsService } from '../src/occupancy/corrective-actions.service';
@@ -15,9 +15,10 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
   const storage = { downloadPrivate: jest.fn(), uploadPrivateImmutable: jest.fn() };
   const evidence = new CorrectiveActionEvidenceService(prisma as any, storage as any, actions);
   const suffix = randomUUID();
-  const ids = { org: `ac-org-${suffix}`, otherOrg: `ac-other-${suffix}`, client: `ac-client-${suffix}`, building: `ac-building-${suffix}`, profile: `ac-profile-${suffix}`, program: `ac-program-${suffix}`, scenario: `ac-scenario-${suffix}`, event: `ac-event-${suffix}`, user: `ac-user-${suffix}`, verifier: `ac-verifier-${suffix}` };
+  const ids = { org: `ac-org-${suffix}`, otherOrg: `ac-other-${suffix}`, client: `ac-client-${suffix}`, building: `ac-building-${suffix}`, profile: `ac-profile-${suffix}`, program: `ac-program-${suffix}`, scenario: `ac-scenario-${suffix}`, event: `ac-event-${suffix}`, user: `ac-user-${suffix}`, verifier: `ac-verifier-${suffix}`, denied: `ac-denied-${suffix}` };
   const actor = { sub: ids.user, organizationId: ids.org, clientId: ids.client, role: 'CLIENT_MANAGER', buildingIds: [ids.building] };
   const verifier = { ...actor, sub: ids.verifier };
+  const deniedActor = { ...actor, sub: ids.denied };
   let reviewId: string;
   let recommendationId: string;
 
@@ -26,8 +27,9 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
     await prisma.organization.createMany({ data: [{ id: ids.org, name: 'AC tests' }, { id: ids.otherOrg, name: 'Other' }] });
     await prisma.client.create({ data: { id: ids.client, name: 'AC client', organizationId: ids.org, regulatoryRequirements: [] } });
     await prisma.building.create({ data: { id: ids.building, name: 'AC building', address: 'Test', city: 'Test', province: 'QC', organizationId: ids.org, clientId: ids.client } });
-    await prisma.clientUser.create({ data: { id: ids.user, email: `ac-${suffix}@example.invalid`, password: 'unused', firstName: 'Alex', lastName: 'Test', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, operationalReviewPermissions: Object.values(OperationalReviewPermission), correctiveActionPermissions: [] } });
-    await prisma.clientUser.create({ data: { id: ids.verifier, email: `verify-${suffix}@example.invalid`, password: 'unused', firstName: 'Vera', lastName: 'Test', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY', 'CORRECTIVE_ACTION_CLOSE'] } });
+    await prisma.clientUser.create({ data: { id: ids.user, email: `ac-${suffix}@example.invalid`, password: 'unused', firstName: 'Alex', lastName: 'Test', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, operationalReviewPermissions: Object.values(OperationalReviewPermission), correctiveActionPermissions: [CorrectiveActionPermission.CORRECTIVE_ACTION_CREATE, CorrectiveActionPermission.CORRECTIVE_ACTION_EDIT, CorrectiveActionPermission.CORRECTIVE_ACTION_COMPLETE] } });
+    await prisma.clientUser.create({ data: { id: ids.verifier, email: `verify-${suffix}@example.invalid`, password: 'unused', firstName: 'Vera', lastName: 'Test', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, correctiveActionPermissions: [CorrectiveActionPermission.CORRECTIVE_ACTION_VERIFY, CorrectiveActionPermission.CORRECTIVE_ACTION_CLOSE] } });
+    await prisma.clientUser.create({ data: { id: ids.denied, email: `denied-${suffix}@example.invalid`, password: 'unused', firstName: 'No', lastName: 'Permission', buildingIds: [ids.building], clientId: ids.client, organizationId: ids.org, correctiveActionPermissions: [] } });
     await prisma.rueFacilityProfile.create({ data: { id: ids.profile, buildingId: ids.building, assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT, populationEnabled: true } });
     await prisma.populationProgram.create({ data: { id: ids.program, rueFacilityProfileId: ids.profile, status: PopulationProgramStatus.ACTIVE, deliveryMode: PopulationDeliveryMode.SANDBOX, publicSlug: `ac-${suffix}`, nameFR: 'AC program' } });
     await prisma.rueEmergencyScenario.create({ data: { id: ids.scenario, facilityProfileId: ids.profile, nameFR: 'AC scenario' } });
@@ -41,6 +43,11 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
     await reviews.decideRecommendation(reviewId, recommendationId, { status: ReviewRecommendationStatus.ACCEPTED }, actor);
   });
   afterAll(async () => prisma.$disconnect());
+
+  it('refuse une mutation a un ClientUser sans permission explicite', async () => {
+    await expect(actions.create({ title: 'Forbidden', buildingId: ids.building }, deniedActor)).rejects.toThrow('Permission action corrective requise');
+    await expect(prisma.correctiveAction.count({ where: { title: 'Forbidden', organizationId: ids.org } })).resolves.toBe(0);
+  });
 
   it('conserve une action legacy sans reference et genere les nouvelles references', async () => {
     const legacy = await prisma.correctiveAction.create({ data: { organizationId: ids.org, buildingId: ids.building, category: 'GENERAL', title: 'Legacy', reference: null } });
