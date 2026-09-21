@@ -52,6 +52,9 @@
 .success {
   border-color: #237a42;
 }
+.confirmation { margin-top: 12px; padding: 16px; border: 1px solid #aabfb4; background: #f3f7f5; }
+.confirmation p { margin: 0; }
+.button:focus-visible, .buttonSecondary:focus-visible, .buttonDanger:focus-visible, .back:focus-visible { outline: 3px solid #e4a52c; outline-offset: 2px; }
 .section {
   padding: 26px 0;
   border-bottom: 1px solid #d9e0dc;
@@ -164,6 +167,7 @@
 .recommendation {
   padding: 12px 0;
 }
+.recommendation .pill { margin-right: 8px; }
 .action {
   margin-top: 12px;
   padding: 14px;

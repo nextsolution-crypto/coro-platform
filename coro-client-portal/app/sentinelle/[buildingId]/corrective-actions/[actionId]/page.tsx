@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import PortalLayout from "../../../../components/PortalLayout";
+import { formatDay, formatMoment, plural } from "../../../presentation.mjs";
 import { apiDownload, apiGet, apiPost, apiPut, getUser } from "../../../../store/auth";
 import CorrectiveActionEvidenceForm from "../CorrectiveActionEvidenceForm";
 import { actionsAvailable, actionStatusLabel, evidenceTypeLabel, priorityLabel, verdictLabel } from "../actionState.mjs";
@@ -18,8 +19,8 @@ type Action = {
 };
 type Evidence = { id: string; title: string; type: string; status: string; noteText?: string | null; externalUrl?: string | null; systemReferenceType?: string | null; submittedAt: string; withdrawnAt?: string | null; withdrawalReason?: string | null };
 type Verification = { id: string; attemptNumber: number; verdict: string; comment: string | null; verifiedAt: string };
-const moment = (value?: string | null) => value ? new Intl.DateTimeFormat("fr-CA", { dateStyle: "long", timeStyle: "short", timeZone: "America/Toronto" }).format(new Date(value)) : null;
-const day = (value?: string | null) => value ? new Intl.DateTimeFormat("fr-CA", { dateStyle: "long", timeZone: "UTC" }).format(new Date(value)) : "Aucune";
+const moment = formatMoment;
+const day = (value?: string | null) => formatDay(value) ?? "Aucune";
 
 export default function CorrectiveActionPage() {
   const { buildingId, actionId } = useParams<{ buildingId: string; actionId: string }>();
@@ -141,7 +142,7 @@ export default function CorrectiveActionPage() {
           <div><dt>Priorité</dt><dd>{priorityLabel[action.priority] ?? action.priority}</dd></div>
           <div><dt>Responsable</dt><dd>{action.assignedTo || "Non assigné"}</dd></div>
           <div><dt>Échéance</dt><dd>{day(action.dueDate)}</dd></div>
-          <div><dt>Preuves</dt><dd>{activeEvidence.length}</dd></div>
+          <div><dt>Preuves</dt><dd>{plural(activeEvidence.length, "preuve", "preuves")}</dd></div>
         </dl>
       </header>
 
@@ -179,7 +180,7 @@ export default function CorrectiveActionPage() {
       </section>
 
       <section className={styles.section} aria-labelledby="evidence-title">
-        <div className={styles.sectionHeading}><h2 id="evidence-title">PREUVES DE RÉALISATION</h2><span>{activeEvidence.length} preuve{activeEvidence.length === 1 ? "" : "s"}</span></div>
+        <div className={styles.sectionHeading}><h2 id="evidence-title">PREUVES DE RÉALISATION</h2><span>{plural(activeEvidence.length, "preuve", "preuves")}</span></div>
         {evidenceFormOpen && available.addEvidence && <CorrectiveActionEvidenceForm actionId={actionId} onSaved={async () => {
           if (!(await load())) throw new Error("Preuve enregistrée, mais l'actualisation a échoué. Actualisez la page.");
           setEvidenceFormOpen(false);
@@ -207,7 +208,7 @@ export default function CorrectiveActionPage() {
 
       <section className={styles.section} aria-labelledby="verification-title"><h2 id="verification-title">HISTORIQUE DES VÉRIFICATIONS</h2>
         {verifications.length ? <ol className={styles.timeline}>{verifications.map((item) => <li key={item.id}>
-          <strong>{verdictLabel[item.verdict] ?? item.verdict}</strong><time dateTime={item.verifiedAt}>{moment(item.verifiedAt)}</time>
+          <strong>Tentative {item.attemptNumber} · {verdictLabel[item.verdict] ?? item.verdict}</strong><time dateTime={item.verifiedAt}>{moment(item.verifiedAt)}</time>
           {item.comment && <p>« {item.comment} »</p>}
         </li>)}</ol> : <p className={styles.empty}>Aucune tentative de vérification.</p>}
       </section>

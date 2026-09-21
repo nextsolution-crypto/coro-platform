@@ -385,7 +385,7 @@ export default function IntelligencePage() {
                 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
                   PLANNED:     { label: 'Planifiée',   color: '#6C757D', bg: '#F8F9FA' },
                   IN_PROGRESS: { label: 'En cours',    color: '#2980B9', bg: '#EBF5FB' },
-                  COMPLETED:   { label: 'Complétée',   color: '#27AE60', bg: '#EAFAF1' },
+                  COMPLETED:   { label: 'Réalisation déclarée', color: '#775111', bg: '#FFF4D6' },
                   VERIFIED:    { label: 'Vérifiée',    color: '#117864', bg: '#E8F8F5' },
                   CLOSED:      { label: 'Fermée',      color: '#566573', bg: '#F2F4F4' },
                 };
@@ -405,7 +405,7 @@ export default function IntelligencePage() {
                       </div>
                       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                         {action.assignedTo && <span style={{ fontSize: 12, color: '#6C757D' }}>👤 {action.assignedTo}</span>}
-                        {action.dueDate && <span style={{ fontSize: 12, color: isOverdue ? '#C0392B' : '#6C757D' }}>📅 {new Date(action.dueDate).toLocaleDateString('fr-CA')}</span>}
+                        {action.dueDate && <span style={{ fontSize: 12, color: isOverdue ? '#C0392B' : '#6C757D' }}>📅 {new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(action.dueDate))}</span>}
                         <span style={{ fontSize: 12, color: '#ADB5BD' }}>{CAT_ICONS[action.category] || '•'} {action.category}</span>
                       </div>
                       {action.description && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#ADB5BD' }}>{action.description}</p>}

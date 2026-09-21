@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, LoaderCircle, RefreshCw } from "lucide-react";
 import PortalLayout from "../../../../../components/PortalLayout";
+import { plural } from "../../../../presentation.mjs";
 import {
   apiGet,
   apiPost,
@@ -55,6 +56,11 @@ export default function PopulationReviewPage() {
     priority: "MEDIUM",
   });
   const [actionFor, setActionFor] = useState<string | null>(null);
+  const [finalizeConfirming, setFinalizeConfirming] = useState(false);
+  const cancelFinalizeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (finalizeConfirming) cancelFinalizeRef.current?.focus();
+  }, [finalizeConfirming]);
   const [actionForm, setActionForm] = useState({
     title: "",
     description: "",
@@ -177,6 +183,7 @@ export default function PopulationReviewPage() {
             </button>
           </div>
         </header>
+        {review.status === "FINALIZED" && <p className={styles.notice}>Le REX est en lecture seule. Les actions correctives poursuivent leur cycle indépendamment.</p>}
         {error && (
           <p className={styles.error} role="alert">
             {error}
@@ -274,7 +281,7 @@ export default function PopulationReviewPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Gravité">
+                <Field label={finding.category === "STRENGTH" ? "Importance" : "Gravité"}>
                   <select
                     value={finding.severity}
                     onChange={(e) =>
@@ -356,7 +363,7 @@ export default function PopulationReviewPage() {
                   </span>
                   <h3>{f.title}</h3>
                 </div>
-                <strong>{severityLabel[f.severity]}</strong>
+                <strong>{f.category === "STRENGTH" ? "Importance" : "Gravité"} : {severityLabel[f.severity]}</strong>
               </div>
               <p>{f.description}</p>
               {f.impact && (
@@ -366,7 +373,7 @@ export default function PopulationReviewPage() {
               )}
               <div className={styles.recommendations}>
                 <div className={styles.sectionHead}>
-                  <strong>RECOMMANDATIONS</strong>
+                  <strong>RECOMMANDATIONS · {plural(f.recommendations?.length ?? 0, "recommandation", "recommandations")}</strong>
                   {editable && (
                     <button
                       className={styles.buttonSecondary}
@@ -380,6 +387,7 @@ export default function PopulationReviewPage() {
                     </button>
                   )}
                 </div>
+                {!f.recommendations?.length && <p className={styles.empty}>Aucune recommandation.</p>}
                 {recommendationFor === f.id && (
                   <div className={styles.mutator}>
                     <Field label="Titre">
@@ -432,6 +440,8 @@ export default function PopulationReviewPage() {
                     <span className={styles.pill}>
                       {recommendationStatusLabel[r.status]}
                     </span>
+                    {r.priority && <span className={styles.pill}>Priorité : {severityLabel[r.priority] ?? r.priority}</span>}
+                    {r.decisionComment && <p>Décision : {r.decisionComment}</p>}
                     {review.status === "IN_REVIEW" &&
                       rex.has("REX_REVIEW") &&
                       r.status === "PROPOSED" && (
@@ -517,6 +527,7 @@ export default function PopulationReviewPage() {
                         <button className={styles.buttonSecondary} type="button" onClick={() => router.push(`/sentinelle/${buildingId}/corrective-actions/${a.id}`)}>CONSULTER L&apos;ACTION</button>
                       </article>
                     ))}
+                    {r.status === "ACCEPTED" && !r.correctiveActions?.length && <p className={styles.empty}>Aucune action corrective associée.</p>}
                   </div>
                 ))}
               </div>
@@ -555,32 +566,13 @@ export default function PopulationReviewPage() {
             </button>
           )}
           {review.status === "IN_REVIEW" && rex.has("REX_FINALIZE") && (
-            <button
-              className={styles.button}
-              disabled={busy !== null}
-              onClick={() =>
-                window.confirm(
-                  "Finaliser le REX ? Ses constats et recommandations deviendront historiques. Les actions correctives resteront suivies séparément.",
-                ) &&
-                void mutate(
-                  "finalize",
-                  () =>
-                    apiPost(
-                      `/client-portal/operational-reviews/${reviewId}/finalize`,
-                      {},
-                    ),
-                  "REX finalisé.",
-                )
-              }
-            >
-              FINALISER LE REX
-            </button>
-          )}
-          {review.status === "FINALIZED" && (
-            <p className={styles.notice}>
-              Le REX est en lecture seule. Les actions correctives poursuivent
-              leur cycle indépendamment.
-            </p>
+            finalizeConfirming ? <div className={styles.confirmation} role="group" aria-label="Confirmer la finalisation du REX">
+              <p>La finalisation rend le REX en lecture seule. Les actions correctives existantes continueront leur cycle indépendamment.</p>
+              <div className={styles.actions}>
+                <button ref={cancelFinalizeRef} type="button" className={styles.buttonSecondary} disabled={busy !== null} onClick={() => setFinalizeConfirming(false)}>ANNULER</button>
+                <button type="button" className={styles.button} disabled={busy !== null} onClick={() => void mutate("finalize", () => apiPost(`/client-portal/operational-reviews/${reviewId}/finalize`, {}), "REX finalisé.")}>FINALISER LE REX</button>
+              </div>
+            </div> : <button type="button" className={styles.button} disabled={busy !== null} onClick={() => setFinalizeConfirming(true)}>FINALISER LE REX</button>
           )}
         </section>
       </main>

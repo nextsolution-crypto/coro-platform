@@ -21,6 +21,7 @@ import {
 
 import { apiGet, apiPost, apiPut, getUser } from "../../../store/auth";
 import PortalLayout from "../../../components/PortalLayout";
+import { formatMoment, plural } from "../../presentation.mjs";
 import PopulationOperationalMap from "./PopulationOperationalMap";
 import PopulationEvidenceEntry from "./evidence/PopulationEvidenceEntry";
 import {
@@ -4174,19 +4175,17 @@ function PopulationUnifiedRegistry({
                       {kind === "OPERATIONAL_EVENT"
                         ? "ÉVÉNEMENT POPULATION"
                         : "COMMUNICATION HISTORIQUE"}{" "}
-                      · {item.status}
+                      · {item.status === "ENDED" ? "Terminé" : item.status === "ACTIVE" ? "En cours" : item.status}
                     </small>
                   </span>
-                  <span>{communications.length} communication(s) · CONSULTER</span>
+                  <span>{plural(communications.length, "communication", "communications")} · CONSULTER</span>
                 </summary>
                 <div className={styles.registryDetail}>
                   <p>
                     Début/diffusion :{" "}
-                    {new Date(
-                      item.startedAt || item.activatedAt || item.createdAt,
-                    ).toLocaleString("fr-CA")}
+                    {formatMoment(item.startedAt || item.activatedAt || item.createdAt)}
                     {item.endedAt
-                      ? ` · Fin : ${new Date(item.endedAt).toLocaleString("fr-CA")}`
+                      ? ` · Fin : ${formatMoment(item.endedAt)}`
                       : ""}
                   </p>
                   {item.incidentEventId && <p>Lié à un incident CORO</p>}
@@ -6843,39 +6842,39 @@ function AlertDraftWorkspace({
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  abonné(s) ciblé(s)
+                  {freezeResult.targeting.subscriberCount === 1 ? "abonné ciblé" : "abonnés ciblés"}
                   <br />
                   <strong>
                     {freezeResult.targeting.deliveryCount.toLocaleString(
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  communication(s) matérialisée(s)
+                  {freezeResult.targeting.deliveryCount === 1 ? "communication matérialisée" : "communications matérialisées"}
                   <br />
                   <strong>
                     {freezeResult.targeting.deliverableCount.toLocaleString(
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  délivrable(s)
+                  {freezeResult.targeting.deliverableCount === 1 ? "délivrable" : "délivrables"}
                   <br />
                   <strong>
                     {freezeResult.targeting.suppressedCount.toLocaleString(
                       "fr-CA",
                     )}
                   </strong>{" "}
-                  communication(s) supprimée(s)
+                  {freezeResult.targeting.suppressedCount === 1 ? "communication supprimée" : "communications supprimées"}
                   {deliveryMode === "LIVE" && (
                     <>
                       <br />
-                      <strong>{livePreflight?.email ?? 0}</strong> courriel(s)
+                      <strong>{livePreflight?.email ?? 0}</strong> {(livePreflight?.email ?? 0) === 1 ? "courriel" : "courriels"}
                       {" · "}
                       <strong>{livePreflight?.sms ?? 0}</strong> SMS
                       <br />
                       <strong>{livePreflight?.retryPending ?? 0}</strong> retry
                       pending {" · "}
                       <strong>{livePreflight?.reconciliation ?? 0}</strong>{" "}
-                      réconciliation(s)
+                      {(livePreflight?.reconciliation ?? 0) === 1 ? "réconciliation" : "réconciliations"}
                       <br />
                       <br />
                       Cette confirmation déclenche la diffusion réelle. Elle ne
@@ -7099,8 +7098,8 @@ function PopulationDiffusionResult({
                 lineHeight: 1.5,
               }}
             >
-              {sandboxSuppressedCount.toLocaleString("fr-CA")} communication(s)
-              ont été supprimée(s) du transport externe conformément au mode
+              {plural(sandboxSuppressedCount, "communication", "communications")}
+              {sandboxSuppressedCount === 1 ? " a été supprimée" : " ont été supprimées"} du transport externe conformément au mode
               SANDBOX.
             </div>
           )}

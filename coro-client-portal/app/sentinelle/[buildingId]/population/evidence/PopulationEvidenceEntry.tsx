@@ -10,6 +10,7 @@ import type {
 } from "./evidenceTypes";
 import styles from "./evidence.module.css";
 import { actionAttention, reviewAccessFromResponse } from "./correctiveActionPresentation.mjs";
+import { plural } from "../../../presentation.mjs";
 
 export default function PopulationEvidenceEntry({
   buildingId,
@@ -160,6 +161,9 @@ export default function PopulationEvidenceEntry({
 
   return (
     <div className={styles.registryEvidence} aria-live="polite">
+      <section className={styles.registryEvidenceGroup} aria-label="Dossier de preuve">
+      </section>
+      <section className={styles.registryEvidenceGroup} aria-label="Retour d'expérience">
       <div className={styles.registryEvidenceTitle}>
         <FileCheck2 size={18} />
         <strong>DOSSIER DE PREUVE</strong>
@@ -232,6 +236,8 @@ export default function PopulationEvidenceEntry({
         </>
       )}
       {error && <p className={styles.inlineError}>{error}</p>}
+      </section>
+      <section className={styles.registryEvidenceGroup} aria-label="Actions correctives">
       <div className={styles.registryEvidenceTitle}>
         <strong>RETOUR D&apos;EXPÉRIENCE</strong>
       </div>
@@ -312,13 +318,14 @@ export default function PopulationEvidenceEntry({
       <div className={styles.registryEvidenceTitle}>
         <strong>ACTIONS CORRECTIVES</strong>
       </div>
-      <span>{actions.length ? `${actions.length} action(s) accessible(s)` : "AUCUNE ACTION ACCESSIBLE"}</span>
+      <span>{plural(actions.length, "action corrective", "actions correctives")}</span>
       {actions.map((action) => (
         <button key={action.id} type="button" onClick={() => router.push(`/sentinelle/${buildingId}/corrective-actions/${action.id}`)}>
           {action.reference ?? "Action corrective"} · {actionAttention(action.status, user?.correctiveActionPermissions ?? [], action.verificationBlockedForCurrentUser)}
           {" · CONSULTER"}
         </button>
       ))}
+      </section>
     </div>
   );
 }
