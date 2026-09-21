@@ -11,7 +11,7 @@ const reviewLabels: Record<ReviewPermission, string> = { REX_CREATE: 'Créer un 
 const correctiveLabels: Record<CorrectiveActionPermission, string> = { CORRECTIVE_ACTION_CREATE: 'Créer une action', CORRECTIVE_ACTION_EDIT: 'Modifier ou assigner une action', CORRECTIVE_ACTION_COMPLETE: 'Déclarer une action réalisée', CORRECTIVE_ACTION_VERIFY: 'Vérifier une réalisation', CORRECTIVE_ACTION_CLOSE: 'Fermer une action' };
 const presetLabels: Record<OperationalPermissionPreset, string> = { READ_ONLY: 'Lecture seule', REX: 'REX', CORRECTIVE_ACTIONS: 'Actions correctives', VERIFICATION: 'Vérification', RESILIENCE_MANAGER: 'Responsable résilience' };
 
-export default function OperationalPermissionsPanel({ clientId }: { clientId: string }) {
+export default function OperationalPermissionsPanel({ clientId, endpointBase }: { clientId: string; endpointBase?: string }) {
   const [users, setUsers] = useState<ClientUserPermissions[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [review, setReview] = useState<ReviewPermission[]>([]);
@@ -19,7 +19,8 @@ export default function OperationalPermissionsPanel({ clientId }: { clientId: st
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { api.get(`/clients/${clientId}/client-users`).then(({ data }) => { setUsers(data); if (data[0]) setSelectedId(data[0].id); }).catch(() => toast('Impossible de charger les comptes client.', 'error')).finally(() => setLoading(false)); }, [clientId]);
+  const basePath = endpointBase ?? `/clients/${clientId}`;
+  useEffect(() => { api.get(`${basePath}/client-users`).then(({ data }) => { setUsers(data); if (data[0]) setSelectedId(data[0].id); }).catch(() => toast('Impossible de charger les comptes client.', 'error')).finally(() => setLoading(false)); }, [basePath]);
   useEffect(() => { const selected = users.find((item) => item.id === selectedId); if (selected) { setReview([...selected.operationalReviewPermissions]); setCorrective([...selected.correctiveActionPermissions]); } }, [selectedId, users]);
 
   const toggle = <T extends string>(value: T, current: T[], setCurrent: (next: T[]) => void) => setCurrent(current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
@@ -28,7 +29,7 @@ export default function OperationalPermissionsPanel({ clientId }: { clientId: st
     if (!selectedId) return;
     setSaving(true);
     try {
-      const { data } = await api.put(`/clients/${clientId}/client-users/${selectedId}/operational-permissions`, { operationalReviewPermissions: review, correctiveActionPermissions: corrective });
+      const { data } = await api.put(`${basePath}/client-users/${selectedId}/operational-permissions`, { operationalReviewPermissions: review, correctiveActionPermissions: corrective });
       setUsers((current) => current.map((item) => item.id === selectedId ? { ...item, ...data } : item));
       toast('Permissions opérationnelles mises à jour.');
     } catch (error: any) {

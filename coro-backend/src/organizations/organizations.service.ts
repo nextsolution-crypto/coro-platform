@@ -15,8 +15,14 @@ export class OrganizationsService {
   async findAll() {
     return this.prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { users: true, projects: true, clients: true, buildings: true } },
+      select: {
+        id: true,
+        name: true,
+        isInternal: true,
+        licenseType: true,
+        isActive: true,
+        createdAt: true,
+        _count: { select: { users: true, projects: true, clients: true, buildings: true, clientUsers: true } },
       },
     });
   }
@@ -24,7 +30,13 @@ export class OrganizationsService {
   async findOne(id: string) {
     const org = await this.prisma.organization.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        isInternal: true,
+        licenseType: true,
+        isActive: true,
+        createdAt: true,
         users: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
         _count: { select: { projects: true, clients: true, buildings: true } },
       },

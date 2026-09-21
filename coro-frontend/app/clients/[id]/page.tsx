@@ -404,7 +404,7 @@ export default function ClientDetailPage() {
               </div>
             </div>
           )}
-          {user?.role === 'SUPER_ADMIN' && <OperationalPermissionsPanel clientId={clientId} />}
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <OperationalPermissionsPanel clientId={clientId} />}
         </div>
       </div>
     </AppLayout>

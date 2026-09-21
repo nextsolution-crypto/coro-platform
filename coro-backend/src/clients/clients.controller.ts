@@ -71,3 +71,86 @@ export class ClientsController {
     return this.clientsService.remove(id, req.user.organizationId);
   }
 }
+
+@Controller('admin/organizations')
+@UseGuards(AuthGuard('jwt'))
+export class PlatformClientAdministrationController {
+  constructor(private clientsService: ClientsService) {}
+
+  @Get(':organizationId/client-users')
+  findOrganizationClientUsers(
+    @Param('organizationId') organizationId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.findPlatformOrganizationClientUsers(
+      organizationId,
+      req.user,
+    );
+  }
+
+  @Get(':organizationId/clients')
+  findClients(
+    @Param('organizationId') organizationId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.findPlatformClients(organizationId, req.user);
+  }
+
+  @Get(':organizationId/clients/:clientId')
+  findClient(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.findPlatformClient(
+      organizationId,
+      clientId,
+      req.user,
+    );
+  }
+
+  @Get(':organizationId/clients/:clientId/client-users')
+  findClientUsers(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.findPlatformClientUsers(
+      organizationId,
+      clientId,
+      req.user,
+    );
+  }
+
+  @Get(':organizationId/clients/:clientId/client-users/:clientUserId/operational-permissions')
+  getPermissions(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Param('clientUserId') clientUserId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.getPlatformClientUserOperationalPermissions(
+      organizationId,
+      clientId,
+      clientUserId,
+      req.user,
+    );
+  }
+
+  @Put(':organizationId/clients/:clientId/client-users/:clientUserId/operational-permissions')
+  updatePermissions(
+    @Param('organizationId') organizationId: string,
+    @Param('clientId') clientId: string,
+    @Param('clientUserId') clientUserId: string,
+    @Body() body: UpdateClientUserOperationalPermissionsDto,
+    @Request() req: any,
+  ) {
+    return this.clientsService.updatePlatformClientUserOperationalPermissions(
+      organizationId,
+      clientId,
+      clientUserId,
+      body,
+      req.user,
+    );
+  }
+}

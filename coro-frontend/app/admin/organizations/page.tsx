@@ -13,7 +13,7 @@ interface Organization {
   licenseType: string;
   isActive: boolean;
   createdAt: string;
-  _count: { users: number; projects: number; clients: number; buildings: number };
+  _count: { users: number; projects: number; clients: number; buildings: number; clientUsers: number };
 }
 
 const licenseColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -222,12 +222,17 @@ additionalMembers: members,
                   </select>
                 )}
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm mb-4" style={{ color: '#6C757D' }}>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 text-sm mb-4" style={{ color: '#6C757D' }}>
                 <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.users}</span> utilisateur{org._count.users !== 1 ? 's' : ''}</div>
                 <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.projects}</span> projet{org._count.projects !== 1 ? 's' : ''}</div>
                 <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.clients}</span> client{org._count.clients !== 1 ? 's' : ''}</div>
                 <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.buildings}</span> bâtiment{org._count.buildings !== 1 ? 's' : ''}</div>
+                <div className="rounded px-3 py-2" style={{ backgroundColor: '#F8F9FA' }}><span className="font-medium">{org._count.clientUsers}</span> compte{org._count.clientUsers !== 1 ? 's' : ''} client</div>
               </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button onClick={() => router.push(`/admin/organizations/${org.id}`)}
+                  className="w-full sm:w-auto text-xs font-semibold px-3 py-2 sm:py-1.5 rounded text-white"
+                  style={{ backgroundColor: '#2C3E50' }}>Ouvrir</button>
               {!org.isInternal && (
                 <button onClick={() => handleToggleActive(org.id, !org.isActive)}
                   className="w-full sm:w-auto text-xs font-medium px-3 py-2 sm:py-1.5 rounded transition-colors"
@@ -235,6 +240,7 @@ additionalMembers: members,
                   {org.isActive ? 'Suspendre' : 'Réactiver'}
                 </button>
               )}
+              </div>
             </div>
           );
         })}

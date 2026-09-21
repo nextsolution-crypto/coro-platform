@@ -35,10 +35,103 @@ export class ClientsService {
   }
 
   async findClientUsers(clientId: string, actor: any) {
-    this.assertSuperAdmin(actor);
+    this.assertOrganizationAdmin(actor);
     await this.assertOwnership(clientId, actor.organizationId);
+    return this.findClientUsersInOrganization(clientId, actor.organizationId);
+  }
+
+  async findPlatformClients(organizationId: string, actor: any) {
+    this.assertSuperAdmin(actor);
+    await this.assertOrganizationExists(organizationId);
+    return this.prisma.client.findMany({
+      where: { organizationId },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        province: true,
+        isActive: true,
+        createdAt: true,
+        _count: { select: { buildings: true, clientUsers: true } },
+      },
+    });
+  }
+
+  async findPlatformOrganizationClientUsers(
+    organizationId: string,
+    actor: any,
+  ) {
+    this.assertSuperAdmin(actor);
+    await this.assertOrganizationExists(organizationId);
     return this.prisma.clientUser.findMany({
-      where: { clientId, organizationId: actor.organizationId },
+      where: { organizationId },
+      orderBy: [{ client: { name: 'asc' } }, { lastName: 'asc' }, { firstName: 'asc' }],
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        buildingIds: true,
+        operationalReviewPermissions: true,
+        correctiveActionPermissions: true,
+        client: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  async findPlatformClient(
+    organizationId: string,
+    clientId: string,
+    actor: any,
+  ) {
+    this.assertSuperAdmin(actor);
+    const client = await this.prisma.client.findFirst({
+      where: { id: clientId, organizationId },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        province: true,
+        isActive: true,
+        organization: { select: { id: true, name: true } },
+        _count: { select: { buildings: true, clientUsers: true } },
+      },
+    });
+    if (!client) throw new NotFoundException('Client introuvable.');
+    return client;
+  }
+
+  async findPlatformClientUsers(
+    organizationId: string,
+    clientId: string,
+    actor: any,
+  ) {
+    this.assertSuperAdmin(actor);
+    await this.assertOwnership(clientId, organizationId);
+    return this.findClientUsersInOrganization(clientId, organizationId);
+  }
+
+  async getPlatformClientUserOperationalPermissions(
+    organizationId: string,
+    clientId: string,
+    clientUserId: string,
+    actor: any,
+  ) {
+    this.assertSuperAdmin(actor);
+    const user = await this.findScopedClientUser(
+      clientId,
+      clientUserId,
+      organizationId,
+    );
+    return this.toOperationalPermissionResponse(user);
+  }
+
+  private findClientUsersInOrganization(clientId: string, organizationId: string) {
+    return this.prisma.clientUser.findMany({
+      where: { clientId, organizationId },
       orderBy: [{ isActive: 'desc' }, { lastName: 'asc' }, { firstName: 'asc' }],
       select: {
         id: true,
@@ -59,7 +152,7 @@ export class ClientsService {
     clientUserId: string,
     actor: any,
   ) {
-    this.assertSuperAdmin(actor);
+    this.assertOrganizationAdmin(actor);
     const user = await this.findScopedClientUser(
       clientId,
       clientUserId,
@@ -77,7 +170,46 @@ export class ClientsService {
     },
     actor: any,
   ) {
+    this.assertOrganizationAdmin(actor);
+    return this.updateOperationalPermissionsInOrganization(
+      actor.organizationId,
+      clientId,
+      clientUserId,
+      data,
+      actor,
+    );
+  }
+
+  async updatePlatformClientUserOperationalPermissions(
+    organizationId: string,
+    clientId: string,
+    clientUserId: string,
+    data: {
+      operationalReviewPermissions?: OperationalReviewPermission[];
+      correctiveActionPermissions?: CorrectiveActionPermission[];
+    },
+    actor: any,
+  ) {
     this.assertSuperAdmin(actor);
+    return this.updateOperationalPermissionsInOrganization(
+      organizationId,
+      clientId,
+      clientUserId,
+      data,
+      actor,
+    );
+  }
+
+  private async updateOperationalPermissionsInOrganization(
+    organizationId: string,
+    clientId: string,
+    clientUserId: string,
+    data: {
+      operationalReviewPermissions?: OperationalReviewPermission[];
+      correctiveActionPermissions?: CorrectiveActionPermission[];
+    },
+    actor: any,
+  ) {
     if (
       data.operationalReviewPermissions === undefined &&
       data.correctiveActionPermissions === undefined
@@ -88,7 +220,7 @@ export class ClientsService {
     const current = await this.findScopedClientUser(
       clientId,
       clientUserId,
-      actor.organizationId,
+      organizationId,
     );
     const nextReview =
       data.operationalReviewPermissions ?? current.operationalReviewPermissions;
@@ -121,9 +253,13 @@ export class ClientsService {
           entityId: clientUserId,
           description: 'Permissions operationnelles du compte client mises a jour.',
           userId: actor.userId,
-          organizationId: actor.organizationId,
+          organizationId,
           metadata: {
-            clientId,
+            actorRole: actor.role,
+            actorOrganizationId: actor.organizationId,
+            targetOrganizationId: organizationId,
+            targetClientId: clientId,
+            targetClientUserId: clientUserId,
             previous: {
               operationalReviewPermissions: current.operationalReviewPermissions,
               correctiveActionPermissions: current.correctiveActionPermissions,
@@ -281,6 +417,20 @@ export class ClientsService {
     if (actor?.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Acces reserve aux super administrateurs.');
     }
+  }
+
+  private assertOrganizationAdmin(actor: any) {
+    if (actor?.role !== 'ADMIN' && actor?.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Acces reserve aux administrateurs.');
+    }
+  }
+
+  private async assertOrganizationExists(organizationId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true },
+    });
+    if (!organization) throw new NotFoundException('Organisation introuvable.');
   }
 
   private async findScopedClientUser(
