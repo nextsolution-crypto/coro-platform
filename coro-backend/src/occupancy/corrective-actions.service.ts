@@ -316,7 +316,7 @@ export class CorrectiveActionsService {
     if (!actor.sub) return;
     const user = await this.prisma.clientUser.findFirst({ where: { id: actor.sub, organizationId: actor.organizationId, isActive: true }, select: { correctiveActionPermissions: true } });
     if (!user) throw new ForbiddenException('Utilisateur client invalide');
-    if (user.correctiveActionPermissions.length > 0 && !user.correctiveActionPermissions.includes(permission)) throw new ForbiddenException('Permission action corrective requise');
+    if (!user.correctiveActionPermissions.includes(permission)) throw new ForbiddenException('Permission action corrective requise');
   }
 
   private async requireExplicitPermission(actor: CorrectiveActionActor, permission: CorrectiveActionPermission) {

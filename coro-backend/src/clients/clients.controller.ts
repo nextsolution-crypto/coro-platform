@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
+import { UpdateClientUserOperationalPermissionsDto } from './dto/update-client-user-operational-permissions.dto';
 
 @Controller('clients')
 @UseGuards(AuthGuard('jwt'))
@@ -15,6 +16,39 @@ export class ClientsController {
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.clientsService.findOne(id, req.user.organizationId);
+  }
+
+  @Get(':id/client-users')
+  findClientUsers(@Param('id') id: string, @Request() req: any) {
+    return this.clientsService.findClientUsers(id, req.user);
+  }
+
+  @Get(':id/client-users/:clientUserId/operational-permissions')
+  getClientUserOperationalPermissions(
+    @Param('id') id: string,
+    @Param('clientUserId') clientUserId: string,
+    @Request() req: any,
+  ) {
+    return this.clientsService.getClientUserOperationalPermissions(
+      id,
+      clientUserId,
+      req.user,
+    );
+  }
+
+  @Put(':id/client-users/:clientUserId/operational-permissions')
+  updateClientUserOperationalPermissions(
+    @Param('id') id: string,
+    @Param('clientUserId') clientUserId: string,
+    @Body() body: UpdateClientUserOperationalPermissionsDto,
+    @Request() req: any,
+  ) {
+    return this.clientsService.updateClientUserOperationalPermissions(
+      id,
+      clientUserId,
+      body,
+      req.user,
+    );
   }
 
   @Post()

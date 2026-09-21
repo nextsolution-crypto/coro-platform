@@ -298,6 +298,12 @@ export default function PopulationEvidenceEntry({
           >
             CRÉER LE REX
           </button>
+          {!canCreateReview && (
+            <p className={styles.inlineError}>
+              Vous n&apos;avez pas l&apos;autorisation de créer un retour
+              d&apos;expérience. Communiquez avec un administrateur CORO.
+            </p>
+          )}
         </>
       )}
       <div className={styles.registryEvidenceTitle}>

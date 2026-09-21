@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { formatPhone } from '@/lib/formatPhone';
 import { toast } from '@/lib/toast';
+import OperationalPermissionsPanel from './OperationalPermissionsPanel';
 
 interface Client {
   id: string;
@@ -29,7 +30,7 @@ export default function ClientDetailPage() {
   const router   = useRouter();
   const params   = useParams();
   const clientId = params.id as string;
-  const { isAuthenticated, initAuth } = useAuthStore();
+  const { isAuthenticated, initAuth, user } = useAuthStore();
 
   const [client,      setClient]      = useState<Client | null>(null);
   const [loading,     setLoading]     = useState(true);
@@ -403,6 +404,7 @@ export default function ClientDetailPage() {
               </div>
             </div>
           )}
+          {user?.role === 'SUPER_ADMIN' && <OperationalPermissionsPanel clientId={clientId} />}
         </div>
       </div>
     </AppLayout>

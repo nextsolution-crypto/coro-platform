@@ -1,4 +1,13 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type {
+  CorrectiveActionPermission,
+  OperationalReviewPermission,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
@@ -23,6 +32,112 @@ export class ClientsService {
       where: { id, organizationId },
       include: { buildings: true, projects: true },
     });
+  }
+
+  async findClientUsers(clientId: string, actor: any) {
+    this.assertSuperAdmin(actor);
+    await this.assertOwnership(clientId, actor.organizationId);
+    return this.prisma.clientUser.findMany({
+      where: { clientId, organizationId: actor.organizationId },
+      orderBy: [{ isActive: 'desc' }, { lastName: 'asc' }, { firstName: 'asc' }],
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        buildingIds: true,
+        operationalReviewPermissions: true,
+        correctiveActionPermissions: true,
+      },
+    });
+  }
+
+  async getClientUserOperationalPermissions(
+    clientId: string,
+    clientUserId: string,
+    actor: any,
+  ) {
+    this.assertSuperAdmin(actor);
+    const user = await this.findScopedClientUser(
+      clientId,
+      clientUserId,
+      actor.organizationId,
+    );
+    return this.toOperationalPermissionResponse(user);
+  }
+
+  async updateClientUserOperationalPermissions(
+    clientId: string,
+    clientUserId: string,
+    data: {
+      operationalReviewPermissions?: OperationalReviewPermission[];
+      correctiveActionPermissions?: CorrectiveActionPermission[];
+    },
+    actor: any,
+  ) {
+    this.assertSuperAdmin(actor);
+    if (
+      data.operationalReviewPermissions === undefined &&
+      data.correctiveActionPermissions === undefined
+    ) {
+      throw new BadRequestException('Au moins une liste de permissions est requise.');
+    }
+
+    const current = await this.findScopedClientUser(
+      clientId,
+      clientUserId,
+      actor.organizationId,
+    );
+    const nextReview =
+      data.operationalReviewPermissions ?? current.operationalReviewPermissions;
+    const nextCorrective =
+      data.correctiveActionPermissions ?? current.correctiveActionPermissions;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.clientUser.update({
+        where: { id: clientUserId },
+        data: {
+          operationalReviewPermissions: nextReview,
+          correctiveActionPermissions: nextCorrective,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          isActive: true,
+          buildingIds: true,
+          operationalReviewPermissions: true,
+          correctiveActionPermissions: true,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: 'CLIENT_USER_OPERATIONAL_PERMISSIONS_UPDATED',
+          entityType: 'ClientUser',
+          entityId: clientUserId,
+          description: 'Permissions operationnelles du compte client mises a jour.',
+          userId: actor.userId,
+          organizationId: actor.organizationId,
+          metadata: {
+            clientId,
+            previous: {
+              operationalReviewPermissions: current.operationalReviewPermissions,
+              correctiveActionPermissions: current.correctiveActionPermissions,
+            },
+            next: {
+              operationalReviewPermissions: nextReview,
+              correctiveActionPermissions: nextCorrective,
+            },
+          },
+        },
+      });
+      return user;
+    });
+    return this.toOperationalPermissionResponse(updated);
   }
 
   async create(data: {
@@ -160,5 +275,48 @@ export class ClientsService {
     if (!client) {
       throw new ForbiddenException('Accès refusé à cette ressource.');
     }
+  }
+
+  private assertSuperAdmin(actor: any) {
+    if (actor?.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Acces reserve aux super administrateurs.');
+    }
+  }
+
+  private async findScopedClientUser(
+    clientId: string,
+    clientUserId: string,
+    organizationId: string,
+  ) {
+    const user = await this.prisma.clientUser.findFirst({
+      where: { id: clientUserId, clientId, organizationId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        buildingIds: true,
+        operationalReviewPermissions: true,
+        correctiveActionPermissions: true,
+      },
+    });
+    if (!user) throw new NotFoundException('Utilisateur client introuvable.');
+    return user;
+  }
+
+  private toOperationalPermissionResponse(user: any) {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      isActive: user.isActive,
+      buildingIds: user.buildingIds,
+      operationalReviewPermissions: user.operationalReviewPermissions,
+      correctiveActionPermissions: user.correctiveActionPermissions,
+    };
   }
 }

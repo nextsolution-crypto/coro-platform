@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Put } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ClientAuthService } from './client-auth.service';
 import { ClientJwtGuard } from './client-jwt.guard';
@@ -6,6 +6,15 @@ import { ClientJwtGuard } from './client-jwt.guard';
 @Controller('client-auth')
 export class ClientAuthController {
   constructor(private clientAuthService: ClientAuthService) {}
+
+  @Get('me')
+  @UseGuards(ClientJwtGuard)
+  async me(@Request() req: any) {
+    return this.clientAuthService.getCurrentUser(
+      req.clientUser.sub,
+      req.clientUser.organizationId,
+    );
+  }
 
   @Post('login')
   @Throttle({ short: { ttl: 60000, limit: 5 } })

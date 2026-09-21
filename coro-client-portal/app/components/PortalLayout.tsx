@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getUser, clearAuth } from '../store/auth';
+import { apiGet, getToken, getUser, setAuth, clearAuth } from '../store/auth';
 import { useToast } from '../store/useToast';
 import ToastContainer from './ToastContainer';
 import {
@@ -55,6 +55,14 @@ export default function PortalLayout({
     const u = getUser();
     if (!u) { router.replace('/login'); return; }
     setUser(u);
+    const token = getToken();
+    if (!token) return;
+    void apiGet('/client-auth/me').then((freshUser) => {
+      setAuth(token, freshUser);
+      setUser(freshUser);
+    }).catch(() => {
+      // The shared API handler redirects only when the session is invalid.
+    });
   }, [router]);
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);

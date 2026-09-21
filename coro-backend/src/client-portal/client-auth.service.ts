@@ -17,6 +17,27 @@ export class ClientAuthService {
     private jwt: JwtService,
   ) {}
 
+  async getCurrentUser(clientUserId: string, organizationId: string) {
+    const clientUser = await this.prisma.clientUser.findFirst({
+      where: { id: clientUserId, organizationId, isActive: true },
+      include: { client: { select: { name: true } } },
+    });
+    if (!clientUser) throw new UnauthorizedException('Session client invalide.');
+    return {
+      id: clientUser.id,
+      email: clientUser.email,
+      firstName: clientUser.firstName,
+      lastName: clientUser.lastName,
+      role: clientUser.role,
+      clientId: clientUser.clientId,
+      clientName: clientUser.client.name,
+      organizationId: clientUser.organizationId,
+      populationPermissions: clientUser.populationPermissions,
+      operationalReviewPermissions: clientUser.operationalReviewPermissions,
+      correctiveActionPermissions: clientUser.correctiveActionPermissions,
+    };
+  }
+
   async login(email: string, password: string, trustedToken?: string) {
     const clientUser = await this.prisma.clientUser.findUnique({
       where: { email },
