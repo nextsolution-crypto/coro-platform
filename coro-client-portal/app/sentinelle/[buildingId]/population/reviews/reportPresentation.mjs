@@ -19,3 +19,15 @@ export function buildReportFilename(reference, reviewVersion) {
 export function reportStatusLabel(status) {
   return status === "GENERATING" ? "Génération en cours" : status === "FINALIZED" ? "Rapport disponible" : "Aucun rapport généré";
 }
+
+export function normalizeReportResponse(value) {
+  return value === "" || value == null ? null : value;
+}
+
+export function canStartReportGeneration(canGenerate, report, pending) {
+  return canGenerate && !pending && report === null;
+}
+
+export function reportEndpoint(reviewId) {
+  return `/client-portal/operational-reviews/${encodeURIComponent(reviewId)}/report`;
+}

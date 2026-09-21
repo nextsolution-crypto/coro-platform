@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, Download, FileText, RefreshCw } from "lucide-react";
 import { apiDownload, apiGet, apiPost } from "../../../../../store/auth";
 import { formatMoment } from "../../../../presentation.mjs";
-import { buildReportFilename, formatReportLanguage, formatReportSize, reportStatusLabel } from "../reportPresentation.mjs";
+import { buildReportFilename, canStartReportGeneration, formatReportLanguage, formatReportSize, normalizeReportResponse, reportEndpoint, reportStatusLabel } from "../reportPresentation.mjs";
 import styles from "./review.module.css";
 
 type OperationalReviewReportSummary = {
@@ -22,8 +22,6 @@ type OperationalReviewReportSummary = {
   finalizedAt: string | null;
 };
 
-const reportPath = (reviewId: string) => `/client-portal/operational-reviews/${encodeURIComponent(reviewId)}/report`;
-
 export default function OperationalReviewReportSection({ reviewId, canGenerate }: { reviewId: string; canGenerate: boolean }) {
   const [report, setReport] = useState<OperationalReviewReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +35,7 @@ export default function OperationalReviewReportSection({ reviewId, canGenerate }
 
   const refresh = useCallback(async () => {
     try {
-      const result = await apiGet(reportPath(reviewId)) as OperationalReviewReportSummary | null;
+      const result = normalizeReportResponse(await apiGet(reportEndpoint(reviewId))) as OperationalReviewReportSummary | null;
       setReport(result);
       setLoaded(true);
       setError(null);
@@ -65,13 +63,13 @@ export default function OperationalReviewReportSection({ reviewId, canGenerate }
   }, [confirming]);
 
   const generate = async () => {
-    if (!canGenerate || pendingRef.current || report !== null) return;
+    if (!canStartReportGeneration(canGenerate, report, pendingRef.current)) return;
     pendingRef.current = true;
     setConfirming(false);
     setWorking("generate");
     setError(null);
     try {
-      await apiPost(reportPath(reviewId), {});
+      await apiPost(reportEndpoint(reviewId), {});
       await refresh();
     } catch {
       const current = await refresh();
@@ -87,7 +85,7 @@ export default function OperationalReviewReportSection({ reviewId, canGenerate }
     setWorking("download");
     setError(null);
     try {
-      const result = await apiDownload(`${reportPath(reviewId)}/download`);
+      const result = await apiDownload(`${reportEndpoint(reviewId)}/download`);
       const fallback = buildReportFilename(report.reference, report.reviewVersion);
       const filename = /^REX-\d{4}-\d{6}_v\d+_FR\.pdf$/.test(result.filename) ? result.filename : fallback;
       const url = URL.createObjectURL(result.blob);
