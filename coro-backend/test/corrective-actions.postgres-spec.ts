@@ -95,7 +95,17 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
     const replay = await evidence.addNote(action.id, { clientIntentId, title: 'Compte rendu', noteText: 'Travaux realises' }, actor);
     expect(replay.id).toBe(first.id);
     const completed = await actions.complete(action.id, {}, actor);
-    expect(completed).toMatchObject({ status: 'COMPLETED', completedById: ids.user });
+    expect(completed).toMatchObject({ status: 'COMPLETED' });
+    for (const field of ['completedById', 'verifiedById', 'closedById', 'createdById', 'updatedById', 'clientIntentId', 'reviewRecommendationId', 'organizationId', 'storageKey']) {
+      expect(completed).not.toHaveProperty(field);
+    }
+    const persisted = await prisma.correctiveAction.findUniqueOrThrow({ where: { id: action.id } });
+    expect(persisted).toMatchObject({
+      status: 'COMPLETED',
+      completedByType: CoroActorType.CLIENT_USER,
+      completedById: ids.user,
+    });
+    expect(persisted.completedAt).not.toBeNull();
   });
 
   it('impose les invariants de type Evidence en PostgreSQL', async () => {
