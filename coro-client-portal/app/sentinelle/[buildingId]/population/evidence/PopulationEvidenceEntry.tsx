@@ -9,6 +9,7 @@ import type {
   PopulationEvidenceRecord,
 } from "./evidenceTypes";
 import styles from "./evidence.module.css";
+import { actionAttention, reviewAccessFromResponse } from "./correctiveActionPresentation.mjs";
 
 export default function PopulationEvidenceEntry({
   buildingId,
@@ -29,10 +30,11 @@ export default function PopulationEvidenceEntry({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<any | null>(null);
+  const [reviewAccess, setReviewAccess] = useState<"missing" | "restricted" | "available">("missing");
+  const [actions, setActions] = useState<any[]>([]);
   const [reviewLoading, setReviewLoading] = useState(true);
   const [reviewCreating, setReviewCreating] = useState(false);
   const [reviewConfirming, setReviewConfirming] = useState(false);
-  const [actionCount, setActionCount] = useState(0);
   const user = getUser();
   const canCreateReview = Boolean(
     user?.operationalReviewPermissions?.includes("REX_CREATE"),
@@ -75,22 +77,13 @@ export default function PopulationEvidenceEntry({
         `/client-portal/operational-reviews/population-events/${eventId}`,
       )) as any;
       setReview(result);
-      if (result) {
-        setActionCount(
-          (result.findings ?? []).reduce(
-            (total: number, finding: any) =>
-              total +
-              (finding.recommendations ?? []).reduce(
-                (count: number, recommendation: any) =>
-                  count + (recommendation.correctiveActions?.length ?? 0),
-                0,
-              ),
-            0,
-          ),
-        );
-      }
+      setReviewAccess(reviewAccessFromResponse(200, Boolean(result)));
     } catch (caught) {
-      if (!(caught instanceof ApiError && caught.status === 404))
+      if (caught instanceof ApiError && (caught.status === 403 || caught.status === 404)) {
+        setReview(null);
+        setReviewAccess(reviewAccessFromResponse(caught.status, false));
+      }
+      else
         setError(
           caught instanceof Error
             ? caught.message
@@ -102,7 +95,15 @@ export default function PopulationEvidenceEntry({
   };
 
   useEffect(() => {
+    setReviewLoading(true);
     void loadReview();
+  }, [buildingId, eventId]);
+
+  useEffect(() => {
+    setActions([]);
+    void apiGet(`/client-portal/buildings/${buildingId}/population/operational-events/${eventId}/corrective-actions`)
+      .then((result) => setActions(result as any[]))
+      .catch((caught) => setError(caught instanceof Error ? caught.message : "Actions correctives indisponibles."));
   }, [buildingId, eventId]);
 
   const createReview = async () => {
@@ -257,6 +258,8 @@ export default function PopulationEvidenceEntry({
             OUVRIR LE REX
           </button>
         </>
+      ) : reviewAccess === "restricted" ? (
+        <span>ACCÈS RESTREINT</span>
       ) : reviewConfirming ? (
         <div
           className={styles.confirmation}
@@ -287,7 +290,7 @@ export default function PopulationEvidenceEntry({
         </div>
       ) : (
         <>
-          <span>AUCUN REX CRÉÉ</span>
+          <span>AUCUN REX ACCESSIBLE</span>
           <button
             type="button"
             disabled={!canCreateReview}
@@ -309,7 +312,13 @@ export default function PopulationEvidenceEntry({
       <div className={styles.registryEvidenceTitle}>
         <strong>ACTIONS CORRECTIVES</strong>
       </div>
-      <span>{review ? `${actionCount} action(s)` : "AUCUNE"}</span>
+      <span>{actions.length ? `${actions.length} action(s) accessible(s)` : "AUCUNE ACTION ACCESSIBLE"}</span>
+      {actions.map((action) => (
+        <button key={action.id} type="button" onClick={() => router.push(`/sentinelle/${buildingId}/corrective-actions/${action.id}`)}>
+          {action.reference ?? "Action corrective"} · {actionAttention(action.status, user?.correctiveActionPermissions ?? [], action.verificationBlockedForCurrentUser)}
+          {" · CONSULTER"}
+        </button>
+      ))}
     </div>
   );
 }

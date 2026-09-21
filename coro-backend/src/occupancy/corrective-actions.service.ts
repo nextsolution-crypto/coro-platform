@@ -40,6 +40,50 @@ export class CorrectiveActionsService {
     return actions.map((action) => this.safeAction(action, actor));
   }
 
+  async getSafe(id: string, actor: CorrectiveActionActor) {
+    const action = await this.findAccessibleAction(id, actor);
+    return this.safeDetail(action, actor);
+  }
+
+  async getForPopulationEvent(buildingId: string, eventId: string, actor: CorrectiveActionActor) {
+    this.assertBuildingAccess(actor, buildingId);
+    const event = await this.prisma.populationOperationalEvent.findFirst({
+      where: {
+        id: eventId,
+        organizationId: actor.organizationId,
+        program: { rueFacilityProfile: { buildingId, building: { clientId: actor.clientId } } },
+      },
+      select: { id: true },
+    });
+    if (!event) throw new NotFoundException('Evenement introuvable');
+    const actions = await this.prisma.correctiveAction.findMany({
+      where: {
+        organizationId: actor.organizationId,
+        buildingId,
+        ...this.accessScope(actor, buildingId),
+        ...await this.visibilityScope(actor),
+        status: { not: 'CANCELLED' },
+        reviewRecommendation: { is: { operationalReview: { is: { populationOperationalEventId: eventId } } } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return actions.map((action) => this.safeDetail(action, actor));
+  }
+
+  private safeDetail(action: any, actor: CorrectiveActionActor) {
+    const { id, reference, buildingId, category, title, description, status, priority,
+      assignedTo, assigneeDisplayNameSnapshot, dueDate, visibility, completedAt,
+      completionComment, completedByType, completedById, assigneeType, assigneeId,
+      verifiedAt, closedAt, closureComment, createdAt, updatedAt } = action;
+    return { id, reference, buildingId, category, title, description, status, priority,
+      assignedTo, assigneeDisplayNameSnapshot, dueDate, visibility, completedAt,
+      completionComment, verifiedAt, closedAt, closureComment, createdAt, updatedAt,
+      verificationBlockedForCurrentUser: Boolean(actor.sub && (
+        (completedByType === 'CLIENT_USER' && completedById === actor.sub) ||
+        (assigneeType === 'CLIENT_USER' && assigneeId === actor.sub)
+      )) };
+  }
+
   async create(body: CreateCorrectiveActionDto, actor: CorrectiveActionActor) {
     await this.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_CREATE);
     if (body.status === 'COMPLETED') throw new BadRequestException('Utilisez la transition explicite de realisation');
@@ -350,10 +394,7 @@ export class CorrectiveActionsService {
   }
 
   private safeAction(action: any, actor: CorrectiveActionActor) {
-    const { clientIntentId, reviewRecommendation, ...safe } = action;
-    const reviewConfidentiality = reviewRecommendation?.operationalReview?.confidentiality;
-    const sourceRestricted = Boolean(action.reviewRecommendationId && reviewConfidentiality === OperationalReviewConfidentiality.RESTRICTED);
-    return { ...safe, reviewRecommendationId: sourceRestricted ? null : action.reviewRecommendationId ?? null, sourceRestricted, sourceAvailable: Boolean(action.reviewRecommendationId && !sourceRestricted) };
+    return this.safeDetail(action, actor);
   }
 
   private async visibilityScope(actor: CorrectiveActionActor): Promise<Prisma.CorrectiveActionWhereInput> {

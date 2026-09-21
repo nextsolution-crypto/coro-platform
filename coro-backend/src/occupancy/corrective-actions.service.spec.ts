@@ -30,6 +30,7 @@ function harness() {
     building: { findFirst: jest.fn() },
     incidentEvent: { findFirst: jest.fn() },
     correctiveAction,
+    populationOperationalEvent: { findFirst: jest.fn() },
     correctiveActionEvidence: { count: jest.fn().mockResolvedValue(0) },
     correctiveActionVerification: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -348,5 +349,64 @@ describe('CorrectiveActionsService D3 verification and closure', () => {
     h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'CLOSED', closedAt: new Date() });
     await h.service.close('action-a', {}, verifier);
     expect(h.prisma.correctiveAction.updateMany).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('CorrectiveActionsService E4 independent action access', () => {
+  const verifier = { ...manager, sub: 'verifier-a' };
+  const sourceAction = {
+    id: 'action-a', reference: 'AC-2026-000001', organizationId: 'org-a', buildingId: 'building-a',
+    title: 'Corriger le plan', status: 'COMPLETED', visibility: 'BUILDING_TEAM',
+    reviewRecommendationId: 'recommendation-secret', clientIntentId: 'intent-secret',
+    completedByType: 'CLIENT_USER', completedById: 'other-user',
+    reviewRecommendation: { operationalReview: { title: 'REX secret', confidentiality: 'BUILDING_TEAM' } },
+  };
+
+  it('returns a safe action without reading its REX or leaking source identifiers', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ operationalReviewPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(sourceAction);
+    const result = await h.service.getSafe('action-a', verifier);
+    expect(result).toMatchObject({ id: 'action-a', reference: 'AC-2026-000001', verificationBlockedForCurrentUser: false });
+    expect(JSON.stringify(result)).not.toMatch(/recommendation-secret|intent-secret|REX secret|other-user|org-a/);
+    expect(h.prisma.correctiveAction.findFirst.mock.calls[0][0].where).toEqual(expect.objectContaining({ organizationId: 'org-a', buildingId: { in: ['building-a'] } }));
+  });
+
+  it('keeps the list source-free even when the source is BUILDING_TEAM', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ operationalReviewPermissions: [] });
+    h.prisma.correctiveAction.findMany.mockResolvedValue([sourceAction]);
+    const result = await h.service.getAll(verifier, 'building-a');
+    expect(JSON.stringify(result)).not.toMatch(/recommendation-secret|REX secret|intent-secret/);
+  });
+
+  it('denies direct access outside building scope or action visibility', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ operationalReviewPermissions: [] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
+    await expect(h.service.getSafe('foreign-action', verifier)).rejects.toBeInstanceOf(NotFoundException);
+    const scope = h.prisma.correctiveAction.findFirst.mock.calls[0][0].where;
+    expect(scope.OR).toContainEqual({ visibility: { in: ['BUILDING_TEAM', 'ORGANIZATION'] } });
+    expect(scope.OR).not.toContainEqual({ visibility: 'RESTRICTED' });
+  });
+
+  it('discovers only scoped actions for an existing event without returning the source', async () => {
+    const h = harness();
+    h.prisma.populationOperationalEvent.findFirst.mockResolvedValue({ id: 'event-a' });
+    h.prisma.clientUser.findFirst.mockResolvedValue({ operationalReviewPermissions: [] });
+    h.prisma.correctiveAction.findMany.mockResolvedValue([sourceAction]);
+    const result = await h.service.getForPopulationEvent('building-a', 'event-a', verifier);
+    expect(result).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toMatch(/recommendation-secret|REX secret/);
+    expect(h.prisma.correctiveAction.findMany.mock.calls[0][0].where).toEqual(expect.objectContaining({ organizationId: 'org-a', buildingId: 'building-a' }));
+    expect(h.prisma.correctiveAction.findMany.mock.calls[0][0].where.reviewRecommendation).toEqual({ is: { operationalReview: { is: { populationOperationalEventId: 'event-a' } } } });
+  });
+
+  it('does not discover actions for an event outside the tenant or building', async () => {
+    const h = harness();
+    h.prisma.populationOperationalEvent.findFirst.mockResolvedValue(null);
+    await expect(h.service.getForPopulationEvent('building-a', 'foreign-event', verifier)).rejects.toBeInstanceOf(NotFoundException);
+    expect(h.prisma.correctiveAction.findMany).not.toHaveBeenCalled();
+    await expect(h.service.getForPopulationEvent('building-b', 'event-a', verifier)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

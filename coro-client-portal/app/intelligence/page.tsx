@@ -411,6 +411,10 @@ export default function IntelligencePage() {
                       {action.description && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#ADB5BD' }}>{action.description}</p>}
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      {action.buildingId && <button type="button" onClick={() => router.push(`/sentinelle/${action.buildingId}/corrective-actions/${action.id}`)}
+                        style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #CED4DA', backgroundColor: '#FFFFFF', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                        Consulter
+                      </button>}
                       {action.status === 'PLANNED' && (
                         <button type="button" onClick={() => handleUpdateActionStatus(action.id, 'IN_PROGRESS')}
                           style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #AED6F1', backgroundColor: '#EBF5FB', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#2980B9' }}>

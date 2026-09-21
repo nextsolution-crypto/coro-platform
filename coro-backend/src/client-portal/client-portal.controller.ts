@@ -977,6 +977,20 @@ export class ClientPortalController {
     return this.correctiveActionsService.getAll(req.clientUser, buildingId);
   }
 
+  @Get('corrective-actions/:id')
+  getCorrectiveAction(@Param('id') id: string, @Request() req: CorrectiveActionRequest) {
+    return this.correctiveActionsService.getSafe(id, req.clientUser);
+  }
+
+  @Get('buildings/:buildingId/population/operational-events/:eventId/corrective-actions')
+  getPopulationOperationalEventCorrectiveActions(
+    @Param('buildingId') buildingId: string,
+    @Param('eventId') eventId: string,
+    @Request() req: CorrectiveActionRequest,
+  ) {
+    return this.correctiveActionsService.getForPopulationEvent(buildingId, eventId, req.clientUser);
+  }
+
   @Post('corrective-actions')
   async createCorrectiveAction(
     @Body() body: CreateCorrectiveActionDto,

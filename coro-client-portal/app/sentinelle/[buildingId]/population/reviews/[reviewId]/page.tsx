@@ -550,14 +550,15 @@ export default function PopulationReviewPage() {
                       <ActionCard
                         key={a.id}
                         action={a}
+                        actionHref={`/sentinelle/${buildingId}/corrective-actions/${a.id}`}
                         open={openAction === a.id}
                         details={actionDetails[a.id]}
                         canEdit={cap.has("CORRECTIVE_ACTION_EDIT")}
                         canComplete={cap.has("CORRECTIVE_ACTION_COMPLETE")}
-                        canVerify={cap.has("CORRECTIVE_ACTION_VERIFY")}
+                        canVerify={false}
                         verificationBlocked={a.verificationBlockedForCurrentUser === true}
                         actionError={actionErrors[a.id]}
-                        canClose={cap.has("CORRECTIVE_ACTION_CLOSE")}
+                        canClose={false}
                         busy={busy}
                         evidenceForm={evidenceForm}
                         setEvidenceForm={setEvidenceForm}
@@ -712,6 +713,7 @@ function ActionForm({
 
 function ActionCard({
   action: a,
+  actionHref,
   open,
   details,
   canEdit,
@@ -755,6 +757,7 @@ function ActionCard({
         <span>{a._count?.evidence ?? 0} preuve(s)</span>
       </div>
       <div className={styles.actions}>
+        <a href={actionHref} className={styles.buttonSecondary}>OUVRIR L&apos;ACTION</a>
         <button className={styles.buttonSecondary} onClick={onOpen}>
           {open ? "ACTUALISER" : "CONSULTER"}
         </button>
