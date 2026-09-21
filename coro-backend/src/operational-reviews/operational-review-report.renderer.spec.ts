@@ -1,4 +1,7 @@
-import { PDFDocument } from 'pdf-lib';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import fontkit from '@pdf-lib/fontkit';
+import { decodePDFRawStream, PDFDict, PDFDocument, PDFName, PDFRawStream } from 'pdf-lib';
 import { buildOperationalReviewReportText, OperationalReviewReportData, OperationalReviewReportRenderer } from './operational-review-report.renderer';
 
 const data: OperationalReviewReportData = {
@@ -38,7 +41,7 @@ describe('OperationalReviewReportRenderer', () => {
     expect(pdf.getPageCount()).toBeGreaterThan(2);
     expect(pdf.getPage(0).getSize()).toMatchObject({ width: 595.28, height: 841.89 });
     expect(pdf.getTitle()).toContain(data.reference);
-    expect(pdf.getCreator()).toBe('coro-rex-pdf/1.0.0');
+    expect(pdf.getCreator()).toBe('coro-rex-pdf/1.0.1');
     expect(pdf.getCreationDate()?.toISOString()).toBe(data.generatedAt);
   });
 
@@ -47,5 +50,32 @@ describe('OperationalReviewReportRenderer', () => {
     const first = await renderer.render(data);
     const second = await renderer.render(data);
     expect(second.equals(first)).toBe(true);
+  });
+
+  it('embarque deux vraies polices statiques intégrales et des tables ToUnicode', async () => {
+    const bytes = await new OperationalReviewReportRenderer().render({
+      ...data, title: 'Équipe — é è à ç ù œ É 12345',
+    });
+    const pdf = await PDFDocument.load(bytes);
+    const embedded = new Map<string, Buffer>();
+    let unicodeMaps = 0;
+    for (const [, object] of pdf.context.enumerateIndirectObjects()) {
+      if (!(object instanceof PDFDict)) continue;
+      const file = object.get(PDFName.of('FontFile2'));
+      if (file) {
+        const stream = pdf.context.lookup(file) as PDFRawStream;
+        const fontBytes = Buffer.from(decodePDFRawStream(stream).decode());
+        const font = fontkit.create(fontBytes);
+        expect(font.postscriptName).not.toBeNull();
+        if (!font.postscriptName) throw new Error('Embedded font has no PostScript name');
+        embedded.set(font.postscriptName, fontBytes);
+      }
+      if (object.get(PDFName.of('ToUnicode'))) unicodeMaps += 1;
+    }
+    expect([...embedded.keys()].sort()).toEqual(['NotoSans', 'NotoSans-Bold']);
+    expect(unicodeMaps).toBe(2);
+    for (const [name, filename] of [['NotoSans', 'NotoSans-Regular.ttf'], ['NotoSans-Bold', 'NotoSans-Bold.ttf']]) {
+      expect(embedded.get(name)?.equals(await readFile(join(process.cwd(), 'assets', 'fonts', filename)))).toBe(true);
+    }
   });
 });

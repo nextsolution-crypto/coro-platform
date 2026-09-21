@@ -3,7 +3,7 @@ import { join } from 'path';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, PDFPage, PDFFont, rgb } from 'pdf-lib';
 
-export const OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION = 'coro-rex-pdf/1.0.0';
+export const OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION = 'coro-rex-pdf/1.0.1';
 
 type Recommendation = {
   title: string | null; description: string; rationale: string | null; priority: string | null;
@@ -93,9 +93,13 @@ export class OperationalReviewReportRenderer {
     pdf.setAuthor('CORO'); pdf.setSubject('Retour d’expérience finalisé');
     pdf.setCreator(OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION); pdf.setProducer('CORO / pdf-lib');
     pdf.setCreationDate(generatedAt); pdf.setModificationDate(generatedAt);
-    const fontBytes = await readFile(join(process.cwd(), 'assets', 'fonts', 'NotoSans-Variable.ttf'));
-    const regular = await pdf.embedFont(fontBytes, { subset: true });
-    const bold = await pdf.embedFont(fontBytes, { subset: true, customName: 'NotoSans-Bold' });
+    const fontDirectory = join(process.cwd(), 'assets', 'fonts');
+    const [regularBytes, boldBytes] = await Promise.all([
+      readFile(join(fontDirectory, 'NotoSans-Regular.ttf')),
+      readFile(join(fontDirectory, 'NotoSans-Bold.ttf')),
+    ]);
+    const regular = await pdf.embedFont(regularBytes, { subset: false });
+    const bold = await pdf.embedFont(boldBytes, { subset: false });
     const pages: PDFPage[] = [];
     let page: PDFPage;
     let y = 0;

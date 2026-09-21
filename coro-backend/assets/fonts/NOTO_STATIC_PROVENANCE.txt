@@ -1,0 +1,15 @@
+Noto Sans static fonts used by coro-rex-pdf/1.0.1
+
+Files: NotoSans-Regular.ttf, NotoSans-Bold.ttf
+Local source: C:\Windows\Fonts on the CORO development workstation (2026-09-21).
+Embedded font metadata: Noto Sans, Regular/Bold, Version 1.04,
+Copyright 2012 Google Inc. All Rights Reserved.
+Embedded license metadata: Licensed under the Apache License, Version 2.0.
+See Apache-2.0.txt in this directory for the license text.
+
+SHA-256 NotoSans-Regular.ttf:
+2ddeaed07f6483f7831b23faa32cf85a04c3406eb4bb2925530894805a05d4fb
+SHA-256 NotoSans-Bold.ttf:
+f9a6bd489df560f7a925b43d5b48d4536fa24589332e53702b63fc0072898f86
+
+The existing NotoSans-Variable.ttf has its own OFL.txt and remains unchanged.
