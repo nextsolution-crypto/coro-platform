@@ -305,6 +305,17 @@ describe('CorrectiveActionsService D3 verification and closure', () => {
     h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY'] });
     h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedByType: 'CLIENT_USER', completedById: 'verifier-a' });
     await expect(h.service.verify('action-a', { clientIntentId: '11111111-1111-4111-8111-111111111111', verdict: 'ACCEPTED', comment: 'Conforme' } as any, verifier)).rejects.toThrow('Auto-verification');
+    expect(h.prisma.correctiveActionVerification.create).not.toHaveBeenCalled();
+    expect(h.prisma.correctiveAction.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('interdit aussi REJECTED au dernier completer sans creer de tentative', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_VERIFY'] });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', organizationId: 'org-a', status: 'COMPLETED', completedByType: 'CLIENT_USER', completedById: 'verifier-a' });
+    await expect(h.service.verify('action-a', { clientIntentId: '11111111-1111-4111-8111-111111111111', verdict: 'REJECTED', comment: 'Preuve insuffisante' } as any, verifier)).rejects.toThrow('Auto-verification');
+    expect(h.prisma.correctiveActionVerification.create).not.toHaveBeenCalled();
+    expect(h.prisma.correctiveAction.updateMany).not.toHaveBeenCalled();
   });
 
   it('ACCEPTED produit VERIFIED et une verification immutable conceptuelle', async () => {

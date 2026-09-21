@@ -11,7 +11,7 @@ const reviewInclude = {
   auditEvents: { orderBy: { createdAt: 'asc' as const } },
   findings: {
     orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }],
-    include: { recommendations: { orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }], include: { correctiveActions: { where: { status: { not: 'CANCELLED' as const } }, orderBy: { createdAt: 'asc' as const }, select: { id: true, reference: true, title: true, description: true, category: true, priority: true, status: true, assignedTo: true, dueDate: true, completedAt: true, completionComment: true, verifiedAt: true, closedAt: true, closureComment: true, _count: { select: { evidence: { where: { status: 'ACTIVE' as const } } } } } } } } },
+    include: { recommendations: { orderBy: [{ displayOrder: 'asc' as const }, { createdAt: 'asc' as const }, { id: 'asc' as const }], include: { correctiveActions: { where: { status: { not: 'CANCELLED' as const } }, orderBy: { createdAt: 'asc' as const }, select: { id: true, reference: true, title: true, description: true, category: true, priority: true, status: true, assignedTo: true, completedByType: true, completedById: true, assigneeType: true, assigneeId: true, dueDate: true, completedAt: true, completionComment: true, verifiedAt: true, closedAt: true, closureComment: true, _count: { select: { evidence: { where: { status: 'ACTIVE' as const } } } } } } } } },
   },
 };
 
@@ -53,7 +53,7 @@ export class OperationalReviewsService {
     }
   }
 
-  private publicRecord(review: any) {
+  private publicRecord(review: any, actor: ReviewActor) {
     return {
       id: review.id, reference: review.reference, version: review.version, status: review.status,
       confidentiality: review.confidentiality, title: review.title, summary: review.summary,
@@ -67,7 +67,22 @@ export class OperationalReviewsService {
       submittedAt: review.submittedAt, submittedByType: review.submittedByType, submittedById: review.submittedById,
       finalizedAt: review.finalizedAt, finalizedByType: review.finalizedByType, finalizedById: review.finalizedById,
       createdAt: review.createdAt, updatedAt: review.updatedAt, auditEvents: review.auditEvents,
-      findings: review.findings ?? [],
+      findings: (review.findings ?? []).map((finding: any) => ({
+        ...finding,
+        recommendations: (finding.recommendations ?? []).map((recommendation: any) => ({
+          ...recommendation,
+          correctiveActions: (recommendation.correctiveActions ?? []).map((action: any) => {
+            const { completedByType, completedById, assigneeType, assigneeId, ...safe } = action;
+            return {
+              ...safe,
+              verificationBlockedForCurrentUser: Boolean(
+                (completedByType === CoroActorType.CLIENT_USER && completedById === actor.sub) ||
+                (assigneeType === 'CLIENT_USER' && assigneeId === actor.sub),
+              ),
+            };
+          }),
+        })),
+      })),
     };
   }
 
@@ -86,7 +101,7 @@ export class OperationalReviewsService {
         where: { organizationId: actor.organizationId, version: 1, supersedesId: null, ...context.sourceWhere },
         include: reviewInclude,
       });
-      if (existing) return this.publicRecord(existing);
+      if (existing) return this.publicRecord(existing, actor);
       const review = await tx.operationalReview.create({
         data: {
           organizationId: actor.organizationId, title: dto.title, summary: dto.summary,
@@ -98,7 +113,7 @@ export class OperationalReviewsService {
         },
         include: reviewInclude,
       });
-      return this.publicRecord(review);
+      return this.publicRecord(review, actor);
     });
   }
 
@@ -130,11 +145,11 @@ export class OperationalReviewsService {
     return { sourceKind: 'EXERCISE', sourceKey: report.id, sourceWhere: { exerciseReportId: report.id }, buildingId: report.buildingId, projectId: report.projectId, evidenceId: null };
   }
 
-  async get(id: string, actor: ReviewActor) { return this.publicRecord(await this.scoped(id, actor)); }
+  async get(id: string, actor: ReviewActor) { return this.publicRecord(await this.scoped(id, actor), actor); }
 
   async getForPopulationEvent(eventId: string, actor: ReviewActor) {
     const review = await this.prisma.operationalReview.findFirst({ where: { organizationId: actor.organizationId, populationOperationalEventId: eventId, version: 1, supersedesId: null }, select: { id: true } });
-    return review ? this.publicRecord(await this.scoped(review.id, actor)) : null;
+    return review ? this.publicRecord(await this.scoped(review.id, actor), actor) : null;
   }
 
   async update(id: string, dto: UpdateOperationalReviewDto, actor: ReviewActor) {
@@ -145,7 +160,7 @@ export class OperationalReviewsService {
     const review = await this.prisma.operationalReview.update({
       where: { id }, data: { ...dto, auditEvents: { create: { type: 'UPDATED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub, metadata: { fields: Object.keys(dto) } } } }, include: reviewInclude,
     });
-    return this.publicRecord(review);
+    return this.publicRecord(review, actor);
   }
 
   async submit(id: string, actor: ReviewActor) {
@@ -156,7 +171,7 @@ export class OperationalReviewsService {
   async finalize(id: string, actor: ReviewActor) {
     await this.requirePermission(actor, OperationalReviewPermission.REX_FINALIZE);
     const current = await this.scoped(id, actor);
-    if (current.status === OperationalReviewStatus.FINALIZED) return this.publicRecord(current);
+    if (current.status === OperationalReviewStatus.FINALIZED) return this.publicRecord(current, actor);
     return this.transition(id, actor, OperationalReviewStatus.IN_REVIEW, OperationalReviewStatus.FINALIZED, 'FINALIZED');
   }
 
@@ -175,7 +190,7 @@ export class OperationalReviewsService {
       },
       include: reviewInclude,
     });
-    return this.publicRecord(review);
+    return this.publicRecord(review, actor);
   }
 
   async createFinding(reviewId: string, dto: CreateReviewFindingDto, actor: ReviewActor) {

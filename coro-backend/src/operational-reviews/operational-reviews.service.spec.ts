@@ -129,6 +129,29 @@ describe('OperationalReviewsService', () => {
     await expect(service.get('review-1', actor)).resolves.toMatchObject({ id: 'review-1' });
   });
 
+  it('expose uniquement le blocage de verification propre a l acteur, sans identifiants', async () => {
+    const { service, prisma } = setup();
+    const action = (id: string, completedById: string, assigneeId: string | null = null) => ({
+      id, status: 'COMPLETED', completedByType: 'CLIENT_USER', completedById,
+      assigneeType: assigneeId ? 'CLIENT_USER' : null, assigneeId,
+    });
+    prisma.operationalReview.findFirst.mockResolvedValue({
+      ...baseReview,
+      findings: [{ id: 'finding-1', recommendations: [{ id: 'rec-1', correctiveActions: [
+        action('self-completer', 'user-1'), action('self-assignee', 'other-user', 'user-1'), action('other', 'other-user'),
+      ] }] }],
+    });
+    const result = await service.get('review-1', actor);
+    const actions = result.findings[0].recommendations[0].correctiveActions;
+    expect(actions.map((item: any) => item.verificationBlockedForCurrentUser)).toEqual([true, true, false]);
+    for (const item of actions) {
+      expect(item).not.toHaveProperty('completedById');
+      expect(item).not.toHaveProperty('completedByType');
+      expect(item).not.toHaveProperty('assigneeId');
+      expect(item).not.toHaveProperty('assigneeType');
+    }
+  });
+
   it('interdit ADVISOR depuis le canal Client Portal', async () => {
     const { service, prisma } = setup();
     await expect(service.create({ title: 'REX', confidentiality: OperationalReviewConfidentiality.ADVISOR, populationOperationalEventId: 'event-1' }, actor)).rejects.toBeInstanceOf(ForbiddenException);

@@ -41,6 +41,7 @@ export default function PopulationReviewPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState({ title: "", summary: "" });
   const [finding, setFinding] = useState({
@@ -119,21 +120,27 @@ export default function PopulationReviewPage() {
     key: string,
     work: () => Promise<unknown>,
     success: string,
+    actionId?: string,
   ) => {
     setBusy(key);
     setError(null);
     setMessage(null);
+    if (actionId) setActionErrors((current) => {
+      const next = { ...current };
+      delete next[actionId];
+      return next;
+    });
     try {
       await work();
       await load(true);
       setMessage(success);
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "L'opération n'a pas pu être terminée.",
-      );
-      await load(true);
+      const failure = caught instanceof Error
+        ? caught.message
+        : "L'opération n'a pas pu être terminée.";
+      try { await load(true); } catch { /* Conserver l'erreur métier initiale. */ }
+      setError(failure);
+      if (actionId) setActionErrors((current) => ({ ...current, [actionId]: failure }));
     } finally {
       setBusy(null);
     }
@@ -548,6 +555,8 @@ export default function PopulationReviewPage() {
                         canEdit={cap.has("CORRECTIVE_ACTION_EDIT")}
                         canComplete={cap.has("CORRECTIVE_ACTION_COMPLETE")}
                         canVerify={cap.has("CORRECTIVE_ACTION_VERIFY")}
+                        verificationBlocked={a.verificationBlockedForCurrentUser === true}
+                        actionError={actionErrors[a.id]}
                         canClose={cap.has("CORRECTIVE_ACTION_CLOSE")}
                         busy={busy}
                         evidenceForm={evidenceForm}
@@ -708,6 +717,8 @@ function ActionCard({
   canEdit,
   canComplete,
   canVerify,
+  verificationBlocked,
+  actionError,
   canClose,
   busy,
   evidenceForm,
@@ -722,7 +733,7 @@ function ActionCard({
     key: string,
     work: () => Promise<unknown>,
     message: string,
-  ) => onMutate(key, work, message).then(onReloadAction);
+  ) => onMutate(key, work, message, a.id).then(onReloadAction);
   return (
     <article className={styles.action}>
       <div className={styles.actionHead}>
@@ -791,7 +802,7 @@ function ActionCard({
             DÉCLARER RÉALISÉE
           </button>
         )}
-        {a.status === "COMPLETED" && canVerify && (
+        {a.status === "COMPLETED" && canVerify && !verificationBlocked && (
           <>
             <button
               className={styles.button}
@@ -867,6 +878,16 @@ function ActionCard({
           </button>
         )}
       </div>
+      {a.status === "COMPLETED" && canVerify && verificationBlocked && (
+        <p className={styles.notice}>
+          Cette réalisation doit être vérifiée par un autre utilisateur autorisé.
+        </p>
+      )}
+      {actionError && (
+        <p className={styles.error} role="alert">
+          {actionError}
+        </p>
+      )}
       {a.status === "COMPLETED" && (
         <p className={styles.notice}>
           <strong>RÉALISATION DÉCLARÉE</strong>
