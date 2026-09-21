@@ -43,6 +43,7 @@ function harness() {
     user: { findFirst: jest.fn() },
     reviewRecommendation: { findFirst: jest.fn() },
     $executeRaw: jest.fn(),
+    $queryRaw: jest.fn(),
     $transaction: jest.fn((callback: any) => callback(prisma)),
   };
   return { prisma, service: new CorrectiveActionsService(prisma as never) };
@@ -279,7 +280,7 @@ describe('CorrectiveActionsService D1 workflow', () => {
   it('cree depuis une Recommendation ACCEPTED avec intention idempotente et confidentialite heritee', async () => {
     const h = harness();
     h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
-    h.prisma.reviewRecommendation.findFirst.mockResolvedValue({ id: 'rec-a', operationalReview: { buildingId: 'building-a', confidentiality: 'BUILDING_TEAM' } });
+    h.prisma.reviewRecommendation.findFirst.mockResolvedValue({ id: 'rec-a', operationalReview: { buildingId: 'building-a', confidentiality: 'BUILDING_TEAM', status: 'IN_REVIEW' } });
     h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
     const dto = { title: 'Action', clientIntentId: '11111111-1111-4111-8111-111111111111' };
     await h.service.createFromRecommendation('review-a', 'rec-a', dto, actor);
@@ -294,6 +295,18 @@ describe('CorrectiveActionsService D1 workflow', () => {
     h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
     h.prisma.reviewRecommendation.findFirst.mockResolvedValue(null);
     await expect(h.service.createFromRecommendation('review-a', 'rec-a', { title: 'Action', clientIntentId: '11111111-1111-4111-8111-111111111111' }, actor)).rejects.toThrow('acceptee introuvable');
+  });
+
+  it('refuse une nouvelle action apres finalisation, sans perdre une intention deja creee', async () => {
+    const h = harness();
+    h.prisma.clientUser.findFirst.mockResolvedValue({ correctiveActionPermissions: ['CORRECTIVE_ACTION_CREATE'] });
+    h.prisma.reviewRecommendation.findFirst.mockResolvedValue({ id: 'rec-a', operationalReview: { buildingId: 'building-a', confidentiality: 'BUILDING_TEAM', status: 'FINALIZED' } });
+    h.prisma.correctiveAction.findFirst.mockResolvedValue(null);
+    const dto = { title: 'Late', clientIntentId: '11111111-1111-4111-8111-111111111111' };
+    await expect(h.service.createFromRecommendation('review-a', 'rec-a', dto, actor)).rejects.toThrow('Le REX est finalisé');
+    expect(h.prisma.correctiveAction.create).not.toHaveBeenCalled();
+    h.prisma.correctiveAction.findFirst.mockResolvedValue({ id: 'action-a', status: 'PLANNED' });
+    await expect(h.service.createFromRecommendation('review-a', 'rec-a', dto, actor)).resolves.toMatchObject({ id: 'action-a' });
   });
 
   it('resout le snapshot d un responsable CLIENT_USER cote serveur', async () => {

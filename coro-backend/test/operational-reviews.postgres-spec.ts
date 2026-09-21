@@ -127,4 +127,15 @@ describePostgres('OperationalReview PostgreSQL invariants', () => {
     await expect(prisma.reviewRecommendation.update({ where: { id: recommendation.id }, data: { description: 'Mutation' } })).rejects.toThrow('children are immutable');
     await expect(prisma.reviewRecommendation.delete({ where: { id: recommendation.id } })).rejects.toThrow('children are immutable');
   });
+
+  it('refuse de deplacer un Finding ou une Recommendation hors du REX finalise', async () => {
+    const finalized = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.secondEvent } });
+    const destination = await prisma.operationalReview.findFirstOrThrow({ where: { populationOperationalEventId: ids.thirdEvent } });
+    const sourceFinding = await prisma.reviewFinding.findFirstOrThrow({ where: { operationalReviewId: finalized.id } });
+    const sourceRecommendation = await prisma.reviewRecommendation.findFirstOrThrow({ where: { operationalReviewId: finalized.id } });
+    const destinationFinding = await prisma.reviewFinding.create({ data: { organizationId: ids.organization, operationalReviewId: destination.id, category: ReviewFindingCategory.OBSERVATION, title: 'Destination', description: 'Test', severity: ReviewFindingSeverity.LOW, displayOrder: 1, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } });
+    await expect(prisma.reviewFinding.update({ where: { id: sourceFinding.id }, data: { operationalReviewId: destination.id, displayOrder: 2 } })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewRecommendation.update({ where: { id: sourceRecommendation.id }, data: { operationalReviewId: destination.id, reviewFindingId: destinationFinding.id } })).rejects.toThrow('children are immutable');
+    await expect(prisma.reviewFinding.create({ data: { organizationId: ids.organization, operationalReviewId: finalized.id, category: ReviewFindingCategory.GAP, title: 'Late', description: 'Test', severity: ReviewFindingSeverity.HIGH, displayOrder: 3, createdByType: CoroActorType.SYSTEM, createdById: 'postgres-test' } })).rejects.toThrow('children are immutable');
+  });
 });

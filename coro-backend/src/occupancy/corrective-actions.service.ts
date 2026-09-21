@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -164,21 +165,24 @@ export class CorrectiveActionsService {
   async createFromRecommendation(reviewId: string, recommendationId: string, body: CreateCorrectiveActionDto, actor: CorrectiveActionActor) {
     await this.requirePermission(actor, CorrectiveActionPermission.CORRECTIVE_ACTION_CREATE);
     if (!body.clientIntentId) throw new BadRequestException('clientIntentId requis');
-    const recommendation = await this.prisma.reviewRecommendation.findFirst({
-      where: { id: recommendationId, operationalReviewId: reviewId, organizationId: actor.organizationId, status: 'ACCEPTED' },
-      select: { id: true, operationalReview: { select: { buildingId: true, confidentiality: true } } },
-    });
-    if (!recommendation) throw new BadRequestException('Recommandation acceptee introuvable');
-    const buildingId = recommendation.operationalReview.buildingId;
-    if (!buildingId) throw new BadRequestException('Le REX source doit etre associe a un batiment');
-    if (body.buildingId && body.buildingId !== buildingId) throw new BadRequestException('Batiment incoherent avec le REX source');
-    this.assertBuildingAccess(actor, buildingId);
-    await this.assertReviewSourceAccess(actor, recommendation.operationalReview.confidentiality);
-    const assignee = await this.resolveAssignee(body, actor);
     return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "OperationalReview" WHERE "id" = ${reviewId} AND "organizationId" = ${actor.organizationId} FOR UPDATE`;
+      const recommendation = await tx.reviewRecommendation.findFirst({
+        where: { id: recommendationId, operationalReviewId: reviewId, organizationId: actor.organizationId, status: 'ACCEPTED' },
+        select: { id: true, operationalReview: { select: { buildingId: true, confidentiality: true, status: true } } },
+      });
+      if (!recommendation) throw new BadRequestException('Recommandation acceptee introuvable');
+      const buildingId = recommendation.operationalReview.buildingId;
+      if (!buildingId) throw new BadRequestException('Le REX source doit etre associe a un batiment');
+      if (body.buildingId && body.buildingId !== buildingId) throw new BadRequestException('Batiment incoherent avec le REX source');
+      this.assertBuildingAccess(actor, buildingId);
+      await this.assertReviewSourceAccess(actor, recommendation.operationalReview.confidentiality);
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'corrective-intent:' + body.clientIntentId}))`;
       const replay = await tx.correctiveAction.findFirst({ where: { clientIntentId: body.clientIntentId, organizationId: actor.organizationId } });
       if (replay) return this.safeAction(replay, actor);
+      if (recommendation.operationalReview.status === 'FINALIZED') throw new ConflictException('Le REX est finalisé. Aucune nouvelle action corrective ne peut être créée depuis ses recommandations.');
+      if (recommendation.operationalReview.status !== 'IN_REVIEW') throw new ConflictException('Le REX doit être en revue pour créer une action corrective.');
+      const assignee = await this.resolveAssignee(body, actor);
       const action = await tx.correctiveAction.create({ data: {
         organizationId: actor.organizationId, buildingId, reviewRecommendationId: recommendation.id,
         clientIntentId: body.clientIntentId, visibility: recommendation.operationalReview.confidentiality,

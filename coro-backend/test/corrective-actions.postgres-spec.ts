@@ -173,4 +173,32 @@ describePostgres('CorrectiveAction D1 PostgreSQL invariants', () => {
       expect(a.closedAt).toEqual(b.closedAt);
     }
   });
+
+  it('fige les nouveaux engagements mais laisse vivre les actions deja liees', async () => {
+    const existing = await prisma.correctiveAction.findFirstOrThrow({ where: { reviewRecommendationId: recommendationId, status: 'PLANNED' } });
+    await reviews.finalize(reviewId, actor);
+    await expect(actions.createFromRecommendation(reviewId, recommendationId, { title: 'Trop tard', clientIntentId: randomUUID() }, actor)).rejects.toThrow('Le REX est finalisé');
+    await expect(prisma.correctiveAction.create({ data: { organizationId: ids.org, buildingId: ids.building, category: 'GENERAL', title: 'Direct late', reviewRecommendationId: recommendationId } })).rejects.toThrow('cannot receive new CorrectiveAction');
+    await expect(actions.update(existing.id, { status: 'IN_PROGRESS' }, actor)).resolves.toMatchObject({ status: 'IN_PROGRESS' });
+    await expect(prisma.correctiveAction.update({ where: { id: existing.id }, data: { reviewRecommendationId: null } })).rejects.toThrow('action link is immutable');
+  });
+
+  it('serialize finalize et creation sans ajout retroactif', async () => {
+    const eventId = `race-event-${suffix}`;
+    await prisma.populationOperationalEvent.create({ data: { id: eventId, organizationId: ids.org, programId: ids.program, emergencyScenarioId: ids.scenario, status: PopulationOperationalEventStatus.ENDED, startedByType: CoroActorType.SYSTEM, startedById: 'test', endedByType: CoroActorType.SYSTEM, endedById: 'test', endedAt: new Date() } });
+    const review = await reviews.create({ title: 'Race', populationOperationalEventId: eventId }, actor);
+    const finding = await reviews.createFinding(review.id, { category: ReviewFindingCategory.GAP, title: 'Race', description: 'Test', severity: ReviewFindingSeverity.HIGH }, actor);
+    const recommendation = await reviews.createRecommendation(review.id, finding.id, { description: 'Fix' }, actor);
+    await reviews.submit(review.id, actor);
+    await reviews.decideRecommendation(review.id, recommendation.id, { status: ReviewRecommendationStatus.ACCEPTED }, actor);
+    const results = await Promise.allSettled([
+      reviews.finalize(review.id, actor),
+      actions.createFromRecommendation(review.id, recommendation.id, { title: 'Concurrent action', clientIntentId: randomUUID() }, actor),
+    ]);
+    expect(results[0].status).toBe('fulfilled');
+    const count = await prisma.correctiveAction.count({ where: { reviewRecommendationId: recommendation.id } });
+    expect(count).toBe(results[1].status === 'fulfilled' ? 1 : 0);
+    expect(await prisma.operationalReview.findUniqueOrThrow({ where: { id: review.id } })).toMatchObject({ status: 'FINALIZED' });
+    await expect(actions.createFromRecommendation(review.id, recommendation.id, { title: 'After race', clientIntentId: randomUUID() }, actor)).rejects.toThrow('Le REX est finalisé');
+  });
 });

@@ -170,9 +170,21 @@ export class OperationalReviewsService {
 
   async finalize(id: string, actor: ReviewActor) {
     await this.requirePermission(actor, OperationalReviewPermission.REX_FINALIZE);
-    const current = await this.scoped(id, actor);
-    if (current.status === OperationalReviewStatus.FINALIZED) return this.publicRecord(current, actor);
-    return this.transition(id, actor, OperationalReviewStatus.IN_REVIEW, OperationalReviewStatus.FINALIZED, 'FINALIZED');
+    await this.scoped(id, actor);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "OperationalReview" WHERE "id" = ${id} AND "organizationId" = ${actor.organizationId} FOR UPDATE`;
+      const current = await tx.operationalReview.findFirst({ where: { id, organizationId: actor.organizationId }, include: reviewInclude });
+      if (!current) throw new NotFoundException('REX introuvable');
+      if (current.status === OperationalReviewStatus.FINALIZED) return this.publicRecord(current, actor);
+      if (current.status !== OperationalReviewStatus.IN_REVIEW) throw new ConflictException('Transition REX invalide');
+      const review = await tx.operationalReview.update({
+        where: { id },
+        data: { status: OperationalReviewStatus.FINALIZED, finalizedAt: new Date(), finalizedByType: CoroActorType.CLIENT_USER, finalizedById: actor.sub,
+          auditEvents: { create: { type: 'FINALIZED', actorType: CoroActorType.CLIENT_USER, actorId: actor.sub } } },
+        include: reviewInclude,
+      });
+      return this.publicRecord(review, actor);
+    });
   }
 
   private async transition(id: string, actor: ReviewActor, expected: OperationalReviewStatus, status: OperationalReviewStatus, type: 'SUBMITTED' | 'FINALIZED') {

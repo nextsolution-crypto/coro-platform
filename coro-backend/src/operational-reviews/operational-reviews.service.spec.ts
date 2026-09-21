@@ -17,7 +17,8 @@ const baseReview: any = {
 function setup(userPermissions = permissions) {
   const tx: any = {
     $executeRaw: jest.fn(),
-    operationalReview: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(baseReview) },
+    $queryRaw: jest.fn(),
+    operationalReview: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(baseReview), update: jest.fn() },
   };
   const prisma: any = {
     clientUser: { findFirst: jest.fn().mockResolvedValue({ operationalReviewPermissions: userPermissions }) },
@@ -167,7 +168,7 @@ describe('OperationalReviewsService', () => {
   });
 
   it('soumet puis finalise avec acteur reel et audit', async () => {
-    const { service, prisma } = setup();
+    const { service, prisma, tx } = setup();
     prisma.operationalReview.update
       .mockResolvedValueOnce({ ...baseReview, status: OperationalReviewStatus.IN_REVIEW })
       .mockResolvedValueOnce({ ...baseReview, status: OperationalReviewStatus.FINALIZED });
@@ -175,16 +176,20 @@ describe('OperationalReviewsService', () => {
     expect(prisma.operationalReview.update.mock.calls[0][0].data).toEqual(expect.objectContaining({ status: OperationalReviewStatus.IN_REVIEW, submittedById: 'user-1' }));
     expect(prisma.operationalReview.update.mock.calls[0][0].data.auditEvents.create.type).toBe('SUBMITTED');
     prisma.operationalReview.findFirst.mockResolvedValue({ ...baseReview, status: OperationalReviewStatus.IN_REVIEW });
+    tx.operationalReview.findFirst.mockResolvedValue({ ...baseReview, status: OperationalReviewStatus.IN_REVIEW });
+    tx.operationalReview.update.mockResolvedValue({ ...baseReview, status: OperationalReviewStatus.FINALIZED });
     await service.finalize('review-1', actor);
-    expect(prisma.operationalReview.update.mock.calls[1][0].data).toEqual(expect.objectContaining({ status: OperationalReviewStatus.FINALIZED, finalizedById: 'user-1' }));
-    expect(prisma.operationalReview.update.mock.calls[1][0].data.auditEvents.create.type).toBe('FINALIZED');
+    expect(tx.operationalReview.update.mock.calls[0][0].data).toEqual(expect.objectContaining({ status: OperationalReviewStatus.FINALIZED, finalizedById: 'user-1' }));
+    expect(tx.operationalReview.update.mock.calls[0][0].data.auditEvents.create.type).toBe('FINALIZED');
+    expect(tx.$queryRaw).toHaveBeenCalled();
   });
 
   it('rend la finalisation repetee idempotente', async () => {
-    const { service, prisma } = setup();
+    const { service, prisma, tx } = setup();
     prisma.operationalReview.findFirst.mockResolvedValue({ ...baseReview, status: OperationalReviewStatus.FINALIZED });
+    tx.operationalReview.findFirst.mockResolvedValue({ ...baseReview, status: OperationalReviewStatus.FINALIZED });
     await expect(service.finalize('review-1', actor)).resolves.toMatchObject({ status: OperationalReviewStatus.FINALIZED });
-    expect(prisma.operationalReview.update).not.toHaveBeenCalled();
+    expect(tx.operationalReview.update).not.toHaveBeenCalled();
   });
 
   it('refuse toute edition apres finalisation', async () => {

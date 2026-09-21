@@ -485,6 +485,7 @@ export default function PopulationReviewPage() {
                         </div>
                       )}
                     {r.status === "ACCEPTED" &&
+                      review.status === "IN_REVIEW" &&
                       cap.has("CORRECTIVE_ACTION_CREATE") && (
                         <button
                           className={styles.buttonSecondary}
