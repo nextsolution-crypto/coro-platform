@@ -255,7 +255,7 @@ export default function BookingsPage() {
       );
 
       const res = await fetch(
-        `${API_URL}/bookings/${bookingId}/cancel`,
+        `${API_URL}/client-portal/bookings/${bookingId}/cancel`,
         {
           method: 'PUT',
           headers: {

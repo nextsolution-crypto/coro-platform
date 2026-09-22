@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { BOOKING_TRANSITIONS, BookingStatus, effectiveBookingDate } from './booking-status';
 
 @Injectable()
 export class BookingsService {
@@ -14,6 +15,9 @@ export class BookingsService {
     participants?: number;
     comment?: string;
   }) {
+    if (Number.isNaN(data.requestedDate.getTime()) || !Number.isInteger(data.duration) || data.duration < 1) {
+      throw new BadRequestException('Date ou durée invalide');
+    }
     const project = await this.prisma.project.findUnique({
       where: { id: data.projectId },
       include: { user: true, client: true, building: true },
@@ -45,15 +49,15 @@ export class BookingsService {
       to: booking.assignedUser.email,
       toName: `${booking.assignedUser.firstName} ${booking.assignedUser.lastName}`,
       subject: `📅 Nouvelle demande de réservation — ${project.name}`,
-      content: `
+      content: this.safeHtml`
         <p>Le client <strong>${booking.clientUser.firstName} ${booking.clientUser.lastName}</strong> a soumis une demande de réservation.</p>
         <div style="background:#F8F9FA;padding:16px;border-radius:8px;margin:16px 0;">
           <p style="margin:0 0 8px;"><strong>Projet :</strong> ${project.name}</p>
           <p style="margin:0 0 8px;"><strong>Activité :</strong> ${this.activityLabel(data.activityType)}</p>
           <p style="margin:0 0 8px;"><strong>Date demandée :</strong> ${new Date(data.requestedDate).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
           <p style="margin:0 0 8px;"><strong>Durée :</strong> ${data.duration} minutes</p>
-          ${data.participants ? `<p style="margin:0 0 8px;"><strong>Participants :</strong> ${data.participants}</p>` : ''}
-          ${data.comment ? `<p style="margin:0;"><strong>Commentaire :</strong> ${data.comment}</p>` : ''}
+          ${data.participants ? this.trustedHtml(`<p style="margin:0 0 8px;"><strong>Participants :</strong> ${data.participants}</p>`) : ''}
+          ${data.comment ? this.trustedHtml(`<p style="margin:0;"><strong>Commentaire :</strong> ${this.escapeHtml(data.comment)}</p>`) : ''}
         </div>
         <a href="https://app.getcoro.io/projects/${project.id}" style="display:inline-block;background:#C0392B;color:#FFFFFF;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:700;">
           Voir la demande →
@@ -64,9 +68,11 @@ export class BookingsService {
     return booking;
   }
 
-  async getBookingsForProject(projectId: string) {
+  async getBookingsForProject(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.booking.findMany({
-      where: { projectId },
+      where: { projectId, organizationId },
       include: {
         clientUser: { select: { firstName: true, lastName: true, email: true } },
         assignedUser: { select: { firstName: true, lastName: true, email: true } },
@@ -98,14 +104,20 @@ export class BookingsService {
     });
   }
 
+  async getBookingForClientCancellation(bookingId: string, clientUserId: string, organizationId: string) {
+    const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, clientUserId, organizationId }, select: { projectId: true } });
+    if (!booking) throw new NotFoundException('Réservation introuvable');
+    return booking;
+  }
+
   async updateBookingStatus(bookingId: string, data: {
     status: string;
     refuseReason?: string;
     reportedDate?: Date;
     newUserId?: string;
-  }) {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
+  }, organizationId: string) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, organizationId },
       include: {
         project: { include: { client: true, building: true } },
         clientUser: true,
@@ -113,6 +125,19 @@ export class BookingsService {
       },
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
+
+    if (!(data.status in BOOKING_TRANSITIONS) || !BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes(data.status as BookingStatus)) {
+      throw new BadRequestException('Transition de réservation non autorisée');
+    }
+    if (data.status === 'REPORTEE' && (!data.reportedDate || Number.isNaN(data.reportedDate.getTime()))) {
+      throw new BadRequestException('Date de report requise');
+    }
+    if (data.status === 'REASSIGNEE' && !data.newUserId) throw new BadRequestException('Conseiller requis');
+    if (data.status === 'REFUSEE' && !data.refuseReason?.trim()) throw new BadRequestException('Motif de refus requis');
+    if (data.newUserId) {
+      const user = await this.prisma.user.findFirst({ where: { id: data.newUserId, organizationId, isActive: true } });
+      if (!user) throw new BadRequestException('Conseiller invalide');
+    }
 
     const updateData: any = { status: data.status };
     if (data.refuseReason) updateData.refuseReason = data.refuseReason;
@@ -131,7 +156,7 @@ export class BookingsService {
 
     // Notifier le client selon le statut
     const actLabel = this.activityLabel(booking.activityType);
-    const dateLabel = new Date(booking.requestedDate).toLocaleDateString('fr-CA', {
+    const dateLabel = effectiveBookingDate(booking).toLocaleDateString('fr-CA', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
@@ -139,7 +164,9 @@ export class BookingsService {
       const icsContent = this.generateIcs({
         title: `${actLabel} — ${booking.project.name}`,
         description: `Réservation CORO\nActivité : ${actLabel}\nProjet : ${booking.project.name}\nBâtiment : ${booking.project.building?.name || ''}\nConseiller : ${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
-        startDate: new Date(booking.requestedDate),
+        startDate: effectiveBookingDate(booking),
+        bookingId,
+        sequence: booking.reportedDate ? 1 : 0,
         durationMinutes: booking.duration,
         location: booking.project.building?.address || '',
         organizerEmail: updated.assignedUser.email,
@@ -153,7 +180,7 @@ export class BookingsService {
         to: booking.clientUser.email,
         toName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
         subject: `✅ Réservation confirmée — ${actLabel}`,
-        content: `
+        content: this.safeHtml`
           <p>Votre demande de réservation a été <strong>confirmée</strong> par votre conseiller.</p>
           <div style="background:#EAFAF1;border:1px solid #A9DFBF;padding:16px;border-radius:8px;margin:16px 0;">
             <p style="margin:0 0 8px;color:#27AE60;font-weight:700;">✓ Réservation confirmée</p>
@@ -171,7 +198,7 @@ export class BookingsService {
         to: updated.assignedUser.email,
         toName: `${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
         subject: `📅 Réservation confirmée — ${actLabel} — ${booking.project.name}`,
-        content: `
+        content: this.safeHtml`
           <p>Vous avez confirmé une réservation. L'événement est joint à ce courriel.</p>
           <div style="background:#EAFAF1;border:1px solid #A9DFBF;padding:16px;border-radius:8px;margin:16px 0;">
             <p style="margin:0 0 8px;color:#27AE60;font-weight:700;">✓ Réservation confirmée</p>
@@ -188,12 +215,12 @@ export class BookingsService {
         to: booking.clientUser.email,
         toName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
         subject: `❌ Demande de réservation refusée — ${actLabel}`,
-        content: `
+        content: this.safeHtml`
           <p>Votre demande de réservation n'a pas pu être acceptée.</p>
           <div style="background:#FDEDEC;border:1px solid #F1948A;padding:16px;border-radius:8px;margin:16px 0;">
             <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
             <p style="margin:0 0 8px;"><strong>Date demandée :</strong> ${dateLabel}</p>
-            ${data.refuseReason ? `<p style="margin:0;"><strong>Motif :</strong> ${data.refuseReason}</p>` : ''}
+            ${data.refuseReason ? this.trustedHtml(`<p style="margin:0;"><strong>Motif :</strong> ${this.escapeHtml(data.refuseReason)}</p>`) : ''}
           </div>
           <p>Vous pouvez soumettre une nouvelle demande avec une autre date depuis votre portail.</p>
         `,
@@ -206,7 +233,9 @@ export class BookingsService {
       const icsReport = this.generateIcs({
         title: `${actLabel} — ${booking.project.name}`,
         description: `Réservation CORO (reportée)\nActivité : ${actLabel}\nProjet : ${booking.project.name}\nBâtiment : ${booking.project.building?.name || ''}\nConseiller : ${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
-        startDate: new Date(data.reportedDate),
+        startDate: effectiveBookingDate(updated),
+        bookingId,
+        sequence: 1,
         durationMinutes: booking.duration,
         location: booking.project.building?.address || '',
         organizerEmail: updated.assignedUser.email,
@@ -219,7 +248,7 @@ export class BookingsService {
         to: booking.clientUser.email,
         toName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
         subject: `📅 Réservation reportée — ${actLabel}`,
-        content: `
+        content: this.safeHtml`
           <p>Votre réservation a été <strong>reportée</strong> à une nouvelle date.</p>
           <div style="background:#FEF9E7;border:1px solid #FAD7A0;padding:16px;border-radius:8px;margin:16px 0;">
             <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
@@ -234,7 +263,7 @@ export class BookingsService {
         to: updated.assignedUser.email,
         toName: `${updated.assignedUser.firstName} ${updated.assignedUser.lastName}`,
         subject: `📅 Réservation reportée — ${actLabel} — ${booking.project.name}`,
-        content: `
+        content: this.safeHtml`
           <p>Vous avez reporté une réservation. L'événement mis à jour est joint à ce courriel.</p>
           <div style="background:#FEF9E7;border:1px solid #FAD7A0;padding:16px;border-radius:8px;margin:16px 0;">
             <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
@@ -252,7 +281,7 @@ export class BookingsService {
           to: booking.clientUser.email,
           toName: `${booking.clientUser.firstName} ${booking.clientUser.lastName}`,
           subject: `👤 Conseiller changé pour votre réservation`,
-          content: `
+          content: this.safeHtml`
             <p>Un nouveau conseiller a été assigné à votre réservation.</p>
             <div style="background:#F4ECF7;border:1px solid #D2B4DE;padding:16px;border-radius:8px;margin:16px 0;">
               <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
@@ -267,12 +296,13 @@ export class BookingsService {
     return updated;
   }
 
-  async cancelBooking(bookingId: string, cancelledBy: 'client' | 'conseiller') {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
+  async cancelBooking(bookingId: string, cancelledBy: 'client' | 'conseiller', organizationId: string, clientUserId?: string) {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, organizationId, ...(clientUserId ? { clientUserId } : {}) },
       include: { clientUser: true, assignedUser: true, project: true },
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
+    if (!BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes('ANNULEE')) throw new BadRequestException('Annulation non autorisée');
 
     await this.prisma.booking.update({
       where: { id: bookingId },
@@ -280,7 +310,7 @@ export class BookingsService {
     });
 
     const actLabel = this.activityLabel(booking.activityType);
-    const dateLabel = new Date(booking.requestedDate).toLocaleDateString('fr-CA', {
+    const dateLabel = effectiveBookingDate(booking).toLocaleDateString('fr-CA', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
 
@@ -294,7 +324,7 @@ export class BookingsService {
       to: notifyEmail,
       toName: notifyName,
       subject: `❌ Réservation annulée — ${actLabel}`,
-      content: `
+      content: this.safeHtml`
         <p>La réservation suivante a été <strong>annulée</strong> par ${cancelledBy === 'client' ? 'le client' : 'le conseiller'}.</p>
         <div style="background:#FDEDEC;border:1px solid #F1948A;padding:16px;border-radius:8px;margin:16px 0;">
           <p style="margin:0 0 8px;"><strong>Activité :</strong> ${actLabel}</p>
@@ -317,7 +347,19 @@ export class BookingsService {
     return labels[type] || type;
   }
 
+  private escapeHtml(value: unknown): string {
+    return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+  }
+
+  private trustedHtml(value: string): { html: string } { return { html: value }; }
+
+  private safeHtml(parts: TemplateStringsArray, ...values: unknown[]): string {
+    return parts.reduce((result, part, index) => result + part + (index < values.length ? (typeof values[index] === 'object' && values[index] !== null && 'html' in values[index] ? (values[index] as { html: string }).html : this.escapeHtml(values[index])) : ''), '');
+  }
+
   private generateIcs(data: {
+    bookingId: string;
+    sequence: number;
     title: string;
     description: string;
     startDate: Date;
@@ -333,7 +375,7 @@ export class BookingsService {
       return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
     };
     const endDate = new Date(data.startDate.getTime() + data.durationMinutes * 60000);
-    const uid = `${Date.now()}-${Math.random().toString(36).substr(2,9)}@getcoro.io`;
+    const uid = `${data.bookingId}@getcoro.io`;
     const now = formatDate(new Date());
 
     return [
@@ -353,7 +395,7 @@ export class BookingsService {
       `ORGANIZER;CN=${data.organizerName}:mailto:${data.organizerEmail}`,
       `ATTENDEE;CN=${data.attendeeName};RSVP=TRUE:mailto:${data.attendeeEmail}`,
       'STATUS:CONFIRMED',
-      'SEQUENCE:0',
+      `SEQUENCE:${data.sequence}`,
       'END:VEVENT',
       'END:VCALENDAR',
     ].filter(Boolean).join('\r\n');
@@ -400,11 +442,12 @@ export class BookingsService {
         }];
       }
 
-      await fetch('https://api.brevo.com/v3/smtp/email', {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
         body: JSON.stringify(body),
       });
+      if (!response.ok) console.error(`Erreur email réservation Brevo: HTTP ${response.status}`);
     } catch (e) { console.error('Erreur email réservation:', e); }
   }
 }

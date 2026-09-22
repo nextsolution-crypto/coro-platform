@@ -1667,8 +1667,24 @@ export class ClientPortalService {
     duration: number;
     participants?: number;
     comment?: string;
+    actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] };
   }) {
+    await this.assertBookingProjectAccess(data.projectId, data.actor);
     return this.bookingsService.createBooking(data);
+  }
+
+  private async assertBookingProjectAccess(projectId: string, actor: { clientId: string; organizationId: string; role: string; buildingIds?: string[] }) {
+    const project = await this.getProject(projectId, actor.clientId, actor.organizationId, actor.role);
+    if (!project || (actor.role === 'CLIENT_MANAGER' && actor.buildingIds?.length && !actor.buildingIds.includes(project.buildingId))) {
+      throw new ForbiddenException('Projet inaccessible');
+    }
+    return project;
+  }
+
+  async cancelBookingFromClient(bookingId: string, actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] }) {
+    const booking = await this.bookingsService.getBookingForClientCancellation(bookingId, actor.sub, actor.organizationId);
+    await this.assertBookingProjectAccess(booking.projectId, actor);
+    return this.bookingsService.cancelBooking(bookingId, 'client', actor.organizationId, actor.sub);
   }
 
   async getBookingsForClient(clientUserId: string) {
