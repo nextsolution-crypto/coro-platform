@@ -22,7 +22,15 @@ describe('CapacityService workload', () => {
     project: { id: 'project', userId: 'owner', name: 'Projet', mandate: { ownerId: 'owner' } },
     bookings, ...overrides,
   });
-  const booking = (status = 'CONFIRMEE', assignments: any[] = [], overrides: Record<string, unknown> = {}) => ({
+  type BookingFixture = {
+    id: string;
+    status: string;
+    requestedDate: Date;
+    reportedDate: Date | null;
+    duration: number;
+    assignments: unknown[];
+  };
+  const booking = (status = 'CONFIRMEE', assignments: unknown[] = [], overrides: Partial<BookingFixture> = {}): BookingFixture => ({
     id: 'booking', status, requestedDate: start(), reportedDate: null,
     duration: 180, assignments, ...overrides,
   });

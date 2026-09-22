@@ -39,7 +39,7 @@ describe('ClientPortalService booking scope', () => {
     [{ status: 'annule' }, 'cancelled'],
     [{ project: { clientId: 'other', buildingId: 'building-a' } }, 'other client'],
     [{ project: { clientId: 'client-a', buildingId: 'building-b' } }, 'other building'],
-  ])('rejects activity booking when %s (%s)', async (change) => {
+  ])('rejects activity booking when %s (%s)', async (change, _reason) => {
     const activity = { id: 'activity', projectId: 'project', type: 'exercice_table', status: 'a_faire', clientVisible: true, clientBookable: true,
       project: { clientId: 'client-a', buildingId: 'building-a' }, ...change };
     (service as any).prisma.projectActivity.findFirst.mockResolvedValue(activity);
