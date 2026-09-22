@@ -100,6 +100,13 @@ export default function SettingsPage() {
                 path: '/settings/users',
                 color: '#27AE60',
               },
+              {
+                icon: <FileText size={20} />,
+                label: 'Types d’activités',
+                desc: 'Catalogue, apparence, durée et ordre des activités',
+                path: '/settings/activity-types',
+                color: '#7D3C98',
+              },
             ],
           },
         ]

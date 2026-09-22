@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { PlannerEvent, PlannerResponse, PlannerUser } from './types';
 import { dateKey, formatClock, formatDay, nowMarker, segmentForDay, timelineDayMinWidth, visibleHours } from './time';
 import { eventForUser, eventLabel, eventStatus } from './projection';
+import { getActivityTypeVisual } from './activityTypeVisual';
 import styles from './planning.module.css';
 
 function AdvisorLabel({ user }: { user: PlannerUser }) {
@@ -84,19 +85,19 @@ export default function ResourceTimeline({ data, days, onSelect }: {
               className={styles.workBand} style={{ left: `${segment!.left}%`, width: `${segment!.width}%` }}
               title={`Horaire de travail ${formatClock(interval.startUtc, timeZone)}–${formatClock(interval.endUtc, timeZone)}`} />)}
             {work.length === 0 && <span className={styles.noScheduleText}>{user.id === '__unassigned' ? 'Aucun conseiller affecté' : user.workScheduleConfigured === false ? 'Horaire non configuré' : user.availability === 'GENERIC' ? 'Aucune plage projetée' : 'Hors horaire de travail'}</span>}
-            {events.map(({ event, segment }, index) => <button key={`${event.id}-${index}`} type="button"
+            {events.map(({ event, segment }, index) => { const visual = getActivityTypeVisual(event.activityType); return <button key={`${event.id}-${index}`} type="button"
               onClick={() => onSelect(event)}
               className={`${styles.event} ${event.source === 'USER_UNAVAILABILITY' ? styles.unavailable :
                 event.source === 'LEGACY_ACTIVITY' ? styles.legacy :
                 event.status === 'REQUESTED' ? styles.requested :
                 event.status === 'PROVISIONAL' ? styles.provisional :
                 event.status === 'BUSY' ? styles.busy : styles.confirmed}`}
-              style={{ left: `${segment!.left}%`, width: `${Math.max(segment!.width, 1)}%`,
+              style={{ left: `${segment!.left}%`, width: `${Math.max(segment!.width, 1)}%`, borderTopColor: visual.color,
                 top: `${6 + index * 38}px` }}
               aria-label={`${eventLabel(event)}, ${eventStatus(event)}, ${formatClock(event.startUtc, timeZone)} à ${formatClock(event.endUtc, timeZone)}${event.needsAction ? ', action requise' : ''}${event.warnings.length ? ', à vérifier' : ''}`}>
-              <span className={styles.eventTitle}>{eventLabel(event)}</span>
+              <span className={styles.eventTitle}><span aria-hidden="true">{visual.icon}</span> {eventLabel(event)}</span>
               <span className={styles.eventMeta}>{formatClock(event.startUtc, timeZone)} · {eventStatus(event)}{event.needsAction || event.warnings.length ? ' · ⚠' : ''}</span>
-            </button>)}
+            </button>; })}
           </div>;
         })}
       </div>)}

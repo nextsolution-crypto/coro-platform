@@ -25,8 +25,8 @@ export class ActivitiesController {
   constructor(private readonly service: ActivitiesService) {}
 
   @Get('activities/catalog')
-  getCatalog() {
-    return this.service.getCatalog();
+  getCatalog(@Request() req: AuthenticatedRequest) {
+    return this.service.getCatalog(req.user);
   }
 
   @Get('projects/:projectId/activities')

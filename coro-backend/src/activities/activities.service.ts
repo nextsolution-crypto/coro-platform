@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
+import { ActivityTypesService } from '../activity-types/activity-types.service';
 
 export const ACTIVITY_CATALOG = [
   {
@@ -91,7 +92,7 @@ export const ACTIVITY_CATALOG = [
 
 @Injectable()
 export class ActivitiesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly activityTypes: ActivityTypesService) {}
 
   // Vérification propriété
   private async assertOwnership(projectId: string, organizationId: string) {
@@ -103,8 +104,20 @@ export class ActivitiesService {
   }
 
   // Catalogue des activités disponibles
-  getCatalog() {
-    return ACTIVITY_CATALOG;
+  async getCatalog(actor: AdviserActor) {
+    const items = await this.activityTypes.list(actor);
+    return items.map((item) => ({
+      activityTypeId: item.id, type: item.code, label: item.nameFR,
+      duration: item.defaultDurationMinutes ? this.formatDuration(item.defaultDurationMinutes) : '',
+      defaultDurationMinutes: item.defaultDurationMinutes, clientBookableDefault: item.clientBookableDefault,
+      visualToken: item.visualToken, iconKey: item.iconKey, isSystem: item.isSystem,
+      displayOrder: item.displayOrder, mode: 'presentiel',
+    }));
+  }
+
+  private formatDuration(minutes: number) {
+    const hours = Math.floor(minutes / 60); const rest = minutes % 60;
+    return `${hours ? `${hours}h` : ''}${rest ? String(rest).padStart(2, '0') : hours ? '00' : ''}`;
   }
 
   // Récupérer les activités d'un projet
@@ -126,18 +139,28 @@ export class ActivitiesService {
   // Ajouter une activité
   async createActivity(projectId: string, organizationId: string, dto: any) {
     await this.assertOwnership(projectId, organizationId);
-    if (dto.clientVisible === false && dto.clientBookable === true) {
+    const selectedType = dto.activityTypeId ? await this.prisma.activityType.findFirst({ where: {
+      id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
+    } }) : null;
+    if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
+    const type = selectedType?.code ?? dto.type;
+    const customLabel = dto.customLabel?.trim() || null;
+    if (type === 'autre' && !customLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
+    const duration = dto.duration ?? (selectedType?.defaultDurationMinutes ? this.formatDuration(selectedType.defaultDurationMinutes) : '');
+    const clientBookable = dto.clientBookable === undefined ? (selectedType?.clientBookableDefault ?? false) : dto.clientBookable === true;
+    if (dto.clientVisible === false && clientBookable) {
       throw new BadRequestException('Une activité réservable doit être visible par le client');
     }
     return this.prisma.projectActivity.create({
       data: {
         projectId,
         organizationId,
-        type: dto.type,
-        label: dto.label,
-        duration: dto.duration || '',
+        type,
+        activityTypeId: selectedType?.id ?? null,
+        label: selectedType?.nameFR ?? dto.label,
+        duration,
         mode: dto.mode || 'presentiel',
-        customLabel: dto.customLabel || null,
+        customLabel,
         customDuration: dto.customDuration || null,
         scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : null,
         status: dto.status || 'a_faire',
@@ -145,7 +168,8 @@ export class ActivitiesService {
         clientEmail: dto.clientEmail || null,
         notes: dto.notes || null,
         clientVisible: dto.clientVisible === undefined ? true : dto.clientVisible,
-        clientBookable: dto.clientBookable === true,
+        clientBookable,
+        dureeHeures: dto.dureeHeures ?? (selectedType?.defaultDurationMinutes ? selectedType.defaultDurationMinutes / 60 : null),
       },
     });
   }
@@ -156,6 +180,14 @@ export class ActivitiesService {
       where: { id: activityId, organizationId },
     });
     if (!activity) throw new NotFoundException('Activité introuvable');
+
+    const selectedType = dto.activityTypeId ? await this.prisma.activityType.findFirst({ where: {
+      id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
+    } }) : null;
+    if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
+    const resultingType = selectedType?.code ?? dto.type ?? activity.type;
+    const resultingCustomLabel = dto.customLabel === undefined ? activity.customLabel : dto.customLabel?.trim() || null;
+    if (resultingType === 'autre' && !resultingCustomLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
 
     const visible = dto.clientVisible === undefined ? activity.clientVisible : dto.clientVisible;
     const bookable = dto.clientBookable === undefined ? activity.clientBookable : dto.clientBookable;
@@ -176,6 +208,11 @@ export class ActivitiesService {
     delete updateData.projectId;
     delete updateData.organizationId;
     delete updateData.sourceMandate;
+    if (selectedType) {
+      updateData.type = selectedType.code;
+      updateData.label = selectedType.nameFR;
+      updateData.customLabel = resultingCustomLabel;
+    }
     if (dto.status === 'reporte' && dto.reportedDate) {
       updateData.reportedDate = new Date(dto.reportedDate);
       updateData.scheduledDate = new Date(dto.reportedDate);

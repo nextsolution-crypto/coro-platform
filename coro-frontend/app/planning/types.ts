@@ -12,6 +12,7 @@ export type PlannerEvent = {
   assignments?: Array<{ userId: string; role: string; status: string }>;
   bookingId?: string; projectId?: string; activityId?: string; buildingId?: string; clientId?: string;
   projectName?: string; clientName?: string; buildingName?: string; ownerName?: string;
+  activityType?: { code: string; nameFR: string; visualToken: string; iconKey?: string | null };
 };
 
 export type PlannerWorkInterval = { userId: string; startUtc: string; endUtc: string; verified: boolean };

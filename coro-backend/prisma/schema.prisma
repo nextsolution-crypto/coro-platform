@@ -46,6 +46,7 @@ model Organization {
   populationEvidenceManifests PopulationEvidenceManifest[]
   populationEvidenceReports   PopulationEvidenceReport[]
   operationalReviewReports    OperationalReviewReport[]
+  activityTypes               ActivityType[]
   // Programme de recommandation
   referralsSent               Referral[]                   @relation("ReferralReferrer")
   referralReceived            Referral?                    @relation("ReferralReferred")
@@ -629,6 +630,8 @@ model ProjectActivity {
   projectId      String
   project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   type           String
+  activityTypeId String?
+  activityType   ActivityType?   @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
   label          String
   duration       String
   mode           String          @default("presentiel")
@@ -650,6 +653,58 @@ model ProjectActivity {
   clientBookable Boolean         @default(false)
   bookings       Booking[]
   exerciseReport ExerciseReport?
+
+  @@index([activityTypeId])
+}
+
+enum ActivityTypeVisualToken {
+  BLUE
+  CYAN
+  VIOLET
+  SLATE
+  INDIGO
+  NAVY
+  ORANGE
+  GREEN
+  AMBER
+  ROSE
+  NEUTRAL
+}
+
+enum ActivityTypeIconKey {
+  EXERCISE
+  INSPECTION
+  TRAINING
+  MEETING
+  AUDIT
+  DOCUMENT
+  FIELD
+  OTHER
+}
+
+model ActivityType {
+  id                     String                  @id @default(uuid())
+  organizationId         String?
+  organization           Organization?           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code                   String
+  nameFR                 String
+  nameEN                 String?
+  descriptionFR          String?
+  descriptionEN          String?
+  visualToken            ActivityTypeVisualToken @default(NEUTRAL)
+  iconKey                ActivityTypeIconKey?
+  defaultDurationMinutes Int?
+  clientBookableDefault  Boolean                 @default(false)
+  isSystem               Boolean                 @default(false)
+  isActive               Boolean                 @default(true)
+  displayOrder           Int                     @default(0)
+  archivedAt             DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  activities             ProjectActivity[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive, displayOrder, nameFR, id], map: "ActivityType_organizationId_isActive_displayOrder_idx")
 }
 
 model TaskList {

@@ -6,12 +6,26 @@ const admin = { userId: 'admin-a', organizationId: 'org-a', role: 'ADMIN' };
 function harness() {
   const prisma = {
     project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }) },
-    projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
+    projectActivity: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
+    activityType: { findFirst: jest.fn() },
   };
-  return { prisma, service: new ActivitiesService(prisma as never) };
+  const activityTypes = { list: jest.fn().mockResolvedValue([]) };
+  return { prisma, service: new ActivitiesService(prisma as never, activityTypes as never) };
 }
 
 describe('ActivitiesService exercise report summary', () => {
+  it('applies catalog defaults once when creating an activity', async () => {
+    const h = harness();
+    h.prisma.activityType.findFirst.mockResolvedValue({ id:'type-a', code:'custom-inspection', nameFR:'Inspection', defaultDurationMinutes:90, clientBookableDefault:true });
+    h.prisma.projectActivity.create.mockImplementation(({ data }: any) => data);
+    const result:any = await h.service.createActivity('project-a','org-a',{ activityTypeId:'type-a' });
+    expect(result).toMatchObject({ activityTypeId:'type-a', type:'custom-inspection', label:'Inspection', duration:'1h30', dureeHeures:1.5, clientBookable:true });
+  });
+
+  it('requires a custom label for the system Other type', async () => {
+    const h = harness(); h.prisma.activityType.findFirst.mockResolvedValue({ id:'other', code:'autre', nameFR:'Autre' });
+    await expect(h.service.createActivity('project-a','org-a',{ activityTypeId:'other' })).rejects.toThrow('libellé personnalisé');
+  });
   it('emits one UTC Z suffix in activity ICS dates', () => {
     const ics = harness().service.generateIcs({ id: 'activity-a', scheduledDate: new Date('2026-10-01T13:00:00Z'), duration: '1h', title: 'Test' });
     expect(ics).toContain('DTSTART:20261001T130000Z');

@@ -20,6 +20,13 @@ function loadTypescript(name) {
 
 const time = loadTypescript('time.ts');
 const projection = loadTypescript('projection.ts');
+const activityVisual = loadTypescript('activityTypeVisual.ts');
+
+test('activity type visual mapping is controlled and shared by planner views', () => {
+  assert.deepEqual(activityVisual.getActivityTypeVisual({ nameFR: 'Formation', visualToken: 'VIOLET', iconKey: 'TRAINING' }),
+    { label: 'Formation', color: '#7d3c98', icon: '◆' });
+  assert.equal(activityVisual.getActivityTypeVisual({ nameFR: 'Inconnu', visualToken: 'url(evil)', iconKey: 'HTML' }).color, '#7b858d');
+});
 
 test('day, full week and work week use exact civil windows', () => {
   assert.deepEqual(time.viewDays('2026-09-23', 'workweek'), [

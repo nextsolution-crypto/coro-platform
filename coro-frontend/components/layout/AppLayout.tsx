@@ -52,6 +52,7 @@ const ADMIN_GROUP = {
     { label: 'Capacity Planning',    path: '/admin/capacity',               icon: '⚡' },
     { label: 'Rendement équipe',      path: '/dashboard/rendement',          icon: '📊' },
     { label: 'Modèles de tâches',    path: '/settings/task-templates',      icon: '✅' },
+    { label: 'Types d’activités',     path: '/settings/activity-types',      icon: '◆' },
     { label: 'Catégories timelog',   path: '/settings/timelog-categories',  icon: '🏷' },
     { label: 'Nous écrire',          path: '/settings/feedback',            icon: '💬' },
   ],

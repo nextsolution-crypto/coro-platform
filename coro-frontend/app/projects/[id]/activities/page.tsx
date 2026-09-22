@@ -5,21 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { Plus, Trash2, Download, Copy } from 'lucide-react';
 import api from '@/lib/api';
 
-const ACTIVITY_CATALOG = [
-  { type: 'creation_document', label: 'Création ou mise à jour de document (PMU/PSI/PUE/PGC...)', duration: 'Variable', mode: 'presentiel' },
-  { type: 'formation_equipe_urgence', label: 'Formation pour équipe d\'urgence', duration: '2h30 – 3h00', mode: 'presentiel' },
-  { type: 'formation_equipe_urgence_exercice', label: 'Formation pour équipe d\'urgence + exercice simulé', duration: '3h00 – 3h30', mode: 'presentiel' },
-  { type: 'formation_travail_chaud', label: 'Formation travail à chaud', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_coordonnateur', label: 'Formation aux coordonnateurs d\'urgence', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_epi', label: 'Formation équipe de première intervention (EPI)', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_communication', label: 'Formation communication d\'urgence', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_comportement', label: 'Formation comportement et attitude en situation d\'urgence', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_locataires', label: 'Formation aux locataires', duration: '1h00', mode: 'teams' },
-  { type: 'exercice_table', label: 'Exercice de table', duration: '2h00', mode: 'teams' },
-  { type: 'exercice_evacuation', label: 'Exercice d\'évacuation annuel', duration: '3h00', mode: 'presentiel' },
-  { type: 'autre', label: 'Autre', duration: '', mode: 'presentiel' },
-];
-
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
   fait:     { label: 'Fait',     color: '#27AE60', bg: '#EAFAF1' },
@@ -34,6 +19,7 @@ export default function ActivitiesPage() {
   const projectId = params.id as string;
 
   const [activities, setActivities] = useState<any[]>([]);
+  const [activityCatalog, setActivityCatalog] = useState<any[]>([]);
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -55,12 +41,14 @@ export default function ActivitiesPage() {
 
   const fetchData = async () => {
     try {
-      const [projectRes, activitiesRes] = await Promise.all([
+      const [projectRes, activitiesRes, catalogRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/projects/${projectId}/activities`),
+        api.get('/activities/catalog'),
       ]);
       setProject(projectRes.data);
       setActivities(activitiesRes.data);
+      setActivityCatalog(catalogRes.data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -72,10 +60,11 @@ export default function ActivitiesPage() {
 
   const handleAddActivity = async () => {
     if (!form.type) return;
-    const catalog = ACTIVITY_CATALOG.find(a => a.type === form.type);
+    const catalog = activityCatalog.find(a => a.type === form.type);
     try {
       await api.post(`/projects/${projectId}/activities`, {
         type: form.type,
+        activityTypeId: catalog?.activityTypeId,
         label: form.type === 'autre' ? (form.customLabel || 'Autre') : (catalog?.label || ''),
         duration: form.type === 'autre' ? form.customDuration : (catalog?.duration || ''),
         mode: form.mode,
@@ -317,7 +306,7 @@ export default function ActivitiesPage() {
                   className="w-full px-3 py-2.5 text-sm rounded"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
                   <option value="">Sélectionner...</option>
-                  {ACTIVITY_CATALOG.map(a => (
+                  {activityCatalog.map(a => (
                     <option key={a.type} value={a.type}>{a.label} {a.duration ? `(${a.duration})` : ''}</option>
                   ))}
                 </select>

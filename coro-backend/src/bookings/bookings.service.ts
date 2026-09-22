@@ -30,12 +30,13 @@ export class BookingsService {
     if (!project) throw new NotFoundException('Projet introuvable');
     const timeZone = project.building?.timeZone ?? 'America/Toronto';
     const requestedDate = resolveBookingInstant({ iso: data.requestedDate, localDateTime: data.requestedLocalDateTime }, timeZone);
+    let linkedActivity: { type: string } | null = null;
     if (data.activityId) {
-      const activity = await this.prisma.projectActivity.findFirst({ where: {
+      linkedActivity = await this.prisma.projectActivity.findFirst({ where: {
         id: data.activityId, projectId: data.projectId, organizationId: project.organizationId,
         clientVisible: true, clientBookable: true, status: { notIn: ['fait', 'termine', 'annule'] },
       } });
-      if (!activity) throw new BadRequestException('Activité non réservable');
+      if (!linkedActivity) throw new BadRequestException('Activité non réservable');
       const open = await this.prisma.booking.findFirst({ where: { activityId: data.activityId, status: { in: OPEN_BOOKING_STATUSES } } });
       if (open) throw new BadRequestException('Cette activité possède déjà une réservation ouverte');
     }
@@ -47,7 +48,7 @@ export class BookingsService {
         organizationId: project.organizationId,
         clientUserId: data.clientUserId,
         assignedUserId: project.userId,
-        activityType: data.activityType,
+        activityType: linkedActivity?.type ?? data.activityType,
         requestedDate,
         duration: data.duration,
         participants: data.participants,

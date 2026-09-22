@@ -142,11 +142,11 @@ describe('BookingsService security and transitions', () => {
   });
 
   it('creates a linked booking and rejects a second open attempt', async () => {
-    prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity' });
+    prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity', type: 'formation_epi' });
     prisma.booking.create.mockResolvedValue({ ...booking, assignedUser: booking.assignedUser });
     const data = { projectId: 'project', activityId: 'activity', clientUserId: 'client-user', activityType: 'visite', requestedDate: booking.requestedDate, duration: 60 };
     await service.createBooking(data);
-    expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ activityId: 'activity' }) }));
+    expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ activityId: 'activity', activityType: 'formation_epi' }) }));
     prisma.booking.findFirst.mockResolvedValue({ id: 'open' });
     await expect(service.createBooking(data)).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.booking.create).toHaveBeenCalledTimes(1);

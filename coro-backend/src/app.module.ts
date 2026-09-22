@@ -51,6 +51,7 @@ import { OperationalReviewsModule } from './operational-reviews/operational-revi
 import { ExerciseReportsModule } from './exercise-reports/exercise-reports.module';
 import { WorkSchedulesModule } from './work-schedules/work-schedules.module';
 import { PlanningModule } from './planning/planning.module';
+import { ActivityTypesModule } from './activity-types/activity-types.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -111,7 +112,8 @@ import { APP_GUARD } from '@nestjs/core';
     RemindersModule,
     BookingsModule,
     WorkSchedulesModule,
-    PlanningModule,
+  PlanningModule,
+  ActivityTypesModule,
     ProjectFilesModule,
 PcaConfiguratorModule,
 OccupancyModule,
