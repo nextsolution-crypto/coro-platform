@@ -3,7 +3,7 @@ import { join } from 'path';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, PDFFont, PDFPage, rgb } from 'pdf-lib';
 
-export const CORRECTIVE_ACTION_TRACKING_REPORT_GENERATOR_VERSION = 'coro-corrective-actions-pdf/1.0.0';
+export const CORRECTIVE_ACTION_TRACKING_REPORT_GENERATOR_VERSION = 'coro-corrective-actions-pdf/1.0.1';
 
 export type TrackingAction = {
   reference: string | null; title: string; description: string | null; priority: string; status: string;
@@ -40,6 +40,14 @@ const date = (value: string | null) => {
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
   return `${part('day')} ${part('month')} ${part('year')} à ${part('hour')} h ${part('minute')} UTC`;
 };
+
+export function formatDateOnlyFr(value: string | null | undefined): string {
+  const calendar = /^(\d{4}-\d{2}-\d{2})(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)?$/.exec(value ?? '')?.[1];
+  if (!calendar) return 'Non renseignée';
+  const dateOnly = new Date(`${calendar}T12:00:00.000Z`);
+  if (Number.isNaN(dateOnly.getTime()) || dateOnly.toISOString().slice(0, 10) !== calendar) return 'Non renseignée';
+  return new Intl.DateTimeFormat('fr-CA', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' }).format(dateOnly);
+}
 
 export function trackingKpis(data: TrackingRenderData) {
   const counts = { total: data.actions.length, planned: 0, inProgress: 0, completed: 0, verified: 0, closed: 0, cancelled: 0 };
@@ -87,7 +95,7 @@ export function buildTrackingReportLines(data: TrackingRenderData, meta: Trackin
     lines.push(line(`${action.reference ?? 'Référence non renseignée'} — ${action.title}`, 'action'),
       line(`${label(statusLabels, action.status)}  ·  Priorité : ${label(priorityLabels, action.priority)}`),
       line(`Responsable au moment de la situation : ${action.assigneeDisplayName ?? 'Non renseigné'}`),
-      line(`Échéance : ${date(action.dueDate)}`));
+      line(`Échéance : ${formatDateOnlyFr(action.dueDate)}`));
   }
   lines.push(line('', 'gap'), line('4. DÉTAIL DES ACTIONS', 'section'));
   if (!actions.length) lines.push(line('Aucun détail à présenter.'));
@@ -96,7 +104,7 @@ export function buildTrackingReportLines(data: TrackingRenderData, meta: Trackin
     if (action.source.findingDisplayOrder !== null) lines.push(line(`Constat ${String(action.source.findingDisplayOrder).padStart(2, '0')} : ${action.source.findingTitle ?? 'Non renseigné'}`));
     if (action.source.recommendationDisplayOrder !== null) lines.push(line(`Recommandation ${action.source.findingDisplayOrder ?? '?'}.${action.source.recommendationDisplayOrder} : ${action.source.recommendationTitle ?? 'Non renseignée'}`));
     lines.push(line(`Statut : ${label(statusLabels, action.status)}  ·  Priorité : ${label(priorityLabels, action.priority)}`),
-      line(`Responsable : ${action.assigneeDisplayName ?? 'Non renseigné'}`), line(`Échéance : ${date(action.dueDate)}`),
+      line(`Responsable : ${action.assigneeDisplayName ?? 'Non renseigné'}`), line(`Échéance : ${formatDateOnlyFr(action.dueDate)}`),
       line(`Créée le : ${date(action.createdAt)}`));
     if (action.description) lines.push(line(`Description : ${action.description}`));
     if (action.completedAt) lines.push(line(`Réalisation déclarée le : ${date(action.completedAt)}`));

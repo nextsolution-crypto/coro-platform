@@ -1,5 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
-import { buildTrackingReportLines, CorrectiveActionTrackingReportRenderer, CORRECTIVE_ACTION_TRACKING_REPORT_GENERATOR_VERSION, trackingKpis, TrackingAction, TrackingRenderData } from './corrective-action-tracking-report.renderer';
+import { buildTrackingReportLines, CorrectiveActionTrackingReportRenderer, CORRECTIVE_ACTION_TRACKING_REPORT_GENERATOR_VERSION, formatDateOnlyFr, trackingKpis, TrackingAction, TrackingRenderData } from './corrective-action-tracking-report.renderer';
 
 const meta = { reportVersion: 1, generatedAt: '2026-09-22T03:00:00.000Z', generatorVersion: CORRECTIVE_ACTION_TRACKING_REPORT_GENERATOR_VERSION, generatedByType: 'CLIENT_USER' };
 const action = (status: string): TrackingAction => ({
@@ -23,6 +23,26 @@ const data = (actions: TrackingAction[]): TrackingRenderData => ({ schemaVersion
 }, actions });
 
 describe('CorrectiveActionTrackingReportRenderer', () => {
+  it('préserve la date métier sans décalage de fuseau ni heure', () => {
+    expect(formatDateOnlyFr('2026-09-25T00:00:00.000Z')).toBe('25 septembre 2026');
+    expect(formatDateOnlyFr('2026-01-01T00:00:00.000Z')).toBe('1 janvier 2026');
+    expect(formatDateOnlyFr('2028-02-29T00:00:00.000Z')).toBe('29 février 2028');
+    expect(formatDateOnlyFr(null)).toBe('Non renseignée');
+    expect(formatDateOnlyFr(undefined)).toBe('Non renseignée');
+    expect(formatDateOnlyFr('2026-02-30T00:00:00.000Z')).toBe('Non renseignée');
+    expect(formatDateOnlyFr('unexpected')).toBe('Non renseignée');
+  });
+
+  it('rend les deux échéances date-only sans changer les vrais timestamps UTC', () => {
+    const current = action('CLOSED');
+    current.dueDate = '2026-09-25T00:00:00.000Z';
+    const lines = buildTrackingReportLines(data([current]), meta).map((entry) => entry.text);
+    expect(lines.filter((text) => text === 'Échéance : 25 septembre 2026')).toHaveLength(2);
+    expect(lines.join('\n')).not.toContain('Échéance : 25 septembre 2026 à 00 h 00 UTC');
+    expect(lines.join('\n')).toContain('Créée le : 21 septembre 2026 à 00 h 00 UTC');
+    expect(lines.join('\n')).toContain('Situation au : 22 septembre 2026 à 02 h 30 UTC');
+    expect(lines.join('\n')).toContain(CORRECTIVE_ACTION_TRACKING_REPORT_GENERATOR_VERSION);
+  });
   it('calcule les KPI depuis le snapshot, y compris zero applicable', () => {
     expect(trackingKpis(data(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'VERIFIED', 'CLOSED', 'CANCELLED'].map(action)))).toMatchObject({ total: 6, planned: 1, inProgress: 1, completed: 1, verified: 1, closed: 1, cancelled: 1, applicable: 5, closureRate: 20 });
     expect(trackingKpis(data([])).closureRate).toBeNull();
