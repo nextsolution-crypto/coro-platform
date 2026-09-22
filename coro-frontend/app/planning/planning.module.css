@@ -27,13 +27,13 @@
 .notice,.empty { padding:14px; background:#f4f7fa; border-radius:8px; color:#5d6d7e; font-size:13px }
 .error { padding:14px; background:#fceeed; border:1px solid #e5ada8; border-radius:8px; color:#922b21; font-size:13px }
 .gridSection { background:white; border:1px solid #e9ecef; border-radius:10px; overflow:hidden }
-.timelineScroll { overflow-x:auto; max-width:100% }.timeline { display:grid; min-width:max-content }
+.timelineScroll { overflow-x:auto; max-width:100% }.timeline { display:grid; grid-auto-flow:row; min-width:max-content }
 .corner,.dayHeader { min-height:82px; padding:12px 10px 6px; background:#f7f8fa; border-bottom:1px solid #cfd6dc; border-right:1px solid #e0e5e9 }
 .dayHeader { position:relative }
 .corner { display:grid; align-content:center; gap:5px }.corner small { color:#6c757d }
 .dayHeader strong { display:block; text-transform:capitalize; font-size:13px; margin-bottom:12px }
 .tickLabels { position:relative; height:20px; margin:0 9px; color:#45515c; font-size:11px; font-weight:600 }
-.tickLabels span { position:absolute; transform:translateX(-50%) }.tickLabels span:first-child { transform:none }.tickLabels span:last-child { transform:translateX(-100%) }
+.tickLabels span { position:absolute; transform:translateX(-50%); white-space:nowrap }.tickLabels span:first-child { transform:none }.tickLabels span:last-child { transform:translateX(-100%) }
 .resourceRow { display:contents }.stickyLeft { position:sticky; left:0; z-index:3 }
 .advisorCell { min-height:128px; padding:13px; background:white; border-bottom:1px solid #e2e7ea; border-right:1px solid #cfd6dc }
 .advisor { display:grid; gap:4px }.advisor strong { font-size:13px }.advisor span,.advisor small { color:#6c757d; font-size:11px }

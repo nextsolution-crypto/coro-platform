@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { PlannerEvent, PlannerResponse, PlannerUser } from './types';
-import { dateKey, formatClock, formatDay, nowMarker, segmentForDay, timelineDayMinWidth, visibleHours } from './time';
+import { dateKey, formatClock, formatDay, nowMarker, segmentForDay, timelineDayMinWidth, timelineGridLayout, timelineLabelTicks, visibleHours } from './time';
 import { eventForUser, eventLabel, eventStatus } from './projection';
 import { getActivityTypeVisual } from './activityTypeVisual';
 import styles from './planning.module.css';
@@ -30,6 +30,8 @@ export default function ResourceTimeline({ data, days, onSelect }: {
     [days, timeZone, data.events, data.workIntervals]);
   const ticks = useMemo(() => Array.from({ length: (hours.end - hours.start) / 30 + 1 },
     (_, index) => hours.start + index * 30), [hours]);
+  const labelTicks = useMemo(() => timelineLabelTicks(hours, days.length), [hours, days.length]);
+  const layout = timelineGridLayout(days.length, rows.length);
   const current = nowMarker(now, days, timeZone, hours);
   const eventsByUser = useMemo(() => {
     const map = new Map<string, PlannerEvent[]>();
@@ -53,31 +55,31 @@ export default function ResourceTimeline({ data, days, onSelect }: {
   if (!rows.length) return <p className={styles.empty}>Aucun conseiller pour ces filtres.</p>;
   return <div className={styles.timelineScroll} role="region" aria-label="Planification de l'équipe" tabIndex={0}>
     <div className={styles.timeline} style={{ gridTemplateColumns: `205px repeat(${days.length}, minmax(${timelineDayMinWidth(days.length)}px, 1fr))` }}>
-      <div className={`${styles.corner} ${styles.stickyLeft}`}>
+      <div className={`${styles.corner} ${styles.stickyLeft}`} style={{ gridColumn: 1, gridRow: 1 }}>
         <strong>Conseillers</strong>
         <small>{String(hours.start / 60).padStart(2, '0')}:00–{String(hours.end / 60).padStart(2, '0')}:00</small>
       </div>
-      {days.map((day, index) => <div className={`${styles.dayHeader} ${day === today ? styles.todayHeader : ''} ${index % 7 >= 5 && days.length === 7 ? styles.weekend : ''}`} key={day}>
+      {days.map((day, index) => <div className={`${styles.dayHeader} ${day === today ? styles.todayHeader : ''} ${index % 7 >= 5 && days.length === 7 ? styles.weekend : ''}`} key={day} style={{ gridColumn: layout.dayColumns[index], gridRow: 1 }}>
         <strong>{formatDay(day)}{day === today ? ' · Aujourd’hui' : ''}</strong>
-        <div className={styles.tickLabels}>{ticks.map((tick, index) =>
-          <span key={tick} style={{ left: `${index / (ticks.length - 1) * 100}%` }}>
-            {tick % 60 === 0 ? `${String(Math.floor(tick / 60)).padStart(2, '0')}h` : '·'}
+        <div className={styles.tickLabels}>{labelTicks.map((tick) =>
+          <span key={tick} style={{ left: `${(tick - hours.start) / (hours.end - hours.start) * 100}%` }}>
+            {`${String(Math.floor(tick / 60)).padStart(2, '0')}h`}
           </span>)}</div>
         {current?.day === day && <span className={styles.nowBadge} style={{ left: `${current.position}%` }}>Maintenant</span>}
       </div>)}
-      {current && <div className={styles.nowColumn} style={{ gridColumn: current.dayIndex + 2, gridRow: '2 / -1' }} aria-hidden="true">
+      {current && <div className={styles.nowColumn} style={{ gridColumn: current.dayIndex + 2, gridRow: `${layout.nowRowStart} / span ${layout.nowRowSpan}` }} aria-hidden="true">
         <span style={{ left: `${current.position}%` }} />
       </div>}
-      {rows.map(user => <div className={styles.resourceRow} key={user.id}>
-        <div className={`${styles.stickyLeft} ${styles.advisorCell}`}><AdvisorLabel user={user} /></div>
-        {days.map(day => {
+      {rows.map((user, rowIndex) => <div className={styles.resourceRow} key={user.id}>
+        <div className={`${styles.stickyLeft} ${styles.advisorCell}`} style={{ gridColumn: layout.advisorColumn, gridRow: layout.resourceRows[rowIndex] }}><AdvisorLabel user={user} /></div>
+        {days.map((day, dayIndex) => {
           const work = (workByUser.get(user.id) ?? []).map(interval => ({ interval,
             segment: segmentForDay(interval, day, timeZone, hours) })).filter(item => item.segment);
           const events = (eventsByUser.get(user.id) ?? []).map(event => ({ event,
             segment: segmentForDay(event, day, timeZone, hours) })).filter(item => item.segment);
           const weekend = days.length === 7 && days.indexOf(day) >= 5;
           return <div className={`${styles.dayTrack} ${work.length ? '' : styles.noSchedule} ${weekend ? styles.weekend : ''}`} key={day}
-            style={{ minHeight: `${Math.max(128, 14 + events.length * 38)}px` }}
+            style={{ minHeight: `${Math.max(128, 14 + events.length * 38)}px`, gridColumn: layout.dayColumns[dayIndex], gridRow: layout.resourceRows[rowIndex] }}
             aria-label={`${user.name}, ${formatDay(day)}`}>
             <div className={styles.trackLines}>{ticks.map((tick, index) =>
               <span key={tick} style={{ left: `${index / (ticks.length - 1) * 100}%` }} />)}</div>

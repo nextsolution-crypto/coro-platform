@@ -82,6 +82,38 @@ test('timeline adapts day widths and renders one global now marker', () => {
   assert.equal(time.nowMarker(new Date('2026-09-22T14:30:00Z'), ['2026-09-22'], 'America/Toronto', { start: 480, end: 1020 }).dayIndex, 0);
 });
 
+test('timeline grid keeps the advisor column separate for day, workweek and week', () => {
+  for (const dayCount of [1, 5, 7]) {
+    const layout = time.timelineGridLayout(dayCount, 3);
+    assert.equal(layout.columnCount, dayCount + 1);
+    assert.equal(layout.advisorColumn, 1);
+    assert.equal(layout.dayColumns.length, dayCount);
+    assert.deepEqual(layout.dayColumns, Array.from({ length: dayCount }, (_, index) => index + 2));
+    assert.ok(layout.dayColumns.every(column => column !== layout.advisorColumn));
+    assert.deepEqual(layout.resourceRows, [2, 3, 4]);
+  }
+});
+
+test('timeline label density is detailed by day and readable over seven days', () => {
+  const hours = { start: 7 * 60, end: 19 * 60 };
+  const day = time.timelineLabelTicks(hours, 1);
+  const workweek = time.timelineLabelTicks(hours, 5);
+  const week = time.timelineLabelTicks(hours, 7);
+  assert.ok(day.length > week.length);
+  assert.deepEqual(workweek, [420, 540, 660, 780, 900, 1020, 1140]);
+  assert.deepEqual(week, workweek);
+  assert.ok(week.every((tick, index) => index === 0 || tick - week[index - 1] >= 120));
+});
+
+test('now marker resolves to one day column and one resource-row span', () => {
+  const marker = time.nowMarker(new Date('2026-09-22T14:30:00Z'),
+    time.viewDays('2026-09-22', 'week'), 'America/Toronto', { start: 420, end: 1140 });
+  const layout = time.timelineGridLayout(7, 3);
+  assert.deepEqual(marker && { count: 1, column: marker.dayIndex + 2 }, { count: 1, column: 3 });
+  assert.equal(layout.nowRowStart, 2);
+  assert.equal(layout.nowRowSpan, 3);
+});
+
 test('month cell summary keeps textual request, conflict and unknown counts', () => {
   const startUtc = '2026-09-22T13:00:00Z';
   const events = Array.from({ length: 3 }, (_, index) => ({ id: `e${index}`, startUtc }));

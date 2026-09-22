@@ -107,6 +107,26 @@ export function timelineDayMinWidth(dayCount: number): number {
   return 180;
 }
 
+export function timelineGridLayout(dayCount: number, resourceCount: number) {
+  const safeDays = Math.max(0, dayCount);
+  return {
+    columnCount: safeDays + 1,
+    advisorColumn: 1,
+    dayColumns: Array.from({ length: safeDays }, (_, index) => index + 2),
+    resourceRows: Array.from({ length: Math.max(0, resourceCount) }, (_, index) => index + 2),
+    nowRowStart: 2,
+    nowRowSpan: Math.max(1, resourceCount),
+  };
+}
+
+export function timelineLabelTicks(hours: { start: number; end: number }, dayCount: number): number[] {
+  const step = dayCount === 1 ? 60 : 120;
+  const ticks: number[] = [];
+  for (let minute = hours.start; minute <= hours.end; minute += step) ticks.push(minute);
+  if (ticks.at(-1) !== hours.end) ticks.push(hours.end);
+  return ticks;
+}
+
 export function plannerDayUrl(currentSearch: string, day: string): string {
   const params = new URLSearchParams(currentSearch);
   params.set('date', day); params.set('view', 'day');
