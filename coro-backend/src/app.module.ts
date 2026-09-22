@@ -49,6 +49,7 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { PopulationModule } from './population/population.module';
 import { OperationalReviewsModule } from './operational-reviews/operational-reviews.module';
 import { ExerciseReportsModule } from './exercise-reports/exercise-reports.module';
+import { WorkSchedulesModule } from './work-schedules/work-schedules.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -108,6 +109,7 @@ import { APP_GUARD } from '@nestjs/core';
     ScheduleModule.forRoot(),
     RemindersModule,
     BookingsModule,
+    WorkSchedulesModule,
     ProjectFilesModule,
 PcaConfiguratorModule,
 OccupancyModule,

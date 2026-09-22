@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { effectiveBookingDate } from '../bookings/booking-status';
 import { parseActivityDurationHours } from '../mandate/capacity-duration';
+import { scheduleRanges, uncovered } from '../work-schedules/work-schedule-time';
 
 export type AvailabilityStatus = 'AVAILABLE' | 'SOFT_CONFLICT' | 'BLOCKED' | 'UNKNOWN';
 export type SchedulingSource = 'BOOKING' | 'LEGACY_ACTIVITY' | 'USER_UNAVAILABILITY' | 'WORK_SCHEDULE' | 'MICROSOFT_CALENDAR' | 'TRAVEL';
@@ -13,7 +14,7 @@ export type SchedulingConflict = {
 };
 export type AvailabilityResult = {
   status: AvailabilityStatus; conflicts: SchedulingConflict[]; warnings: string[];
-  sourcesChecked: Array<'BOOKING' | 'LEGACY_ACTIVITY'>;
+  sourcesChecked: SchedulingSource[];
 };
 export type SchedulingInterval = { startUtc: Date; endUtc: Date; timeZone: string; timeZoneVerified: boolean };
 
@@ -88,7 +89,9 @@ export class SchedulingService {
     if (!input.userIds.length) return new Map();
     const db = tx ?? this.prisma;
     const earliestStart = new Date(input.startUtc.getTime() - 24 * 60 * 60_000);
-    const [users, building, assignments, activities] = await Promise.all([
+    const lowerDate = new Date(input.startUtc.getTime() - 2 * 86400000);
+    const upperDate = new Date(input.endUtc.getTime() + 2 * 86400000);
+    const [users, building, assignments, activities, schedules, unavailabilities] = await Promise.all([
       db.user.findMany({ where: { organizationId: input.organizationId, isActive: true, id: { in: input.userIds } },
         select: { id: true, email: true } }),
       input.targetBuildingId ? db.building.findFirst({ where: { id: input.targetBuildingId, organizationId: input.organizationId },
@@ -108,6 +111,12 @@ export class SchedulingService {
         bookings: { none: {} },
       }, select: { id: true, label: true, customLabel: true, assigneeEmail: true, scheduledDate: true,
         duration: true, customDuration: true, project: { select: { building: { select: { timeZone: true, timeZoneVerified: true } } } } } }),
+      db.userWorkSchedule.findMany({ where: { organizationId: input.organizationId, userId: { in: input.userIds },
+        effectiveFrom: { lt: upperDate }, OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: lowerDate } }] },
+        include: { intervals: true } }),
+      db.userUnavailability.findMany({ where: { organizationId: input.organizationId, userId: { in: input.userIds },
+        cancelledAt: null, startAt: { lt: input.endUtc }, endAt: { gt: input.startUtc } },
+        select: { id: true, userId: true, startAt: true, endAt: true, timeZone: true } }),
     ]);
     if (input.targetBuildingId && !building) throw new NotFoundException('Bâtiment introuvable');
     const results = new Map<string, AvailabilityResult>();
@@ -153,6 +162,43 @@ export class SchedulingService {
       result.conflicts.push({ severity: 'SOFT_CONFLICT', source: 'LEGACY_ACTIVITY', sourceId: activity.id,
         activityId: activity.id, startUtc, endUtc, timeZone,
         label: activity.customLabel || activity.label, reason: 'Conflit potentiel — activité legacy' });
+    }
+    for (const absence of unavailabilities) {
+      const result = results.get(absence.userId);
+      if (!result) continue;
+      result.sourcesChecked.push('USER_UNAVAILABILITY');
+      result.conflicts.push({ severity: 'BLOCKED', source: 'USER_UNAVAILABILITY', sourceId: absence.id,
+        startUtc: absence.startAt, endUtc: absence.endAt, timeZone: absence.timeZone,
+        label: 'Indisponible', reason: 'Indisponible' });
+    }
+    for (const [userId, result] of results) {
+      if (!result.sourcesChecked.includes('USER_UNAVAILABILITY')) result.sourcesChecked.push('USER_UNAVAILABILITY');
+      const versions = schedules.filter(schedule => schedule.userId === userId && schedule.verifiedAt);
+      if (!versions.length) { result.warnings.push('Horaire non configuré'); continue; }
+      try {
+        const validity: Array<{ startUtc: Date; endUtc: Date; scheduleId: string; timeZone: string }> = [];
+        const work: Array<{ startUtc: Date; endUtc: Date }> = [];
+        for (const version of versions) {
+          const ranges = scheduleRanges(version.intervals, version.timeZone, input.startUtc, input.endUtc,
+            version.effectiveFrom, version.effectiveUntil);
+          if (ranges.validity.endUtc > ranges.validity.startUtc) {
+            validity.push({ ...ranges.validity, scheduleId: version.id, timeZone: version.timeZone });
+            work.push(...ranges.work);
+          }
+        }
+        if (validity.length) result.sourcesChecked.push('WORK_SCHEDULE');
+        if (uncovered(target, validity).length) result.warnings.push('Horaire non configuré pour tout le créneau');
+        for (const known of validity) {
+          const inside = work.filter(range => overlaps(known, range));
+          for (const gap of uncovered(known, inside)) {
+            result.conflicts.push({ severity: 'BLOCKED', source: 'WORK_SCHEDULE', sourceId: known.scheduleId,
+              startUtc: gap.startUtc, endUtc: gap.endUtc, timeZone: known.timeZone,
+              label: 'Hors horaire de travail', reason: 'Le créneau dépasse l’horaire de travail' });
+          }
+        }
+      } catch {
+        result.warnings.push('Horaire local impossible à interpréter au changement d’heure');
+      }
     }
     for (const result of results.values()) {
       // A demonstrated firm conflict remains BLOCKED. Any unresolved timezone or

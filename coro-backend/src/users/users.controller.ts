@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Param, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
+import type { UpdateMeDto } from './users.service';
 
 @Controller('users')
 export class UsersController {
@@ -53,10 +54,17 @@ export class UsersController {
     return this.usersService.findById(req.user.userId);
   }
 
+  @Put('organization/:userId/time-zone')
+  @UseGuards(AuthGuard('jwt'))
+  async setTimeZone(@Param('userId') userId: string, @Body() body: { timeZone: string }, @Request() req: any) {
+    this.assertAdmin(req);
+    return this.usersService.setTimeZone(userId, req.user.organizationId, body?.timeZone);
+  }
+
   @Put('me')
   @UseGuards(AuthGuard('jwt'))
-  async updateMe(@Request() req: any, @Body() body: any) {
-    return this.usersService.updateUser(req.user.userId, body);
+  async updateMe(@Request() req: any, @Body() body: UpdateMeDto) {
+    return this.usersService.updateMe(req.user.userId, body, ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role));
   }
 
   @Put('me/password')
@@ -71,12 +79,12 @@ export class UsersController {
   @Put('me/logo')
   @UseGuards(AuthGuard('jwt'))
   async updateLogo(@Request() req: any, @Body() body: { companyLogoB64: string }) {
-    return this.usersService.updateUser(req.user.userId, { companyLogoB64: body.companyLogoB64 });
+    return this.usersService.updateLogo(req.user.userId, 'companyLogoB64', body.companyLogoB64);
   }
 
   @Put('me/logo-full')
   @UseGuards(AuthGuard('jwt'))
   async updateLogoFull(@Request() req: any, @Body() body: { companyLogoFullB64: string }) {
-    return this.usersService.updateUser(req.user.userId, { companyLogoFullB64: body.companyLogoFullB64 });
+    return this.usersService.updateLogo(req.user.userId, 'companyLogoFullB64', body.companyLogoFullB64);
   }
 }

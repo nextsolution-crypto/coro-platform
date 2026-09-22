@@ -3,6 +3,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
 import { getLimitsForLicense } from '../organizations/license-limits';
+import { assertIanaTimeZone } from '../bookings/booking-time';
+
+export type UpdateMeDto = Partial<{
+  firstName: string; lastName: string; email: string; horaireBase: number;
+  companyName: string | null; companyPhone: string | null; companyEmail: string | null;
+  companyAddress: string | null; companyWebsite: string | null;
+  companyTagline: string | null; companyLicense: string | null;
+}>;
+const SELF_FIELDS = new Set(['firstName', 'lastName', 'email', 'horaireBase']);
+const COMPANY_FIELDS = new Set(['companyName', 'companyPhone', 'companyEmail', 'companyAddress', 'companyWebsite', 'companyTagline', 'companyLicense']);
 
 @Injectable()
 export class UsersService {
@@ -27,6 +37,8 @@ export class UsersService {
         organizationId: true,
         isActive: true,
         horaireBase: true,
+        timeZone: true,
+        timeZoneVerified: true,
         companyName: true,
         companyLogoB64: true,
         companyLogoFullB64: true,
@@ -52,8 +64,18 @@ export class UsersService {
       data: { ...data, password: hashedPassword },
     });
   }
-  async updateUser(id: string, data: any) {
-    const { password, ...safeData } = data;
+  async updateMe(id: string, data: UpdateMeDto, isManager: boolean) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new BadRequestException('Profil invalide');
+    const safeData: UpdateMeDto = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (!SELF_FIELDS.has(key) && !(isManager && COMPANY_FIELDS.has(key))) throw new BadRequestException(`Champ de profil interdit : ${key}`);
+      if (key === 'horaireBase') {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 168) throw new BadRequestException('Horaire de base invalide');
+      } else if (typeof value !== 'string' && !(COMPANY_FIELDS.has(key) && value === null)) {
+        throw new BadRequestException(`Valeur invalide : ${key}`);
+      }
+      (safeData as Record<string, unknown>)[key] = value;
+    }
     return this.prisma.user.update({
       where: { id },
       data: safeData,
@@ -73,8 +95,23 @@ export class UsersService {
         companyTagline: true,
         companyLicense: true,
         horaireBase: true,
+        timeZone: true,
+        timeZoneVerified: true,
       },
     });
+  }
+
+  async updateLogo(id: string, field: 'companyLogoB64' | 'companyLogoFullB64', value: string | null) {
+    if (value !== null && typeof value !== 'string') throw new BadRequestException('Logo invalide');
+    return this.prisma.user.update({ where: { id }, data: { [field]: value }, select: { id: true, [field]: true } });
+  }
+
+  async setTimeZone(userId: string, organizationId: string, timeZone: string) {
+    assertIanaTimeZone(timeZone);
+    const user = await this.prisma.user.findFirst({ where: { id: userId, organizationId } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable');
+    return this.prisma.user.update({ where: { id: userId }, data: { timeZone, timeZoneVerified: true },
+      select: { id: true, timeZone: true, timeZoneVerified: true } });
   }
 
   private validatePasswordStrength(password: string): void {

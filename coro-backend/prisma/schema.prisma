@@ -84,22 +84,29 @@ model User {
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
-  projects           Project[]
-  feedbacks          Feedback[]
-  lastEditedProjects Project[]             @relation("lastEditedProjects")
-  submittedProjects  Project[]             @relation("submittedProjects")
-  createdTemplates   ProjectTemplate[]     @relation("createdTemplates")
-  auditLogs          AuditLog[]
-  taskAssignees      ProjectTaskAssignee[]
-  timeEntries        TaskTimeEntry[]
-  projectComments    ProjectComment[]
-  ownedMandates      ProjectMandate[]      @relation("mandateOwner")
-  assignedTasks      ProjectTask[]         @relation("taskAssignee")
-  horaireBase        Float                 @default(40)
-  timelogEntries     TimelogEntry[]
-  customProcedures   CustomProcedure[]
-  refreshTokens      RefreshToken[]
-  trustedDevices     TrustedDevice[]
+  projects                  Project[]
+  feedbacks                 Feedback[]
+  lastEditedProjects        Project[]             @relation("lastEditedProjects")
+  submittedProjects         Project[]             @relation("submittedProjects")
+  createdTemplates          ProjectTemplate[]     @relation("createdTemplates")
+  auditLogs                 AuditLog[]
+  taskAssignees             ProjectTaskAssignee[]
+  timeEntries               TaskTimeEntry[]
+  projectComments           ProjectComment[]
+  ownedMandates             ProjectMandate[]      @relation("mandateOwner")
+  assignedTasks             ProjectTask[]         @relation("taskAssignee")
+  horaireBase               Float                 @default(40)
+  timeZone                  String                @default("America/Toronto")
+  timeZoneVerified          Boolean               @default(false)
+  workSchedules             UserWorkSchedule[]    @relation("WorkScheduleUser")
+  workSchedulesVerified     UserWorkSchedule[]    @relation("WorkScheduleVerifier")
+  unavailabilities          UserUnavailability[]  @relation("UnavailableUser")
+  unavailabilitiesCreated   UserUnavailability[]  @relation("UnavailabilityCreator")
+  unavailabilitiesCancelled UserUnavailability[]  @relation("UnavailabilityCanceller")
+  timelogEntries            TimelogEntry[]
+  customProcedures          CustomProcedure[]
+  refreshTokens             RefreshToken[]
+  trustedDevices            TrustedDevice[]
 
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -120,6 +127,70 @@ model User {
   exerciseFindingsValidated        ExerciseFinding[]        @relation("ExerciseFindingValidator")
   exerciseRecommendationsValidated ExerciseRecommendation[] @relation("ExerciseRecommendationValidator")
   exerciseActionItemsValidated     ExerciseActionItem[]     @relation("ExerciseActionItemValidator")
+}
+
+model UserWorkSchedule {
+  id               String                     @id @default(uuid())
+  organizationId   String
+  userId           String
+  user             User                       @relation("WorkScheduleUser", fields: [userId], references: [id])
+  timeZone         String
+  effectiveFrom    DateTime
+  effectiveUntil   DateTime?
+  verifiedAt       DateTime
+  verifiedByUserId String
+  verifiedBy       User                       @relation("WorkScheduleVerifier", fields: [verifiedByUserId], references: [id])
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  intervals        UserWorkScheduleInterval[]
+
+  @@index([organizationId, userId, effectiveFrom])
+}
+
+model UserWorkScheduleInterval {
+  id         String           @id @default(uuid())
+  scheduleId String
+  schedule   UserWorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int
+  startTime  Int
+  endTime    Int
+  createdAt  DateTime         @default(now())
+
+  @@index([scheduleId, dayOfWeek])
+}
+
+enum UserUnavailabilityType {
+  VACATION
+  SICK
+  TRAINING
+  TRAVEL
+  ADMIN_BLOCK
+  PERSONAL
+  OTHER
+}
+
+model UserUnavailability {
+  id                String                 @id @default(uuid())
+  organizationId    String
+  userId            String
+  user              User                   @relation("UnavailableUser", fields: [userId], references: [id])
+  startAt           DateTime
+  endAt             DateTime
+  allDay            Boolean                @default(false)
+  localStartDate    DateTime?              @db.Date
+  localEndDate      DateTime?              @db.Date
+  timeZone          String
+  type              UserUnavailabilityType
+  privateNote       String?
+  createdByUserId   String
+  createdBy         User                   @relation("UnavailabilityCreator", fields: [createdByUserId], references: [id])
+  cancelledAt       DateTime?
+  cancelledByUserId String?
+  cancelledBy       User?                  @relation("UnavailabilityCanceller", fields: [cancelledByUserId], references: [id])
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([organizationId, userId, startAt, endAt])
 }
 
 enum UserRole {

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
+import WorkSchedulePanel from '@/components/WorkSchedulePanel';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -200,6 +201,8 @@ export default function ProfilePage() {
             {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé' : 'Sauvegarder'}
           </button>
         </div>
+
+        <WorkSchedulePanel manager={false} />
 
         {/* Changer le mot de passe */}
         <div className="rounded-md p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>

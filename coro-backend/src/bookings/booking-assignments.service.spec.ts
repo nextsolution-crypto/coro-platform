@@ -183,6 +183,23 @@ describe('BookingAssignmentsService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a', isActive: true }) }));
   });
 
+  it('keeps schedule and absence decisions separate from workload in available-users', async () => {
+    const users = ['marco', 'solange', 'amel', 'juan'].map(id => ({ id, firstName: id, lastName: 'Test', email: `${id}@example.com` }));
+    prisma.user.findMany = jest.fn().mockResolvedValue(users);
+    scheduling.analyzeUsers.mockResolvedValue(new Map([
+      ['marco', { status: 'AVAILABLE', conflicts: [], warnings: [], sourcesChecked: ['WORK_SCHEDULE'] }],
+      ['solange', { status: 'BLOCKED', conflicts: [{ source: 'USER_UNAVAILABILITY', label: 'Indisponible' }], warnings: [], sourcesChecked: ['WORK_SCHEDULE', 'USER_UNAVAILABILITY'] }],
+      ['amel', { status: 'UNKNOWN', conflicts: [], warnings: ['Horaire non configuré'], sourcesChecked: ['USER_UNAVAILABILITY'] }],
+      ['juan', { status: 'BLOCKED', conflicts: [{ source: 'WORK_SCHEDULE', label: 'Hors horaire de travail' }], warnings: [], sourcesChecked: ['WORK_SCHEDULE'] }],
+    ]));
+    capacity.getCapacityPlanning.mockResolvedValue(users.map((row, i) => ({ userId: row.id,
+      chargeConfirmee: i + 1, chargeProvisoire: 0, tauxUtilisationConfirmee: 40 + i })));
+    const result = await service.availableUsers('booking', admin);
+    expect(result.map(row => row.availabilityStatus)).toEqual(['AVAILABLE', 'BLOCKED', 'UNKNOWN', 'BLOCKED']);
+    expect(result.map(row => row.utilizationConfirmed)).toEqual([40, 41, 42, 43]);
+    expect(JSON.stringify(result)).not.toMatch(/SICK|VACATION|privateNote/);
+  });
+
   it('does not expose candidates across tenants or to an operator', async () => {
     await expect(service.availableUsers('booking', { ...admin, organizationId: 'org-b' })).rejects.toBeInstanceOf(NotFoundException);
     await expect(service.availableUsers('booking', operator)).rejects.toBeInstanceOf(ForbiddenException);

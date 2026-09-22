@@ -5,6 +5,9 @@ const date = (hour: number, minute = 0) => new Date(Date.UTC(2026, 9, 1, hour, m
 const target = { organizationId: 'org-a', userId: 'user-a', startUtc: date(9), endUtc: date(12), targetBuildingId: 'building' };
 const booking = (status: string, requestedDate = date(10)) => ({ id: 'booking-b', status, requestedDate,
   reportedDate: null, duration: 60, project: { name: 'Projet B', building: { timeZone: 'America/Toronto', timeZoneVerified: true } } });
+const fullSchedule = { id: 'schedule', userId: 'user-a', timeZone: 'America/Toronto',
+  effectiveFrom: new Date('2026-01-01'), effectiveUntil: null, verifiedAt: new Date('2026-01-01'),
+  intervals: Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, startTime: 0, endTime: 1440 })) };
 
 describe('Scheduling interval', () => {
   it.each(['DECLINED', 'REPLACED', 'REMOVED'])('ignores %s assignments', status => {
@@ -39,6 +42,8 @@ describe('SchedulingService', () => {
       building: { findFirst: jest.fn().mockResolvedValue({ timeZone: 'America/Toronto', timeZoneVerified: true }) },
       bookingAssignment: { findMany: jest.fn().mockResolvedValue([]) },
       projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
+      userWorkSchedule: { findMany: jest.fn().mockResolvedValue([fullSchedule]) },
+      userUnavailability: { findMany: jest.fn().mockResolvedValue([]) },
     };
     service = new SchedulingService(prisma);
   });
@@ -58,6 +63,8 @@ describe('SchedulingService', () => {
       building: { findFirst: jest.fn().mockResolvedValue({ timeZone: 'America/Toronto', timeZoneVerified: true }) },
       bookingAssignment: { findMany: jest.fn().mockResolvedValue([]) },
       projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
+      userWorkSchedule: { findMany: jest.fn().mockResolvedValue([fullSchedule]) },
+      userUnavailability: { findMany: jest.fn().mockResolvedValue([]) },
     } as any;
     expect((await service.analyzeUser(target, tx)).status).toBe('AVAILABLE');
     expect(tx.bookingAssignment.findMany).toHaveBeenCalledTimes(1);
@@ -69,7 +76,71 @@ describe('SchedulingService', () => {
 
   it('returns AVAILABLE with checked sources when timezone is verified', async () => {
     expect(await service.analyzeUser(target)).toEqual({ status: 'AVAILABLE', conflicts: [], warnings: [],
-      sourcesChecked: ['BOOKING', 'LEGACY_ACTIVITY'] });
+      sourcesChecked: ['BOOKING', 'LEGACY_ACTIVITY', 'USER_UNAVAILABILITY', 'WORK_SCHEDULE'] });
+  });
+
+  it('returns UNKNOWN without a verified schedule while preserving soft and firm Booking signals', async () => {
+    prisma.userWorkSchedule.findMany.mockResolvedValue([]);
+    expect((await service.analyzeUser(target)).status).toBe('UNKNOWN');
+    prisma.bookingAssignment.findMany.mockResolvedValue([assignment('PENDING', 'CONFIRMEE')]);
+    const soft = await service.analyzeUser(target);
+    expect(soft.status).toBe('UNKNOWN');
+    expect(soft.conflicts).toEqual([expect.objectContaining({ severity: 'SOFT_CONFLICT' })]);
+    prisma.bookingAssignment.findMany.mockResolvedValue([assignment('ACCEPTED', 'CONFIRMEE')]);
+    expect((await service.analyzeUser(target)).status).toBe('BLOCKED');
+  });
+
+  it.each([
+    ['before', date(9), date(10), 360, 480],
+    ['after', date(9), date(12), 300, 360],
+    ['partial', date(9), date(12), 300, 420],
+  ])('blocks %s a verified work interval', async (_label, startUtc, endUtc, startTime, endTime) => {
+    prisma.userWorkSchedule.findMany.mockResolvedValue([{ ...fullSchedule,
+      intervals: [{ dayOfWeek: 4, startTime, endTime }] }]);
+    const result = await service.analyzeUser({ ...target, startUtc, endUtc });
+    expect(result.status).toBe('BLOCKED');
+    expect(result.conflicts).toEqual(expect.arrayContaining([expect.objectContaining({ source: 'WORK_SCHEDULE', label: 'Hors horaire de travail' })]));
+  });
+
+  it('blocks a lunch gap but accepts adjacent intervals', async () => {
+    prisma.userWorkSchedule.findMany.mockResolvedValue([{ ...fullSchedule,
+      intervals: [{ dayOfWeek: 4, startTime: 240, endTime: 360 }, { dayOfWeek: 4, startTime: 420, endTime: 600 }] }]);
+    expect((await service.analyzeUser(target)).status).toBe('BLOCKED');
+    prisma.userWorkSchedule.findMany.mockResolvedValue([{ ...fullSchedule,
+      intervals: [{ dayOfWeek: 4, startTime: 240, endTime: 360 }, { dayOfWeek: 4, startTime: 360, endTime: 600 }] }]);
+    expect((await service.analyzeUser(target)).status).toBe('AVAILABLE');
+  });
+
+  it('uses the applicable version and keeps the historical one independent', async () => {
+    const old = { ...fullSchedule, id: 'old', effectiveUntil: new Date('2026-10-01'), intervals: [] };
+    const current = { ...fullSchedule, id: 'new', effectiveFrom: new Date('2026-10-01') };
+    prisma.userWorkSchedule.findMany.mockResolvedValue([old, current]);
+    expect((await service.analyzeUser(target)).status).toBe('AVAILABLE');
+    expect(prisma.userWorkSchedule.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a' }) }));
+  });
+
+  it('covers a Booking across a timezone version boundary without a UTC gap', async () => {
+    const boundary = new Date('2026-10-01T07:00:00Z');
+    prisma.userWorkSchedule.findMany.mockResolvedValue([
+      { ...fullSchedule, id: 'old', effectiveUntil: boundary },
+      { ...fullSchedule, id: 'new', timeZone: 'America/Vancouver', effectiveFrom: boundary },
+    ]);
+    const result = await service.analyzeUser({ ...target,
+      startUtc: new Date('2026-10-01T06:00:00Z'), endUtc: new Date('2026-10-01T08:00:00Z') });
+    expect(result.status).toBe('AVAILABLE');
+    expect(result.conflicts).toEqual([]);
+  });
+
+  it('treats an active unavailability as blocked with a generic projection', async () => {
+    prisma.userUnavailability.findMany.mockResolvedValue([{ id: 'absence', userId: 'user-a', startAt: date(10), endAt: date(11),
+      timeZone: 'America/Toronto', type: 'SICK', privateNote: 'secret' }]);
+    const result = await service.analyzeUser(target);
+    expect(result.status).toBe('BLOCKED');
+    expect(result.conflicts).toEqual([expect.objectContaining({ source: 'USER_UNAVAILABILITY', label: 'Indisponible' })]);
+    expect(JSON.stringify(result)).not.toMatch(/SICK|secret/);
+    expect(prisma.userUnavailability.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      cancelledAt: null, startAt: { lt: target.endUtc }, endAt: { gt: target.startUtc },
+    }) }));
   });
 
   it.each(['CONFIRMEE', 'REPORTEE', 'REASSIGNEE'])('blocks accepted %s bookings', async status => {
