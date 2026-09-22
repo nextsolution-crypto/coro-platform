@@ -3,7 +3,7 @@ import { join } from 'path';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, PDFPage, PDFFont, rgb } from 'pdf-lib';
 
-export const OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION = 'coro-rex-pdf/1.0.1';
+export const OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION = 'coro-rex-pdf/1.1.0';
 
 type Recommendation = {
   title: string | null; description: string; rationale: string | null; priority: string | null;
@@ -30,13 +30,18 @@ const labels: Record<string, string> = {
   RISK: 'Risque', IMPROVEMENT_OPPORTUNITY: "Occasion d'amélioration",
   CRITICAL: 'Critique', HIGH: 'Élevée', MEDIUM: 'Modérée', LOW: 'Faible', INFORMATIONAL: 'Information',
   OPEN: 'Ouvert', ACCEPTED: 'Acceptée', REJECTED: 'Rejetée', MONITORED: 'Sous surveillance', CLOSED: 'Fermé',
-  PROPOSED: 'Proposée', DEFERRED: 'Reportée', CLIENT_USER: 'Utilisateur client', USER: 'Conseiller CORO', SYSTEM: 'Système CORO',
+  PROPOSED: 'Proposée', DEFERRED: 'Reportée', CLIENT_USER: 'Utilisateur client', USER: 'Utilisateur CORO', SYSTEM: 'Système CORO',
 };
 const human = (value: string | null) => value ? labels[value] ?? 'Non renseigné' : 'Non renseigné';
 const clean = (value: unknown) => String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
-const date = (value: string | null) => value ? new Intl.DateTimeFormat('fr-CA', {
-  timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', hourCycle: 'h23',
-}).format(new Date(value)).replace(/ (\d{1,2}) h (\d{2})$/, ' à $1 h $2') + ' UTC' : 'Non renseigné';
+const date = (value: string | null) => {
+  if (!value) return 'Non renseigné';
+  const parts = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('day')} ${part('month')} ${part('year')} à ${part('hour').padStart(2, '0')} h ${part('minute')} UTC`;
+};
 
 export function buildOperationalReviewReportText(data: OperationalReviewReportData): string[] {
   const lines = [
@@ -45,8 +50,9 @@ export function buildOperationalReviewReportText(data: OperationalReviewReportDa
     `Source : ${human(data.sourceType)}`, `Finalisé le : ${date(data.finalizedAt)}`,
     '[[PAGE_BREAK]]', '1. IDENTIFICATION', `Référence : ${data.reference}`, `Version REX : ${data.reviewVersion}`,
     `Statut : Finalisé`, `Confidentialité : ${human(data.confidentiality)}`,
-    `Organisation (nom relevé à la génération) : ${data.organizationNameAtGeneration ?? 'Non renseigné'}`,
-    `Bâtiment (nom relevé à la génération) : ${data.buildingNameAtGeneration ?? 'Non renseigné'}`,
+    `Organisation : ${data.organizationNameAtGeneration ?? 'Non renseigné'}`,
+    `Bâtiment : ${data.buildingNameAtGeneration ?? 'Non renseigné'}`,
+    'Les noms de l’organisation et du bâtiment correspondent aux valeurs enregistrées lors de la génération du rapport.',
     `Créé le : ${date(data.createdAt)} · ${human(data.createdByType)}`,
     `Soumis le : ${date(data.submittedAt)} · ${human(data.submittedByType)}`,
     `Finalisé le : ${date(data.finalizedAt)} · ${human(data.finalizedByType)}`,
@@ -75,7 +81,7 @@ export function buildOperationalReviewReportText(data: OperationalReviewReportDa
   lines.push('5. ACTIONS CORRECTIVES',
     'Les actions correctives issues des recommandations acceptées sont suivies séparément dans CORO et poursuivent leur cycle indépendamment du présent rapport finalisé.',
     '', '6. NOTE DOCUMENTAIRE',
-    'Le présent rapport reflète le retour d’expérience tel qu’il a été finalisé. Le suivi des actions correctives est réalisé séparément dans CORO.',
+    'Le présent rapport restitue le retour d’expérience tel qu’il a été finalisé. Aucune donnée ultérieure n’y est incorporée.',
     '', '7. TRAÇABILITÉ', `Référence : ${data.reference} · Version REX ${data.reviewVersion}`,
     `Source : ${human(data.sourceType)}`, `REX finalisé le : ${date(data.finalizedAt)}`,
     `Rapport généré le : ${date(data.generatedAt)} · ${human(data.generatedByType)}`,
@@ -101,17 +107,18 @@ export class OperationalReviewReportRenderer {
     const regular = await pdf.embedFont(regularBytes, { subset: false });
     const bold = await pdf.embedFont(boldBytes, { subset: false });
     const pages: PDFPage[] = [];
-    let page: PDFPage;
+    let page!: PDFPage;
     let y = 0;
     const addPage = () => {
       page = pdf.addPage([595.28, 841.89]); pages.push(page); y = 784;
-      if (pages.length > 1) page.drawText('CORO  |  RAPPORT DE RETOUR D’EXPÉRIENCE', { x: 48, y: 813, size: 8, font: bold, color: rgb(.08, .38, .31) });
+      if (pages.length > 1) {
+        page.drawText('CORO  |  RAPPORT DE RETOUR D’EXPÉRIENCE', { x: 48, y: 813, size: 8, font: bold, color: rgb(.08, .38, .31) });
+        page.drawLine({ start: { x: 48, y: 801 }, end: { x: 547, y: 801 }, thickness: .6, color: rgb(.72, .78, .76) });
+      }
     };
     const ensure = (height: number) => { if (y - height < 64) addPage(); };
-    const drawLine = (text: string, size: number, font: PDFFont, color = rgb(.14, .2, .2)) => {
-      ensure(size + 8);
-      page.drawText(text || ' ', { x: 48, y, size, font, color }); y -= size + 6;
-    };
+    const ink = rgb(.14, .2, .2);
+    const green = rgb(.08, .34, .29);
     const wrap = (text: string, size: number, font: PDFFont) => {
       const output: string[] = [];
       for (const paragraph of text.split(/\r?\n/)) {
@@ -130,25 +137,65 @@ export class OperationalReviewReportRenderer {
       }
       return output;
     };
+    const drawWrapped = (text: string, size = 10, font: PDFFont = regular, leading = 17.5, color = ink) => {
+      for (const item of wrap(text, size, font)) {
+        ensure(leading);
+        page.drawText(item || ' ', { x: 48, y, size, font, color });
+        y -= leading;
+      }
+    };
+    addPage();
+    page.drawText('CORO', { x: 48, y, size: 31, font: bold, color: green }); y -= 48;
+    page.drawLine({ start: { x: 48, y }, end: { x: 547, y }, thickness: 1.2, color: green }); y -= 36;
+    drawWrapped('RAPPORT DE RETOUR D’EXPÉRIENCE', 19, bold, 28, green); y -= 12;
+    drawWrapped(data.reference, 15, bold, 23); y -= 9;
+    drawWrapped(`Version du REX : ${data.reviewVersion}`, 10, regular, 19);
+    drawWrapped(`Version du rapport : ${data.reportVersion ?? 1}`, 10, regular, 19);
+    drawWrapped('Statut : Finalisé', 10, bold, 19, green);
+    if ((data.reportVersion ?? 1) > 1) drawWrapped('Version documentaire corrigée à la suite d’une correction technique.', 9, regular, 17, green);
+    y -= 31;
+    page.drawLine({ start: { x: 48, y: y + 12 }, end: { x: 547, y: y + 12 }, thickness: .6, color: rgb(.72, .78, .76) });
+    drawWrapped('IDENTIFICATION DU RAPPORT', 9, bold, 22, green); y -= 6;
+    if (data.organizationNameAtGeneration) drawWrapped(`Organisation : ${clean(data.organizationNameAtGeneration)}`);
+    if (data.buildingNameAtGeneration) drawWrapped(`Bâtiment : ${clean(data.buildingNameAtGeneration)}`);
+    drawWrapped(`Source : ${human(data.sourceType)}`);
+    drawWrapped(`Finalisé le : ${date(data.finalizedAt)}`);
+    drawWrapped(`Confidentialité : ${human(data.confidentiality)}`);
+    y -= 20;
+    drawWrapped('Les noms de l’organisation et du bâtiment reflètent les valeurs enregistrées lors de la génération du rapport.', 8, regular, 14, rgb(.35, .41, .4));
+
     addPage();
     const lines = buildOperationalReviewReportText(data);
-    drawLine('CORO', 31, bold, rgb(.08, .38, .31)); y -= 100;
-    for (const raw of lines) {
-      if (raw === '[[PAGE_BREAK]]') { addPage(); continue; }
-      if (raw === '') { y -= 9; continue; }
-      const heading = /^\d+\. |^Constat \d+|^Recommandation \d+/.test(raw);
-      const size = heading ? 12 : 9.5;
+    const body = lines.slice(lines.indexOf('[[PAGE_BREAK]]') + 1);
+    for (const [index, raw] of body.entries()) {
+      if (raw === '') { y -= 11; continue; }
+      const section = /^\d+\. /.test(raw);
+      const finding = /^Constat \d+/.test(raw);
+      const recommendation = /^Recommandation \d+/.test(raw);
+      const heading = section || finding || recommendation;
+      const size = section ? 13 : heading ? 11.5 : 10;
       const font = heading ? bold : regular;
-      const wrapped = wrap(raw, size, font);
-      if (heading) ensure(Math.min(58, (wrapped.length + 2) * (size + 6)));
-      for (const item of wrapped) drawLine(item, size, font, heading ? rgb(.08, .34, .29) : rgb(.14, .2, .2));
-      if (heading) y -= 7;
+      const leading = heading ? 19 : 17.5;
+      if (heading) {
+        const following = body.slice(index + 1).filter(Boolean).slice(0, section ? 1 : finding ? 3 : 1);
+        const nextHeight = following.reduce((height, line) => height + Math.min(2, wrap(line, 10, regular).length) * 17.5, 0);
+        ensure(Math.min(110, wrap(raw, size, font).length * leading + nextHeight + 13));
+        y -= section ? 13 : 9;
+      } else if (/^(Catégorie|Importance|Gravité|Statut|Priorité|Décision|Impact|Décidée le|Aucune recommandation)/.test(raw)) {
+        ensure(wrap(raw, size, font).length * leading + 5);
+      }
+      drawWrapped(raw, size, font, leading, heading ? green : ink);
+      if (section) {
+        page.drawLine({ start: { x: 48, y: y + 3 }, end: { x: 547, y: y + 3 }, thickness: .45, color: rgb(.77, .82, .8) });
+        y -= 8;
+      } else if (heading) y -= 5;
     }
     pages.forEach((item, index) => {
       if (index === 0) return;
       item.drawLine({ start: { x: 48, y: 43 }, end: { x: 547, y: 43 }, thickness: .5, color: rgb(.72, .78, .76) });
-      item.drawText(`${data.reference} · Version ${data.reviewVersion} · ${human(data.confidentiality)}`, { x: 48, y: 26, size: 7, font: regular });
-      item.drawText(`Page ${index + 1} / ${pages.length}`, { x: 492, y: 26, size: 7, font: regular });
+      item.drawText(`${data.reference} · REX ${data.reviewVersion} · Rapport ${data.reportVersion ?? 1} · ${human(data.confidentiality)}`, { x: 48, y: 26, size: 7.5, font: regular });
+      const pageLabel = `Page ${index + 1} / ${pages.length}`;
+      item.drawText(pageLabel, { x: 547 - regular.widthOfTextAtSize(pageLabel, 7.5), y: 26, size: 7.5, font: regular });
     });
     return Buffer.from(await pdf.save({ useObjectStreams: false }));
   }
