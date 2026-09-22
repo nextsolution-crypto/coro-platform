@@ -52,6 +52,45 @@ export function bookingInterval(booking: {
 export class SchedulingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // One source read for the full planner window, then evaluate each target in memory.
+  // Whole-window uncertainty is deliberately conservative for individual slots.
+  async analyzeManySlots(input: { organizationId: string; userIds: string[]; startUtc: Date; endUtc: Date;
+    slots: Array<{ key: string; userId: string; startUtc: Date; endUtc: Date; excludeBookingId?: string }> }) {
+    const [broad, schedules] = await Promise.all([
+      this.analyzeUsers({ organizationId: input.organizationId, userIds: input.userIds,
+        startUtc: input.startUtc, endUtc: input.endUtc }),
+      this.prisma.userWorkSchedule.findMany({ where: { organizationId: input.organizationId,
+        userId: { in: input.userIds }, effectiveFrom: { lt: input.endUtc },
+        OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: input.startUtc } }] },
+        include: { intervals: true } }),
+    ]);
+    const results = new Map<string, AvailabilityResult>();
+    for (const slot of input.slots) {
+      const source = broad.get(slot.userId);
+      if (!source) continue;
+      const target = { startUtc: slot.startUtc, endUtc: slot.endUtc };
+      const conflicts = source.conflicts.filter(conflict =>
+        conflict.bookingId !== slot.excludeBookingId && overlaps(target, conflict));
+      const warnings = source.warnings.filter(warning =>
+        !warning.startsWith('Horaire non configuré') &&
+        !warning.startsWith('Fuseau horaire du Booking '));
+      const versions = schedules.filter(schedule => schedule.userId === slot.userId && schedule.verifiedAt);
+      if (!versions.length) warnings.push('Horaire non configuré');
+      else {
+        try {
+          const validity = versions.map(version => scheduleRanges(version.intervals, version.timeZone,
+            slot.startUtc, slot.endUtc, version.effectiveFrom, version.effectiveUntil).validity)
+            .filter(range => range.endUtc > range.startUtc);
+          if (uncovered(target, validity).length) warnings.push('Horaire non configuré pour tout le créneau');
+        } catch { warnings.push('Horaire local impossible à interpréter au changement d’heure'); }
+      }
+      results.set(slot.key, { conflicts, warnings, sourcesChecked: source.sourcesChecked,
+        status: conflicts.some(c => c.severity === 'BLOCKED') ? 'BLOCKED'
+          : warnings.length ? 'UNKNOWN' : conflicts.length ? 'SOFT_CONFLICT' : 'AVAILABLE' });
+    }
+    return results;
+  }
+
   // Lock the target Booking first so its assignment set cannot change while a
   // status transition collects users. Then lock User rows in stable UUID order.
   async lockBooking(tx: Prisma.TransactionClient, organizationId: string, bookingId: string) {

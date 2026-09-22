@@ -99,9 +99,14 @@ export class BookingsService {
     });
   }
 
-  async getBookingsForOrganization(organizationId: string) {
+  async getBookingsForOrganization(organizationId: string, actor: { userId: string; role: string }) {
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(actor?.role)) throw new ForbiddenException('Accès interdit');
     return this.prisma.booking.findMany({
-      where: { organizationId },
+      where: { organizationId, ...(actor.role === 'OPERATOR' ? { OR: [
+        { project: { userId: actor.userId } },
+        { assignedUserId: actor.userId },
+        { assignments: { some: { userId: actor.userId, status: { in: ['PENDING', 'ACCEPTED'] } } } },
+      ] } : {}) },
       include: {
         project: { include: { client: true, building: true } },
         clientUser: { select: { firstName: true, lastName: true, email: true } },

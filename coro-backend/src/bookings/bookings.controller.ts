@@ -11,7 +11,7 @@ export class BookingsController {
 
   @Get('organization')
   getForOrganization(@Request() req: any) {
-    return this.bookingsService.getBookingsForOrganization(req.user.organizationId);
+    return this.bookingsService.getBookingsForOrganization(req.user.organizationId, req.user);
   }
 
   @Get('project/:projectId')
