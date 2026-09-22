@@ -16,6 +16,7 @@ import {
 import { createHash, randomUUID } from 'crypto';
 import { OperationalReviewsService } from '../src/operational-reviews/operational-reviews.service';
 import { OperationalReviewReportService } from '../src/operational-reviews/operational-review-report.service';
+import { OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION } from '../src/operational-reviews/operational-review-report.renderer';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (process.env.CI && !databaseUrl) throw new Error('TEST_DATABASE_URL est obligatoire en CI');
@@ -239,7 +240,7 @@ describePostgres('OperationalReview PostgreSQL invariants', () => {
     expect(concurrent.filter((item) => item.status === 'fulfilled')).toHaveLength(1);
     const repeated = await call();
     expect(repeated.reportVersion).toBe(2);
-    expect(repeated.generatorVersion).toBe('coro-rex-pdf/1.0.1');
+    expect(repeated.generatorVersion).toBe(OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION);
     expect(await prisma.operationalReviewReport.count({ where: { operationalReviewId: review.id } })).toBe(2);
     expect(storage.uploadPrivateImmutable).toHaveBeenCalledTimes(1);
     const first = await prisma.operationalReviewReport.findUniqueOrThrow({ where: { id: source.id } });
