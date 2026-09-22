@@ -62,8 +62,29 @@ test('today and now position respect the selected IANA zone and DST', () => {
   assert.equal(time.dateKey(instant, 'America/Vancouver'), '2026-09-22');
   assert.equal(time.nowPosition(instant, '2026-09-22', 'America/Toronto', { start: 480, end: 1020 }), 150 / 540 * 100);
   assert.equal(time.nowPosition(instant, '2026-09-21', 'America/Toronto', { start: 0, end: 1440 }), null);
+  assert.deepEqual(time.nowMarker(instant, ['2026-09-21', '2026-09-22', '2026-09-23'], 'America/Toronto', { start: 480, end: 1020 }),
+    { day: '2026-09-22', dayIndex: 1, position: 150 / 540 * 100 });
   const dst = time.requestWindow(time.viewDays('2026-03-08', 'day'), 'America/Toronto');
   assert.equal((new Date(dst.end) - new Date(dst.start)) / 3_600_000, 23);
+});
+
+test('timeline adapts day widths and renders one global now marker', () => {
+  assert.equal(time.timelineDayMinWidth(1), 720);
+  assert.equal(time.timelineDayMinWidth(5), 240);
+  assert.equal(time.timelineDayMinWidth(7), 180);
+  assert.equal(time.nowMarker(new Date('2026-09-22T14:30:00Z'), ['2026-09-22'], 'America/Toronto', { start: 480, end: 1020 }).dayIndex, 0);
+});
+
+test('month cell summary keeps textual request, conflict and unknown counts', () => {
+  const startUtc = '2026-09-22T13:00:00Z';
+  const events = Array.from({ length: 3 }, (_, index) => ({ id: `e${index}`, startUtc }));
+  const actions = [
+    { id: 'a1', type: 'BOOKING_REQUESTED', startUtc }, { id: 'a2', type: 'SCHEDULING_BLOCKED', startUtc },
+    { id: 'a3', type: 'SCHEDULING_UNKNOWN', startUtc }, { id: 'a4', type: 'UNPLANNED_ACTIVITY', startUtc },
+  ];
+  const summary = time.monthDaySummary('2026-09-22', events, actions, 'America/Toronto');
+  assert.equal(summary.events.length, 3); assert.equal(summary.requested, 1); assert.equal(summary.conflicts, 1);
+  assert.equal(summary.unknown, 1); assert.equal(summary.unplanned, 1);
 });
 
 test('period labels and month-to-day URL retain filters', () => {

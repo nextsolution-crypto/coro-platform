@@ -93,10 +93,35 @@ export function nowPosition(now: Date, day: string, timeZone: string, hours: { s
   return ((minute - hours.start) / (hours.end - hours.start)) * 100;
 }
 
+export function nowMarker(now: Date, days: string[], timeZone: string, hours: { start: number; end: number }) {
+  for (let index = 0; index < days.length; index++) {
+    const position = nowPosition(now, days[index], timeZone, hours);
+    if (position !== null) return { day: days[index], dayIndex: index, position };
+  }
+  return null;
+}
+
+export function timelineDayMinWidth(dayCount: number): number {
+  if (dayCount <= 1) return 720;
+  if (dayCount <= 5) return 240;
+  return 180;
+}
+
 export function plannerDayUrl(currentSearch: string, day: string): string {
   const params = new URLSearchParams(currentSearch);
   params.set('date', day); params.set('view', 'day');
   return `/planning?${params.toString()}`;
+}
+
+export function monthDaySummary<T extends { startUtc: string }>(day: string, events: T[],
+  actions: Array<{ type: string; startUtc: string | null }>, timeZone: string) {
+  const dayEvents = events.filter(event => dateKey(new Date(event.startUtc), timeZone) === day);
+  const dayActions = actions.filter(action => action.startUtc && dateKey(new Date(action.startUtc), timeZone) === day);
+  return { events: dayEvents,
+    requested: dayActions.filter(action => action.type === 'BOOKING_REQUESTED').length,
+    conflicts: dayActions.filter(action => action.type === 'SCHEDULING_BLOCKED').length,
+    unknown: dayActions.filter(action => action.type === 'SCHEDULING_UNKNOWN').length,
+    unplanned: dayActions.filter(action => action.type === 'UNPLANNED_ACTIVITY').length };
 }
 
 // Convert a civil boundary in the display zone to an instant. The iteration

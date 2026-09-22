@@ -5,9 +5,11 @@
 .eyebrow { color:#c0392b!important; font-size:11px!important; font-weight:700; letter-spacing:.12em; text-transform:uppercase }
 .headerMeta { display:grid; justify-items:end; gap:4px; color:#6c757d; font-size:12px }
 .summary { display:grid; grid-template-columns:repeat(6,minmax(120px,1fr)); gap:10px }
-.summaryCard { background:white; border:1px solid #e9ecef; border-radius:10px; padding:13px; text-align:left; display:grid; gap:5px; cursor:pointer }
+.summaryCard { background:#fbfcfd; border:1px solid #e9ecef; border-radius:9px; padding:9px 11px; text-align:left; display:grid; gap:3px; cursor:pointer }
 .summaryCard:hover,.summaryCard:focus-visible { border-color:#c0392b }
-.summaryCard strong { color:#c0392b; font-size:23px; line-height:1 }.summaryCard span { font-size:12px; line-height:1.25 }
+.summaryCard strong { color:#6c757d; font-size:19px; line-height:1 }.summaryCard span { font-size:11px; line-height:1.25 }
+.summaryCard span em { display:block; margin-top:2px; color:#922b21; font-size:9px; font-style:normal; font-weight:800; text-transform:uppercase; letter-spacing:.05em }
+.summaryCardActive { background:#fff8f7; border-color:#d9a39e }.summaryCardActive strong { color:#c0392b }
 .summaryFoot { margin:-12px 0 0; color:#6c757d; font-size:12px }
 .actionList { background:white; border:1px solid #e9ecef; border-radius:10px; padding:14px; font-size:13px }
 .actionListHeader { display:flex; justify-content:space-between; align-items:center; gap:10px }.actionListHeader h2 { font-size:15px; font-weight:700; margin:0; text-transform:capitalize }
@@ -26,22 +28,24 @@
 .error { padding:14px; background:#fceeed; border:1px solid #e5ada8; border-radius:8px; color:#922b21; font-size:13px }
 .gridSection { background:white; border:1px solid #e9ecef; border-radius:10px; overflow:hidden }
 .timelineScroll { overflow-x:auto; max-width:100% }.timeline { display:grid; min-width:max-content }
-.corner,.dayHeader { min-height:77px; padding:12px 10px 6px; background:#f7f8fa; border-bottom:1px solid #dee2e6; border-right:1px solid #e9ecef }
+.corner,.dayHeader { min-height:82px; padding:12px 10px 6px; background:#f7f8fa; border-bottom:1px solid #cfd6dc; border-right:1px solid #e0e5e9 }
+.dayHeader { position:relative }
 .corner { display:grid; align-content:center; gap:5px }.corner small { color:#6c757d }
 .dayHeader strong { display:block; text-transform:capitalize; font-size:13px; margin-bottom:12px }
-.tickLabels { position:relative; height:18px; margin:0 8px; color:#6c757d; font-size:10px }
+.tickLabels { position:relative; height:20px; margin:0 9px; color:#45515c; font-size:11px; font-weight:600 }
 .tickLabels span { position:absolute; transform:translateX(-50%) }.tickLabels span:first-child { transform:none }.tickLabels span:last-child { transform:translateX(-100%) }
 .resourceRow { display:contents }.stickyLeft { position:sticky; left:0; z-index:3 }
-.advisorCell { min-height:122px; padding:11px; background:white; border-bottom:1px solid #e9ecef; border-right:1px solid #dee2e6 }
+.advisorCell { min-height:128px; padding:13px; background:white; border-bottom:1px solid #e2e7ea; border-right:1px solid #cfd6dc }
 .advisor { display:grid; gap:4px }.advisor strong { font-size:13px }.advisor span,.advisor small { color:#6c757d; font-size:11px }
-.dayTrack { min-height:122px; position:relative; background:#eef1f4; border-right:1px solid #e9ecef; border-bottom:1px solid #e9ecef; overflow:hidden }
+.dayTrack { min-height:128px; position:relative; background:#eef1f4; border-right:1px solid #e1e6ea; border-bottom:1px solid #e1e6ea; overflow:hidden }
 .noSchedule { background:repeating-linear-gradient(135deg,#f5f6f8,#f5f6f8 7px,#eceff2 7px,#eceff2 14px) }
 .noScheduleText { position:absolute; left:10px; bottom:6px; font-size:10px; color:#7a8691 }
-.trackLines { position:absolute; inset:0 8px; pointer-events:none; z-index:1 }.trackLines span { position:absolute; top:0; bottom:0; border-left:1px solid #dce2e7 }
+.trackLines { position:absolute; inset:0 9px; pointer-events:none; z-index:1 }.trackLines span { position:absolute; top:0; bottom:0; border-left:1px solid #cfd7dd }.trackLines span:nth-child(even) { border-color:#e2e7ea }
 .workBand { position:absolute; inset-block:0; background:#fff; border-left:1px solid #c9dccc; border-right:1px solid #c9dccc }
-.todayHeader { box-shadow:inset 0 3px #c0392b }.weekend { background-color:#f4f6f8 }
-.nowLine { position:absolute; z-index:4; top:0; bottom:0; width:2px; background:#c0392b; pointer-events:none }
-.nowLine span { position:absolute; top:2px; left:3px; padding:1px 4px; border-radius:3px; background:#c0392b; color:white; font-size:8px; font-weight:700 }
+.todayHeader { box-shadow:inset 0 3px #c0392b }.weekend { background-color:#f5f6f8 }
+.nowBadge { position:absolute; z-index:6; bottom:1px; transform:translateX(-50%); padding:2px 5px; border-radius:4px; background:#c0392b; color:white; font-size:9px; font-weight:800; white-space:nowrap }
+.nowColumn { position:relative; z-index:5; min-height:100%; pointer-events:none }
+.nowColumn > span { position:absolute; top:0; bottom:0; width:2px; background:#c0392b; transform:translateX(-1px) }
 .event { position:absolute; z-index:2; min-height:31px; border:1px solid; border-radius:5px; padding:3px 5px; text-align:left; overflow:hidden; cursor:pointer; display:grid; gap:1px; white-space:nowrap }
 .eventTitle { font-weight:700; font-size:10px; overflow:hidden; text-overflow:ellipsis }.eventMeta { font-size:9px; overflow:hidden; text-overflow:ellipsis }
 .requested { background:#ebf5fb; border-color:#78b6da; color:#175879; border-style:dashed }
@@ -51,7 +55,7 @@
 .mobileAgenda { display:none }
 .monthWrap { padding:12px; overflow:hidden }.monthWeekdays,.monthGrid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)) }
 .monthWeekdays span { padding:8px; text-align:center; color:#6c757d; font-size:11px; font-weight:700 }
-.monthCell { min-height:142px; border-top:1px solid #e1e5e8; border-left:1px solid #e1e5e8; padding:6px; overflow:hidden; background:white }
+.monthCell { min-height:148px; border-top:1px solid #e1e5e8; border-left:1px solid #e1e5e8; padding:7px; overflow:hidden; background:white }
 .monthCell:nth-child(7n) { border-right:1px solid #e1e5e8 }.monthCell:nth-last-child(-n+7) { border-bottom:1px solid #e1e5e8 }
 .outsideMonth { opacity:.48 }.todayCell { box-shadow:inset 0 0 0 2px #c0392b }
 .dayTarget { width:100%; border:0; background:transparent; text-align:left; padding:2px; cursor:pointer; color:#2c3e50 }
@@ -60,6 +64,7 @@
 .daySignals span { padding:2px 4px; border-radius:3px; background:#fff4db; color:#795500; font-size:9px; font-weight:700 }
 .monthEvents { display:grid; gap:3px; margin-top:5px }.monthEvents button { width:100%; border:0; border-left:3px solid #78b6da; background:#f4f8fb; padding:3px 4px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#2c3e50; font-size:9px; cursor:pointer }
 .monthEvents span { color:#6c757d; font-size:9px }
+.timelineEmpty { display:flex; align-items:center; gap:8px; margin:10px; padding:10px 12px; border-left:3px solid #aab4bd; background:#f7f9fa; color:#5d6d7e; font-size:12px }.timelineEmpty strong { color:#45515c }.timelineEmpty span { color:#6c757d }
 .drawerBackdrop { position:fixed; inset:0; z-index:80; background:#1c26336b; display:flex; justify-content:flex-end }
 .drawer { width:min(440px,100vw); height:100%; overflow-y:auto; background:white; box-shadow:-10px 0 30px #17243330; padding:22px }
 .drawerHeader { display:flex; align-items:start; justify-content:space-between; gap:15px; border-bottom:1px solid #e9ecef; padding-bottom:15px }

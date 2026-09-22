@@ -31,8 +31,8 @@ function ActionSummary({ summary, onFilter }: { summary: PlannerResponse['action
   ] as const;
   return <section className={styles.summary} aria-label="Actions de planification">
     {counts.map(([label, count, type]) => <button key={label} type="button" onClick={() => onFilter(type)}
-      className={styles.summaryCard} aria-label={`${count} ${label}. Ouvrir la liste d’actions.`}>
-      <strong>{count}</strong><span>{label}</span>
+      className={`${styles.summaryCard} ${count > 0 ? styles.summaryCardActive : ''}`} aria-label={`${count} ${label}. Ouvrir la liste d’actions.`}>
+      <strong>{count}</strong><span>{label}{count > 0 && <em>À traiter</em>}</span>
     </button>)}
   </section>;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { PlannerEvent, PlannerResponse, PlannerUser } from './types';
-import { dateKey, formatClock, formatDay, nowPosition, segmentForDay, visibleHours } from './time';
+import { dateKey, formatClock, formatDay, nowMarker, segmentForDay, timelineDayMinWidth, visibleHours } from './time';
 import { eventForUser, eventLabel, eventStatus } from './projection';
 import styles from './planning.module.css';
 
@@ -29,6 +29,7 @@ export default function ResourceTimeline({ data, days, onSelect }: {
     [days, timeZone, data.events, data.workIntervals]);
   const ticks = useMemo(() => Array.from({ length: (hours.end - hours.start) / 30 + 1 },
     (_, index) => hours.start + index * 30), [hours]);
+  const current = nowMarker(now, days, timeZone, hours);
   const eventsByUser = useMemo(() => {
     const map = new Map<string, PlannerEvent[]>();
     for (const event of data.events) for (const userId of event.userIds.length ? event.userIds : ['__unassigned']) {
@@ -50,7 +51,7 @@ export default function ResourceTimeline({ data, days, onSelect }: {
 
   if (!rows.length) return <p className={styles.empty}>Aucun conseiller pour ces filtres.</p>;
   return <div className={styles.timelineScroll} role="region" aria-label="Planification de l'équipe" tabIndex={0}>
-    <div className={styles.timeline} style={{ gridTemplateColumns: `190px repeat(${days.length}, minmax(330px, 1fr))` }}>
+    <div className={styles.timeline} style={{ gridTemplateColumns: `205px repeat(${days.length}, minmax(${timelineDayMinWidth(days.length)}px, 1fr))` }}>
       <div className={`${styles.corner} ${styles.stickyLeft}`}>
         <strong>Conseillers</strong>
         <small>{String(hours.start / 60).padStart(2, '0')}:00–{String(hours.end / 60).padStart(2, '0')}:00</small>
@@ -61,7 +62,11 @@ export default function ResourceTimeline({ data, days, onSelect }: {
           <span key={tick} style={{ left: `${index / (ticks.length - 1) * 100}%` }}>
             {tick % 60 === 0 ? `${String(Math.floor(tick / 60)).padStart(2, '0')}h` : '·'}
           </span>)}</div>
+        {current?.day === day && <span className={styles.nowBadge} style={{ left: `${current.position}%` }}>Maintenant</span>}
       </div>)}
+      {current && <div className={styles.nowColumn} style={{ gridColumn: current.dayIndex + 2, gridRow: '2 / -1' }} aria-hidden="true">
+        <span style={{ left: `${current.position}%` }} />
+      </div>}
       {rows.map(user => <div className={styles.resourceRow} key={user.id}>
         <div className={`${styles.stickyLeft} ${styles.advisorCell}`}><AdvisorLabel user={user} /></div>
         {days.map(day => {
@@ -69,14 +74,12 @@ export default function ResourceTimeline({ data, days, onSelect }: {
             segment: segmentForDay(interval, day, timeZone, hours) })).filter(item => item.segment);
           const events = (eventsByUser.get(user.id) ?? []).map(event => ({ event,
             segment: segmentForDay(event, day, timeZone, hours) })).filter(item => item.segment);
-          const current = nowPosition(now, day, timeZone, hours);
           const weekend = days.length === 7 && days.indexOf(day) >= 5;
           return <div className={`${styles.dayTrack} ${work.length ? '' : styles.noSchedule} ${weekend ? styles.weekend : ''}`} key={day}
-            style={{ minHeight: `${Math.max(122, 12 + events.length * 34)}px` }}
+            style={{ minHeight: `${Math.max(128, 14 + events.length * 38)}px` }}
             aria-label={`${user.name}, ${formatDay(day)}`}>
             <div className={styles.trackLines}>{ticks.map((tick, index) =>
               <span key={tick} style={{ left: `${index / (ticks.length - 1) * 100}%` }} />)}</div>
-            {current !== null && <div className={styles.nowLine} style={{ left: `${current}%` }} aria-label={`Maintenant, ${formatClock(now, timeZone)}`}><span>Maintenant</span></div>}
             {work.map(({ interval, segment }, index) => <div key={`${interval.startUtc}-${index}`}
               className={styles.workBand} style={{ left: `${segment!.left}%`, width: `${segment!.width}%` }}
               title={`Horaire de travail ${formatClock(interval.startUtc, timeZone)}–${formatClock(interval.endUtc, timeZone)}`} />)}
@@ -89,7 +92,7 @@ export default function ResourceTimeline({ data, days, onSelect }: {
                 event.status === 'PROVISIONAL' ? styles.provisional :
                 event.status === 'BUSY' ? styles.busy : styles.confirmed}`}
               style={{ left: `${segment!.left}%`, width: `${Math.max(segment!.width, 1)}%`,
-                top: `${5 + index * 34}px` }}
+                top: `${6 + index * 38}px` }}
               aria-label={`${eventLabel(event)}, ${eventStatus(event)}, ${formatClock(event.startUtc, timeZone)} à ${formatClock(event.endUtc, timeZone)}${event.needsAction ? ', action requise' : ''}${event.warnings.length ? ', à vérifier' : ''}`}>
               <span className={styles.eventTitle}>{eventLabel(event)}</span>
               <span className={styles.eventMeta}>{formatClock(event.startUtc, timeZone)} · {eventStatus(event)}{event.needsAction || event.warnings.length ? ' · ⚠' : ''}</span>
@@ -98,6 +101,6 @@ export default function ResourceTimeline({ data, days, onSelect }: {
         })}
       </div>)}
     </div>
-    {data.events.length === 0 && <p className={styles.empty}>Aucun événement dans cette période. Les horaires affichés restent indicatifs.</p>}
+    {data.events.length === 0 && <p className={styles.timelineEmpty}><strong>Aucun événement planifié pour cette période.</strong><span>Les horaires affichés restent indicatifs.</span></p>}
   </div>;
 }

@@ -1,14 +1,14 @@
 'use client';
 
 import type { PlannerEvent } from './types';
-import { dateKey, formatClock, formatDay, monthGridDays } from './time';
+import { formatClock, formatDay, monthDaySummary, monthGridDays } from './time';
 import { eventLabel } from './projection';
 import styles from './planning.module.css';
 
-type PlanningAction = { id: string; type: string; startUtc: string | null };
+type DatedPlanningAction = { id: string; type: string; startUtc: string | null };
 
 export default function MonthCalendar({ monthDays, events, actions, timeZone, today, onDay, onSelect }: {
-  monthDays: string[]; events: PlannerEvent[]; actions: PlanningAction[]; timeZone: string; today: string;
+  monthDays: string[]; events: PlannerEvent[]; actions: DatedPlanningAction[]; timeZone: string; today: string;
   onDay: (day: string) => void; onSelect: (event: PlannerEvent) => void;
 }) {
   const month = monthDays[0].slice(0, 7);
@@ -18,12 +18,7 @@ export default function MonthCalendar({ monthDays, events, actions, timeZone, to
     </div>
     <div className={styles.monthGrid} role="grid" aria-label="Calendrier mensuel">
       {monthGridDays(monthDays[0]).map((day, index) => {
-        const dayEvents = events.filter(event => dateKey(new Date(event.startUtc), timeZone) === day);
-        const dayActions = actions.filter(action => action.startUtc && dateKey(new Date(action.startUtc), timeZone) === day);
-        const requested = dayActions.filter(action => action.type === 'BOOKING_REQUESTED').length;
-        const conflicts = dayActions.filter(action => action.type === 'SCHEDULING_BLOCKED').length;
-        const unknown = dayActions.filter(action => action.type === 'SCHEDULING_UNKNOWN').length;
-        const unplanned = dayActions.filter(action => action.type === 'UNPLANNED_ACTIVITY').length;
+        const { events: dayEvents, requested, conflicts, unknown, unplanned } = monthDaySummary(day, events, actions, timeZone);
         const outside = day.slice(0, 7) !== month; const weekend = index % 7 >= 5;
         return <div role="gridcell" key={day} className={`${styles.monthCell} ${outside ? styles.outsideMonth : ''} ${weekend ? styles.weekend : ''} ${day === today ? styles.todayCell : ''}`}>
           <button type="button" className={styles.dayTarget} onClick={() => onDay(day)}
