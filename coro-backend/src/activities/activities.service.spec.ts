@@ -64,3 +64,17 @@ describe('ActivitiesService exercise report summary', () => {
     });
   });
 });
+
+describe('ActivitiesService mandate origin', () => {
+  it('does not let the generic update forge sourceMandate', async () => {
+    const h = harness();
+    (h.prisma.projectActivity as any).findFirst = jest.fn().mockResolvedValue({
+      id: 'activity-a', clientVisible: true, clientBookable: false,
+    });
+    (h.prisma.projectActivity as any).update = jest.fn().mockResolvedValue({});
+    await h.service.updateActivity('activity-a', 'org-a', { sourceMandate: true, notes: 'note' });
+    expect((h.prisma.projectActivity as any).update).toHaveBeenCalledWith({
+      where: { id: 'activity-a' }, data: { notes: 'note' },
+    });
+  });
+});

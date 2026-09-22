@@ -175,6 +175,7 @@ export class ActivitiesService {
     delete updateData.bookings;
     delete updateData.projectId;
     delete updateData.organizationId;
+    delete updateData.sourceMandate;
     if (dto.status === 'reporte' && dto.reportedDate) {
       updateData.reportedDate = new Date(dto.reportedDate);
       updateData.scheduledDate = new Date(dto.reportedDate);

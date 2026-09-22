@@ -10,7 +10,7 @@ const NIVEAU_CONFIG: Record<string, { label: string; color: string; bg: string; 
   SURCHARGE:  { label: 'Surchargé',   color: '#C0392B', bg: '#FDEDEC', border: '#F1948A', icon: '🔴' },
   CHARGE:     { label: 'Chargé',      color: '#E67E22', bg: '#FEF9E7', border: '#FAD7A0', icon: '🟠' },
   NORMAL:     { label: 'Normal',      color: '#F39C12', bg: '#FEF9E7', border: '#FAD7A0', icon: '🟡' },
-  DISPONIBLE: { label: 'Disponible',  color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF', icon: '🟢' },
+  DISPONIBLE: { label: 'Charge faible', color: '#27AE60', bg: '#EAFAF1', border: '#A9DFBF', icon: '🟢' },
 };
 
 export default function CapacityPage() {
@@ -37,7 +37,7 @@ export default function CapacityPage() {
   // KPIs globaux
   const surcharges = data.filter(d => d.niveau === 'SURCHARGE').length;
   const disponibles = data.filter(d => d.niveau === 'DISPONIBLE').length;
-  const totalHeuresFutures = data.reduce((s, d) => s + d.chargeFutureTotale, 0);
+  const totalHeuresFutures = data.reduce((s, d) => s + d.chargeEngagee, 0);
   const totalHeuresSaisies = data.reduce((s, d) => s + d.heuresTotalSaisies, 0);
 
   return (
@@ -52,7 +52,7 @@ export default function CapacityPage() {
             Capacity Planning
           </h2>
           <p className="text-sm mt-1" style={{ color: '#6C757D' }}>
-            Taux d'occupation et horizon de disponibilité par conseiller
+            Capacité théorique et charge attribuée sur 12 semaines
           </p>
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
@@ -69,8 +69,8 @@ export default function CapacityPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Conseillers surchargés', value: surcharges,                          color: '#C0392B', bg: '#FDEDEC' },
-          { label: 'Disponibles bientôt',    value: disponibles,                         color: '#27AE60', bg: '#EAFAF1' },
-          { label: 'Heures futures totales', value: `${totalHeuresFutures.toFixed(0)}h`, color: '#2980B9', bg: '#EBF5FB' },
+          { label: 'Charge faible',          value: disponibles,                         color: '#27AE60', bg: '#EAFAF1' },
+          { label: 'Charge engagée totale', value: `${totalHeuresFutures.toFixed(0)}h`, color: '#2980B9', bg: '#EBF5FB' },
           { label: 'Heures saisies totales', value: `${totalHeuresSaisies.toFixed(0)}h`, color: '#8E44AD', bg: '#F4ECF7' },
         ].map(kpi => (
           <div key={kpi.label} className="rounded-md p-5"
@@ -86,7 +86,7 @@ export default function CapacityPage() {
         style={{ backgroundColor: '#EBF5FB', border: '1px solid #AED6F1' }}>
         <span style={{ fontSize: '14px', flexShrink: 0 }}>ℹ️</span>
         <p className="text-xs" style={{ color: '#2980B9' }}>
-          Le taux d'occupation est calculé sur un horizon de 12 semaines. Plus le conseiller saisit ses heures réelles, plus les données sont précises. Les activités sans durée saisie utilisent une valeur par défaut selon leur type.
+          La capacité est théorique sur 12 semaines. La charge engagée additionne les activités planifiées et le budget des mandats non encore ventilé. Les affectations en attente sont séparées. Ce calcul ne vérifie pas les plages libres du calendrier.
         </p>
       </div>
 
@@ -103,7 +103,6 @@ export default function CapacityPage() {
           {data.map(conseiller => {
             const cfg = NIVEAU_CONFIG[conseiller.niveau] || NIVEAU_CONFIG.NORMAL;
             const isExpanded = expanded === conseiller.userId;
-            const dateDisp = new Date(conseiller.dateDisponibilite);
 
             return (
               <div key={conseiller.userId} className="rounded-md overflow-hidden"
@@ -140,7 +139,7 @@ export default function CapacityPage() {
                   <div className="w-full lg:flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-medium" style={{ color: '#6C757D' }}>
-                        Taux d'occupation (12 sem.)
+                        Utilisation retenue (12 sem.)
                       </span>
                       <span className="text-sm font-black" style={{ color: cfg.color }}>
                         {conseiller.tauxOccupation}%
@@ -155,7 +154,7 @@ export default function CapacityPage() {
                     </div>
                   </div>
 
-                  {/* Niveau + disponibilité */}
+                  {/* Niveau + capacité restante théorique */}
                   <div className="grid grid-cols-2 gap-3 w-full lg:w-auto lg:flex lg:items-center lg:gap-6">
                     <div className="min-w-0 lg:w-28 lg:text-center">
                       <p className="text-xs font-medium mb-1 lg:hidden" style={{ color: '#6C757D' }}>
@@ -170,17 +169,15 @@ export default function CapacityPage() {
                     </div>
 
                     <div className="min-w-0 lg:w-36 lg:text-right">
-                      <p className="text-xs font-medium" style={{ color: '#6C757D' }}>Disponible</p>
+                      <p className="text-xs font-medium" style={{ color: '#6C757D' }}>Reste théorique</p>
                       <p
                         className="text-sm font-bold break-words"
                         style={{ color: conseiller.niveau === 'DISPONIBLE' ? '#27AE60' : '#2C3E50' }}
                       >
-                        {conseiller.niveau === 'DISPONIBLE'
-                          ? 'Maintenant'
-                          : dateDisp.toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {conseiller.capaciteRestanteTheorique.toFixed(1)} h
                       </p>
                       <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                        {conseiller.semainesChargees} sem. chargées
+                        sur {conseiller.capacite12Semaines.toFixed(0)} h
                       </p>
                     </div>
                   </div>
@@ -200,9 +197,11 @@ export default function CapacityPage() {
                       {[
                         { label: 'Heures saisies (tâches)',   value: `${conseiller.heuresTaskTotal.toFixed(1)}h`,    color: '#8E44AD' },
                         { label: 'Heures saisies (timelog)',  value: `${conseiller.heuresTimelogTotal.toFixed(1)}h`, color: '#8E44AD' },
-                        { label: 'Heures restantes mandats',  value: `${conseiller.heuresRestantesMandats.toFixed(1)}h`, color: '#2980B9' },
-                        { label: 'Heures activités futures',  value: `${conseiller.heuresActivitesFutures.toFixed(1)}h`, color: '#2980B9' },
-                        { label: 'Charge future totale',      value: `${conseiller.chargeFutureTotale.toFixed(1)}h`, color: '#C0392B' },
+                        { label: 'Mandats non ventilés',      value: `${conseiller.chargeMandatNonVentilee.toFixed(1)}h`, color: '#2980B9' },
+                        { label: 'Charge planifiée',          value: `${conseiller.chargePlanifiee.toFixed(1)}h`, color: '#2980B9' },
+                        { label: 'Affectations en attente',   value: `${conseiller.chargeProvisoire.toFixed(1)}h`, color: '#E67E22' },
+                        { label: 'Utilisation activités confirmées', value: `${conseiller.tauxUtilisationConfirmee}%`, color: '#2980B9' },
+                        { label: 'Charge engagée',            value: `${conseiller.chargeEngagee.toFixed(1)}h`, color: '#C0392B' },
                         { label: 'Activités planifiées',      value: `${conseiller.activitesFuturesCount}`,          color: '#F39C12' },
                       ].map(stat => (
                         <div key={stat.label} className="rounded p-3"
@@ -239,12 +238,26 @@ export default function CapacityPage() {
                               </div>
                               <div className="text-left sm:text-right w-full sm:w-auto">
                                 <p className="text-xs font-bold" style={{ color: '#2980B9' }}>
-                                  {m.heuresRestantes.toFixed(0)}h restantes
+                                  {m.chargeMandatNonVentilee.toFixed(1)}h non ventilées
                                 </p>
                                 <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                                  {m.heuresReelles.toFixed(0)}h / {m.heuresBudgetees}h
+                                  {m.heuresReelles.toFixed(1)}h réalisées · {m.heuresPlanifieesMandat.toFixed(1)}h planifiées / {m.heuresBudgetees}h budgétées
                                 </p>
                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {conseiller.chargeDetails?.some((d: any) => d.source !== 'MANDATE') && (
+                      <div className="mt-4">
+                        <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#ADB5BD' }}>Activités attribuées</p>
+                        <div className="space-y-1.5">
+                          {conseiller.chargeDetails.filter((d: any) => d.source !== 'MANDATE').map((d: any, index: number) => (
+                            <div key={d.assignmentId || `${d.activityId}-${index}`} className="p-3 rounded text-xs flex flex-wrap justify-between gap-2"
+                              style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                              <span>{d.label} — {d.role || 'Activité legacy'} — {d.category === 'PENDING' ? 'en attente' : 'confirmée'}</span>
+                              <span>{d.durationHours.toFixed(1)} h{d.effectiveDate ? ` · ${new Date(d.effectiveDate).toLocaleDateString('fr-CA')}` : ''}</span>
                             </div>
                           ))}
                         </div>
