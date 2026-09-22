@@ -7,6 +7,7 @@ import { CorrectiveActionsService } from '../occupancy/corrective-actions.servic
 import { OperationalReviewReportService } from './operational-review-report.service';
 import { StorageModule } from '../storage/storage.module';
 import { OperationalReviewReportsAdminController } from './operational-review-reports-admin.controller';
+import { CorrectiveActionTrackingReportService } from './corrective-action-tracking-report.service';
 
-@Module({ imports: [PrismaModule, StorageModule, JwtModule.register({ secret: process.env.JWT_SECRET || 'coro-secret' })], controllers: [OperationalReviewsController, OperationalReviewReportsAdminController], providers: [OperationalReviewsService, CorrectiveActionsService, OperationalReviewReportService], exports: [OperationalReviewsService] })
+@Module({ imports: [PrismaModule, StorageModule, JwtModule.register({ secret: process.env.JWT_SECRET || 'coro-secret' })], controllers: [OperationalReviewsController, OperationalReviewReportsAdminController], providers: [OperationalReviewsService, CorrectiveActionsService, OperationalReviewReportService, CorrectiveActionTrackingReportService], exports: [OperationalReviewsService] })
 export class OperationalReviewsModule {}

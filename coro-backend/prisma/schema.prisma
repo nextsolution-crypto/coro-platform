@@ -1114,6 +1114,7 @@ enum CorrectiveActionPermission {
   CORRECTIVE_ACTION_COMPLETE
   CORRECTIVE_ACTION_VERIFY
   CORRECTIVE_ACTION_CLOSE
+  CORRECTIVE_ACTION_REPORT_GENERATE
 }
 
 enum CorrectiveActionAssigneeType {
@@ -3412,6 +3413,7 @@ model OperationalReview {
   findings ReviewFinding[]
   recommendations ReviewRecommendation[]
   reports OperationalReviewReport[]
+  correctiveActionTrackingReports CorrectiveActionTrackingReport[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3422,6 +3424,34 @@ model OperationalReview {
   @@index([exerciseReportId])
   @@index([status])
   @@unique([id, organizationId])
+}
+
+enum CorrectiveActionTrackingReportStatus {
+  SNAPSHOT_READY
+  GENERATING
+  FINALIZED
+}
+
+model CorrectiveActionTrackingReport {
+  id String @id @default(uuid())
+  organizationId String
+  operationalReviewId String
+  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewVersion Int
+  reportVersion Int
+  clientIntentId String
+  snapshotAt DateTime
+  language String @default("FR")
+  format String @default("PDF")
+  status CorrectiveActionTrackingReportStatus @default(SNAPSHOT_READY)
+  generatedByType CoroActorType
+  generatedById String
+  renderData Json
+  createdAt DateTime @default(now())
+
+  @@unique([organizationId, clientIntentId])
+  @@unique([operationalReviewId, reviewVersion, reportVersion, language, format])
+  @@index([organizationId, operationalReviewId])
 }
 
 enum OperationalReviewReportStatus {

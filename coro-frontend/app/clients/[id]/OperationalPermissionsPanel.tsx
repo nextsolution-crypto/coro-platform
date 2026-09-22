@@ -8,7 +8,7 @@ import { applyOperationalPermissionPreset, CORRECTIVE_ACTION_PERMISSIONS, OPERAT
 
 interface ClientUserPermissions { id: string; email: string; firstName: string; lastName: string; role: string; isActive: boolean; buildingIds: string[]; operationalReviewPermissions: ReviewPermission[]; correctiveActionPermissions: CorrectiveActionPermission[]; }
 const reviewLabels: Record<ReviewPermission, string> = { REX_CREATE: 'Créer un REX', REX_EDIT: 'Modifier un REX', REX_REVIEW: 'Réviser les constats et recommandations', REX_FINALIZE: 'Finaliser un REX' };
-const correctiveLabels: Record<CorrectiveActionPermission, string> = { CORRECTIVE_ACTION_CREATE: 'Créer une action', CORRECTIVE_ACTION_EDIT: 'Modifier ou assigner une action', CORRECTIVE_ACTION_COMPLETE: 'Déclarer une action réalisée', CORRECTIVE_ACTION_VERIFY: 'Vérifier une réalisation', CORRECTIVE_ACTION_CLOSE: 'Fermer une action' };
+const correctiveLabels: Record<CorrectiveActionPermission, string> = { CORRECTIVE_ACTION_CREATE: 'Créer une action', CORRECTIVE_ACTION_EDIT: 'Modifier ou assigner une action', CORRECTIVE_ACTION_COMPLETE: 'Déclarer une action réalisée', CORRECTIVE_ACTION_VERIFY: 'Vérifier une réalisation', CORRECTIVE_ACTION_CLOSE: 'Fermer une action', CORRECTIVE_ACTION_REPORT_GENERATE: 'Générer un suivi des actions' };
 const presetLabels: Record<OperationalPermissionPreset, string> = { READ_ONLY: 'Lecture seule', REX: 'REX', CORRECTIVE_ACTIONS: 'Actions correctives', VERIFICATION: 'Vérification', RESILIENCE_MANAGER: 'Responsable résilience' };
 
 export default function OperationalPermissionsPanel({ clientId, endpointBase }: { clientId: string; endpointBase?: string }) {
