@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Request, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Request, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { CreateOperationalReviewDto, UpdateOperationalReviewDto } from './dto/operational-review.dto';
@@ -7,18 +7,46 @@ import { ChangeReviewFindingStatusDto, CreateReviewFindingDto, CreateReviewRecom
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
 import { CreateCorrectiveActionDto } from '../occupancy/dto/corrective-action.dto';
 import { OperationalReviewReportService } from './operational-review-report.service';
+import { CorrectiveActionTrackingReportService } from './corrective-action-tracking-report.service';
+import { CreateCorrectiveActionTrackingReportDto } from './dto/create-corrective-action-tracking-report.dto';
+import { CorrectiveActionTrackingPdfService } from './corrective-action-tracking-pdf.service';
 
 @Controller('client-portal/operational-reviews')
 @UseGuards(ClientJwtGuard)
 export class OperationalReviewsController {
-  constructor(private readonly service: OperationalReviewsService, private readonly correctiveActions: CorrectiveActionsService, private readonly reports: OperationalReviewReportService) {}
+  constructor(private readonly service: OperationalReviewsService, private readonly correctiveActions: CorrectiveActionsService, private readonly reports: OperationalReviewReportService, private readonly trackingReports: CorrectiveActionTrackingReportService, private readonly trackingPdf: CorrectiveActionTrackingPdfService) {}
   @Post() create(@Body() dto: CreateOperationalReviewDto, @Request() req: { clientUser: ReviewActor }) { return this.service.create(dto, req.clientUser); }
   @Get('population-events/:eventId') getForPopulationEvent(@Param('eventId') eventId: string, @Request() req: { clientUser: ReviewActor }) { return this.service.getForPopulationEvent(eventId, req.clientUser); }
+  @Post(':id/corrective-action-reports') createTrackingReport(@Param('id') id: string, @Body() dto: CreateCorrectiveActionTrackingReportDto, @Request() req: { clientUser: ReviewActor }) { return this.trackingReports.create(id, dto.clientIntentId, req.clientUser); }
+  @Get(':id/corrective-action-reports') listTrackingReports(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.trackingReports.list(id, req.clientUser); }
+  @Get(':id/corrective-action-reports/:version') getTrackingReport(@Param('id') id: string, @Param('version', ParseIntPipe) version: number, @Request() req: { clientUser: ReviewActor }) { return this.trackingReports.get(id, version, req.clientUser); }
+  @Post(':id/corrective-action-reports/:version/materialize') materializeTrackingReport(@Param('id') id: string, @Param('version', ParseIntPipe) version: number, @Request() req: { clientUser: ReviewActor }) { return this.trackingPdf.materialize(id, version, req.clientUser); }
+  @Get(':id/corrective-action-reports/:version/download') async downloadTrackingReport(@Param('id') id: string, @Param('version', ParseIntPipe) version: number, @Request() req: { clientUser: ReviewActor }, @Res() res: Response) {
+    const report = await this.trackingPdf.download(id, version, req.clientUser);
+    res.set({
+      'Content-Type': 'application/pdf', 'Content-Length': String(report.bytes.length),
+      'Content-Disposition': `attachment; filename="${report.filename}"; filename*=UTF-8''${encodeURIComponent(report.filename)}`,
+      'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Expose-Headers': 'Content-Disposition',
+    });
+    return res.send(report.bytes);
+  }
   @Get(':id') get(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.service.get(id, req.clientUser); }
   @Post(':id/report') generateReport(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.reports.generate(id, req.clientUser); }
   @Get(':id/report') getReport(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.reports.get(id, req.clientUser); }
+  @Get(':id/reports') listReports(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.reports.list(id, req.clientUser); }
   @Get(':id/report/download') async downloadReport(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }, @Res() res: Response) {
     const report = await this.reports.download(id, req.clientUser);
+    res.set({
+      'Content-Type': 'application/pdf', 'Content-Length': String(report.bytes.length),
+      'Content-Disposition': `attachment; filename="${report.filename}"; filename*=UTF-8''${encodeURIComponent(report.filename)}`,
+      'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Expose-Headers': 'Content-Disposition',
+    });
+    return res.send(report.bytes);
+  }
+  @Get(':id/reports/:version/download') async downloadReportVersion(@Param('id') id: string, @Param('version', ParseIntPipe) version: number, @Request() req: { clientUser: ReviewActor }, @Res() res: Response) {
+    const report = await this.reports.download(id, req.clientUser, version);
     res.set({
       'Content-Type': 'application/pdf', 'Content-Length': String(report.bytes.length),
       'Content-Disposition': `attachment; filename="${report.filename}"; filename*=UTF-8''${encodeURIComponent(report.filename)}`,

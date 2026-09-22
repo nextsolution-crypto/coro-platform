@@ -258,6 +258,18 @@
   color: #53635b;
   font-size: 0.88rem;
 }
+.trackingPrevious,
+.trackingHistory {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #dce3df;
+}
+.trackingHistoryItem {
+  padding: 16px 0;
+  border-top: 1px solid #edf0ee;
+}
+.trackingHistoryItem:first-of-type { border-top: 0; }
+.trackingHistoryItem .reportMetrics { margin: 12px 0; }
 .spinner {
   animation: spin 1s linear infinite;
 }

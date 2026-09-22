@@ -20,10 +20,13 @@ type OperationalReviewReportSummary = {
   fileSize: number | null;
   reportSha256: string | null;
   finalizedAt: string | null;
+  supersessionReason: string | null;
+  isCurrent?: boolean;
 };
 
 export default function OperationalReviewReportSection({ reviewId, canGenerate }: { reviewId: string; canGenerate: boolean }) {
   const [report, setReport] = useState<OperationalReviewReportSummary | null>(null);
+  const [history, setHistory] = useState<OperationalReviewReportSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [working, setWorking] = useState<"generate" | "download" | null>(null);
@@ -37,6 +40,10 @@ export default function OperationalReviewReportSection({ reviewId, canGenerate }
     try {
       const result = normalizeReportResponse(await apiGet(reportEndpoint(reviewId))) as OperationalReviewReportSummary | null;
       setReport(result);
+      if (result?.status === "FINALIZED") {
+        try { setHistory((await apiGet(`${reportEndpoint(reviewId).replace(/\/report$/, "/reports")}`)) as OperationalReviewReportSummary[]); }
+        catch { setHistory([]); }
+      }
       setLoaded(true);
       setError(null);
       return result;
@@ -80,14 +87,14 @@ export default function OperationalReviewReportSection({ reviewId, canGenerate }
     }
   };
 
-  const download = async () => {
+  const download = async (version?: number) => {
     if (working || report?.status !== "FINALIZED") return;
     setWorking("download");
     setError(null);
     try {
-      const result = await apiDownload(`${reportEndpoint(reviewId)}/download`);
-      const fallback = buildReportFilename(report.reference, report.reviewVersion);
-      const filename = /^REX-\d{4}-\d{6}_v\d+_FR\.pdf$/.test(result.filename) ? result.filename : fallback;
+      const result = await apiDownload(version === undefined ? `${reportEndpoint(reviewId)}/download` : `${reportEndpoint(reviewId).replace(/\/report$/, "/reports")}/${version}/download`);
+      const fallback = buildReportFilename(report.reference, report.reviewVersion, version ?? report.reportVersion);
+      const filename = /^REX-\d{4}-\d{6}_v\d+_R\d+_FR\.pdf$/.test(result.filename) ? result.filename : fallback;
       const url = URL.createObjectURL(result.blob);
       try {
         const link = document.createElement("a");
@@ -134,8 +141,13 @@ export default function OperationalReviewReportSection({ reviewId, canGenerate }
         <div><dt>Généré le</dt><dd>{formatMoment(report.generatedAt) ?? "Non renseigné"}</dd></div>
         <div><dt>Taille</dt><dd>{report.fileSize === null ? "Non disponible" : formatReportSize(report.fileSize)}</dd></div>
       </dl>
+      {report.supersessionReason === "TECHNICAL_CORRECTION" && <p>Cette version remplace une version documentaire antérieure à la suite d&apos;une correction technique.</p>}
       {report.reportSha256 && <div className={styles.reportHash}><span>Empreinte SHA-256</span><div><code>{report.reportSha256}</code><button type="button" className={styles.buttonSecondary} onClick={() => void copyHash()} title="Copier l'empreinte SHA-256" aria-label="Copier l'empreinte SHA-256">{copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}</button></div></div>}
       <div className={styles.actions}><button type="button" className={styles.button} disabled={working !== null} onClick={() => void download()}><Download size={17} aria-hidden="true" /> {working === "download" ? "TÉLÉCHARGEMENT..." : "TÉLÉCHARGER LE PDF"}</button></div>
+      {history.length > 1 && <section aria-label="Versions antérieures"><h3>Versions antérieures</h3>{history.filter((item) => !item.isCurrent).map((item) => <div key={item.id}>
+        <span>Rapport R{item.reportVersion} · {formatMoment(item.generatedAt) ?? "Date inconnue"} · Remplacé pour correction technique</span>
+        <button type="button" className={styles.buttonSecondary} disabled={working !== null} onClick={() => void download(item.reportVersion)}><Download size={16} aria-hidden="true" /> Télécharger</button>
+      </div>)}</section>}
     </> : <>
       <p className={styles.reportStatus}>{reportStatusLabel(null)}</p>
       <p>Le rapport constitue la version documentaire officielle du retour d&apos;expérience finalisé.</p>

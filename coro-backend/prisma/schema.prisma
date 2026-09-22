@@ -1229,6 +1229,7 @@ enum CorrectiveActionPermission {
   CORRECTIVE_ACTION_COMPLETE
   CORRECTIVE_ACTION_VERIFY
   CORRECTIVE_ACTION_CLOSE
+  CORRECTIVE_ACTION_REPORT_GENERATE
 }
 
 enum CorrectiveActionAssigneeType {
@@ -3496,38 +3497,39 @@ model CorrectiveActionAuditEvent {
 }
 
 model OperationalReview {
-  id                           String                           @id @default(uuid())
-  organizationId               String
-  reference                    String                           @unique @default(dbgenerated("operational_review_reference()"))
-  version                      Int                              @default(1)
-  status                       OperationalReviewStatus          @default(DRAFT)
-  confidentiality              OperationalReviewConfidentiality @default(RESTRICTED)
-  title                        String
-  summary                      String?
-  buildingId                   String?
-  projectId                    String?
-  populationOperationalEventId String?
-  populationEvidenceRecordId   String?
-  populationEvidenceRecord     PopulationEvidenceRecord?        @relation(fields: [populationEvidenceRecordId], references: [id], onDelete: Restrict)
-  incidentEventId              String?
-  exerciseReportId             String?
-  createdByType                CoroActorType
-  createdById                  String
-  submittedAt                  DateTime?
-  submittedByType              CoroActorType?
-  submittedById                String?
-  finalizedAt                  DateTime?
-  finalizedByType              CoroActorType?
-  finalizedById                String?
-  supersedesId                 String?                          @unique
-  supersedes                   OperationalReview?               @relation("OperationalReviewSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
-  supersededBy                 OperationalReview?               @relation("OperationalReviewSupersession")
-  auditEvents                  OperationalReviewAuditEvent[]
-  findings                     ReviewFinding[]
-  recommendations              ReviewRecommendation[]
-  reports                      OperationalReviewReport[]
-  createdAt                    DateTime                         @default(now())
-  updatedAt                    DateTime                         @updatedAt
+  id                              String                           @id @default(uuid())
+  organizationId                  String
+  reference                       String                           @unique @default(dbgenerated("operational_review_reference()"))
+  version                         Int                              @default(1)
+  status                          OperationalReviewStatus          @default(DRAFT)
+  confidentiality                 OperationalReviewConfidentiality @default(RESTRICTED)
+  title                           String
+  summary                         String?
+  buildingId                      String?
+  projectId                       String?
+  populationOperationalEventId    String?
+  populationEvidenceRecordId      String?
+  populationEvidenceRecord        PopulationEvidenceRecord?        @relation(fields: [populationEvidenceRecordId], references: [id], onDelete: Restrict)
+  incidentEventId                 String?
+  exerciseReportId                String?
+  createdByType                   CoroActorType
+  createdById                     String
+  submittedAt                     DateTime?
+  submittedByType                 CoroActorType?
+  submittedById                   String?
+  finalizedAt                     DateTime?
+  finalizedByType                 CoroActorType?
+  finalizedById                   String?
+  supersedesId                    String?                          @unique
+  supersedes                      OperationalReview?               @relation("OperationalReviewSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy                    OperationalReview?               @relation("OperationalReviewSupersession")
+  auditEvents                     OperationalReviewAuditEvent[]
+  findings                        ReviewFinding[]
+  recommendations                 ReviewRecommendation[]
+  reports                         OperationalReviewReport[]
+  correctiveActionTrackingReports CorrectiveActionTrackingReport[]
+  createdAt                       DateTime                         @default(now())
+  updatedAt                       DateTime                         @updatedAt
 
   @@unique([id, organizationId])
   @@index([organizationId])
@@ -3538,32 +3540,78 @@ model OperationalReview {
   @@index([status])
 }
 
+enum CorrectiveActionTrackingReportStatus {
+  SNAPSHOT_READY
+  GENERATING
+  FINALIZED
+}
+
+model CorrectiveActionTrackingReport {
+  id                    String                               @id @default(uuid())
+  organizationId        String
+  operationalReviewId   String
+  operationalReview     OperationalReview                    @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewVersion         Int
+  reportVersion         Int
+  clientIntentId        String
+  snapshotAt            DateTime
+  language              String                               @default("FR")
+  format                String                               @default("PDF")
+  status                CorrectiveActionTrackingReportStatus @default(SNAPSHOT_READY)
+  generatedByType       CoroActorType
+  generatedById         String
+  snapshotCreatedByType CoroActorType?
+  snapshotCreatedById   String?
+  generatedAt           DateTime?
+  generatorVersion      String?
+  storageKey            String?                              @unique
+  fileSize              Int?
+  reportSha256          String?
+  leaseExpiresAt        DateTime?
+  finalizedAt           DateTime?
+  renderData            Json
+  createdAt             DateTime                             @default(now())
+
+  @@unique([organizationId, clientIntentId])
+  @@unique([operationalReviewId, reviewVersion, reportVersion, language, format])
+  @@index([organizationId, operationalReviewId])
+}
+
 enum OperationalReviewReportStatus {
   GENERATING
   FINALIZED
 }
 
+enum OperationalReviewReportSupersessionReason {
+  TECHNICAL_CORRECTION
+}
+
 model OperationalReviewReport {
-  id                  String                        @id @default(uuid())
+  id                  String                                     @id @default(uuid())
   organizationId      String
-  organization        Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization        Organization                               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   operationalReviewId String
-  operationalReview   OperationalReview             @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  operationalReview   OperationalReview                          @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
   reviewVersion       Int
-  reportVersion       Int                           @default(1)
-  format              String                        @default("PDF")
-  language            String                        @default("FR")
-  status              OperationalReviewReportStatus @default(GENERATING)
+  reportVersion       Int                                        @default(1)
+  format              String                                     @default("PDF")
+  language            String                                     @default("FR")
+  status              OperationalReviewReportStatus              @default(GENERATING)
   generatedAt         DateTime
   generatedByType     CoroActorType
   generatedById       String
   generatorVersion    String
-  storageKey          String                        @unique
+  storageKey          String                                     @unique
   fileSize            Int?
   reportSha256        String?
   leaseExpiresAt      DateTime
   renderData          Json
-  createdAt           DateTime                      @default(now())
+  supersedesReportId  String?                                    @unique
+  supersedesReport    OperationalReviewReport?                   @relation("OperationalReviewReportSupersession", fields: [supersedesReportId], references: [id], onDelete: Restrict)
+  supersededByReport  OperationalReviewReport?                   @relation("OperationalReviewReportSupersession")
+  supersessionReason  OperationalReviewReportSupersessionReason?
+  supersessionComment String?
+  createdAt           DateTime                                   @default(now())
   finalizedAt         DateTime?
 
   @@unique([operationalReviewId, reviewVersion, reportVersion, language, format])

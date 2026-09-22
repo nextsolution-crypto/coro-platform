@@ -41,7 +41,7 @@ describe('OperationalReviewReportRenderer', () => {
     expect(pdf.getPageCount()).toBeGreaterThan(2);
     expect(pdf.getPage(0).getSize()).toMatchObject({ width: 595.28, height: 841.89 });
     expect(pdf.getTitle()).toContain(data.reference);
-    expect(pdf.getCreator()).toBe('coro-rex-pdf/1.0.1');
+    expect(pdf.getCreator()).toBe('coro-rex-pdf/1.1.0');
     expect(pdf.getCreationDate()?.toISOString()).toBe(data.generatedAt);
   });
 
@@ -51,6 +51,48 @@ describe('OperationalReviewReportRenderer', () => {
     const second = await renderer.render(data);
     expect(second.equals(first)).toBe(true);
   });
+
+  it('indique la version documentaire R2 sans changer le contenu métier', () => {
+    expect(buildOperationalReviewReportText({ ...data, reportVersion: 2 })).toContain('Version REX 1 · Version rapport 2');
+    expect(buildOperationalReviewReportText(data)).toContain('Version REX 1 · Version rapport 1');
+  });
+
+  it('formate UTC sans double préposition et avec heure à deux chiffres à minuit', () => {
+    const text = buildOperationalReviewReportText({
+      ...data, finalizedAt: '2026-09-21T16:46:00.000Z', generatedAt: '2026-09-22T00:29:00.000Z',
+      generatedByType: 'USER', reportVersion: 3,
+    }).join('\n');
+    expect(text).toContain('21 septembre 2026 à 16 h 46 UTC');
+    expect(text).toContain('22 septembre 2026 à 00 h 29 UTC');
+    expect(text).not.toContain('à à');
+    expect(text).toContain('Utilisateur CORO');
+    expect(text).toContain('Version rapport 3');
+  });
+
+  it('conserve la catégorie et le statut historiques des constats', () => {
+    const text = buildOperationalReviewReportText({
+      ...data, findings: [{ ...data.findings[0], category: 'STRENGTH', status: 'OPEN', description: 'Problème décrit par le rédacteur.' }],
+    }).join('\n');
+    expect(text).toContain('Catégorie : Point fort');
+    expect(text).toContain('Statut : Ouvert');
+    expect(text).toContain('Problème décrit par le rédacteur.');
+  });
+
+  it('pagine un dossier long sans perdre les métadonnées PDF ni les polices', async () => {
+    const findings = Array.from({ length: 14 }, (_, index) => ({
+      ...data.findings[0], title: `Constat ${index + 1} — coordination`,
+      description: 'Observation détaillée sur les mesures d’urgence et la coordination. '.repeat(30),
+      recommendations: [{ ...data.findings[0].recommendations[0], description: 'Amélioration proposée et documentée. '.repeat(18) }],
+    }));
+    const bytes = await new OperationalReviewReportRenderer().render({ ...data, findings });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBeGreaterThanOrEqual(5);
+    expect(pdf.getCreator()).toBe('coro-rex-pdf/1.1.0');
+    expect(pdf.getTitle()).toContain(data.reference);
+    expect(pdf.getAuthor()).toBe('CORO');
+    expect(pdf.getSubject()).toBe('Retour d’expérience finalisé');
+    for (const page of pdf.getPages()) expect(page.getSize()).toMatchObject({ width: 595.28, height: 841.89 });
+  }, 30_000);
 
   it('embarque deux vraies polices statiques intégrales et des tables ToUnicode', async () => {
     const bytes = await new OperationalReviewReportRenderer().render({

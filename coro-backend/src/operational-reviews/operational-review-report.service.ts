@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { CoroActorType, OperationalReviewReportStatus, OperationalReviewStatus, Prisma } from '@prisma/client';
+import { CoroActorType, OperationalReviewReportStatus, OperationalReviewReportSupersessionReason, OperationalReviewStatus, Prisma } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -21,16 +21,72 @@ export class OperationalReviewReportService {
       id: report.id, reference, reviewVersion: report.reviewVersion, reportVersion: report.reportVersion,
       format: report.format, language: report.language, status: report.status, generatedAt: report.generatedAt,
       generatorVersion: report.generatorVersion, fileSize: report.fileSize, reportSha256: report.reportSha256,
-      finalizedAt: report.finalizedAt,
+      finalizedAt: report.finalizedAt, supersessionReason: report.supersessionReason ?? null,
     };
   }
 
   async get(reviewId: string, actor: ReviewActor) {
     const review = await this.reviews.authorizeReport(reviewId, actor);
-    const report = await this.prisma.operationalReviewReport.findFirst({
-      where: { operationalReviewId: reviewId, organizationId: actor.organizationId, reviewVersion: review.version, reportVersion: 1, language: 'FR', format: 'PDF' },
-    });
+    const scope = { operationalReviewId: reviewId, organizationId: actor.organizationId, reviewVersion: review.version, language: 'FR', format: 'PDF' };
+    const report = await this.prisma.operationalReviewReport.findFirst({ where: { ...scope, status: OperationalReviewReportStatus.FINALIZED }, orderBy: { reportVersion: 'desc' } })
+      ?? await this.prisma.operationalReviewReport.findFirst({ where: scope, orderBy: { reportVersion: 'desc' } });
     return report ? this.publicRecord(report, review.reference) : null;
+  }
+
+  async list(reviewId: string, actor: ReviewActor) {
+    const review = await this.reviews.authorizeReport(reviewId, actor);
+    const records = await this.prisma.operationalReviewReport.findMany({
+      where: { operationalReviewId: reviewId, organizationId: actor.organizationId, reviewVersion: review.version, language: 'FR', format: 'PDF', status: OperationalReviewReportStatus.FINALIZED },
+      orderBy: { reportVersion: 'desc' },
+    });
+    return records.map((record, index) => ({ ...this.publicRecord(record, review.reference), isCurrent: index === 0 }));
+  }
+
+  async findByReference(reference: string) {
+    const review = await this.prisma.operationalReview.findUnique({ where: { reference }, select: { id: true, reference: true, version: true, status: true } });
+    if (!review) throw new NotFoundException('REX introuvable.');
+    const reports = await this.prisma.operationalReviewReport.findMany({ where: { operationalReviewId: review.id, reviewVersion: review.version, language: 'FR', format: 'PDF' }, orderBy: { reportVersion: 'desc' } });
+    return { reference: review.reference, reviewVersion: review.version, status: review.status, reports: reports.map((report) => this.publicRecord(report, reference)) };
+  }
+
+  async supersede(sourceReportId: string, reason: OperationalReviewReportSupersessionReason, comment: string, adminId: string) {
+    if (reason !== OperationalReviewReportSupersessionReason.TECHNICAL_CORRECTION || !comment.trim()) throw new BadRequestException('Motif et commentaire requis.');
+    const now = new Date();
+    const reservation = await this.prisma.$transaction(async (tx) => {
+      const source = await tx.operationalReviewReport.findUnique({ where: { id: sourceReportId } });
+      if (!source || source.status !== OperationalReviewReportStatus.FINALIZED) throw new NotFoundException('Rapport source finalisé introuvable.');
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'rex-report:' + source.operationalReviewId + ':' + source.reviewVersion + ':' + source.language + ':' + source.format}))`;
+      const review = await tx.operationalReview.findFirst({ where: { id: source.operationalReviewId, organizationId: source.organizationId, version: source.reviewVersion, status: OperationalReviewStatus.FINALIZED }, select: { reference: true } });
+      if (!review) throw new ConflictException('REX source finalisé introuvable.');
+      let report = await tx.operationalReviewReport.findUnique({ where: { supersedesReportId: source.id } });
+      if (report?.status === OperationalReviewReportStatus.FINALIZED) return { report, reference: review.reference, owner: false };
+      if (report && report.leaseExpiresAt > now) return { report, reference: review.reference, owner: false };
+      if (report) {
+        report = await tx.operationalReviewReport.update({ where: { id: report.id }, data: { leaseExpiresAt: new Date(now.getTime() + LEASE_MS) } });
+        return { report, reference: review.reference, owner: true };
+      }
+      const latest = await tx.operationalReviewReport.aggregate({ where: { operationalReviewId: source.operationalReviewId, reviewVersion: source.reviewVersion, language: source.language, format: source.format }, _max: { reportVersion: true } });
+      if (latest._max.reportVersion !== source.reportVersion) throw new ConflictException('Seule la dernière version peut être supersédée.');
+      const prior = source.renderData as unknown as OperationalReviewReportData;
+      if (!prior || typeof prior !== 'object' || !Array.isArray(prior.findings) || prior.reference !== review.reference) throw new ConflictException('Snapshot historique incompatible.');
+      const version = source.reportVersion + 1;
+      const id = randomUUID();
+      const filename = `${review.reference.replace(/[^A-Za-z0-9-]/g, '')}_v${source.reviewVersion}_R${version}_${source.language}.pdf`;
+      report = await tx.operationalReviewReport.create({ data: {
+        id, organizationId: source.organizationId, operationalReviewId: source.operationalReviewId,
+        reviewVersion: source.reviewVersion, reportVersion: version, language: source.language, format: source.format,
+        status: OperationalReviewReportStatus.GENERATING, generatedAt: now, generatedByType: CoroActorType.USER, generatedById: adminId,
+        generatorVersion: OPERATIONAL_REVIEW_REPORT_GENERATOR_VERSION,
+        storageKey: `operational-review-reports/${source.organizationId}/${source.operationalReviewId}/${id}/${filename}`,
+        leaseExpiresAt: new Date(now.getTime() + LEASE_MS),
+        renderData: { ...prior, reportVersion: version, generatedAt: now.toISOString(), generatedByType: CoroActorType.USER } as unknown as Prisma.InputJsonValue,
+        supersedesReportId: source.id, supersessionReason: reason, supersessionComment: comment.trim(),
+      } });
+      return { report, reference: review.reference, owner: true };
+    });
+    if (reservation.report.status === OperationalReviewReportStatus.FINALIZED) return this.publicRecord(reservation.report, reservation.reference);
+    if (!reservation.owner) throw new ConflictException('Génération de la version corrigée déjà en cours. Réessayez plus tard.');
+    return this.materialize(reservation.report, reservation.reference);
   }
 
   async generate(reviewId: string, actor: ReviewActor) {
@@ -155,18 +211,18 @@ export class OperationalReviewReportService {
     return this.publicRecord(finalized, reference);
   }
 
-  async download(reviewId: string, actor: ReviewActor) {
+  async download(reviewId: string, actor: ReviewActor, reportVersion?: number) {
     const review = await this.reviews.authorizeReport(reviewId, actor);
     const report = await this.prisma.operationalReviewReport.findFirst({ where: {
       operationalReviewId: reviewId, organizationId: actor.organizationId, reviewVersion: review.version,
-      reportVersion: 1, language: 'FR', format: 'PDF', status: OperationalReviewReportStatus.FINALIZED,
-    } });
+      ...(reportVersion === undefined ? {} : { reportVersion }), language: 'FR', format: 'PDF', status: OperationalReviewReportStatus.FINALIZED,
+    }, orderBy: { reportVersion: 'desc' } });
     if (!report?.reportSha256 || !report.fileSize) throw new NotFoundException('Rapport REX finalisé introuvable.');
     let bytes: Buffer;
     try { bytes = await this.storage.downloadPrivate(report.storageKey); }
     catch { throw new ConflictException('Rapport privé temporairement indisponible.'); }
     if (bytes.length !== report.fileSize || sha256(bytes) !== report.reportSha256) throw new ConflictException('Intégrité du rapport PDF invalide.');
     const safeReference = review.reference.replace(/[^A-Za-z0-9-]/g, '');
-    return { bytes, filename: `${safeReference}_v${report.reviewVersion}_FR.pdf` };
+    return { bytes, filename: `${safeReference}_v${report.reviewVersion}_R${report.reportVersion}_FR.pdf` };
   }
 }

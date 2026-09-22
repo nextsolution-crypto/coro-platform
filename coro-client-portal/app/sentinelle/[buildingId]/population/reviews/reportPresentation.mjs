@@ -10,10 +10,11 @@ export function formatReportLanguage(language) {
   return language === "FR" ? "Français" : language === "EN" ? "Anglais" : "Non renseignée";
 }
 
-export function buildReportFilename(reference, reviewVersion) {
+export function buildReportFilename(reference, reviewVersion, reportVersion = 1) {
   const safeReference = /^REX-\d{4}-\d{6}$/.test(reference) ? reference : "REX";
   const safeVersion = Number.isInteger(reviewVersion) && reviewVersion > 0 ? reviewVersion : 1;
-  return `${safeReference}_v${safeVersion}_FR.pdf`;
+  const safeReportVersion = Number.isInteger(reportVersion) && reportVersion > 0 ? reportVersion : 1;
+  return `${safeReference}_v${safeVersion}_R${safeReportVersion}_FR.pdf`;
 }
 
 export function reportStatusLabel(status) {

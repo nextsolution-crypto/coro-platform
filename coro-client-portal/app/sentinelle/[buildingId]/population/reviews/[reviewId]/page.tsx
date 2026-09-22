@@ -21,6 +21,7 @@ import {
 } from "../reviewState";
 import styles from "./review.module.css";
 import OperationalReviewReportSection from "./OperationalReviewReportSection";
+import CorrectiveActionTrackingReportSection from "./CorrectiveActionTrackingReportSection";
 
 const uuid = () => crypto.randomUUID();
 export default function PopulationReviewPage() {
@@ -578,6 +579,7 @@ export default function PopulationReviewPage() {
           )}
         </section>
         {review.status === "FINALIZED" && <OperationalReviewReportSection key={reviewId} reviewId={reviewId} canGenerate={rex.has("REX_FINALIZE")} />}
+        {review.status === "FINALIZED" && <CorrectiveActionTrackingReportSection key={`tracking-${reviewId}`} reviewId={reviewId} reference={review.reference} canGenerate={cap.has("CORRECTIVE_ACTION_REPORT_GENERATE")} />}
       </main>
     </PortalLayout>
   );
