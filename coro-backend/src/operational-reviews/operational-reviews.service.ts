@@ -150,7 +150,7 @@ export class OperationalReviewsService {
   async authorizeReport(id: string, actor: ReviewActor, generate = false) {
     if (generate) await this.requirePermission(actor, OperationalReviewPermission.REX_FINALIZE);
     const review = await this.scoped(id, actor, false);
-    return { id: review.id, reference: review.reference, version: review.version, status: review.status, organizationId: review.organizationId };
+    return { id: review.id, reference: review.reference, version: review.version, status: review.status, organizationId: review.organizationId, confidentiality: review.confidentiality };
   }
 
   async getForPopulationEvent(eventId: string, actor: ReviewActor) {

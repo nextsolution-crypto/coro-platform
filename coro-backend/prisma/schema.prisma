@@ -3446,6 +3446,15 @@ model CorrectiveActionTrackingReport {
   status CorrectiveActionTrackingReportStatus @default(SNAPSHOT_READY)
   generatedByType CoroActorType
   generatedById String
+  snapshotCreatedByType CoroActorType?
+  snapshotCreatedById String?
+  generatedAt DateTime?
+  generatorVersion String?
+  storageKey String? @unique
+  fileSize Int?
+  reportSha256 String?
+  leaseExpiresAt DateTime?
+  finalizedAt DateTime?
   renderData Json
   createdAt DateTime @default(now())
 

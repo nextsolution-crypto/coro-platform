@@ -8,6 +8,8 @@ const actor = { sub: 'user', organizationId: 'org', role: 'CLIENT_MANAGER', buil
 function setup() {
   const review = { id: 'review', reference: 'REX-2026-000001', version: 1, status: OperationalReviewStatus.FINALIZED, organizationId: 'org' };
   const prisma: any = {
+    organization: { findUnique: jest.fn().mockResolvedValue({ name: 'Organization' }) },
+    building: { findUnique: jest.fn().mockResolvedValue({ name: 'Building' }) },
     clientUser: { findFirst: jest.fn().mockResolvedValue({ correctiveActionPermissions: [CorrectiveActionPermission.CORRECTIVE_ACTION_REPORT_GENERATE] }) },
     operationalReview: { findFirst: jest.fn().mockResolvedValue({ ...review, title: 'REX', confidentiality: OperationalReviewConfidentiality.BUILDING_TEAM, finalizedAt: new Date(), recommendations: [{ id: 'rec', displayOrder: 1, title: 'Recommendation', status: 'ACCEPTED', reviewFinding: { displayOrder: 1, title: 'Finding' } }] }) },
     correctiveAction: { findMany: jest.fn().mockResolvedValue([{ reviewRecommendationId: 'rec', reference: 'AC-2026-000001', title: 'Action', description: 'Description', priority: 'WARNING', status: 'CANCELLED', visibility: OperationalReviewConfidentiality.BUILDING_TEAM, assigneeType: null, assigneeDisplayNameSnapshot: 'Person', dueDate: null, createdAt: new Date(), completedAt: null, verifiedAt: null, closedAt: null, completionComment: null, closureComment: null, evidence: [{ status: 'ACTIVE', type: 'NOTE', title: 'Note', submittedAt: new Date(), fileSize: null, sha256: null }, { status: 'WITHDRAWN', type: 'LINK', title: 'Old', submittedAt: new Date(), fileSize: null, sha256: null }], verifications: [{ attemptNumber: 1, verdict: 'REJECTED', comment: 'Rework', verifiedAt: new Date(), verifiedByType: 'CLIENT_USER' }] }]) },
