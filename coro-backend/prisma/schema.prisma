@@ -107,6 +107,8 @@ model User {
   mfaCodeExpiry    DateTime?
 
   bookings                         Booking[]
+  bookingAssignments               BookingAssignment[]      @relation("BookingAssignee")
+  bookingAssignmentsCreated        BookingAssignment[]      @relation("BookingAssignmentActor")
   uploadedFiles                    ProjectFile[]            @relation("FileUploader")
   referralsCreated                 Referral[]               @relation("ReferralCreator")
   exerciseReportsCreated           ExerciseReport[]         @relation("ExerciseReportCreator")
@@ -156,6 +158,43 @@ model Client {
   projects        Project[]
   clientUsers     ClientUser[]
   exerciseReports ExerciseReport[]
+}
+
+enum BookingAssignmentRole {
+  LEAD
+  SUPPORT
+}
+
+enum BookingAssignmentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REPLACED
+  REMOVED
+}
+
+model BookingAssignment {
+  id                     String                  @id @default(uuid())
+  bookingId              String
+  booking                Booking                 @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  userId                 String
+  user                   User                    @relation("BookingAssignee", fields: [userId], references: [id], onDelete: Restrict)
+  role                   BookingAssignmentRole
+  status                 BookingAssignmentStatus @default(PENDING)
+  assignedByUserId       String?
+  assignedBy             User?                   @relation("BookingAssignmentActor", fields: [assignedByUserId], references: [id], onDelete: Restrict)
+  assignedAt             DateTime                @default(now())
+  respondedAt            DateTime?
+  declineReason          String?
+  replacedByAssignmentId String?                 @unique
+  replacedByAssignment   BookingAssignment?      @relation("BookingAssignmentReplacement", fields: [replacedByAssignmentId], references: [id], onDelete: Restrict)
+  replaces               BookingAssignment?      @relation("BookingAssignmentReplacement")
+  endedAt                DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([bookingId, status])
+  @@index([userId, status])
 }
 
 model Building {
@@ -773,34 +812,34 @@ model Notification {
 }
 
 model ClientUser {
-  id                    String                 @id @default(uuid())
-  email                 String                 @unique
-  password              String
-  firstName             String
-  lastName              String
-  role                  ClientUserRole         @default(CLIENT_MANAGER)
-  populationPermissions PopulationPermission[] @default([])
+  id                           String                        @id @default(uuid())
+  email                        String                        @unique
+  password                     String
+  firstName                    String
+  lastName                     String
+  role                         ClientUserRole                @default(CLIENT_MANAGER)
+  populationPermissions        PopulationPermission[]        @default([])
   operationalReviewPermissions OperationalReviewPermission[] @default([])
-  correctiveActionPermissions CorrectiveActionPermission[] @default([])
-  buildingIds           String[]
-  isActive              Boolean                @default(true)
-  clientId              String
-  client                Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  organizationId        String
-  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  signatures            DocumentSignature[]
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  magicLinks            MagicLink[]
-  engagements           DocumentEngagement[]
-  bookings              Booking[]
-  mfaCode               String?
-  mfaCodeExpiry         DateTime?
-  uploadedFiles         ProjectFile[]          @relation("ClientFileUploader")
-  trustedDevices        ClientTrustedDevice[]
-  passwordResetTokens   ClientPasswordResetToken[]
-  securityAuditEvents   ClientSecurityAuditEvent[]
-  sessionVersion        Int                    @default(0)
+  correctiveActionPermissions  CorrectiveActionPermission[]  @default([])
+  buildingIds                  String[]
+  isActive                     Boolean                       @default(true)
+  clientId                     String
+  client                       Client                        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  organizationId               String
+  organization                 Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  signatures                   DocumentSignature[]
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  magicLinks                   MagicLink[]
+  engagements                  DocumentEngagement[]
+  bookings                     Booking[]
+  mfaCode                      String?
+  mfaCodeExpiry                DateTime?
+  uploadedFiles                ProjectFile[]                 @relation("ClientFileUploader")
+  trustedDevices               ClientTrustedDevice[]
+  passwordResetTokens          ClientPasswordResetToken[]
+  securityAuditEvents          ClientSecurityAuditEvent[]
+  sessionVersion               Int                           @default(0)
 }
 
 model ClientPasswordResetToken {
@@ -1020,6 +1059,7 @@ model Booking {
   notifications   BookingNotification[]
   activity        ProjectActivity?
   exerciseReports ExerciseReport[]
+  assignments     BookingAssignment[]
 }
 
 model BookingNotification {
@@ -2713,11 +2753,11 @@ model PopulationEvidenceRecord {
   snapshot       Json
   snapshotSha256 String
 
-  supersedesId String?                      @unique
-  supersedes   PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
-  supersededBy PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession")
-  manifests    PopulationEvidenceManifest[]
-  reports      PopulationEvidenceReport[]
+  supersedesId       String?                      @unique
+  supersedes         PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy       PopulationEvidenceRecord?    @relation("PopulationEvidenceSupersession")
+  manifests          PopulationEvidenceManifest[]
+  reports            PopulationEvidenceReport[]
   operationalReviews OperationalReview[]
 
   createdAt DateTime @default(now())
@@ -3253,59 +3293,58 @@ model ComplianceEvidence {
 }
 
 model CorrectiveAction {
-  id             String    @id @default(uuid())
-  reference      String?   @unique @default(dbgenerated("corrective_action_reference()"))
-  clientIntentId String?   @unique
-  organizationId String
-  buildingId     String?
-  incidentId     String?
-  category       String // ROLES | QUALIFICATIONS | PLANS | EXERCISES | INCIDENTS | GENERAL
-  title          String
-  description    String?
-  status         String    @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
-  priority       String    @default("WARNING") // CRITICAL | WARNING | INFO
-  assignedTo     String?
-  assigneeType   CorrectiveActionAssigneeType?
-  assigneeId     String?
+  id                          String                           @id @default(uuid())
+  reference                   String?                          @unique @default(dbgenerated("corrective_action_reference()"))
+  clientIntentId              String?                          @unique
+  organizationId              String
+  buildingId                  String?
+  incidentId                  String?
+  category                    String // ROLES | QUALIFICATIONS | PLANS | EXERCISES | INCIDENTS | GENERAL
+  title                       String
+  description                 String?
+  status                      String                           @default("PLANNED") // PLANNED | IN_PROGRESS | COMPLETED | CANCELLED
+  priority                    String                           @default("WARNING") // CRITICAL | WARNING | INFO
+  assignedTo                  String?
+  assigneeType                CorrectiveActionAssigneeType?
+  assigneeId                  String?
   assigneeDisplayNameSnapshot String?
-  visibility     OperationalReviewConfidentiality @default(BUILDING_TEAM)
-  reviewRecommendationId String?
-  reviewRecommendation ReviewRecommendation? @relation(fields: [reviewRecommendationId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  createdByType  CoroActorType?
-  createdById    String?
-  updatedByType  CoroActorType?
-  updatedById    String?
-  dueDate        DateTime?
-  completedAt    DateTime?
-  completedByType CoroActorType?
-  completedById   String?
-  completionComment String?
-  verifiedAt      DateTime?
-  verifiedByType  CoroActorType?
-  verifiedById    String?
-  closedAt        DateTime?
-  closedByType    CoroActorType?
-  closedById      String?
-  closureComment  String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  visibility                  OperationalReviewConfidentiality @default(BUILDING_TEAM)
+  reviewRecommendationId      String?
+  reviewRecommendation        ReviewRecommendation?            @relation(fields: [reviewRecommendationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdByType               CoroActorType?
+  createdById                 String?
+  updatedByType               CoroActorType?
+  updatedById                 String?
+  dueDate                     DateTime?
+  completedAt                 DateTime?
+  completedByType             CoroActorType?
+  completedById               String?
+  completionComment           String?
+  verifiedAt                  DateTime?
+  verifiedByType              CoroActorType?
+  verifiedById                String?
+  closedAt                    DateTime?
+  closedByType                CoroActorType?
+  closedById                  String?
+  closureComment              String?
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
 
-  building               Building?               @relation(fields: [buildingId], references: [id], onDelete: SetNull)
-  incident               IncidentEvent?          @relation(fields: [incidentId], references: [id], onDelete: SetNull)
-  exerciseReport         ExerciseReport?         @relation(fields: [exerciseReportId], references: [id], onDelete: SetNull)
+  building               Building?                      @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  incident               IncidentEvent?                 @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  exerciseReport         ExerciseReport?                @relation(fields: [exerciseReportId], references: [id], onDelete: SetNull)
   exerciseReportId       String?
-  sourceFinding          ExerciseFinding?        @relation(fields: [sourceFindingId], references: [id], onDelete: SetNull)
+  sourceFinding          ExerciseFinding?               @relation(fields: [sourceFindingId], references: [id], onDelete: SetNull)
   sourceFindingId        String?
-  sourceRecommendation   ExerciseRecommendation? @relation(fields: [sourceRecommendationId], references: [id], onDelete: SetNull)
+  sourceRecommendation   ExerciseRecommendation?        @relation(fields: [sourceRecommendationId], references: [id], onDelete: SetNull)
   sourceRecommendationId String?
-  exerciseActionItemId   String?                 @unique
-  actionItem             ExerciseActionItem?     @relation(fields: [exerciseActionItemId], references: [id], onDelete: SetNull)
+  exerciseActionItemId   String?                        @unique
+  actionItem             ExerciseActionItem?            @relation(fields: [exerciseActionItemId], references: [id], onDelete: SetNull)
   auditEvents            CorrectiveActionAuditEvent[]
   evidence               CorrectiveActionEvidence[]
   verifications          CorrectiveActionVerification[]
 
   @@unique([id, organizationId])
-
   @@index([organizationId])
   @@index([buildingId])
   @@index([incidentId])
@@ -3333,16 +3372,16 @@ model CorrectiveActionVerification {
 }
 
 model CorrectiveActionEvidence {
-  id                 String                         @id @default(uuid())
-  organizationId     String
-  correctiveActionId String
-  correctiveAction   CorrectiveAction               @relation(fields: [correctiveActionId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  clientIntentId     String
-  type               CorrectiveActionEvidenceType
-  title              String
-  description        String?
-  status             CorrectiveActionEvidenceStatus @default(PENDING)
-  storageKey          String?                        @unique
+  id                  String                               @id @default(uuid())
+  organizationId      String
+  correctiveActionId  String
+  correctiveAction    CorrectiveAction                     @relation(fields: [correctiveActionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  clientIntentId      String
+  type                CorrectiveActionEvidenceType
+  title               String
+  description         String?
+  status              CorrectiveActionEvidenceStatus       @default(PENDING)
+  storageKey          String?                              @unique
   originalFileName    String?
   mimeType            String?
   fileSize            Int?
@@ -3351,14 +3390,14 @@ model CorrectiveActionEvidence {
   systemReferenceType CorrectiveActionSystemReferenceType?
   systemReferenceId   String?
   noteText            String?
-  submittedAt         DateTime                       @default(now())
+  submittedAt         DateTime                             @default(now())
   submittedByType     CoroActorType
   submittedById       String
   withdrawnAt         DateTime?
   withdrawnByType     CoroActorType?
   withdrawnById       String?
   withdrawalReason    String?
-  createdAt            DateTime                       @default(now())
+  createdAt           DateTime                             @default(now())
 
   @@unique([organizationId, clientIntentId])
   @@index([correctiveActionId, status, submittedAt])
@@ -3367,61 +3406,61 @@ model CorrectiveActionEvidence {
 }
 
 model CorrectiveActionAuditEvent {
-  id String @id @default(uuid())
-  organizationId String
+  id                 String                         @id @default(uuid())
+  organizationId     String
   correctiveActionId String
-  correctiveAction CorrectiveAction @relation(fields: [correctiveActionId], references: [id], onDelete: Restrict)
-  eventType CorrectiveActionAuditEventType
-  actorType CoroActorType
-  actorId String
-  occurredAt DateTime @default(now())
-  metadata Json?
+  correctiveAction   CorrectiveAction               @relation(fields: [correctiveActionId], references: [id], onDelete: Restrict)
+  eventType          CorrectiveActionAuditEventType
+  actorType          CoroActorType
+  actorId            String
+  occurredAt         DateTime                       @default(now())
+  metadata           Json?
 
   @@index([correctiveActionId, occurredAt])
   @@index([organizationId])
 }
 
 model OperationalReview {
-  id String @id @default(uuid())
-  organizationId String
-  reference String @unique @default(dbgenerated("operational_review_reference()"))
-  version Int @default(1)
-  status OperationalReviewStatus @default(DRAFT)
-  confidentiality OperationalReviewConfidentiality @default(RESTRICTED)
-  title String
-  summary String?
-  buildingId String?
-  projectId String?
+  id                           String                           @id @default(uuid())
+  organizationId               String
+  reference                    String                           @unique @default(dbgenerated("operational_review_reference()"))
+  version                      Int                              @default(1)
+  status                       OperationalReviewStatus          @default(DRAFT)
+  confidentiality              OperationalReviewConfidentiality @default(RESTRICTED)
+  title                        String
+  summary                      String?
+  buildingId                   String?
+  projectId                    String?
   populationOperationalEventId String?
-  populationEvidenceRecordId String?
-  populationEvidenceRecord PopulationEvidenceRecord? @relation(fields: [populationEvidenceRecordId], references: [id], onDelete: Restrict)
-  incidentEventId String?
-  exerciseReportId String?
-  createdByType CoroActorType
-  createdById String
-  submittedAt DateTime?
-  submittedByType CoroActorType?
-  submittedById String?
-  finalizedAt DateTime?
-  finalizedByType CoroActorType?
-  finalizedById String?
-  supersedesId String? @unique
-  supersedes OperationalReview? @relation("OperationalReviewSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
-  supersededBy OperationalReview? @relation("OperationalReviewSupersession")
-  auditEvents OperationalReviewAuditEvent[]
-  findings ReviewFinding[]
-  recommendations ReviewRecommendation[]
-  reports OperationalReviewReport[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  populationEvidenceRecordId   String?
+  populationEvidenceRecord     PopulationEvidenceRecord?        @relation(fields: [populationEvidenceRecordId], references: [id], onDelete: Restrict)
+  incidentEventId              String?
+  exerciseReportId             String?
+  createdByType                CoroActorType
+  createdById                  String
+  submittedAt                  DateTime?
+  submittedByType              CoroActorType?
+  submittedById                String?
+  finalizedAt                  DateTime?
+  finalizedByType              CoroActorType?
+  finalizedById                String?
+  supersedesId                 String?                          @unique
+  supersedes                   OperationalReview?               @relation("OperationalReviewSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy                 OperationalReview?               @relation("OperationalReviewSupersession")
+  auditEvents                  OperationalReviewAuditEvent[]
+  findings                     ReviewFinding[]
+  recommendations              ReviewRecommendation[]
+  reports                      OperationalReviewReport[]
+  createdAt                    DateTime                         @default(now())
+  updatedAt                    DateTime                         @updatedAt
 
+  @@unique([id, organizationId])
   @@index([organizationId])
   @@index([buildingId])
   @@index([populationOperationalEventId])
   @@index([incidentEventId])
   @@index([exerciseReportId])
   @@index([status])
-  @@unique([id, organizationId])
 }
 
 enum OperationalReviewReportStatus {
@@ -3430,27 +3469,27 @@ enum OperationalReviewReportStatus {
 }
 
 model OperationalReviewReport {
-  id String @id @default(uuid())
-  organizationId String
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id                  String                        @id @default(uuid())
+  organizationId      String
+  organization        Organization                  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   operationalReviewId String
-  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  reviewVersion Int
-  reportVersion Int @default(1)
-  format String @default("PDF")
-  language String @default("FR")
-  status OperationalReviewReportStatus @default(GENERATING)
-  generatedAt DateTime
-  generatedByType CoroActorType
-  generatedById String
-  generatorVersion String
-  storageKey String @unique
-  fileSize Int?
-  reportSha256 String?
-  leaseExpiresAt DateTime
-  renderData Json
-  createdAt DateTime @default(now())
-  finalizedAt DateTime?
+  operationalReview   OperationalReview             @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewVersion       Int
+  reportVersion       Int                           @default(1)
+  format              String                        @default("PDF")
+  language            String                        @default("FR")
+  status              OperationalReviewReportStatus @default(GENERATING)
+  generatedAt         DateTime
+  generatedByType     CoroActorType
+  generatedById       String
+  generatorVersion    String
+  storageKey          String                        @unique
+  fileSize            Int?
+  reportSha256        String?
+  leaseExpiresAt      DateTime
+  renderData          Json
+  createdAt           DateTime                      @default(now())
+  finalizedAt         DateTime?
 
   @@unique([operationalReviewId, reviewVersion, reportVersion, language, format])
   @@index([organizationId])
@@ -3458,41 +3497,41 @@ model OperationalReviewReport {
 }
 
 model OperationalReviewAuditEvent {
-  id String @id @default(uuid())
-  reviewId String
-  review OperationalReview @relation(fields: [reviewId], references: [id], onDelete: Restrict)
-  type OperationalReviewAuditEventType
+  id        String                          @id @default(uuid())
+  reviewId  String
+  review    OperationalReview               @relation(fields: [reviewId], references: [id], onDelete: Restrict)
+  type      OperationalReviewAuditEventType
   actorType CoroActorType
-  actorId String
-  metadata Json?
-  createdAt DateTime @default(now())
+  actorId   String
+  metadata  Json?
+  createdAt DateTime                        @default(now())
 
   @@index([reviewId, createdAt])
 }
 
 model ReviewFinding {
-  id String @id @default(uuid())
-  organizationId String
+  id                  String                 @id @default(uuid())
+  organizationId      String
   operationalReviewId String
-  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  category ReviewFindingCategory
-  title String
-  description String
-  severity ReviewFindingSeverity
-  impact String?
-  status ReviewFindingStatus @default(OPEN)
-  displayOrder Int
-  createdByType CoroActorType
-  createdById String
-  acceptedAt DateTime?
-  acceptedByType CoroActorType?
-  acceptedById String?
-  closedAt DateTime?
-  closedByType CoroActorType?
-  closedById String?
-  recommendations ReviewRecommendation[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  operationalReview   OperationalReview      @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  category            ReviewFindingCategory
+  title               String
+  description         String
+  severity            ReviewFindingSeverity
+  impact              String?
+  status              ReviewFindingStatus    @default(OPEN)
+  displayOrder        Int
+  createdByType       CoroActorType
+  createdById         String
+  acceptedAt          DateTime?
+  acceptedByType      CoroActorType?
+  acceptedById        String?
+  closedAt            DateTime?
+  closedByType        CoroActorType?
+  closedById          String?
+  recommendations     ReviewRecommendation[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   @@unique([id, operationalReviewId, organizationId])
   @@unique([operationalReviewId, displayOrder])
@@ -3501,27 +3540,27 @@ model ReviewFinding {
 }
 
 model ReviewRecommendation {
-  id String @id @default(uuid())
-  organizationId String
+  id                  String                        @id @default(uuid())
+  organizationId      String
   operationalReviewId String
-  operationalReview OperationalReview @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  reviewFindingId String
-  reviewFinding ReviewFinding @relation(fields: [reviewFindingId, operationalReviewId, organizationId], references: [id, operationalReviewId, organizationId], onDelete: Restrict)
-  title String?
-  description String
-  priority ReviewRecommendationPriority?
-  status ReviewRecommendationStatus @default(PROPOSED)
-  rationale String?
-  displayOrder Int
-  createdByType CoroActorType
-  createdById String
-  decidedAt DateTime?
-  decidedByType CoroActorType?
-  decidedById String?
-  decisionComment String?
-  correctiveActions CorrectiveAction[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  operationalReview   OperationalReview             @relation(fields: [operationalReviewId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  reviewFindingId     String
+  reviewFinding       ReviewFinding                 @relation(fields: [reviewFindingId, operationalReviewId, organizationId], references: [id, operationalReviewId, organizationId], onDelete: Restrict)
+  title               String?
+  description         String
+  priority            ReviewRecommendationPriority?
+  status              ReviewRecommendationStatus    @default(PROPOSED)
+  rationale           String?
+  displayOrder        Int
+  createdByType       CoroActorType
+  createdById         String
+  decidedAt           DateTime?
+  decidedByType       CoroActorType?
+  decidedById         String?
+  decisionComment     String?
+  correctiveActions   CorrectiveAction[]
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @updatedAt
 
   @@unique([operationalReviewId, displayOrder])
   @@unique([id, organizationId])

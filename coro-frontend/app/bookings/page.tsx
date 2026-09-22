@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { useAuthStore } from '@/stores/auth.store';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
   DEMANDEE:   { label: 'Demandée',   color: '#2980B9', bg: '#EBF5FB', border: '#AED6F1', icon: '⏳' },
@@ -23,8 +24,15 @@ const ACTIVITY_LABELS: Record<string, string> = {
   autre:     '📅 Autre activité',
 };
 
+const ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'En attente', ACCEPTED: 'Acceptée', DECLINED: 'Refusée',
+  REPLACED: 'Remplacée', REMOVED: 'Retirée',
+};
+
 export default function BookingsPage() {
   const router = useRouter();
+  const currentUser = useAuthStore(s => s.user);
+  const canManageTeam = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
   const [bookings, setBookings] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +52,8 @@ export default function BookingsPage() {
   const [newUserId, setNewUserId] = useState('');
   const [processing, setProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [teamUserIds, setTeamUserIds] = useState<Record<string, string>>({});
+  const [teamError, setTeamError] = useState('');
 
   useEffect(() => { fetchData(); }, []);
 
@@ -75,6 +85,20 @@ export default function BookingsPage() {
       await fetchData();
     } catch (err) { console.error(err); }
     finally { setProcessing(false); }
+  };
+
+  const teamAction = async (bookingId: string, action: 'add' | 'addLead' | 'replace' | 'remove' | 'respond', assignmentId?: string, response?: string) => {
+    setTeamError('');
+    try {
+      if (action === 'add') await api.post(`/bookings/${bookingId}/assignments`, { userId: teamUserIds[bookingId], role: 'SUPPORT' });
+      if (action === 'addLead') await api.post(`/bookings/${bookingId}/assignments`, { userId: teamUserIds[bookingId], role: 'LEAD' });
+      if (action === 'replace') await api.post(`/bookings/${bookingId}/assignments/${assignmentId}/replace`, { newUserId: teamUserIds[bookingId] });
+      if (action === 'remove') await api.delete(`/bookings/${bookingId}/assignments/${assignmentId}`);
+      if (action === 'respond') await api.post(`/bookings/${bookingId}/assignments/${assignmentId}/respond`, { status: response });
+      await fetchData();
+    } catch (error: any) {
+      setTeamError(error?.response?.data?.message || 'Impossible de modifier l’équipe.');
+    }
   };
 
   const closeAllModals = () => {
@@ -260,13 +284,13 @@ export default function BookingsPage() {
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                           📅 Reporter
                         </button>
-                        <button onClick={() => openModal(booking, 'reassign')}
+                        {canManageTeam && <button onClick={() => openModal(booking, 'reassign')}
                           className="text-sm font-medium px-3 sm:px-4 py-2.5 rounded transition-colors min-h-11 w-full sm:w-auto"
                           style={{ border: '1px solid #D2B4DE', color: '#8E44AD' }}
                           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F4ECF7'}
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                           👤 Réassigner
-                        </button>
+                        </button>}
                         <button onClick={() => openModal(booking, 'refuse')}
                           className="text-sm font-medium px-3 sm:px-4 py-2.5 rounded transition-colors min-h-11 w-full sm:w-auto"
                           style={{ border: '1px solid #F1948A', color: '#C0392B' }}
@@ -361,6 +385,34 @@ export default function BookingsPage() {
                       Voir le projet →
                     </button>
                   </div>
+
+                  <div className="mt-4 rounded p-3" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+                    <p className="text-xs font-bold mb-2" style={{ color: '#2C3E50' }}>Équipe</p>
+                    {(booking.assignments || []).length === 0 && <p className="text-xs" style={{ color: '#6C757D' }}>Aucune affectation active.</p>}
+                    {(booking.assignments || []).map((assignment: any) => (
+                      <div key={assignment.id} className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+                        <span className="font-bold">{assignment.role}</span>
+                        <span>{assignment.user?.firstName} {assignment.user?.lastName}</span>
+                        <span style={{ color: '#6C757D' }}>{ASSIGNMENT_STATUS_LABELS[assignment.status] || assignment.status}</span>
+                        {assignment.status === 'PENDING' && assignment.userId === currentUser?.id && <>
+                          <button className="underline" onClick={() => teamAction(booking.id, 'respond', assignment.id, 'ACCEPTED')}>Accepter</button>
+                          <button className="underline" onClick={() => teamAction(booking.id, 'respond', assignment.id, 'DECLINED')}>Refuser</button>
+                        </>}
+                        {canManageTeam && assignment.role === 'SUPPORT' && <button className="underline" onClick={() => teamAction(booking.id, 'remove', assignment.id)}>Retirer</button>}
+                      </div>
+                    ))}
+                    {!(booking.assignments || []).some((a: any) => a.role === 'LEAD') && <p className="text-xs mb-2" style={{ color: '#C0392B' }}>Aucun LEAD actif. Une nouvelle proposition est nécessaire.</p>}
+                    {canManageTeam && <div className="flex flex-wrap gap-2 mt-3">
+                      <select aria-label="Conseiller à affecter" className="text-xs rounded p-2" value={teamUserIds[booking.id] || ''} onChange={e => setTeamUserIds(v => ({ ...v, [booking.id]: e.target.value }))}>
+                        <option value="">Choisir un conseiller</option>
+                        {users.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
+                      </select>
+                      <button className="text-xs underline disabled:opacity-50" disabled={!teamUserIds[booking.id]} onClick={() => teamAction(booking.id, 'add')}>Ajouter SUPPORT</button>
+                      {!(booking.assignments || []).some((a: any) => a.role === 'LEAD') && <button className="text-xs underline disabled:opacity-50" disabled={!teamUserIds[booking.id]} onClick={() => teamAction(booking.id, 'addLead')}>Proposer LEAD</button>}
+                      {(booking.assignments || []).find((a: any) => a.role === 'LEAD') && <button className="text-xs underline disabled:opacity-50" disabled={!teamUserIds[booking.id]} onClick={() => teamAction(booking.id, 'replace', (booking.assignments || []).find((a: any) => a.role === 'LEAD').id)}>Remplacer LEAD</button>}
+                    </div>}
+                  </div>
+                  {teamError && <p role="alert" className="text-xs text-red-700 mt-2">{teamError}</p>}
                 </div>
               </div>
             );

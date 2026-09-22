@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BOOKING_TRANSITIONS, BookingStatus, effectiveBookingDate } from './booking-status';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class BookingsService {
@@ -36,6 +37,7 @@ export class BookingsService {
         participants: data.participants,
         comment: data.comment,
         status: 'DEMANDEE',
+        assignments: { create: { userId: project.userId, role: 'LEAD', status: 'ACCEPTED', respondedAt: new Date() } },
       },
       include: {
         project: { include: { client: true, building: true } },
@@ -88,6 +90,11 @@ export class BookingsService {
         project: { include: { client: true, building: true } },
         clientUser: { select: { firstName: true, lastName: true, email: true } },
         assignedUser: { select: { firstName: true, lastName: true, email: true } },
+        assignments: {
+          where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          orderBy: { assignedAt: 'asc' },
+        },
       },
       orderBy: { requestedDate: 'asc' },
     });
@@ -115,7 +122,7 @@ export class BookingsService {
     refuseReason?: string;
     reportedDate?: Date;
     newUserId?: string;
-  }, organizationId: string) {
+  }, organizationId: string, actor?: { userId: string; role: string }) {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, organizationId },
       include: {
@@ -133,10 +140,14 @@ export class BookingsService {
       throw new BadRequestException('Date de report requise');
     }
     if (data.status === 'REASSIGNEE' && !data.newUserId) throw new BadRequestException('Conseiller requis');
+    if (data.newUserId && data.status !== 'REASSIGNEE') throw new BadRequestException('Conseiller seulement permis pour une réassignation');
     if (data.status === 'REFUSEE' && !data.refuseReason?.trim()) throw new BadRequestException('Motif de refus requis');
     if (data.newUserId) {
       const user = await this.prisma.user.findFirst({ where: { id: data.newUserId, organizationId, isActive: true } });
       if (!user) throw new BadRequestException('Conseiller invalide');
+    }
+    if (data.status === 'REASSIGNEE' && actor?.role !== 'ADMIN' && actor?.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Réassignation réservée aux administrateurs');
     }
 
     const updateData: any = { status: data.status };
@@ -144,15 +155,25 @@ export class BookingsService {
     if (data.reportedDate) updateData.reportedDate = data.reportedDate;
     if (data.newUserId) updateData.assignedUserId = data.newUserId;
 
-    const updated = await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: updateData,
-      include: {
-        project: { include: { client: true, building: true } },
-        clientUser: true,
-        assignedUser: true,
-      },
-    });
+    const include = {
+      project: { include: { client: true, building: true } },
+      clientUser: true,
+      assignedUser: true,
+    } as const;
+    const updated = data.status === 'REASSIGNEE' && data.newUserId
+      ? await this.prisma.$transaction(async tx => {
+          const previous = await tx.bookingAssignment.findFirst({ where: { bookingId, role: 'LEAD', status: { in: ['PENDING', 'ACCEPTED'] } } });
+          if (previous?.userId === data.newUserId) throw new BadRequestException('Conseiller déjà affecté');
+          const now = new Date();
+          if (previous) await tx.bookingAssignment.update({ where: { id: previous.id }, data: { status: 'REPLACED', endedAt: now } });
+          const next = await tx.bookingAssignment.create({ data: {
+            bookingId, userId: data.newUserId!, role: 'LEAD', status: 'ACCEPTED',
+            assignedAt: now, respondedAt: now, assignedByUserId: actor?.userId,
+          } });
+          if (previous) await tx.bookingAssignment.update({ where: { id: previous.id }, data: { replacedByAssignmentId: next.id } });
+          return tx.booking.update({ where: { id: bookingId }, data: updateData, include });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      : await this.prisma.booking.update({ where: { id: bookingId }, data: updateData, include });
 
     // Notifier le client selon le statut
     const actLabel = this.activityLabel(booking.activityType);

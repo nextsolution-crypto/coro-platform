@@ -29,7 +29,7 @@ export class BookingsController {
       refuseReason: body.refuseReason,
       reportedDate: body.reportedDate ? new Date(body.reportedDate) : undefined,
       newUserId: body.newUserId,
-    }, req.user.organizationId);
+    }, req.user.organizationId, req.user);
   }
 
   @Put(':id/cancel')
