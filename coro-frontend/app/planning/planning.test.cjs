@@ -21,21 +21,57 @@ function loadTypescript(name) {
 const time = loadTypescript('time.ts');
 const projection = loadTypescript('projection.ts');
 
-test('work week and day navigation stay on civil dates', () => {
-  assert.deepEqual(time.viewDays('2026-09-23', 'week'), [
+test('day, full week and work week use exact civil windows', () => {
+  assert.deepEqual(time.viewDays('2026-09-23', 'workweek'), [
     '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25',
   ]);
-  assert.equal(time.addDays('2026-09-23', -7), '2026-09-16');
-  assert.equal(time.addDays('2026-09-23', 7), '2026-09-30');
+  assert.deepEqual(time.viewDays('2026-09-23', 'week'), [
+    '2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27',
+  ]);
   assert.deepEqual(time.viewDays('2026-09-23', 'day'), ['2026-09-23']);
+  assert.equal(time.requestWindow(time.viewDays('2026-09-23', 'day'), 'America/Toronto').end, '2026-09-24T04:00:00.000Z');
 });
 
 test('request window uses local boundaries in the display time zone', () => {
-  const window = time.requestWindow(time.viewDays('2026-09-23', 'week'), 'America/Toronto');
+  const window = time.requestWindow(time.viewDays('2026-09-23', 'workweek'), 'America/Toronto');
   assert.equal(window.start, '2026-09-21T04:00:00.000Z');
   assert.equal(window.end, '2026-09-26T04:00:00.000Z');
   assert.equal(time.dateKey(new Date('2026-09-23T02:00:00Z'), 'America/Toronto'), '2026-09-22');
   assert.equal(time.validTimeZone('Invalid/Zone'), false);
+});
+
+test('civil months include leap, common, 30-day and 31-day boundaries', () => {
+  assert.equal(time.viewDays('2028-02-10', 'month').length, 29);
+  assert.equal(time.viewDays('2027-02-10', 'month').length, 28);
+  assert.equal(time.viewDays('2026-04-10', 'month').length, 30);
+  assert.equal(time.viewDays('2026-01-10', 'month').length, 31);
+  assert.equal(time.requestWindow(time.viewDays('2028-02-10', 'month'), 'America/Toronto').end, '2028-03-01T05:00:00.000Z');
+});
+
+test('month navigation crosses year boundaries without UTC date drift', () => {
+  assert.equal(time.moveDate('2026-12-31', 'month', 1), '2027-01-31');
+  assert.equal(time.moveDate('2027-01-31', 'month', -1), '2026-12-31');
+  assert.equal(time.moveDate('2028-01-31', 'month', 1), '2028-02-29');
+  assert.equal(time.monthGridDays('2027-02-12').length, 35);
+  assert.equal(time.monthGridDays('2026-08-12').length, 42);
+});
+
+test('today and now position respect the selected IANA zone and DST', () => {
+  const instant = new Date('2026-09-22T14:30:00Z');
+  assert.equal(time.dateKey(instant, 'America/Toronto'), '2026-09-22');
+  assert.equal(time.dateKey(instant, 'America/Vancouver'), '2026-09-22');
+  assert.equal(time.nowPosition(instant, '2026-09-22', 'America/Toronto', { start: 480, end: 1020 }), 150 / 540 * 100);
+  assert.equal(time.nowPosition(instant, '2026-09-21', 'America/Toronto', { start: 0, end: 1440 }), null);
+  const dst = time.requestWindow(time.viewDays('2026-03-08', 'day'), 'America/Toronto');
+  assert.equal((new Date(dst.end) - new Date(dst.start)) / 3_600_000, 23);
+});
+
+test('period labels and month-to-day URL retain filters', () => {
+  assert.match(time.periodLabel(time.viewDays('2026-09-22', 'day'), 'day'), /22 septembre 2026/);
+  assert.match(time.periodLabel(time.viewDays('2026-09-22', 'week'), 'week'), /21–27 septembre 2026/);
+  assert.match(time.periodLabel(time.viewDays('2026-09-22', 'month'), 'month'), /septembre 2026/);
+  const url = time.plannerDayUrl('date=2026-09-01&view=month&tz=America%2FToronto&clientId=c1&needsAction=true', '2026-09-22');
+  assert.match(url, /date=2026-09-22/); assert.match(url, /view=day/); assert.match(url, /clientId=c1/); assert.match(url, /needsAction=true/);
 });
 
 test('09:10–11:40 is positioned to the minute and early/late events extend the scale', () => {

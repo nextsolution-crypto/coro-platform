@@ -8,10 +8,11 @@ import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/auth.store';
 import ResourceTimeline from './ResourceTimeline';
+import MonthCalendar from './MonthCalendar';
 import { eventForUser, eventLabel, eventStatus, planningErrorMessage } from './projection';
 import PlanningDrawer from './PlanningDrawer';
 import type { PlannerEvent, PlannerResponse } from './types';
-import { addDays, dateKey, formatClock, formatDay, requestWindow, segmentForDay, validTimeZone, viewDays, type PlannerView } from './time';
+import { dateKey, formatClock, formatDay, moveDate, periodLabel, requestWindow, segmentForDay, validTimeZone, viewDays, type PlannerView } from './time';
 import styles from './planning.module.css';
 
 type Option = { id: string; name: string };
@@ -61,6 +62,7 @@ export default function TeamPlannerPage() {
   const [actionTotal, setActionTotal] = useState(0);
   const [actionError, setActionError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [periodActions, setPeriodActions] = useState<PlanningAction[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +75,9 @@ export default function TeamPlannerPage() {
       setZone(initialZone);
       setDate(requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
         Number.isFinite(new Date(`${requestedDate}T12:00:00Z`).getTime()) ? requestedDate : dateKey(new Date(), initialZone));
-      setView(params.get('view') === 'day' || (!params.has('view') && window.innerWidth < 700) ? 'day' : 'week');
+      const requestedView = params.get('view');
+      setView(requestedView && ['day', 'week', 'workweek', 'month'].includes(requestedView)
+        ? requestedView as PlannerView : !params.has('view') && window.innerWidth < 700 ? 'day' : 'workweek');
       setSearch(params.get('search') ?? '');
       setClientId(params.get('clientId') ?? '');
       setBuildingId(params.get('buildingId') ?? '');
@@ -146,13 +150,37 @@ export default function TeamPlannerPage() {
     return () => { cancelled = true; };
   }, [actionType, actionPage, requestRange, zone, debouncedSearch, clientId, buildingId, bookingStatus, isAuthenticated]);
 
-  const move = (direction: -1 | 1) => setDate(previous => addDays(previous, direction * (view === 'week' ? 7 : 1)));
+  useEffect(() => {
+    const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
+    if (view !== 'month' || !requestRange || !authenticated) { setPeriodActions([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      const collected: PlanningAction[] = [];
+      for (let page = 1; ; page++) {
+        const response = await api.get('/planning/actions', { params: {
+          start: requestRange.start, end: requestRange.end, displayTimeZone: zone, page, limit: 50,
+          ...(debouncedSearch ? { search: debouncedSearch } : {}), ...(clientId ? { clientId } : {}),
+          ...(buildingId ? { buildingId } : {}), ...(bookingStatus ? { bookingStatus } : {}),
+        } });
+        const items = (response.data.items ?? []) as PlanningAction[];
+        collected.push(...items);
+        if (collected.length >= (response.data.total ?? 0) || items.length === 0) break;
+      }
+      if (!cancelled) setPeriodActions(collected);
+    };
+    load().catch(() => { if (!cancelled) setPeriodActions([]); });
+    return () => { cancelled = true; };
+  }, [view, requestRange, zone, debouncedSearch, clientId, buildingId, bookingStatus, isAuthenticated]);
+
+  const move = (direction: -1 | 1) => setDate(previous => moveDate(previous, view, direction));
   const closeDrawer = useCallback(() => setSelected(null), []);
   const displayedZone = data?.displayTimeZone ?? zone;
   const mobileEvents = useMemo(() => data?.events.flatMap(event => event.userIds.length
     ? event.userIds.map(userId => ({ ...eventForUser(event, userId), userIds: [userId] }))
     : [event]) ?? [], [data]);
   const totalActions = data ? Object.values(data.actionSummary).reduce((sum, count) => sum + count, 0) : 0;
+  const period = periodLabel(days, view);
+  const today = dateKey(new Date(), displayedZone);
 
   return <AppLayout>
     <div className={styles.page}>
@@ -184,12 +212,14 @@ export default function TeamPlannerPage() {
 
       <section className={styles.toolbar} aria-label="Contrôles du planner">
         <div className={styles.periodControls}>
-          <button type="button" onClick={() => move(-1)} aria-label={view === 'week' ? 'Semaine précédente' : 'Jour précédent'}>‹</button>
+          <button type="button" onClick={() => move(-1)} aria-label="Période précédente">‹</button>
           <button type="button" onClick={() => setDate(dateKey(new Date(), zone))}>Aujourd’hui</button>
-          <button type="button" onClick={() => move(1)} aria-label={view === 'week' ? 'Semaine suivante' : 'Jour suivant'}>›</button>
+          <button type="button" onClick={() => move(1)} aria-label="Période suivante">›</button>
+          <strong className={styles.periodLabel} aria-live="polite">{period}</strong>
           <label>Date <input type="date" value={date} onChange={change => setDate(change.target.value)} /></label>
           <label>Vue <select value={view} onChange={change => setView(change.target.value as PlannerView)}>
-            <option value="week">Semaine ouvrée</option><option value="day">Jour</option></select></label>
+            <option value="day">Jour</option><option value="week">Semaine</option>
+            <option value="workweek">Semaine ouvrée</option><option value="month">Mois</option></select></label>
         </div>
         <div className={styles.filters}>
           <label>Fuseau <select value={zone} onChange={change => setZone(change.target.value)}>
@@ -212,9 +242,11 @@ export default function TeamPlannerPage() {
       {error && <div className={styles.error} role="alert">{error}</div>}
       {data && !error && <section className={styles.gridSection} aria-label="Calendrier d'équipe" aria-busy={loading}>
         {data.warnings.length > 0 && <div className={styles.notice} role="status">{data.warnings.join(' · ')}</div>}
+        {view === 'month' ? <MonthCalendar monthDays={days} events={data.events} actions={periodActions}
+          timeZone={displayedZone} today={today} onDay={day => { setDate(day); setView('day'); }} onSelect={setSelected} /> : <>
         <div className={styles.desktopTimeline}><ResourceTimeline data={data} days={days} onSelect={setSelected} /></div>
         <div className={styles.mobileAgenda}>
-          <h2>Agenda {view === 'day' ? 'du jour' : 'de la semaine'}</h2>
+          <h2>{view === 'day' ? 'Journée' : 'Agenda de la semaine'}</h2>
           {days.map(day => <section key={day}><h3>{formatDay(day)}</h3>
             {mobileEvents.filter(event => segmentForDay(event, day, displayedZone, { start: 0, end: 1440 })).length ?
               mobileEvents.filter(event => segmentForDay(event, day, displayedZone, { start: 0, end: 1440 }))
@@ -225,7 +257,7 @@ export default function TeamPlannerPage() {
                 </button>) : <p>Aucun événement ce jour.</p>}
           </section>)}
           <h3>Conseillers</h3><ul>{data.users.map(person => <li key={person.id}>{person.name}{person.workScheduleConfigured === false ? ' · Horaire non configuré' : ''}</li>)}</ul>
-        </div>
+        </div></>}
       </section>}
       {!data && !loading && !error && <p className={styles.empty}>Aucune projection disponible.</p>}
     </div>

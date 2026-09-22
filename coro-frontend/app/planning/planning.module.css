@@ -17,6 +17,7 @@
 .actionPager { display:flex; align-items:center; gap:10px; margin-top:12px }.actionPager button { background:white; border:1px solid #ced4da; border-radius:6px; padding:5px 9px; cursor:pointer }.actionPager button:disabled { opacity:.5; cursor:default }
 .toolbar { background:white; border:1px solid #e9ecef; border-radius:10px; padding:14px; display:grid; gap:12px }
 .periodControls,.filters { display:flex; align-items:end; flex-wrap:wrap; gap:10px }
+.periodLabel { align-self:center; min-width:190px; text-align:center; text-transform:capitalize; font-size:15px }
 .periodControls label,.filters label { display:grid; gap:4px; color:#6c757d; font-size:11px; font-weight:600 }
 .toolbar input,.toolbar select,.toolbar button { min-height:35px; border:1px solid #ced4da; border-radius:6px; background:white; padding:6px 9px; color:#2c3e50; font-size:13px }
 .toolbar button { cursor:pointer }.toolbar button:hover { background:#f8f9fa }
@@ -38,6 +39,9 @@
 .noScheduleText { position:absolute; left:10px; bottom:6px; font-size:10px; color:#7a8691 }
 .trackLines { position:absolute; inset:0 8px; pointer-events:none; z-index:1 }.trackLines span { position:absolute; top:0; bottom:0; border-left:1px solid #dce2e7 }
 .workBand { position:absolute; inset-block:0; background:#fff; border-left:1px solid #c9dccc; border-right:1px solid #c9dccc }
+.todayHeader { box-shadow:inset 0 3px #c0392b }.weekend { background-color:#f4f6f8 }
+.nowLine { position:absolute; z-index:4; top:0; bottom:0; width:2px; background:#c0392b; pointer-events:none }
+.nowLine span { position:absolute; top:2px; left:3px; padding:1px 4px; border-radius:3px; background:#c0392b; color:white; font-size:8px; font-weight:700 }
 .event { position:absolute; z-index:2; min-height:31px; border:1px solid; border-radius:5px; padding:3px 5px; text-align:left; overflow:hidden; cursor:pointer; display:grid; gap:1px; white-space:nowrap }
 .eventTitle { font-weight:700; font-size:10px; overflow:hidden; text-overflow:ellipsis }.eventMeta { font-size:9px; overflow:hidden; text-overflow:ellipsis }
 .requested { background:#ebf5fb; border-color:#78b6da; color:#175879; border-style:dashed }
@@ -45,6 +49,17 @@
 .confirmed { background:#e9f6ed; border-color:#6ab27e; color:#1f6232 }.unavailable { background:#f7e7e5; border-color:#c9857f; color:#80342e }
 .legacy { background:#f3eff8; border-color:#a78dbe; color:#684784; border-style:dashed }.busy { background:#e8eaed; border-color:#a5aab1; color:#4e555d }
 .mobileAgenda { display:none }
+.monthWrap { padding:12px; overflow:hidden }.monthWeekdays,.monthGrid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)) }
+.monthWeekdays span { padding:8px; text-align:center; color:#6c757d; font-size:11px; font-weight:700 }
+.monthCell { min-height:142px; border-top:1px solid #e1e5e8; border-left:1px solid #e1e5e8; padding:6px; overflow:hidden; background:white }
+.monthCell:nth-child(7n) { border-right:1px solid #e1e5e8 }.monthCell:nth-last-child(-n+7) { border-bottom:1px solid #e1e5e8 }
+.outsideMonth { opacity:.48 }.todayCell { box-shadow:inset 0 0 0 2px #c0392b }
+.dayTarget { width:100%; border:0; background:transparent; text-align:left; padding:2px; cursor:pointer; color:#2c3e50 }
+.dayNumber { display:flex; justify-content:space-between; align-items:center; font-weight:800 }.dayNumber em { color:#a93226; font-size:9px; font-style:normal }
+.dayCounts { display:block; margin-top:4px; color:#6c757d; font-size:10px }.daySignals { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px }
+.daySignals span { padding:2px 4px; border-radius:3px; background:#fff4db; color:#795500; font-size:9px; font-weight:700 }
+.monthEvents { display:grid; gap:3px; margin-top:5px }.monthEvents button { width:100%; border:0; border-left:3px solid #78b6da; background:#f4f8fb; padding:3px 4px; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#2c3e50; font-size:9px; cursor:pointer }
+.monthEvents span { color:#6c757d; font-size:9px }
 .drawerBackdrop { position:fixed; inset:0; z-index:80; background:#1c26336b; display:flex; justify-content:flex-end }
 .drawer { width:min(440px,100vw); height:100%; overflow-y:auto; background:white; box-shadow:-10px 0 30px #17243330; padding:22px }
 .drawerHeader { display:flex; align-items:start; justify-content:space-between; gap:15px; border-bottom:1px solid #e9ecef; padding-bottom:15px }
@@ -63,4 +78,6 @@
   .desktopTimeline { display:none }.mobileAgenda { display:block; padding:15px }
   .mobileAgenda h2 { font-size:16px; font-weight:700; margin:0 0 15px }.mobileAgenda h3 { font-size:14px; font-weight:700; text-transform:capitalize; margin:18px 0 8px }
   .mobileAgenda p,.mobileAgenda li { font-size:12px; color:#6c757d }
+  .periodLabel { order:-1; width:100%; text-align:left }.monthWrap { padding:5px }.monthWeekdays span { padding:5px 1px; font-size:9px }
+  .monthCell { min-height:76px; padding:2px }.dayNumber { font-size:11px }.dayNumber em,.dayCounts,.daySignals,.monthEvents { display:none }
 }

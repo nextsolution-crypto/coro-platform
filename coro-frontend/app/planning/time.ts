@@ -1,4 +1,4 @@
-export type PlannerView = 'week' | 'day';
+export type PlannerView = 'day' | 'week' | 'workweek' | 'month';
 const formatterCache = new Map<string, Intl.DateTimeFormat>();
 const boundaryCache = new Map<string, Date>();
 
@@ -46,8 +46,57 @@ export function monday(key: string): string {
 
 export function viewDays(key: string, view: PlannerView): string[] {
   if (view === 'day') return [key];
+  if (view === 'month') {
+    const first = `${key.slice(0, 7)}-01`;
+    const next = addMonths(first, 1);
+    const count = Math.round((new Date(`${next}T12:00:00Z`).getTime() - new Date(`${first}T12:00:00Z`).getTime()) / 86_400_000);
+    return Array.from({ length: count }, (_, index) => addDays(first, index));
+  }
   const first = monday(key);
-  return Array.from({ length: 5 }, (_, index) => addDays(first, index));
+  return Array.from({ length: view === 'week' ? 7 : 5 }, (_, index) => addDays(first, index));
+}
+
+export function monthGridDays(key: string): string[] {
+  const month = viewDays(key, 'month');
+  const first = monday(month[0]);
+  const count = Math.max(35, Math.ceil((month.length + Math.round((new Date(`${month[0]}T12:00:00Z`).getTime() -
+    new Date(`${first}T12:00:00Z`).getTime()) / 86_400_000)) / 7) * 7);
+  return Array.from({ length: count }, (_, index) => addDays(first, index));
+}
+
+export function addMonths(key: string, count: number): string {
+  const [year, month, day] = key.split('-').map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + count, 1, 12));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0, 12)).getUTCDate();
+  return `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;
+}
+
+export function moveDate(key: string, view: PlannerView, direction: -1 | 1): string {
+  return view === 'month' ? addMonths(key, direction) : addDays(key, direction * (view === 'day' ? 1 : 7));
+}
+
+export function periodLabel(days: string[], view: PlannerView): string {
+  if (!days.length) return '';
+  const full = (key: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('fr-CA',
+    { ...options, timeZone: 'UTC' }).format(new Date(`${key}T12:00:00Z`));
+  if (view === 'day') return full(days[0], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  if (view === 'month') return full(days[0], { month: 'long', year: 'numeric' });
+  const first = new Date(`${days[0]}T12:00:00Z`); const last = new Date(`${days[days.length - 1]}T12:00:00Z`);
+  if (first.getUTCMonth() === last.getUTCMonth()) return `${first.getUTCDate()}–${last.getUTCDate()} ${full(days[0], { month: 'long', year: 'numeric' })}`;
+  return `${full(days[0], { day: 'numeric', month: 'long' })} – ${full(days.at(-1)!, { day: 'numeric', month: 'long', year: 'numeric' })}`;
+}
+
+export function nowPosition(now: Date, day: string, timeZone: string, hours: { start: number; end: number }): number | null {
+  if (dateKey(now, timeZone) !== day) return null;
+  const minute = localMinutes(now, timeZone);
+  if (minute < hours.start || minute > hours.end) return null;
+  return ((minute - hours.start) / (hours.end - hours.start)) * 100;
+}
+
+export function plannerDayUrl(currentSearch: string, day: string): string {
+  const params = new URLSearchParams(currentSearch);
+  params.set('date', day); params.set('view', 'day');
+  return `/planning?${params.toString()}`;
 }
 
 // Convert a civil boundary in the display zone to an instant. The iteration
