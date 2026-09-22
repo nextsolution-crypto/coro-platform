@@ -181,9 +181,6 @@ export default function BookingsPage() {
     setSubmitting(true);
 
     try {
-      const requestedDate = new Date(
-        `${form.requestedDate}T${form.requestedTime}:00`
-      );
 
       const token = localStorage.getItem(
         'coro_client_token'
@@ -199,8 +196,7 @@ export default function BookingsPage() {
           },
           body: JSON.stringify({
             activityType: form.activityType,
-            requestedDate:
-              requestedDate.toISOString(),
+            requestedLocalDateTime: `${form.requestedDate}T${form.requestedTime}:00`,
             duration: form.duration,
             participants: form.participants
               ? parseInt(form.participants, 10)
@@ -626,6 +622,7 @@ export default function BookingsPage() {
 
 
             {/* DATE + HEURE */}
+            <p className="text-sm">Heure du bâtiment : {projects.find(p => p.id === form.projectId)?.building?.timeZone || 'America/Toronto'}</p>
 
             <div
               className="
@@ -1275,6 +1272,7 @@ export default function BookingsPage() {
                       ).toLocaleDateString(
                         'fr-CA',
                         {
+                          timeZone: booking.project?.building?.timeZone || 'America/Toronto',
                           weekday: 'short',
                           day: 'numeric',
                           month: 'short',
@@ -1333,6 +1331,7 @@ export default function BookingsPage() {
                         ).toLocaleDateString(
                           'fr-CA',
                           {
+                            timeZone: booking.project?.building?.timeZone || 'America/Toronto',
                             weekday:
                               'short',
                             day: 'numeric',

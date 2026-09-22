@@ -12,6 +12,11 @@ function harness() {
 }
 
 describe('ActivitiesService exercise report summary', () => {
+  it('emits one UTC Z suffix in activity ICS dates', () => {
+    const ics = harness().service.generateIcs({ id: 'activity-a', scheduledDate: new Date('2026-10-01T13:00:00Z'), duration: '1h', title: 'Test' });
+    expect(ics).toContain('DTSTART:20261001T130000Z');
+    expect(ics).not.toMatch(/\dZZ/);
+  });
   it('returns an admissible activity without a report', async () => {
     const h = harness();
     h.prisma.projectActivity.findMany.mockResolvedValue([

@@ -17,6 +17,7 @@ interface Building {
   province: string;
   floors?: number;
   buildingType?: string;
+  timeZoneVerified: boolean;
   client: { id: string; name: string };
   _count?: { projects: number };
 }
@@ -69,7 +70,7 @@ export default function BuildingsPage() {
   const [showModal, setShowModal]   = useState(false);
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
-    postalCode: '', floors: '', buildingType: '', clientId: '',
+    postalCode: '', floors: '', buildingType: '', timeZone: 'America/Toronto', clientId: '',
     responsableFirstName: '', responsableLastName: '',
     responsableTitre: '', responsableEmail: '', responsablePhone: '',
     photoBase64: '',
@@ -139,7 +140,7 @@ export default function BuildingsPage() {
         floors: form.floors ? parseInt(form.floors) : undefined,
       });
       setShowModal(false);
-      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', clientId: '', responsableFirstName: '', responsableLastName: '', responsableTitre: '', responsableEmail: '', responsablePhone: '', photoBase64: '' });
+      setForm({ name: '', address: '', city: '', province: '', postalCode: '', floors: '', buildingType: '', timeZone: 'America/Toronto', clientId: '', responsableFirstName: '', responsableLastName: '', responsableTitre: '', responsableEmail: '', responsablePhone: '', photoBase64: '' });
       setAddressPaste('');
       fetchData();
       toast('Bâtiment créé avec succès.');
@@ -243,6 +244,7 @@ export default function BuildingsPage() {
                 <p className="text-sm mt-1 break-words" style={{ color: '#6C757D' }}>
                   {building.address}, {building.city}, {building.province}
                 </p>
+                {building.timeZoneVerified === false && <p className="text-xs mt-1" style={{ color: '#9A6700' }}>Fuseau horaire à confirmer</p>}
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {building.buildingType && (
                     <span className="text-xs px-2 py-1 rounded-full font-medium"
@@ -437,6 +439,11 @@ export default function BuildingsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Fuseau horaire IANA du bâtiment *</label>
+                <input type="text" list="building-time-zones" value={form.timeZone} onChange={e => setForm({ ...form, timeZone: e.target.value })} required className="w-full rounded px-4 py-2.5 text-sm" style={inputStyle} />
+                <datalist id="building-time-zones"><option value="America/Toronto" /><option value="America/Vancouver" /><option value="America/Edmonton" /><option value="America/Winnipeg" /><option value="America/Halifax" /><option value="America/St_Johns" /></datalist>
+              </div>
               {/* Code postal / Étages */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

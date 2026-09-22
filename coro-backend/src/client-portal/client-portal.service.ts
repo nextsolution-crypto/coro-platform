@@ -1667,7 +1667,8 @@ export class ClientPortalService {
     projectId: string;
     clientUserId: string;
     activityType: string;
-    requestedDate: Date;
+    requestedDate?: Date;
+    requestedLocalDateTime?: string;
     duration: number;
     participants?: number;
     comment?: string;
@@ -1680,7 +1681,8 @@ export class ClientPortalService {
   async createBookingForActivity(data: {
     activityId: string;
     actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] };
-    requestedDate: Date;
+    requestedDate?: Date;
+    requestedLocalDateTime?: string;
     duration: number;
     participants?: number;
     comment?: string;
@@ -1705,6 +1707,7 @@ export class ClientPortalService {
         activity.type.startsWith('formation') ? 'formation' :
         activity.type === 'creation_document' ? 'revision' : 'autre',
       requestedDate: data.requestedDate,
+      requestedLocalDateTime: data.requestedLocalDateTime,
       duration: data.duration,
       participants: data.participants,
       comment: data.comment,

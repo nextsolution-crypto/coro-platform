@@ -247,7 +247,7 @@ export class ActivitiesService {
       d
         .toISOString()
         .replace(/[-:]/g, '')
-        .replace(/\.\d{3}/, '');
+        .replace(/\.\d{3}Z$/, '');
 
     const start = activity.scheduledDate
       ? new Date(activity.scheduledDate)

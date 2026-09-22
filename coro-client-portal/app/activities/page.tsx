@@ -72,7 +72,7 @@ export default function ActivitiesPage() {
     try {
       setPlanningError('');
       await apiPost(`/client-portal/activities/${activityId}/bookings`, {
-        requestedDate: new Date(requestedDate).toISOString(), duration,
+        requestedLocalDateTime: requestedDate, duration,
       });
       setPlanningId(null);
       await fetchActivities();
@@ -337,6 +337,7 @@ export default function ActivitiesPage() {
             <button type="button" onClick={() => setPlanningId(a.id)}>PLANIFIER</button>
             {planningId === a.id && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                <span>Heure du bâtiment : {a.project?.building?.timeZone || 'America/Toronto'}</span>
                 <input aria-label="Date souhaitée" type="datetime-local" value={requestedDate} onChange={e => setRequestedDate(e.target.value)} />
                 <input aria-label="Durée en minutes" type="number" min={1} max={1440} value={duration} onChange={e => setDuration(Number(e.target.value))} />
                 <button type="button" onClick={() => planActivity(a.id)}>Envoyer la demande</button>

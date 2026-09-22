@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { PrismaService } from '../prisma/prisma.service';
 import { BOOKING_TRANSITIONS, OPEN_BOOKING_STATUSES, BookingStatus, effectiveBookingDate } from './booking-status';
 import { Prisma } from '@prisma/client';
+import { formatBuildingDate, resolveBookingInstant } from './booking-time';
 
 @Injectable()
 export class BookingsService {
@@ -11,13 +12,14 @@ export class BookingsService {
     projectId: string;
     clientUserId: string;
     activityType: string;
-    requestedDate: Date;
+    requestedDate?: Date;
+    requestedLocalDateTime?: string;
     duration: number;
     participants?: number;
     comment?: string;
     activityId?: string;
   }) {
-    if (Number.isNaN(data.requestedDate.getTime()) || !Number.isInteger(data.duration) || data.duration < 1) {
+    if (!Number.isInteger(data.duration) || data.duration < 1) {
       throw new BadRequestException('Date ou durée invalide');
     }
     const project = await this.prisma.project.findUnique({
@@ -25,6 +27,8 @@ export class BookingsService {
       include: { user: true, client: true, building: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
+    const timeZone = project.building?.timeZone ?? 'America/Toronto';
+    const requestedDate = resolveBookingInstant({ iso: data.requestedDate, localDateTime: data.requestedLocalDateTime }, timeZone);
     if (data.activityId) {
       const activity = await this.prisma.projectActivity.findFirst({ where: {
         id: data.activityId, projectId: data.projectId, organizationId: project.organizationId,
@@ -43,7 +47,7 @@ export class BookingsService {
         clientUserId: data.clientUserId,
         assignedUserId: project.userId,
         activityType: data.activityType,
-        requestedDate: data.requestedDate,
+        requestedDate,
         duration: data.duration,
         participants: data.participants,
         comment: data.comment,
@@ -67,7 +71,7 @@ export class BookingsService {
         <div style="background:#F8F9FA;padding:16px;border-radius:8px;margin:16px 0;">
           <p style="margin:0 0 8px;"><strong>Projet :</strong> ${project.name}</p>
           <p style="margin:0 0 8px;"><strong>Activité :</strong> ${this.activityLabel(data.activityType)}</p>
-          <p style="margin:0 0 8px;"><strong>Date demandée :</strong> ${new Date(data.requestedDate).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          <p style="margin:0 0 8px;"><strong>Date demandée :</strong> ${formatBuildingDate(requestedDate, timeZone)}</p>
           <p style="margin:0 0 8px;"><strong>Durée :</strong> ${data.duration} minutes</p>
           ${data.participants ? this.trustedHtml(`<p style="margin:0 0 8px;"><strong>Participants :</strong> ${data.participants}</p>`) : ''}
           ${data.comment ? this.trustedHtml(`<p style="margin:0;"><strong>Commentaire :</strong> ${this.escapeHtml(data.comment)}</p>`) : ''}
@@ -132,6 +136,7 @@ export class BookingsService {
     status: string;
     refuseReason?: string;
     reportedDate?: Date;
+    reportedLocalDateTime?: string;
     newUserId?: string;
   }, organizationId: string, actor?: { userId: string; role: string }) {
     const booking = await this.prisma.booking.findFirst({
@@ -143,13 +148,15 @@ export class BookingsService {
       },
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
+    const timeZone = booking.project.building?.timeZone ?? 'America/Toronto';
+    const reportedDate = data.status === 'REPORTEE'
+      ? resolveBookingInstant({ iso: data.reportedDate, localDateTime: data.reportedLocalDateTime }, timeZone)
+      : undefined;
 
     if (!(data.status in BOOKING_TRANSITIONS) || !BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes(data.status as BookingStatus)) {
       throw new BadRequestException('Transition de réservation non autorisée');
     }
-    if (data.status === 'REPORTEE' && (!data.reportedDate || Number.isNaN(data.reportedDate.getTime()))) {
-      throw new BadRequestException('Date de report requise');
-    }
+    if (data.status !== 'REPORTEE' && (data.reportedDate || data.reportedLocalDateTime)) throw new BadRequestException('Date de report non permise');
     if (data.status === 'REASSIGNEE' && !data.newUserId) throw new BadRequestException('Conseiller requis');
     if (data.newUserId && data.status !== 'REASSIGNEE') throw new BadRequestException('Conseiller seulement permis pour une réassignation');
     if (data.status === 'REFUSEE' && !data.refuseReason?.trim()) throw new BadRequestException('Motif de refus requis');
@@ -163,7 +170,7 @@ export class BookingsService {
 
     const updateData: any = { status: data.status };
     if (data.refuseReason) updateData.refuseReason = data.refuseReason;
-    if (data.reportedDate) updateData.reportedDate = data.reportedDate;
+    if (reportedDate) updateData.reportedDate = reportedDate;
     if (data.newUserId) updateData.assignedUserId = data.newUserId;
 
     const include = {
@@ -198,9 +205,7 @@ export class BookingsService {
 
     // Notifier le client selon le statut
     const actLabel = this.activityLabel(booking.activityType);
-    const dateLabel = effectiveBookingDate(booking).toLocaleDateString('fr-CA', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    const dateLabel = formatBuildingDate(effectiveBookingDate(booking), timeZone);
 
     if (data.status === 'CONFIRMEE') {
       const icsContent = this.generateIcs({
@@ -267,10 +272,8 @@ export class BookingsService {
           <p>Vous pouvez soumettre une nouvelle demande avec une autre date depuis votre portail.</p>
         `,
       });
-    } else if (data.status === 'REPORTEE' && data.reportedDate) {
-      const newDateLabel = new Date(data.reportedDate).toLocaleDateString('fr-CA', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
+    } else if (data.status === 'REPORTEE' && reportedDate) {
+      const newDateLabel = formatBuildingDate(reportedDate, timeZone);
 
       const icsReport = this.generateIcs({
         title: `${actLabel} — ${booking.project.name}`,
@@ -341,7 +344,7 @@ export class BookingsService {
   async cancelBooking(bookingId: string, cancelledBy: 'client' | 'conseiller', organizationId: string, clientUserId?: string) {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, organizationId, ...(clientUserId ? { clientUserId } : {}) },
-      include: { clientUser: true, assignedUser: true, project: true },
+      include: { clientUser: true, assignedUser: true, project: { include: { building: true } } },
     });
     if (!booking) throw new NotFoundException('Réservation introuvable');
     if (!BOOKING_TRANSITIONS[booking.status as BookingStatus]?.includes('ANNULEE')) throw new BadRequestException('Annulation non autorisée');
@@ -352,9 +355,7 @@ export class BookingsService {
     });
 
     const actLabel = this.activityLabel(booking.activityType);
-    const dateLabel = effectiveBookingDate(booking).toLocaleDateString('fr-CA', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    });
+    const dateLabel = formatBuildingDate(effectiveBookingDate(booking), booking.project.building?.timeZone ?? 'America/Toronto');
 
     // Notifier l'autre partie
     const notifyEmail = cancelledBy === 'client' ? booking.assignedUser.email : booking.clientUser.email;

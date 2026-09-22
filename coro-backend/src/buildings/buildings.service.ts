@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
+import { assertIanaTimeZone } from '../bookings/booking-time';
 
 async function geocodeAddress(address: string, city: string, province: string): Promise<{ latitude: number; longitude: number } | null> {
   try {
@@ -92,17 +93,21 @@ export class BuildingsService {
     buildingType?: string;
     clientId: string;
     organizationId: string;
+    timeZone?: string;
     responsableFirstName?: string;
     responsableLastName?: string;
     responsableTitre?: string;
     responsableEmail?: string;
     responsablePhone?: string;
   }) {
+    if (data.timeZone !== undefined) assertIanaTimeZone(data.timeZone);
+    const { timeZoneVerified: _ignored, ...safeData } = data as typeof data & { timeZoneVerified?: unknown };
     // Geocoding automatique
     const coords = await geocodeAddress(data.address, data.city, data.province);
     const building = await this.prisma.building.create({
       data: {
-        ...data,
+        ...safeData,
+        timeZoneVerified: data.timeZone !== undefined,
         latitude: coords?.latitude ?? null,
         longitude: coords?.longitude ?? null,
       },
@@ -180,6 +185,8 @@ export class BuildingsService {
 
   async update(id: string, data: any, organizationId: string) {
     await this.assertOwnership(id, organizationId);
+    if (data.timeZone !== undefined) assertIanaTimeZone(data.timeZone);
+    const { timeZoneVerified: _ignored, ...safeData } = data;
 
     // Récupérer l'ancien responsable avant la mise à jour
     const oldBuilding = await this.prisma.building.findUnique({ where: { id } });
@@ -197,7 +204,8 @@ export class BuildingsService {
     const updated = await this.prisma.building.update({
       where: { id },
       data: {
-        ...data,
+        ...safeData,
+        ...(data.timeZone !== undefined ? { timeZoneVerified: true } : {}),
         ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
       },
     });

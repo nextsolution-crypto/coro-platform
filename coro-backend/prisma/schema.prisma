@@ -203,6 +203,8 @@ model Building {
   address              String
   city                 String
   province             String
+  timeZone             String   @default("America/Toronto")
+  timeZoneVerified     Boolean  @default(false)
   postalCode           String?
   floors               Int?
   units                Int?

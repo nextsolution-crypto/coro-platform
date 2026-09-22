@@ -75,7 +75,7 @@ export default function BookingsPage() {
     try {
       let body: any = { status: action };
       if (action === 'REFUSEE') body.refuseReason = refuseReason;
-      if (action === 'REPORTEE') body.reportedDate = new Date(`${reportedDate}T${reportedTime}:00`).toISOString();
+      if (action === 'REPORTEE') body.reportedLocalDateTime = `${reportedDate}T${reportedTime}:00`;
       if (action === 'REASSIGNEE') body.newUserId = newUserId;
 
       await api.put(`/bookings/${selectedBooking.id}/status`, body);
@@ -326,14 +326,14 @@ export default function BookingsPage() {
                     <div className="rounded px-3 py-2 min-w-0" style={{ backgroundColor: '#F8F9FA', border: '1px solid #E9ECEF' }}>
                       <p className="text-xs mb-1" style={{ color: '#ADB5BD' }}>Date demandée</p>
                       <p className="text-sm font-semibold break-words" style={{ color: '#2C3E50' }}>
-                        {new Date(booking.requestedDate).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(booking.requestedDate).toLocaleDateString('fr-CA', { timeZone: booking.project?.building?.timeZone || 'America/Toronto', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                     {booking.reportedDate && (
                       <div className="rounded px-3 py-2 min-w-0" style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
                         <p className="text-xs mb-1" style={{ color: '#F39C12' }}>Nouvelle date</p>
                         <p className="text-sm font-semibold" style={{ color: '#F39C12' }}>
-                          {new Date(booking.reportedDate).toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(booking.reportedDate).toLocaleDateString('fr-CA', { timeZone: booking.project?.building?.timeZone || 'America/Toronto', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     )}
@@ -433,7 +433,7 @@ export default function BookingsPage() {
             <h3 className="font-bold text-lg mb-2" style={{ color: '#27AE60' }}>✓ Confirmer la réservation</h3>
             <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
               Vous confirmez la demande de <strong>{selectedBooking.clientUser?.firstName} {selectedBooking.clientUser?.lastName}</strong> pour un <strong>{ACTIVITY_LABELS[selectedBooking.activityType]}</strong> le{' '}
-              <strong>{new Date(selectedBooking.requestedDate).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
+              <strong>{new Date(selectedBooking.requestedDate).toLocaleDateString('fr-CA', { timeZone: selectedBooking.project?.building?.timeZone || 'America/Toronto', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
             </p>
             <p className="text-xs mb-6" style={{ color: '#ADB5BD' }}>Le client recevra automatiquement un courriel de confirmation.</p>
             <div className="flex flex-col-reverse sm:flex-row gap-3">
@@ -491,6 +491,7 @@ export default function BookingsPage() {
             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
             <h3 className="font-bold text-lg mb-2" style={{ color: '#F39C12' }}>📅 Reporter la réservation</h3>
             <p className="text-sm mb-4" style={{ color: '#6C757D' }}>Proposez une nouvelle date au client. Il sera notifié automatiquement.</p>
+            <p className="text-sm mb-4">Heure du bâtiment : {selectedBooking?.project?.building?.timeZone || 'America/Toronto'}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
                 <label style={lbl}>Nouvelle date *</label>

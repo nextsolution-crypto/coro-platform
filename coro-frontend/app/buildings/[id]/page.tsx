@@ -17,6 +17,7 @@ interface Building {
   postalCode?: string;
   floors?: number;
   buildingType?: string;
+  timeZoneVerified: boolean;
   photoBase64?: string;
   responsableFirstName?: string;
   responsableLastName?: string;
@@ -54,7 +55,7 @@ export default function BuildingDetailPage() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [form, setForm] = useState({
     name: '', address: '', city: '', province: '',
-    postalCode: '', floors: '', buildingType: '', photoBase64: '',
+    postalCode: '', floors: '', buildingType: '', timeZone: 'America/Toronto', photoBase64: '',
     responsableFirstName: '', responsableLastName: '',
     responsableTitre: '', responsableEmail: '', responsablePhone: '',
   });
@@ -97,6 +98,7 @@ export default function BuildingDetailPage() {
         postalCode:           br.data.postalCode || '',
         floors:               br.data.floors?.toString() || '',
         buildingType:         br.data.buildingType || '',
+        timeZone: br.data.timeZone || 'America/Toronto',
         photoBase64:          br.data.photoBase64 || '',
         responsableFirstName: br.data.responsableFirstName || '',
         responsableLastName:  br.data.responsableLastName || '',
@@ -229,6 +231,7 @@ export default function BuildingDetailPage() {
                   {building.address}, {building.city}, {building.province}
                   {building.postalCode && ` ${building.postalCode}`}
                 </p>
+                {building.timeZoneVerified === false && <p className="text-xs" style={{ color: '#9A6700' }}>Fuseau horaire à confirmer</p>}
               </div>
               <div className="flex gap-2 mt-3 flex-wrap">
                 {building.buildingType && (
@@ -505,6 +508,11 @@ export default function BuildingDetailPage() {
                   onFocus={e => e.target.style.borderColor = '#C0392B'}
                   onBlur={e => e.target.style.borderColor = '#CED4DA'}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Fuseau horaire IANA du bâtiment *</label>
+                <input type="text" list="building-time-zones-edit" value={form.timeZone} onChange={e => setForm({ ...form, timeZone: e.target.value })} required className="w-full rounded px-4 py-2.5 text-sm" style={inputStyle} />
+                <datalist id="building-time-zones-edit"><option value="America/Toronto" /><option value="America/Vancouver" /><option value="America/Edmonton" /><option value="America/Winnipeg" /><option value="America/Halifax" /><option value="America/St_Johns" /></datalist>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

@@ -111,6 +111,30 @@ describe('BookingsService security and transitions', () => {
     }) }));
   });
 
+  it.each([undefined, 'activity'])('uses the Project Building zone for local Booking time (activity %s)', async activityId => {
+    prisma.project.findUnique.mockResolvedValue({ ...project, building: { timeZone: 'America/Vancouver' } });
+    if (activityId) prisma.projectActivity.findFirst.mockResolvedValue({ id: activityId });
+    prisma.booking.create.mockResolvedValue({ ...booking, assignedUser: booking.assignedUser });
+    await service.createBooking({ projectId: 'project', activityId, clientUserId: 'client-user', activityType: 'visite', requestedLocalDateTime: '2026-07-15T09:00', duration: 60 });
+    expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ requestedDate: new Date('2026-07-15T16:00:00Z') }) }));
+    expect((service as any).sendBookingEmail).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('America/Vancouver') }));
+  });
+
+  it('continues accepting a Booking for an unverified Building timezone', async () => {
+    prisma.project.findUnique.mockResolvedValue({ ...project, building: { timeZone: 'America/Toronto', timeZoneVerified: false } });
+    prisma.booking.create.mockResolvedValue({ ...booking, assignedUser: booking.assignedUser });
+    await service.createBooking({ projectId: 'project', clientUserId: 'client-user', activityType: 'visite', requestedLocalDateTime: '2026-07-15T09:00', duration: 60 });
+    expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ requestedDate: new Date('2026-07-15T13:00:00Z') }) }));
+  });
+
+  it('reports in the Building zone and stores the resulting UTC instant', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ ...booking, project: { ...booking.project, building: { timeZone: 'America/Toronto' } } });
+    prisma.booking.update.mockImplementation(async ({ data }) => ({ ...booking, ...data }));
+    await service.updateBookingStatus('booking', { status: 'REPORTEE', reportedLocalDateTime: '2026-07-15T09:00' }, 'org-a');
+    expect(prisma.booking.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ reportedDate: new Date('2026-07-15T13:00:00Z') }) }));
+    expect((service as any).sendBookingEmail).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('America/Toronto') }));
+  });
+
   it('creates a linked booking and rejects a second open attempt', async () => {
     prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity' });
     prisma.booking.create.mockResolvedValue({ ...booking, assignedUser: booking.assignedUser });

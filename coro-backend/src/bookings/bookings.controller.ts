@@ -28,6 +28,7 @@ export class BookingsController {
       status: body.status,
       refuseReason: body.refuseReason,
       reportedDate: body.reportedDate ? new Date(body.reportedDate) : undefined,
+      reportedLocalDateTime: body.reportedLocalDateTime,
       newUserId: body.newUserId,
     }, req.user.organizationId, req.user);
   }
