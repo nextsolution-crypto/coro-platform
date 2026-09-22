@@ -6,7 +6,7 @@ import { assertIanaTimeZone } from '../bookings/booking-time';
 import { assertNonOverlappingScheduleVersions, civilString, localMidnight, normalizeSlots, parseCivilDate, WorkSlot } from './work-schedule-time';
 
 export type ScheduleActor = { userId: string; organizationId: string; role: string };
-export type ScheduleInput = { effectiveFrom: string; intervals: WorkSlot[] };
+export type ScheduleInput = { effectiveFrom: string; intervals: WorkSlot[]; timeZone?: string };
 export type UnavailabilityInput = {
   startAt?: string; endAt?: string; allDay?: boolean; localStartDate?: string; localEndDate?: string;
   timeZone?: string; type: UserUnavailabilityType; privateNote?: string | null;
@@ -56,9 +56,13 @@ export class WorkSchedulesService {
       const user = await tx.user.findFirst({ where: { id: userId, organizationId: actor.organizationId },
         select: { organizationId: true, timeZone: true, timeZoneVerified: true } });
       if (!user) throw new NotFoundException('Conseiller introuvable');
-      if (!user.timeZoneVerified) throw new BadRequestException('Fuseau personnel à vérifier avant l’horaire');
-      assertIanaTimeZone(user.timeZone);
-      const from = localMidnight(fromDate, user.timeZone);
+      const timeZone = input.timeZone ?? user.timeZone;
+      assertIanaTimeZone(timeZone);
+      if (!input.timeZone && !user.timeZoneVerified) throw new BadRequestException('Fuseau personnel à vérifier avant l’horaire');
+      if (input.timeZone && (timeZone !== user.timeZone || !user.timeZoneVerified)) {
+        await tx.user.update({ where: { id: userId }, data: { timeZone, timeZoneVerified: true } });
+      }
+      const from = localMidnight(fromDate, timeZone);
       // Read the complete history only after locking User. All schedule writers use this lock.
       const versions = await tx.userWorkSchedule.findMany({ where: { userId }, orderBy: { effectiveFrom: 'asc' } });
       if (versions.some(version => version.organizationId !== user.organizationId)) {
@@ -76,7 +80,7 @@ export class WorkSchedulesService {
       if (open) {
         await tx.userWorkSchedule.update({ where: { id: open.id }, data: { effectiveUntil: from } });
       }
-      return tx.userWorkSchedule.create({ data: { organizationId: user.organizationId, userId, timeZone: user.timeZone,
+      return tx.userWorkSchedule.create({ data: { organizationId: user.organizationId, userId, timeZone,
         effectiveFrom: from, verifiedAt: new Date(), verifiedByUserId: actor.userId,
         intervals: { create: slots } }, include: { intervals: true } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });

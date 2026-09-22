@@ -11,7 +11,7 @@ describe('WorkSchedulesService permissions and atomic writes', () => {
   let service: WorkSchedulesService;
   beforeEach(() => {
     const tx: any = {
-      user: { findFirst: jest.fn().mockResolvedValue(user) },
+      user: { findFirst: jest.fn().mockResolvedValue(user), update: jest.fn().mockResolvedValue(user) },
       userWorkSchedule: { findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}),
         create: jest.fn().mockResolvedValue({ id: 'new' }) },
       userUnavailability: { findFirst: jest.fn().mockResolvedValue({ id: 'absence', userId: 'user-a' }),
@@ -39,6 +39,16 @@ describe('WorkSchedulesService permissions and atomic writes', () => {
     expect(prisma.tx.userWorkSchedule.update).toHaveBeenCalledWith({ where: { id: 'old' }, data: { effectiveUntil: new Date('2026-10-01T04:00:00.000Z') } });
     expect(prisma.tx.userWorkSchedule.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
       organizationId: 'org-a', timeZone: 'America/Toronto', intervals: { create: [{ dayOfWeek: 1, startTime: 480, endTime: 1020 }] },
+    }) }));
+  });
+
+  it('validates and saves a changed timezone atomically with the new version', async () => {
+    await service.replace('user-a', { effectiveFrom: '2026-10-01', intervals: [], timeZone: 'America/Vancouver' }, admin);
+    expect(prisma.tx.user.update).toHaveBeenCalledWith({ where: { id: 'user-a' }, data: {
+      timeZone: 'America/Vancouver', timeZoneVerified: true,
+    } });
+    expect(prisma.tx.userWorkSchedule.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      timeZone: 'America/Vancouver', effectiveFrom: new Date('2026-10-01T07:00:00.000Z'),
     }) }));
   });
 

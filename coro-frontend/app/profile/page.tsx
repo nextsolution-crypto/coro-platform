@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { toast } from '@/lib/toast';
-import WorkSchedulePanel from '@/components/WorkSchedulePanel';
+import WorkScheduleEditorPanel from '@/components/WorkScheduleEditorPanel';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -202,7 +202,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <WorkSchedulePanel manager={false} />
+        <WorkScheduleEditorPanel manager={false} />
 
         {/* Changer le mot de passe */}
         <div className="rounded-md p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>

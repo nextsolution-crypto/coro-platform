@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
-import WorkSchedulePanel from '@/components/WorkSchedulePanel';
+import WorkScheduleEditorPanel from '@/components/WorkScheduleEditorPanel';
 
 interface TeamUser {
   id: string;
@@ -34,6 +34,7 @@ export default function TeamUsersPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [planningUserId, setPlanningUserId] = useState('');
+  const [scheduleDirty, setScheduleDirty] = useState(false);
 
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '', password: '', role: 'OPERATOR',
@@ -128,11 +129,16 @@ export default function TeamUsersPage() {
     <AppLayout>
       <div className="rounded-md bg-white border border-gray-200 p-4 mb-6 space-y-3">
         <label className="block text-sm font-medium">Horaire et indisponibilités d’un conseiller</label>
-        <select className="border rounded p-2 w-full sm:w-auto" value={planningUserId} onChange={e => setPlanningUserId(e.target.value)}>
+        <select className="border rounded p-2 w-full sm:w-auto" value={planningUserId} onChange={e => {
+          if (scheduleDirty && !confirm('Des modifications de l’horaire ne sont pas enregistrées. Changer de conseiller?')) return;
+          setScheduleDirty(false); setPlanningUserId(e.target.value);
+        }}>
           <option value="">Choisir un membre</option>
           {users.map(member => <option key={member.id} value={member.id}>{member.firstName} {member.lastName}</option>)}
         </select>
-        {planningUserId && <WorkSchedulePanel key={planningUserId} userId={planningUserId} manager />}
+        {planningUserId && <WorkScheduleEditorPanel key={planningUserId} userId={planningUserId} manager
+          userName={users.find(member => member.id === planningUserId) ? `${users.find(member => member.id === planningUserId)!.firstName} ${users.find(member => member.id === planningUserId)!.lastName}` : undefined}
+          onDirtyChange={setScheduleDirty} />}
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
