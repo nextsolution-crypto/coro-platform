@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BOOKING_TRANSITIONS, BookingStatus, effectiveBookingDate } from './booking-status';
+import { BOOKING_TRANSITIONS, OPEN_BOOKING_STATUSES, BookingStatus, effectiveBookingDate } from './booking-status';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -15,6 +15,7 @@ export class BookingsService {
     duration: number;
     participants?: number;
     comment?: string;
+    activityId?: string;
   }) {
     if (Number.isNaN(data.requestedDate.getTime()) || !Number.isInteger(data.duration) || data.duration < 1) {
       throw new BadRequestException('Date ou durée invalide');
@@ -24,10 +25,20 @@ export class BookingsService {
       include: { user: true, client: true, building: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
+    if (data.activityId) {
+      const activity = await this.prisma.projectActivity.findFirst({ where: {
+        id: data.activityId, projectId: data.projectId, organizationId: project.organizationId,
+        clientVisible: true, clientBookable: true, status: { notIn: ['fait', 'termine', 'annule'] },
+      } });
+      if (!activity) throw new BadRequestException('Activité non réservable');
+      const open = await this.prisma.booking.findFirst({ where: { activityId: data.activityId, status: { in: OPEN_BOOKING_STATUSES } } });
+      if (open) throw new BadRequestException('Cette activité possède déjà une réservation ouverte');
+    }
 
     const booking = await this.prisma.booking.create({
       data: {
         projectId: data.projectId,
+        activityId: data.activityId,
         organizationId: project.organizationId,
         clientUserId: data.clientUserId,
         assignedUserId: project.userId,
@@ -173,7 +184,17 @@ export class BookingsService {
           if (previous) await tx.bookingAssignment.update({ where: { id: previous.id }, data: { replacedByAssignmentId: next.id } });
           return tx.booking.update({ where: { id: bookingId }, data: updateData, include });
         }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
-      : await this.prisma.booking.update({ where: { id: bookingId }, data: updateData, include });
+      : booking.activityId && (data.status === 'CONFIRMEE' || data.status === 'REPORTEE')
+        ? await this.prisma.$transaction(async tx => {
+            const result = await tx.booking.update({ where: { id: bookingId }, data: updateData, include });
+            const effectiveDate = effectiveBookingDate(result);
+            await tx.projectActivity.update({ where: { id: booking.activityId! }, data: {
+              scheduledDate: effectiveDate,
+              ...(data.status === 'REPORTEE' ? { reportedDate: effectiveDate } : {}),
+            } });
+            return result;
+          })
+        : await this.prisma.booking.update({ where: { id: bookingId }, data: updateData, include });
 
     // Notifier le client selon le statut
     const actLabel = this.activityLabel(booking.activityType);

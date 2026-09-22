@@ -1071,11 +1071,10 @@ export class ClientPortalService {
     const projects = await this.prisma.project.findMany({
       where: {
         organizationId,
+        clientId,
         ...(role === 'CLIENT_MANAGER' && buildingIds?.length
           ? { buildingId: { in: buildingIds } }
-          : role === 'CLIENT_MANAGER'
-            ? { clientId }
-            : {}),
+          : {}),
       },
       select: { id: true },
     });
@@ -1083,8 +1082,13 @@ export class ClientPortalService {
     const projectIds = projects.map((p) => p.id);
 
     return this.prisma.projectActivity.findMany({
-      where: { projectId: { in: projectIds } },
+      where: { projectId: { in: projectIds }, organizationId, clientVisible: true },
       include: {
+        bookings: {
+          where: { status: { in: ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'] } },
+          select: { id: true, status: true, requestedDate: true, reportedDate: true },
+          take: 1,
+        },
         project: {
           include: {
             client: true,
@@ -1671,6 +1675,40 @@ export class ClientPortalService {
   }) {
     await this.assertBookingProjectAccess(data.projectId, data.actor);
     return this.bookingsService.createBooking(data);
+  }
+
+  async createBookingForActivity(data: {
+    activityId: string;
+    actor: { sub: string; clientId: string; organizationId: string; role: string; buildingIds?: string[] };
+    requestedDate: Date;
+    duration: number;
+    participants?: number;
+    comment?: string;
+  }) {
+    const activity = await this.prisma.projectActivity.findFirst({
+      where: { id: data.activityId, organizationId: data.actor.organizationId },
+      include: { project: true },
+    });
+    if (!activity || activity.project.clientId !== data.actor.clientId ||
+        (data.actor.role === 'CLIENT_MANAGER' && data.actor.buildingIds?.length &&
+          !data.actor.buildingIds.includes(activity.project.buildingId))) {
+      throw new ForbiddenException('Activité inaccessible');
+    }
+    if (!activity.clientVisible || !activity.clientBookable || ['fait', 'termine', 'annule'].includes(activity.status)) {
+      throw new ForbiddenException('Activité non réservable');
+    }
+    return this.bookingsService.createBooking({
+      projectId: activity.projectId,
+      activityId: activity.id,
+      clientUserId: data.actor.sub,
+      activityType: activity.type.startsWith('exercice') ? 'exercice' :
+        activity.type.startsWith('formation') ? 'formation' :
+        activity.type === 'creation_document' ? 'revision' : 'autre',
+      requestedDate: data.requestedDate,
+      duration: data.duration,
+      participants: data.participants,
+      comment: data.comment,
+    });
   }
 
   private async assertBookingProjectAccess(projectId: string, actor: { clientId: string; organizationId: string; role: string; buildingIds?: string[] }) {

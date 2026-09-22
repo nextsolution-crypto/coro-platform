@@ -43,7 +43,7 @@ const reportInclude = {
 } satisfies Prisma.ExerciseReportInclude;
 
 const activityContextInclude = {
-  booking: true,
+  bookings: { orderBy: { createdAt: 'desc' as const } },
   project: {
     include: {
       organization: true,
@@ -105,7 +105,8 @@ export class ExerciseReportsService {
     }
     const reportType = eligibility.reportType;
 
-    const bookingId = dto.bookingId ?? activity.bookingId;
+    const bookingId = dto.bookingId ??
+      (activity.bookings.find(b => ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'].includes(b.status)) ?? activity.bookings[0])?.id;
     const booking = bookingId
       ? await this.prisma.booking.findFirst({
           where: {
@@ -114,11 +115,14 @@ export class ExerciseReportsService {
             organizationId: user.organizationId,
           },
         })
-      : activity.booking;
+      : null;
     if (bookingId && !booking) {
       throw new BadRequestException(
         'Reservation incompatible avec cette activite',
       );
+    }
+    if (booking?.activityId && booking.activityId !== activityId) {
+      throw new BadRequestException('Reservation liee a une autre activite');
     }
 
     const incident = dto.incidentEventId

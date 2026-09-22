@@ -25,8 +25,7 @@ function activity(type = 'exercice_table') {
     dureeHeures: 2,
     duration: '2h00',
     notes: 'Scenario activity',
-    bookingId: null,
-    booking: null,
+    bookings: [],
     project: {
       id: 'project-a',
       clientId: 'client-a',
@@ -217,6 +216,19 @@ describe('ExerciseReportsService createFromActivity', () => {
     expect(data.startedAt).toEqual(triggeredAt);
     expect(data.buildingName).toBe('Tour A');
     expect(data.fieldProvenance.scenario.origin).toBe('SENTINELLE');
+  });
+
+  it('rejects a booking explicitly linked to another Activity', async () => {
+    const h = harness();
+    h.prisma.booking.findFirst.mockResolvedValue({ id: 'booking-b', activityId: 'activity-b' });
+    await expect(h.service.createFromActivity('activity-a', { bookingId: 'booking-b' }, user)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts an explicit legacy Booking without an Activity link', async () => {
+    const h = harness();
+    h.prisma.booking.findFirst.mockResolvedValue({ id: 'legacy-booking', activityId: null, requestedDate: new Date('2026-09-16T13:00:00Z'), reportedDate: null, duration: 60 });
+    await h.service.createFromActivity('activity-a', { bookingId: 'legacy-booking' }, user);
+    expect(h.tx.exerciseReport.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ bookingId: 'legacy-booking' }) }));
   });
 
   it('prefills Sentinelle participants and REX content with explicit origins', async () => {

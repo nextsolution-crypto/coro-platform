@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiGet, getUser } from '../store/auth';
+import { apiGet, apiPost, getUser } from '../store/auth';
 import PortalLayout from '../components/PortalLayout';
 import {
   Calendar,
@@ -62,6 +62,24 @@ export default function ActivitiesPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
+  const [planningId, setPlanningId] = useState<string | null>(null);
+  const [requestedDate, setRequestedDate] = useState('');
+  const [duration, setDuration] = useState(60);
+  const [planningError, setPlanningError] = useState('');
+
+  const planActivity = async (activityId: string) => {
+    if (!requestedDate) return;
+    try {
+      setPlanningError('');
+      await apiPost(`/client-portal/activities/${activityId}/bookings`, {
+        requestedDate: new Date(requestedDate).toISOString(), duration,
+      });
+      setPlanningId(null);
+      await fetchActivities();
+    } catch (error) {
+      setPlanningError(error instanceof Error ? error.message : 'Erreur de réservation');
+    }
+  };
 
   useEffect(() => {
     const currentUser = getUser();
@@ -312,6 +330,21 @@ export default function ActivitiesPage() {
         >
           {status.label}
         </span>
+        {a.bookings?.[0] ? (
+          <span>Planification : {a.bookings[0].status}</span>
+        ) : a.clientVisible && a.clientBookable && !['fait', 'termine', 'annule'].includes(a.status) ? (
+          <div>
+            <button type="button" onClick={() => setPlanningId(a.id)}>PLANIFIER</button>
+            {planningId === a.id && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                <input aria-label="Date souhaitée" type="datetime-local" value={requestedDate} onChange={e => setRequestedDate(e.target.value)} />
+                <input aria-label="Durée en minutes" type="number" min={1} max={1440} value={duration} onChange={e => setDuration(Number(e.target.value))} />
+                <button type="button" onClick={() => planActivity(a.id)}>Envoyer la demande</button>
+                {planningError && <span role="alert">{planningError}</span>}
+              </div>
+            )}
+          </div>
+        ) : null}
       </article>
     );
   };

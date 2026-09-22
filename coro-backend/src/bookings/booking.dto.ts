@@ -9,6 +9,13 @@ export class CreateBookingDto {
   @IsOptional() @IsString() @MaxLength(2000) comment?: string;
 }
 
+export class CreateActivityBookingDto {
+  @IsDateString() requestedDate!: string;
+  @IsInt() @Min(1) @Max(1440) duration!: number;
+  @IsOptional() @IsInt() @Min(1) participants?: number;
+  @IsOptional() @IsString() @MaxLength(2000) comment?: string;
+}
+
 export class UpdateBookingStatusDto {
   @IsIn(BOOKING_STATUSES) status!: string;
   @ValidateIf(o => o.status === 'REFUSEE' || o.refuseReason !== undefined)

@@ -11,6 +11,7 @@ describe('ClientPortalService booking scope', () => {
     service = Object.create(ClientPortalService.prototype);
     bookingsService = { createBooking: jest.fn(), getBookingForClientCancellation: jest.fn(), cancelBooking: jest.fn() };
     (service as any).bookingsService = bookingsService;
+    (service as any).prisma = { projectActivity: { findFirst: jest.fn() } };
     jest.spyOn(service, 'getProject').mockResolvedValue(null as any);
   });
 
@@ -29,6 +30,34 @@ describe('ClientPortalService booking scope', () => {
     (service.getProject as jest.Mock).mockResolvedValue({ id: 'project', buildingId: 'building-a' });
     await service.createBookingFromClient({ projectId: 'project', clientUserId: actor.sub, activityType: 'visite', requestedDate: new Date(), duration: 60, actor });
     expect(bookingsService.createBooking).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'project', clientUserId: actor.sub }));
+  });
+
+  it.each([
+    [{ clientVisible: false, clientBookable: true }, 'hidden'],
+    [{ clientVisible: true, clientBookable: false }, 'not bookable'],
+    [{ status: 'termine' }, 'complete'],
+    [{ status: 'annule' }, 'cancelled'],
+    [{ project: { clientId: 'other', buildingId: 'building-a' } }, 'other client'],
+    [{ project: { clientId: 'client-a', buildingId: 'building-b' } }, 'other building'],
+  ])('rejects activity booking when %s (%s)', async (change) => {
+    const activity = { id: 'activity', projectId: 'project', type: 'exercice_table', status: 'a_faire', clientVisible: true, clientBookable: true,
+      project: { clientId: 'client-a', buildingId: 'building-a' }, ...change };
+    (service as any).prisma.projectActivity.findFirst.mockResolvedValue(activity);
+    await expect(service.createBookingForActivity({ activityId: 'activity', actor, requestedDate: new Date(), duration: 60 })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(bookingsService.createBooking).not.toHaveBeenCalled();
+  });
+
+  it('derives the project and booking type from an accessible Activity', async () => {
+    (service as any).prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity', projectId: 'project', type: 'exercice_table', status: 'a_faire', clientVisible: true, clientBookable: true,
+      project: { clientId: 'client-a', buildingId: 'building-a' } });
+    await service.createBookingForActivity({ activityId: 'activity', actor, requestedDate: new Date(), duration: 60 });
+    expect(bookingsService.createBooking).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'project', activityId: 'activity', activityType: 'exercice', clientUserId: actor.sub }));
+  });
+
+  it('rejects an Activity outside the organization', async () => {
+    (service as any).prisma.projectActivity.findFirst.mockResolvedValue(null);
+    await expect(service.createBookingForActivity({ activityId: 'foreign', actor, requestedDate: new Date(), duration: 60 })).rejects.toBeInstanceOf(ForbiddenException);
+    expect((service as any).prisma.projectActivity.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', organizationId: 'org-a' } }));
   });
 
   it('rejects cancelling a booking outside the requester scope', async () => {

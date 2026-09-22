@@ -20,6 +20,7 @@ describe('BookingsService security and transitions', () => {
       project: { findUnique: jest.fn().mockResolvedValue(project), findFirst: jest.fn().mockResolvedValue(null) },
       booking: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn(), create: jest.fn() },
       user: { findFirst: jest.fn().mockResolvedValue(null), findUnique: jest.fn().mockResolvedValue(null) },
+      projectActivity: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() },
     };
     service = new BookingsService(prisma);
     jest.spyOn(service as any, 'sendBookingEmail').mockResolvedValue(undefined);
@@ -62,6 +63,29 @@ describe('BookingsService security and transitions', () => {
     await expect(service.updateBookingStatus('booking', { status: 'CONFIRMEE' }, 'org-a')).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it.each([
+    ['CONFIRMEE', undefined],
+    ['REPORTEE', new Date('2026-10-02T13:00:00Z')],
+  ])('synchronizes a linked %s booking date', async (status, reportedDate) => {
+    prisma.booking.findFirst.mockResolvedValue({ ...booking, activityId: 'activity' });
+    const result = { ...booking, status, activityId: 'activity', reportedDate: reportedDate ?? null };
+    prisma.booking.update.mockResolvedValue(result);
+    prisma.$transaction = jest.fn(async callback => callback({ booking: prisma.booking, projectActivity: prisma.projectActivity }));
+    await service.updateBookingStatus('booking', { status, reportedDate }, 'org-a');
+    expect(prisma.projectActivity.update).toHaveBeenCalledWith({ where: { id: 'activity' }, data: {
+      scheduledDate: reportedDate ?? booking.requestedDate,
+      ...(reportedDate ? { reportedDate } : {}),
+    } });
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('does not update the Activity when a linked booking is refused', async () => {
+    prisma.booking.findFirst.mockResolvedValue({ ...booking, activityId: 'activity' });
+    prisma.booking.update.mockResolvedValue({ ...booking, status: 'REFUSEE' });
+    await service.updateBookingStatus('booking', { status: 'REFUSEE', refuseReason: 'Indisponible' }, 'org-a');
+    expect(prisma.projectActivity.update).not.toHaveBeenCalled();
+  });
+
   it('requires report date and replacement user', async () => {
     prisma.booking.findFirst.mockResolvedValue(booking);
     await expect(service.updateBookingStatus('booking', { status: 'REPORTEE' }, 'org-a')).rejects.toBeInstanceOf(BadRequestException);
@@ -85,6 +109,24 @@ describe('BookingsService security and transitions', () => {
     expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
       assignedUserId: 'user-a', assignments: { create: expect.objectContaining({ userId: 'user-a', role: 'LEAD', status: 'ACCEPTED' }) },
     }) }));
+  });
+
+  it('creates a linked booking and rejects a second open attempt', async () => {
+    prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity' });
+    prisma.booking.create.mockResolvedValue({ ...booking, assignedUser: booking.assignedUser });
+    const data = { projectId: 'project', activityId: 'activity', clientUserId: 'client-user', activityType: 'visite', requestedDate: booking.requestedDate, duration: 60 };
+    await service.createBooking(data);
+    expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ activityId: 'activity' }) }));
+    prisma.booking.findFirst.mockResolvedValue({ id: 'open' });
+    await expect(service.createBooking(data)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.booking.create).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['REFUSEE', 'ANNULEE'])('allows a new attempt after %s', async () => {
+    prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity' });
+    prisma.booking.create.mockResolvedValue({ ...booking, assignedUser: booking.assignedUser });
+    await service.createBooking({ projectId: 'project', activityId: 'activity', clientUserId: 'client-user', activityType: 'visite', requestedDate: booking.requestedDate, duration: 60 });
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith({ where: { activityId: 'activity', status: { in: ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'] } } });
   });
 
   it('keeps client listing on legacy assignedUser', async () => {

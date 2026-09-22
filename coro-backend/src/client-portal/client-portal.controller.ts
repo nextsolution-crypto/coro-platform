@@ -22,7 +22,7 @@ import { UpdatePopulationAlertDraftDto } from '../population/dto/update-populati
 import { ClosePopulationOperationalEventDto } from '../population/dto/close-population-operational-event.dto';
 import { PopulationAlertType } from '@prisma/client';
 import { ClientJwtGuard } from './client-jwt.guard';
-import { CreateBookingDto } from '../bookings/booking.dto';
+import { CreateBookingDto, CreateActivityBookingDto } from '../bookings/booking.dto';
 import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
@@ -277,6 +277,22 @@ export class ClientPortalController {
       participants: body.participants,
       comment: body.comment,
       actor: req.clientUser,
+    });
+  }
+
+  @Post('activities/:activityId/bookings')
+  async createActivityBooking(
+    @Param('activityId') activityId: string,
+    @Request() req: any,
+    @Body() body: CreateActivityBookingDto,
+  ) {
+    return this.clientPortalService.createBookingForActivity({
+      activityId,
+      actor: req.clientUser,
+      requestedDate: new Date(body.requestedDate),
+      duration: body.duration,
+      participants: body.participants,
+      comment: body.comment,
     });
   }
 

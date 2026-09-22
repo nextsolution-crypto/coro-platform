@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
@@ -126,6 +126,9 @@ export class ActivitiesService {
   // Ajouter une activité
   async createActivity(projectId: string, organizationId: string, dto: any) {
     await this.assertOwnership(projectId, organizationId);
+    if (dto.clientVisible === false && dto.clientBookable === true) {
+      throw new BadRequestException('Une activité réservable doit être visible par le client');
+    }
     return this.prisma.projectActivity.create({
       data: {
         projectId,
@@ -141,6 +144,8 @@ export class ActivitiesService {
         assigneeEmail: dto.assigneeEmail || null,
         clientEmail: dto.clientEmail || null,
         notes: dto.notes || null,
+        clientVisible: dto.clientVisible === undefined ? true : dto.clientVisible,
+        clientBookable: dto.clientBookable === true,
       },
     });
   }
@@ -152,8 +157,24 @@ export class ActivitiesService {
     });
     if (!activity) throw new NotFoundException('Activité introuvable');
 
+    const visible = dto.clientVisible === undefined ? activity.clientVisible : dto.clientVisible;
+    const bookable = dto.clientBookable === undefined ? activity.clientBookable : dto.clientBookable;
+    if (typeof visible !== 'boolean' || typeof bookable !== 'boolean' || (!visible && bookable)) {
+      throw new BadRequestException('Une activité réservable doit être visible par le client');
+    }
+    if (dto.scheduledDate !== undefined || dto.reportedDate !== undefined) {
+      const operationalBooking = await this.prisma.booking.findFirst({ where: {
+        activityId, status: { in: ['CONFIRMEE', 'REPORTEE'] },
+      }, select: { id: true } });
+      if (operationalBooking) throw new BadRequestException('Modifier la date sur la réservation liée');
+    }
+
     // Si statut passe à "reporte" → nouvelle date obligatoire
     const updateData: any = { ...dto };
+    delete updateData.bookingId;
+    delete updateData.bookings;
+    delete updateData.projectId;
+    delete updateData.organizationId;
     if (dto.status === 'reporte' && dto.reportedDate) {
       updateData.reportedDate = new Date(dto.reportedDate);
       updateData.scheduledDate = new Date(dto.reportedDate);
@@ -173,6 +194,8 @@ export class ActivitiesService {
       where: { id: activityId, organizationId },
     });
     if (!activity) throw new NotFoundException('Activité introuvable');
+    const linkedBooking = await this.prisma.booking.findFirst({ where: { activityId }, select: { id: true } });
+    if (linkedBooking) throw new BadRequestException('Cette activité possède un historique de réservations');
     return this.prisma.projectActivity.delete({ where: { id: activityId } });
   }
 
@@ -439,6 +462,7 @@ export class ActivitiesService {
         organizationId,
         sourceMandate: true,
         type: { notIn: selectedTypes },
+        bookings: { none: {} },
       },
     });
 

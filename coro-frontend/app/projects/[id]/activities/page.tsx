@@ -100,6 +100,16 @@ export default function ActivitiesPage() {
     } catch (err) { console.error(err); }
   };
 
+  const handleClientAccess = async (activity: any, field: 'clientVisible' | 'clientBookable', value: boolean) => {
+    try {
+      await api.put(`/activities/${activity.id}`, {
+        [field]: value,
+        ...(field === 'clientVisible' && !value ? { clientBookable: false } : {}),
+      });
+      fetchData();
+    } catch (err) { console.error(err); }
+  };
+
   const handleReportSubmit = async (newDate: string) => {
     if (!reportModal || !newDate) return;
     try {
@@ -253,6 +263,11 @@ export default function ActivitiesPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      <label className="text-xs"><input type="checkbox" checked={activity.clientVisible ?? true}
+                        onChange={e => handleClientAccess(activity, 'clientVisible', e.target.checked)} /> Visible client</label>
+                      <label className="text-xs"><input type="checkbox" checked={activity.clientBookable ?? false}
+                        disabled={!activity.clientVisible}
+                        onChange={e => handleClientAccess(activity, 'clientBookable', e.target.checked)} /> Réservable</label>
                       <select value={activity.status}
                         onChange={e => handleStatusChange(activity, e.target.value)}
                         className="text-xs px-2 py-1.5 rounded font-medium border-0 outline-none cursor-pointer"

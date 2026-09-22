@@ -573,8 +573,9 @@ model ProjectActivity {
   isRecurring    Boolean         @default(false)
   sourceMandate  Boolean         @default(false)
   dureeHeures    Float? // Durée réelle ou estimée en heures
-  bookingId      String?         @unique
-  booking        Booking?        @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  clientVisible  Boolean         @default(true)
+  clientBookable Boolean         @default(false)
+  bookings       Booking[]
   exerciseReport ExerciseReport?
 }
 
@@ -1037,6 +1038,8 @@ model DocumentEngagement {
 
 model Booking {
   id              String                @id @default(uuid())
+  activityId      String?
+  activity        ProjectActivity?      @relation(fields: [activityId], references: [id], onDelete: SetNull)
   projectId       String
   project         Project               @relation(fields: [projectId], references: [id])
   organizationId  String
@@ -1057,7 +1060,6 @@ model Booking {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   notifications   BookingNotification[]
-  activity        ProjectActivity?
   exerciseReports ExerciseReport[]
   assignments     BookingAssignment[]
 }

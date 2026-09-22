@@ -1,5 +1,6 @@
 export const BOOKING_STATUSES = ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE', 'REFUSEE', 'COMPLETEE', 'ANNULEE'] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+export const OPEN_BOOKING_STATUSES: BookingStatus[] = ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'];
 export const BOOKING_TRANSITIONS: Record<BookingStatus, readonly BookingStatus[]> = {
   DEMANDEE: ['CONFIRMEE', 'REFUSEE', 'REPORTEE', 'REASSIGNEE', 'ANNULEE'],
   CONFIRMEE: ['REPORTEE', 'REASSIGNEE', 'COMPLETEE', 'ANNULEE'],
