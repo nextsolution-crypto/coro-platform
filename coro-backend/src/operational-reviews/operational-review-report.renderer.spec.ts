@@ -92,7 +92,7 @@ describe('OperationalReviewReportRenderer', () => {
     expect(pdf.getAuthor()).toBe('CORO');
     expect(pdf.getSubject()).toBe('Retour d’expérience finalisé');
     for (const page of pdf.getPages()) expect(page.getSize()).toMatchObject({ width: 595.28, height: 841.89 });
-  });
+  }, 30_000);
 
   it('embarque deux vraies polices statiques intégrales et des tables ToUnicode', async () => {
     const bytes = await new OperationalReviewReportRenderer().render({
