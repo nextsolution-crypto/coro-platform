@@ -14,7 +14,7 @@ type Finding = {
   status: string; recommendations: Recommendation[];
 };
 export type OperationalReviewReportData = {
-  reference: string; reviewVersion: number; title: string; summary: string | null;
+  reference: string; reviewVersion: number; reportVersion?: number; title: string; summary: string | null;
   confidentiality: string; sourceType: 'POPULATION' | 'INCIDENT' | 'EXERCISE';
   evidenceReference: string | null; evidenceVersion: number | null;
   organizationNameAtGeneration: string | null; buildingNameAtGeneration: string | null;
@@ -40,7 +40,7 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat('fr-CA', 
 
 export function buildOperationalReviewReportText(data: OperationalReviewReportData): string[] {
   const lines = [
-    'RAPPORT DE RETOUR D’EXPÉRIENCE', data.reference, `Version REX ${data.reviewVersion} · Version rapport 1`,
+    'RAPPORT DE RETOUR D’EXPÉRIENCE', data.reference, `Version REX ${data.reviewVersion} · Version rapport ${data.reportVersion ?? 1}`,
     'FINALISÉ', `Confidentialité : ${human(data.confidentiality)}`,
     `Source : ${human(data.sourceType)}`, `Finalisé le : ${date(data.finalizedAt)}`,
     '[[PAGE_BREAK]]', '1. IDENTIFICATION', `Référence : ${data.reference}`, `Version REX : ${data.reviewVersion}`,

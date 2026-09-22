@@ -3429,6 +3429,10 @@ enum OperationalReviewReportStatus {
   FINALIZED
 }
 
+enum OperationalReviewReportSupersessionReason {
+  TECHNICAL_CORRECTION
+}
+
 model OperationalReviewReport {
   id String @id @default(uuid())
   organizationId String
@@ -3449,6 +3453,11 @@ model OperationalReviewReport {
   reportSha256 String?
   leaseExpiresAt DateTime
   renderData Json
+  supersedesReportId String? @unique
+  supersedesReport OperationalReviewReport? @relation("OperationalReviewReportSupersession", fields: [supersedesReportId], references: [id], onDelete: Restrict)
+  supersededByReport OperationalReviewReport? @relation("OperationalReviewReportSupersession")
+  supersessionReason OperationalReviewReportSupersessionReason?
+  supersessionComment String?
   createdAt DateTime @default(now())
   finalizedAt DateTime?
 

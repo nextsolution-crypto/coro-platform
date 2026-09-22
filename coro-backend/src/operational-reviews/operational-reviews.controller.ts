@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Request, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Request, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { CreateOperationalReviewDto, UpdateOperationalReviewDto } from './dto/operational-review.dto';
@@ -17,8 +17,19 @@ export class OperationalReviewsController {
   @Get(':id') get(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.service.get(id, req.clientUser); }
   @Post(':id/report') generateReport(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.reports.generate(id, req.clientUser); }
   @Get(':id/report') getReport(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.reports.get(id, req.clientUser); }
+  @Get(':id/reports') listReports(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }) { return this.reports.list(id, req.clientUser); }
   @Get(':id/report/download') async downloadReport(@Param('id') id: string, @Request() req: { clientUser: ReviewActor }, @Res() res: Response) {
     const report = await this.reports.download(id, req.clientUser);
+    res.set({
+      'Content-Type': 'application/pdf', 'Content-Length': String(report.bytes.length),
+      'Content-Disposition': `attachment; filename="${report.filename}"; filename*=UTF-8''${encodeURIComponent(report.filename)}`,
+      'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Expose-Headers': 'Content-Disposition',
+    });
+    return res.send(report.bytes);
+  }
+  @Get(':id/reports/:version/download') async downloadReportVersion(@Param('id') id: string, @Param('version', ParseIntPipe) version: number, @Request() req: { clientUser: ReviewActor }, @Res() res: Response) {
+    const report = await this.reports.download(id, req.clientUser, version);
     res.set({
       'Content-Type': 'application/pdf', 'Content-Length': String(report.bytes.length),
       'Content-Disposition': `attachment; filename="${report.filename}"; filename*=UTF-8''${encodeURIComponent(report.filename)}`,

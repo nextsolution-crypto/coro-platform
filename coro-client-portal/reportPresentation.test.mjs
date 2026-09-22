@@ -15,8 +15,9 @@ test("langue, statut et nom de fichier du rapport", () => {
   assert.equal(formatReportLanguage("FR"), "Français");
   assert.equal(reportStatusLabel("GENERATING"), "Génération en cours");
   assert.equal(reportStatusLabel("FINALIZED"), "Rapport disponible");
-  assert.equal(buildReportFilename("REX-2026-000001", 1), "REX-2026-000001_v1_FR.pdf");
-  assert.equal(buildReportFilename("../../unsafe", 1), "REX_v1_FR.pdf");
+  assert.equal(buildReportFilename("REX-2026-000001", 1), "REX-2026-000001_v1_R1_FR.pdf");
+  assert.equal(buildReportFilename("REX-2026-000001", 1, 2), "REX-2026-000001_v1_R2_FR.pdf");
+  assert.equal(buildReportFilename("../../unsafe", 1), "REX_v1_R1_FR.pdf");
 });
 
 test("réponse Nest vide signifie aucun rapport et autorise un seul POST explicite", () => {

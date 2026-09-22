@@ -52,6 +52,11 @@ describe('OperationalReviewReportRenderer', () => {
     expect(second.equals(first)).toBe(true);
   });
 
+  it('indique la version documentaire R2 sans changer le contenu métier', () => {
+    expect(buildOperationalReviewReportText({ ...data, reportVersion: 2 })).toContain('Version REX 1 · Version rapport 2');
+    expect(buildOperationalReviewReportText(data)).toContain('Version REX 1 · Version rapport 1');
+  });
+
   it('embarque deux vraies polices statiques intégrales et des tables ToUnicode', async () => {
     const bytes = await new OperationalReviewReportRenderer().render({
       ...data, title: 'Équipe — é è à ç ù œ É 12345',
