@@ -7,7 +7,8 @@ const actor = { userId: 'u1', organizationId: 'org-a', role: 'ADMIN' };
 const user = (id: string) => ({ id, email: `${id}@example.com`, firstName: id, lastName: 'Conseiller',
   title: 'Conseiller', timeZone: 'America/Toronto', timeZoneVerified: true });
 const project = { name: 'Projet privé', clientId: 'client-a', buildingId: 'building-a',
-  building: { timeZone: 'America/Toronto', timeZoneVerified: true } };
+  client: { name: 'Client privé' }, user: { firstName: 'Responsable', lastName: 'Dossier' },
+  building: { name: 'Bâtiment privé', timeZone: 'America/Toronto', timeZoneVerified: true } };
 const booking = (status: string, assignmentStatus: string) => ({ id: `b-${status}`,
   requestedDate: new Date('2026-09-23T14:00:00Z'), reportedDate: null, duration: 60, status,
   activityType: 'Visite privée', projectId: 'project-a', project,
@@ -67,6 +68,8 @@ describe('PlanningService', () => {
     expect(result.users[0]).toHaveProperty('capacity');
     expect(result.users[1]).toEqual({ id: 'u2', name: 'u2 Conseiller', title: 'Conseiller', availability: 'GENERIC' });
     expect(result.events.find((e: any) => e.source === 'BOOKING')).toMatchObject({ label: 'Occupé', status: 'BUSY' });
+    expect(result.events.find((e: any) => e.source === 'BOOKING')).not.toHaveProperty('assignments');
+    expect(result.events.find((e: any) => e.source === 'BOOKING')).not.toHaveProperty('clientName');
     expect(prisma.userUnavailability.findMany.mock.calls[0][0].select).toEqual({
       id: true, userId: true, startAt: true, endAt: true, timeZone: true });
     expect(JSON.stringify(result)).not.toMatch(/SICK|secret|Visite privée|Projet privé/);
@@ -81,6 +84,11 @@ describe('PlanningService', () => {
     expect(result.events.find((e: any) => e.bookingId === 'b-DEMANDEE')).toMatchObject({
       status: 'REQUESTED', label: 'Demande client — non confirmée', needsAction: true });
     expect(result.events.find((e: any) => e.bookingId === 'b-CONFIRMEE')).toMatchObject({ status: 'CONFIRMED' });
+    expect(result.events.find((e: any) => e.bookingId === 'b-CONFIRMEE')).toMatchObject({
+      bookingStatus: 'CONFIRMEE', assignments: [{ userId: 'u2', role: 'LEAD', status: 'ACCEPTED' }],
+      projectName: 'Projet privé', clientName: 'Client privé', buildingName: 'Bâtiment privé',
+      ownerName: 'Responsable Dossier',
+    });
     expect(result.actionSummary).toMatchObject({ requestedBookings: 1, bookingsWithoutAcceptedLead: 1,
       pendingAssignments: 1 });
     expect(scheduling.analyzeManySlots).toHaveBeenCalledTimes(1);

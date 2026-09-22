@@ -21,6 +21,7 @@ const NAV_GROUPS = [
       { label: 'Projets',    path: '/projects',            icon: '📁' },
       { label: 'Activités', path: '/activities/portfolio', icon: '📅' },
       { label: 'Timelog',   path: '/timelog',              icon: '⏱' },
+      { label: 'Planification d’équipe', path: '/planning', icon: '🗓' },
     ],
   },
   {

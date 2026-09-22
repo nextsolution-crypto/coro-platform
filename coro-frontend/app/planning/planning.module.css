@@ -1,0 +1,66 @@
+.page { display:grid; gap:18px; color:#2c3e50 }
+.pageHeader { display:flex; justify-content:space-between; gap:18px; align-items:flex-start }
+.pageHeader h1 { margin:2px 0 5px; font-size:25px; font-weight:700 }
+.pageHeader p { margin:0; color:#6c757d; font-size:14px }
+.eyebrow { color:#c0392b!important; font-size:11px!important; font-weight:700; letter-spacing:.12em; text-transform:uppercase }
+.headerMeta { display:grid; justify-items:end; gap:4px; color:#6c757d; font-size:12px }
+.summary { display:grid; grid-template-columns:repeat(6,minmax(120px,1fr)); gap:10px }
+.summaryCard { background:white; border:1px solid #e9ecef; border-radius:10px; padding:13px; text-align:left; display:grid; gap:5px; cursor:pointer }
+.summaryCard:hover,.summaryCard:focus-visible { border-color:#c0392b }
+.summaryCard strong { color:#c0392b; font-size:23px; line-height:1 }.summaryCard span { font-size:12px; line-height:1.25 }
+.summaryFoot { margin:-12px 0 0; color:#6c757d; font-size:12px }
+.actionList { background:white; border:1px solid #e9ecef; border-radius:10px; padding:14px; font-size:13px }
+.actionListHeader { display:flex; justify-content:space-between; align-items:center; gap:10px }.actionListHeader h2 { font-size:15px; font-weight:700; margin:0; text-transform:capitalize }
+.actionListHeader button { border:1px solid #ced4da; border-radius:6px; background:white; width:32px; height:32px; cursor:pointer; font-size:21px }
+.actionList ul { list-style:none; padding:0; margin:12px 0 0 }.actionList li { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:8px 0; border-top:1px solid #edf0f2 }
+.actionList li span { color:#6c757d }.actionList li a { color:#a93226; text-decoration:underline }
+.actionPager { display:flex; align-items:center; gap:10px; margin-top:12px }.actionPager button { background:white; border:1px solid #ced4da; border-radius:6px; padding:5px 9px; cursor:pointer }.actionPager button:disabled { opacity:.5; cursor:default }
+.toolbar { background:white; border:1px solid #e9ecef; border-radius:10px; padding:14px; display:grid; gap:12px }
+.periodControls,.filters { display:flex; align-items:end; flex-wrap:wrap; gap:10px }
+.periodControls label,.filters label { display:grid; gap:4px; color:#6c757d; font-size:11px; font-weight:600 }
+.toolbar input,.toolbar select,.toolbar button { min-height:35px; border:1px solid #ced4da; border-radius:6px; background:white; padding:6px 9px; color:#2c3e50; font-size:13px }
+.toolbar button { cursor:pointer }.toolbar button:hover { background:#f8f9fa }
+.filters .checkbox { display:flex; align-items:center; gap:7px; min-height:35px; color:#2c3e50; font-size:12px }.checkbox input { min-height:0 }
+.notice,.empty { padding:14px; background:#f4f7fa; border-radius:8px; color:#5d6d7e; font-size:13px }
+.error { padding:14px; background:#fceeed; border:1px solid #e5ada8; border-radius:8px; color:#922b21; font-size:13px }
+.gridSection { background:white; border:1px solid #e9ecef; border-radius:10px; overflow:hidden }
+.timelineScroll { overflow-x:auto; max-width:100% }.timeline { display:grid; min-width:max-content }
+.corner,.dayHeader { min-height:77px; padding:12px 10px 6px; background:#f7f8fa; border-bottom:1px solid #dee2e6; border-right:1px solid #e9ecef }
+.corner { display:grid; align-content:center; gap:5px }.corner small { color:#6c757d }
+.dayHeader strong { display:block; text-transform:capitalize; font-size:13px; margin-bottom:12px }
+.tickLabels { position:relative; height:18px; margin:0 8px; color:#6c757d; font-size:10px }
+.tickLabels span { position:absolute; transform:translateX(-50%) }.tickLabels span:first-child { transform:none }.tickLabels span:last-child { transform:translateX(-100%) }
+.resourceRow { display:contents }.stickyLeft { position:sticky; left:0; z-index:3 }
+.advisorCell { min-height:122px; padding:11px; background:white; border-bottom:1px solid #e9ecef; border-right:1px solid #dee2e6 }
+.advisor { display:grid; gap:4px }.advisor strong { font-size:13px }.advisor span,.advisor small { color:#6c757d; font-size:11px }
+.dayTrack { min-height:122px; position:relative; background:#eef1f4; border-right:1px solid #e9ecef; border-bottom:1px solid #e9ecef; overflow:hidden }
+.noSchedule { background:repeating-linear-gradient(135deg,#f5f6f8,#f5f6f8 7px,#eceff2 7px,#eceff2 14px) }
+.noScheduleText { position:absolute; left:10px; bottom:6px; font-size:10px; color:#7a8691 }
+.trackLines { position:absolute; inset:0 8px; pointer-events:none; z-index:1 }.trackLines span { position:absolute; top:0; bottom:0; border-left:1px solid #dce2e7 }
+.workBand { position:absolute; inset-block:0; background:#fff; border-left:1px solid #c9dccc; border-right:1px solid #c9dccc }
+.event { position:absolute; z-index:2; min-height:31px; border:1px solid; border-radius:5px; padding:3px 5px; text-align:left; overflow:hidden; cursor:pointer; display:grid; gap:1px; white-space:nowrap }
+.eventTitle { font-weight:700; font-size:10px; overflow:hidden; text-overflow:ellipsis }.eventMeta { font-size:9px; overflow:hidden; text-overflow:ellipsis }
+.requested { background:#ebf5fb; border-color:#78b6da; color:#175879; border-style:dashed }
+.provisional { background:#fff4db; border-color:#d9a632; color:#795500; border-style:dashed }
+.confirmed { background:#e9f6ed; border-color:#6ab27e; color:#1f6232 }.unavailable { background:#f7e7e5; border-color:#c9857f; color:#80342e }
+.legacy { background:#f3eff8; border-color:#a78dbe; color:#684784; border-style:dashed }.busy { background:#e8eaed; border-color:#a5aab1; color:#4e555d }
+.mobileAgenda { display:none }
+.drawerBackdrop { position:fixed; inset:0; z-index:80; background:#1c26336b; display:flex; justify-content:flex-end }
+.drawer { width:min(440px,100vw); height:100%; overflow-y:auto; background:white; box-shadow:-10px 0 30px #17243330; padding:22px }
+.drawerHeader { display:flex; align-items:start; justify-content:space-between; gap:15px; border-bottom:1px solid #e9ecef; padding-bottom:15px }
+.drawerHeader small { color:#c0392b; font-weight:700; text-transform:uppercase; letter-spacing:.08em }.drawerHeader h2 { margin:5px 0 0; font-size:20px }
+.closeButton { border:1px solid #ced4da; border-radius:6px; background:white; width:36px; height:36px; font-size:24px; cursor:pointer }
+.details { display:grid; grid-template-columns:115px 1fr; gap:10px; margin:20px 0; font-size:13px }.details dt { color:#6c757d }.details dd { margin:0; overflow-wrap:anywhere }
+.drawerSection { border-top:1px solid #e9ecef; padding-top:15px; font-size:13px }.drawerSection h3 { font-size:14px; margin:0 0 8px }.drawerSection ul { margin:0 0 15px; padding-left:20px }
+.actionNotice { padding:12px; background:#fff4db; color:#795500; border-radius:6px; font-size:13px }
+.drawerLinks { display:grid; gap:10px; margin-top:20px }.drawerLinks a { color:#a93226; font-size:13px; font-weight:600; text-decoration:underline }
+.agendaCard { display:grid; gap:4px; width:100%; text-align:left; background:white; border:1px solid #e9ecef; border-radius:8px; padding:11px; margin:7px 0; cursor:pointer }
+.agendaCard strong { font-size:13px }.agendaCard span { font-size:12px; color:#6c757d }
+.page button:focus-visible,.page a:focus-visible,.page input:focus-visible,.page select:focus-visible,.drawer button:focus-visible,.drawer a:focus-visible { outline:3px solid #2980b9; outline-offset:2px }
+@media (max-width:1180px) { .summary { grid-template-columns:repeat(3,minmax(120px,1fr)) } }
+@media (max-width:700px) {
+  .pageHeader { display:grid }.headerMeta { justify-items:start }.summary { grid-template-columns:repeat(2,minmax(120px,1fr)) }
+  .desktopTimeline { display:none }.mobileAgenda { display:block; padding:15px }
+  .mobileAgenda h2 { font-size:16px; font-weight:700; margin:0 0 15px }.mobileAgenda h3 { font-size:14px; font-weight:700; text-transform:capitalize; margin:18px 0 8px }
+  .mobileAgenda p,.mobileAgenda li { font-size:12px; color:#6c757d }
+}
