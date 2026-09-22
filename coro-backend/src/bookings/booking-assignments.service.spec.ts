@@ -6,13 +6,15 @@ describe('BookingAssignmentsService', () => {
   const operator: BookingActor = { userId: 'user-a', organizationId: 'org-a', role: 'OPERATOR' };
   let rows: any[];
   let prisma: any;
+  let scheduling: any;
+  let capacity: any;
   let service: BookingAssignmentsService;
 
   beforeEach(() => {
     rows = [];
     prisma = {
       booking: {
-        findFirst: jest.fn(({ where }) => where.organizationId === 'org-a' && where.id === 'booking' ? { id: 'booking', projectId: 'project', organizationId: 'org-a', assignedUserId: 'user-a' } : null),
+        findFirst: jest.fn(({ where }) => where.organizationId === 'org-a' && where.id === 'booking' ? { id: 'booking', projectId: 'project', organizationId: 'org-a', assignedUserId: 'user-a', requestedDate: new Date('2026-10-01T13:00:00Z'), reportedDate: null, duration: 60, project: { buildingId: 'building', building: { timeZone: 'America/Toronto', timeZoneVerified: true } } } : null),
         update: jest.fn().mockResolvedValue({}),
       },
       user: {
@@ -33,7 +35,10 @@ describe('BookingAssignmentsService', () => {
       },
       $transaction: jest.fn(async callback => callback(prisma)),
     };
-    service = new BookingAssignmentsService(prisma);
+    scheduling = { analyzeUser: jest.fn().mockResolvedValue({ status: 'AVAILABLE', conflicts: [], warnings: [], sourcesChecked: [] }),
+      analyzeUsers: jest.fn().mockResolvedValue(new Map()), lockBooking: jest.fn(), lockUsers: jest.fn() };
+    capacity = { getCapacityPlanning: jest.fn().mockResolvedValue([]) };
+    service = new BookingAssignmentsService(prisma, scheduling, capacity);
   });
 
   it('adds several SUPPORT assignments and lists active team members', async () => {
@@ -165,5 +170,97 @@ describe('BookingAssignmentsService', () => {
     expect(support.status).toBe('REMOVED');
     expect(support.endedAt).toBeInstanceOf(Date);
     expect(rows).toHaveLength(1);
+  });
+
+  it('returns candidate availability and workload with one batched scheduling and capacity call', async () => {
+    prisma.user.findMany = jest.fn().mockResolvedValue([{ id: 'user-a', firstName: 'A', lastName: 'B', email: 'a@example.com' }]);
+    scheduling.analyzeUsers.mockResolvedValue(new Map([['user-a', { status: 'SOFT_CONFLICT', conflicts: [{ source: 'BOOKING' }], warnings: [], sourcesChecked: ['BOOKING'] }]]));
+    capacity.getCapacityPlanning.mockResolvedValue([{ userId: 'user-a', chargeConfirmee: 8, chargeProvisoire: 2, tauxUtilisationConfirmee: 20 }]);
+    const result = await service.availableUsers('booking', admin);
+    expect(result[0]).toMatchObject({ id: 'user-a', availabilityStatus: 'SOFT_CONFLICT', confirmedWorkload: 8, pendingWorkload: 2, utilizationConfirmed: 20 });
+    expect(scheduling.analyzeUsers).toHaveBeenCalledTimes(1);
+    expect(capacity.getCapacityPlanning).toHaveBeenCalledTimes(1);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ organizationId: 'org-a', isActive: true }) }));
+  });
+
+  it('does not expose candidates across tenants or to an operator', async () => {
+    await expect(service.availableUsers('booking', { ...admin, organizationId: 'org-b' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.availableUsers('booking', operator)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('allows soft and unknown availability with an explanatory response', async () => {
+    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'SOFT_CONFLICT', conflicts: [{ source: 'BOOKING' }], warnings: [], sourcesChecked: ['BOOKING'] })
+      .mockResolvedValueOnce({ status: 'SOFT_CONFLICT', conflicts: [{ source: 'BOOKING' }], warnings: [], sourcesChecked: ['BOOKING'] })
+      .mockResolvedValueOnce({ status: 'UNKNOWN', conflicts: [], warnings: ['Fuseau à confirmer'], sourcesChecked: ['BOOKING'] })
+      .mockResolvedValueOnce({ status: 'UNKNOWN', conflicts: [], warnings: ['Fuseau à confirmer'], sourcesChecked: ['BOOKING'] });
+    expect((await service.add('booking', 'user-a', 'SUPPORT', admin)).availability.status).toBe('SOFT_CONFLICT');
+    expect((await service.add('booking', 'user-b', 'SUPPORT', admin)).availability.warnings).toContain('Fuseau à confirmer');
+  });
+
+  it('rejects a blocked add without override and records an admin override', async () => {
+    scheduling.analyzeUser.mockResolvedValue({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [], sourcesChecked: ['BOOKING'] });
+    await expect(service.add('booking', 'user-a', 'SUPPORT', admin)).rejects.toBeInstanceOf(BadRequestException);
+    expect(rows).toHaveLength(0);
+    await service.add('booking', 'user-a', 'SUPPORT', admin, true);
+    expect(rows).toHaveLength(1);
+    expect(prisma.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'BOOKING_SCHEDULING_OVERRIDE' }) });
+    await expect(service.add('booking', 'user-b', 'SUPPORT', operator, true)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('validates a replacement before beginning its transaction', async () => {
+    const old = await service.add('booking', 'user-a', 'LEAD', admin);
+    scheduling.analyzeUser.mockResolvedValue({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [], sourcesChecked: ['BOOKING'] });
+    const transactionCalls = prisma.$transaction.mock.calls.length;
+    await expect(service.replace('booking', old.id, 'user-b', admin)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(transactionCalls);
+    expect(old.status).toBe('PENDING');
+    await service.replace('booking', old.id, 'user-b', admin, true);
+    expect(old.status).toBe('REPLACED');
+  });
+
+  it('rechecks conflicts when a pending proposal is accepted', async () => {
+    const proposal = await service.add('booking', 'user-a', 'SUPPORT', admin);
+    scheduling.analyzeUser.mockResolvedValue({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [], sourcesChecked: ['BOOKING'] });
+    await expect(service.respond('booking', proposal.id, 'ACCEPTED', undefined, operator)).rejects.toBeInstanceOf(BadRequestException);
+    expect(proposal.status).toBe('PENDING');
+  });
+
+  it('does not add when a firm conflict appears after the first check', async () => {
+    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'AVAILABLE', conflicts: [], warnings: [] })
+      .mockResolvedValueOnce({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [] });
+    await expect(service.add('booking', 'user-a', 'SUPPORT', admin)).rejects.toBeInstanceOf(BadRequestException);
+    expect(rows).toHaveLength(0);
+    expect(scheduling.lockBooking).toHaveBeenCalledWith(prisma, 'org-a', 'booking');
+    expect(scheduling.lockUsers).toHaveBeenCalledWith(prisma, 'org-a', ['user-a']);
+    expect(scheduling.analyzeUser).toHaveBeenCalledTimes(2);
+    expect(scheduling.analyzeUser).toHaveBeenLastCalledWith(expect.objectContaining({ userId: 'user-a' }), prisma);
+  });
+
+  it('keeps the old assignment and legacy LEAD when replacement recheck becomes blocked', async () => {
+    const old = await service.add('booking', 'user-a', 'LEAD', admin);
+    prisma.booking.update.mockClear();
+    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'AVAILABLE', conflicts: [], warnings: [] })
+      .mockResolvedValueOnce({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [] });
+    await expect(service.replace('booking', old.id, 'user-b', admin)).rejects.toBeInstanceOf(BadRequestException);
+    expect(old.status).toBe('PENDING');
+    expect(rows).toHaveLength(1);
+    expect(prisma.booking.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps a proposal pending when acceptance recheck becomes blocked', async () => {
+    const proposal = await service.add('booking', 'user-a', 'SUPPORT', admin);
+    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'AVAILABLE', conflicts: [], warnings: [] })
+      .mockResolvedValueOnce({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [] });
+    await expect(service.respond('booking', proposal.id, 'ACCEPTED', undefined, operator)).rejects.toBeInstanceOf(BadRequestException);
+    expect(proposal.status).toBe('PENDING');
+  });
+
+  it('lets an admin override a conflict discovered at the second check', async () => {
+    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'AVAILABLE', conflicts: [], warnings: [] })
+      .mockResolvedValueOnce({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [] });
+    const result = await service.add('booking', 'user-a', 'SUPPORT', admin, true);
+    expect(result.status).toBe('PENDING');
+    expect(result.availability.status).toBe('BLOCKED');
+    expect(prisma.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'BOOKING_SCHEDULING_OVERRIDE' }) });
   });
 });

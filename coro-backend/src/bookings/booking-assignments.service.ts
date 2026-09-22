@@ -1,6 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { BookingAssignmentRole, BookingAssignmentStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SchedulingService, bookingInterval } from '../scheduling/scheduling.service';
+import { CapacityService } from '../mandate/capacity.service';
 
 export interface BookingActor {
   userId: string;
@@ -13,7 +15,57 @@ type AssignmentNotification = 'NEW' | 'ACCEPTED' | 'DECLINED' | 'REPLACED' | 'RE
 
 @Injectable()
 export class BookingAssignmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly scheduling: SchedulingService,
+    private readonly capacity: CapacityService) {}
+
+  private async availability(bookingId: string, userId: string, actor: BookingActor, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    const booking = await db.booking.findFirst({ where: { id: bookingId, organizationId: actor.organizationId },
+      include: { project: { include: { building: true } } } });
+    if (!booking) throw new NotFoundException('Réservation introuvable');
+    const interval = bookingInterval(booking);
+    return this.scheduling.analyzeUser({ organizationId: actor.organizationId, userId,
+      startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,
+      targetBuildingId: booking.project.buildingId }, tx);
+  }
+
+  private requireNoUnapprovedBlock(result: Awaited<ReturnType<SchedulingService['analyzeUser']>>, allowConflict?: boolean) {
+    if (result.status === 'BLOCKED' && !allowConflict) throw new BadRequestException({
+      message: 'Conflit confirmé : override administratif requis', availabilityStatus: result.status,
+      conflicts: result.conflicts, warnings: result.warnings,
+    });
+  }
+
+  private async recordOverride(tx: Prisma.TransactionClient, actor: BookingActor, bookingId: string, userId: string) {
+    await tx.notification.create({ data: { userId: actor.userId, organizationId: actor.organizationId,
+      type: 'BOOKING_SCHEDULING_OVERRIDE', title: 'Conflit Booking contourné',
+      message: `Booking ${bookingId} : conflit confirmé contourné pour le conseiller ${userId} par ${actor.userId}` } });
+  }
+
+  async availableUsers(bookingId: string, actor: BookingActor) {
+    this.requireManager(actor);
+    const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, organizationId: actor.organizationId },
+      include: { project: { include: { building: true } } } });
+    if (!booking) throw new NotFoundException('Réservation introuvable');
+    const interval = bookingInterval(booking);
+    const users = await this.prisma.user.findMany({ where: { organizationId: actor.organizationId, isActive: true,
+      role: { in: ['ADMIN', 'OPERATOR'] } }, select: { id: true, firstName: true, lastName: true, email: true } });
+    const [availability, capacity] = await Promise.all([
+      this.scheduling.analyzeUsers({ organizationId: actor.organizationId, userIds: users.map(user => user.id),
+        startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,
+        targetBuildingId: booking.project.buildingId }),
+      this.capacity.getCapacityPlanning(actor.organizationId),
+    ]);
+    const capacityByUser = new Map(capacity.map(row => [row.userId, row]));
+    return users.map(user => {
+      const result = availability.get(user.id)!;
+      const workload = capacityByUser.get(user.id);
+      return { ...user, availabilityStatus: result.status, conflicts: result.conflicts, warnings: result.warnings,
+        sourcesChecked: result.sourcesChecked, confirmedWorkload: workload?.chargeConfirmee ?? 0,
+        pendingWorkload: workload?.chargeProvisoire ?? 0,
+        utilizationConfirmed: workload?.tauxUtilisationConfirmee ?? null };
+    });
+  }
 
   private requireManager(actor: BookingActor) {
     if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
@@ -60,9 +112,15 @@ export class BookingAssignmentsService {
     });
   }
 
-  async add(bookingId: string, userId: string, role: BookingAssignmentRole, actor: BookingActor) {
+  async add(bookingId: string, userId: string, role: BookingAssignmentRole, actor: BookingActor, allowConflict = false) {
     this.requireManager(actor);
-    return this.prisma.$transaction(async tx => {
+    let availability = await this.availability(bookingId, userId, actor);
+    this.requireNoUnapprovedBlock(availability, allowConflict);
+    const assignment = await this.prisma.$transaction(async tx => {
+      await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
+      await this.scheduling.lockUsers(tx, actor.organizationId, [userId]);
+      availability = await this.availability(bookingId, userId, actor, tx);
+      this.requireNoUnapprovedBlock(availability, allowConflict);
       const booking = await this.bookingInScope(tx, bookingId, actor);
       await this.eligibleUser(tx, userId, actor.organizationId);
       if (role === 'LEAD' && await tx.bookingAssignment.findFirst({ where: { bookingId, role: 'LEAD', status: { in: ACTIVE } } })) {
@@ -76,13 +134,30 @@ export class BookingAssignmentsService {
       });
       if (role === 'LEAD') await tx.booking.update({ where: { id: bookingId }, data: { assignedUserId: userId } });
       await this.notify(tx, booking, actor, userId, 'NEW');
+      if (availability.status === 'BLOCKED' && allowConflict) await this.recordOverride(tx, actor, bookingId, userId);
       return assignment;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+    return Object.assign(assignment, { availability });
   }
 
   async respond(bookingId: string, assignmentId: string, status: BookingAssignmentStatus, declineReason: string | undefined, actor: BookingActor) {
     if (status !== 'ACCEPTED' && status !== 'DECLINED') throw new BadRequestException('Réponse invalide');
-    return this.prisma.$transaction(async tx => {
+    let availability: Awaited<ReturnType<SchedulingService['analyzeUser']>> | undefined;
+    if (status === 'ACCEPTED') {
+      const assignment = await this.prisma.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId,
+        booking: { organizationId: actor.organizationId } } });
+      if (!assignment) throw new NotFoundException('Affectation introuvable');
+      if (assignment.userId !== actor.userId) throw new ForbiddenException('Vous ne pouvez répondre que pour vous-même');
+      availability = await this.availability(bookingId, actor.userId, actor);
+      this.requireNoUnapprovedBlock(availability);
+    }
+    const result = await this.prisma.$transaction(async tx => {
+      await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
+      if (status === 'ACCEPTED') {
+        await this.scheduling.lockUsers(tx, actor.organizationId, [actor.userId]);
+        availability = await this.availability(bookingId, actor.userId, actor, tx);
+        this.requireNoUnapprovedBlock(availability);
+      }
       const booking = await this.bookingInScope(tx, bookingId, actor);
       const assignment = await tx.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId } });
       if (!assignment) throw new NotFoundException('Affectation introuvable');
@@ -97,12 +172,19 @@ export class BookingAssignmentsService {
       if (result.count !== 1) throw new BadRequestException('Affectation déjà traitée');
       if (assignment.assignedByUserId) await this.notify(tx, booking, actor, assignment.assignedByUserId, status);
       return tx.bookingAssignment.findUniqueOrThrow({ where: { id: assignmentId } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+    return availability ? Object.assign(result, { availability }) : result;
   }
 
-  async replace(bookingId: string, assignmentId: string, newUserId: string, actor: BookingActor) {
+  async replace(bookingId: string, assignmentId: string, newUserId: string, actor: BookingActor, allowConflict = false) {
     this.requireManager(actor);
-    return this.prisma.$transaction(async tx => {
+    let availability = await this.availability(bookingId, newUserId, actor);
+    this.requireNoUnapprovedBlock(availability, allowConflict);
+    const replacement = await this.prisma.$transaction(async tx => {
+      await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
+      await this.scheduling.lockUsers(tx, actor.organizationId, [newUserId]);
+      availability = await this.availability(bookingId, newUserId, actor, tx);
+      this.requireNoUnapprovedBlock(availability, allowConflict);
       const booking = await this.bookingInScope(tx, bookingId, actor);
       const old = await tx.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId, status: { in: ACTIVE } } });
       if (!old) throw new NotFoundException('Affectation active introuvable');
@@ -120,13 +202,16 @@ export class BookingAssignmentsService {
       if (old.role === 'LEAD') await tx.booking.update({ where: { id: bookingId }, data: { assignedUserId: newUserId } });
       await this.notify(tx, booking, actor, old.userId, 'REPLACED');
       await this.notify(tx, booking, actor, newUserId, 'NEW');
+      if (availability.status === 'BLOCKED' && allowConflict) await this.recordOverride(tx, actor, bookingId, newUserId);
       return replacement;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+    return Object.assign(replacement, { availability });
   }
 
   async remove(bookingId: string, assignmentId: string, actor: BookingActor) {
     this.requireManager(actor);
     return this.prisma.$transaction(async tx => {
+      await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
       const booking = await this.bookingInScope(tx, bookingId, actor);
       const assignment = await tx.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId, status: { in: ACTIVE } } });
       if (!assignment) throw new NotFoundException('Affectation active introuvable');

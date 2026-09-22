@@ -11,6 +11,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule],
   controllers: [MandateController, RendementController, PortfolioController, CapacityController],
   providers: [MandateService, CapacityService],
-  exports: [MandateService],
+  exports: [MandateService, CapacityService],
 })
 export class MandateModule {}

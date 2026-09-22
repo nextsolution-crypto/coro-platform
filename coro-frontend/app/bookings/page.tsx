@@ -54,6 +54,19 @@ export default function BookingsPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [teamUserIds, setTeamUserIds] = useState<Record<string, string>>({});
   const [teamError, setTeamError] = useState('');
+  const [availableByBooking, setAvailableByBooking] = useState<Record<string, any[]>>({});
+  const [teamOverride, setTeamOverride] = useState<{ bookingId: string; action: 'add' | 'addLead' | 'replace'; assignmentId?: string; conflicts: any[] } | null>(null);
+  const [statusConflict, setStatusConflict] = useState<{ action: string; userId?: string; conflicts: any[] } | null>(null);
+
+  const fetchAvailableUsers = async (bookingId: string) => {
+    try {
+      const response = await api.get(`/bookings/${bookingId}/available-users`);
+      setAvailableByBooking(current => ({ ...current, [bookingId]: response.data || [] }));
+      setTeamError('');
+    } catch (error: any) {
+      setTeamError(error?.response?.data?.message || 'Disponibilités indisponibles.');
+    }
+  };
 
   useEffect(() => { fetchData(); }, []);
 
@@ -69,7 +82,7 @@ export default function BookingsPage() {
     finally { setLoading(false); }
   };
 
-  const handleAction = async (action: string) => {
+  const handleAction = async (action: string, allowConflict = false) => {
     if (!selectedBooking) return;
     setProcessing(true);
     try {
@@ -77,27 +90,43 @@ export default function BookingsPage() {
       if (action === 'REFUSEE') body.refuseReason = refuseReason;
       if (action === 'REPORTEE') body.reportedLocalDateTime = `${reportedDate}T${reportedTime}:00`;
       if (action === 'REASSIGNEE') body.newUserId = newUserId;
+      if (allowConflict) body.allowConflict = true;
 
       await api.put(`/bookings/${selectedBooking.id}/status`, body);
+      setStatusConflict(null);
       setSuccessMsg('Réservation mise à jour avec succès.');
       setTimeout(() => setSuccessMsg(''), 4000);
       closeAllModals();
       await fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      const detail = err?.response?.data;
+      if (detail?.availabilityStatus === 'BLOCKED') setStatusConflict({ action, userId: detail.userId, conflicts: detail.conflicts || [] });
+      else setTeamError(detail?.message || 'Impossible de modifier la réservation.');
+    }
     finally { setProcessing(false); }
   };
 
-  const teamAction = async (bookingId: string, action: 'add' | 'addLead' | 'replace' | 'remove' | 'respond', assignmentId?: string, response?: string) => {
+  const teamAction = async (bookingId: string, action: 'add' | 'addLead' | 'replace' | 'remove' | 'respond', assignmentId?: string, response?: string, allowConflict = false) => {
     setTeamError('');
+    const candidate = availableByBooking[bookingId]?.find(u => u.id === teamUserIds[bookingId]);
+    if (!allowConflict && canManageTeam && ['add', 'addLead', 'replace'].includes(action) && candidate?.availabilityStatus === 'BLOCKED') {
+      setTeamOverride({ bookingId, action: action as 'add' | 'addLead' | 'replace', assignmentId, conflicts: candidate.conflicts });
+      return;
+    }
     try {
-      if (action === 'add') await api.post(`/bookings/${bookingId}/assignments`, { userId: teamUserIds[bookingId], role: 'SUPPORT' });
-      if (action === 'addLead') await api.post(`/bookings/${bookingId}/assignments`, { userId: teamUserIds[bookingId], role: 'LEAD' });
-      if (action === 'replace') await api.post(`/bookings/${bookingId}/assignments/${assignmentId}/replace`, { newUserId: teamUserIds[bookingId] });
+      if (action === 'add') await api.post(`/bookings/${bookingId}/assignments`, { userId: teamUserIds[bookingId], role: 'SUPPORT', allowConflict });
+      if (action === 'addLead') await api.post(`/bookings/${bookingId}/assignments`, { userId: teamUserIds[bookingId], role: 'LEAD', allowConflict });
+      if (action === 'replace') await api.post(`/bookings/${bookingId}/assignments/${assignmentId}/replace`, { newUserId: teamUserIds[bookingId], allowConflict });
       if (action === 'remove') await api.delete(`/bookings/${bookingId}/assignments/${assignmentId}`);
       if (action === 'respond') await api.post(`/bookings/${bookingId}/assignments/${assignmentId}/respond`, { status: response });
+      setTeamOverride(null);
       await fetchData();
+      if (availableByBooking[bookingId]) await fetchAvailableUsers(bookingId);
     } catch (error: any) {
-      setTeamError(error?.response?.data?.message || 'Impossible de modifier l’équipe.');
+      const detail = error?.response?.data;
+      if (detail?.availabilityStatus === 'BLOCKED' && canManageTeam && ['add', 'addLead', 'replace'].includes(action) && !allowConflict) {
+        setTeamOverride({ bookingId, action: action as 'add' | 'addLead' | 'replace', assignmentId, conflicts: detail.conflicts || [] });
+      } else setTeamError(detail?.message || 'Impossible de modifier l’équipe.');
     }
   };
 
@@ -111,6 +140,7 @@ export default function BookingsPage() {
     setReportedDate('');
     setReportedTime('09:00');
     setNewUserId('');
+    setStatusConflict(null);
   };
 
   const openModal = (booking: any, type: 'confirm' | 'refuse' | 'report' | 'reassign') => {
@@ -118,7 +148,7 @@ export default function BookingsPage() {
     if (type === 'confirm') setShowConfirmModal(true);
     if (type === 'refuse') setShowRefuseModal(true);
     if (type === 'report') setShowReportModal(true);
-    if (type === 'reassign') setShowReassignModal(true);
+    if (type === 'reassign') { setShowReassignModal(true); fetchAvailableUsers(booking.id); }
   };
 
   const filtered = bookings.filter(b => {
@@ -402,14 +432,26 @@ export default function BookingsPage() {
                       </div>
                     ))}
                     {!(booking.assignments || []).some((a: any) => a.role === 'LEAD') && <p className="text-xs mb-2" style={{ color: '#C0392B' }}>Aucun LEAD actif. Une nouvelle proposition est nécessaire.</p>}
+                    {canManageTeam && <button className="text-xs underline mb-2" onClick={() => fetchAvailableUsers(booking.id)}>Voir les disponibilités et la charge</button>}
                     {canManageTeam && <div className="flex flex-wrap gap-2 mt-3">
-                      <select aria-label="Conseiller à affecter" className="text-xs rounded p-2" value={teamUserIds[booking.id] || ''} onChange={e => setTeamUserIds(v => ({ ...v, [booking.id]: e.target.value }))}>
-                        <option value="">Choisir un conseiller</option>
-                        {users.map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
+                      <select aria-label="Conseiller à affecter" className="text-xs rounded p-2" value={teamUserIds[booking.id] || ''} onChange={e => { setTeamOverride(null); setTeamUserIds(v => ({ ...v, [booking.id]: e.target.value })); }}>
+                        <option value="">{availableByBooking[booking.id] ? 'Choisir un conseiller' : 'Charger les disponibilités'}</option>
+                        {(availableByBooking[booking.id] || []).map((u: any) => <option key={u.id} value={u.id}>{u.firstName} {u.lastName} — {u.availabilityStatus}</option>)}
                       </select>
                       <button className="text-xs underline disabled:opacity-50" disabled={!teamUserIds[booking.id]} onClick={() => teamAction(booking.id, 'add')}>Ajouter SUPPORT</button>
                       {!(booking.assignments || []).some((a: any) => a.role === 'LEAD') && <button className="text-xs underline disabled:opacity-50" disabled={!teamUserIds[booking.id]} onClick={() => teamAction(booking.id, 'addLead')}>Proposer LEAD</button>}
                       {(booking.assignments || []).find((a: any) => a.role === 'LEAD') && <button className="text-xs underline disabled:opacity-50" disabled={!teamUserIds[booking.id]} onClick={() => teamAction(booking.id, 'replace', (booking.assignments || []).find((a: any) => a.role === 'LEAD').id)}>Remplacer LEAD</button>}
+                    </div>}
+                    {(() => { const candidate = availableByBooking[booking.id]?.find(u => u.id === teamUserIds[booking.id]); return candidate && <div className="text-xs mt-2" aria-live="polite">
+                      <p><strong>{candidate.availabilityStatus}</strong> — charge confirmée : {candidate.confirmedWorkload} h ; provisoire : {candidate.pendingWorkload} h{candidate.utilizationConfirmed !== null ? ` ; utilisation : ${candidate.utilizationConfirmed} %` : ''}</p>
+                      {(candidate.conflicts || []).map((conflict: any) => <p key={`${conflict.source}-${conflict.sourceId}`}>{conflict.source === 'LEGACY_ACTIVITY' ? 'Conflit potentiel — activité legacy' : conflict.severity === 'BLOCKED' ? 'Engagement confirmé' : 'Proposition provisoire'} : {conflict.label} ({new Date(conflict.startUtc).toLocaleString('fr-CA', { timeZone: conflict.timeZone })})</p>)}
+                      {(candidate.warnings || []).map((warning: string, index: number) => <p key={index}>{warning}</p>)}
+                    </div>; })()}
+                    {teamOverride && teamOverride.bookingId === booking.id && <div className="mt-2 rounded border border-red-300 p-3 text-xs" role="alert">
+                      <p>Ce conseiller possède déjà un engagement confirmé qui chevauche ce créneau.</p>
+                      {teamOverride.conflicts.map((conflict: any) => <p key={`${conflict.source}-${conflict.sourceId}`}>{conflict.label} : {conflict.reason}</p>)}
+                      <button className="underline mr-4" onClick={() => setTeamOverride(null)}>Annuler</button>
+                      <button className="underline font-bold" onClick={() => teamAction(teamOverride.bookingId, teamOverride.action, teamOverride.assignmentId, undefined, true)}>Affecter quand même</button>
                     </div>}
                   </div>
                   {teamError && <p role="alert" className="text-xs text-red-700 mt-2">{teamError}</p>}
@@ -436,6 +478,11 @@ export default function BookingsPage() {
               <strong>{new Date(selectedBooking.requestedDate).toLocaleDateString('fr-CA', { timeZone: selectedBooking.project?.building?.timeZone || 'America/Toronto', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>.
             </p>
             <p className="text-xs mb-6" style={{ color: '#ADB5BD' }}>Le client recevra automatiquement un courriel de confirmation.</p>
+            {statusConflict?.action === 'CONFIRMEE' && <div className="mb-4 rounded border border-red-300 p-3 text-sm" role="alert">
+              <p>Un conseiller possède déjà un engagement confirmé sur ce créneau : {statusConflict.userId}</p>
+              {statusConflict.conflicts.map((conflict: any) => <p key={`${conflict.source}-${conflict.sourceId}`}>{conflict.label} : {conflict.reason}</p>)}
+              {canManageTeam && <button className="underline font-bold mt-2" onClick={() => handleAction('CONFIRMEE', true)}>Confirmer quand même</button>}
+            </div>}
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button onClick={closeAllModals} disabled={processing}
                 className="flex-1 min-h-11 py-3 rounded font-medium text-sm"
@@ -504,6 +551,11 @@ export default function BookingsPage() {
                   onChange={e => setReportedTime(e.target.value)} style={inp} />
               </div>
             </div>
+            {statusConflict?.action === 'REPORTEE' && <div className="mb-4 rounded border border-red-300 p-3 text-sm" role="alert">
+              <p>Un conseiller possède déjà un engagement confirmé sur le nouveau créneau : {statusConflict.userId}</p>
+              {statusConflict.conflicts.map((conflict: any) => <p key={`${conflict.source}-${conflict.sourceId}`}>{conflict.label} : {conflict.reason}</p>)}
+              {canManageTeam && <button className="underline font-bold mt-2" onClick={() => handleAction('REPORTEE', true)}>Reporter quand même</button>}
+            </div>}
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button onClick={closeAllModals} disabled={processing}
                 className="flex-1 min-h-11 py-3 rounded font-medium text-sm"
@@ -532,11 +584,17 @@ export default function BookingsPage() {
               <label style={lbl}>Nouveau conseiller *</label>
               <select value={newUserId} onChange={e => setNewUserId(e.target.value)} style={sel}>
                 <option value="">Sélectionner un conseiller...</option>
-                {users.map((u: any) => (
-                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName} — {u.email}</option>
+                {(availableByBooking[selectedBooking.id] || []).map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName} — {u.availabilityStatus}</option>
                 ))}
               </select>
+              {newUserId && (() => { const candidate = availableByBooking[selectedBooking.id]?.find(u => u.id === newUserId); return candidate && <p className="text-xs mt-2">{candidate.availabilityStatus} — charge confirmée : {candidate.confirmedWorkload} h ; provisoire : {candidate.pendingWorkload} h. {(candidate.warnings || []).join(' ')}</p>; })()}
             </div>
+            {statusConflict?.action === 'REASSIGNEE' && <div className="mb-4 rounded border border-red-300 p-3 text-sm" role="alert">
+              <p>Le remplaçant possède déjà un engagement confirmé qui chevauche ce créneau.</p>
+              {statusConflict.conflicts.map((conflict: any) => <p key={`${conflict.source}-${conflict.sourceId}`}>{conflict.label} : {conflict.reason}</p>)}
+              {canManageTeam && <button className="underline font-bold mt-2" onClick={() => handleAction('REASSIGNEE', true)}>Réassigner quand même</button>}
+            </div>}
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <button onClick={closeAllModals} disabled={processing}
                 className="flex-1 min-h-11 py-3 rounded font-medium text-sm"

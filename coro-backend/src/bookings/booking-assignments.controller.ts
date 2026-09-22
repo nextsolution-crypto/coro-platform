@@ -15,7 +15,7 @@ export class BookingAssignmentsController {
 
   @Post()
   add(@Param('id') id: string, @Body() dto: CreateBookingAssignmentDto, @Request() req: any) {
-    return this.assignments.add(id, dto.userId, dto.role, req.user);
+    return this.assignments.add(id, dto.userId, dto.role, req.user, dto.allowConflict);
   }
 
   @Post(':assignmentId/respond')
@@ -25,7 +25,7 @@ export class BookingAssignmentsController {
 
   @Post(':assignmentId/replace')
   replace(@Param('id') id: string, @Param('assignmentId') assignmentId: string, @Body() dto: ReplaceBookingAssignmentDto, @Request() req: any) {
-    return this.assignments.replace(id, assignmentId, dto.newUserId, req.user);
+    return this.assignments.replace(id, assignmentId, dto.newUserId, req.user, dto.allowConflict);
   }
 
   @Delete(':assignmentId')

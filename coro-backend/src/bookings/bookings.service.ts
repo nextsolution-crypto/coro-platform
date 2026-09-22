@@ -3,10 +3,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BOOKING_TRANSITIONS, OPEN_BOOKING_STATUSES, BookingStatus, effectiveBookingDate } from './booking-status';
 import { Prisma } from '@prisma/client';
 import { formatBuildingDate, resolveBookingInstant } from './booking-time';
+import { SchedulingService, bookingInterval } from '../scheduling/scheduling.service';
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly scheduling: SchedulingService) {}
 
   async createBooking(data: {
     projectId: string;
@@ -138,8 +139,9 @@ export class BookingsService {
     reportedDate?: Date;
     reportedLocalDateTime?: string;
     newUserId?: string;
+    allowConflict?: boolean;
   }, organizationId: string, actor?: { userId: string; role: string }) {
-    const booking = await this.prisma.booking.findFirst({
+    let booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, organizationId },
       include: {
         project: { include: { client: true, building: true } },
@@ -167,6 +169,43 @@ export class BookingsService {
     if (data.status === 'REASSIGNEE' && actor?.role !== 'ADMIN' && actor?.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException('Réassignation réservée aux administrateurs');
     }
+    if (data.allowConflict && actor?.role !== 'ADMIN' && actor?.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Override réservé aux administrateurs');
+    }
+
+    let schedulingWarnings: string[] = [];
+    let overriddenUserIds: string[] = [];
+    if (data.status === 'CONFIRMEE' || data.status === 'REPORTEE') {
+      const interval = bookingInterval({ ...booking, reportedDate: reportedDate ?? booking.reportedDate });
+      const assignments = await this.prisma.bookingAssignment.findMany({ where: { bookingId,
+        status: { in: ['ACCEPTED', 'PENDING'] } }, select: { userId: true, status: true } });
+      const userIds = [...new Set(assignments.map(a => a.userId))];
+      const analyses = await this.scheduling.analyzeUsers({ organizationId, userIds, startUtc: interval.startUtc,
+        endUtc: interval.endUtc, excludeBookingId: bookingId, targetBuildingId: booking.project.buildingId });
+      for (const assignment of assignments) {
+        const analysis = analyses.get(assignment.userId);
+        if (!analysis) continue;
+        if (assignment.status === 'ACCEPTED' && analysis.status === 'BLOCKED') {
+          if (!data.allowConflict) throw new BadRequestException({ message: 'Conflit confirmé sur une affectation acceptée',
+            availabilityStatus: 'BLOCKED', userId: assignment.userId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+          overriddenUserIds.push(assignment.userId);
+        }
+        schedulingWarnings.push(...analysis.warnings);
+        if (analysis.conflicts.length) schedulingWarnings.push(`${assignment.userId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+      }
+    }
+    if (data.status === 'REASSIGNEE' && data.newUserId) {
+      const interval = bookingInterval(booking);
+      const analysis = await this.scheduling.analyzeUser({ organizationId, userId: data.newUserId,
+        startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,
+        targetBuildingId: booking.project.buildingId });
+      if (analysis.status === 'BLOCKED' && !data.allowConflict) throw new BadRequestException({
+        message: 'Conflit confirmé pour le remplaçant', availabilityStatus: 'BLOCKED',
+        userId: data.newUserId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+      if (analysis.status === 'BLOCKED') overriddenUserIds.push(data.newUserId);
+      schedulingWarnings.push(...analysis.warnings);
+      if (analysis.conflicts.length) schedulingWarnings.push(`${data.newUserId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+    }
 
     const updateData: any = { status: data.status };
     if (data.refuseReason) updateData.refuseReason = data.refuseReason;
@@ -178,8 +217,61 @@ export class BookingsService {
       clientUser: true,
       assignedUser: true,
     } as const;
+    const recordOverride = async (tx: Prisma.TransactionClient) => {
+      if (!overriddenUserIds.length || !actor) return;
+      await tx.notification.create({ data: {
+        userId: actor.userId, organizationId, projectId: booking!.projectId,
+        type: 'BOOKING_SCHEDULING_OVERRIDE', title: 'Conflit Booking contourné',
+        message: `Booking ${bookingId} : conflit confirmé contourné pour ${overriddenUserIds.join(', ')} par ${actor.userId}`,
+      } });
+    };
+    const recheckScheduling = async (tx: Prisma.TransactionClient) => {
+      await this.scheduling.lockBooking(tx, organizationId, bookingId);
+      const current = await tx.booking.findFirst({ where: { id: bookingId, organizationId }, include });
+      if (!current) throw new NotFoundException('Réservation introuvable');
+      if (!BOOKING_TRANSITIONS[current.status as BookingStatus]?.includes(data.status as BookingStatus)) {
+        throw new BadRequestException('Transition de réservation non autorisée');
+      }
+      booking = current;
+      schedulingWarnings = [];
+      overriddenUserIds = [];
+      if (data.status === 'CONFIRMEE' || data.status === 'REPORTEE') {
+        const assignments = await tx.bookingAssignment.findMany({ where: { bookingId,
+          status: { in: ['ACCEPTED', 'PENDING'] } }, select: { userId: true, status: true } });
+        const userIds = [...new Set(assignments.map(a => a.userId))];
+        await this.scheduling.lockUsers(tx, organizationId, userIds);
+        const interval = bookingInterval({ ...current, reportedDate: reportedDate ?? current.reportedDate });
+        const analyses = await this.scheduling.analyzeUsers({ organizationId, userIds, startUtc: interval.startUtc,
+          endUtc: interval.endUtc, excludeBookingId: bookingId, targetBuildingId: current.project.buildingId }, tx);
+        for (const assignment of assignments) {
+          const analysis = analyses.get(assignment.userId);
+          if (!analysis) continue;
+          if (assignment.status === 'ACCEPTED' && analysis.status === 'BLOCKED') {
+            if (!data.allowConflict) throw new BadRequestException({ message: 'Conflit confirmé sur une affectation acceptée',
+              availabilityStatus: 'BLOCKED', userId: assignment.userId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+            overriddenUserIds.push(assignment.userId);
+          }
+          schedulingWarnings.push(...analysis.warnings);
+          if (analysis.conflicts.length) schedulingWarnings.push(`${assignment.userId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+        }
+      } else if (data.status === 'REASSIGNEE' && data.newUserId) {
+        await this.scheduling.lockUsers(tx, organizationId, [data.newUserId]);
+        const interval = bookingInterval(current);
+        const analysis = await this.scheduling.analyzeUser({ organizationId, userId: data.newUserId,
+          startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,
+          targetBuildingId: current.project.buildingId }, tx);
+        if (analysis.status === 'BLOCKED' && !data.allowConflict) throw new BadRequestException({
+          message: 'Conflit confirmé pour le remplaçant', availabilityStatus: 'BLOCKED',
+          userId: data.newUserId, conflicts: analysis.conflicts, warnings: analysis.warnings });
+        if (analysis.status === 'BLOCKED') overriddenUserIds.push(data.newUserId);
+        schedulingWarnings.push(...analysis.warnings);
+        if (analysis.conflicts.length) schedulingWarnings.push(`${data.newUserId} : ${analysis.conflicts.map(c => c.reason).join(', ')}`);
+      }
+      return current;
+    };
     const updated = data.status === 'REASSIGNEE' && data.newUserId
       ? await this.prisma.$transaction(async tx => {
+          await recheckScheduling(tx);
           const previous = await tx.bookingAssignment.findFirst({ where: { bookingId, role: 'LEAD', status: { in: ['PENDING', 'ACCEPTED'] } } });
           if (previous?.userId === data.newUserId) throw new BadRequestException('Conseiller déjà affecté');
           const now = new Date();
@@ -189,18 +281,24 @@ export class BookingsService {
             assignedAt: now, respondedAt: now, assignedByUserId: actor?.userId,
           } });
           if (previous) await tx.bookingAssignment.update({ where: { id: previous.id }, data: { replacedByAssignmentId: next.id } });
-          return tx.booking.update({ where: { id: bookingId }, data: updateData, include });
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
-      : booking.activityId && (data.status === 'CONFIRMEE' || data.status === 'REPORTEE')
+          const result = await tx.booking.update({ where: { id: bookingId }, data: updateData, include });
+          await recordOverride(tx);
+          return result;
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
+      : (data.status === 'CONFIRMEE' || data.status === 'REPORTEE')
         ? await this.prisma.$transaction(async tx => {
+            const current = await recheckScheduling(tx);
             const result = await tx.booking.update({ where: { id: bookingId }, data: updateData, include });
-            const effectiveDate = effectiveBookingDate(result);
-            await tx.projectActivity.update({ where: { id: booking.activityId! }, data: {
-              scheduledDate: effectiveDate,
-              ...(data.status === 'REPORTEE' ? { reportedDate: effectiveDate } : {}),
-            } });
+            if (current.activityId) {
+              const effectiveDate = effectiveBookingDate(result);
+              await tx.projectActivity.update({ where: { id: current.activityId }, data: {
+                scheduledDate: effectiveDate,
+                ...(data.status === 'REPORTEE' ? { reportedDate: effectiveDate } : {}),
+              } });
+            }
+            await recordOverride(tx);
             return result;
-          })
+          }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
         : await this.prisma.booking.update({ where: { id: bookingId }, data: updateData, include });
 
     // Notifier le client selon le statut
@@ -338,7 +436,7 @@ export class BookingsService {
       }
     }
 
-    return updated;
+    return { ...updated, schedulingWarnings };
   }
 
   async cancelBooking(bookingId: string, cancelledBy: 'client' | 'conseiller', organizationId: string, clientUserId?: string) {

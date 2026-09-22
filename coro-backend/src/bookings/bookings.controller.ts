@@ -2,11 +2,12 @@ import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@ne
 import { AuthGuard } from '@nestjs/passport';
 import { BookingsService } from './bookings.service';
 import { UpdateBookingStatusDto } from './booking.dto';
+import { BookingAssignmentsService } from './booking-assignments.service';
 
 @Controller('bookings')
 @UseGuards(AuthGuard('jwt'))
 export class BookingsController {
-  constructor(private bookingsService: BookingsService) {}
+  constructor(private bookingsService: BookingsService, private assignments: BookingAssignmentsService) {}
 
   @Get('organization')
   getForOrganization(@Request() req: any) {
@@ -16,6 +17,11 @@ export class BookingsController {
   @Get('project/:projectId')
   getForProject(@Param('projectId') projectId: string, @Request() req: any) {
     return this.bookingsService.getBookingsForProject(projectId, req.user.organizationId);
+  }
+
+  @Get(':id/available-users')
+  availableUsers(@Param('id') id: string, @Request() req: any) {
+    return this.assignments.availableUsers(id, req.user);
   }
 
   @Put(':id/status')
@@ -30,6 +36,7 @@ export class BookingsController {
       reportedDate: body.reportedDate ? new Date(body.reportedDate) : undefined,
       reportedLocalDateTime: body.reportedLocalDateTime,
       newUserId: body.newUserId,
+      allowConflict: body.allowConflict,
     }, req.user.organizationId, req.user);
   }
 

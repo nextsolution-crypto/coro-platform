@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { BOOKING_STATUSES } from './booking-status';
 
 export class CreateBookingDto {
@@ -24,6 +24,7 @@ export class UpdateBookingStatusDto {
   @IsString() @IsNotEmpty() @MaxLength(2000) refuseReason?: string;
   @IsOptional() @IsDateString() @Matches(/(?:Z|[+-]\d{2}:\d{2})$/i) reportedDate?: string;
   @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/) reportedLocalDateTime?: string;
+  @IsOptional() @IsBoolean() allowConflict?: boolean;
   @ValidateIf(o => o.status === 'REASSIGNEE' || o.newUserId !== undefined)
   @IsUUID() newUserId?: string;
 }

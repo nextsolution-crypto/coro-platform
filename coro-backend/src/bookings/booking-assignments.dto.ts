@@ -1,9 +1,10 @@
 import { BookingAssignmentRole, BookingAssignmentStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class CreateBookingAssignmentDto {
   @IsUUID() userId!: string;
   @IsEnum(BookingAssignmentRole) role!: BookingAssignmentRole;
+  @IsOptional() @IsBoolean() allowConflict?: boolean;
 }
 
 export class RespondBookingAssignmentDto {
@@ -13,4 +14,5 @@ export class RespondBookingAssignmentDto {
 
 export class ReplaceBookingAssignmentDto {
   @IsUUID() newUserId!: string;
+  @IsOptional() @IsBoolean() allowConflict?: boolean;
 }
