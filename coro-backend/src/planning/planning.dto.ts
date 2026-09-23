@@ -1,4 +1,5 @@
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class PlanningWindowDto {
   @IsString() start!: string;
@@ -27,6 +28,12 @@ export class CreatePlanningActivityDto {
   @IsOptional() @IsIn(['presentiel', 'teams', 'hybride']) mode?: string;
   @IsOptional() @IsBoolean() clientVisible?: boolean;
   @IsOptional() @IsBoolean() clientBookable?: boolean;
+}
+
+export class PlanningTeamPreviewDto {
+  @IsString() @MaxLength(100) buildingId!: string;
+  @IsISO8601({ strict: true }) startUtc!: string;
+  @Type(() => Number) @IsInt() @Min(15) @Max(1440) durationMinutes!: number;
 }
 
 export class PlanningActionsDto extends PlanningWindowDto {

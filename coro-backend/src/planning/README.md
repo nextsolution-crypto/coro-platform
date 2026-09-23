@@ -17,3 +17,11 @@ Candidate Booking and Activity reads each use `take: 2001` to detect whether mor
 `POST /planning/activities` creates one undated `ProjectActivity` attached to an accessible active Project. The organization always comes from the staff JWT. The ActivityType must be active and either global or owned by that organization. Activity creation and its `PLANNING_ACTIVITY_CREATED` audit row share one transaction. This foundation route creates no empty Booking and no BookingAssignment; slot and team orchestration belong to the following scheduling phases.
 
 The team and action routes accept optional `projectId` and `activityTypeId` filters. These filters are applied in Prisma before the candidate ceiling. Unplanned action items expose stable Client, Building, Project and ActivityType identifiers and labels so the drawer can reopen the existing Activity without copying business objects into a planner-specific model.
+
+## Team preview
+
+`POST /planning/team-preview` accepts a UTC start instant, a duration in minutes and a tenant-scoped Building ID. It loads active candidates once, calls `SchedulingService.analyzeUsers` once for the complete slot, and calls Capacity once. It does not create a Booking or BookingAssignment.
+
+The public candidate contract contains `userId`, `displayName`, an optional secondary email, `availabilityStatus`, a generic reason, an optional generic blocked interval and the committed 12-week capacity percentage. `SOFT_CONFLICT` is projected as `UNKNOWN`; the Planner exposes only `AVAILABLE`, `UNKNOWN` and `BLOCKED`. Raw Scheduling conflicts, Booking or client details, absence type and private notes are never returned.
+
+Admins and super administrators see active staff candidates from their organization. An operator can preview only their own availability. Client JWTs are rejected before database access. Capacity is informational and never changes the Scheduling category.

@@ -65,7 +65,8 @@ export default function TeamPlannerPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [periodActions, setPeriodActions] = useState<PlanningAction[]>([]);
   const [context, setContext] = useState<PlanningContext | null>(null);
-  const [activityDrawer, setActivityDrawer] = useState<{ mode: 'CREATE' | 'PLAN_EXISTING'; action?: PlanningAction } | null>(null);
+  const [activityDrawer, setActivityDrawer] = useState<{ mode: 'CREATE' | 'PLAN_EXISTING'; action?: PlanningAction;
+    initialSlot?: { date: string; time: string; leadId?: string } } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -273,7 +274,9 @@ export default function TeamPlannerPage() {
         {data.warnings.length > 0 && <div className={styles.notice} role="status">{data.warnings.join(' · ')}</div>}
         {view === 'month' ? <MonthCalendar monthDays={days} events={data.events} actions={periodActions}
           timeZone={displayedZone} today={today} onDay={day => { setDate(day); setView('day'); }} onSelect={setSelected} /> : <>
-        <div className={styles.desktopTimeline}><ResourceTimeline data={data} days={days} onSelect={setSelected} /></div>
+        <div className={styles.desktopTimeline}><ResourceTimeline data={data} days={days} onSelect={setSelected}
+          onCreate={slot => setActivityDrawer({ mode: 'CREATE', initialSlot: slot,
+            action: { id: 'draft', type: 'UNPLANNED_ACTIVITY', label: '', startUtc: null, clientId, buildingId, projectId } })} /></div>
         <div className={styles.mobileAgenda}>
           <h2>{view === 'day' ? 'Journée' : 'Agenda de la semaine'}</h2>
           {days.map(day => <section key={day}><h3>{formatDay(day)}</h3>
@@ -292,6 +295,6 @@ export default function TeamPlannerPage() {
     </div>
     <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone} onClose={closeDrawer} />
     {activityDrawer && context && <ActivityPlanningDrawer mode={activityDrawer.mode} action={activityDrawer.action}
-      context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}
+      initialSlot={activityDrawer.initialSlot} context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}
   </AppLayout>;
 }

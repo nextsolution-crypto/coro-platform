@@ -111,6 +111,17 @@ describe('SchedulingService', () => {
     expect((await service.analyzeUser(target)).status).toBe('AVAILABLE');
   });
 
+  it('blocks a Saturday slot when the verified schedule only covers Monday to Friday', async () => {
+    prisma.userWorkSchedule.findMany.mockResolvedValue([{ ...fullSchedule,
+      intervals: [1, 2, 3, 4, 5].map(dayOfWeek => ({ dayOfWeek, startTime: 480, endTime: 1020 })) }]);
+    const result = await service.analyzeUser({ ...target,
+      startUtc: new Date('2026-10-03T14:00:00Z'), endUtc: new Date('2026-10-03T15:30:00Z') });
+    expect(result.status).toBe('BLOCKED');
+    expect(result.conflicts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: 'WORK_SCHEDULE', label: 'Hors horaire de travail' }),
+    ]));
+  });
+
   it('uses the applicable version and keeps the historical one independent', async () => {
     const old = { ...fullSchedule, id: 'old', effectiveUntil: new Date('2026-10-01'), intervals: [] };
     const current = { ...fullSchedule, id: 'new', effectiveFrom: new Date('2026-10-01') };

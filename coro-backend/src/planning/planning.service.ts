@@ -6,7 +6,7 @@ import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { assertIanaTimeZone } from '../bookings/booking-time';
 import { parseActivityDurationHours } from '../mandate/capacity-duration';
 import { scheduleRanges } from '../work-schedules/work-schedule-time';
-import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningWindowDto } from './planning.dto';
+import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningTeamPreviewDto, PlanningWindowDto } from './planning.dto';
 import { projectAccessWhere } from '../auth/project-access';
 
 type Actor = { userId: string; organizationId: string; role: string };
@@ -17,7 +17,7 @@ type ActionType = 'BOOKING_REQUESTED' | 'NO_ACCEPTED_LEAD' | 'PENDING_ASSIGNMENT
 type Action = { id: string; type: ActionType; groupId: string; bookingId?: string; activityId?: string;
   userId?: string; startUtc: Date | null; label: string; clientId?: string; buildingId?: string;
   projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
-  activityTypeId?: string; activityTypeName?: string };
+  activityTypeId?: string; activityTypeName?: string; durationMinutes?: number };
 
 export function planningWindow(query: PlanningWindowDto) {
   const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -126,6 +126,56 @@ export class PlanningService {
       } });
       return activity;
     });
+  }
+
+  async teamPreview(dto: PlanningTeamPreviewDto, actor: Actor) {
+    staff(actor);
+    const startUtc = new Date(dto.startUtc);
+    if (!Number.isFinite(startUtc.getTime())) throw new BadRequestException('Date de debut invalide');
+    const endUtc = new Date(startUtc.getTime() + dto.durationMinutes * 60_000);
+    const building = await this.prisma.building.findFirst({ where: {
+      id: dto.buildingId, organizationId: actor.organizationId, isActive: true,
+    }, select: { id: true, timeZone: true, timeZoneVerified: true } });
+    if (!building) throw new BadRequestException('Batiment indisponible');
+    const users = await this.prisma.user.findMany({ where: {
+      organizationId: actor.organizationId, isActive: true,
+      role: { in: ['ADMIN', 'OPERATOR'] },
+      ...(actor.role === 'OPERATOR' ? { id: actor.userId } : {}),
+    }, select: { id: true, firstName: true, lastName: true, email: true },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }] });
+    const [availability, capacity] = await Promise.all([
+      this.scheduling.analyzeUsers({ organizationId: actor.organizationId,
+        userIds: users.map(user => user.id), startUtc, endUtc, targetBuildingId: building.id }),
+      this.capacity.getCapacityPlanning(actor.organizationId),
+    ]);
+    const capacityByUser = new Map(capacity.map(row => [row.userId, row]));
+    const rank = { AVAILABLE: 0, UNKNOWN: 1, BLOCKED: 2 } as const;
+    const candidates = users.map(user => {
+      const result = availability.get(user.id);
+      if (!result) throw new BadRequestException('Disponibilite candidat introuvable');
+      const availabilityStatus = result.status === 'AVAILABLE' ? 'AVAILABLE'
+        : result.status === 'BLOCKED' ? 'BLOCKED' : 'UNKNOWN';
+      const blocked = result.conflicts.find(conflict => conflict.severity === 'BLOCKED');
+      let genericReason = availabilityStatus === 'AVAILABLE' ? 'Disponible'
+        : result.status === 'SOFT_CONFLICT' ? 'Disponibilite a verifier - engagement provisoire.'
+          : availabilityStatus === 'UNKNOWN'
+            ? 'Disponibilite a verifier - horaire non configure ou non verifie.'
+            : 'Indisponible';
+      let blockedInterval: { startUtc: Date; endUtc: Date } | undefined;
+      if (availabilityStatus === 'BLOCKED' && blocked) {
+        genericReason = blocked.source === 'BOOKING' ? 'Deja engage sur ce creneau.'
+          : blocked.source === 'WORK_SCHEDULE' ? 'Hors horaire de travail.' : 'Indisponible.';
+        blockedInterval = { startUtc: blocked.startUtc, endUtc: blocked.endUtc };
+      }
+      const workload = capacityByUser.get(user.id);
+      return { userId: user.id, displayName: `${user.firstName} ${user.lastName}`.trim(),
+        email: user.email, availabilityStatus, genericReason, blockedInterval,
+        capacityCommittedPercent: workload?.tauxUtilisationConfirmee ?? null,
+        capacityHorizonWeeks: 12 };
+    }).sort((a, b) => rank[a.availabilityStatus] - rank[b.availabilityStatus]
+      || a.displayName.localeCompare(b.displayName, 'fr') || a.userId.localeCompare(b.userId));
+    return { version: 1, slot: { startUtc, endUtc, durationMinutes: dto.durationMinutes,
+      buildingId: building.id, timeZone: building.timeZone, timeZoneVerified: building.timeZoneVerified }, candidates };
   }
 
   private async snapshot(query: PlanningWindowDto, actor: Actor, withCapacity: boolean) {
@@ -332,7 +382,9 @@ export class PlanningService {
           projectId: activity.projectId, projectName: activity.project.name,
           clientName: activity.project.client.name, buildingName: activity.project.building?.name,
           activityTypeId: activity.activityTypeId || undefined,
-          activityTypeName: activity.activityType?.nameFR || activity.label });
+          activityTypeName: activity.activityType?.nameFR || activity.label,
+          durationMinutes: (() => { const hours = parseActivityDurationHours(activity.customDuration || activity.duration);
+            return hours ? Math.round(hours * 60) : undefined; })() });
       }
     }
     const summary = { requestedBookings: actions.filter(a => a.type === 'BOOKING_REQUESTED').length,

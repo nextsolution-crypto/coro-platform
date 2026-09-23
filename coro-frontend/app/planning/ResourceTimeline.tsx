@@ -17,8 +17,9 @@ function AdvisorLabel({ user }: { user: PlannerUser }) {
   </div>;
 }
 
-export default function ResourceTimeline({ data, days, onSelect }: {
+export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
   data: PlannerResponse; days: string[]; onSelect: (event: PlannerEvent) => void;
+  onCreate?: (slot: { date: string; time: string; leadId: string }) => void;
 }) {
   const timeZone = data.displayTimeZone;
   const [now, setNow] = useState(() => new Date());
@@ -80,7 +81,14 @@ export default function ResourceTimeline({ data, days, onSelect }: {
           const weekend = days.length === 7 && days.indexOf(day) >= 5;
           return <div className={`${styles.dayTrack} ${work.length ? '' : styles.noSchedule} ${weekend ? styles.weekend : ''}`} key={day}
             style={{ minHeight: `${Math.max(128, 14 + events.length * 38)}px`, gridColumn: layout.dayColumns[dayIndex], gridRow: layout.resourceRows[rowIndex] }}
-            aria-label={`${user.name}, ${formatDay(day)}`}>
+            aria-label={`${user.name}, ${formatDay(day)}`}
+            onDoubleClick={event => {
+              if (!onCreate || user.id === '__unassigned' || (event.target as HTMLElement).closest('button')) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const raw = hours.start + (event.clientX - rect.left) / rect.width * (hours.end - hours.start);
+              const minute = Math.max(hours.start, Math.min(hours.end - 15, Math.round(raw / 15) * 15));
+              onCreate({ date: day, time: `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`, leadId: user.id });
+            }}>
             <div className={styles.trackLines}>{ticks.map((tick, index) =>
               <span key={tick} style={{ left: `${index / (ticks.length - 1) * 100}%` }} />)}</div>
             {work.map(({ interval, segment }, index) => <div key={`${interval.startUtc}-${index}`}

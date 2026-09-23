@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PlanningService } from './planning.service';
-import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningWindowDto } from './planning.dto';
+import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningTeamPreviewDto, PlanningWindowDto } from './planning.dto';
 
 @Controller('planning')
 @UseGuards(AuthGuard('jwt'))
@@ -26,5 +26,10 @@ export class PlanningController {
   @Post('activities')
   createActivity(@Body() body: CreatePlanningActivityDto, @Request() req: any) {
     return this.planning.createUnplannedActivity(body, req.user);
+  }
+
+  @Post('team-preview')
+  teamPreview(@Body() body: PlanningTeamPreviewDto, @Request() req: any) {
+    return this.planning.teamPreview(body, req.user);
   }
 }

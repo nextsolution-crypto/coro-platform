@@ -21,6 +21,7 @@ function loadTypescript(name) {
 const time = loadTypescript('time.ts');
 const projection = loadTypescript('projection.ts');
 const activityVisual = loadTypescript('activityTypeVisual.ts');
+const teamPicker = loadTypescript('teamPickerState.ts');
 
 test('activity type visual mapping is controlled and shared by planner views', () => {
   assert.deepEqual(activityVisual.getActivityTypeVisual({ nameFR: 'Formation', visualToken: 'VIOLET', iconKey: 'TRAINING' }),
@@ -169,4 +170,59 @@ test('oversized API windows explain how to narrow the query', () => {
   assert.match(projection.planningErrorMessage(400), /Réduisez la période/);
   assert.match(projection.planningErrorMessage(400), /filtre/);
   assert.doesNotMatch(projection.planningErrorMessage(500), /Projection trop large/);
+});
+
+test('team picker keeps incomplete slots unknown and groups all three server statuses', () => {
+  assert.equal(teamPicker.completeSlot('2026-09-23', '', 90), false);
+  assert.equal(teamPicker.completeSlot('2026-09-23', '13:30', 90), true);
+  const candidates = [
+    { userId: 'available', availabilityStatus: 'AVAILABLE' },
+    { userId: 'unknown', availabilityStatus: 'UNKNOWN' },
+    { userId: 'blocked', availabilityStatus: 'BLOCKED' },
+  ];
+  const groups = teamPicker.groupCandidates(candidates);
+  assert.deepEqual(Object.fromEntries(Object.entries(groups).map(([key, rows]) => [key, rows.map(row => row.userId)])), {
+    AVAILABLE: ['available'], UNKNOWN: ['unknown'], BLOCKED: ['blocked'],
+  });
+});
+
+test('capacity stays informational and never changes availability grouping', () => {
+  const candidates = [
+    { userId: 'blocked-low-load', availabilityStatus: 'BLOCKED', capacityCommittedPercent: 1, genericReason: 'Indisponible.' },
+    { userId: 'available-high-load', availabilityStatus: 'AVAILABLE', capacityCommittedPercent: 90, genericReason: 'Disponible' },
+  ];
+  const groups = teamPicker.groupCandidates(candidates);
+  assert.equal(groups.AVAILABLE[0].userId, 'available-high-load');
+  assert.equal(groups.BLOCKED[0].userId, 'blocked-low-load');
+  assert.equal(JSON.stringify(groups).includes('privateNote'), false);
+});
+
+test('AVAILABLE and UNKNOWN can be selected while BLOCKED cannot', () => {
+  const candidates = [
+    { userId: 'available', availabilityStatus: 'AVAILABLE' },
+    { userId: 'unknown', availabilityStatus: 'UNKNOWN' },
+    { userId: 'blocked', availabilityStatus: 'BLOCKED' },
+  ];
+  const empty = { leadId: '', supportIds: [] };
+  assert.equal(teamPicker.selectLead(empty, 'available', candidates).leadId, 'available');
+  assert.equal(teamPicker.selectLead(empty, 'unknown', candidates).leadId, 'unknown');
+  assert.equal(teamPicker.selectLead(empty, 'blocked', candidates).leadId, '');
+});
+
+test('one LEAD excludes duplicate SUPPORT and SUPPORT remains unique', () => {
+  const candidates = ['lead', 'support'].map(userId => ({ userId, availabilityStatus: 'AVAILABLE' }));
+  let team = teamPicker.selectLead({ leadId: '', supportIds: ['lead'] }, 'lead', candidates);
+  assert.deepEqual(team, { leadId: 'lead', supportIds: [] });
+  team = teamPicker.toggleSupport(team, 'lead', candidates);
+  assert.deepEqual(team.supportIds, []);
+  team = teamPicker.toggleSupport(team, 'support', candidates);
+  assert.deepEqual(team.supportIds, ['support']);
+  team = teamPicker.toggleSupport(team, 'support', candidates);
+  assert.deepEqual(team.supportIds, []);
+});
+
+test('slot or team edits mark the drawer dirty', () => {
+  assert.equal(teamPicker.teamDirty({ leadId: '', supportIds: [] }, '', '', null), false);
+  assert.equal(teamPicker.teamDirty({ leadId: 'steve', supportIds: [] }, '', '', null), true);
+  assert.equal(teamPicker.teamDirty({ leadId: '', supportIds: [] }, '2026-09-23', '13:30', 90), true);
 });

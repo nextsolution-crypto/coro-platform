@@ -39,4 +39,12 @@ export type PlanningContext = {
 export type PlanningAction = { id: string; type: string; label: string; startUtc: string | null;
   bookingId?: string; activityId?: string; userId?: string; clientId?: string; buildingId?: string;
   projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
-  activityTypeId?: string; activityTypeName?: string };
+  activityTypeId?: string; activityTypeName?: string; durationMinutes?: number };
+
+export type TeamCandidate = { userId: string; displayName: string; email?: string;
+  availabilityStatus: 'AVAILABLE' | 'UNKNOWN' | 'BLOCKED'; genericReason: string;
+  blockedInterval?: { startUtc: string; endUtc: string };
+  capacityCommittedPercent: number | null; capacityHorizonWeeks: number };
+
+export type TeamPreview = { version: number; slot: { startUtc: string; endUtc: string; durationMinutes: number;
+  buildingId: string; timeZone: string; timeZoneVerified: boolean }; candidates: TeamCandidate[] };

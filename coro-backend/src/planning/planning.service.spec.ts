@@ -243,4 +243,50 @@ describe('PlanningService', () => {
     expect(tx.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_CREATED', entityId: 'activity-1' });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
+
+  it('previews active candidates in one Scheduling batch with generic confidential reasons', async () => {
+    const prisma = {
+      building: { findFirst: jest.fn().mockResolvedValue({ id: 'building-a', timeZone: 'America/Toronto', timeZoneVerified: true }) },
+      user: { findMany: jest.fn().mockResolvedValue([
+        { id: 'available', firstName: 'Alice', lastName: 'Able', email: 'alice@example.com' },
+        { id: 'unknown', firstName: 'Uma', lastName: 'Unknown', email: 'uma@example.com' },
+        { id: 'blocked', firstName: 'Steve', lastName: 'Parker', email: 'steve@example.com' },
+      ]) },
+    };
+    const scheduling = { analyzeUsers: jest.fn().mockResolvedValue(new Map([
+      ['available', { status: 'AVAILABLE', conflicts: [], warnings: [], sourcesChecked: [] }],
+      ['unknown', { status: 'UNKNOWN', conflicts: [], warnings: ['Horaire non configure'], sourcesChecked: [] }],
+      ['blocked', { status: 'BLOCKED', conflicts: [{ severity: 'BLOCKED', source: 'USER_UNAVAILABILITY',
+        startUtc: new Date('2026-09-23T17:00:00Z'), endUtc: new Date('2026-09-23T20:00:00Z'),
+        label: 'Formation', reason: 'note privee' }], warnings: [], sourcesChecked: [] }],
+    ])) };
+    const capacity = { getCapacityPlanning: jest.fn().mockResolvedValue([
+      { userId: 'available', tauxUtilisationConfirmee: 32 },
+    ]) };
+    const service = new PlanningService(prisma as any, scheduling as any, capacity as any);
+    const result = await service.teamPreview({ buildingId: 'building-a',
+      startUtc: '2026-09-23T17:30:00.000Z', durationMinutes: 90 }, actor);
+    expect(result.candidates.map(candidate => candidate.availabilityStatus)).toEqual(['AVAILABLE', 'UNKNOWN', 'BLOCKED']);
+    expect(result.candidates[0]).toMatchObject({ userId: 'available', capacityCommittedPercent: 32 });
+    expect(result.candidates[2]).toMatchObject({ userId: 'blocked', genericReason: 'Indisponible.',
+      blockedInterval: { startUtc: expect.any(Date), endUtc: expect.any(Date) } });
+    expect(JSON.stringify(result)).not.toMatch(/Formation|note privee|conflicts|warnings/);
+    expect(scheduling.analyzeUsers).toHaveBeenCalledTimes(1);
+    expect(capacity.getCapacityPlanning).toHaveBeenCalledTimes(1);
+    expect(prisma.user.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a', isActive: true });
+  });
+
+  it('limits an operator preview to self and rejects a client before database reads', async () => {
+    const prisma = { building: { findFirst: jest.fn().mockResolvedValue({ id: 'building-a' }) },
+      user: { findMany: jest.fn().mockResolvedValue([]) } };
+    const scheduling = { analyzeUsers: jest.fn().mockResolvedValue(new Map()) };
+    const capacity = { getCapacityPlanning: jest.fn().mockResolvedValue([]) };
+    const service = new PlanningService(prisma as any, scheduling as any, capacity as any);
+    await service.teamPreview({ buildingId: 'building-a', startUtc: start, durationMinutes: 60 }, { ...actor, role: 'OPERATOR' });
+    expect(prisma.user.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a', id: 'u1' });
+    prisma.building.findFirst.mockClear();
+    await expect(service.teamPreview({ buildingId: 'building-a', startUtc: start, durationMinutes: 60 },
+      { ...actor, role: 'CLIENT' })).rejects.toThrow(ForbiddenException);
+    expect(prisma.building.findFirst).not.toHaveBeenCalled();
+  });
 });
