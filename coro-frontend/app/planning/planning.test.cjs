@@ -292,7 +292,8 @@ test('3D mobile drawer and destructive confirmation remain keyboard-usable', () 
 test('mutation preview keeps the current team and rechecks every editable mode with the effective event slot', () => {
   const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
   assert.ok(drawer.includes('setDate(dateKey(new Date(event.startUtc), event.sourceTimeZone))'));
-  assert.ok(drawer.includes('setTime(formatClock(event.startUtc, event.sourceTimeZone))'));
+  assert.ok(drawer.includes('setTime(timeValue(event.startUtc, event.sourceTimeZone))'));
+  assert.equal(drawer.includes('setTime(formatClock(event.startUtc, event.sourceTimeZone))'), false);
   assert.ok(drawer.includes('[editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]'));
   assert.ok(drawer.includes('buildingId: previewBuildingId, timeZone: previewTimeZone'));
   assert.equal(drawer.includes('setTeam(current =>'), false);
@@ -363,6 +364,32 @@ test('production reassign inputs build the expected request before Axios', () =>
   const request = previewCycle.buildTeamPreviewRequest({ buildingId: 'tour-premont', timeZone: 'America/Toronto',
     date: '2026-09-24', time: '13:15', durationMinutes: 90 }, time.localBoundary);
   assert.deepEqual(request, { buildingId: 'tour-premont', startUtc: '2026-09-24T17:15:00.000Z', durationMinutes: 90 });
+});
+
+test('planner machine time stays HH:mm while French clock formatting remains display-only', () => {
+  const cases = [
+    ['2026-09-24T13:00:00.000Z', '09:00'],
+    ['2026-09-24T17:15:00.000Z', '13:15'],
+    ['2026-09-24T17:45:00.000Z', '13:45'],
+    ['2026-09-24T04:00:00.000Z', '00:00'],
+    ['2026-09-25T03:30:00.000Z', '23:30'],
+  ];
+  for (const [instant, expected] of cases) {
+    assert.equal(time.timeValue(instant, 'America/Toronto'), expected);
+    assert.match(time.timeValue(instant, 'America/Toronto'), /^(?:[01]\d|2[0-3]):[0-5]\d$/);
+  }
+  assert.equal(time.timeValue('2026-03-08T07:30:00.000Z', 'America/Toronto'), '03:30');
+  assert.equal(time.timeValue('2026-11-01T05:30:00.000Z', 'America/Toronto'), '01:30');
+  assert.equal(time.timeValue('2026-11-01T06:30:00.000Z', 'America/Toronto'), '01:30');
+});
+
+test('09:00 reassignment initialization builds one valid preview payload', () => {
+  const machineTime = time.timeValue('2026-09-24T13:00:00.000Z', 'America/Toronto');
+  assert.equal(machineTime, '09:00');
+  assert.notEqual(machineTime, '09 h 00');
+  const request = previewCycle.buildTeamPreviewRequest({ buildingId: 'tour-premont', timeZone: 'America/Toronto',
+    date: '2026-09-24', time: machineTime, durationMinutes: 90 }, time.localBoundary);
+  assert.deepEqual(request, { buildingId: 'tour-premont', startUtc: '2026-09-24T13:00:00.000Z', durationMinutes: 90 });
 });
 
 test('invalid or throwing pre-fetch inputs cannot become a generic HTTP error', () => {

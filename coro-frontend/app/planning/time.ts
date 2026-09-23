@@ -176,6 +176,12 @@ export function formatClock(instant: string | Date, timeZone: string): string {
     .format(new Date(instant));
 }
 
+// Canonical value for <input type="time"> and temporal calculations. Keep display formatting in formatClock.
+export function timeValue(instant: string | Date, timeZone: string): string {
+  const p = parts(new Date(instant), timeZone);
+  return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`;
+}
+
 export function formatDay(key: string): string {
   return new Intl.DateTimeFormat('fr-CA', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' })
     .format(new Date(`${key}T12:00:00Z`));

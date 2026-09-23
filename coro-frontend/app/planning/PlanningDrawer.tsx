@@ -6,7 +6,7 @@ import axios from 'axios';
 import api from '@/lib/api';
 import type { PlannerEvent, PlannerUser, TeamCandidate, TeamPreview } from './types';
 import { eventLabel, eventStatus } from './projection';
-import { dateKey, formatClock, localBoundary } from './time';
+import { dateKey, formatClock, localBoundary, timeValue } from './time';
 import type { TeamDraft } from './teamPickerState';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
@@ -74,7 +74,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   const initialDuration = event ? Math.round((new Date(event.endUtc).getTime() - new Date(event.startUtc).getTime()) / 60_000) : 60;
   const dirty = Boolean(event && mode !== 'VIEW' && mode !== 'CANCEL_SCHEDULE' && (
     date !== dateKey(new Date(event.startUtc), event.sourceTimeZone) ||
-    time !== formatClock(event.startUtc, event.sourceTimeZone) || durationMinutes !== initialDuration ||
+    time !== timeValue(event.startUtc, event.sourceTimeZone) || durationMinutes !== initialDuration ||
     team.leadId !== initialTeam.leadId || team.supportIds.join(',') !== initialTeam.supportIds.join(',')
   ));
 
@@ -82,7 +82,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
     if (!event) return;
     setMode(initialMode);
     setDate(dateKey(new Date(event.startUtc), event.sourceTimeZone));
-    setTime(formatClock(event.startUtc, event.sourceTimeZone));
+    setTime(timeValue(event.startUtc, event.sourceTimeZone));
     setDurationMinutes(initialDuration);
     setTeam(initialTeam);
     setCandidates([]); setError(''); setPreviewError(''); setConfirmUnknown(false); setConfirmDiscard(false);
