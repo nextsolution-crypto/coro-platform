@@ -22,6 +22,7 @@ const time = loadTypescript('time.ts');
 const projection = loadTypescript('projection.ts');
 const activityVisual = loadTypescript('activityTypeVisual.ts');
 const teamPicker = loadTypescript('teamPickerState.ts');
+const previewCycle = loadTypescript('previewCycle.ts');
 
 test('activity type visual mapping is controlled and shared by planner views', () => {
   assert.deepEqual(activityVisual.getActivityTypeVisual({ nameFR: 'Formation', visualToken: 'VIOLET', iconKey: 'TRAINING' }),
@@ -292,8 +293,8 @@ test('mutation preview keeps the current team and rechecks every editable mode w
   const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
   assert.ok(drawer.includes('setDate(dateKey(new Date(event.startUtc), event.sourceTimeZone))'));
   assert.ok(drawer.includes('setTime(formatClock(event.startUtc, event.sourceTimeZone))'));
-  assert.ok(drawer.includes('[event, mode, editable, date, time, durationMinutes]'));
-  assert.ok(drawer.includes('buildingId: event.buildingId, startUtc, durationMinutes'));
+  assert.ok(drawer.includes('[editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]'));
+  assert.ok(drawer.includes('buildingId: previewBuildingId, startUtc, durationMinutes'));
   assert.equal(drawer.includes('setTeam(current =>'), false);
 });
 
@@ -325,9 +326,47 @@ test('team preview retains AVAILABLE UNKNOWN and BLOCKED confidentiality contrac
 test('VIEW stops mutation preview loading and refreshed projections never retain a stale Booking', () => {
   const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
   const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
-  assert.ok(drawer.includes('if (!editable) { setPreviewLoading(false); return; }'));
-  assert.ok(drawer.includes('window.clearTimeout(timer); setPreviewLoading(false)'));
+  assert.ok(drawer.includes('previewCycles.current.invalidate()'));
+  assert.ok(drawer.includes("setPreviewLoading(false); setPreviewError('')"));
   assert.ok(drawer.includes('editable && previewLoading'));
   assert.equal(page.includes('?? current : null'), false);
   assert.ok(page.includes('?? null : null'));
+});
+
+test('reassign preview depends on stable slot inputs and does not restart for an equivalent event object', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  assert.ok(drawer.includes('[editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]'));
+  assert.equal(drawer.includes('[event, mode, editable, date, time, durationMinutes]'), false);
+  assert.ok(drawer.includes("}, { signal: cycle.signal })"));
+});
+
+test('an aborted or stale preview cycle cannot publish over the latest cycle', () => {
+  const guard = previewCycle.createPreviewCycleGuard();
+  const first = guard.begin();
+  const second = guard.begin();
+  assert.equal(first.isCurrent(), false);
+  assert.equal(second.isCurrent(), true);
+  first.cancel();
+  assert.equal(first.signal.aborted, true);
+  assert.equal(second.isCurrent(), true);
+  second.cancel();
+  assert.equal(second.isCurrent(), false);
+});
+
+test('normal preview cancellation is silent while a real HTTP failure remains reportable', () => {
+  assert.equal(previewCycle.isPreviewCancellation({ name: 'AbortError' }), true);
+  assert.equal(previewCycle.isPreviewCancellation({ name: 'CanceledError', code: 'ERR_CANCELED' }), true);
+  assert.equal(previewCycle.isPreviewCancellation({ response: { status: 500 } }), false);
+});
+
+test('VIEW and repeated mutation mode switches invalidate old preview cycles', () => {
+  const guard = previewCycle.createPreviewCycleGuard();
+  const reschedule = guard.begin();
+  guard.invalidate();
+  assert.equal(reschedule.isCurrent(), false);
+  const reassign = guard.begin();
+  assert.equal(reassign.isCurrent(), true);
+  guard.invalidate();
+  assert.equal(reassign.isCurrent(), false);
+  assert.equal(previewCycle.createPreviewCycleGuard().begin().isCurrent(), true);
 });

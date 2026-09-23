@@ -10,6 +10,7 @@ import { dateKey, formatClock, localBoundary } from './time';
 import type { TeamDraft } from './teamPickerState';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
+import { createPreviewCycleGuard, isPreviewCancellation } from './previewCycle';
 import styles from './planning.module.css';
 
 export type PlanningDrawerMode = 'VIEW' | 'EDIT_SLOT' | 'RESCHEDULE' | 'REASSIGN' | 'CANCEL_SCHEDULE';
@@ -32,6 +33,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   initialMode?: PlanningDrawerMode; onClose: () => void; onMutated?: () => void;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const previewCycles = useRef(createPreviewCycleGuard());
   const [mode, setMode] = useState<PlanningDrawerMode>(initialMode);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -90,30 +92,38 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   }, [event, requestClose]);
 
   const editable = mode === 'EDIT_SLOT' || mode === 'RESCHEDULE' || mode === 'REASSIGN';
+  const previewBuildingId = event?.buildingId ?? '';
+  const previewTimeZone = event?.sourceTimeZone ?? '';
   useEffect(() => {
-    if (!editable) { setPreviewLoading(false); return; }
+    if (!editable) {
+      previewCycles.current.invalidate();
+      setPreviewLoading(false); setPreviewError('');
+      return;
+    }
     setCandidates([]); setConfirmUnknown(false); setPreviewError('');
-    if (!event?.buildingId || !event.sourceTimeZone) {
+    if (!previewBuildingId || !previewTimeZone) {
       setPreviewLoading(false); setPreviewError('Données du bâtiment indisponibles pour vérifier les disponibilités.'); return;
     }
     if (!date || !time || !durationMinutes) { setPreviewLoading(false); return; }
-    let cancelled = false;
+    const cycle = previewCycles.current.begin();
     setPreviewLoading(true);
     const timer = window.setTimeout(async () => {
       try {
         const minute = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-        const startUtc = localBoundary(date, minute, event.sourceTimeZone).toISOString();
+        const startUtc = localBoundary(date, minute, previewTimeZone).toISOString();
         const response = await api.post<TeamPreview>('/planning/team-preview', {
-          buildingId: event.buildingId, startUtc, durationMinutes,
-        });
-        if (cancelled) return;
+          buildingId: previewBuildingId, startUtc, durationMinutes,
+        }, { signal: cycle.signal });
+        if (!cycle.isCurrent()) return;
         setCandidates(response.data.candidates);
       } catch (cause) {
-        if (!cancelled) setPreviewError(serverMessage(cause, 'Impossible de vérifier les disponibilités.'));
-      } finally { if (!cancelled) setPreviewLoading(false); }
+        if (cycle.isCurrent() && !isPreviewCancellation(cause) && !axios.isCancel(cause)) {
+          setPreviewError(serverMessage(cause, 'Impossible de vérifier les disponibilités.'));
+        }
+      } finally { if (cycle.isCurrent()) setPreviewLoading(false); }
     }, 300);
-    return () => { cancelled = true; window.clearTimeout(timer); setPreviewLoading(false); };
-  }, [event, mode, editable, date, time, durationMinutes]);
+    return () => { window.clearTimeout(timer); cycle.cancel(); };
+  }, [editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]);
 
   if (!event) return null;
   const names = new Map(users.map(user => [user.id, user.name]));
