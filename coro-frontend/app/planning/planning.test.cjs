@@ -244,3 +244,46 @@ test('planner mutations disable submit while saving and refresh projections with
   assert.match(page, /setRefreshKey/);
   assert.doesNotMatch(page + drawer, /window\.location\.reload/);
 });
+test('3D drawer exposes explicit workflow modes without prompt-driven mutations', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  for (const mode of ['VIEW', 'EDIT_SLOT', 'RESCHEDULE', 'REASSIGN', 'CANCEL_SCHEDULE']) {
+    assert.match(drawer, new RegExp(`['"]${mode}['"]`));
+  }
+  assert.doesNotMatch(drawer, /window\.(prompt|confirm)/);
+  assert.match(drawer, /\/slot`/);
+  assert.match(drawer, /\/team`/);
+  assert.match(drawer, /cancel-schedule/);
+});
+
+test('3D Action Center covers every category with empty states and contextual actions', () => {
+  const center = fs.readFileSync(path.join(__dirname, 'PlanningActionCenter.tsx'), 'utf8');
+  for (const type of ['BOOKING_REQUESTED', 'NO_ACCEPTED_LEAD', 'PENDING_ASSIGNMENT',
+    'SCHEDULING_BLOCKED', 'SCHEDULING_UNKNOWN', 'UNPLANNED_ACTIVITY']) assert.match(center, new RegExp(type));
+  assert.match(center, /Aucune action requise/);
+  assert.match(center, /Aucun conflit/);
+  assert.match(center, /Planifier/);
+  assert.match(center, /REASSIGN/);
+  assert.match(center, /RESCHEDULE/);
+});
+
+test('3D preserves drafts, explicit UNKNOWN consent, loading and administrator-only mutations', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  const activity = fs.readFileSync(path.join(__dirname, 'ActivityPlanningDrawer.tsx'), 'utf8');
+  const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+  assert.match(drawer + activity, /confirmDiscard/);
+  assert.match(drawer + activity, /confirmUnknown/);
+  for (const label of ['previewLoading', 'saving', 'refreshing']) assert.match(drawer, new RegExp(label));
+  assert.match(page, /\['ADMIN', 'SUPER_ADMIN'\]/);
+  assert.doesNotMatch(drawer + activity, /window\.(prompt|confirm)/);
+  assert.doesNotMatch(page + drawer + activity, /window\.location\.reload/);
+});
+
+test('3D mobile drawer and destructive confirmation remain keyboard-usable', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, 'planning.module.css'), 'utf8');
+  assert.match(drawer, /role="dialog"/);
+  assert.match(drawer, /role="alertdialog"/);
+  assert.match(drawer, /key\.key === 'Escape'/);
+  assert.match(css, /100dvh/);
+  assert.match(css, /\.candidateRow/);
+});

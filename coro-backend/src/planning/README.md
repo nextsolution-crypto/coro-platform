@@ -38,3 +38,20 @@ Cancelling a schedule sets the Booking to `ANNULEE`, terminates active assignmen
 The one-open-Booking-per-Activity invariant covers both Planner and client Booking creation. Both paths lock the same `ProjectActivity` row before their final open-status check and insert. PostgreSQL remains the final authority through the partial unique index `Booking_one_open_per_activity_idx` for `DEMANDEE`, `CONFIRMEE`, `REPORTEE`, and `REASSIGNEE`. `REFUSEE`, `COMPLETEE`, and `ANNULEE` are terminal and permit a later Booking attempt. The read-only preflight is `prisma/preflight/activity-booking-open-invariant.sql`.
 
 Planner team replacement keeps the old LEAD as `REPLACED` and links it to the new LEAD with `replacedByAssignmentId`. A retained SUPPORT is likewise linked to its new Assignment for the same user and Booking; removed SUPPORT assignments remain terminal without an invented successor. PostgreSQL index `BookingAssignment_one_active_lead` protects one `PENDING` or `ACCEPTED` LEAD per Booking. `BookingAssignment_unique_active_person_role` protects each `bookingId + userId + role` combination for those same active statuses.
+## 3D workflow and permissions
+
+The Planner drawer exposes VIEW, EDIT_SLOT, RESCHEDULE, REASSIGN, and CANCEL_SCHEDULE as explicit modes. Creation and backlog planning remain the CREATE and PLAN_EXISTING modes of ActivityPlanningDrawer. Mutations refresh Team, Context, and Action Center projections without reloading or changing URL filters.
+
+Permissions remain backend-owned:
+
+| Capability | SUPER_ADMIN | ADMIN | OPERATOR | Client JWT |
+| --- | --- | --- | --- | --- |
+| View Planner and own permitted context | yes | yes | own scope | no |
+| Team preview | yes | yes | self only | no |
+| Create an unplanned Activity | yes | yes | permitted Projects | no |
+| Plan, edit, reschedule, reassign, cancel schedule | yes | yes | no | no |
+| View Action Center | yes | yes | own scope | no |
+
+Client Booking requests remain available through their canonical Booking workflow. Assignment acceptance/refusal remains in the existing BookingAssignment endpoints and is not duplicated in Planner 3D. Permanent Activity cancellation, physical deletion, Outlook, annual programs, Network materialization, and a partial audit timeline are intentionally outside this pass. The Planner reads and mutates ProjectActivity, Booking, BookingAssignment, Project, Client, Building, User, Scheduling, and Capacity directly; it owns no parallel calendar entity.
+
+Operational deployment checks include the read-only `prisma/preflight/activity-booking-open-invariant.sql` and the PostgreSQL suites for Planner mutations, Activity/Booking, BookingAssignment, WorkSchedules, and Scheduling. Never run those suites against production.

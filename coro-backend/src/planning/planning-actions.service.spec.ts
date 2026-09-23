@@ -51,7 +51,7 @@ describe('PlanningActionsService', () => {
   it('rejects an already open Booking after locking the Activity', async () => {
     const { service, tx } = setup();
     tx.booking.findFirst.mockResolvedValue({ id: 'existing' });
-    await expect(service.planExisting('activity', dto, actor)).rejects.toThrow('deja une planification active');
+    await expect(service.planExisting('activity', dto, actor)).rejects.toThrow('planification active');
     expect(tx.booking.create).not.toHaveBeenCalled();
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
   });
@@ -73,6 +73,7 @@ describe('PlanningActionsService', () => {
     const { service } = setup();
     await expect(service.planExisting('activity', { ...dto, supportUserIds: ['lead'] }, actor)).rejects.toThrow(BadRequestException);
     await expect(service.planExisting('activity', dto, { ...actor, role: 'CLIENT' })).rejects.toThrow(ForbiddenException);
+    await expect(service.planExisting('activity', dto, { ...actor, role: 'OPERATOR' })).rejects.toThrow(ForbiddenException);
   });
 
   it('links replaced LEAD and retained SUPPORT without crossing the Booking', async () => {

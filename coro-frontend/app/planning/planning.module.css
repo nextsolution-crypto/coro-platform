@@ -104,3 +104,17 @@
   .monthCell { min-height:76px; padding:2px }.dayNumber { font-size:11px }.dayNumber em,.dayCounts,.daySignals,.monthEvents { display:none }
   .slotGrid { grid-template-columns:1fr }.candidateRow { align-items:flex-start; flex-direction:column }
 }
+
+.actionCenter { display: grid; gap: 10px; }
+.summaryCardSelected { outline: 3px solid rgba(31, 92, 135, .25); border-color: #1f5c87; }
+.actionButtons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.destructivePanel, .confirmPanel { border: 1px solid #d7a29c; background: #fff7f5; border-radius: 12px; padding: 16px; }
+.confirmPanel { position: sticky; bottom: 0; box-shadow: 0 -8px 24px rgba(34, 48, 60, .12); }
+
+@media (max-width: 700px) {
+  .drawer { width: 100vw; max-width: none; height: 100dvh; border-radius: 0; }
+  .slotGrid { grid-template-columns: 1fr; }
+  .candidateRow { align-items: stretch; flex-direction: column; }
+  .actionList li { align-items: stretch; flex-direction: column; }
+  .actionButtons { justify-content: flex-start; }
+}

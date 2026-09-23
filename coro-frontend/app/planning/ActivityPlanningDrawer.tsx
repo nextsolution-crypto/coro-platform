@@ -40,6 +40,7 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
   const [planningSaving, setPlanningSaving] = useState(false);
   const [confirmUnknown, setConfirmUnknown] = useState(false);
   const [error, setError] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const buildings = useMemo(() => context.buildings.filter(item => !clientId || item.clientId === clientId), [context, clientId]);
   const projects = useMemo(() => context.projects.filter(item => (!clientId || item.clientId === clientId) && (!buildingId || item.buildingId === buildingId)), [context, clientId, buildingId]);
   const selectedType = context.activityTypes.find(item => item.id === activityTypeId);
@@ -48,7 +49,7 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
   const dirty = teamDirty(team, date, time, durationMinutes === (action?.durationMinutes ?? null) ? null : durationMinutes);
 
   const requestClose = useCallback(() => {
-    if (dirty && !window.confirm('Abandonner les modifications du créneau et de l’équipe ?')) return;
+    if (dirty) { setConfirmDiscard(true); return; }
     onClose();
   }, [dirty, onClose]);
 
@@ -162,6 +163,11 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
           <button className={styles.primaryButton} type="button" disabled={saving || planningSaving || previewLoading || !team.leadId}
             onClick={() => plan(true)}>{planningSaving ? 'Planification…' : 'Créer et planifier'}</button></div>
       </form>}
+      {confirmDiscard && <section className={styles.confirmPanel} role="alertdialog" aria-label="Modifications non enregistrees">
+        <p>Abandonner les modifications non enregistrÃ©es ?</p><div className={styles.formActions}>
+          <button type="button" onClick={() => setConfirmDiscard(false)}>Continuer la modification</button>
+          <button type="button" className={styles.dangerButton} onClick={onClose}>Abandonner</button>
+        </div></section>}
     </aside>
   </div>;
 }

@@ -37,7 +37,7 @@ export type PlanningContext = {
 };
 
 export type PlanningAction = { id: string; type: string; label: string; startUtc: string | null;
-  bookingId?: string; activityId?: string; userId?: string; clientId?: string; buildingId?: string;
+  bookingId?: string; activityId?: string; userId?: string; userName?: string; clientId?: string; buildingId?: string;
   projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
   activityTypeId?: string; activityTypeName?: string; durationMinutes?: number };
 

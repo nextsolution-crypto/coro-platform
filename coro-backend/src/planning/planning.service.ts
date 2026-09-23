@@ -16,7 +16,7 @@ type ActionType = 'BOOKING_REQUESTED' | 'NO_ACCEPTED_LEAD' | 'PENDING_ASSIGNMENT
   'SCHEDULING_BLOCKED' | 'SCHEDULING_UNKNOWN' | 'UNPLANNED_ACTIVITY';
 type Action = { id: string; type: ActionType; groupId: string; bookingId?: string; activityId?: string;
   userId?: string; startUtc: Date | null; label: string; clientId?: string; buildingId?: string;
-  projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
+  projectId?: string; projectName?: string; clientName?: string; buildingName?: string; userName?: string;
   activityTypeId?: string; activityTypeName?: string; durationMinutes?: number };
 
 export function planningWindow(query: PlanningWindowDto) {
@@ -62,9 +62,11 @@ export class PlanningService {
     staff(actor);
     const projectScope = projectAccessWhere(actor);
     const [clients, buildings, projects, activityTypes] = await Promise.all([
-      this.prisma.client.findMany({ where: { organizationId: actor.organizationId, isActive: true },
+      this.prisma.client.findMany({ where: { organizationId: actor.organizationId, isActive: true,
+        ...(actor.role === 'OPERATOR' ? { projects: { some: projectScope } } : {}) },
         select: { id: true, name: true }, orderBy: { name: 'asc' } }),
       this.prisma.building.findMany({ where: { organizationId: actor.organizationId, isActive: true,
+        ...(actor.role === 'OPERATOR' ? { projects: { some: projectScope } } : {}),
         ...(query.clientId ? { clientId: query.clientId } : {}) },
         select: { id: true, name: true, clientId: true, timeZone: true, timeZoneVerified: true },
         orderBy: { name: 'asc' } }),
@@ -205,6 +207,7 @@ export class PlanningService {
     if (users.length > 50) throw new BadRequestException('Plus de 50 conseillers : préciser un filtre');
     const ids = users.map(user => user.id);
     const emailToId = new Map(users.map(user => [user.email.toLowerCase(), user.id]));
+    const userNames = new Map(users.map(user => [user.id, `${user.firstName} ${user.lastName}`.trim()]));
     const earliest = new Date(window.startUtc.getTime() - DAY);
     const [bookings, schedules, absences, activities, capacityRows] = await Promise.all([
       this.prisma.booking.findMany({ where: { organizationId: actor.organizationId,
@@ -318,15 +321,18 @@ export class PlanningService {
         if (booking.status === 'DEMANDEE') actions.push({ id: `requested:${booking.id}`, type: 'BOOKING_REQUESTED',
           groupId: booking.id, bookingId: booking.id, startUtc: interval.startUtc,
           label: 'Demande client — non confirmée', clientId: booking.project.clientId,
-          buildingId: booking.project.buildingId });
+          buildingId: booking.project.buildingId, projectId: booking.projectId, projectName: booking.project.name,
+            clientName: booking.project.client.name, buildingName: booking.project.building?.name });
         if (!acceptedLead) actions.push({ id: `lead:${booking.id}`, type: 'NO_ACCEPTED_LEAD', groupId: booking.id,
           bookingId: booking.id, startUtc: interval.startUtc, label: 'Aucun LEAD accepté',
-          clientId: booking.project.clientId, buildingId: booking.project.buildingId });
+          clientId: booking.project.clientId, buildingId: booking.project.buildingId, projectId: booking.projectId, projectName: booking.project.name,
+            clientName: booking.project.client.name, buildingName: booking.project.building?.name });
         for (const assignment of assignments.filter(a => a.status === 'PENDING' && (!own || a.userId === actor.userId))) {
           actions.push({ id: `pending:${assignment.id}`, type: 'PENDING_ASSIGNMENT', groupId: booking.id,
             bookingId: booking.id, userId: assignment.userId, startUtc: interval.startUtc,
-            label: 'Affectation en attente', clientId: booking.project.clientId,
-            buildingId: booking.project.buildingId });
+            label: 'Affectation en attente', userName: userNames.get(assignment.userId), clientId: booking.project.clientId,
+            buildingId: booking.project.buildingId, projectId: booking.projectId, projectName: booking.project.name,
+            clientName: booking.project.client.name, buildingName: booking.project.building?.name });
         }
       }
       for (const assignment of assignments.filter(a => !own || a.userId === actor.userId)) {
@@ -348,10 +354,14 @@ export class PlanningService {
       if (!result || !['BLOCKED', 'UNKNOWN'].includes(result.status)) continue;
       const bookingId = slot.excludeBookingId;
       const type = result.status === 'BLOCKED' ? 'SCHEDULING_BLOCKED' : 'SCHEDULING_UNKNOWN';
-      actions.push({ id: `${type}:${slot.key}`, type, groupId: bookingId, bookingId,
-        userId: slot.userId, startUtc: slot.startUtc,
-        label: type === 'SCHEDULING_BLOCKED' ? 'Conflit horaire' : 'Disponibilité à vérifier' });
       const event = events.find(item => item.bookingId === bookingId);
+      const affectedUser = users.find(user => user.id === slot.userId);
+      actions.push({ id: `${type}:${slot.key}`, type, groupId: bookingId, bookingId,
+        userId: slot.userId, userName: affectedUser ? `${affectedUser.firstName} ${affectedUser.lastName}`.trim() : undefined,
+        startUtc: slot.startUtc, label: type === 'SCHEDULING_BLOCKED' ? 'Conflit horaire' : 'Disponibilite a verifier',
+        activityId: event?.activityId, projectId: event?.projectId, projectName: event?.projectName,
+        clientId: event?.clientId, clientName: event?.clientName,
+        buildingId: event?.buildingId, buildingName: event?.buildingName });
       if (event) { event.needsAction = true; event.warnings.push(...result.warnings); }
     }
     for (const absence of absences) events.push({ id: `absence:${absence.id}`, source: 'USER_UNAVAILABILITY',

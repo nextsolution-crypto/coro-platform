@@ -10,7 +10,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import ResourceTimeline from './ResourceTimeline';
 import MonthCalendar from './MonthCalendar';
 import { eventForUser, eventLabel, eventStatus, planningErrorMessage } from './projection';
-import PlanningDrawer from './PlanningDrawer';
+import PlanningDrawer, { type PlanningDrawerMode } from './PlanningDrawer';
+import PlanningActionCenter from './PlanningActionCenter';
 import ActivityPlanningDrawer from './ActivityPlanningDrawer';
 import type { PlannerEvent, PlannerResponse, PlanningAction, PlanningContext } from './types';
 import { dateKey, formatClock, formatDay, moveDate, periodLabel, requestWindow, segmentForDay, validTimeZone, viewDays, type PlannerView } from './time';
@@ -19,26 +20,10 @@ import styles from './planning.module.css';
 type Option = { id: string; name: string; clientId?: string };
 const ZONES = ['America/Toronto', 'America/Halifax', 'America/Vancouver', 'America/Winnipeg', 'UTC'];
 
-function ActionSummary({ summary, onFilter }: { summary: PlannerResponse['actionSummary']; onFilter: (type: string) => void }) {
-  const counts = [
-    ['Demandes client', summary.requestedBookings, 'BOOKING_REQUESTED'],
-    ['LEAD à confirmer', summary.bookingsWithoutAcceptedLead, 'NO_ACCEPTED_LEAD'],
-    ['Affectations en attente', summary.pendingAssignments, 'PENDING_ASSIGNMENT'],
-    ['Conflits', summary.blockedConflicts, 'SCHEDULING_BLOCKED'],
-    ['Disponibilités à vérifier', summary.unknownAvailability, 'SCHEDULING_UNKNOWN'],
-    ['Activités à planifier', summary.unplannedActivities, 'UNPLANNED_ACTIVITY'],
-  ] as const;
-  return <section className={styles.summary} aria-label="Actions de planification">
-    {counts.map(([label, count, type]) => <button key={label} type="button" onClick={() => onFilter(type)}
-      className={`${styles.summaryCard} ${count > 0 ? styles.summaryCardActive : ''}`} aria-label={`${count} ${label}. Ouvrir la liste d’actions.`}>
-      <strong>{count}</strong><span>{label}{count > 0 && <em>À traiter</em>}</span>
-    </button>)}
-  </section>;
-}
-
 export default function TeamPlannerPage() {
   const router = useRouter();
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const authUser = useAuthStore(state => state.user);
   const [ready, setReady] = useState(false);
   const [date, setDate] = useState('');
   const [view, setView] = useState<PlannerView>('week');
@@ -57,6 +42,7 @@ export default function TeamPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<PlannerEvent | null>(null);
+  const [selectedMode, setSelectedMode] = useState<PlanningDrawerMode>('VIEW');
   const [actionType, setActionType] = useState('');
   const [actionPage, setActionPage] = useState(1);
   const [actionItems, setActionItems] = useState<PlanningAction[]>([]);
@@ -145,7 +131,10 @@ export default function TeamPlannerPage() {
       ...(clientId ? { clientId } : {}), ...(buildingId ? { buildingId } : {}),
       ...(projectId ? { projectId } : {}), ...(activityTypeId ? { activityTypeId } : {}),
       ...(bookingStatus ? { bookingStatus } : {}), ...(needsAction ? { needsAction: 'true' } : {}),
-    } }).then(response => { if (!cancelled) setData(response.data); }).catch(cause => {
+    } }).then(response => { if (!cancelled) {
+      setData(response.data);
+      setSelected(current => current ? response.data.events.find(item => item.id === current.id) ?? current : null);
+    } }).catch(cause => {
       if (cancelled) return;
       setData(null);
       setError(planningErrorMessage(axios.isAxiosError(cause) ? cause.response?.status : undefined));
@@ -196,7 +185,11 @@ export default function TeamPlannerPage() {
   }, [view, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, isAuthenticated, refreshKey]);
 
   const move = (direction: -1 | 1) => setDate(previous => moveDate(previous, view, direction));
-  const closeDrawer = useCallback(() => setSelected(null), []);
+  const closeDrawer = useCallback(() => { setSelected(null); setSelectedMode('VIEW'); }, []);
+  const canMutate = ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role ?? '');
+  const openEvent = useCallback((event: PlannerEvent, mode: PlanningDrawerMode = 'VIEW') => {
+    setSelectedMode(mode); setSelected(event);
+  }, []);
   const displayedZone = data?.displayTimeZone ?? zone;
   const mobileEvents = useMemo(() => data?.events.flatMap(event => event.userIds.length
     ? event.userIds.map(userId => ({ ...eventForUser(event, userId), userIds: [userId] }))
@@ -215,27 +208,16 @@ export default function TeamPlannerPage() {
           {data && <span>Mis à jour à {formatClock(data.asOf, displayedZone)}</span>}</div>
       </header>
 
-      {data && <><ActionSummary summary={data.actionSummary} onFilter={type => { setActionType(type); setActionPage(1); }} />
-        <p className={styles.summaryFoot}>{totalActions ? `${totalActions} signalements dans la période` : 'Aucune action dans la période'} · La charge sur 12 semaines ne représente pas la disponibilité d’un créneau.</p></>}
-      {actionType && data && <section className={styles.actionList} aria-label="Liste des actions">
-        <div className={styles.actionListHeader}><h2>Actions · {actionType.replaceAll('_', ' ').toLowerCase()}</h2>
-          <button type="button" onClick={() => setActionType('')} aria-label="Fermer la liste d’actions">×</button></div>
-        {actionLoading && <p role="status">Chargement des actions…</p>}
-        {actionError && <p role="alert">{actionError}</p>}
-        {!actionLoading && !actionError && (actionItems.length ? <ul>{actionItems.map(item =>
-          <li key={item.id}><strong>{item.label}</strong>
-            {item.startUtc && <span>{formatDay(dateKey(new Date(item.startUtc), displayedZone))} · {formatClock(item.startUtc, displayedZone)}</span>}
-            {item.type === 'UNPLANNED_ACTIVITY' && <><span>{item.clientName} · {item.buildingName} · {item.projectName}</span>
-              <button type="button" className={styles.inlineButton} onClick={() => setActivityDrawer({ mode: 'PLAN_EXISTING', action: item })}>Ouvrir</button></>}
-            {item.bookingId && <Link href="/bookings">Ouvrir Booking</Link>}
-          </li>)}</ul> : <p>Aucune action de ce type.</p>)}
-        {actionTotal > 25 && <div className={styles.actionPager}>
-          <button type="button" disabled={actionPage === 1} onClick={() => setActionPage(page => page - 1)}>Précédent</button>
-          <span>Page {actionPage} · {actionTotal} actions</span>
-          <button type="button" disabled={actionPage * 25 >= actionTotal} onClick={() => setActionPage(page => page + 1)}>Suivant</button>
-        </div>}
-      </section>}
-
+      {data && <PlanningActionCenter summary={data.actionSummary} activeType={actionType} items={actionItems}
+        total={actionTotal} page={actionPage} loading={actionLoading} error={actionError} timeZone={displayedZone}
+        canManage={canMutate} onOpen={type => { setActionType(type); setActionPage(1); }} onClose={() => setActionType('')}
+        onPage={setActionPage} onAction={(item, mode) => {
+          if (mode === 'PLAN_EXISTING') {
+            setActivityDrawer({ mode: 'PLAN_EXISTING', action: item }); return;
+          }
+          const target = data.events.find(event => event.bookingId === item.bookingId);
+          if (target) openEvent(target, mode);
+        }} />}
       <section className={styles.toolbar} aria-label="Contrôles du planner">
         <div className={styles.periodControls}>
           <button type="button" onClick={() => move(-1)} aria-label="Période précédente">‹</button>
@@ -273,8 +255,8 @@ export default function TeamPlannerPage() {
       {data && !error && <section className={styles.gridSection} aria-label="Calendrier d'équipe" aria-busy={loading}>
         {data.warnings.length > 0 && <div className={styles.notice} role="status">{data.warnings.join(' · ')}</div>}
         {view === 'month' ? <MonthCalendar monthDays={days} events={data.events} actions={periodActions}
-          timeZone={displayedZone} today={today} onDay={day => { setDate(day); setView('day'); }} onSelect={setSelected} /> : <>
-        <div className={styles.desktopTimeline}><ResourceTimeline data={data} days={days} onSelect={setSelected}
+          timeZone={displayedZone} today={today} onDay={day => { setDate(day); setView('day'); }} onSelect={event => openEvent(event)} /> : <>
+        <div className={styles.desktopTimeline}><ResourceTimeline data={data} days={days} onSelect={event => openEvent(event)}
           onCreate={slot => setActivityDrawer({ mode: 'CREATE', initialSlot: slot,
             action: { id: 'draft', type: 'UNPLANNED_ACTIVITY', label: '', startUtc: null, clientId, buildingId, projectId } })} /></div>
         <div className={styles.mobileAgenda}>
@@ -282,7 +264,7 @@ export default function TeamPlannerPage() {
           {days.map(day => <section key={day}><h3>{formatDay(day)}</h3>
             {mobileEvents.filter(event => segmentForDay(event, day, displayedZone, { start: 0, end: 1440 })).length ?
               mobileEvents.filter(event => segmentForDay(event, day, displayedZone, { start: 0, end: 1440 }))
-                .map(event => <button type="button" key={`${event.id}:${event.userIds.join(',')}`} onClick={() => setSelected(event)} className={styles.agendaCard}>
+                .map(event => <button type="button" key={`${event.id}:${event.userIds.join(',')}`} onClick={() => openEvent(event)} className={styles.agendaCard}>
                   <strong>{formatClock(event.startUtc, displayedZone)} · {eventLabel(event)}</strong>
                   <span>{eventStatus(event)} · {event.userIds.length ? event.userIds.map(id => data.users.find(person => person.id === id)?.name ?? 'Conseiller').join(', ') : 'À affecter'}</span>
                   {(event.needsAction || event.warnings.length > 0) && <span>⚠ {event.needsAction ? 'Action requise' : 'À vérifier'}</span>}
@@ -293,7 +275,8 @@ export default function TeamPlannerPage() {
       </section>}
       {!data && !loading && !error && <p className={styles.empty}>Aucune projection disponible.</p>}
     </div>
-    <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone} onClose={closeDrawer}
+    <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone}
+      canMutate={canMutate} initialMode={selectedMode} onClose={closeDrawer}
       onMutated={() => setRefreshKey(key => key + 1)} />
     {activityDrawer && context && <ActivityPlanningDrawer mode={activityDrawer.mode} action={activityDrawer.action}
       initialSlot={activityDrawer.initialSlot} context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}

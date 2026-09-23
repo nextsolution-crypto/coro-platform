@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SchedulingService } from '../scheduling/scheduling.service';
@@ -71,7 +71,7 @@ export class PlanningActionsService {
 
   private async assertNoOpenBooking(tx: Prisma.TransactionClient, activityId: string) {
     const open = await tx.booking.findFirst({ where: { activityId, status: { in: OPEN_BOOKING_STATUSES } }, select: { id: true } });
-    if (open) throw new BadRequestException('Cette activite possede deja une planification active.');
+    if (open) throw new ConflictException('Cette activite possede deja une planification active.');
   }
 
   private async createBooking(tx: Prisma.TransactionClient, activity: any, actor: Actor,

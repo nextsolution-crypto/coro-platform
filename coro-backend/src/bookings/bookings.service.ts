@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BOOKING_TRANSITIONS, OPEN_BOOKING_STATUSES, BookingStatus, effectiveBookingDate } from './booking-status';
 import { Prisma } from '@prisma/client';
@@ -48,7 +48,7 @@ export class BookingsService {
         const open = await tx.booking.findFirst({ where: {
           activityId: data.activityId, status: { in: OPEN_BOOKING_STATUSES },
         } });
-        if (open) throw new BadRequestException('Cette activitÃ© possÃ¨de dÃ©jÃ  une rÃ©servation ouverte');
+        if (open) throw new ConflictException('Cette activitÃ© possÃ¨de dÃ©jÃ  une rÃ©servation ouverte');
       }
       return tx.booking.create({ data: {
         projectId: data.projectId,

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { effectiveBookingDate } from './booking-status';
 
@@ -149,7 +149,7 @@ describe('BookingsService security and transitions', () => {
     await service.createBooking(data);
     expect(prisma.booking.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ activityId: 'activity', activityType: 'formation_epi' }) }));
     prisma.booking.findFirst.mockResolvedValue({ id: 'open' });
-    await expect(service.createBooking(data)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.createBooking(data)).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.booking.create).toHaveBeenCalledTimes(1);
   });
 

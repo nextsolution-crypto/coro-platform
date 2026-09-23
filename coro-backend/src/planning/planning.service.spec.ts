@@ -226,6 +226,18 @@ describe('PlanningService', () => {
     expect(result.projects[0]).toMatchObject({ mandateId: 'm1', owner: { firstName: 'Real' } });
   });
 
+  it('scopes Operator context clients, buildings and projects through projectAccessWhere', async () => {
+    const prisma = {
+      client: { findMany: jest.fn().mockResolvedValue([]) }, building: { findMany: jest.fn().mockResolvedValue([]) },
+      project: { findMany: jest.fn().mockResolvedValue([]) }, activityType: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new PlanningService(prisma as any, {} as any, {} as any);
+    await service.context({}, { ...actor, role: 'OPERATOR' });
+    const scope = { organizationId: 'org-a', OR: [{ userId: 'u1' }, { lastEditedById: 'u1' }] };
+    expect(prisma.client.findMany.mock.calls[0][0].where.projects.some).toEqual(scope);
+    expect(prisma.building.findMany.mock.calls[0][0].where.projects.some).toEqual(scope);
+    expect(prisma.project.findMany.mock.calls[0][0].where).toMatchObject(scope);
+  });
   it('creates an unplanned mandate Activity and its audit atomically without a Booking', async () => {
     const tx = { projectActivity: { create: jest.fn().mockResolvedValue({ id: 'activity-1' }) },
       auditLog: { create: jest.fn().mockResolvedValue({ id: 'audit-1' }) } };
