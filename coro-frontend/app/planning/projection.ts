@@ -20,7 +20,7 @@ export function eventStatus(event: PlannerEvent): string {
   if (event.status === 'REQUESTED') return 'Demande · non confirmée';
   if (event.status === 'PROVISIONAL') return 'Proposition en attente';
   if (event.bookingStatus === 'REPORTEE') return 'Reportée · planifiée';
-  if (event.bookingStatus === 'REASSIGNEE') return 'Réassignée · active';
+  if (event.bookingStatus === 'REASSIGNEE') return 'Réaffectée · active';
   return 'Confirmée';
 }
 
