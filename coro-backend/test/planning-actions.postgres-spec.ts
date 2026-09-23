@@ -28,6 +28,10 @@ describePostgres('Planner mutations on PostgreSQL', () => {
   const actor = () => ({ userId: fixture.admin.id, organizationId: fixture.org.id, role: 'ADMIN' });
   const input = () => ({ startUtc: '2026-10-08T14:00:00.000Z', durationMinutes: 60,
     leadUserId: fixture.owner.id, supportUserIds: [fixture.colleague.id], confirmUnknown: true });
+  const backlog = () => new PlanningService(prisma as any, new SchedulingService(prisma as any), {
+    getCapacityPlanning: jest.fn().mockResolvedValue([]),
+  } as any).actions({ start: '2026-10-01T04:00:00.000Z', end: '2026-10-31T04:00:00.000Z',
+    type: 'UNPLANNED_ACTIVITY' }, actor());
 
   it('commits Activity, Booking, assignments and audit together and preserves the Project chain', async () => {
     const source = await activity();
@@ -184,5 +188,61 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     })).rejects.toBeDefined();
     expect(await prisma.booking.count({ where: { activityId: source.id,
       status: { in: ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'] } } })).toBe(1);
+  });
+
+  it('cancels an Activity with terminal history while preserving its Booking and Assignments', async () => {
+    const source = await activity();
+    const planned = await service.planExisting(source.id, input(), actor());
+    await service.cancelSchedule(planned.bookingId, actor());
+    const bookingBefore = await prisma.booking.findUniqueOrThrow({ where: { id: planned.bookingId } });
+    const assignmentsBefore = await prisma.bookingAssignment.findMany({ where: { bookingId: planned.bookingId },
+      orderBy: { id: 'asc' } });
+    expect((await backlog()).items.some((item: any) => item.activityId === source.id)).toBe(true);
+
+    await service.cancelActivity(source.id, actor());
+
+    expect(await prisma.projectActivity.findUniqueOrThrow({ where: { id: source.id } })).toMatchObject({ status: 'annule' });
+    expect(await prisma.booking.findUniqueOrThrow({ where: { id: planned.bookingId } })).toEqual(bookingBefore);
+    expect(await prisma.bookingAssignment.findMany({ where: { bookingId: planned.bookingId },
+      orderBy: { id: 'asc' } })).toEqual(assignmentsBefore);
+    expect(await prisma.auditLog.count({ where: { entityId: source.id,
+      action: 'PLANNING_ACTIVITY_CANCELLED', userId: fixture.admin.id } })).toBe(1);
+    expect((await backlog()).items.some((item: any) => item.activityId === source.id)).toBe(false);
+    expect(await prisma.projectActivity.count({ where: { id: source.id } })).toBe(1);
+  });
+
+  it('physically deletes a new dependency-free Activity without affecting its tenant sibling', async () => {
+    const source = await activity();
+    const sibling = await activity();
+    expect(await prisma.booking.count({ where: { activityId: source.id } })).toBe(0);
+    expect(await prisma.exerciseReport.count({ where: { activityId: source.id } })).toBe(0);
+    expect(await prisma.auditLog.count({ where: { entityType: 'ProjectActivity', entityId: source.id } })).toBe(0);
+
+    await service.deleteUnplannedActivity(source.id, actor());
+
+    expect(await prisma.projectActivity.count({ where: { id: source.id } })).toBe(0);
+    expect(await prisma.projectActivity.count({ where: { id: sibling.id, organizationId: fixture.org.id } })).toBe(1);
+    expect((await backlog()).items.some((item: any) => item.activityId === source.id)).toBe(false);
+  });
+
+  it('refuses physical deletion when the Activity has Booking history', async () => {
+    const source = await activity();
+    const planned = await service.planExisting(source.id, input(), actor());
+    await service.cancelSchedule(planned.bookingId, actor());
+
+    await expect(service.deleteUnplannedActivity(source.id, actor())).rejects.toThrow('historique');
+
+    expect(await prisma.projectActivity.count({ where: { id: source.id } })).toBe(1);
+    expect(await prisma.booking.count({ where: { id: planned.bookingId, activityId: source.id } })).toBe(1);
+  });
+
+  it('refuses business cancellation while the Activity has an open Booking', async () => {
+    const source = await activity();
+    const planned = await service.planExisting(source.id, input(), actor());
+
+    await expect(service.cancelActivity(source.id, actor())).rejects.toThrow('planification active');
+
+    expect(await prisma.projectActivity.findUniqueOrThrow({ where: { id: source.id } })).toMatchObject({ status: 'a_faire' });
+    expect(await prisma.booking.findUniqueOrThrow({ where: { id: planned.bookingId } })).toMatchObject({ status: 'CONFIRMEE' });
   });
 });

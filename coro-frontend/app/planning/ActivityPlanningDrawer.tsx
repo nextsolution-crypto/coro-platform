@@ -5,7 +5,7 @@ import axios from 'axios';
 import api from '@/lib/api';
 import type { PlanningAction, PlanningContext, TeamCandidate, TeamPreview } from './types';
 import { completeSlot, selectLead, teamDirty, type TeamDraft } from './teamPickerState';
-import { localBoundary } from './time';
+import { dateKey, localBoundary, timeValue } from './time';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
 import styles from './planning.module.css';
@@ -28,14 +28,17 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
   const [modeValue, setModeValue] = useState('presentiel');
   const [clientVisible, setClientVisible] = useState(true);
   const [clientBookable, setClientBookable] = useState(false);
-  const [date, setDate] = useState(initialSlot?.date ?? '');
-  const [time, setTime] = useState(initialSlot?.time ?? '');
-  const [durationMinutes, setDurationMinutes] = useState<number | null>(action?.durationMinutes ?? null);
+  const historicalStart = action?.lastEffectiveStartUtc;
+  const historicalZone = context.buildings.find(item => item.id === action?.buildingId)?.timeZone ?? 'America/Toronto';
+  const [date, setDate] = useState(initialSlot?.date ?? (historicalStart ? dateKey(new Date(historicalStart), historicalZone) : ''));
+  const [time, setTime] = useState(initialSlot?.time ?? (historicalStart ? timeValue(historicalStart, historicalZone) : ''));
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(action?.lastDurationMinutes ?? action?.durationMinutes ?? null);
   const [team, setTeam] = useState<TeamDraft>(EMPTY_TEAM);
   const [candidates, setCandidates] = useState<TeamCandidate[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
-  const [teamOpen, setTeamOpen] = useState(Boolean(initialSlot?.leadId));
+  const suggestedLeadId = initialSlot?.leadId ?? action?.lastLead?.userId;
+  const [teamOpen, setTeamOpen] = useState(Boolean(suggestedLeadId));
   const [saving, setSaving] = useState(false);
   const [planningSaving, setPlanningSaving] = useState(false);
   const [confirmUnknown, setConfirmUnknown] = useState(false);
@@ -71,14 +74,14 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
         const startUtc = localBoundary(date, minute, building.timeZone).toISOString();
         const response = await api.post<TeamPreview>('/planning/team-preview', { buildingId: building.id, startUtc, durationMinutes });
         setCandidates(response.data.candidates);
-        if (initialSlot?.leadId) setTeam(current => selectLead(current, initialSlot.leadId!, response.data.candidates));
+        if (suggestedLeadId) setTeam(current => selectLead(current, suggestedLeadId, response.data.candidates));
       } catch (cause) {
         const message = axios.isAxiosError(cause) ? cause.response?.data?.message : null;
         setPreviewError(Array.isArray(message) ? message.join(' ') : message || 'Impossible de vérifier les disponibilités.');
       } finally { setPreviewLoading(false); }
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [teamOpen, slotComplete, building, date, time, durationMinutes, initialSlot?.leadId]);
+  }, [teamOpen, slotComplete, building, date, time, durationMinutes, suggestedLeadId]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError('');

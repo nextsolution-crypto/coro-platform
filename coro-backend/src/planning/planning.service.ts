@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { PrismaService } from '../prisma/prisma.service';
 import { CapacityService } from '../mandate/capacity.service';
 import { SchedulingService, bookingInterval, overlaps } from '../scheduling/scheduling.service';
-import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
+import { effectiveBookingDate, OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { assertIanaTimeZone } from '../bookings/booking-time';
 import { parseActivityDurationHours } from '../mandate/capacity-duration';
 import { scheduleRanges } from '../work-schedules/work-schedule-time';
@@ -17,7 +17,10 @@ type ActionType = 'BOOKING_REQUESTED' | 'NO_ACCEPTED_LEAD' | 'PENDING_ASSIGNMENT
 type Action = { id: string; type: ActionType; groupId: string; bookingId?: string; activityId?: string;
   userId?: string; startUtc: Date | null; label: string; clientId?: string; buildingId?: string;
   projectId?: string; projectName?: string; clientName?: string; buildingName?: string; userName?: string;
-  activityTypeId?: string; activityTypeName?: string; durationMinutes?: number };
+  activityTypeId?: string; activityTypeName?: string; durationMinutes?: number;
+  hasBookingHistory?: boolean; lastBookingId?: string; lastEffectiveStartUtc?: Date;
+  lastDurationMinutes?: number; lastBookingStatus?: string;
+  lastLead?: { userId: string; displayName: string }; removalAction?: 'DELETE' | 'CANCEL' };
 
 export function planningWindow(query: PlanningWindowDto) {
   const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -255,7 +258,11 @@ export class PlanningService {
         projectId: true, project: { select: { name: true, clientId: true, buildingId: true,
           client: { select: { name: true } },
           building: { select: { name: true, timeZone: true, timeZoneVerified: true } } } },
-        bookings: { select: { id: true, status: true } },
+        exerciseReport: { select: { id: true } },
+        bookings: { orderBy: { createdAt: 'desc' }, select: { id: true, status: true, requestedDate: true,
+          reportedDate: true, duration: true, createdAt: true,
+          assignments: { where: { role: 'LEAD' }, orderBy: { assignedAt: 'desc' }, take: 1,
+            select: { userId: true, user: { select: { firstName: true, lastName: true } } } } } },
       }, take: MAX_CANDIDATES + 1 }),
       withCapacity ? this.capacity.getCapacityPlanning(actor.organizationId) : Promise.resolve([]),
     ]);
@@ -263,6 +270,10 @@ export class PlanningService {
       throw new BadRequestException('Trop de résultats : réduire la période ou filtrer');
     }
     const capacityById = new Map(capacityRows.map(row => [row.userId, row]));
+    const activityAuditIds = new Set((await this.prisma.auditLog.findMany({ where: {
+      organizationId: actor.organizationId, entityType: 'ProjectActivity',
+      entityId: { in: activities.map(activity => activity.id) },
+    }, select: { entityId: true }, distinct: ['entityId'] })).map(row => row.entityId));
     const workIntervals: Array<{ userId: string; startUtc: Date; endUtc: Date; verified: boolean }> = [];
     const configured = new Set<string>();
     for (const schedule of schedules) {
@@ -386,6 +397,8 @@ export class PlanningService {
       if ((activity.clientBookable || activity.sourceMandate) &&
         !activity.bookings.some(booking => OPEN_BOOKING_STATUSES.includes(booking.status as any)) &&
         (!own || userId === actor.userId) && (!activity.scheduledDate || (interval && overlaps(window, interval)))) {
+        const lastBooking = activity.bookings.find(booking => !OPEN_BOOKING_STATUSES.includes(booking.status as any));
+        const lastLead = lastBooking?.assignments[0];
         actions.push({ id: `unplanned:${activity.id}`, type: 'UNPLANNED_ACTIVITY', groupId: activity.id,
           activityId: activity.id, userId: userId || undefined, startUtc: activity.scheduledDate,
           label: activity.customLabel || activity.activityType?.nameFR || activity.label,
@@ -394,6 +407,15 @@ export class PlanningService {
           clientName: activity.project.client.name, buildingName: activity.project.building?.name,
           activityTypeId: activity.activityTypeId || undefined,
           activityTypeName: activity.activityType?.nameFR || activity.label,
+          hasBookingHistory: activity.bookings.length > 0,
+          lastBookingId: lastBooking?.id,
+          lastEffectiveStartUtc: lastBooking ? effectiveBookingDate(lastBooking) : undefined,
+          lastDurationMinutes: lastBooking?.duration,
+          lastBookingStatus: lastBooking?.status,
+          lastLead: lastLead ? { userId: lastLead.userId,
+            displayName: `${lastLead.user.firstName} ${lastLead.user.lastName}`.trim() } : undefined,
+          removalAction: activity.bookings.length === 0 && !activity.exerciseReport && !activityAuditIds.has(activity.id)
+            ? 'DELETE' : 'CANCEL',
           durationMinutes: (() => { const hours = parseActivityDurationHours(activity.customDuration || activity.duration);
             return hours ? Math.round(hours * 60) : undefined; })() });
       }

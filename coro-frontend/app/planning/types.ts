@@ -39,7 +39,10 @@ export type PlanningContext = {
 export type PlanningAction = { id: string; type: string; label: string; startUtc: string | null;
   bookingId?: string; activityId?: string; userId?: string; userName?: string; clientId?: string; buildingId?: string;
   projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
-  activityTypeId?: string; activityTypeName?: string; durationMinutes?: number };
+  activityTypeId?: string; activityTypeName?: string; durationMinutes?: number;
+  hasBookingHistory?: boolean; lastBookingId?: string; lastEffectiveStartUtc?: string;
+  lastDurationMinutes?: number; lastBookingStatus?: string;
+  lastLead?: { userId: string; displayName: string }; removalAction?: 'DELETE' | 'CANCEL' };
 
 export type TeamCandidate = { userId: string; displayName: string; email?: string;
   availabilityStatus: 'AVAILABLE' | 'UNKNOWN' | 'BLOCKED'; genericReason: string;

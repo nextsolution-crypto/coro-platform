@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PlanningService } from './planning.service';
 import { PlanningActionsService } from './planning-actions.service';
@@ -37,6 +37,16 @@ export class PlanningController {
   @Post('activities/:activityId/plan')
   planExisting(@Param('activityId') activityId: string, @Body() body: PlanExistingActivityDto, @Request() req: any) {
     return this.mutations.planExisting(activityId, body, req.user);
+  }
+
+  @Delete('activities/:activityId')
+  deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    return this.mutations.deleteUnplannedActivity(activityId, req.user);
+  }
+
+  @Post('activities/:activityId/cancel')
+  cancelActivity(@Param('activityId') activityId: string, @Request() req: any) {
+    return this.mutations.cancelActivity(activityId, req.user);
   }
 
   @Post('activities/create-and-plan')

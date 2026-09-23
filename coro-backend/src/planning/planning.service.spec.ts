@@ -22,6 +22,7 @@ function setup() {
     userWorkSchedule: { findMany: jest.fn().mockResolvedValue([]) },
     userUnavailability: { findMany: jest.fn().mockResolvedValue([]) },
     projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
+    auditLog: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const scheduling = { analyzeManySlots: jest.fn().mockResolvedValue(new Map()) };
   const capacity = { getCapacityPlanning: jest.fn().mockResolvedValue([
@@ -155,6 +156,38 @@ describe('PlanningService', () => {
     const blocked = await service.actions({ start, end, type: 'SCHEDULING_BLOCKED' }, actor);
     expect(blocked.items).toMatchObject([{ type: 'SCHEDULING_BLOCKED' }]);
     expect(await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor)).toMatchObject({ total: 1 });
+  });
+
+  it('projects terminal Booking context without merging otherwise identical Activities', async () => {
+    const { service, prisma } = setup();
+    const terminal = (id: string, hour: number, lead: string) => ({ id: `booking-${id}`, status: 'ANNULEE',
+      requestedDate: new Date(`2026-09-23T${hour}:00:00.000Z`),
+      reportedDate: new Date(`2026-09-24T${hour}:00:00.000Z`), duration: 90, createdAt: new Date(),
+      assignments: [{ userId: `user-${id}`, user: { firstName: lead, lastName: 'Parker' } }] });
+    prisma.projectActivity.findMany.mockResolvedValue(['a', 'b', 'c', 'd'].map((id, index) => ({
+      id, scheduledDate: null, duration: '1h30', customDuration: null, label: 'Inspection', customLabel: `Visite ${id}`,
+      type: 'inspection', assigneeEmail: null, sourceMandate: true, clientBookable: false,
+      activityTypeId: 'type-a', activityType: { nameFR: 'Inspection' }, projectId: 'project-a', project,
+      exerciseReport: null, bookings: [terminal(id, 13 + index, index ? 'Alex' : 'Steve')],
+    })));
+    const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+    expect(result.total).toBe(4);
+    expect(result.items.map((item: any) => item.activityId)).toEqual(['a', 'b', 'c', 'd']);
+    expect(result.items[0]).toMatchObject({ label: 'Visite a', hasBookingHistory: true,
+      lastBookingId: 'booking-a', lastEffectiveStartUtc: new Date('2026-09-24T13:00:00.000Z'),
+      lastDurationMinutes: 90, lastBookingStatus: 'ANNULEE',
+      lastLead: { userId: 'user-a', displayName: 'Steve Parker' }, removalAction: 'CANCEL' });
+  });
+
+  it('keeps a never-planned Activity without invented slot and marks deletion eligibility', async () => {
+    const { service, prisma } = setup();
+    prisma.projectActivity.findMany.mockResolvedValue([{ id: 'fresh', scheduledDate: null, duration: '1h',
+      customDuration: null, label: 'Inspection', customLabel: null, type: 'inspection', assigneeEmail: null,
+      sourceMandate: true, clientBookable: false, activityTypeId: 'type-a', activityType: { nameFR: 'Inspection' },
+      projectId: 'project-a', project, exerciseReport: null, bookings: [] }]);
+    const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+    expect(result.items[0]).toMatchObject({ activityId: 'fresh', hasBookingHistory: false,
+      lastEffectiveStartUtc: undefined, removalAction: 'DELETE' });
   });
 
   it('projects UNKNOWN Scheduling as a separate action', async () => {

@@ -211,6 +211,12 @@ export default function TeamPlannerPage() {
       {data && <PlanningActionCenter summary={data.actionSummary} activeType={actionType} items={actionItems}
         total={actionTotal} page={actionPage} loading={actionLoading} error={actionError} timeZone={displayedZone}
         canManage={canMutate} onOpen={type => { setActionType(type); setActionPage(1); }} onClose={() => setActionType('')}
+        onRemove={async item => {
+          if (!item.activityId) return;
+          if (item.removalAction === 'DELETE') await api.delete(`/planning/activities/${item.activityId}`);
+          else await api.post(`/planning/activities/${item.activityId}/cancel`);
+          setRefreshKey(key => key + 1);
+        }}
         onPage={setActionPage} onAction={(item, mode) => {
           if (mode === 'PLAN_EXISTING') {
             setActivityDrawer({ mode: 'PLAN_EXISTING', action: item }); return;

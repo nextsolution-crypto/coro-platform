@@ -109,6 +109,48 @@ export class PlanningActionsService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }
 
+  async deleteUnplannedActivity(activityId: string, actor: Actor) {
+    this.manager(actor);
+    return this.prisma.$transaction(async tx => {
+      await this.lockActivity(tx, activityId, actor.organizationId);
+      const activity = await tx.projectActivity.findFirst({ where: { id: activityId,
+        organizationId: actor.organizationId, status: { notIn: ['annule', 'fait', 'termine'] } },
+        select: { id: true, projectId: true, bookings: { select: { id: true }, take: 1 },
+          exerciseReport: { select: { id: true } } } });
+      if (!activity) throw new NotFoundException('Activite introuvable');
+      const audit = await tx.auditLog.findFirst({ where: { organizationId: actor.organizationId,
+        entityType: 'ProjectActivity', entityId: activity.id }, select: { id: true } });
+      if (activity.bookings.length || activity.exerciseReport || audit) {
+        throw new BadRequestException("Cette activite possede un historique et ne peut pas etre supprimee physiquement.");
+      }
+      await tx.projectActivity.delete({ where: { id: activity.id } });
+      await tx.auditLog.create({ data: { action: 'PLANNING_ACTIVITY_DELETED', entityType: 'ProjectActivity',
+        entityId: activity.id, projectId: activity.projectId, description: 'Activite retiree definitivement du backlog.',
+        metadata: { previousStatus: 'a_faire' }, userId: actor.userId, organizationId: actor.organizationId } });
+      return { activityId: activity.id, deleted: true };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+  }
+
+  async cancelActivity(activityId: string, actor: Actor) {
+    this.manager(actor);
+    return this.prisma.$transaction(async tx => {
+      await this.lockActivity(tx, activityId, actor.organizationId);
+      const activity = await tx.projectActivity.findFirst({ where: { id: activityId,
+        organizationId: actor.organizationId, status: { notIn: ['annule', 'fait', 'termine'] } },
+        select: { id: true, projectId: true, status: true,
+          bookings: { where: { status: { in: OPEN_BOOKING_STATUSES } }, select: { id: true }, take: 1 } } });
+      if (!activity) throw new NotFoundException('Activite introuvable');
+      if (activity.bookings.length) throw new ConflictException("L'activite possede une planification active.");
+      await tx.projectActivity.update({ where: { id: activity.id }, data: { status: 'annule',
+        scheduledDate: null, reportedDate: null } });
+      await tx.auditLog.create({ data: { action: 'PLANNING_ACTIVITY_CANCELLED', entityType: 'ProjectActivity',
+        entityId: activity.id, projectId: activity.projectId, description: 'Activite retiree du backlog; historique conserve.',
+        metadata: { previousStatus: activity.status, finalStatus: 'annule' },
+        userId: actor.userId, organizationId: actor.organizationId } });
+      return { activityId: activity.id, status: 'annule' };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+  }
+
   async createAndPlan(dto: CreateAndPlanActivityDto, actor: Actor) {
     this.manager(actor);
     return this.prisma.$transaction(async tx => {

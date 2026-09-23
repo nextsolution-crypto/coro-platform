@@ -11,7 +11,7 @@ const activity = { id: 'activity', projectId: 'project', organizationId: 'org-a'
 function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
   const tx: any = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: 'activity' }]),
-    projectActivity: { findFirst: jest.fn().mockResolvedValue(activity), create: jest.fn(), update: jest.fn() },
+    projectActivity: { findFirst: jest.fn().mockResolvedValue(activity), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     project: { findFirst: jest.fn() }, activityType: { findFirst: jest.fn() },
     clientUser: { findFirst: jest.fn().mockResolvedValue({ id: 'client-user' }) },
     user: { findMany: jest.fn().mockResolvedValue([
@@ -22,7 +22,7 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
       update: jest.fn() },
     bookingAssignment: { createMany: jest.fn(), updateMany: jest.fn(),
       create: jest.fn(), update: jest.fn() },
-    auditLog: { create: jest.fn() },
+    auditLog: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
   };
   const prisma = { $transaction: jest.fn(async (callback: any) => callback(tx)) };
   const result = { status, conflicts: status === 'BLOCKED' ? [{ severity: 'BLOCKED' }] : [], warnings: [], sourcesChecked: [] };
@@ -126,5 +126,36 @@ describe('PlanningActionsService', () => {
     expect(tx.bookingAssignment.updateMany.mock.calls[0][0].data).toMatchObject({ status: 'REMOVED', endedAt: expect.any(Date) });
     expect(tx.projectActivity.update).toHaveBeenCalledWith({ where: { id: 'activity' }, data: { scheduledDate: null, reportedDate: null } });
     expect(tx.auditLog.create.mock.calls[0][0].data.action).toBe('SCHEDULE_CANCELLED');
+  });
+
+  it('deletes a dependency-free Activity and records the actor', async () => {
+    const { service, tx } = setup();
+    tx.projectActivity.findFirst.mockResolvedValue({ id: 'activity', projectId: 'project', bookings: [], exerciseReport: null });
+    await expect(service.deleteUnplannedActivity('activity', actor)).resolves.toEqual({ activityId: 'activity', deleted: true });
+    expect(tx.projectActivity.delete).toHaveBeenCalledWith({ where: { id: 'activity' } });
+    expect(tx.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_DELETED', userId: 'admin' });
+  });
+
+  it('refuses physical deletion with history and cancels the Activity without changing old Booking data', async () => {
+    const { service, tx } = setup();
+    tx.projectActivity.findFirst
+      .mockResolvedValueOnce({ id: 'activity', projectId: 'project', bookings: [{ id: 'old' }], exerciseReport: null })
+      .mockResolvedValueOnce({ id: 'activity', projectId: 'project', status: 'a_faire', bookings: [] });
+    await expect(service.deleteUnplannedActivity('activity', actor)).rejects.toThrow('historique');
+    expect(tx.projectActivity.delete).not.toHaveBeenCalled();
+    await expect(service.cancelActivity('activity', actor)).resolves.toEqual({ activityId: 'activity', status: 'annule' });
+    expect(tx.projectActivity.update).toHaveBeenCalledWith({ where: { id: 'activity' }, data: {
+      status: 'annule', scheduledDate: null, reportedDate: null } });
+    expect(tx.booking.update).not.toHaveBeenCalled();
+    expect(tx.bookingAssignment.updateMany).not.toHaveBeenCalled();
+    expect(tx.auditLog.create.mock.calls.at(-1)[0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_CANCELLED',
+      metadata: { previousStatus: 'a_faire', finalStatus: 'annule' } });
+  });
+
+  it('enforces tenant and manager permissions for backlog removal', async () => {
+    const { service, tx } = setup();
+    tx.projectActivity.findFirst.mockResolvedValue(null);
+    await expect(service.cancelActivity('other-tenant', actor)).rejects.toThrow('introuvable');
+    await expect(service.cancelActivity('activity', { ...actor, role: 'OPERATOR' })).rejects.toThrow(ForbiddenException);
   });
 });

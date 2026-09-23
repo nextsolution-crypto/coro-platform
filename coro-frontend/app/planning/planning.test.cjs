@@ -413,3 +413,20 @@ test('VIEW and repeated mutation mode switches invalidate old preview cycles', (
   assert.equal(reassign.isCurrent(), false);
   assert.equal(previewCycle.createPreviewCycleGuard().begin().isCurrent(), true);
 });
+
+test('backlog distinguishes replanning context and keeps destructive actions explicit', () => {
+  const center = fs.readFileSync(path.join(__dirname, 'PlanningActionCenter.tsx'), 'utf8');
+  const drawer = fs.readFileSync(path.join(__dirname, 'ActivityPlanningDrawer.tsx'), 'utf8');
+  const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+  for (const label of ['À replanifier', 'Dernier créneau', 'Dernier LEAD', 'Replanifier',
+    'Supprimer définitivement cette activité', 'Annuler cette activité', 'Ne plus planifier']) {
+    assert.ok(center.includes(label));
+  }
+  assert.ok(drawer.includes('action?.lastEffectiveStartUtc'));
+  assert.ok(drawer.includes('timeValue(historicalStart, historicalZone)'));
+  assert.ok(drawer.includes('action?.lastDurationMinutes'));
+  assert.ok(drawer.includes('action?.lastLead?.userId'));
+  assert.ok(page.includes("api.delete(`/planning/activities/${item.activityId}`)"));
+  assert.ok(page.includes("api.post(`/planning/activities/${item.activityId}/cancel`)"));
+  assert.doesNotMatch(center, /window\.confirm/);
+});
