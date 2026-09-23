@@ -180,19 +180,20 @@ describe('PlanningService', () => {
     const { service, prisma } = setup();
     prisma.user.findMany.mockResolvedValue([user('u2')]);
     await service.actions({ start, end, userId: 'u2', clientId: 'client-a',
-      buildingId: 'building-a', bookingStatus: 'DEMANDEE' }, actor);
+      buildingId: 'building-a', projectId: 'project-a', activityTypeId: 'type-a', bookingStatus: 'DEMANDEE' }, actor);
     const usersWhere = prisma.user.findMany.mock.calls[0][0].where;
     const bookingQuery = prisma.booking.findMany.mock.calls[0][0];
     const activityQuery = prisma.projectActivity.findMany.mock.calls[0][0];
     expect(usersWhere).toMatchObject({ organizationId: 'org-a', id: 'u2' });
     expect(bookingQuery.where).toMatchObject({ organizationId: 'org-a',
-      status: { in: ['DEMANDEE'] }, project: { clientId: 'client-a', buildingId: 'building-a' },
+      status: { in: ['DEMANDEE'] }, project: { clientId: 'client-a', buildingId: 'building-a', id: 'project-a' },
+      activity: { activityTypeId: 'type-a' },
       assignments: { some: { userId: { in: ['u2'] } } } });
     expect(bookingQuery.where.OR).toEqual(expect.arrayContaining([
       { reportedDate: null, requestedDate: { gte: expect.any(Date), lt: expect.any(Date) } },
     ]));
     expect(activityQuery.where).toMatchObject({ organizationId: 'org-a',
-      project: { clientId: 'client-a', buildingId: 'building-a' },
+      project: { clientId: 'client-a', buildingId: 'building-a', id: 'project-a' }, activityTypeId: 'type-a',
       assigneeEmail: { in: ['u2@example.com'], mode: 'insensitive' } });
     expect(activityQuery.where.OR).toEqual(expect.arrayContaining([{ scheduledDate: null }]));
   });
@@ -205,5 +206,41 @@ describe('PlanningService', () => {
     expect(result.items.map(item => item.type)).toEqual(expect.arrayContaining([
       'BOOKING_REQUESTED', 'NO_ACCEPTED_LEAD', 'PENDING_ASSIGNMENT',
     ]));
+  });
+
+  it('returns tenant-scoped context and derives the mandate owner from ProjectMandate', async () => {
+    const prisma = {
+      client: { findMany: jest.fn().mockResolvedValue([{ id: 'c1', name: 'Client' }]) },
+      building: { findMany: jest.fn().mockResolvedValue([{ id: 'bd1', clientId: 'c1', name: 'Building' }]) },
+      project: { findMany: jest.fn().mockResolvedValue([{ id: 'p1', name: 'Mandate', clientId: 'c1', buildingId: 'bd1',
+        user: { id: 'legacy-owner', firstName: 'Legacy', lastName: 'Owner' },
+        mandate: { id: 'm1', ownerId: 'owner', owner: { firstName: 'Real', lastName: 'Owner' } } }]) },
+      activityType: { findMany: jest.fn().mockResolvedValue([{ id: 't1', nameFR: 'Inspection' }]) },
+    };
+    const service = new PlanningService(prisma as any, {} as any, {} as any);
+    const result = await service.context({ clientId: 'c1', buildingId: 'bd1' }, actor);
+    expect(prisma.client.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a' });
+    expect(prisma.building.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a', clientId: 'c1' });
+    expect(prisma.project.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a', clientId: 'c1', buildingId: 'bd1' });
+    expect(prisma.activityType.findMany.mock.calls[0][0].where.OR).toEqual([{ organizationId: null }, { organizationId: 'org-a' }]);
+    expect(result.projects[0]).toMatchObject({ mandateId: 'm1', owner: { firstName: 'Real' } });
+  });
+
+  it('creates an unplanned mandate Activity and its audit atomically without a Booking', async () => {
+    const tx = { projectActivity: { create: jest.fn().mockResolvedValue({ id: 'activity-1' }) },
+      auditLog: { create: jest.fn().mockResolvedValue({ id: 'audit-1' }) } };
+    const prisma = {
+      project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-1' }) },
+      activityType: { findFirst: jest.fn().mockResolvedValue({ id: 'type-1', code: 'inspection', nameFR: 'Inspection',
+        defaultDurationMinutes: 90, clientBookableDefault: false }) },
+      $transaction: jest.fn(async (callback: any) => callback(tx)),
+    };
+    const service = new PlanningService(prisma as any, {} as any, {} as any);
+    await service.createUnplannedActivity({ projectId: 'project-1', activityTypeId: 'type-1' }, actor);
+    expect(prisma.project.findFirst.mock.calls[0][0].where).toMatchObject({ id: 'project-1', organizationId: 'org-a' });
+    expect(tx.projectActivity.create.mock.calls[0][0].data).toMatchObject({ organizationId: 'org-a', projectId: 'project-1',
+      scheduledDate: null, status: 'a_faire', sourceMandate: true, duration: '1h30' });
+    expect(tx.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_CREATED', entityId: 'activity-1' });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 });

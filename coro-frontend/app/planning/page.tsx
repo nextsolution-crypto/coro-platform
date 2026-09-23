@@ -11,13 +11,12 @@ import ResourceTimeline from './ResourceTimeline';
 import MonthCalendar from './MonthCalendar';
 import { eventForUser, eventLabel, eventStatus, planningErrorMessage } from './projection';
 import PlanningDrawer from './PlanningDrawer';
-import type { PlannerEvent, PlannerResponse } from './types';
+import ActivityPlanningDrawer from './ActivityPlanningDrawer';
+import type { PlannerEvent, PlannerResponse, PlanningAction, PlanningContext } from './types';
 import { dateKey, formatClock, formatDay, moveDate, periodLabel, requestWindow, segmentForDay, validTimeZone, viewDays, type PlannerView } from './time';
 import styles from './planning.module.css';
 
-type Option = { id: string; name: string };
-type PlanningAction = { id: string; type: string; label: string; startUtc: string | null;
-  bookingId?: string; activityId?: string; userId?: string };
+type Option = { id: string; name: string; clientId?: string };
 const ZONES = ['America/Toronto', 'America/Halifax', 'America/Vancouver', 'America/Winnipeg', 'UTC'];
 
 function ActionSummary({ summary, onFilter }: { summary: PlannerResponse['actionSummary']; onFilter: (type: string) => void }) {
@@ -49,6 +48,8 @@ export default function TeamPlannerPage() {
   const [clientId, setClientId] = useState('');
   const [buildingId, setBuildingId] = useState('');
   const [bookingStatus, setBookingStatus] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [activityTypeId, setActivityTypeId] = useState('');
   const [needsAction, setNeedsAction] = useState(false);
   const [clients, setClients] = useState<Option[]>([]);
   const [buildings, setBuildings] = useState<Option[]>([]);
@@ -63,6 +64,9 @@ export default function TeamPlannerPage() {
   const [actionError, setActionError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [periodActions, setPeriodActions] = useState<PlanningAction[]>([]);
+  const [context, setContext] = useState<PlanningContext | null>(null);
+  const [activityDrawer, setActivityDrawer] = useState<{ mode: 'CREATE' | 'PLAN_EXISTING'; action?: PlanningAction } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +86,8 @@ export default function TeamPlannerPage() {
       setClientId(params.get('clientId') ?? '');
       setBuildingId(params.get('buildingId') ?? '');
       setBookingStatus(params.get('bookingStatus') ?? '');
+      setProjectId(params.get('projectId') ?? '');
+      setActivityTypeId(params.get('activityTypeId') ?? '');
       setNeedsAction(params.get('needsAction') === 'true');
       setReady(true);
     });
@@ -98,9 +104,11 @@ export default function TeamPlannerPage() {
     if (clientId) params.set('clientId', clientId);
     if (buildingId) params.set('buildingId', buildingId);
     if (bookingStatus) params.set('bookingStatus', bookingStatus);
+    if (projectId) params.set('projectId', projectId);
+    if (activityTypeId) params.set('activityTypeId', activityTypeId);
     if (needsAction) params.set('needsAction', 'true');
     window.history.replaceState(null, '', `/planning?${params.toString()}`);
-  }, [ready, date, view, zone, search, clientId, buildingId, bookingStatus, needsAction]);
+  }, [ready, date, view, zone, search, clientId, buildingId, bookingStatus, projectId, activityTypeId, needsAction]);
 
   useEffect(() => {
     if (!ready) return;
@@ -113,6 +121,16 @@ export default function TeamPlannerPage() {
     });
   }, [ready, isAuthenticated, router]);
 
+  useEffect(() => {
+    const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
+    if (!ready || !authenticated) return;
+    let cancelled = false;
+    api.get<PlanningContext>('/planning/context').then(response => { if (!cancelled) {
+      setContext(response.data); setClients(response.data.clients); setBuildings(response.data.buildings);
+    } });
+    return () => { cancelled = true; };
+  }, [ready, isAuthenticated, refreshKey]);
+
   const days = useMemo(() => date ? viewDays(date, view) : [], [date, view]);
   const requestRange = useMemo(() => days.length && validTimeZone(zone) ? requestWindow(days, zone) : null, [days, zone]);
 
@@ -124,6 +142,7 @@ export default function TeamPlannerPage() {
       start: requestRange.start, end: requestRange.end, displayTimeZone: zone,
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(clientId ? { clientId } : {}), ...(buildingId ? { buildingId } : {}),
+      ...(projectId ? { projectId } : {}), ...(activityTypeId ? { activityTypeId } : {}),
       ...(bookingStatus ? { bookingStatus } : {}), ...(needsAction ? { needsAction: 'true' } : {}),
     } }).then(response => { if (!cancelled) setData(response.data); }).catch(cause => {
       if (cancelled) return;
@@ -131,16 +150,18 @@ export default function TeamPlannerPage() {
       setError(planningErrorMessage(axios.isAxiosError(cause) ? cause.response?.status : undefined));
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [ready, requestRange, zone, debouncedSearch, clientId, buildingId, bookingStatus, needsAction, isAuthenticated]);
+  }, [ready, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, needsAction, isAuthenticated, refreshKey]);
 
   useEffect(() => {
-    if (!actionType || !requestRange || !isAuthenticated) return;
+    const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
+    if (!actionType || !requestRange || !authenticated) return;
     let cancelled = false;
     queueMicrotask(() => { if (!cancelled) { setActionLoading(true); setActionError(''); } });
     api.get('/planning/actions', { params: { start: requestRange.start, end: requestRange.end,
       displayTimeZone: zone, type: actionType, page: actionPage, limit: 25,
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(clientId ? { clientId } : {}), ...(buildingId ? { buildingId } : {}),
+      ...(projectId ? { projectId } : {}), ...(activityTypeId ? { activityTypeId } : {}),
       ...(bookingStatus ? { bookingStatus } : {}),
     } }).then(response => {
       if (cancelled) return;
@@ -148,7 +169,7 @@ export default function TeamPlannerPage() {
     }).catch(() => { if (!cancelled) { setActionItems([]); setActionError('Impossible de charger cette liste. Réduisez la période ou filtrez davantage.'); } })
       .finally(() => { if (!cancelled) setActionLoading(false); });
     return () => { cancelled = true; };
-  }, [actionType, actionPage, requestRange, zone, debouncedSearch, clientId, buildingId, bookingStatus, isAuthenticated]);
+  }, [actionType, actionPage, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, isAuthenticated, refreshKey]);
 
   useEffect(() => {
     const authenticated = isAuthenticated || Boolean(sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token'));
@@ -161,6 +182,7 @@ export default function TeamPlannerPage() {
           start: requestRange.start, end: requestRange.end, displayTimeZone: zone, page, limit: 50,
           ...(debouncedSearch ? { search: debouncedSearch } : {}), ...(clientId ? { clientId } : {}),
           ...(buildingId ? { buildingId } : {}), ...(bookingStatus ? { bookingStatus } : {}),
+          ...(projectId ? { projectId } : {}), ...(activityTypeId ? { activityTypeId } : {}),
         } });
         const items = (response.data.items ?? []) as PlanningAction[];
         collected.push(...items);
@@ -170,7 +192,7 @@ export default function TeamPlannerPage() {
     };
     load().catch(() => { if (!cancelled) setPeriodActions([]); });
     return () => { cancelled = true; };
-  }, [view, requestRange, zone, debouncedSearch, clientId, buildingId, bookingStatus, isAuthenticated]);
+  }, [view, requestRange, zone, debouncedSearch, clientId, buildingId, projectId, activityTypeId, bookingStatus, isAuthenticated, refreshKey]);
 
   const move = (direction: -1 | 1) => setDate(previous => moveDate(previous, view, direction));
   const closeDrawer = useCallback(() => setSelected(null), []);
@@ -187,7 +209,8 @@ export default function TeamPlannerPage() {
       <header className={styles.pageHeader}>
         <div><p className={styles.eyebrow}>Planification interne</p><h1>Planification d’équipe</h1>
           <p>Bookings, horaires et disponibilité de l’équipe en un coup d’œil.</p></div>
-        <div className={styles.headerMeta}><span>Fuseau d’affichage : <strong>{displayedZone}</strong></span>
+        <div className={styles.headerMeta}>{context && <button className={styles.primaryButton} type="button" onClick={() => setActivityDrawer({ mode: 'CREATE' })}>Créer une activité</button>}
+          <span>Fuseau d’affichage : <strong>{displayedZone}</strong></span>
           {data && <span>Mis à jour à {formatClock(data.asOf, displayedZone)}</span>}</div>
       </header>
 
@@ -201,6 +224,8 @@ export default function TeamPlannerPage() {
         {!actionLoading && !actionError && (actionItems.length ? <ul>{actionItems.map(item =>
           <li key={item.id}><strong>{item.label}</strong>
             {item.startUtc && <span>{formatDay(dateKey(new Date(item.startUtc), displayedZone))} · {formatClock(item.startUtc, displayedZone)}</span>}
+            {item.type === 'UNPLANNED_ACTIVITY' && <><span>{item.clientName} · {item.buildingName} · {item.projectName}</span>
+              <button type="button" className={styles.inlineButton} onClick={() => setActivityDrawer({ mode: 'PLAN_EXISTING', action: item })}>Ouvrir</button></>}
             {item.bookingId && <Link href="/bookings">Ouvrir Booking</Link>}
           </li>)}</ul> : <p>Aucune action de ce type.</p>)}
         {actionTotal > 25 && <div className={styles.actionPager}>
@@ -225,10 +250,14 @@ export default function TeamPlannerPage() {
           <label>Fuseau <select value={zone} onChange={change => setZone(change.target.value)}>
             {ZONES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
           <label>Conseiller <input type="search" value={search} onChange={change => setSearch(change.target.value)} placeholder="Rechercher" /></label>
-          <label>Client <select value={clientId} onChange={change => setClientId(change.target.value)}>
+          <label>Client <select value={clientId} onChange={change => { setClientId(change.target.value); setBuildingId(''); setProjectId(''); }}>
             <option value="">Tous</option>{clients.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
-          <label>Bâtiment <select value={buildingId} onChange={change => setBuildingId(change.target.value)}>
-            <option value="">Tous</option>{buildings.map(building => <option key={building.id} value={building.id}>{building.name}</option>)}</select></label>
+          <label>Bâtiment <select value={buildingId} onChange={change => { setBuildingId(change.target.value); setProjectId(''); }}>
+            <option value="">Tous</option>{buildings.filter(building => !clientId || building.clientId === clientId).map(building => <option key={building.id} value={building.id}>{building.name}</option>)}</select></label>
+          <label>Mandat <select value={projectId} onChange={change => setProjectId(change.target.value)}>
+            <option value="">Tous</option>{(context?.projects ?? []).filter(project => (!clientId || project.clientId === clientId) && (!buildingId || project.buildingId === buildingId)).map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+          <label>Type d’activité <select value={activityTypeId} onChange={change => setActivityTypeId(change.target.value)}>
+            <option value="">Tous</option>{(context?.activityTypes ?? []).map(type => <option key={type.id} value={type.id}>{type.nameFR}</option>)}</select></label>
           <label>Booking <select value={bookingStatus} onChange={change => setBookingStatus(change.target.value)}>
             <option value="">Tous les statuts actifs</option><option value="DEMANDEE">Demandée</option>
             <option value="CONFIRMEE">Confirmée</option><option value="REPORTEE">Reportée</option>
@@ -262,5 +291,7 @@ export default function TeamPlannerPage() {
       {!data && !loading && !error && <p className={styles.empty}>Aucune projection disponible.</p>}
     </div>
     <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone} onClose={closeDrawer} />
+    {activityDrawer && context && <ActivityPlanningDrawer mode={activityDrawer.mode} action={activityDrawer.action}
+      context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}
   </AppLayout>;
 }

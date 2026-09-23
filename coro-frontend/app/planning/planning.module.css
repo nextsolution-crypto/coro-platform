@@ -74,6 +74,13 @@
 .drawerSection { border-top:1px solid #e9ecef; padding-top:15px; font-size:13px }.drawerSection h3 { font-size:14px; margin:0 0 8px }.drawerSection ul { margin:0 0 15px; padding-left:20px }
 .actionNotice { padding:12px; background:#fff4db; color:#795500; border-radius:6px; font-size:13px }
 .drawerLinks { display:grid; gap:10px; margin-top:20px }.drawerLinks a { color:#a93226; font-size:13px; font-weight:600; text-decoration:underline }
+.primaryButton { min-height:36px; border:1px solid #a93226; border-radius:6px; background:#a93226; color:white; padding:7px 12px; font-weight:700; cursor:pointer }
+.primaryButton:disabled { opacity:.55; cursor:default }
+.inlineButton { border:1px solid #ced4da; border-radius:5px; background:white; color:#a93226; padding:5px 9px; font-weight:700; cursor:pointer }
+.activityForm { display:grid; gap:14px; margin-top:20px }
+.activityForm > label:not(.checkbox) { display:grid; gap:5px; color:#5d6d7e; font-size:12px; font-weight:700 }
+.activityForm input,.activityForm select,.activityForm textarea { width:100%; border:1px solid #ced4da; border-radius:6px; background:white; padding:9px; color:#2c3e50; font:inherit }
+.activityForm textarea { resize:vertical }.formHint { margin:0; color:#6c757d; font-size:12px }
 .agendaCard { display:grid; gap:4px; width:100%; text-align:left; background:white; border:1px solid #e9ecef; border-radius:8px; padding:11px; margin:7px 0; cursor:pointer }
 .agendaCard strong { font-size:13px }.agendaCard span { font-size:12px; color:#6c757d }
 .page button:focus-visible,.page a:focus-visible,.page input:focus-visible,.page select:focus-visible,.drawer button:focus-visible,.drawer a:focus-visible { outline:3px solid #2980b9; outline-offset:2px }

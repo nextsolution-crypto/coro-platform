@@ -25,3 +25,18 @@ export type PlannerResponse = {
     pendingAssignments: number; blockedConflicts: number; unknownAvailability: number; unplannedActivities: number };
   warnings: string[];
 };
+
+export type PlanningContext = {
+  version: number;
+  clients: Array<{ id: string; name: string }>;
+  buildings: Array<{ id: string; name: string; clientId: string; timeZone: string; timeZoneVerified: boolean }>;
+  projects: Array<{ id: string; name: string; clientId: string; buildingId: string; status: string; year: number;
+    mandateId: string | null; owner: { id?: string; firstName: string; lastName: string } | null }>;
+  activityTypes: Array<{ id: string; code: string; nameFR: string; defaultDurationMinutes: number | null;
+    clientBookableDefault: boolean; displayOrder: number }>;
+};
+
+export type PlanningAction = { id: string; type: string; label: string; startUtc: string | null;
+  bookingId?: string; activityId?: string; userId?: string; clientId?: string; buildingId?: string;
+  projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
+  activityTypeId?: string; activityTypeName?: string };

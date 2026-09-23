@@ -6,7 +6,8 @@ import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { assertIanaTimeZone } from '../bookings/booking-time';
 import { parseActivityDurationHours } from '../mandate/capacity-duration';
 import { scheduleRanges } from '../work-schedules/work-schedule-time';
-import { PlanningActionsDto, PlanningWindowDto } from './planning.dto';
+import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningWindowDto } from './planning.dto';
+import { projectAccessWhere } from '../auth/project-access';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const DAY = 86_400_000;
@@ -14,7 +15,9 @@ const MAX_CANDIDATES = 2000;
 type ActionType = 'BOOKING_REQUESTED' | 'NO_ACCEPTED_LEAD' | 'PENDING_ASSIGNMENT' |
   'SCHEDULING_BLOCKED' | 'SCHEDULING_UNKNOWN' | 'UNPLANNED_ACTIVITY';
 type Action = { id: string; type: ActionType; groupId: string; bookingId?: string; activityId?: string;
-  userId?: string; startUtc: Date | null; label: string; clientId?: string; buildingId?: string };
+  userId?: string; startUtc: Date | null; label: string; clientId?: string; buildingId?: string;
+  projectId?: string; projectName?: string; clientName?: string; buildingName?: string;
+  activityTypeId?: string; activityTypeName?: string };
 
 export function planningWindow(query: PlanningWindowDto) {
   const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -55,6 +58,76 @@ export class PlanningService {
   constructor(private readonly prisma: PrismaService, private readonly scheduling: SchedulingService,
     private readonly capacity: CapacityService) {}
 
+  async context(query: PlanningContextDto, actor: Actor) {
+    staff(actor);
+    const projectScope = projectAccessWhere(actor);
+    const [clients, buildings, projects, activityTypes] = await Promise.all([
+      this.prisma.client.findMany({ where: { organizationId: actor.organizationId, isActive: true },
+        select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+      this.prisma.building.findMany({ where: { organizationId: actor.organizationId, isActive: true,
+        ...(query.clientId ? { clientId: query.clientId } : {}) },
+        select: { id: true, name: true, clientId: true, timeZone: true, timeZoneVerified: true },
+        orderBy: { name: 'asc' } }),
+      this.prisma.project.findMany({ where: { ...projectScope, isActive: true,
+        ...(query.clientId ? { clientId: query.clientId } : {}),
+        ...(query.buildingId ? { buildingId: query.buildingId } : {}) },
+        select: { id: true, name: true, clientId: true, buildingId: true, status: true, year: true,
+          user: { select: { id: true, firstName: true, lastName: true } },
+          mandate: { select: { id: true, ownerId: true,
+            owner: { select: { firstName: true, lastName: true } } } } },
+        orderBy: [{ year: 'desc' }, { name: 'asc' }] }),
+      this.prisma.activityType.findMany({ where: { isActive: true,
+        OR: [{ organizationId: null }, { organizationId: actor.organizationId }] },
+        select: { id: true, code: true, nameFR: true, defaultDurationMinutes: true,
+          clientBookableDefault: true, displayOrder: true },
+        orderBy: [{ displayOrder: 'asc' }, { nameFR: 'asc' }, { id: 'asc' }] }),
+    ]);
+    return { version: 1, clients, buildings, projects: projects.map(project => ({
+      ...project, owner: project.mandate?.owner ?? project.user,
+      mandateId: project.mandate?.id ?? null,
+    })), activityTypes };
+  }
+
+  async createUnplannedActivity(dto: CreatePlanningActivityDto, actor: Actor) {
+    staff(actor);
+    const project = await this.prisma.project.findFirst({ where: {
+      id: dto.projectId, isActive: true, ...projectAccessWhere(actor),
+    }, select: { id: true } });
+    if (!project) throw new BadRequestException('Mandat indisponible');
+    const activityType = await this.prisma.activityType.findFirst({ where: {
+      id: dto.activityTypeId, isActive: true,
+      OR: [{ organizationId: null }, { organizationId: actor.organizationId }],
+    } });
+    if (!activityType) throw new BadRequestException("Type d'activite indisponible");
+    const customLabel = dto.customLabel?.trim() || null;
+    if (activityType.code === 'autre' && !customLabel) {
+      throw new BadRequestException('Un libelle personnalise est requis pour Autre');
+    }
+    const clientVisible = dto.clientVisible ?? true;
+    const clientBookable = dto.clientBookable ?? activityType.clientBookableDefault;
+    if (!clientVisible && clientBookable) {
+      throw new BadRequestException('Une activite reservable doit etre visible par le client');
+    }
+    return this.prisma.$transaction(async tx => {
+      const minutes = activityType.defaultDurationMinutes;
+      const activity = await tx.projectActivity.create({ data: {
+        projectId: project.id, organizationId: actor.organizationId,
+        type: activityType.code, activityTypeId: activityType.id, label: activityType.nameFR,
+        duration: minutes ? `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}` : '',
+        dureeHeures: minutes ? minutes / 60 : null, mode: dto.mode ?? 'presentiel',
+        customLabel, notes: dto.notes?.trim() || null, scheduledDate: null,
+        status: 'a_faire', sourceMandate: true, clientVisible, clientBookable,
+      } });
+      await tx.auditLog.create({ data: {
+        action: 'PLANNING_ACTIVITY_CREATED', entityType: 'ProjectActivity', entityId: activity.id,
+        projectId: project.id, description: 'Activite creee depuis le Planner et ajoutee au backlog.',
+        metadata: { activityTypeId: activityType.id, scheduled: false },
+        userId: actor.userId, organizationId: actor.organizationId,
+      } });
+      return activity;
+    });
+  }
+
   private async snapshot(query: PlanningWindowDto, actor: Actor, withCapacity: boolean) {
     staff(actor);
     const window = planningWindow(query);
@@ -88,10 +161,12 @@ export class PlanningService {
         status: { in: query.bookingStatus ? [query.bookingStatus] : [...OPEN_BOOKING_STATUSES] },
         OR: [{ reportedDate: null, requestedDate: { gte: earliest, lt: window.endUtc } },
           { reportedDate: { gte: earliest, lt: window.endUtc } }],
-        ...(query.clientId || query.buildingId ? { project: {
+        ...(query.clientId || query.buildingId || query.projectId ? { project: {
           ...(query.clientId ? { clientId: query.clientId } : {}),
           ...(query.buildingId ? { buildingId: query.buildingId } : {}),
+          ...(query.projectId ? { id: query.projectId } : {}),
         } } : {}),
+        ...(query.activityTypeId ? { activity: { activityTypeId: query.activityTypeId } } : {}),
         ...(filteredUsers ? { assignments: { some: { userId: { in: ids },
           status: { in: ['PENDING', 'ACCEPTED'] } } } } : {}),
       }, select: { id: true, requestedDate: true, reportedDate: true, duration: true, status: true,
@@ -113,13 +188,16 @@ export class PlanningService {
       this.prisma.projectActivity.findMany({ where: { organizationId: actor.organizationId,
         status: { notIn: ['annule', 'fait', 'termine'] },
         OR: [{ scheduledDate: { gte: earliest, lt: window.endUtc } }, { scheduledDate: null }],
-        ...(query.clientId || query.buildingId ? { project: {
+        ...(query.clientId || query.buildingId || query.projectId ? { project: {
           ...(query.clientId ? { clientId: query.clientId } : {}),
           ...(query.buildingId ? { buildingId: query.buildingId } : {}),
+          ...(query.projectId ? { id: query.projectId } : {}),
         } } : {}),
+        ...(query.activityTypeId ? { activityTypeId: query.activityTypeId } : {}),
         ...(filteredUsers ? { assigneeEmail: { in: users.map(user => user.email), mode: 'insensitive' as const } } : {}),
       }, select: { id: true, scheduledDate: true, duration: true, customDuration: true,
         label: true, customLabel: true, type: true, assigneeEmail: true, sourceMandate: true, clientBookable: true,
+        activityTypeId: true,
         activityType: { select: { code: true, nameFR: true, visualToken: true, iconKey: true } },
         projectId: true, project: { select: { name: true, clientId: true, buildingId: true,
           client: { select: { name: true } },
@@ -249,8 +327,12 @@ export class PlanningService {
         (!own || userId === actor.userId) && (!activity.scheduledDate || (interval && overlaps(window, interval)))) {
         actions.push({ id: `unplanned:${activity.id}`, type: 'UNPLANNED_ACTIVITY', groupId: activity.id,
           activityId: activity.id, userId: userId || undefined, startUtc: activity.scheduledDate,
-          label: 'Activité à planifier', clientId: activity.project.clientId,
-          buildingId: activity.project.buildingId });
+          label: activity.customLabel || activity.activityType?.nameFR || activity.label,
+          clientId: activity.project.clientId, buildingId: activity.project.buildingId,
+          projectId: activity.projectId, projectName: activity.project.name,
+          clientName: activity.project.client.name, buildingName: activity.project.building?.name,
+          activityTypeId: activity.activityTypeId || undefined,
+          activityTypeName: activity.activityType?.nameFR || activity.label });
       }
     }
     const summary = { requestedBookings: actions.filter(a => a.type === 'BOOKING_REQUESTED').length,

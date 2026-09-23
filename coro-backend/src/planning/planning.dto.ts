@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class PlanningWindowDto {
   @IsString() start!: string;
@@ -7,9 +7,26 @@ export class PlanningWindowDto {
   @IsOptional() @IsString() @MaxLength(100) search?: string;
   @IsOptional() @IsString() clientId?: string;
   @IsOptional() @IsString() buildingId?: string;
+  @IsOptional() @IsString() projectId?: string;
+  @IsOptional() @IsString() activityTypeId?: string;
   @IsOptional() @IsIn(['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE']) bookingStatus?: string;
   @IsOptional() @IsIn(['true', 'false']) needsAction?: string;
   @IsOptional() @IsString() displayTimeZone?: string;
+}
+
+export class PlanningContextDto {
+  @IsOptional() @IsString() @MaxLength(100) clientId?: string;
+  @IsOptional() @IsString() @MaxLength(100) buildingId?: string;
+}
+
+export class CreatePlanningActivityDto {
+  @IsString() @MaxLength(100) projectId!: string;
+  @IsString() @MaxLength(100) activityTypeId!: string;
+  @IsOptional() @IsString() @MaxLength(160) customLabel?: string;
+  @IsOptional() @IsString() @MaxLength(2000) notes?: string;
+  @IsOptional() @IsIn(['presentiel', 'teams', 'hybride']) mode?: string;
+  @IsOptional() @IsBoolean() clientVisible?: boolean;
+  @IsOptional() @IsBoolean() clientBookable?: boolean;
 }
 
 export class PlanningActionsDto extends PlanningWindowDto {
