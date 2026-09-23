@@ -76,6 +76,29 @@ describe('PlanningActionsService', () => {
     await expect(service.planExisting('activity', dto, { ...actor, role: 'OPERATOR' })).rejects.toThrow(ForbiddenException);
   });
 
+  it('reassigns a reported Booking without changing its effective slot or Activity identity', async () => {
+    const { service, tx, scheduling } = setup();
+    const requestedDate = new Date('2026-09-23T17:45:00.000Z');
+    const reportedDate = new Date('2026-09-24T17:45:00.000Z');
+    tx.booking.findFirst.mockResolvedValue({ id: 'booking', projectId: 'project', organizationId: 'org-a',
+      requestedDate, reportedDate, duration: 90, status: 'REPORTEE', activity,
+      project: activity.project, assignments: [{ id: 'old-lead', userId: 'lead', role: 'LEAD', status: 'PENDING' }] });
+    tx.bookingAssignment.create.mockResolvedValue({ id: 'new-lead', bookingId: 'booking', userId: 'replacement', role: 'LEAD' });
+    tx.user.findMany.mockResolvedValue([{ id: 'replacement', firstName: 'Steve', lastName: 'Parker' }]);
+    scheduling.analyzeUsers.mockResolvedValue(new Map([['replacement', {
+      status: 'AVAILABLE', conflicts: [], warnings: [], sourcesChecked: [],
+    }]]));
+    await service.reassign('booking', { leadUserId: 'replacement', supportUserIds: [] }, actor);
+    expect(scheduling.analyzeUsers).toHaveBeenCalledWith(expect.objectContaining({
+      startUtc: reportedDate, endUtc: new Date('2026-09-24T19:15:00.000Z'), excludeBookingId: 'booking' }), tx);
+    expect(tx.booking.update).toHaveBeenCalledWith({ where: { id: 'booking' },
+      data: { assignedUserId: 'replacement', status: 'REASSIGNEE' } });
+    expect(tx.booking.update.mock.calls[0][0].data).not.toHaveProperty('requestedDate');
+    expect(tx.booking.update.mock.calls[0][0].data).not.toHaveProperty('reportedDate');
+    expect(tx.projectActivity.create).not.toHaveBeenCalled();
+    expect(tx.booking.create).not.toHaveBeenCalled();
+  });
+
   it('links replaced LEAD and retained SUPPORT without crossing the Booking', async () => {
     const { service, tx } = setup();
     tx.booking.findFirst.mockResolvedValue({ id: 'booking', projectId: 'project', organizationId: 'org-a',

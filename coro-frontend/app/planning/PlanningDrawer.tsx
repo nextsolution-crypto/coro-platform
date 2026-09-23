@@ -91,7 +91,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
 
   const editable = mode === 'EDIT_SLOT' || mode === 'RESCHEDULE' || mode === 'REASSIGN';
   useEffect(() => {
-    if (!editable) return;
+    if (!editable) { setPreviewLoading(false); return; }
     setCandidates([]); setConfirmUnknown(false); setPreviewError('');
     if (!event?.buildingId || !event.sourceTimeZone) {
       setPreviewLoading(false); setPreviewError('Données du bâtiment indisponibles pour vérifier les disponibilités.'); return;
@@ -112,7 +112,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
         if (!cancelled) setPreviewError(serverMessage(cause, 'Impossible de vérifier les disponibilités.'));
       } finally { if (!cancelled) setPreviewLoading(false); }
     }, 300);
-    return () => { cancelled = true; window.clearTimeout(timer); };
+    return () => { cancelled = true; window.clearTimeout(timer); setPreviewLoading(false); };
   }, [event, mode, editable, date, time, durationMinutes]);
 
   if (!event) return null;
@@ -243,7 +243,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
           <button type="button" className={styles.dangerButton} disabled={saving} onClick={cancelSchedule}>{saving ? 'Annulation…' : 'Annuler la planification'}</button></div>
       </section>}
 
-      {previewLoading && <p className={styles.notice} role="status">Vérification des disponibilités…</p>}
+      {editable && previewLoading && <p className={styles.notice} role="status">Vérification des disponibilités…</p>}
       {saving && <p className={styles.notice} role="status">Enregistrement…</p>}
       {refreshing && <p className={styles.notice} role="status">Actualisation…</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}

@@ -321,3 +321,13 @@ test('team preview retains AVAILABLE UNKNOWN and BLOCKED confidentiality contrac
   const preview = fs.readFileSync(path.join(__dirname, 'SchedulingPreview.tsx'), 'utf8');
   assert.doesNotMatch(preview, /privateNote|absenceType|SICK|PERSONAL/);
 });
+
+test('VIEW stops mutation preview loading and refreshed projections never retain a stale Booking', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+  assert.ok(drawer.includes('if (!editable) { setPreviewLoading(false); return; }'));
+  assert.ok(drawer.includes('window.clearTimeout(timer); setPreviewLoading(false)'));
+  assert.ok(drawer.includes('editable && previewLoading'));
+  assert.equal(page.includes('?? current : null'), false);
+  assert.ok(page.includes('?? null : null'));
+});

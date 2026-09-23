@@ -107,6 +107,21 @@ describe('PlanningService', () => {
       activityTypeId: 'type-a', projectId: 'project-a', buildingId: 'building-a', clientId: 'client-a' });
   });
 
+  it('keeps the reported slot and replacement active LEAD after reassignment', async () => {
+    const { service, prisma } = setup();
+    prisma.booking.findMany.mockResolvedValue([{ ...booking('REASSIGNEE', 'PENDING'),
+      requestedDate: new Date('2026-09-23T17:45:00.000Z'),
+      reportedDate: new Date('2026-09-24T17:45:00.000Z'), duration: 90,
+      assignments: [{ id: 'new-lead', userId: 'u1', role: 'LEAD', status: 'PENDING' }],
+      activity: { id: 'activity-a', type: 'inspection', label: 'Inspection', customLabel: null,
+        activityTypeId: 'type-a', activityType: null } }]);
+    const result = await service.team({ start, end: '2026-09-26T00:00:00Z' }, actor);
+    expect(result.events[0]).toMatchObject({ bookingId: 'b-REASSIGNEE', activityId: 'activity-a',
+      bookingStatus: 'REASSIGNEE', startUtc: new Date('2026-09-24T17:45:00.000Z'),
+      endUtc: new Date('2026-09-24T19:15:00.000Z'), userIds: ['u1'],
+      assignments: [{ userId: 'u1', role: 'LEAD', status: 'PENDING' }] });
+  });
+
   it('projects work intervals and generic absences, and only legacy activities without a booking', async () => {
     const { service, prisma } = setup();
     prisma.userWorkSchedule.findMany.mockResolvedValue([{ id: 'ws', userId: 'u2', verifiedAt: new Date(),

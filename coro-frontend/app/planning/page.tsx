@@ -133,7 +133,7 @@ export default function TeamPlannerPage() {
       ...(bookingStatus ? { bookingStatus } : {}), ...(needsAction ? { needsAction: 'true' } : {}),
     } }).then(response => { if (!cancelled) {
       setData(response.data);
-      setSelected(current => current ? response.data.events.find(item => item.id === current.id) ?? current : null);
+      setSelected(current => current ? response.data.events.find(item => item.id === current.id) ?? null : null);
     } }).catch(cause => {
       if (cancelled) return;
       setData(null);

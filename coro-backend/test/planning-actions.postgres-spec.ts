@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { createBookingFixture } from './booking-postgres-fixture';
 import { SchedulingService } from '../src/scheduling/scheduling.service';
 import { PlanningActionsService } from '../src/planning/planning-actions.service';
+import { PlanningService } from '../src/planning/planning.service';
 import { BookingsService } from '../src/bookings/bookings.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
@@ -111,6 +112,46 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     expect(attempts.filter(item => item.status === 'rejected')).toHaveLength(1);
     expect(await prisma.bookingAssignment.count({ where: { bookingId: booking.id, role: 'LEAD',
       status: { in: ['PENDING', 'ACCEPTED'] } } })).toBe(1);
+  });
+
+  it('preserves the reported slot and projects the replacement LEAD after reassignment', async () => {
+    const source = await activity();
+    const planned = await service.planExisting(source.id, { ...input(),
+      startUtc: '2026-09-23T17:45:00.000Z', durationMinutes: 90, supportUserIds: [] }, actor());
+    const original = await prisma.booking.findUniqueOrThrow({ where: { id: planned.bookingId } });
+    const oldLead = await prisma.bookingAssignment.findFirstOrThrow({ where: {
+      bookingId: planned.bookingId, role: 'LEAD', status: 'PENDING', userId: fixture.owner.id,
+    } });
+    await service.updateSlot(planned.bookingId, { startUtc: '2026-09-24T17:45:00.000Z',
+      durationMinutes: 90, reschedule: true, confirmUnknown: true }, actor());
+    await service.reassign(planned.bookingId, { leadUserId: fixture.target.id,
+      supportUserIds: [], confirmUnknown: true }, actor());
+
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: planned.bookingId } });
+    const historical = await prisma.bookingAssignment.findUniqueOrThrow({ where: { id: oldLead.id } });
+    const replacement = await prisma.bookingAssignment.findUniqueOrThrow({ where: {
+      id: historical.replacedByAssignmentId!,
+    } });
+    expect(booking).toMatchObject({ id: original.id, activityId: source.id,
+      requestedDate: new Date('2026-09-23T17:45:00.000Z'),
+      reportedDate: new Date('2026-09-24T17:45:00.000Z'), duration: 90,
+      status: 'REASSIGNEE', assignedUserId: fixture.target.id });
+    expect(await prisma.booking.count({ where: { activityId: source.id,
+      status: { in: ['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'] } } })).toBe(1);
+    expect(historical).toMatchObject({ status: 'REPLACED', replacedByAssignmentId: replacement.id });
+    expect(replacement).toMatchObject({ bookingId: planned.bookingId, userId: fixture.target.id,
+      role: 'LEAD', status: 'PENDING' });
+
+    const projection = new PlanningService(prisma as any, new SchedulingService(prisma as any), {
+      getCapacityPlanning: jest.fn().mockResolvedValue([]),
+    } as any);
+    const snapshot = await projection.team({ start: '2026-09-23T04:00:00.000Z',
+      end: '2026-09-26T04:00:00.000Z' }, actor());
+    expect(snapshot.events.find((event: any) => event.bookingId === planned.bookingId)).toMatchObject({
+      activityId: source.id, startUtc: new Date('2026-09-24T17:45:00.000Z'),
+      endUtc: new Date('2026-09-24T19:15:00.000Z'), bookingStatus: 'REASSIGNEE',
+      userIds: [fixture.target.id], assignments: [{ userId: fixture.target.id, role: 'LEAD', status: 'PENDING' }],
+    });
   });
 
   it('links replaced LEAD history and rejects a cross-tenant Activity', async () => {
