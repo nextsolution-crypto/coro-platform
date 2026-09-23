@@ -417,9 +417,14 @@ test('VIEW and repeated mutation mode switches invalidate old preview cycles', (
 test('backlog distinguishes replanning context and keeps destructive actions explicit', () => {
   const center = fs.readFileSync(path.join(__dirname, 'PlanningActionCenter.tsx'), 'utf8');
   const drawer = fs.readFileSync(path.join(__dirname, 'ActivityPlanningDrawer.tsx'), 'utf8');
+  const planningDrawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  const preview = fs.readFileSync(path.join(__dirname, 'SchedulingPreview.tsx'), 'utf8');
   const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
   for (const label of ['À replanifier', 'Dernier créneau', 'Dernier LEAD', 'Replanifier',
-    'Supprimer définitivement cette activité', 'Annuler cette activité', 'Ne plus planifier']) {
+    'Supprimer cette activité ?', 'Supprimer définitivement', 'Ne plus planifier cette activité ?', 'Ne plus planifier']) {
+    assert.ok(center.includes(label));
+  }
+  for (const label of ['actionTitle', 'actionHistory', 'activityTypeName', 'Toutes les activités sont planifiées ou traitées']) {
     assert.ok(center.includes(label));
   }
   assert.ok(drawer.includes('action?.lastEffectiveStartUtc'));
@@ -429,4 +434,15 @@ test('backlog distinguishes replanning context and keeps destructive actions exp
   assert.ok(page.includes("api.delete(`/planning/activities/${item.activityId}`)"));
   assert.ok(page.includes("api.post(`/planning/activities/${item.activityId}/cancel`)"));
   assert.doesNotMatch(center, /window\.confirm/);
+  assert.ok(drawer.includes('Ajouter à « À planifier »'));
+  assert.ok(drawer.includes('Planifier maintenant'));
+  assert.ok(drawer.includes('Vérifier les disponibilités'));
+  assert.doesNotMatch(drawer, /comportement 3A|Créer sans créneau|Créer et planifier/);
+  assert.ok(preview.includes('Disponibilité de l’équipe'));
+  assert.doesNotMatch(preview, /<h3>SchedulingPreview<\/h3>/);
+  assert.ok(planningDrawer.includes("event.source === 'USER_UNAVAILABILITY'"));
+  assert.ok(planningDrawer.includes('Retirer cette activité du calendrier ?'));
+  assert.ok(planningDrawer.includes('Retirer du calendrier'));
+  assert.doesNotMatch(planningDrawer, /<dt>Booking<\/dt>/);
+  assert.doesNotMatch(page, /<label>Booking /);
 });

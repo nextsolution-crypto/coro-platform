@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SchedulingService } from '../scheduling/scheduling.service';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { CreateAndPlanActivityDto, PlanExistingActivityDto, ReassignPlanningTeamDto, UpdatePlanningSlotDto } from './planning.dto';
+import { INTRINSIC_ACTIVITY_AUDIT_ACTIONS } from './planning-activity-history';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const ACTIVE_ASSIGNMENTS: Array<'PENDING' | 'ACCEPTED'> = ['PENDING', 'ACCEPTED'];
@@ -119,14 +120,15 @@ export class PlanningActionsService {
           exerciseReport: { select: { id: true } } } });
       if (!activity) throw new NotFoundException('Activite introuvable');
       const audit = await tx.auditLog.findFirst({ where: { organizationId: actor.organizationId,
-        entityType: 'ProjectActivity', entityId: activity.id }, select: { id: true } });
+        entityType: 'ProjectActivity', entityId: activity.id,
+        action: { notIn: [...INTRINSIC_ACTIVITY_AUDIT_ACTIONS] } }, select: { id: true } });
       if (activity.bookings.length || activity.exerciseReport || audit) {
         throw new BadRequestException("Cette activite possede un historique et ne peut pas etre supprimee physiquement.");
       }
+      await tx.auditLog.deleteMany({ where: { organizationId: actor.organizationId,
+        entityType: 'ProjectActivity', entityId: activity.id,
+        action: { in: [...INTRINSIC_ACTIVITY_AUDIT_ACTIONS] } } });
       await tx.projectActivity.delete({ where: { id: activity.id } });
-      await tx.auditLog.create({ data: { action: 'PLANNING_ACTIVITY_DELETED', entityType: 'ProjectActivity',
-        entityId: activity.id, projectId: activity.projectId, description: 'Activite retiree definitivement du backlog.',
-        metadata: { previousStatus: 'a_faire' }, userId: actor.userId, organizationId: actor.organizationId } });
       return { activityId: activity.id, deleted: true };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }

@@ -202,7 +202,7 @@ export default function TeamPlannerPage() {
     <div className={styles.page}>
       <header className={styles.pageHeader}>
         <div><p className={styles.eyebrow}>Planification interne</p><h1>Planification d’équipe</h1>
-          <p>Bookings, horaires et disponibilité de l’équipe en un coup d’œil.</p></div>
+          <p>Activités, horaires et disponibilités de l’équipe en un coup d’œil.</p></div>
         <div className={styles.headerMeta}>{context && <button className={styles.primaryButton} type="button" onClick={() => setActivityDrawer({ mode: 'CREATE' })}>Créer une activité</button>}
           <span>Fuseau d’affichage : <strong>{displayedZone}</strong></span>
           {data && <span>Mis à jour à {formatClock(data.asOf, displayedZone)}</span>}</div>
@@ -247,10 +247,10 @@ export default function TeamPlannerPage() {
             <option value="">Tous</option>{(context?.projects ?? []).filter(project => (!clientId || project.clientId === clientId) && (!buildingId || project.buildingId === buildingId)).map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
           <label>Type d’activité <select value={activityTypeId} onChange={change => setActivityTypeId(change.target.value)}>
             <option value="">Tous</option>{(context?.activityTypes ?? []).map(type => <option key={type.id} value={type.id}>{type.nameFR}</option>)}</select></label>
-          <label>Booking <select value={bookingStatus} onChange={change => setBookingStatus(change.target.value)}>
+          <label>État de planification <select value={bookingStatus} onChange={change => setBookingStatus(change.target.value)}>
             <option value="">Tous les statuts actifs</option><option value="DEMANDEE">Demandée</option>
             <option value="CONFIRMEE">Confirmée</option><option value="REPORTEE">Reportée</option>
-            <option value="REASSIGNEE">Réassignée</option></select></label>
+            <option value="REASSIGNEE">Réaffectée</option></select></label>
           <label className={styles.checkbox}><input type="checkbox" checked={needsAction}
             onChange={change => setNeedsAction(change.target.checked)} />Nécessite une action</label>
         </div>

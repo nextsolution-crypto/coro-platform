@@ -22,7 +22,7 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
       update: jest.fn() },
     bookingAssignment: { createMany: jest.fn(), updateMany: jest.fn(),
       create: jest.fn(), update: jest.fn() },
-    auditLog: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null) },
+    auditLog: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null), deleteMany: jest.fn() },
   };
   const prisma = { $transaction: jest.fn(async (callback: any) => callback(tx)) };
   const result = { status, conflicts: status === 'BLOCKED' ? [{ severity: 'BLOCKED' }] : [], warnings: [], sourcesChecked: [] };
@@ -128,12 +128,16 @@ describe('PlanningActionsService', () => {
     expect(tx.auditLog.create.mock.calls[0][0].data.action).toBe('SCHEDULE_CANCELLED');
   });
 
-  it('deletes a dependency-free Activity and records the actor', async () => {
+  it('deletes a dependency-free Activity with only its intrinsic creation audit', async () => {
     const { service, tx } = setup();
     tx.projectActivity.findFirst.mockResolvedValue({ id: 'activity', projectId: 'project', bookings: [], exerciseReport: null });
     await expect(service.deleteUnplannedActivity('activity', actor)).resolves.toEqual({ activityId: 'activity', deleted: true });
+    expect(tx.auditLog.findFirst.mock.calls[0][0].where.action).toEqual({ notIn: ['PLANNING_ACTIVITY_CREATED'] });
+    expect(tx.auditLog.deleteMany).toHaveBeenCalledWith({ where: { organizationId: 'org-a',
+      entityType: 'ProjectActivity', entityId: 'activity', action: { in: ['PLANNING_ACTIVITY_CREATED'] } } });
     expect(tx.projectActivity.delete).toHaveBeenCalledWith({ where: { id: 'activity' } });
-    expect(tx.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_DELETED', userId: 'admin' });
+    expect(tx.auditLog.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(tx.projectActivity.delete.mock.invocationCallOrder[0]);
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 
   it('refuses physical deletion with history and cancels the Activity without changing old Booking data', async () => {
@@ -150,6 +154,17 @@ describe('PlanningActionsService', () => {
     expect(tx.bookingAssignment.updateMany).not.toHaveBeenCalled();
     expect(tx.auditLog.create.mock.calls.at(-1)[0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_CANCELLED',
       metadata: { previousStatus: 'a_faire', finalStatus: 'annule' } });
+  });
+
+  it('refuses physical deletion when an operational audit exists', async () => {
+    const { service, tx } = setup();
+    tx.projectActivity.findFirst.mockResolvedValue({
+      id: 'activity', projectId: 'project', bookings: [], exerciseReport: null,
+    });
+    tx.auditLog.findFirst.mockResolvedValue({ id: 'planned-audit' });
+    await expect(service.deleteUnplannedActivity('activity', actor)).rejects.toThrow('historique');
+    expect(tx.auditLog.deleteMany).not.toHaveBeenCalled();
+    expect(tx.projectActivity.delete).not.toHaveBeenCalled();
   });
 
   it('enforces tenant and manager permissions for backlog removal', async () => {

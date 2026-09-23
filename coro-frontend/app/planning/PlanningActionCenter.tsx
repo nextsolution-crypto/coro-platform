@@ -48,13 +48,17 @@ export default function PlanningActionCenter({ summary, activeType, items, total
         <button type="button" onClick={onClose} aria-label="Fermer le centre d’actions">×</button></div>
       {loading && <p role="status">Chargement des actions…</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
-      {!loading && !error && (items.length ? <ul>{items.map(item => <li key={item.id}>
-        <div><strong>{item.label}</strong>
-          <span>{[item.clientName, item.buildingName, item.projectName].filter(Boolean).join(' · ')}</span>
+      {!loading && !error && (items.length ? <ul>{items.map(item => <li key={item.id} className={item.type === 'UNPLANNED_ACTIVITY' ? styles.backlogCard : undefined}>
+        <div className={styles.actionContent}><div className={styles.actionTitle}><strong>{item.label}</strong>
+          {item.type === 'UNPLANNED_ACTIVITY' && <em>{item.hasBookingHistory ? 'À replanifier' : 'À planifier'}</em>}</div>
+          {item.activityTypeName && item.activityTypeName !== item.label && <span>{item.activityTypeName}</span>}
+          <span>{[item.clientName, item.buildingName].filter(Boolean).join(' · ')}</span>
+          {item.projectName && <span>{item.projectName}</span>}
           {item.userName && <span>Conseiller : {item.userName}</span>}
-          {item.type === 'UNPLANNED_ACTIVITY' && <span>{item.hasBookingHistory ? 'À replanifier' : 'À planifier'}</span>}
-          {item.lastEffectiveStartUtc && <span>Dernier créneau : {formatDay(dateKey(new Date(item.lastEffectiveStartUtc), timeZone))} · {formatClock(item.lastEffectiveStartUtc, timeZone)}</span>}
-          {item.lastLead && <span>Dernier LEAD : {item.lastLead.displayName}</span>}
+          {(item.lastEffectiveStartUtc || item.lastLead) && <div className={styles.actionHistory}>
+            {item.lastEffectiveStartUtc && <span><small>Dernier créneau</small>{formatDay(dateKey(new Date(item.lastEffectiveStartUtc), timeZone))} · {formatClock(item.lastEffectiveStartUtc, timeZone)}</span>}
+            {item.lastLead && <span><small>Dernier LEAD</small>{item.lastLead.displayName}</span>}
+          </div>}
           {item.startUtc && item.type !== 'UNPLANNED_ACTIVITY' && <span>{formatDay(dateKey(new Date(item.startUtc), timeZone))} · {formatClock(item.startUtc, timeZone)}</span>}
         </div><div className={styles.actionButtons}>
           {item.type === 'UNPLANNED_ACTIVITY' ? canManage ? <button type="button" className={styles.primaryButton}
@@ -68,15 +72,16 @@ export default function PlanningActionCenter({ summary, activeType, items, total
           {item.type === 'UNPLANNED_ACTIVITY' && canManage && <button type="button" className={styles.inlineButton}
             onClick={() => setPendingRemoval(item)}>{item.removalAction === 'DELETE' ? 'Supprimer' : 'Ne plus planifier'}</button>}
         </div>
-      </li>)}</ul> : <p>{emptyLabels[activeType] ?? 'Aucune action de ce type.'}</p>)}
+      </li>)}</ul> : <p className={styles.compactEmpty}>{activeType === 'UNPLANNED_ACTIVITY' ? '✓ Toutes les activités sont planifiées ou traitées.' : emptyLabels[activeType] ?? 'Aucune action de ce type.'}</p>)}
       {pendingRemoval && <section className={styles.confirmPanel} role="alertdialog" aria-label="Confirmer le retrait de l’activité">
+        <h3>{pendingRemoval.removalAction === 'DELETE' ? 'Supprimer cette activité ?' : 'Ne plus planifier cette activité ?'}</h3>
         <p>{pendingRemoval.removalAction === 'DELETE'
-          ? 'Supprimer définitivement cette activité ? Cette action supprimera l’activité de la liste des activités à planifier.'
-          : 'Annuler cette activité ? Elle ne sera plus à planifier. Son historique de planification sera conservé.'}</p>
+          ? 'Cette activité n’a jamais été planifiée. Elle sera supprimée définitivement.'
+          : 'Cette activité ne sera plus à planifier. Son historique de planification sera conservé.'}</p>
         <div className={styles.formActions}><button type="button" disabled={removing} onClick={() => setPendingRemoval(null)}>Retour</button>
           <button type="button" className={styles.dangerButton} disabled={removing} onClick={async () => {
             setRemoving(true); try { await onRemove(pendingRemoval); setPendingRemoval(null); } finally { setRemoving(false); }
-          }}>{removing ? 'Traitement…' : pendingRemoval.removalAction === 'DELETE' ? 'Supprimer définitivement' : 'Annuler l’activité'}</button></div>
+          }}>{removing ? 'Traitement…' : pendingRemoval.removalAction === 'DELETE' ? 'Supprimer définitivement' : 'Ne plus planifier'}</button></div>
       </section>}
       {total > 25 && <div className={styles.actionPager}>
         <button type="button" disabled={page === 1} onClick={() => onPage(page - 1)}>Précédent</button>

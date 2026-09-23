@@ -211,16 +211,30 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     expect(await prisma.projectActivity.count({ where: { id: source.id } })).toBe(1);
   });
 
-  it('physically deletes a new dependency-free Activity without affecting its tenant sibling', async () => {
-    const source = await activity();
+  it('physically deletes an Activity created by the Planner with only its intrinsic audit', async () => {
+    const activityType = await prisma.activityType.create({ data: {
+      organizationId: fixture.org.id, code: `custom-gate-${randomUUID()}`, nameFR: 'Gate Planner',
+      defaultDurationMinutes: 60, clientBookableDefault: false,
+    } });
+    const planning = new PlanningService(prisma as any, new SchedulingService(prisma as any), {
+      getCapacityPlanning: jest.fn().mockResolvedValue([]),
+    } as any);
+    const source = await planning.createUnplannedActivity({
+      projectId: fixture.project.id, activityTypeId: activityType.id,
+    }, actor());
     const sibling = await activity();
     expect(await prisma.booking.count({ where: { activityId: source.id } })).toBe(0);
     expect(await prisma.exerciseReport.count({ where: { activityId: source.id } })).toBe(0);
-    expect(await prisma.auditLog.count({ where: { entityType: 'ProjectActivity', entityId: source.id } })).toBe(0);
+    expect(await prisma.auditLog.count({ where: { entityType: 'ProjectActivity', entityId: source.id,
+      action: 'PLANNING_ACTIVITY_CREATED' } })).toBe(1);
+    expect((await backlog()).items.find((item: any) => item.activityId === source.id)).toMatchObject({
+      removalAction: 'DELETE', hasBookingHistory: false,
+    });
 
     await service.deleteUnplannedActivity(source.id, actor());
 
     expect(await prisma.projectActivity.count({ where: { id: source.id } })).toBe(0);
+    expect(await prisma.auditLog.count({ where: { entityType: 'ProjectActivity', entityId: source.id } })).toBe(0);
     expect(await prisma.projectActivity.count({ where: { id: sibling.id, organizationId: fixture.org.id } })).toBe(1);
     expect((await backlog()).items.some((item: any) => item.activityId === source.id)).toBe(false);
   });

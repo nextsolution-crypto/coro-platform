@@ -8,6 +8,7 @@ import { parseActivityDurationHours } from '../mandate/capacity-duration';
 import { scheduleRanges } from '../work-schedules/work-schedule-time';
 import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningTeamPreviewDto, PlanningWindowDto } from './planning.dto';
 import { projectAccessWhere } from '../auth/project-access';
+import { isOperationalActivityAudit } from './planning-activity-history';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const DAY = 86_400_000;
@@ -273,7 +274,9 @@ export class PlanningService {
     const activityAuditIds = new Set((await this.prisma.auditLog.findMany({ where: {
       organizationId: actor.organizationId, entityType: 'ProjectActivity',
       entityId: { in: activities.map(activity => activity.id) },
-    }, select: { entityId: true }, distinct: ['entityId'] })).map(row => row.entityId));
+    }, select: { entityId: true, action: true } }))
+      .filter(row => isOperationalActivityAudit(row.action))
+      .map(row => row.entityId));
     const workIntervals: Array<{ userId: string; startUtc: Date; endUtc: Date; verified: boolean }> = [];
     const configured = new Set<string>();
     for (const schedule of schedules) {

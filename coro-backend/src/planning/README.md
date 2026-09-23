@@ -30,6 +30,8 @@ Admins and super administrators see active staff candidates from their organizat
 
 `PlanningActionsService` owns the composed writes. `PlanningService` remains the read projection. Planning an existing Activity locks its `ProjectActivity` row, verifies that no open Booking exists, locks candidate Users in deterministic order, reruns Scheduling through the transaction, then creates the Booking, PENDING assignments, Activity schedule and audit together.
 
+Backlog removal is derived from persisted relations rather than the displayed status. An Activity with no Booking, ExerciseReport, or operational audit can be physically deleted even when its only audit is the intrinsic `PLANNING_ACTIVITY_CREATED` row. That intrinsic row is deleted with the Activity in one transaction. Any Booking, ExerciseReport, or other Activity audit preserves the Activity and exposes business cancellation instead.
+
 The admin-created assignment policy follows `BookingAssignmentsService.add`: LEAD and SUPPORT start as `PENDING`. `Booking.assignedUserId` mirrors the selected LEAD for legacy readers; `BookingAssignment` is the team source of truth. The required legacy `clientUserId` is populated from an active ClientUser scoped to the Project client and Building. Planning is rejected when no such contact exists.
 
 `UNKNOWN` requires `confirmUnknown: true`; `BLOCKED` is always rejected with a generic adviser message. No Scheduling conflict details are returned by mutation errors. Creating and planning uses the same transaction, so a failure leaves neither Activity nor Booking. Slot edits preserve the Booking ID. A report preserves `requestedDate`, stores the new effective instant in `reportedDate`, and sets `REPORTEE`.

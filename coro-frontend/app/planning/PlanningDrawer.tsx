@@ -28,6 +28,14 @@ function serverMessage(cause: unknown, fallback: string) {
   return typeof value === 'string' ? value : fallback;
 }
 
+const bookingStatusLabel: Record<string, string> = {
+  DEMANDEE: 'Demandée', CONFIRMEE: 'Confirmée', REPORTEE: 'Reportée',
+  REASSIGNEE: 'Réaffectée', REFUSEE: 'Refusée', COMPLETEE: 'Terminée', ANNULEE: 'Annulée',
+};
+const assignmentStatusLabel: Record<string, string> = {
+  PENDING: 'En attente', ACCEPTED: 'Acceptée', REFUSED: 'Refusée', REMOVED: 'Retirée', REPLACED: 'Remplacée',
+};
+
 export default function PlanningDrawer({ event, users, displayTimeZone, canMutate, initialMode = 'VIEW', onClose, onMutated }: {
   event: PlannerEvent | null; users: PlannerUser[]; displayTimeZone: string; canMutate: boolean;
   initialMode?: PlanningDrawerMode; onClose: () => void; onMutated?: () => void;
@@ -177,12 +185,13 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
     finally { setSaving(false); }
   };
 
+  const isUnavailability = event.source === 'USER_UNAVAILABILITY';
   const titles: Record<PlanningDrawerMode, string> = {
-    VIEW: eventLabel(event), EDIT_SLOT: 'Modifier le créneau', RESCHEDULE: 'Reporter la planification',
+    VIEW: isUnavailability ? 'Indisponibilité' : eventLabel(event), EDIT_SLOT: 'Modifier le créneau', RESCHEDULE: 'Reporter la planification',
     REASSIGN: 'Réaffecter l’équipe', CANCEL_SCHEDULE: 'Annuler la planification',
   };
   const descriptions: Record<PlanningDrawerMode, string> = {
-    VIEW: 'Détail de la planification', EDIT_SLOT: 'Ajustez le créneau en conservant la même activité.',
+    VIEW: isUnavailability ? 'Période non disponible' : 'Détail de la planification', EDIT_SLOT: 'Ajustez le créneau en conservant la même activité.',
     RESCHEDULE: 'Choisissez un nouveau créneau. L’équipe actuelle est conservée et revérifiée.',
     REASSIGN: 'Choisissez un nouveau LEAD et, au besoin, des SUPPORT.',
     CANCEL_SCHEDULE: 'Le créneau et les affectations seront annulés. L’activité restera à réaliser et retournera dans Activités à planifier.',
@@ -194,22 +203,36 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
         <h2 ref={titleRef} tabIndex={-1} id="planner-drawer-title">{titles[mode]}</h2></div>
         <button type="button" className={styles.closeButton} aria-label="Fermer le détail" onClick={requestClose}>×</button></div>
 
-      {mode === 'VIEW' && <>
+      {mode === 'VIEW' && isUnavailability && <section className={styles.drawerSection}>
+        <h3>Indisponibilité</h3>
         <dl className={styles.details}>
+          <dt>Conseiller</dt><dd>{event.userIds.map(id => names.get(id)).filter(Boolean).join(', ') || 'Conseiller'}</dd>
+          <dt>Date et heure</dt><dd>{instant(event.startUtc, displayTimeZone)}</dd>
+          <dt>Fin</dt><dd>{instant(event.endUtc, displayTimeZone)}</dd>
+          <dt>Fuseau horaire</dt><dd>{event.sourceTimeZone}</dd>
+        </dl>
+      </section>}
+
+      {mode === 'VIEW' && !isUnavailability && <>
+        <section className={styles.drawerSection}><h3>Activité</h3><dl className={styles.details}>
           <dt>Type</dt><dd>{event.activityType?.nameFR ?? eventLabel(event)}</dd>
           <dt>Titre</dt><dd>{eventLabel(event)}</dd>
+        </dl></section>
+        <section className={styles.drawerSection}><h3>Contexte</h3><dl className={styles.details}>
           <dt>Client</dt><dd>{event.clientName ?? '—'}</dd>
           <dt>Bâtiment</dt><dd>{event.buildingName ?? '—'}</dd>
           <dt>Mandat</dt><dd>{event.projectName ?? '—'}</dd>
           <dt>Responsable du mandat</dt><dd>{event.ownerName ?? '—'}</dd>
+        </dl></section>
+        <section className={styles.drawerSection}><h3>Planification</h3><dl className={styles.details}>
           <dt>Date et heure</dt><dd>{instant(event.startUtc, displayTimeZone)}</dd>
           <dt>Durée</dt><dd>{initialDuration} minutes</dd>
-          <dt>Fuseau</dt><dd>{event.sourceTimeZone}</dd>
-          <dt>Booking</dt><dd>{eventStatus(event)}{event.bookingStatus ? ` · ${event.bookingStatus}` : ''}</dd>
-        </dl>
-        {event.assignments?.length ? <section className={styles.drawerSection}><h3>Équipe affectée</h3><ul>
+          <dt>Fuseau horaire</dt><dd>{event.sourceTimeZone}</dd>
+          <dt>État</dt><dd>{event.bookingStatus ? bookingStatusLabel[event.bookingStatus] ?? eventStatus(event) : eventStatus(event)}</dd>
+        </dl></section>
+        {event.assignments?.length ? <section className={styles.drawerSection}><h3>Équipe</h3><ul>
           {event.assignments.map(assignment => <li key={`${assignment.userId}-${assignment.role}`}>
-            <strong>{assignment.role}</strong> · {names.get(assignment.userId) ?? 'Conseiller'} · {assignment.status === 'PENDING' ? 'En attente' : assignment.status === 'ACCEPTED' ? 'Accepté' : assignment.status}
+            <strong>{assignment.role}</strong> · {names.get(assignment.userId) ?? 'Conseiller'} · {assignmentStatusLabel[assignment.status] ?? 'État inconnu'}
           </li>)}</ul></section> : null}
         {event.warnings.length > 0 && <section className={styles.drawerSection}><h3>À vérifier</h3>
           <ul>{event.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></section>}
@@ -258,9 +281,9 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
       </>}
 
       {mode === 'CANCEL_SCHEDULE' && <section className={styles.destructivePanel}>
-        <h3>Confirmer la déplanification</h3><p>{descriptions.CANCEL_SCHEDULE}</p>
+        <h3>Retirer cette activité du calendrier ?</h3><p>{descriptions.CANCEL_SCHEDULE}</p>
         <div className={styles.formActions}><button type="button" onClick={() => setMode('VIEW')}>Retour</button>
-          <button type="button" className={styles.dangerButton} disabled={saving} onClick={cancelSchedule}>{saving ? 'Annulation…' : 'Annuler la planification'}</button></div>
+          <button type="button" className={styles.dangerButton} disabled={saving} onClick={cancelSchedule}>{saving ? 'Retrait…' : 'Retirer du calendrier'}</button></div>
       </section>}
 
       {editable && previewLoading && <p className={styles.notice} role="status">Vérification des disponibilités…</p>}

@@ -126,12 +126,12 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
   };
 
   const slotFields = <section className={styles.slotSection}><div className={styles.sectionHeading}><h3>Créneau</h3>
-    {building && <span>Fuseau du bâtiment : {building.timeZone}{!building.timeZoneVerified ? ' · à vérifier' : ''}</span>}</div>
+    {building && <span>{building.timeZoneVerified ? `Fuseau du bâtiment : ${building.timeZone}` : `Fuseau horaire du bâtiment à confirmer : ${building.timeZone}`}</span>}</div>
     <div className={styles.slotGrid}><label>Date<input type="date" value={date} onChange={event => setDate(event.target.value)} /></label>
       <label>Heure de début<input type="time" value={time} onChange={event => setTime(event.target.value)} /></label>
       <label>Durée (minutes)<input type="number" min={15} max={1440} step={15} value={durationMinutes ?? ''} onChange={event => setDurationMinutes(event.target.value ? Number(event.target.value) : null)} /></label></div>
     {!slotComplete && <p className={styles.notice}>Définissez un créneau pour vérifier la disponibilité.</p>}
-    <button type="button" className={styles.inlineButton} disabled={!slotComplete || !buildingId} onClick={() => setTeamOpen(true)}>Trouver une équipe</button>
+    {!teamOpen && <button type="button" className={styles.inlineButton} disabled={!slotComplete || !buildingId} onClick={() => setTeamOpen(true)}>Vérifier les disponibilités</button>}
     {previewError && <p className={styles.error} role="alert">{previewError}</p>}
     {teamOpen && <><TeamPicker candidates={candidates} team={team} onChange={setTeam} />
       <SchedulingPreview complete={slotComplete} loading={previewLoading} candidates={candidates} team={team} timeZone={building?.timeZone ?? 'America/Toronto'} />
@@ -160,11 +160,11 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
         <label>Notes<textarea maxLength={2000} rows={4} value={notes} onChange={event => setNotes(event.target.value)} /></label>
         <label className={styles.checkbox}><input type="checkbox" checked={clientVisible} onChange={event => { setClientVisible(event.target.checked); if (!event.target.checked) setClientBookable(false); }} />Visible par le client</label>
         <label className={styles.checkbox}><input type="checkbox" checked={clientBookable} disabled={!clientVisible} onChange={event => setClientBookable(event.target.checked)} />Réservable par le client</label>
-        {slotFields}<p className={styles.formHint}>« Créer l’activité » conserve le comportement 3A : Activity sans créneau confirmé et sans Booking.</p>
+        {slotFields}
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <div className={styles.formActions}><button className={styles.inlineButton} type="submit" disabled={saving || planningSaving}>{saving ? 'Création…' : 'Créer sans créneau'}</button>
+        <div className={styles.formActions}><button className={styles.inlineButton} type="submit" disabled={saving || planningSaving}>{saving ? 'Ajout…' : 'Ajouter à « À planifier »'}</button>
           <button className={styles.primaryButton} type="button" disabled={saving || planningSaving || previewLoading || !team.leadId}
-            onClick={() => plan(true)}>{planningSaving ? 'Planification…' : 'Créer et planifier'}</button></div>
+            onClick={() => plan(true)}>{planningSaving ? 'Planification…' : 'Planifier maintenant'}</button></div>
       </form>}
       {confirmDiscard && <section className={styles.confirmPanel} role="alertdialog" aria-label="Modifications non enregistrees">
         <p>Abandonner les modifications non enregistrÃ©es ?</p><div className={styles.formActions}>

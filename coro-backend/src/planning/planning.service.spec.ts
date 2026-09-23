@@ -179,12 +179,27 @@ describe('PlanningService', () => {
       lastLead: { userId: 'user-a', displayName: 'Steve Parker' }, removalAction: 'CANCEL' });
   });
 
+  it('marks an Activity with an operational audit for business cancellation', async () => {
+    const { service, prisma } = setup();
+    prisma.projectActivity.findMany.mockResolvedValue([{ id: 'audited', scheduledDate: null, duration: '1h',
+      customDuration: null, label: 'Inspection', customLabel: null, type: 'inspection', assigneeEmail: null,
+      sourceMandate: true, clientBookable: false, activityTypeId: 'type-a', activityType: { nameFR: 'Inspection' },
+      projectId: 'project-a', project, exerciseReport: null, bookings: [] }]);
+    prisma.auditLog.findMany.mockResolvedValue([
+      { entityId: 'audited', action: 'PLANNING_ACTIVITY_CREATED' },
+      { entityId: 'audited', action: 'PLANNED' },
+    ]);
+    const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+    expect(result.items[0]).toMatchObject({ activityId: 'audited', removalAction: 'CANCEL' });
+  });
+
   it('keeps a never-planned Activity without invented slot and marks deletion eligibility', async () => {
     const { service, prisma } = setup();
     prisma.projectActivity.findMany.mockResolvedValue([{ id: 'fresh', scheduledDate: null, duration: '1h',
       customDuration: null, label: 'Inspection', customLabel: null, type: 'inspection', assigneeEmail: null,
       sourceMandate: true, clientBookable: false, activityTypeId: 'type-a', activityType: { nameFR: 'Inspection' },
       projectId: 'project-a', project, exerciseReport: null, bookings: [] }]);
+    prisma.auditLog.findMany.mockResolvedValue([{ entityId: 'fresh', action: 'PLANNING_ACTIVITY_CREATED' }]);
     const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
     expect(result.items[0]).toMatchObject({ activityId: 'fresh', hasBookingHistory: false,
       lastEffectiveStartUtc: undefined, removalAction: 'DELETE' });
