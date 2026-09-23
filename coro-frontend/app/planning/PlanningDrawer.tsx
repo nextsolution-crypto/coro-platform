@@ -7,7 +7,7 @@ import api from '@/lib/api';
 import type { PlannerEvent, PlannerUser, TeamCandidate, TeamPreview } from './types';
 import { eventLabel, eventStatus } from './projection';
 import { dateKey, formatClock, localBoundary } from './time';
-import { selectLead, type TeamDraft } from './teamPickerState';
+import type { TeamDraft } from './teamPickerState';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
 import styles from './planning.module.css';
@@ -91,9 +91,14 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
 
   const editable = mode === 'EDIT_SLOT' || mode === 'RESCHEDULE' || mode === 'REASSIGN';
   useEffect(() => {
-    if (!event?.buildingId || !editable || !date || !time || !durationMinutes) return;
+    if (!editable) return;
+    setCandidates([]); setConfirmUnknown(false); setPreviewError('');
+    if (!event?.buildingId || !event.sourceTimeZone) {
+      setPreviewLoading(false); setPreviewError('Données du bâtiment indisponibles pour vérifier les disponibilités.'); return;
+    }
+    if (!date || !time || !durationMinutes) { setPreviewLoading(false); return; }
     let cancelled = false;
-    setPreviewLoading(true); setPreviewError('');
+    setPreviewLoading(true);
     const timer = window.setTimeout(async () => {
       try {
         const minute = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
@@ -103,25 +108,22 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
         });
         if (cancelled) return;
         setCandidates(response.data.candidates);
-        setTeam(current => {
-          let next = current;
-          if (current.leadId) next = selectLead(next, current.leadId, response.data.candidates);
-          return { ...next, supportIds: next.supportIds.filter(id =>
-            response.data.candidates.some(candidate => candidate.userId === id && candidate.availabilityStatus !== 'BLOCKED')) };
-        });
       } catch (cause) {
         if (!cancelled) setPreviewError(serverMessage(cause, 'Impossible de vérifier les disponibilités.'));
       } finally { if (!cancelled) setPreviewLoading(false); }
     }, 300);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [event, editable, date, time, durationMinutes]);
+  }, [event, mode, editable, date, time, durationMinutes]);
 
   if (!event) return null;
   const names = new Map(users.map(user => [user.id, user.name]));
   const selected = candidates.filter(candidate => candidate.userId === team.leadId || team.supportIds.includes(candidate.userId));
+  const selectedIds = new Set(selected.map(candidate => candidate.userId));
+  const previewCoversTeam = Boolean(team.leadId && selectedIds.has(team.leadId) &&
+    team.supportIds.every(userId => selectedIds.has(userId)));
   const hasBlocked = selected.some(candidate => candidate.availabilityStatus === 'BLOCKED');
   const hasUnknown = selected.some(candidate => candidate.availabilityStatus === 'UNKNOWN');
-  const canSave = Boolean(team.leadId && !previewLoading && !previewError && !hasBlocked && (!hasUnknown || confirmUnknown));
+  const canSave = Boolean(previewCoversTeam && !previewLoading && !previewError && !hasBlocked && (!hasUnknown || confirmUnknown));
 
   const save = async () => {
     if (!event.bookingId || !canSave) return;
@@ -215,7 +217,8 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
             onChange={change => setDurationMinutes(Number(change.target.value))} /></label>
         </div></section>
         <p className={styles.notice}>Équipe actuelle conservée : {event.assignments?.map(item => names.get(item.userId)).filter(Boolean).join(', ') || 'Aucune'}</p>
-        <SchedulingPreview complete={Boolean(date && time && durationMinutes)} loading={previewLoading} candidates={candidates} team={team} timeZone={event.sourceTimeZone} />
+        {previewError ? <p className={styles.error} role="alert">{previewError}</p> :
+          <SchedulingPreview complete={Boolean(date && time && durationMinutes)} loading={previewLoading} candidates={candidates} team={team} timeZone={event.sourceTimeZone} />}
         {hasBlocked && <p className={styles.error}>Un membre est non disponible. Choisissez un autre créneau ou réaffectez l’équipe.</p>}
         {hasUnknown && <label className={styles.checkbox}><input type="checkbox" checked={confirmUnknown} onChange={change => setConfirmUnknown(change.target.checked)} />Confirmer les disponibilités à vérifier</label>}
         <div className={styles.formActions}><button type="button" onClick={() => setMode('VIEW')}>Retour</button>
@@ -226,8 +229,9 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
       {mode === 'REASSIGN' && <>
         <p className={styles.notice}>LEAD actuel : {names.get(initialTeam.leadId) ?? 'Aucun'}<br />SUPPORT actuels : {initialTeam.supportIds.map(id => names.get(id)).filter(Boolean).join(', ') || 'Aucun'}</p>
         {previewError && <p className={styles.error} role="alert">{previewError}</p>}
-        <TeamPicker candidates={candidates} team={team} onChange={setTeam} />
-        <SchedulingPreview complete loading={previewLoading} candidates={candidates} team={team} timeZone={event.sourceTimeZone} />
+        {!previewError && <TeamPicker candidates={candidates} team={team} onChange={setTeam} />}
+        {!previewError && <SchedulingPreview complete loading={previewLoading} candidates={candidates} team={team} timeZone={event.sourceTimeZone} />}
+        {hasBlocked && <p className={styles.error}>Le membre sélectionné est non disponible sur ce créneau.</p>}
         {hasUnknown && <label className={styles.checkbox}><input type="checkbox" checked={confirmUnknown} onChange={change => setConfirmUnknown(change.target.checked)} />Confirmer les disponibilités à vérifier</label>}
         <div className={styles.formActions}><button type="button" onClick={() => setMode('VIEW')}>Retour</button>
           <button type="button" className={styles.primaryButton} disabled={!canSave || saving} onClick={save}>{saving ? 'Enregistrement…' : 'Enregistrer la nouvelle équipe'}</button></div>

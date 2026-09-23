@@ -10,7 +10,7 @@ export type PlannerEvent = {
   status: string; label: string; needsAction: boolean; warnings: string[];
   bookingStatus?: string;
   assignments?: Array<{ userId: string; role: string; status: string }>;
-  bookingId?: string; projectId?: string; activityId?: string; buildingId?: string; clientId?: string;
+  bookingId?: string; projectId?: string; activityId?: string; activityTypeId?: string; buildingId?: string; clientId?: string;
   projectName?: string; clientName?: string; buildingName?: string; ownerName?: string;
   activityType?: { code: string; nameFR: string; visualToken: string; iconKey?: string | null };
 };

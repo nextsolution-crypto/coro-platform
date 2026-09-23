@@ -287,3 +287,37 @@ test('3D mobile drawer and destructive confirmation remain keyboard-usable', () 
   assert.match(css, /100dvh/);
   assert.match(css, /\.candidateRow/);
 });
+
+test('mutation preview keeps the current team and rechecks every editable mode with the effective event slot', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  assert.ok(drawer.includes('setDate(dateKey(new Date(event.startUtc), event.sourceTimeZone))'));
+  assert.ok(drawer.includes('setTime(formatClock(event.startUtc, event.sourceTimeZone))'));
+  assert.ok(drawer.includes('[event, mode, editable, date, time, durationMinutes]'));
+  assert.ok(drawer.includes('buildingId: event.buildingId, startUtc, durationMinutes'));
+  assert.equal(drawer.includes('setTeam(current =>'), false);
+});
+
+test('reschedule and reassign invalidate stale previews, expose API errors, and require complete preview coverage', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  assert.ok(drawer.includes("setCandidates([]); setConfirmUnknown(false); setPreviewError('')"));
+  assert.ok(drawer.includes('previewCoversTeam'));
+  assert.ok(drawer.includes('selectedIds.has(team.leadId)'));
+  assert.ok(drawer.includes('team.supportIds.every'));
+  assert.ok(drawer.includes('previewError ? <p className={styles.error} role="alert">'));
+  assert.ok(drawer.includes('!previewError && <TeamPicker'));
+  assert.ok(drawer.includes('hasBlocked && <p className={styles.error}'));
+});
+
+test('team preview retains AVAILABLE UNKNOWN and BLOCKED confidentiality contract', () => {
+  const candidates = [
+    { userId: 'demo', availabilityStatus: 'AVAILABLE' },
+    { userId: 'unknown', availabilityStatus: 'UNKNOWN' },
+    { userId: 'steve', availabilityStatus: 'BLOCKED' },
+  ];
+  const groups = teamPicker.groupCandidates(candidates);
+  assert.deepEqual(groups.AVAILABLE.map(item => item.userId), ['demo']);
+  assert.deepEqual(groups.UNKNOWN.map(item => item.userId), ['unknown']);
+  assert.deepEqual(groups.BLOCKED.map(item => item.userId), ['steve']);
+  const preview = fs.readFileSync(path.join(__dirname, 'SchedulingPreview.tsx'), 'utf8');
+  assert.doesNotMatch(preview, /privateNote|absenceType|SICK|PERSONAL/);
+});
