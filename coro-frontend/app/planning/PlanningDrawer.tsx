@@ -10,7 +10,7 @@ import { dateKey, formatClock, localBoundary } from './time';
 import type { TeamDraft } from './teamPickerState';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
-import { createPreviewCycleGuard, isPreviewCancellation } from './previewCycle';
+import { buildTeamPreviewRequest, createPreviewCycleGuard, isPreviewCancellation } from './previewCycle';
 import styles from './planning.module.css';
 
 export type PlanningDrawerMode = 'VIEW' | 'EDIT_SLOT' | 'RESCHEDULE' | 'REASSIGN' | 'CANCEL_SCHEDULE';
@@ -108,12 +108,21 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
     const cycle = previewCycles.current.begin();
     setPreviewLoading(true);
     const timer = window.setTimeout(async () => {
+      let request;
       try {
-        const minute = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-        const startUtc = localBoundary(date, minute, previewTimeZone).toISOString();
-        const response = await api.post<TeamPreview>('/planning/team-preview', {
-          buildingId: previewBuildingId, startUtc, durationMinutes,
-        }, { signal: cycle.signal });
+        request = buildTeamPreviewRequest({ buildingId: previewBuildingId, timeZone: previewTimeZone,
+          date, time, durationMinutes }, localBoundary);
+      } catch {
+        request = null;
+      }
+      if (!cycle.isCurrent()) return;
+      if (!request) {
+        setPreviewLoading(false);
+        setPreviewError('Le créneau est invalide. Vérifiez la date, l’heure et le fuseau horaire.');
+        return;
+      }
+      try {
+        const response = await api.post<TeamPreview>('/planning/team-preview', request, { signal: cycle.signal });
         if (!cycle.isCurrent()) return;
         setCandidates(response.data.candidates);
       } catch (cause) {

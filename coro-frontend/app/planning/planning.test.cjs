@@ -294,7 +294,7 @@ test('mutation preview keeps the current team and rechecks every editable mode w
   assert.ok(drawer.includes('setDate(dateKey(new Date(event.startUtc), event.sourceTimeZone))'));
   assert.ok(drawer.includes('setTime(formatClock(event.startUtc, event.sourceTimeZone))'));
   assert.ok(drawer.includes('[editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]'));
-  assert.ok(drawer.includes('buildingId: previewBuildingId, startUtc, durationMinutes'));
+  assert.ok(drawer.includes('buildingId: previewBuildingId, timeZone: previewTimeZone'));
   assert.equal(drawer.includes('setTeam(current =>'), false);
 });
 
@@ -337,7 +337,7 @@ test('reassign preview depends on stable slot inputs and does not restart for an
   const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
   assert.ok(drawer.includes('[editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]'));
   assert.equal(drawer.includes('[event, mode, editable, date, time, durationMinutes]'), false);
-  assert.ok(drawer.includes("}, { signal: cycle.signal })"));
+  assert.ok(drawer.includes("api.post<TeamPreview>('/planning/team-preview', request, { signal: cycle.signal })"));
 });
 
 test('an aborted or stale preview cycle cannot publish over the latest cycle', () => {
@@ -357,6 +357,22 @@ test('normal preview cancellation is silent while a real HTTP failure remains re
   assert.equal(previewCycle.isPreviewCancellation({ name: 'AbortError' }), true);
   assert.equal(previewCycle.isPreviewCancellation({ name: 'CanceledError', code: 'ERR_CANCELED' }), true);
   assert.equal(previewCycle.isPreviewCancellation({ response: { status: 500 } }), false);
+});
+
+test('production reassign inputs build the expected request before Axios', () => {
+  const request = previewCycle.buildTeamPreviewRequest({ buildingId: 'tour-premont', timeZone: 'America/Toronto',
+    date: '2026-09-24', time: '13:15', durationMinutes: 90 }, time.localBoundary);
+  assert.deepEqual(request, { buildingId: 'tour-premont', startUtc: '2026-09-24T17:15:00.000Z', durationMinutes: 90 });
+});
+
+test('invalid or throwing pre-fetch inputs cannot become a generic HTTP error', () => {
+  const boundary = () => { throw new RangeError('invalid time zone'); };
+  assert.throws(() => previewCycle.buildTeamPreviewRequest({ buildingId: 'building', timeZone: 'Invalid/Zone',
+    date: '2026-09-24', time: '13:15', durationMinutes: 90 }, boundary), RangeError);
+  assert.equal(previewCycle.buildTeamPreviewRequest({ buildingId: 'building', timeZone: 'America/Toronto',
+    date: 'invalid', time: '13:15', durationMinutes: 90 }, time.localBoundary), null);
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  assert.ok(drawer.includes("setPreviewError('Le créneau est invalide. Vérifiez la date, l’heure et le fuseau horaire.')"));
 });
 
 test('VIEW and repeated mutation mode switches invalidate old preview cycles', () => {
