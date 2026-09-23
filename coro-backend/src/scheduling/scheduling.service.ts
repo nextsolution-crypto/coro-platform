@@ -132,7 +132,7 @@ export class SchedulingService {
     const upperDate = new Date(input.endUtc.getTime() + 2 * 86400000);
     const [users, building, assignments, activities, schedules, unavailabilities] = await Promise.all([
       db.user.findMany({ where: { organizationId: input.organizationId, isActive: true, id: { in: input.userIds } },
-        select: { id: true, email: true } }),
+        select: { id: true, email: true, timeZone: true, timeZoneVerified: true } }),
       input.targetBuildingId ? db.building.findFirst({ where: { id: input.targetBuildingId, organizationId: input.organizationId },
         select: { timeZone: true, timeZoneVerified: true } }) : Promise.resolve(null),
       db.bookingAssignment.findMany({ where: {
@@ -163,7 +163,7 @@ export class SchedulingService {
     for (const user of users) {
       results.set(user.id, { status: 'AVAILABLE', conflicts: [], warnings: [], sourcesChecked: ['BOOKING', 'LEGACY_ACTIVITY'] });
       emailToId.set(user.email.trim().toLowerCase(), user.id);
-      if (building && !building.timeZoneVerified) results.get(user.id)!.warnings.push('Fuseau horaire du bâtiment à confirmer');
+      if (!user.timeZoneVerified) results.get(user.id)!.warnings.push('Fuseau horaire du conseiller à confirmer');
     }
     const target = { startUtc: input.startUtc, endUtc: input.endUtc };
     for (const assignment of assignments) {

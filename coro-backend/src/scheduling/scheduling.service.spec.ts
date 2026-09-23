@@ -38,7 +38,7 @@ describe('SchedulingService', () => {
   let service: SchedulingService;
   beforeEach(() => {
     prisma = {
-      user: { findMany: jest.fn().mockResolvedValue([{ id: 'user-a', email: 'a@example.com' }]) },
+      user: { findMany: jest.fn().mockResolvedValue([{ id: 'user-a', email: 'a@example.com', timeZone: 'America/Toronto', timeZoneVerified: true }]) },
       building: { findFirst: jest.fn().mockResolvedValue({ timeZone: 'America/Toronto', timeZoneVerified: true }) },
       bookingAssignment: { findMany: jest.fn().mockResolvedValue([]) },
       projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
@@ -59,7 +59,7 @@ describe('SchedulingService', () => {
 
   it('runs the protected recheck through the transaction client', async () => {
     const tx = {
-      user: { findMany: jest.fn().mockResolvedValue([{ id: 'user-a', email: 'a@example.com' }]) },
+      user: { findMany: jest.fn().mockResolvedValue([{ id: 'user-a', email: 'a@example.com', timeZone: 'America/Toronto', timeZoneVerified: true }]) },
       building: { findFirst: jest.fn().mockResolvedValue({ timeZone: 'America/Toronto', timeZoneVerified: true }) },
       bookingAssignment: { findMany: jest.fn().mockResolvedValue([]) },
       projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
@@ -77,6 +77,70 @@ describe('SchedulingService', () => {
   it('returns AVAILABLE with checked sources when timezone is verified', async () => {
     expect(await service.analyzeUser(target)).toEqual({ status: 'AVAILABLE', conflicts: [], warnings: [],
       sourcesChecked: ['BOOKING', 'LEGACY_ACTIVITY', 'USER_UNAVAILABILITY', 'WORK_SCHEDULE'] });
+  });
+
+  describe('verified work schedule regression', () => {
+    const slot = { organizationId: 'org-a', userId: 'user-a',
+      startUtc: new Date('2026-09-23T17:45:00.000Z'), endUtc: new Date('2026-09-23T19:15:00.000Z'),
+      targetBuildingId: 'building' };
+    const wednesday = [{ dayOfWeek: 3, startTime: 480, endTime: 720 },
+      { dayOfWeek: 3, startTime: 780, endTime: 1020 }];
+    const version = (effectiveFrom: string, effectiveUntil: string | null = null) => ({ ...fullSchedule,
+      effectiveFrom: new Date(effectiveFrom), effectiveUntil: effectiveUntil ? new Date(effectiveUntil) : null,
+      intervals: wednesday });
+
+    it('returns AVAILABLE when the version starts the previous local day', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([version('2026-09-22T04:00:00.000Z')]);
+      expect((await service.analyzeUser(slot)).status).toBe('AVAILABLE');
+    });
+
+    it('returns AVAILABLE when the version starts on the same local day', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([version('2026-09-23T04:00:00.000Z')]);
+      expect((await service.analyzeUser(slot)).status).toBe('AVAILABLE');
+    });
+
+    it('returns UNKNOWN when the only verified version starts in the future', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([version('2026-09-24T04:00:00.000Z')]);
+      expect((await service.analyzeUser(slot)).status).toBe('UNKNOWN');
+    });
+
+    it('blocks the 12:00-13:00 lunch gap and accepts a slot after 13:00', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([version('2026-09-22T04:00:00.000Z')]);
+      const lunch = { ...slot, startUtc: new Date('2026-09-23T16:15:00.000Z'), endUtc: new Date('2026-09-23T16:45:00.000Z') };
+      expect((await service.analyzeUser(lunch)).status).toBe('BLOCKED');
+      expect((await service.analyzeUser(slot)).status).toBe('AVAILABLE');
+    });
+
+    it('requires the adviser timezone to be verified', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([version('2026-09-22T04:00:00.000Z')]);
+      expect((await service.analyzeUser(slot)).status).toBe('AVAILABLE');
+      prisma.user.findMany.mockResolvedValue([{ id: 'user-a', email: 'a@example.com',
+        timeZone: 'America/Toronto', timeZoneVerified: false }]);
+      const result = await service.analyzeUser(slot);
+      expect(result.status).toBe('UNKNOWN');
+      expect(result.warnings).toContain('Fuseau horaire du conseiller à confirmer');
+    });
+
+    it('keeps local work intervals valid after the DST transition', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([{ ...version('2026-01-01T05:00:00.000Z'),
+        intervals: [{ dayOfWeek: 1, startTime: 480, endTime: 1020 }] }]);
+      const afterDst = { ...slot, startUtc: new Date('2026-03-09T17:45:00.000Z'),
+        endUtc: new Date('2026-03-09T19:15:00.000Z') };
+      expect((await service.analyzeUser(afterDst)).status).toBe('AVAILABLE');
+    });
+
+    it('uses the new applicable version after the old version closes', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([
+        { ...version('2026-09-01T04:00:00.000Z', '2026-09-23T04:00:00.000Z'), id: 'old', intervals: [] },
+        { ...version('2026-09-23T04:00:00.000Z'), id: 'new' },
+      ]);
+      expect((await service.analyzeUser(slot)).status).toBe('AVAILABLE');
+    });
+
+    it('returns UNKNOWN when no version is applicable', async () => {
+      prisma.userWorkSchedule.findMany.mockResolvedValue([]);
+      expect((await service.analyzeUser(slot)).status).toBe('UNKNOWN');
+    });
   });
 
   it('returns UNKNOWN without a verified schedule while preserving soft and firm Booking signals', async () => {
@@ -175,13 +239,11 @@ describe('SchedulingService', () => {
     }) }));
   });
 
-  it('returns UNKNOWN for an unverified target unless a firm conflict is shown', async () => {
+  it('does not conflate target building verification with adviser availability', async () => {
     prisma.building.findFirst.mockResolvedValue({ timeZone: 'America/Toronto', timeZoneVerified: false });
-    expect((await service.analyzeUser(target)).status).toBe('UNKNOWN');
+    expect((await service.analyzeUser(target)).status).toBe('AVAILABLE');
     prisma.bookingAssignment.findMany.mockResolvedValue([assignment('ACCEPTED', 'CONFIRMEE')]);
-    const result = await service.analyzeUser(target);
-    expect(result.status).toBe('BLOCKED');
-    expect(result.warnings).toContain('Fuseau horaire du bâtiment à confirmer');
+    expect((await service.analyzeUser(target)).status).toBe('BLOCKED');
   });
 
   it('treats precise legacy activities as potential conflicts and imprecise ones as warnings', async () => {
