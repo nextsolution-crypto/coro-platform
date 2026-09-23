@@ -3,6 +3,7 @@ import { BookingAssignmentRole, BookingAssignmentStatus, Prisma, UserRole } from
 import { PrismaService } from '../prisma/prisma.service';
 import { SchedulingService, bookingInterval } from '../scheduling/scheduling.service';
 import { CapacityService } from '../mandate/capacity.service';
+import { createAssignmentNotification, type AssignmentNotificationKind } from './booking-assignment-notifications';
 
 export interface BookingActor {
   userId: string;
@@ -11,7 +12,6 @@ export interface BookingActor {
 }
 
 const ACTIVE: BookingAssignmentStatus[] = ['PENDING', 'ACCEPTED'];
-type AssignmentNotification = 'NEW' | 'ACCEPTED' | 'DECLINED' | 'REPLACED' | 'REMOVED';
 
 @Injectable()
 export class BookingAssignmentsService {
@@ -85,19 +85,10 @@ export class BookingAssignmentsService {
     return user;
   }
 
-  private async notify(tx: Prisma.TransactionClient, booking: { projectId: string }, actor: BookingActor, userId: string, kind: AssignmentNotification) {
-    await tx.notification.create({ data: {
-      userId, organizationId: actor.organizationId, projectId: booking.projectId,
-      type: `BOOKING_ASSIGNMENT_${kind}`,
-      title: 'Affectation Booking',
-      message: {
-        NEW: 'Une affectation vous a été proposée.',
-        ACCEPTED: 'Une affectation Booking a été acceptée.',
-        DECLINED: 'Une affectation Booking a été refusée.',
-        REPLACED: 'Votre affectation Booking a été remplacée.',
-        REMOVED: 'Votre affectation Booking a été retirée.',
-      }[kind],
-    } });
+  private async notify(tx: Prisma.TransactionClient, booking: { projectId: string }, actor: BookingActor,
+    userId: string, kind: AssignmentNotificationKind) {
+    await createAssignmentNotification(tx, { kind, userId, organizationId: actor.organizationId,
+      projectId: booking.projectId });
   }
 
   async list(bookingId: string, actor: BookingActor, includeHistory = false) {
@@ -143,26 +134,25 @@ export class BookingAssignmentsService {
   async respond(bookingId: string, assignmentId: string, status: BookingAssignmentStatus, declineReason: string | undefined, actor: BookingActor) {
     if (status !== 'ACCEPTED' && status !== 'DECLINED') throw new BadRequestException('Réponse invalide');
     let availability: Awaited<ReturnType<SchedulingService['analyzeUser']>> | undefined;
-    if (status === 'ACCEPTED') {
-      const assignment = await this.prisma.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId,
-        booking: { organizationId: actor.organizationId } } });
-      if (!assignment) throw new NotFoundException('Affectation introuvable');
-      if (assignment.userId !== actor.userId) throw new ForbiddenException('Vous ne pouvez répondre que pour vous-même');
-      availability = await this.availability(bookingId, actor.userId, actor);
-      this.requireNoUnapprovedBlock(availability);
-    }
     const result = await this.prisma.$transaction(async tx => {
       await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
+      const booking = await this.bookingInScope(tx, bookingId, actor);
+      const assignment = await tx.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId } });
+      if (!assignment) throw new NotFoundException('Affectation introuvable');
+      if (assignment.userId !== actor.userId) throw new ForbiddenException('Vous ne pouvez répondre que pour vous-même');
+      if (assignment.status === status) return assignment;
+      if (assignment.status === 'ACCEPTED' || assignment.status === 'DECLINED') {
+        throw new BadRequestException('Cette affectation a déjà reçu une réponse différente');
+      }
+      if (assignment.status !== 'PENDING') throw new BadRequestException('Cette affectation ne peut plus recevoir de réponse');
+      if (!['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'].includes(booking.status)) {
+        throw new BadRequestException('Cette planification ne permet plus de répondre à l’affectation');
+      }
       if (status === 'ACCEPTED') {
         await this.scheduling.lockUsers(tx, actor.organizationId, [actor.userId]);
         availability = await this.availability(bookingId, actor.userId, actor, tx);
         this.requireNoUnapprovedBlock(availability);
       }
-      const booking = await this.bookingInScope(tx, bookingId, actor);
-      const assignment = await tx.bookingAssignment.findFirst({ where: { id: assignmentId, bookingId } });
-      if (!assignment) throw new NotFoundException('Affectation introuvable');
-      if (assignment.userId !== actor.userId) throw new ForbiddenException('Vous ne pouvez répondre que pour vous-même');
-      if (assignment.status !== 'PENDING') throw new BadRequestException('Affectation déjà traitée');
       const now = new Date();
       const result = await tx.bookingAssignment.updateMany({
         where: { id: assignmentId, bookingId, status: 'PENDING' },
@@ -170,7 +160,19 @@ export class BookingAssignmentsService {
           endedAt: status === 'DECLINED' ? now : null },
       });
       if (result.count !== 1) throw new BadRequestException('Affectation déjà traitée');
-      if (assignment.assignedByUserId) await this.notify(tx, booking, actor, assignment.assignedByUserId, status);
+      await tx.auditLog.create({ data: {
+        action: status === 'ACCEPTED' ? 'ASSIGNMENT_ACCEPTED' : 'ASSIGNMENT_REFUSED',
+        entityType: 'BookingAssignment', entityId: assignment.id, projectId: booking.projectId,
+        description: status === 'ACCEPTED' ? 'Affectation acceptée par le conseiller.' : 'Affectation refusée par le conseiller.',
+        metadata: { bookingId, activityId: booking.activityId, role: assignment.role,
+          previousStatus: 'PENDING', newStatus: status },
+        userId: actor.userId, organizationId: actor.organizationId,
+      } });
+      if (assignment.assignedByUserId && assignment.assignedByUserId !== actor.userId) {
+        const assigner = await tx.user.findFirst({ where: { id: assignment.assignedByUserId,
+          organizationId: actor.organizationId, isActive: true }, select: { id: true } });
+        if (assigner) await this.notify(tx, booking, actor, assigner.id, status);
+      }
       return tx.bookingAssignment.findUniqueOrThrow({ where: { id: assignmentId } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
     return availability ? Object.assign(result, { availability }) : result;

@@ -23,6 +23,7 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
     bookingAssignment: { createMany: jest.fn(), updateMany: jest.fn(),
       create: jest.fn(), update: jest.fn() },
     auditLog: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null), deleteMany: jest.fn() },
+    notification: { create: jest.fn() },
   };
   const prisma = { $transaction: jest.fn(async (callback: any) => callback(tx)) };
   const result = { status, conflicts: status === 'BLOCKED' ? [{ severity: 'BLOCKED' }] : [], warnings: [], sourcesChecked: [] };
@@ -46,6 +47,9 @@ describe('PlanningActionsService', () => {
     ]));
     expect(tx.projectActivity.update.mock.calls[0][0]).toMatchObject({ where: { id: 'activity' } });
     expect(tx.auditLog.create.mock.calls[0][0].data.action).toBe('PLANNED');
+    expect(tx.notification.create).toHaveBeenCalledTimes(2);
+    expect(tx.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      type: 'BOOKING_ASSIGNMENT_NEW', title: 'Nouvelle affectation', userId: 'lead' }) });
   });
 
   it('rejects an already open Booking after locking the Activity', async () => {
@@ -97,6 +101,27 @@ describe('PlanningActionsService', () => {
     expect(tx.booking.update.mock.calls[0][0].data).not.toHaveProperty('reportedDate');
     expect(tx.projectActivity.create).not.toHaveBeenCalled();
     expect(tx.booking.create).not.toHaveBeenCalled();
+    expect(tx.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      type: 'BOOKING_ASSIGNMENT_REPLACED', userId: 'lead' }) });
+    expect(tx.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      type: 'BOOKING_ASSIGNMENT_NEW', userId: 'replacement' }) });
+  });
+
+  it('notifies every active assignee when the effective slot changes', async () => {
+    const { service, tx } = setup();
+    tx.booking.findFirst.mockResolvedValue({ id: 'booking', projectId: 'project', organizationId: 'org-a',
+      requestedDate: new Date('2026-09-23T13:30:00.000Z'), reportedDate: null, duration: 90,
+      status: 'CONFIRMEE', activity, project: activity.project, assignments: [
+        { id: 'lead-a', userId: 'lead', role: 'LEAD', status: 'ACCEPTED' },
+        { id: 'support-a', userId: 'support', role: 'SUPPORT', status: 'PENDING' },
+      ] });
+    await service.updateSlot('booking', { startUtc: '2026-09-24T13:30:00.000Z',
+      durationMinutes: 90, reschedule: true, confirmUnknown: true }, actor);
+    expect(tx.notification.create).toHaveBeenCalledTimes(2);
+    expect(tx.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      type: 'BOOKING_ASSIGNMENT_SCHEDULE_CHANGED', userId: 'lead' }) });
+    expect(tx.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      type: 'BOOKING_ASSIGNMENT_SCHEDULE_CHANGED', userId: 'support' }) });
   });
 
   it('links replaced LEAD and retained SUPPORT without crossing the Booking', async () => {
@@ -119,13 +144,16 @@ describe('PlanningActionsService', () => {
   it('cancels only the schedule, keeps the Activity, and terminates assignments', async () => {
     const { service, tx } = setup();
     tx.booking.findFirst.mockResolvedValue({ id: 'booking', projectId: 'project', activity,
-      status: 'CONFIRMEE' });
+      status: 'CONFIRMEE', assignments: [{ userId: 'lead' }, { userId: 'support' }] });
     const result = await service.cancelSchedule('booking', actor);
     expect(result).toEqual({ activityId: 'activity', bookingId: 'booking' });
     expect(tx.booking.update).toHaveBeenCalledWith({ where: { id: 'booking' }, data: { status: 'ANNULEE' } });
     expect(tx.bookingAssignment.updateMany.mock.calls[0][0].data).toMatchObject({ status: 'REMOVED', endedAt: expect.any(Date) });
     expect(tx.projectActivity.update).toHaveBeenCalledWith({ where: { id: 'activity' }, data: { scheduledDate: null, reportedDate: null } });
     expect(tx.auditLog.create.mock.calls[0][0].data.action).toBe('SCHEDULE_CANCELLED');
+    expect(tx.notification.create).toHaveBeenCalledTimes(2);
+    expect(tx.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      type: 'BOOKING_ASSIGNMENT_SCHEDULE_CANCELLED', userId: 'lead' }) });
   });
 
   it('deletes a dependency-free Activity with only its intrinsic creation audit', async () => {

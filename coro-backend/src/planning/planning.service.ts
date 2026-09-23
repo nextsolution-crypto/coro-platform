@@ -134,6 +134,42 @@ export class PlanningService {
     });
   }
 
+  async myAssignments(actor: Actor) {
+    staff(actor);
+    const assignments = await this.prisma.bookingAssignment.findMany({ where: {
+      userId: actor.userId, status: 'PENDING',
+      booking: { organizationId: actor.organizationId, status: { in: [...OPEN_BOOKING_STATUSES] } },
+    }, select: {
+      id: true, role: true, status: true,
+      booking: { select: { id: true, requestedDate: true, reportedDate: true, duration: true,
+        activityId: true, activityType: true,
+        activity: { select: { label: true, customLabel: true,
+          activityType: { select: { nameFR: true } } } },
+        project: { select: { id: true, name: true,
+          client: { select: { name: true } },
+          building: { select: { name: true, timeZone: true } } } },
+      } },
+    }, orderBy: [{ assignedAt: 'asc' }, { id: 'asc' }] });
+    const items = assignments.map(assignment => ({
+      assignmentId: assignment.id,
+      bookingId: assignment.booking.id,
+      activityId: assignment.booking.activityId,
+      role: assignment.role,
+      assignmentStatus: assignment.status,
+      requiresMyAction: true,
+      title: assignment.booking.activity?.customLabel || assignment.booking.activity?.label || assignment.booking.activityType,
+      activityType: assignment.booking.activity?.activityType?.nameFR || assignment.booking.activity?.label || assignment.booking.activityType,
+      client: assignment.booking.project.client.name,
+      building: assignment.booking.project.building?.name ?? null,
+      project: assignment.booking.project.name,
+      projectId: assignment.booking.project.id,
+      effectiveStartUtc: effectiveBookingDate(assignment.booking),
+      durationMinutes: assignment.booking.duration,
+      timeZone: assignment.booking.project.building?.timeZone ?? 'America/Toronto',
+    }));
+    return { version: 1, asOf: new Date(), pendingCount: items.length, items };
+  }
+
   async teamPreview(dto: PlanningTeamPreviewDto, actor: Actor) {
     staff(actor);
     const startUtc = new Date(dto.startUtc);

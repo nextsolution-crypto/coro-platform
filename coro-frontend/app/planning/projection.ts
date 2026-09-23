@@ -18,7 +18,7 @@ export function eventStatus(event: PlannerEvent): string {
   if (event.source === 'LEGACY_ACTIVITY') return 'Legacy · provisoire';
   if (event.status === 'BUSY') return 'Occupé';
   if (event.status === 'REQUESTED') return 'Demande · non confirmée';
-  if (event.status === 'PROVISIONAL') return 'Proposition en attente';
+  if (event.status === 'PROVISIONAL') return 'En attente de votre confirmation';
   if (event.bookingStatus === 'REPORTEE') return 'Reportée · planifiée';
   if (event.bookingStatus === 'REASSIGNEE') return 'Réaffectée · active';
   return 'Confirmée';

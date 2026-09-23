@@ -446,3 +446,25 @@ test('backlog distinguishes replanning context and keeps destructive actions exp
   assert.doesNotMatch(planningDrawer, /<dt>Booking<\/dt>/);
   assert.doesNotMatch(page, /<label>Booking /);
 });
+
+test('advisor assignment inbox is personal, actionable and independent from planner filters', () => {
+  const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+  const panel = fs.readFileSync(path.join(__dirname, 'MyAssignmentsPanel.tsx'), 'utf8');
+  const projection = fs.readFileSync(path.join(__dirname, 'projection.ts'), 'utf8');
+  const notifications = fs.readFileSync(path.join(__dirname, '..', 'notifications', 'page.tsx'), 'utf8');
+  assert.ok(page.includes("authUser?.role === 'OPERATOR'"));
+  assert.ok(page.includes('<MyAssignmentsPanel'));
+  assert.ok(panel.includes("api.get<MyAssignmentsResponse>('/planning/my-assignments')"));
+  assert.doesNotMatch(panel, /requestRange|clientId|buildingId|projectId.*params|bookingStatus.*params/);
+  assert.ok(panel.includes('Mes affectations à confirmer'));
+  for (const label of ['Accepter', 'Refuser', 'En attente de votre confirmation', 'Motif facultatif']) {
+    assert.ok(panel.includes(label));
+  }
+  assert.ok(panel.includes('/assignments/${item.assignmentId}/respond'));
+  assert.ok(panel.includes("status: 'ACCEPTED'"));
+  assert.ok(panel.includes("respond(refusing, 'DECLINED')"));
+  assert.ok(panel.includes('onChanged()'));
+  assert.ok(projection.includes('En attente de votre confirmation'));
+  assert.ok(notifications.includes("notif.type.startsWith('BOOKING_ASSIGNMENT_')"));
+  assert.ok(notifications.includes("router.push('/planning')"));
+});

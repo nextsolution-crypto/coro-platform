@@ -19,6 +19,11 @@ export class PlanningController {
     return this.planning.actions(query, req.user);
   }
 
+  @Get('my-assignments')
+  myAssignments(@Request() req: any) {
+    return this.planning.myAssignments(req.user);
+  }
+
   @Get('context')
   context(@Query() query: PlanningContextDto, @Request() req: any) {
     return this.planning.context(query, req.user);

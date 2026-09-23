@@ -22,6 +22,7 @@ function setup() {
     userWorkSchedule: { findMany: jest.fn().mockResolvedValue([]) },
     userUnavailability: { findMany: jest.fn().mockResolvedValue([]) },
     projectActivity: { findMany: jest.fn().mockResolvedValue([]) },
+    bookingAssignment: { findMany: jest.fn().mockResolvedValue([]) },
     auditLog: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const scheduling = { analyzeManySlots: jest.fn().mockResolvedValue(new Map()) };
@@ -34,6 +35,23 @@ function setup() {
 }
 
 describe('PlanningService', () => {
+  it('projects the authenticated adviser pending assignments independently of a planning window', async () => {
+    const { service, prisma } = setup();
+    prisma.bookingAssignment.findMany.mockResolvedValue([{ id: 'assignment-1', role: 'LEAD', status: 'PENDING',
+      booking: { id: 'booking-1', activityId: 'activity-1', activityType: 'inspection',
+        requestedDate: new Date('2026-12-10T14:00:00.000Z'), reportedDate: new Date('2026-12-11T15:00:00.000Z'),
+        duration: 90, activity: { label: 'Inspection', customLabel: 'Inspection annuelle',
+          activityType: { nameFR: 'Inspection technique' } },
+        project: { id: 'project-1', name: 'Mandat 2026', client: { name: 'Client A' },
+          building: { name: 'Tour A', timeZone: 'America/Toronto' } } } }]);
+    const result = await service.myAssignments({ ...actor, role: 'OPERATOR' });
+    expect(prisma.bookingAssignment.findMany.mock.calls[0][0].where).toMatchObject({
+      userId: 'u1', status: 'PENDING', booking: { organizationId: 'org-a' },
+    });
+    expect(result).toMatchObject({ pendingCount: 1, items: [{ assignmentId: 'assignment-1',
+      bookingId: 'booking-1', role: 'LEAD', requiresMyAction: true, title: 'Inspection annuelle',
+      effectiveStartUtc: new Date('2026-12-11T15:00:00.000Z') }] });
+  });
   it('validates a half-open ISO window of at most 31 days', () => {
     expect(planningWindow({ start, end }).startUtc.toISOString()).toBe(start.replace('Z', '.000Z'));
     expect(() => planningWindow({ start: end, end: start })).toThrow(BadRequestException);

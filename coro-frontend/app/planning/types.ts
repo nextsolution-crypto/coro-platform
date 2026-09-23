@@ -51,3 +51,12 @@ export type TeamCandidate = { userId: string; displayName: string; email?: strin
 
 export type TeamPreview = { version: number; slot: { startUtc: string; endUtc: string; durationMinutes: number;
   buildingId: string; timeZone: string; timeZoneVerified: boolean }; candidates: TeamCandidate[] };
+
+export type MyAssignment = {
+  assignmentId: string; bookingId: string; activityId: string | null; role: 'LEAD' | 'SUPPORT';
+  assignmentStatus: 'PENDING'; requiresMyAction: true; title: string; activityType: string;
+  client: string; building: string | null; project: string; projectId: string;
+  effectiveStartUtc: string; durationMinutes: number; timeZone: string;
+};
+
+export type MyAssignmentsResponse = { version: number; asOf: string; pendingCount: number; items: MyAssignment[] };

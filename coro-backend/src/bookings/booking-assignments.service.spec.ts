@@ -14,13 +14,14 @@ describe('BookingAssignmentsService', () => {
     rows = [];
     prisma = {
       booking: {
-        findFirst: jest.fn(({ where }) => where.organizationId === 'org-a' && where.id === 'booking' ? { id: 'booking', projectId: 'project', organizationId: 'org-a', assignedUserId: 'user-a', requestedDate: new Date('2026-10-01T13:00:00Z'), reportedDate: null, duration: 60, project: { buildingId: 'building', building: { timeZone: 'America/Toronto', timeZoneVerified: true } } } : null),
+        findFirst: jest.fn(({ where }) => where.organizationId === 'org-a' && where.id === 'booking' ? { id: 'booking', projectId: 'project', activityId: 'activity', organizationId: 'org-a', status: 'CONFIRMEE', assignedUserId: 'user-a', requestedDate: new Date('2026-10-01T13:00:00Z'), reportedDate: null, duration: 60, project: { buildingId: 'building', building: { timeZone: 'America/Toronto', timeZoneVerified: true } } } : null),
         update: jest.fn().mockResolvedValue({}),
       },
       user: {
-        findFirst: jest.fn(({ where }) => ['user-a', 'user-b', 'user-c'].includes(where.id) && where.organizationId === 'org-a' && where.isActive ? { id: where.id } : null),
+        findFirst: jest.fn(({ where }) => ['admin', 'user-a', 'user-b', 'user-c'].includes(where.id) && where.organizationId === 'org-a' && where.isActive ? { id: where.id } : null),
       },
       notification: { create: jest.fn().mockResolvedValue({}) },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
       bookingAssignment: {
         findFirst: jest.fn(({ where }) => rows.find(row =>
           (where.id === undefined || row.id === where.id) && row.bookingId === where.bookingId &&
@@ -109,6 +110,68 @@ describe('BookingAssignmentsService', () => {
     expect(await service.list('booking', operator)).toHaveLength(0);
     expect(await service.list('booking', operator, true)).toHaveLength(1);
     await expect(service.respond('booking', assignment.id, 'ACCEPTED', undefined, operator)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('is idempotent for the same response and audits only the first transition', async () => {
+    const accepted = await service.add('booking', 'user-a', 'LEAD', admin);
+    prisma.notification.create.mockClear();
+    await service.respond('booking', accepted.id, 'ACCEPTED', undefined, operator);
+    const respondedAt = accepted.respondedAt;
+    await expect(service.respond('booking', accepted.id, 'ACCEPTED', undefined, operator)).resolves.toBe(accepted);
+    expect(accepted.respondedAt).toBe(respondedAt);
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      action: 'ASSIGNMENT_ACCEPTED', entityType: 'BookingAssignment', entityId: accepted.id,
+      metadata: expect.objectContaining({ bookingId: 'booking', activityId: 'activity', role: 'LEAD',
+        previousStatus: 'PENDING', newStatus: 'ACCEPTED' }),
+    }) });
+    expect(prisma.notification.create).toHaveBeenCalledTimes(1);
+
+    const declined = await service.add('booking', 'user-b', 'SUPPORT', admin);
+    prisma.auditLog.create.mockClear(); prisma.notification.create.mockClear();
+    await service.respond('booking', declined.id, 'DECLINED', undefined, { ...operator, userId: 'user-b' });
+    const declinedAt = declined.respondedAt;
+    await expect(service.respond('booking', declined.id, 'DECLINED', undefined,
+      { ...operator, userId: 'user-b' })).resolves.toBe(declined);
+    expect(declined.respondedAt).toBe(declinedAt);
+    expect(prisma.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(prisma.notification.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a contradictory or terminal response', async () => {
+    const assignment = await service.add('booking', 'user-a', 'SUPPORT', admin);
+    await service.respond('booking', assignment.id, 'ACCEPTED', undefined, operator);
+    await expect(service.respond('booking', assignment.id, 'DECLINED', undefined, operator))
+      .rejects.toThrow('réponse différente');
+    assignment.status = 'REPLACED';
+    await expect(service.respond('booking', assignment.id, 'ACCEPTED', undefined, operator))
+      .rejects.toThrow('ne peut plus');
+  });
+
+  it('checks acceptance against the effective reported slot', async () => {
+    const assignment = await service.add('booking', 'user-a', 'SUPPORT', admin);
+    const reportedDate = new Date('2026-10-02T15:00:00.000Z');
+    prisma.booking.findFirst.mockResolvedValue({ id: 'booking', projectId: 'project', activityId: 'activity',
+      organizationId: 'org-a', status: 'REPORTEE', requestedDate: new Date('2026-10-01T13:00:00.000Z'),
+      reportedDate, duration: 60, project: { buildingId: 'building',
+        building: { timeZone: 'America/Toronto', timeZoneVerified: true } } });
+    scheduling.analyzeUser.mockClear();
+    await service.respond('booking', assignment.id, 'ACCEPTED', undefined, operator);
+    expect(scheduling.analyzeUser).toHaveBeenCalledWith(expect.objectContaining({
+      startUtc: reportedDate, endUtc: new Date('2026-10-02T16:00:00.000Z'), excludeBookingId: 'booking',
+    }), prisma);
+  });
+
+  it('refuses a response after Booking cancellation or Assignment removal', async () => {
+    const cancelled = await service.add('booking', 'user-a', 'SUPPORT', admin);
+    prisma.booking.findFirst.mockResolvedValue({ id: 'booking', projectId: 'project', activityId: 'activity',
+      organizationId: 'org-a', status: 'ANNULEE' });
+    await expect(service.respond('booking', cancelled.id, 'DECLINED', undefined, operator))
+      .rejects.toThrow('ne permet plus');
+    expect(cancelled.status).toBe('PENDING');
+    cancelled.status = 'REMOVED';
+    await expect(service.respond('booking', cancelled.id, 'DECLINED', undefined, operator))
+      .rejects.toThrow('ne peut plus');
   });
 
   it('replaces a LEAD atomically, preserves history and synchronizes legacy field', async () => {
@@ -266,8 +329,7 @@ describe('BookingAssignmentsService', () => {
 
   it('keeps a proposal pending when acceptance recheck becomes blocked', async () => {
     const proposal = await service.add('booking', 'user-a', 'SUPPORT', admin);
-    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'AVAILABLE', conflicts: [], warnings: [] })
-      .mockResolvedValueOnce({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [] });
+    scheduling.analyzeUser.mockResolvedValueOnce({ status: 'BLOCKED', conflicts: [{ source: 'BOOKING' }], warnings: [] });
     await expect(service.respond('booking', proposal.id, 'ACCEPTED', undefined, operator)).rejects.toBeInstanceOf(BadRequestException);
     expect(proposal.status).toBe('PENDING');
   });

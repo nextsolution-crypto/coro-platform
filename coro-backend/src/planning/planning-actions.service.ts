@@ -5,6 +5,7 @@ import { SchedulingService } from '../scheduling/scheduling.service';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { CreateAndPlanActivityDto, PlanExistingActivityDto, ReassignPlanningTeamDto, UpdatePlanningSlotDto } from './planning.dto';
 import { INTRINSIC_ACTIVITY_AUDIT_ACTIONS } from './planning-activity-history';
+import { createAssignmentNotification, type AssignmentNotificationKind } from '../bookings/booking-assignment-notifications';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const ACTIVE_ASSIGNMENTS: Array<'PENDING' | 'ACCEPTED'> = ['PENDING', 'ACCEPTED'];
@@ -16,6 +17,13 @@ export class PlanningActionsService {
   private manager(actor: Actor) {
     if (!actor?.organizationId || !actor.userId || !['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) {
       throw new ForbiddenException('Mutations du Planner reservees aux administrateurs');
+    }
+  }
+
+  private async notifyUsers(tx: Prisma.TransactionClient, actor: Actor, projectId: string,
+    userIds: string[], kind: AssignmentNotificationKind) {
+    for (const userId of [...new Set(userIds)]) {
+      await createAssignmentNotification(tx, { kind, userId, organizationId: actor.organizationId, projectId });
     }
   }
 
@@ -90,6 +98,7 @@ export class PlanningActionsService {
       ...team.supportUserIds.map(userId => ({ bookingId: booking.id, userId, role: 'SUPPORT' as const,
         status: 'PENDING' as const, assignedByUserId: actor.userId, assignedAt: now })),
     ] });
+    await this.notifyUsers(tx, actor, activity.projectId, team.userIds, 'NEW');
     await tx.projectActivity.update({ where: { id: activity.id }, data: { scheduledDate: startUtc,
       duration: `${Math.floor(input.durationMinutes / 60)}h${String(input.durationMinutes % 60).padStart(2, '0')}`,
       dureeHeures: input.durationMinutes / 60 } });
@@ -200,6 +209,7 @@ export class PlanningActionsService {
         description: dto.reschedule ? 'Activite reportee depuis le Planner.' : 'Creneau modifie depuis le Planner.',
         metadata: { bookingId, oldStart, newStart: startUtc, durationMinutes: dto.durationMinutes },
         userId: actor.userId, organizationId: actor.organizationId } });
+      await this.notifyUsers(tx, actor, booking.projectId, booking.assignments.map(item => item.userId), 'SCHEDULE_CHANGED');
       return { activityId: booking.activity.id, bookingId };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }
@@ -238,6 +248,8 @@ export class PlanningActionsService {
         if (replacementSupport) await tx.bookingAssignment.update({ where: { id: previousSupport.id },
           data: { replacedByAssignmentId: replacementSupport.id } });
       }      await tx.booking.update({ where: { id: bookingId }, data: { assignedUserId: team.leadUserId, status: 'REASSIGNEE' } });
+      await this.notifyUsers(tx, actor, booking.projectId, booking.assignments.map(item => item.userId), 'REPLACED');
+      await this.notifyUsers(tx, actor, booking.projectId, team.userIds, 'NEW');
       await tx.auditLog.create({ data: { action: 'TEAM_REASSIGNED', entityType: 'ProjectActivity', entityId: booking.activity.id,
         projectId: booking.projectId, description: 'Equipe reaffectee depuis le Planner.',
         metadata: { bookingId, newLead: team.leadUserId, supportUserIds: team.supportUserIds },
@@ -251,7 +263,8 @@ export class PlanningActionsService {
     return this.prisma.$transaction(async tx => {
       await this.scheduling.lockBooking(tx, actor.organizationId, bookingId);
       const booking = await tx.booking.findFirst({ where: { id: bookingId, organizationId: actor.organizationId,
-        status: { in: OPEN_BOOKING_STATUSES } }, include: { activity: true } });
+        status: { in: OPEN_BOOKING_STATUSES } }, include: { activity: true,
+        assignments: { where: { status: { in: ACTIVE_ASSIGNMENTS } }, select: { userId: true } } } });
       if (!booking?.activity) throw new NotFoundException('Planification introuvable');
       const now = new Date();
       await tx.booking.update({ where: { id: bookingId }, data: { status: 'ANNULEE' } });
@@ -261,6 +274,7 @@ export class PlanningActionsService {
       await tx.auditLog.create({ data: { action: 'SCHEDULE_CANCELLED', entityType: 'ProjectActivity', entityId: booking.activity.id,
         projectId: booking.projectId, description: 'Planification annulee; activite conservee dans le backlog.',
         metadata: { bookingId }, userId: actor.userId, organizationId: actor.organizationId } });
+      await this.notifyUsers(tx, actor, booking.projectId, (booking.assignments ?? []).map(item => item.userId), 'SCHEDULE_CANCELLED');
       return { activityId: booking.activity.id, bookingId };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }

@@ -97,7 +97,9 @@ export default function NotificationsPage() {
       await handleMarkAsRead(notif.id);
     }
 
-    if (notif.projectId) {
+    if (notif.type.startsWith('BOOKING_ASSIGNMENT_')) {
+      router.push('/planning');
+    } else if (notif.projectId) {
       router.push(`/projects/${notif.projectId}`);
     }
   };

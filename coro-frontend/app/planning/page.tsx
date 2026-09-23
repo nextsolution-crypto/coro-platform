@@ -13,6 +13,7 @@ import { eventForUser, eventLabel, eventStatus, planningErrorMessage } from './p
 import PlanningDrawer, { type PlanningDrawerMode } from './PlanningDrawer';
 import PlanningActionCenter from './PlanningActionCenter';
 import ActivityPlanningDrawer from './ActivityPlanningDrawer';
+import MyAssignmentsPanel from './MyAssignmentsPanel';
 import type { PlannerEvent, PlannerResponse, PlanningAction, PlanningContext } from './types';
 import { dateKey, formatClock, formatDay, moveDate, periodLabel, requestWindow, segmentForDay, validTimeZone, viewDays, type PlannerView } from './time';
 import styles from './planning.module.css';
@@ -224,6 +225,8 @@ export default function TeamPlannerPage() {
           const target = data.events.find(event => event.bookingId === item.bookingId);
           if (target) openEvent(target, mode);
         }} />}
+      {authUser?.role === 'OPERATOR' && <MyAssignmentsPanel refreshKey={refreshKey}
+        onChanged={() => setRefreshKey(key => key + 1)} />}
       <section className={styles.toolbar} aria-label="Contrôles du planner">
         <div className={styles.periodControls}>
           <button type="button" onClick={() => move(-1)} aria-label="Période précédente">‹</button>
