@@ -49,7 +49,7 @@ export class BookingAssignmentsService {
     if (!booking) throw new NotFoundException('Réservation introuvable');
     const interval = bookingInterval(booking);
     const users = await this.prisma.user.findMany({ where: { organizationId: actor.organizationId, isActive: true,
-      role: { in: ['ADMIN', 'OPERATOR'] } }, select: { id: true, firstName: true, lastName: true, email: true } });
+      role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] } }, select: { id: true, firstName: true, lastName: true, email: true } });
     const [availability, capacity] = await Promise.all([
       this.scheduling.analyzeUsers({ organizationId: actor.organizationId, userIds: users.map(user => user.id),
         startUtc: interval.startUtc, endUtc: interval.endUtc, excludeBookingId: bookingId,

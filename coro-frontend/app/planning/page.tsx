@@ -225,7 +225,7 @@ export default function TeamPlannerPage() {
           const target = data.events.find(event => event.bookingId === item.bookingId);
           if (target) openEvent(target, mode);
         }} />}
-      {authUser?.role === 'OPERATOR' && <MyAssignmentsPanel refreshKey={refreshKey}
+      {authUser && ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(authUser.role) && <MyAssignmentsPanel refreshKey={refreshKey}
         onChanged={() => setRefreshKey(key => key + 1)} />}
       <section className={styles.toolbar} aria-label="Contrôles du planner">
         <div className={styles.periodControls}>

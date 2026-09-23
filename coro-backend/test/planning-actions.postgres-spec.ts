@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { ForbiddenException } from '@nestjs/common';
 import { createBookingFixture } from './booking-postgres-fixture';
 import { SchedulingService } from '../src/scheduling/scheduling.service';
 import { PlanningActionsService } from '../src/planning/planning-actions.service';
@@ -376,5 +377,35 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     expect(['ACCEPTED', 'REPLACED']).toContain(historical.status);
     expect(await prisma.bookingAssignment.count({ where: { bookingId: planned.bookingId,
       role: 'LEAD', status: { in: ['PENDING', 'ACCEPTED'] } } })).toBe(1);
+  });
+
+  it('lets an assigned ADMIN accept personally but never answer for another user', async () => {
+    const source = await activity();
+    const planned = await service.planExisting(source.id, {
+      ...input('2026-10-21T14:00:00.000Z'), leadUserId: fixture.admin.id,
+      supportUserIds: [fixture.owner.id],
+    }, actor());
+    const lead = await prisma.bookingAssignment.findFirstOrThrow({ where: {
+      bookingId: planned.bookingId, userId: fixture.admin.id, role: 'LEAD', status: 'PENDING',
+    } });
+    const support = await prisma.bookingAssignment.findFirstOrThrow({ where: {
+      bookingId: planned.bookingId, userId: fixture.owner.id, role: 'SUPPORT', status: 'PENDING',
+    } });
+    const adminActor = { userId: fixture.admin.id, organizationId: fixture.org.id, role: 'ADMIN' as const };
+    const projection = new PlanningService(prisma as any, new SchedulingService(prisma as any), {
+      getCapacityPlanning: jest.fn().mockResolvedValue([]),
+    } as any);
+
+    expect((await projection.myAssignments(adminActor)).items.filter(item => item.assignmentId === lead.id))
+      .toEqual([expect.objectContaining({ role: 'LEAD', assignmentStatus: 'PENDING', requiresMyAction: true })]);
+    await expect(assignments.respond(planned.bookingId, support.id, 'ACCEPTED', undefined, adminActor))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    await assignments.respond(planned.bookingId, lead.id, 'ACCEPTED', undefined, adminActor);
+
+    expect(await prisma.projectActivity.count({ where: { id: source.id } })).toBe(1);
+    expect(await prisma.booking.count({ where: { id: planned.bookingId, activityId: source.id } })).toBe(1);
+    expect(await prisma.bookingAssignment.findUniqueOrThrow({ where: { id: lead.id } }))
+      .toMatchObject({ bookingId: planned.bookingId, userId: fixture.admin.id, status: 'ACCEPTED' });
+    expect((await projection.myAssignments(adminActor)).items.some(item => item.assignmentId === lead.id)).toBe(false);
   });
 });

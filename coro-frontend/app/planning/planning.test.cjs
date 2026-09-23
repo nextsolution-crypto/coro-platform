@@ -452,7 +452,7 @@ test('advisor assignment inbox is personal, actionable and independent from plan
   const panel = fs.readFileSync(path.join(__dirname, 'MyAssignmentsPanel.tsx'), 'utf8');
   const projection = fs.readFileSync(path.join(__dirname, 'projection.ts'), 'utf8');
   const notifications = fs.readFileSync(path.join(__dirname, '..', 'notifications', 'page.tsx'), 'utf8');
-  assert.ok(page.includes("authUser?.role === 'OPERATOR'"));
+  assert.ok(page.includes("['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(authUser.role)"));
   assert.ok(page.includes('<MyAssignmentsPanel'));
   assert.ok(panel.includes("api.get<MyAssignmentsResponse>('/planning/my-assignments')"));
   assert.doesNotMatch(panel, /requestRange|clientId|buildingId|projectId.*params|bookingStatus.*params/);
@@ -464,6 +464,8 @@ test('advisor assignment inbox is personal, actionable and independent from plan
   assert.ok(panel.includes("status: 'ACCEPTED'"));
   assert.ok(panel.includes("respond(refusing, 'DECLINED')"));
   assert.ok(panel.includes('onChanged()'));
+  assert.ok(panel.includes('count === 0'));
+  assert.ok(page.includes("const canMutate = ['ADMIN', 'SUPER_ADMIN'].includes"));
   assert.ok(projection.includes('En attente de votre confirmation'));
   assert.ok(notifications.includes("notif.type.startsWith('BOOKING_ASSIGNMENT_')"));
   assert.ok(notifications.includes("router.push('/planning')"));

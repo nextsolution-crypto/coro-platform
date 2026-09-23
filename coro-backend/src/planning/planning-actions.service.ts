@@ -62,7 +62,7 @@ export class PlanningActionsService {
     const team = this.team(input);
     await this.scheduling.lockUsers(tx, activity.organizationId, team.userIds);
     const users = await tx.user.findMany({ where: { id: { in: team.userIds }, organizationId: activity.organizationId,
-      isActive: true, role: { in: ['ADMIN', 'OPERATOR'] } }, select: { id: true, firstName: true, lastName: true } });
+      isActive: true, role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] } }, select: { id: true, firstName: true, lastName: true } });
     if (users.length !== team.userIds.length) throw new BadRequestException('Un conseiller est inactif ou hors organisation');
     const results = await this.scheduling.analyzeUsers({ organizationId: activity.organizationId,
       userIds: team.userIds, startUtc: input.startUtc, endUtc: input.endUtc,

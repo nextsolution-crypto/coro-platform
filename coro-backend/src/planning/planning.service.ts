@@ -181,7 +181,7 @@ export class PlanningService {
     if (!building) throw new BadRequestException('Batiment indisponible');
     const users = await this.prisma.user.findMany({ where: {
       organizationId: actor.organizationId, isActive: true,
-      role: { in: ['ADMIN', 'OPERATOR'] },
+      role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] },
       ...(actor.role === 'OPERATOR' ? { id: actor.userId } : {}),
     }, select: { id: true, firstName: true, lastName: true, email: true },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }] });
@@ -234,7 +234,7 @@ export class PlanningService {
     const actionUserId = 'userId' in query ? (query as PlanningActionsDto).userId : undefined;
     const filteredUsers = !!(window.userIds || query.search || actionUserId);
     const users = await this.prisma.user.findMany({ where: { organizationId: actor.organizationId, isActive: true,
-      role: { in: ['ADMIN', 'OPERATOR'] },
+      role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'] },
       ...(window.userIds ? { id: { in: window.userIds } } : {}),
       ...(actionUserId ? { id: actionUserId } : {}),
       ...(query.search ? { OR: [

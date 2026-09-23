@@ -35,7 +35,8 @@ function setup() {
 }
 
 describe('PlanningService', () => {
-  it('projects the authenticated adviser pending assignments independently of a planning window', async () => {
+  it.each(['OPERATOR', 'ADMIN', 'SUPER_ADMIN'] as const)(
+  'projects a %s authenticated user pending assignments independently of a planning window', async role => {
     const { service, prisma } = setup();
     prisma.bookingAssignment.findMany.mockResolvedValue([{ id: 'assignment-1', role: 'LEAD', status: 'PENDING',
       booking: { id: 'booking-1', activityId: 'activity-1', activityType: 'inspection',
@@ -44,7 +45,7 @@ describe('PlanningService', () => {
           activityType: { nameFR: 'Inspection technique' } },
         project: { id: 'project-1', name: 'Mandat 2026', client: { name: 'Client A' },
           building: { name: 'Tour A', timeZone: 'America/Toronto' } } } }]);
-    const result = await service.myAssignments({ ...actor, role: 'OPERATOR' });
+    const result = await service.myAssignments({ ...actor, role });
     expect(prisma.bookingAssignment.findMany.mock.calls[0][0].where).toMatchObject({
       userId: 'u1', status: 'PENDING', booking: { organizationId: 'org-a' },
     });

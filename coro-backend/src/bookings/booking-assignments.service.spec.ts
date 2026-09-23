@@ -102,6 +102,21 @@ describe('BookingAssignmentsService', () => {
     expect(prisma.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'BOOKING_ASSIGNMENT_ACCEPTED', userId: 'admin' }) });
   });
 
+  it.each(['ADMIN', 'SUPER_ADMIN'] as const)('%s can accept and decline only personal LEAD and SUPPORT assignments', async role => {
+    const personalActor: BookingActor = { userId: 'admin', organizationId: 'org-a', role };
+    const lead = await service.add('booking', 'admin', 'LEAD', admin);
+    await expect(service.respond('booking', lead.id, 'ACCEPTED', undefined, personalActor))
+      .resolves.toMatchObject({ id: lead.id, status: 'ACCEPTED' });
+
+    const support = await service.add('booking', 'admin', 'SUPPORT', admin);
+    await expect(service.respond('booking', support.id, 'DECLINED', 'Unavailable', personalActor))
+      .resolves.toMatchObject({ id: support.id, status: 'DECLINED' });
+
+    const other = await service.add('booking', 'user-b', 'SUPPORT', admin);
+    await expect(service.respond('booking', other.id, 'ACCEPTED', undefined, personalActor))
+      .rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('records decline reason and response time without deletion', async () => {
     const assignment = await service.add('booking', 'user-a', 'SUPPORT', admin);
     const declined = await service.respond('booking', assignment.id, 'DECLINED', 'Unavailable', operator);

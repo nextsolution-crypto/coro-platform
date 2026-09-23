@@ -21,7 +21,7 @@ export default function MyAssignmentsPanel({ refreshKey, onChanged }: {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setLoading(true); setMessage(''); setError('');
     api.get<MyAssignmentsResponse>('/planning/my-assignments')
       .then(response => { if (!cancelled) setData(response.data); })
       .catch(() => { if (!cancelled) setError('Impossible de charger vos affectations.'); })
@@ -47,6 +47,7 @@ export default function MyAssignmentsPanel({ refreshKey, onChanged }: {
   };
 
   const count = data?.pendingCount ?? 0;
+  if (!loading && data && count === 0 && !message && !error) return null;
   return <section className={styles.myAssignments} aria-label="Mes affectations">
     <button type="button" className={`${styles.summaryCard} ${count ? styles.summaryCardActive : ''}`}
       onClick={() => setOpen(value => !value)} aria-expanded={open} aria-controls="my-assignments-panel">
