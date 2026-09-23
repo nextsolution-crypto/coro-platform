@@ -226,3 +226,21 @@ test('slot or team edits mark the drawer dirty', () => {
   assert.equal(teamPicker.teamDirty({ leadId: 'steve', supportIds: [] }, '', '', null), true);
   assert.equal(teamPicker.teamDirty({ leadId: '', supportIds: [] }, '2026-09-23', '13:30', 90), true);
 });
+
+test('planner creation uses a single click and ignores event buttons', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'ResourceTimeline.tsx'), 'utf8');
+  assert.match(source, /onClick=\{event =>/);
+  assert.match(source, /closest\('button'\)/);
+  assert.doesNotMatch(source, /onDoubleClick=/);
+  assert.match(source, /onKeyDown=/);
+});
+
+test('planner mutations disable submit while saving and refresh projections without reload', () => {
+  const drawer = fs.readFileSync(path.join(__dirname, 'ActivityPlanningDrawer.tsx'), 'utf8');
+  const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
+  assert.match(drawer, /disabled=\{planningSaving/);
+  assert.match(drawer, /create-and-plan/);
+  assert.match(drawer, /\/plan`/);
+  assert.match(page, /setRefreshKey/);
+  assert.doesNotMatch(page + drawer, /window\.location\.reload/);
+});

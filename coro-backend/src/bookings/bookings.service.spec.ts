@@ -23,6 +23,7 @@ describe('BookingsService security and transitions', () => {
       bookingAssignment: { findMany: jest.fn().mockResolvedValue([]) },
       user: { findFirst: jest.fn().mockResolvedValue(null), findUnique: jest.fn().mockResolvedValue(null) },
       projectActivity: { findFirst: jest.fn().mockResolvedValue(null), update: jest.fn() },
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'activity' }]),
       $transaction: jest.fn(async callback => callback(prisma)),
     };
     scheduling = { analyzeUsers: jest.fn().mockResolvedValue(new Map()),

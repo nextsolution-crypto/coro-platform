@@ -81,12 +81,16 @@ export default function ResourceTimeline({ data, days, onSelect, onCreate }: {
           const weekend = days.length === 7 && days.indexOf(day) >= 5;
           return <div className={`${styles.dayTrack} ${work.length ? '' : styles.noSchedule} ${weekend ? styles.weekend : ''}`} key={day}
             style={{ minHeight: `${Math.max(128, 14 + events.length * 38)}px`, gridColumn: layout.dayColumns[dayIndex], gridRow: layout.resourceRows[rowIndex] }}
-            aria-label={`${user.name}, ${formatDay(day)}`}
-            onDoubleClick={event => {
+            aria-label={`${user.name}, ${formatDay(day)}. Cliquer pour créer une activité.`} role="gridcell" tabIndex={0}
+            onClick={event => {
               if (!onCreate || user.id === '__unassigned' || (event.target as HTMLElement).closest('button')) return;
               const rect = event.currentTarget.getBoundingClientRect();
               const raw = hours.start + (event.clientX - rect.left) / rect.width * (hours.end - hours.start);
               const minute = Math.max(hours.start, Math.min(hours.end - 15, Math.round(raw / 15) * 15));
+              onCreate({ date: day, time: `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`, leadId: user.id });
+            }} onKeyDown={event => {
+              if (!onCreate || user.id === '__unassigned' || !['Enter', ' '].includes(event.key)) return;
+              event.preventDefault(); const minute = Math.round(((hours.start + hours.end) / 2) / 15) * 15;
               onCreate({ date: day, time: `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`, leadId: user.id });
             }}>
             <div className={styles.trackLines}>{ticks.map((tick, index) =>

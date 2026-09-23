@@ -30,19 +30,27 @@ export class BookingsService {
     if (!project) throw new NotFoundException('Projet introuvable');
     const timeZone = project.building?.timeZone ?? 'America/Toronto';
     const requestedDate = resolveBookingInstant({ iso: data.requestedDate, localDateTime: data.requestedLocalDateTime }, timeZone);
-    let linkedActivity: { type: string } | null = null;
-    if (data.activityId) {
-      linkedActivity = await this.prisma.projectActivity.findFirst({ where: {
-        id: data.activityId, projectId: data.projectId, organizationId: project.organizationId,
-        clientVisible: true, clientBookable: true, status: { notIn: ['fait', 'termine', 'annule'] },
-      } });
-      if (!linkedActivity) throw new BadRequestException('Activité non réservable');
-      const open = await this.prisma.booking.findFirst({ where: { activityId: data.activityId, status: { in: OPEN_BOOKING_STATUSES } } });
-      if (open) throw new BadRequestException('Cette activité possède déjà une réservation ouverte');
-    }
-
-    const booking = await this.prisma.booking.create({
-      data: {
+    const create = async (tx: Prisma.TransactionClient | PrismaService) => {
+      let linkedActivity: { type: string } | null = null;
+      if (data.activityId) {
+        const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT "id" FROM "ProjectActivity"
+          WHERE "id" = ${data.activityId} AND "projectId" = ${data.projectId}
+            AND "organizationId" = ${project.organizationId}
+          FOR UPDATE
+        `);
+        if (!locked.length) throw new BadRequestException('ActivitÃ© non rÃ©servable');
+        linkedActivity = await tx.projectActivity.findFirst({ where: {
+          id: data.activityId, projectId: data.projectId, organizationId: project.organizationId,
+          clientVisible: true, clientBookable: true, status: { notIn: ['fait', 'termine', 'annule'] },
+        } });
+        if (!linkedActivity) throw new BadRequestException('ActivitÃ© non rÃ©servable');
+        const open = await tx.booking.findFirst({ where: {
+          activityId: data.activityId, status: { in: OPEN_BOOKING_STATUSES },
+        } });
+        if (open) throw new BadRequestException('Cette activitÃ© possÃ¨de dÃ©jÃ  une rÃ©servation ouverte');
+      }
+      return tx.booking.create({ data: {
         projectId: data.projectId,
         activityId: data.activityId,
         organizationId: project.organizationId,
@@ -55,14 +63,17 @@ export class BookingsService {
         comment: data.comment,
         status: 'DEMANDEE',
         assignments: { create: { userId: project.userId, role: 'LEAD', status: 'ACCEPTED', respondedAt: new Date() } },
-      },
-      include: {
+      }, include: {
         project: { include: { client: true, building: true } },
         assignedUser: true,
         clientUser: true,
-      },
-    });
-
+      } });
+    };
+    const booking = data.activityId
+      ? await this.prisma.$transaction(tx => create(tx), {
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+        })
+      : await create(this.prisma);
     // Notifier le conseiller par courriel
     await this.sendBookingEmail({
       to: booking.assignedUser.email,

@@ -89,6 +89,8 @@
 .candidateGroup { display:grid; gap:6px }.candidateGroup h4 { margin:5px 0 0; color:#6c757d; font-size:10px; text-transform:uppercase; letter-spacing:.08em }.candidateGroup p { margin:0; color:#7a8691; font-size:11px }
 .candidateRow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; border-radius:6px; background:#f8f9fa }.candidateRow > div { display:grid; gap:2px }.candidateRow strong { font-size:12px }.candidateRow span,.candidateRow small { color:#6c757d; font-size:10px }.candidateRow button { border:1px solid #ced4da; border-radius:5px; background:white; padding:6px; color:#45515c; font-size:10px; font-weight:700; cursor:pointer }.candidateRow button:disabled { opacity:.45; cursor:default }
 .schedulingPreview h3 { margin:0; font-size:14px }.previewRow { display:grid; gap:3px; padding-top:7px; border-top:1px solid #edf0f2 }.previewRow strong { font-size:12px }.previewRow span { color:#5d6d7e; font-size:11px }
+.formActions { display:flex; justify-content:flex-end; gap:9px; flex-wrap:wrap }
+.dangerButton { border:1px solid #c9857f; border-radius:5px; background:#fff5f4; color:#922b21; padding:6px 9px; font-weight:700; cursor:pointer }.dangerButton:disabled { opacity:.5 }
 .agendaCard { display:grid; gap:4px; width:100%; text-align:left; background:white; border:1px solid #e9ecef; border-radius:8px; padding:11px; margin:7px 0; cursor:pointer }
 .agendaCard strong { font-size:13px }.agendaCard span { font-size:12px; color:#6c757d }
 .page button:focus-visible,.page a:focus-visible,.page input:focus-visible,.page select:focus-visible,.drawer button:focus-visible,.drawer a:focus-visible { outline:3px solid #2980b9; outline-offset:2px }

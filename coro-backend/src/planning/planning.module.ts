@@ -4,10 +4,11 @@ import { SchedulingModule } from '../scheduling/scheduling.module';
 import { MandateModule } from '../mandate/mandate.module';
 import { PlanningController } from './planning.controller';
 import { PlanningService } from './planning.service';
+import { PlanningActionsService } from './planning-actions.service';
 
 @Module({
   imports: [PrismaModule, SchedulingModule, MandateModule],
   controllers: [PlanningController],
-  providers: [PlanningService],
+  providers: [PlanningService, PlanningActionsService],
 })
 export class PlanningModule {}

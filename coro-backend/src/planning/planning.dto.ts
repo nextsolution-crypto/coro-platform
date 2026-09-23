@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PlanningWindowDto {
@@ -35,6 +35,34 @@ export class PlanningTeamPreviewDto {
   @IsISO8601({ strict: true }) startUtc!: string;
   @Type(() => Number) @IsInt() @Min(15) @Max(1440) durationMinutes!: number;
 }
+
+export class PlanningTeamDto {
+  @IsString() @MaxLength(100) leadUserId!: string;
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(20) @IsString({ each: true }) supportUserIds?: string[];
+  @IsOptional() @IsBoolean() confirmUnknown?: boolean;
+}
+
+export class PlanExistingActivityDto extends PlanningTeamDto {
+  @IsISO8601({ strict: true }) startUtc!: string;
+  @Type(() => Number) @IsInt() @Min(15) @Max(1440) durationMinutes!: number;
+}
+
+export class CreateAndPlanActivityDto extends CreatePlanningActivityDto {
+  @IsISO8601({ strict: true }) startUtc!: string;
+  @Type(() => Number) @IsInt() @Min(15) @Max(1440) durationMinutes!: number;
+  @IsString() @MaxLength(100) leadUserId!: string;
+  @IsOptional() @IsArray() @ArrayUnique() @ArrayMaxSize(20) @IsString({ each: true }) supportUserIds?: string[];
+  @IsOptional() @IsBoolean() confirmUnknown?: boolean;
+}
+
+export class UpdatePlanningSlotDto {
+  @IsISO8601({ strict: true }) startUtc!: string;
+  @Type(() => Number) @IsInt() @Min(15) @Max(1440) durationMinutes!: number;
+  @IsOptional() @IsBoolean() reschedule?: boolean;
+  @IsOptional() @IsBoolean() confirmUnknown?: boolean;
+}
+
+export class ReassignPlanningTeamDto extends PlanningTeamDto {}
 
 export class PlanningActionsDto extends PlanningWindowDto {
   @IsOptional() @IsIn(['BOOKING_REQUESTED', 'NO_ACCEPTED_LEAD', 'PENDING_ASSIGNMENT',

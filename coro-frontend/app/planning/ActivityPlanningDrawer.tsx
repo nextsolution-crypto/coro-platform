@@ -37,6 +37,8 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
   const [previewError, setPreviewError] = useState('');
   const [teamOpen, setTeamOpen] = useState(Boolean(initialSlot?.leadId));
   const [saving, setSaving] = useState(false);
+  const [planningSaving, setPlanningSaving] = useState(false);
+  const [confirmUnknown, setConfirmUnknown] = useState(false);
   const [error, setError] = useState('');
   const buildings = useMemo(() => context.buildings.filter(item => !clientId || item.clientId === clientId), [context, clientId]);
   const projects = useMemo(() => context.projects.filter(item => (!clientId || item.clientId === clientId) && (!buildingId || item.buildingId === buildingId)), [context, clientId, buildingId]);
@@ -90,6 +92,35 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
     } finally { setSaving(false); }
   };
 
+  const plan = async (create: boolean) => {
+    setError('');
+    if (!building || !slotComplete || !durationMinutes || !team.leadId) {
+      setError('Définissez un créneau et choisissez un LEAD.'); return;
+    }
+    const selected = candidates.filter(candidate => candidate.userId === team.leadId || team.supportIds.includes(candidate.userId));
+    if (selected.some(candidate => candidate.availabilityStatus === 'UNKNOWN') && !confirmUnknown) {
+      setError('Confirmez explicitement les disponibilités à vérifier.'); return;
+    }
+    setPlanningSaving(true);
+    try {
+      const minute = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+      const common = { startUtc: localBoundary(date, minute, building.timeZone).toISOString(), durationMinutes,
+        leadUserId: team.leadId, supportUserIds: team.supportIds, confirmUnknown };
+      if (create) {
+        if (!projectId || !activityTypeId) throw new Error('Choisissez un mandat et un type d’activité.');
+        await api.post('/planning/activities/create-and-plan', { ...common, projectId, activityTypeId,
+          customLabel: customLabel || undefined, notes: notes || undefined, mode: modeValue, clientVisible, clientBookable });
+      } else {
+        if (!action?.activityId) throw new Error('Activité introuvable.');
+        await api.post(`/planning/activities/${action.activityId}/plan`, common);
+      }
+      onCreated(); onClose();
+    } catch (cause) {
+      const message = axios.isAxiosError(cause) ? cause.response?.data?.message : cause instanceof Error ? cause.message : null;
+      setError(Array.isArray(message) ? message.join(' ') : message || 'La planification a changé. Actualisez les disponibilités.');
+    } finally { setPlanningSaving(false); }
+  };
+
   const slotFields = <section className={styles.slotSection}><div className={styles.sectionHeading}><h3>Créneau</h3>
     {building && <span>Fuseau du bâtiment : {building.timeZone}{!building.timeZoneVerified ? ' · à vérifier' : ''}</span>}</div>
     <div className={styles.slotGrid}><label>Date<input type="date" value={date} onChange={event => setDate(event.target.value)} /></label>
@@ -100,7 +131,11 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
     {previewError && <p className={styles.error} role="alert">{previewError}</p>}
     {teamOpen && <><TeamPicker candidates={candidates} team={team} onChange={setTeam} />
       <SchedulingPreview complete={slotComplete} loading={previewLoading} candidates={candidates} team={team} timeZone={building?.timeZone ?? 'America/Toronto'} />
-      <p className={styles.formHint}>La confirmation de planification sera activée à l’étape 2D.3.3C. Aucun BookingAssignment n’est créé ici.</p></>}
+      {candidates.some(candidate => candidate.availabilityStatus === 'UNKNOWN' &&
+        (candidate.userId === team.leadId || team.supportIds.includes(candidate.userId))) &&
+        <label className={styles.checkbox}><input type="checkbox" checked={confirmUnknown} onChange={event => setConfirmUnknown(event.target.checked)} />Confirmer les disponibilités à vérifier</label>}
+      {mode === 'PLAN_EXISTING' && <button type="button" className={styles.primaryButton} disabled={planningSaving || previewLoading || !team.leadId}
+        onClick={() => plan(false)}>{planningSaving ? 'Planification…' : 'Confirmer la planification'}</button>}</>}
   </section>;
 
   return <div className={styles.drawerBackdrop} onMouseDown={event => { if (event.target === event.currentTarget) requestClose(); }}>
@@ -109,7 +144,8 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
         <button ref={closeRef} type="button" className={styles.closeButton} aria-label="Fermer" onClick={requestClose}>×</button></div>
       {mode === 'PLAN_EXISTING' ? <><dl className={styles.details}><dt>Client</dt><dd>{action?.clientName ?? '—'}</dd>
         <dt>Bâtiment</dt><dd>{action?.buildingName ?? '—'}</dd><dt>Mandat</dt><dd>{action?.projectName ?? '—'}</dd>
-        <dt>Type</dt><dd>{action?.activityTypeName ?? action?.label}</dd><dt>État</dt><dd>À planifier</dd></dl>{slotFields}</>
+        <dt>Type</dt><dd>{action?.activityTypeName ?? action?.label}</dd><dt>État</dt><dd>À planifier</dd></dl>{slotFields}
+        {error && <p className={styles.error} role="alert">{error}</p>}</>
       : <form className={styles.activityForm} onSubmit={submit}>
         <label>Client<select required value={clientId} onChange={event => { setClientId(event.target.value); setBuildingId(''); setProjectId(''); setTeam(EMPTY_TEAM); }}><option value="">Choisir un client</option>{context.clients.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <label>Bâtiment<select required value={buildingId} disabled={!clientId} onChange={event => { setBuildingId(event.target.value); setProjectId(''); setTeam(EMPTY_TEAM); setCandidates([]); }}><option value="">Choisir un bâtiment</option>{buildings.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -122,7 +158,9 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
         <label className={styles.checkbox}><input type="checkbox" checked={clientBookable} disabled={!clientVisible} onChange={event => setClientBookable(event.target.checked)} />Réservable par le client</label>
         {slotFields}<p className={styles.formHint}>« Créer l’activité » conserve le comportement 3A : Activity sans créneau confirmé et sans Booking.</p>
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <button className={styles.primaryButton} type="submit" disabled={saving}>{saving ? 'Création…' : 'Créer l’activité à planifier'}</button>
+        <div className={styles.formActions}><button className={styles.inlineButton} type="submit" disabled={saving || planningSaving}>{saving ? 'Création…' : 'Créer sans créneau'}</button>
+          <button className={styles.primaryButton} type="button" disabled={saving || planningSaving || previewLoading || !team.leadId}
+            onClick={() => plan(true)}>{planningSaving ? 'Planification…' : 'Créer et planifier'}</button></div>
       </form>}
     </aside>
   </div>;

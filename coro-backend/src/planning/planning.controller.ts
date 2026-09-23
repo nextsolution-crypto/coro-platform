@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PlanningService } from './planning.service';
-import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningTeamPreviewDto, PlanningWindowDto } from './planning.dto';
+import { PlanningActionsService } from './planning-actions.service';
+import { CreateAndPlanActivityDto, CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningTeamPreviewDto, PlanningWindowDto, PlanExistingActivityDto, ReassignPlanningTeamDto, UpdatePlanningSlotDto } from './planning.dto';
 
 @Controller('planning')
 @UseGuards(AuthGuard('jwt'))
 export class PlanningController {
-  constructor(private readonly planning: PlanningService) {}
+  constructor(private readonly planning: PlanningService, private readonly mutations: PlanningActionsService) {}
 
   @Get('team')
   team(@Query() query: PlanningWindowDto, @Request() req: any) {
@@ -31,5 +32,30 @@ export class PlanningController {
   @Post('team-preview')
   teamPreview(@Body() body: PlanningTeamPreviewDto, @Request() req: any) {
     return this.planning.teamPreview(body, req.user);
+  }
+
+  @Post('activities/:activityId/plan')
+  planExisting(@Param('activityId') activityId: string, @Body() body: PlanExistingActivityDto, @Request() req: any) {
+    return this.mutations.planExisting(activityId, body, req.user);
+  }
+
+  @Post('activities/create-and-plan')
+  createAndPlan(@Body() body: CreateAndPlanActivityDto, @Request() req: any) {
+    return this.mutations.createAndPlan(body, req.user);
+  }
+
+  @Patch('bookings/:bookingId/slot')
+  updateSlot(@Param('bookingId') bookingId: string, @Body() body: UpdatePlanningSlotDto, @Request() req: any) {
+    return this.mutations.updateSlot(bookingId, body, req.user);
+  }
+
+  @Patch('bookings/:bookingId/team')
+  reassign(@Param('bookingId') bookingId: string, @Body() body: ReassignPlanningTeamDto, @Request() req: any) {
+    return this.mutations.reassign(bookingId, body, req.user);
+  }
+
+  @Post('bookings/:bookingId/cancel-schedule')
+  cancelSchedule(@Param('bookingId') bookingId: string, @Request() req: any) {
+    return this.mutations.cancelSchedule(bookingId, req.user);
   }
 }

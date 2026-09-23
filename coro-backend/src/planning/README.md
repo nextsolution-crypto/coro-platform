@@ -25,3 +25,16 @@ The team and action routes accept optional `projectId` and `activityTypeId` filt
 The public candidate contract contains `userId`, `displayName`, an optional secondary email, `availabilityStatus`, a generic reason, an optional generic blocked interval and the committed 12-week capacity percentage. `SOFT_CONFLICT` is projected as `UNKNOWN`; the Planner exposes only `AVAILABLE`, `UNKNOWN` and `BLOCKED`. Raw Scheduling conflicts, Booking or client details, absence type and private notes are never returned.
 
 Admins and super administrators see active staff candidates from their organization. An operator can preview only their own availability. Client JWTs are rejected before database access. Capacity is informational and never changes the Scheduling category.
+
+## Planner mutations
+
+`PlanningActionsService` owns the composed writes. `PlanningService` remains the read projection. Planning an existing Activity locks its `ProjectActivity` row, verifies that no open Booking exists, locks candidate Users in deterministic order, reruns Scheduling through the transaction, then creates the Booking, PENDING assignments, Activity schedule and audit together.
+
+The admin-created assignment policy follows `BookingAssignmentsService.add`: LEAD and SUPPORT start as `PENDING`. `Booking.assignedUserId` mirrors the selected LEAD for legacy readers; `BookingAssignment` is the team source of truth. The required legacy `clientUserId` is populated from an active ClientUser scoped to the Project client and Building. Planning is rejected when no such contact exists.
+
+`UNKNOWN` requires `confirmUnknown: true`; `BLOCKED` is always rejected with a generic adviser message. No Scheduling conflict details are returned by mutation errors. Creating and planning uses the same transaction, so a failure leaves neither Activity nor Booking. Slot edits preserve the Booking ID. A report preserves `requestedDate`, stores the new effective instant in `reportedDate`, and sets `REPORTEE`.
+
+Cancelling a schedule sets the Booking to `ANNULEE`, terminates active assignments as `REMOVED`, clears the Activity scheduling dates and keeps the same active Activity for the backlog. Replanning creates a new Booking attempt while preserving the cancelled Booking. No Activity cancellation endpoint is introduced.
+The one-open-Booking-per-Activity invariant covers both Planner and client Booking creation. Both paths lock the same `ProjectActivity` row before their final open-status check and insert. PostgreSQL remains the final authority through the partial unique index `Booking_one_open_per_activity_idx` for `DEMANDEE`, `CONFIRMEE`, `REPORTEE`, and `REASSIGNEE`. `REFUSEE`, `COMPLETEE`, and `ANNULEE` are terminal and permit a later Booking attempt. The read-only preflight is `prisma/preflight/activity-booking-open-invariant.sql`.
+
+Planner team replacement keeps the old LEAD as `REPLACED` and links it to the new LEAD with `replacedByAssignmentId`. A retained SUPPORT is likewise linked to its new Assignment for the same user and Booking; removed SUPPORT assignments remain terminal without an invented successor. PostgreSQL index `BookingAssignment_one_active_lead` protects one `PENDING` or `ACCEPTED` LEAD per Booking. `BookingAssignment_unique_active_person_role` protects each `bookingId + userId + role` combination for those same active statuses.

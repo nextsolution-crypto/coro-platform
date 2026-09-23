@@ -293,7 +293,8 @@ export default function TeamPlannerPage() {
       </section>}
       {!data && !loading && !error && <p className={styles.empty}>Aucune projection disponible.</p>}
     </div>
-    <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone} onClose={closeDrawer} />
+    <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone} onClose={closeDrawer}
+      onMutated={() => setRefreshKey(key => key + 1)} />
     {activityDrawer && context && <ActivityPlanningDrawer mode={activityDrawer.mode} action={activityDrawer.action}
       initialSlot={activityDrawer.initialSlot} context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}
   </AppLayout>;

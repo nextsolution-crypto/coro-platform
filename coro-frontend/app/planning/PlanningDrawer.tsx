@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import axios from 'axios';
+import api from '@/lib/api';
 import type { PlannerEvent, PlannerUser } from './types';
 import { eventLabel, eventStatus } from './projection';
+import { dateKey, formatClock, localBoundary } from './time';
 import styles from './planning.module.css';
 
 function instant(value: string, timeZone: string) {
@@ -11,10 +14,12 @@ function instant(value: string, timeZone: string) {
     year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
-export default function PlanningDrawer({ event, users, displayTimeZone, onClose }: {
-  event: PlannerEvent | null; users: PlannerUser[]; displayTimeZone: string; onClose: () => void;
+export default function PlanningDrawer({ event, users, displayTimeZone, onClose, onMutated }: {
+  event: PlannerEvent | null; users: PlannerUser[]; displayTimeZone: string; onClose: () => void; onMutated?: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [mutating, setMutating] = useState(false);
+  const [mutationError, setMutationError] = useState('');
   useEffect(() => {
     if (!event) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -34,6 +39,33 @@ export default function PlanningDrawer({ event, users, displayTimeZone, onClose 
   }, [event, onClose]);
   if (!event) return null;
   const names = new Map(users.map(user => [user.id, user.name]));
+  const mutateSlot = async (reschedule: boolean) => {
+    if (!event.bookingId) return;
+    const date = window.prompt(reschedule ? 'Nouvelle date (AAAA-MM-JJ)' : 'Date (AAAA-MM-JJ)', dateKey(new Date(event.startUtc), event.sourceTimeZone));
+    if (!date) return;
+    const time = window.prompt('Heure de début (HH:mm)', formatClock(event.startUtc, event.sourceTimeZone));
+    if (!time) return;
+    const currentDuration = Math.round((new Date(event.endUtc).getTime() - new Date(event.startUtc).getTime()) / 60_000);
+    const duration = Number(window.prompt('Durée en minutes', String(currentDuration)));
+    if (!Number.isInteger(duration) || duration < 15) { setMutationError('Durée invalide.'); return; }
+    setMutating(true); setMutationError('');
+    try {
+      const minute = Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+      await api.patch(`/planning/bookings/${event.bookingId}/slot`, { startUtc: localBoundary(date, minute, event.sourceTimeZone).toISOString(), durationMinutes: duration, reschedule });
+      onMutated?.(); onClose();
+    } catch (cause) {
+      const message = axios.isAxiosError(cause) ? cause.response?.data?.message : null;
+      setMutationError(Array.isArray(message) ? message.join(' ') : message || 'La modification a été refusée.');
+    } finally { setMutating(false); }
+  };
+  const cancelSchedule = async () => {
+    if (!event.bookingId || !window.confirm('Annuler uniquement cette planification et remettre l’activité au backlog ?')) return;
+    setMutating(true); setMutationError('');
+    try { await api.post(`/planning/bookings/${event.bookingId}/cancel-schedule`); onMutated?.(); onClose(); }
+    catch (cause) { const message = axios.isAxiosError(cause) ? cause.response?.data?.message : null;
+      setMutationError(Array.isArray(message) ? message.join(' ') : message || 'Annulation impossible.'); }
+    finally { setMutating(false); }
+  };
   return <div className={styles.drawerBackdrop} onMouseDown={mouse => { if (mouse.target === mouse.currentTarget) onClose(); }}>
     <aside className={styles.drawer} role="dialog" aria-modal="true" aria-labelledby="planner-drawer-title">
       <div className={styles.drawerHeader}>
@@ -64,6 +96,13 @@ export default function PlanningDrawer({ event, users, displayTimeZone, onClose 
         <h3>À vérifier</h3><ul>{event.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
       </section>}
       {event.needsAction && <p className={styles.actionNotice}>Une action est requise pour cet événement.</p>}
+      {event.source === 'BOOKING' && event.bookingId && <section className={styles.drawerSection}>
+        <h3>Actions de planification</h3><div className={styles.formActions}>
+          <button type="button" className={styles.inlineButton} disabled={mutating} onClick={() => mutateSlot(false)}>Modifier le créneau</button>
+          <button type="button" className={styles.inlineButton} disabled={mutating} onClick={() => mutateSlot(true)}>Reporter</button>
+          <button type="button" className={styles.dangerButton} disabled={mutating} onClick={cancelSchedule}>Annuler la planification</button>
+        </div>{mutationError && <p className={styles.error} role="alert">{mutationError}</p>}
+      </section>}
       {event.source !== 'USER_UNAVAILABILITY' && <div className={styles.drawerLinks}>
         {event.bookingId && <Link href="/bookings">Résoudre dans Booking</Link>}
         {event.projectId && <Link href={`/projects/${event.projectId}`}>Ouvrir le projet</Link>}
