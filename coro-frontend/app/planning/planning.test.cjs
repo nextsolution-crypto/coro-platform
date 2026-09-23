@@ -413,17 +413,3 @@ test('VIEW and repeated mutation mode switches invalidate old preview cycles', (
   assert.equal(reassign.isCurrent(), false);
   assert.equal(previewCycle.createPreviewCycleGuard().begin().isCurrent(), true);
 });
-
-test('temporary reassignment diagnostics expose sanitized lifecycle counters without private data', () => {
-  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
-  for (const stage of ['mode-enter', 'cycle-start', 'inputs-ready', 'payload-built', 'debounce-wait',
-    'request-start', 'request-success', 'request-cancelled', 'request-stale', 'request-error',
-    'cycle-complete', 'view-exit']) assert.ok(drawer.includes(stage));
-  for (const field of ['requestCount', 'successCount', 'cancelCount', 'staleCount', 'errorCount',
-    'buildingIdPresent', 'startUtc', 'durationMinutes', 'candidatesCount', 'selectedLeadPresent']) {
-    assert.ok(drawer.includes(field));
-  }
-  assert.equal(drawer.includes('console.log'), false);
-  assert.equal(drawer.includes('privateNote'), false);
-  assert.ok(drawer.includes('TEMPORARY — remove after Booking V1 runtime diagnosis.'));
-});

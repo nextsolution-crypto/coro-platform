@@ -16,23 +16,6 @@ import styles from './planning.module.css';
 export type PlanningDrawerMode = 'VIEW' | 'EDIT_SLOT' | 'RESCHEDULE' | 'REASSIGN' | 'CANCEL_SCHEDULE';
 
 const EMPTY_TEAM: TeamDraft = { leadId: '', supportIds: [] };
-// TEMPORARY — remove after Booking V1 runtime diagnosis.
-const REASSIGN_RUNTIME_DIAGNOSTICS = true;
-
-type ReassignDiagnostics = {
-  cycleId: number; stage: string; lastOutcome: string;
-  requestCount: number; successCount: number; cancelCount: number; staleCount: number; errorCount: number;
-  buildingIdPresent: boolean; timeZone: string; date: string; time: string; durationMinutes: number;
-  startUtc: string; candidatesCount: number; selectedLeadPresent: boolean;
-  isAxiosError: boolean | null; status: number | null; code: string; technicalMessage: string;
-};
-
-const EMPTY_REASSIGN_DIAGNOSTICS: ReassignDiagnostics = {
-  cycleId: 0, stage: 'view-exit', lastOutcome: 'none', requestCount: 0, successCount: 0,
-  cancelCount: 0, staleCount: 0, errorCount: 0, buildingIdPresent: false, timeZone: '', date: '', time: '',
-  durationMinutes: 0, startUtc: '', candidatesCount: 0, selectedLeadPresent: false,
-  isAxiosError: null, status: null, code: '', technicalMessage: '',
-};
 
 function instant(value: string, timeZone: string) {
   return new Intl.DateTimeFormat('fr-CA', { timeZone, weekday: 'long', day: 'numeric', month: 'long',
@@ -51,7 +34,6 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const previewCycles = useRef(createPreviewCycleGuard());
-  const diagnosticCycle = useRef(0);
   const [mode, setMode] = useState<PlanningDrawerMode>(initialMode);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -65,7 +47,6 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [reassignDiagnostics, setReassignDiagnostics] = useState(EMPTY_REASSIGN_DIAGNOSTICS);
 
   const initialTeam = useMemo<TeamDraft>(() => ({
     leadId: event?.assignments?.find(item => item.role === 'LEAD')?.userId ?? '',
@@ -114,12 +95,6 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
   const previewBuildingId = event?.buildingId ?? '';
   const previewTimeZone = event?.sourceTimeZone ?? '';
   useEffect(() => {
-    if (!REASSIGN_RUNTIME_DIAGNOSTICS) return;
-    setReassignDiagnostics(current => ({ ...current, stage: mode === 'REASSIGN' ? 'mode-enter' : 'view-exit',
-      candidatesCount: mode === 'REASSIGN' ? current.candidatesCount : 0,
-      selectedLeadPresent: mode === 'REASSIGN' ? Boolean(team.leadId) : false }));
-  }, [mode]); // Diagnostic observation only; it does not drive preview state.
-  useEffect(() => {
     if (!editable) {
       previewCycles.current.invalidate();
       setPreviewLoading(false); setPreviewError('');
@@ -130,17 +105,8 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
       setPreviewLoading(false); setPreviewError('Données du bâtiment indisponibles pour vérifier les disponibilités.'); return;
     }
     if (!date || !time || !durationMinutes) { setPreviewLoading(false); return; }
-    const runtimeDiagnostic = REASSIGN_RUNTIME_DIAGNOSTICS && mode === 'REASSIGN';
-    const runtimeCycleId = runtimeDiagnostic ? ++diagnosticCycle.current : 0;
-    let runtimeSettled = false;
-    if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, cycleId: runtimeCycleId,
-      stage: 'cycle-start', lastOutcome: 'none', buildingIdPresent: Boolean(previewBuildingId),
-      timeZone: previewTimeZone, date, time, durationMinutes, startUtc: '', candidatesCount: 0,
-      selectedLeadPresent: Boolean(team.leadId), isAxiosError: null, status: null, code: '', technicalMessage: '' }));
     const cycle = previewCycles.current.begin();
     setPreviewLoading(true);
-    if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'inputs-ready' }));
-    if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'debounce-wait' }));
     const timer = window.setTimeout(async () => {
       let request;
       try {
@@ -151,63 +117,22 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
       }
       if (!cycle.isCurrent()) return;
       if (!request) {
-        runtimeSettled = true;
-        if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'cycle-complete',
-          lastOutcome: 'request-error', errorCount: current.errorCount + 1,
-          technicalMessage: 'Invalid local preview inputs' }));
         setPreviewLoading(false);
         setPreviewError('Le créneau est invalide. Vérifiez la date, l’heure et le fuseau horaire.');
         return;
       }
-      if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'payload-built',
-        startUtc: request.startUtc }));
       try {
-        if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'request-start',
-          requestCount: current.requestCount + 1 }));
         const response = await api.post<TeamPreview>('/planning/team-preview', request, { signal: cycle.signal });
-        if (!cycle.isCurrent()) {
-          if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'request-stale',
-            lastOutcome: 'request-stale', staleCount: current.staleCount + 1 }));
-          return;
-        }
+        if (!cycle.isCurrent()) return;
         setCandidates(response.data.candidates);
-        runtimeSettled = true;
-        if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'request-success',
-          lastOutcome: 'request-success', successCount: current.successCount + 1,
-          candidatesCount: response.data.candidates.length }));
       } catch (cause) {
         const cancelled = isPreviewCancellation(cause) || axios.isCancel(cause);
-        if (runtimeDiagnostic && cancelled && !runtimeSettled) {
-          runtimeSettled = true;
-          setReassignDiagnostics(current => ({ ...current, stage: 'request-cancelled',
-            lastOutcome: 'request-cancelled', cancelCount: current.cancelCount + 1 }));
-        }
         if (cycle.isCurrent() && !cancelled) {
-          runtimeSettled = true;
-          const axiosError = axios.isAxiosError(cause);
-          if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'request-error',
-            lastOutcome: 'request-error', errorCount: current.errorCount + 1, isAxiosError: axiosError,
-            status: axiosError ? cause.response?.status ?? null : null,
-            code: cause && typeof cause === 'object' && 'code' in cause ? String(cause.code ?? '') : '',
-            technicalMessage: axiosError ? 'Axios request failed' : cause instanceof Error ? cause.name : 'Unknown error' }));
           setPreviewError(serverMessage(cause, 'Impossible de vérifier les disponibilités.'));
         }
-      } finally {
-        if (cycle.isCurrent()) {
-          setPreviewLoading(false);
-          if (runtimeDiagnostic) setReassignDiagnostics(current => ({ ...current, stage: 'cycle-complete' }));
-        }
-      }
+      } finally { if (cycle.isCurrent()) setPreviewLoading(false); }
     }, 300);
-    return () => {
-      window.clearTimeout(timer);
-      if (runtimeDiagnostic && !runtimeSettled) {
-        runtimeSettled = true;
-        setReassignDiagnostics(current => ({ ...current, stage: 'request-cancelled',
-          lastOutcome: 'request-cancelled', cancelCount: current.cancelCount + 1 }));
-      }
-      cycle.cancel();
-    };
+    return () => { window.clearTimeout(timer); cycle.cancel(); };
   }, [editable, previewBuildingId, previewTimeZone, date, time, durationMinutes]);
 
   if (!event) return null;
@@ -322,9 +247,6 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
       </>}
 
       {mode === 'REASSIGN' && <>
-        {REASSIGN_RUNTIME_DIAGNOSTICS && <section className={styles.notice} aria-label="Diagnostic REASSIGN">
-          <strong>DIAGNOSTIC REASSIGN</strong><pre>{`cycle: ${reassignDiagnostics.cycleId}\nstage: ${reassignDiagnostics.stage}\nlast: ${reassignDiagnostics.lastOutcome}\nrequest/success/cancel/stale/error: ${reassignDiagnostics.requestCount}/${reassignDiagnostics.successCount}/${reassignDiagnostics.cancelCount}/${reassignDiagnostics.staleCount}/${reassignDiagnostics.errorCount}\nbuildingIdPresent: ${reassignDiagnostics.buildingIdPresent}\ntimezone: ${reassignDiagnostics.timeZone}\ndate: ${reassignDiagnostics.date}\ntime: ${reassignDiagnostics.time}\nduration: ${reassignDiagnostics.durationMinutes}\nstartUtc: ${reassignDiagnostics.startUtc || 'not-built'}\ncandidates: ${reassignDiagnostics.candidatesCount}\nselected lead: ${reassignDiagnostics.selectedLeadPresent ? 'present' : 'absent'}\naxios: ${reassignDiagnostics.isAxiosError ?? 'n/a'}\nstatus: ${reassignDiagnostics.status ?? 'n/a'}\ncode: ${reassignDiagnostics.code || 'n/a'}\ntechnical: ${reassignDiagnostics.technicalMessage || 'n/a'}`}</pre>
-        </section>}
         <p className={styles.notice}>LEAD actuel : {names.get(initialTeam.leadId) ?? 'Aucun'}<br />SUPPORT actuels : {initialTeam.supportIds.map(id => names.get(id)).filter(Boolean).join(', ') || 'Aucun'}</p>
         {previewError && <p className={styles.error} role="alert">{previewError}</p>}
         {!previewError && <TeamPicker candidates={candidates} team={team} onChange={setTeam} />}
