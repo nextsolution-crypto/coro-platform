@@ -95,3 +95,39 @@ test('API URL helpers never duplicate the api segment', () => {
   if (previousPublic === undefined) delete process.env.NEXT_PUBLIC_API_URL; else process.env.NEXT_PUBLIC_API_URL = previousPublic;
   if (previousInternal === undefined) delete process.env.INTERNAL_API_URL; else process.env.INTERNAL_API_URL = previousInternal;
 });
+
+test('the about pilot uses the shared Website V2 shell and locale foundations', () => {
+  const page = readFileSync(resolve('app/about/page.tsx'), 'utf8');
+  const view = readFileSync(resolve('app/about/AboutV2.tsx'), 'utf8');
+  assert.match(view, /<SiteHeader locale=\{locale\} pathname="\/about" \/>/);
+  assert.match(view, /<SiteFooter locale=\{locale\} pathname="\/about" \/>/);
+  assert.match(page, /localeFromSearchParams/);
+  assert.match(view, /localizedHref/);
+  assert.match(page, /buildPageMetadata/);
+  assert.doesNotMatch(`${page}\n${view}`, /about-mobile-menu|about-desktop-nav/);
+});
+
+test('the about pilot keeps bilingual content and its relevant structured data', () => {
+  const page = readFileSync(resolve('app/about/page.tsx'), 'utf8');
+  const content = readFileSync(resolve('app/about/content.ts'), 'utf8');
+  const view = readFileSync(resolve('app/about/AboutV2.tsx'), 'utf8');
+  assert.match(content, /Conçue par le terrain/);
+  assert.match(content, /Built from the field/);
+  assert.match(content, /Conformité Opérationnelle/);
+  assert.match(content, /Résilience Organisationnelle/);
+  assert.match(content, /CORO takes its name from the French concepts/);
+  for (const step of ['Connaître', 'Anticiper', 'Détecter', 'Décider', 'Agir', 'Protéger', 'Prouver', 'Apprendre', 'Améliorer']) assert.match(content, new RegExp(step));
+  for (const phase of ['Avant', 'Pendant', 'Après']) assert.match(content, new RegExp(phase));
+  assert.match(content, /Même donnée\. Plusieurs usages/);
+  assert.match(content, /décisions sensibles demeurent sous contrôle humain/i);
+  for (const level of ['Bâtiment', 'Portefeuille', 'Organisation']) assert.match(content, new RegExp(level));
+  assert.match(page, /'@type': 'AboutPage'/);
+  assert.match(page, /organizationJsonLd/);
+  assert.doesNotMatch(view, /href=.*(?:knowledge|coro-ai|coro-ops|coro-network|building-bridge|qr-intervention)/i);
+  assert.doesNotMatch(content, /status:\s*['"]available['"]/i);
+  assert.equal(localizedHref('/about', 'fr'), '/about');
+  assert.equal(localizedHref('/about', 'en'), '/about?lang=en');
+  const metadata = buildPageMetadata({ path: '/about', locale: 'en', title: 'About CORO', description: 'CORO' });
+  assert.equal(metadata.alternates?.canonical, 'https://getcoro.io/about?lang=en');
+  assert.deepEqual(metadata.alternates?.languages, { 'fr-CA': 'https://getcoro.io/about', 'en-CA': 'https://getcoro.io/about?lang=en', 'x-default': 'https://getcoro.io/about' });
+});
