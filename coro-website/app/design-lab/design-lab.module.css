@@ -243,3 +243,12 @@
 .familyRule dl > div { display: grid; gap: .3rem; padding-block-start: .6rem; border-block-start: 1px solid var(--coro-v1-paper-line-strong); }
 .familyRule dd { margin: 0; font-size: var(--coro-v1-text-small); color: var(--coro-v1-text-600); line-height: 1.5; }
 @media (min-width: 48rem) { .familyRule dl { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--coro-v1-space-8); } }
+
+/* Zone 04 */
+.spatialStudy { max-inline-size: 68rem; margin-inline: auto; }
+.spatialLegend { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--coro-v1-paper-line-strong); }
+.spatialLegend ul { list-style: none; margin: .4rem 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; font-size: .8125rem; }
+.spatialLegend li { display: inline-flex; align-items: center; gap: .4rem; }
+.spatialLegend li span { inline-size: 1.25rem; block-size: .875rem; border: 1px dashed var(--coro-v1-navy-950); background: repeating-linear-gradient(135deg, rgb(6 29 53 / 35%) 0 2px, transparent 2px 6px); }
+.spatialLegend li span[data-hatch="Z2"] { background: repeating-linear-gradient(45deg, rgb(6 29 53 / 35%) 0 2px, transparent 2px 6px); }
+.spatialLegend li span[data-hatch="Z3"] { background: repeating-linear-gradient(0deg, rgb(6 29 53 / 35%) 0 2px, transparent 2px 6px); }
