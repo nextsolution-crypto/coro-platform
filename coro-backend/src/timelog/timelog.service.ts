@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const DEFAULT_CATEGORIES = [
@@ -67,15 +67,19 @@ export class TimelogService {
   }
 
   async updateCategory(key: string, dto: any, organizationId: string) {
+    const category = await this.prisma.timelogCategory.findFirst({ where: { key, organizationId } });
+    if (!category) throw new NotFoundException('Catégorie introuvable');
     return this.prisma.timelogCategory.updateMany({
-      where: { key, OR: [{ organizationId: null }, { organizationId }] },
+      where: { key, organizationId },
       data: { label: dto.label },
     });
   }
 
   async deleteCategory(key: string, organizationId: string) {
+    const category = await this.prisma.timelogCategory.findFirst({ where: { key, organizationId } });
+    if (!category) throw new NotFoundException('Catégorie introuvable');
     return this.prisma.timelogCategory.updateMany({
-      where: { key, OR: [{ organizationId: null }, { organizationId }] },
+      where: { key, organizationId },
       data: { isActive: false },
     });
   }
@@ -161,9 +165,9 @@ export class TimelogService {
     });
   }
 
-  async updateEntry(entryId: string, userId: string, dto: any) {
+  async updateEntry(entryId: string, userId: string, organizationId: string, dto: any) {
     return this.prisma.timelogEntry.updateMany({
-      where: { id: entryId, userId },
+      where: { id: entryId, userId, organizationId },
       data: {
         heures: parseFloat(dto.heures),
         note: dto.note || null,
@@ -171,9 +175,9 @@ export class TimelogService {
     });
   }
 
-  async deleteEntry(entryId: string, userId: string) {
+  async deleteEntry(entryId: string, userId: string, organizationId: string) {
     return this.prisma.timelogEntry.deleteMany({
-      where: { id: entryId, userId },
+      where: { id: entryId, userId, organizationId },
     });
   }
 

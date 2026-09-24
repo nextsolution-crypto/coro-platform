@@ -178,7 +178,7 @@ export default function TimelogCategoriesPage() {
             className="px-4 sm:px-5 py-3"
             style={{ borderBottom: idx < categories.length - 1 ? '1px solid #F8F9FA' : 'none' }}
           >
-            {editingId === cat.key ? (
+            {editingId === cat.key && cat.organizationId !== null ? (
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <input
                   type="text"
@@ -189,7 +189,7 @@ export default function TimelogCategoriesPage() {
                   autoFocus
                 />
 
-                <div className="flex gap-2 self-end sm:self-auto">
+                {cat.organizationId !== null && <div className="flex gap-2 self-end sm:self-auto">
                   <button
                     onClick={() => handleEdit(cat.key)}
                     className="p-2 rounded text-white"
@@ -210,7 +210,7 @@ export default function TimelogCategoriesPage() {
                   >
                     <X size={13} />
                   </button>
-                </div>
+                </div>}
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -223,7 +223,7 @@ export default function TimelogCategoriesPage() {
                   </p>
                 </div>
 
-                <div className="flex gap-2 self-end sm:self-auto">
+                {cat.organizationId !== null && <div className="flex gap-2 self-end sm:self-auto">
                   <button
                     onClick={() => {
                       setEditingId(cat.key);
@@ -248,7 +248,7 @@ export default function TimelogCategoriesPage() {
                   >
                     <Trash2 size={13} />
                   </button>
-                </div>
+                </div>}
               </div>
             )}
           </div>

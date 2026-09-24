@@ -39,10 +39,10 @@ export default function OrgTaskTemplatesPage() {
     try {
       const [orgRes, globalRes] = await Promise.all([
         api.get('/task-templates/my'),
-        api.get('/task-templates'),
+        api.get('/task-templates/combined'),
       ]);
       setOrgTemplates(orgRes.data?.templates || []);
-      setGlobalTemplates(globalRes.data?.templates || []);
+      setGlobalTemplates((globalRes.data?.templates || []).filter((template: any) => template.organizationId === null));
 
       const cats: Record<string, boolean> = {};
       CATEGORY_ORDER.forEach(c => { cats[c] = true; });
@@ -65,7 +65,7 @@ export default function OrgTaskTemplatesPage() {
 
   const handleEdit = async (id: string) => {
     try {
-      await api.put(`/task-templates/${id}`, editingData);
+      await api.put(`/task-templates/my/${id}`, editingData);
       setEditingId(null);
       setEditingData({});
       fetchTemplates();
@@ -75,7 +75,7 @@ export default function OrgTaskTemplatesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce template ?')) return;
     try {
-      await api.delete(`/task-templates/${id}`);
+      await api.delete(`/task-templates/my/${id}`);
       fetchTemplates();
     } catch (err) { console.error(err); }
   };

@@ -36,6 +36,10 @@ export class MandateService {
 
   async saveMandate(projectId: string, organizationId: string, dto: any) {
     await this.assertOwnership(projectId, organizationId);
+    if (dto.ownerId) {
+      const owner = await this.prisma.user.findFirst({ where: { id: dto.ownerId, organizationId, isActive: true } });
+      if (!owner) throw new NotFoundException('Responsable introuvable');
+    }
 
     // Calcul automatique du délai si type = FORFAITAIRE et dateDebutDelai fournie
     let dateLimite: Date | null = null;
@@ -147,9 +151,10 @@ export class MandateService {
     });
   }
 
-  async updateComment(commentId: string, userId: string, contenu: string) {
+  async updateComment(projectId: string, commentId: string, userId: string, organizationId: string, contenu: string) {
+    await this.assertOwnership(projectId, organizationId);
     const comment = await this.prisma.projectComment.findFirst({
-      where: { id: commentId, userId },
+      where: { id: commentId, projectId, organizationId, userId },
     });
     if (!comment) throw new NotFoundException('Commentaire introuvable ou non autorisé');
     return this.prisma.projectComment.update({
@@ -159,9 +164,10 @@ export class MandateService {
     });
   }
 
-  async deleteComment(commentId: string, userId: string) {
+  async deleteComment(projectId: string, commentId: string, userId: string, organizationId: string) {
+    await this.assertOwnership(projectId, organizationId);
     const comment = await this.prisma.projectComment.findFirst({
-      where: { id: commentId, userId },
+      where: { id: commentId, projectId, organizationId, userId },
     });
     if (!comment) throw new NotFoundException('Commentaire introuvable ou non autorisé');
     return this.prisma.projectComment.delete({ where: { id: commentId } });
@@ -243,6 +249,10 @@ export class MandateService {
       where: { id: taskId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
+    if (dto.assigneeId) {
+      const assignee = await this.prisma.user.findFirst({ where: { id: dto.assigneeId, organizationId, isActive: true } });
+      if (!assignee) throw new NotFoundException('Conseiller introuvable');
+    }
 
     const updated = await this.prisma.projectTask.update({
       where: { id: taskId },
@@ -281,9 +291,10 @@ export class MandateService {
     });
   }
 
-  async deleteTimeEntry(entryId: string, userId: string) {
+  async deleteTimeEntry(projectId: string, entryId: string, userId: string, organizationId: string) {
+    await this.assertOwnership(projectId, organizationId);
     const entry = await this.prisma.taskTimeEntry.findFirst({
-      where: { id: entryId, userId },
+      where: { id: entryId, userId, organizationId, task: { projectId, organizationId } },
     });
     if (!entry) throw new NotFoundException('Entrée introuvable ou non autorisée');
     return this.prisma.taskTimeEntry.delete({ where: { id: entryId } });
