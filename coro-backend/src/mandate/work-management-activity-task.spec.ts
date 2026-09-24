@@ -142,4 +142,25 @@ describe('ProjectTask activity provenance', () => {
     }, actor)).rejects.toBeInstanceOf(NotFoundException);
     expect(h.tx.projectTask.create).not.toHaveBeenCalled();
   });
+
+  it('keeps independent and listed tasks in the canonical Project task read model', async () => {
+    const tasks = [
+      { id: 'listed', projectTaskListId: 'list-a', activityId: 'activity-a' },
+      { id: 'independent-linked', projectTaskListId: null, activityId: 'activity-a' },
+      { id: 'independent-transversal', projectTaskListId: null, activityId: null },
+    ];
+    const prisma = {
+      project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }) },
+      projectTask: { findMany: jest.fn().mockResolvedValue(tasks) },
+    };
+    const result = await new MandateService(prisma as any).getTasks('project-a', 'org-a');
+    expect(result).toEqual(tasks);
+    expect(prisma.projectTask.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { projectId: 'project-a', organizationId: 'org-a' },
+      include: expect.objectContaining({
+        activity: { select: { id: true, label: true, customLabel: true } },
+      }),
+      orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+    }));
+  });
 });

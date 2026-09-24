@@ -488,3 +488,17 @@ test('Activity tasks expose empty, aggregate, create, link and unlink contracts 
   assert.ok(drawer.includes('<ActivityTasksSection'));
   assert.ok(css.includes('.taskRow,.taskCreate,.taskCandidates > div'));
 });
+
+test('Mandate Tasks keeps listed tasks and adds independent tasks exactly once', () => {
+  const mandateTasks = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'TaskListsTab.tsx'), 'utf8');
+  assert.ok(mandateTasks.includes("api.get(`/projects/${projectId}/tasks`)"));
+  assert.ok(mandateTasks.includes('task.projectTaskListId === null'));
+  assert.ok(mandateTasks.includes("customName: 'Tâches indépendantes'"));
+  assert.ok(mandateTasks.includes('tasks: independentTasks'));
+  assert.ok(mandateTasks.includes('displayGroups.reduce'));
+  assert.ok(mandateTasks.includes('displayGroups.map'));
+  assert.ok(mandateTasks.includes('Activité : {task.activity.customLabel || task.activity.label}'));
+  assert.ok(mandateTasks.includes('task.activityId && task.activity'));
+  assert.ok(mandateTasks.includes('flex flex-wrap items-center'));
+  assert.doesNotMatch(mandateTasks, /projectTaskListId\s*===\s*null.*activityId\s*===\s*null/);
+});

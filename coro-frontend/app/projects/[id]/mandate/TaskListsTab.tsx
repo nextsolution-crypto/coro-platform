@@ -31,6 +31,7 @@ interface Props {
 
 export default function TaskListsTab({ projectId, teamMembers }: Props) {
   const [projectTaskLists, setProjectTaskLists] = useState<any[]>([]);
+  const [independentTasks, setIndependentTasks] = useState<any[]>([]);
   const [availableLists, setAvailableLists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -53,12 +54,15 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [listsRes, availableRes] = await Promise.all([
+      const [listsRes, availableRes, tasksRes] = await Promise.all([
         api.get(`/task-lists/project/${projectId}`),
         api.get('/task-lists'),
+        api.get(`/projects/${projectId}/tasks`),
       ]);
       const lists = listsRes.data || [];
+      const independent = (tasksRes.data || []).filter((task: any) => task.projectTaskListId === null);
       setProjectTaskLists(lists);
+      setIndependentTasks(independent);
       setAvailableLists(availableRes.data || []);
 
       // Expand toutes les listes et catégories par défaut
@@ -70,6 +74,10 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
           expandedCats[`${l.id}-${t.categoryName}`] = true;
         });
       });
+      if (independent.length) {
+        expanded.independent = true;
+        independent.forEach((task: any) => { expandedCats[`independent-${task.categoryName}`] = true; });
+      }
       setExpandedLists(expanded);
       setExpandedCategories(expandedCats);
     } catch (err) { console.error(err); }
@@ -190,10 +198,14 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
     </div>
   );
 
-  const totalTaches = projectTaskLists.reduce((sum, l) => sum + (l.tasks?.length || 0), 0);
-  const totalTerminees = projectTaskLists.reduce((sum, l) =>
+  const displayGroups = independentTasks.length ? [...projectTaskLists, {
+    id: 'independent', customName: 'Tâches indépendantes', taskList: null,
+    tasks: independentTasks, isIndependent: true,
+  }] : projectTaskLists;
+  const totalTaches = displayGroups.reduce((sum, l) => sum + (l.tasks?.length || 0), 0);
+  const totalTerminees = displayGroups.reduce((sum, l) =>
     sum + (l.tasks?.filter((t: any) => t.status === 'termine').length || 0), 0);
-  const totalHeures = projectTaskLists.reduce((sum, l) =>
+  const totalHeures = displayGroups.reduce((sum, l) =>
     sum + (l.tasks?.reduce((s: number, t: any) =>
       s + (t.timeEntries || []).reduce((se: number, e: any) => se + e.heures, 0), 0) || 0), 0);
 
@@ -233,7 +245,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
       </div>
 
       {/* Message si aucune liste */}
-      {projectTaskLists.length === 0 && (
+      {displayGroups.length === 0 && (
         <div className="text-center py-16 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-4xl mb-4">✅</p>
           <p className="text-sm font-medium mb-2" style={{ color: '#6C757D' }}>Aucune liste de tâches</p>
@@ -250,7 +262,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
 
       {/* Listes de tâches */}
       <div className="space-y-6">
-        {projectTaskLists.map(list => {
+        {displayGroups.map(list => {
           const isExpanded = expandedLists[list.id] !== false;
           const listTerminees = list.tasks?.filter((t: any) => t.status === 'termine').length || 0;
           const listTotal = list.tasks?.length || 0;
@@ -297,15 +309,15 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                       <span className="font-bold text-sm" style={{ color: '#2C3E50' }}>
                         {list.customName}
                       </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full"
+                      {list.taskList && <span className="text-xs px-2 py-0.5 rounded-full"
                         style={{ backgroundColor: '#EBF5FB', color: '#2980B9' }}>
                         {list.taskList?.name}
-                      </span>
-                      <button onClick={() => { setEditingListId(list.id); setEditingListName(list.customName); }}
+                      </span>}
+                      {!list.isIndependent && <button onClick={() => { setEditingListId(list.id); setEditingListName(list.customName); }}
                         className="p-1 rounded opacity-50 hover:opacity-100 transition-opacity"
                         style={{ color: '#6C757D' }}>
                         <Pencil size={12} />
-                      </button>
+                      </button>}
                     </div>
                   )}
                 </div>
@@ -319,7 +331,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                       ⏱ {Number(listHeures).toFixed(2).replace(/\.?0+$/, '')}h
                     </span>
                   )}
-                  <button
+                  {!list.isIndependent && <button
                     onClick={() => handleDeleteList(list.id)}
                     disabled={deletingListId === list.id}
                     className="p-1.5 rounded transition-colors disabled:opacity-50"
@@ -327,7 +339,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                     onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <Trash2 size={13} />
-                  </button>
+                  </button>}
                 </div>
               </div>
 
@@ -373,7 +385,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                           return (
                             <div key={task.id}
                               style={{ borderBottom: idx < tasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}>
-                              <div className="flex items-center gap-3 px-5 py-3">
+                              <div className="flex flex-wrap items-center gap-3 px-5 py-3 min-w-0">
                                 {/* Checkbox */}
                                 <input type="checkbox"
                                   checked={task.status === 'termine'}
@@ -401,7 +413,7 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                                   </div>
                                 ) : (
                                   <span
-                                    className="flex-1 text-sm cursor-pointer"
+                                    className="flex-1 min-w-48 text-sm cursor-pointer break-words"
                                     style={{
                                       color: task.status === 'termine' ? '#ADB5BD' : '#2C3E50',
                                       textDecoration: task.status === 'termine' ? 'line-through' : 'none',
@@ -409,6 +421,8 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
                                     onDoubleClick={() => { setEditingTaskId(task.id); setEditingTaskTitle(task.taskTitle); }}
                                     title="Double-cliquer pour modifier">
                                     {task.taskTitle}
+                                    {task.activityId && task.activity && <small className="block mt-1 font-normal"
+                                      style={{ color: '#6C757D' }}>Activité : {task.activity.customLabel || task.activity.label}</small>}
                                   </span>
                                 )}
 

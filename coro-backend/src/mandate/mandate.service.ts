@@ -191,8 +191,9 @@ export class MandateService {
           include: { user: { select: { firstName: true, lastName: true, id: true } } },
         },
         assignee: { select: { id: true, firstName: true, lastName: true } },
+        activity: { select: { id: true, label: true, customLabel: true } },
       },
-      orderBy: [{ order: 'asc' }],
+      orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
     });
   }
 

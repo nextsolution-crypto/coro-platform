@@ -105,7 +105,6 @@ describePostgres('ProjectActivity to ProjectTask integrity on PostgreSQL', () =>
       } }),
       prisma.projectTaskAssignee.create({ data: { taskId: historicalTask.id, userId: fixture.colleague.id } }),
     ]);
-
     await expectActivityTaskForeignKeyViolation(
       prisma.projectActivity.delete({ where: { id: activity.id } }),
     );
@@ -136,6 +135,18 @@ describePostgres('ProjectActivity to ProjectTask integrity on PostgreSQL', () =>
       } }),
       prisma.projectTaskAssignee.create({ data: { taskId: task.id, userId: fixture.colleague.id } }),
     ]);
+    expect(await prisma.projectTask.count({ where: { id: task.id } })).toBe(1);
+    expect(await prisma.projectTask.findUniqueOrThrow({ where: { id: task.id } })).toMatchObject({
+      projectTaskListId: null, activityId: activity.id,
+    });
+    expect(await prisma.taskTimeEntry.count({ where: { taskId: task.id } })).toBe(1);
+    await expect(new ActivitiesService(prisma as any, {} as any)
+      .getActivityTasks(fixture.project.id, activity.id, {
+        userId: fixture.admin.id, organizationId: fixture.org.id, role: 'ADMIN',
+      })).resolves.toMatchObject({
+        taskCount: 1, actualHours: 1,
+        tasks: [expect.objectContaining({ id: task.id, actualHours: 1 })],
+      });
     await expect(new MandateService(prisma as any).setTaskActivity(fixture.project.id, task.id, null, {
       userId: fixture.admin.id, organizationId: fixture.org.id, role: 'ADMIN',
     })).rejects.toBeInstanceOf(ConflictException);
