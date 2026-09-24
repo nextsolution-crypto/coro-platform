@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { createBookingFixture } from './booking-postgres-fixture';
 import { MandateService } from '../src/mandate/mandate.service';
+import { ActivitiesService } from '../src/activities/activities.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
@@ -42,13 +43,22 @@ describePostgres('ProjectActivity to ProjectTask integrity on PostgreSQL', () =>
   it('keeps existing NULL tasks compatible and links/unlinks a virgin task atomically with audit logs', async () => {
     const fixture = await createBookingFixture(prisma);
     const activity = await createActivity(fixture);
-    const task = await createTask(fixture);
-    expect(task.activityId).toBeNull();
     const service = new MandateService(prisma as any);
     const actor = { userId: fixture.admin.id, organizationId: fixture.org.id, role: 'ADMIN' };
+    const task = await service.createTask(fixture.project.id, {
+      taskTitle: 'Transversal gate task', categoryName: 'Gate',
+    }, actor);
+    expect(task.activityId).toBeNull();
+    const activities = new ActivitiesService(prisma as any, {} as any);
+    await expect(activities.getTaskCandidates(fixture.project.id, activity.id, actor))
+      .resolves.toEqual(expect.arrayContaining([expect.objectContaining({ id: task.id })]));
 
     await service.setTaskActivity(fixture.project.id, task.id, activity.id, actor);
     expect((await prisma.projectTask.findUniqueOrThrow({ where: { id: task.id } })).activityId).toBe(activity.id);
+    await expect(activities.getActivityTasks(fixture.project.id, activity.id, actor)).resolves.toMatchObject({
+      taskCount: 1, taskCompletedCount: 0, taskOpenCount: 1, taskProgressPercent: 0,
+      actualHours: 0, tasks: [expect.objectContaining({ id: task.id, activityId: activity.id })],
+    });
     expect(await prisma.auditLog.count({ where: {
       action: 'TASK_LINKED_TO_ACTIVITY', entityId: task.id, organizationId: fixture.org.id,
     } })).toBe(1);

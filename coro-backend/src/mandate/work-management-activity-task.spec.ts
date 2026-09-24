@@ -15,11 +15,13 @@ function harness(task: any = baseTask) {
       findFirst: jest.fn().mockResolvedValue(task),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUnique: jest.fn().mockResolvedValue({ ...task, activityId: 'activity-a' }),
+      create: jest.fn().mockResolvedValue({ ...task, activityId: 'activity-a', taskTitle: 'Nouvelle tâche' }),
     },
     projectActivity: {
       findFirst: jest.fn().mockResolvedValue({ id: 'activity-a', projectId: 'project-a' }),
     },
     auditLog: { create: jest.fn().mockResolvedValue({ id: 'audit-a' }) },
+    user: { findFirst: jest.fn().mockResolvedValue({ id: 'advisor-a' }) },
   };
   const prisma = { $transaction: jest.fn(async (callback: any) => callback(tx)) };
   return { tx, prisma, service: new MandateService(prisma as any) };
@@ -89,12 +91,16 @@ describe('ProjectTask activity provenance', () => {
   });
 
   it('rejects client roles at the mutation boundary', async () => {
-    const service = { setTaskActivity: jest.fn() };
+    const service = { setTaskActivity: jest.fn(), createTask: jest.fn() };
     const controller = new MandateController(service as any);
     expect(() => controller.setTaskActivity('project-a', 'task-a', { activityId: 'activity-a' }, {
       user: { userId: 'client-a', organizationId: 'org-a', role: 'CLIENT' },
     })).toThrow(ForbiddenException);
+    expect(() => controller.createTask('project-a', { taskTitle: 'Forbidden' }, {
+      user: { userId: 'client-a', organizationId: 'org-a', role: 'CLIENT_MANAGER' },
+    })).toThrow(ForbiddenException);
     expect(service.setTaskActivity).not.toHaveBeenCalled();
+    expect(service.createTask).not.toHaveBeenCalled();
   });
 
   it('applies the existing operator project scope before reading the task', async () => {
@@ -111,5 +117,29 @@ describe('ProjectTask activity provenance', () => {
       select: { id: true },
     });
     expect(h.tx.projectTask.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('creates a manual task directly in an Activity through the canonical task service', async () => {
+    const h = harness();
+    const result = await h.service.createTask('project-a', {
+      activityId: 'activity-a', taskTitle: ' Nouvelle tâche ', categoryName: 'Suivi', dueDate: '2026-10-01',
+    }, actor);
+    expect(result).toMatchObject({ activityId: 'activity-a', taskTitle: 'Nouvelle tâche' });
+    expect(h.tx.projectActivity.findFirst).toHaveBeenCalledWith({
+      where: { id: 'activity-a', projectId: 'project-a', organizationId: 'org-a' }, select: { id: true },
+    });
+    expect(h.tx.projectTask.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      projectId: 'project-a', organizationId: 'org-a', activityId: 'activity-a',
+      taskTitle: 'Nouvelle tâche', categoryName: 'Suivi', status: 'a_faire',
+    }) }));
+  });
+
+  it('does not create a task when a known Activity belongs to another project or tenant', async () => {
+    const h = harness();
+    h.tx.projectActivity.findFirst.mockResolvedValue(null);
+    await expect(h.service.createTask('project-a', {
+      activityId: 'foreign-activity', taskTitle: 'Forbidden',
+    }, actor)).rejects.toBeInstanceOf(NotFoundException);
+    expect(h.tx.projectTask.create).not.toHaveBeenCalled();
   });
 });

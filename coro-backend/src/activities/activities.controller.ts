@@ -37,6 +37,24 @@ export class ActivitiesController {
     return this.service.getActivities(projectId, req.user);
   }
 
+  @Get('projects/:projectId/activities/:activityId/tasks')
+  getActivityTasks(
+    @Param('projectId') projectId: string,
+    @Param('activityId') activityId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.service.getActivityTasks(projectId, activityId, req.user);
+  }
+
+  @Get('projects/:projectId/activities/:activityId/task-candidates')
+  getTaskCandidates(
+    @Param('projectId') projectId: string,
+    @Param('activityId') activityId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.service.getTaskCandidates(projectId, activityId, req.user);
+  }
+
   @Post('projects/:projectId/activities')
   createActivity(
     @Param('projectId') projectId: string,

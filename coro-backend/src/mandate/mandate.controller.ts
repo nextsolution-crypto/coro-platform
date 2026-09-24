@@ -61,6 +61,12 @@ export class MandateController {
     return this.service.initTasksFromTemplate(projectId, req.user.organizationId, dto.documentType);
   }
 
+  @Post('tasks')
+  createTask(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
+    requireInternal(req.user);
+    return this.service.createTask(projectId, dto, req.user);
+  }
+
   @Put('tasks/:taskId')
   updateTask(@Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
     requireInternal(req.user);

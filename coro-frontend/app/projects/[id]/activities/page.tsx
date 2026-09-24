@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, Trash2, Download, Copy } from 'lucide-react';
 import api from '@/lib/api';
+import { useAuthStore } from '@/stores/auth.store';
+import ActivityTasksSection from '@/app/planning/ActivityTasksSection';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
@@ -17,6 +19,8 @@ export default function ActivitiesPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.id as string;
+  const authUser = useAuthStore(state => state.user);
+  const canManageTasks = ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(authUser?.role ?? '');
 
   const [activities, setActivities] = useState<any[]>([]);
   const [activityCatalog, setActivityCatalog] = useState<any[]>([]);
@@ -284,6 +288,7 @@ export default function ActivitiesPage() {
                       </button>
                     </div>
                   </div>
+                  <ActivityTasksSection projectId={projectId} activityId={activity.id} canMutate={canManageTasks} />
                 </div>
               );
             })}

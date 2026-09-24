@@ -247,6 +247,42 @@ export class MandateService {
     return this.getTasks(projectId, organizationId);
   }
 
+  async createTask(projectId: string, dto: any, actor: WorkManagementActor) {
+    const taskTitle = String(dto.taskTitle ?? '').trim();
+    if (!taskTitle) throw new BadRequestException('Le titre de la tâche est requis');
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) }, select: { id: true },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
+      if (dto.assigneeId) {
+        const assignee = await tx.user.findFirst({
+          where: { id: dto.assigneeId, organizationId: actor.organizationId, isActive: true }, select: { id: true },
+        });
+        if (!assignee) throw new NotFoundException('Conseiller introuvable');
+      }
+      if (dto.activityId) {
+        const activity = await tx.projectActivity.findFirst({
+          where: { id: dto.activityId, projectId, organizationId: actor.organizationId }, select: { id: true },
+        });
+        if (!activity) throw new NotFoundException('Activité introuvable');
+      }
+      return tx.projectTask.create({
+        data: {
+          projectId, organizationId: actor.organizationId, activityId: dto.activityId || null,
+          taskTitle, categoryName: String(dto.categoryName ?? 'Activité').trim() || 'Activité',
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+          assigneeId: dto.assigneeId || null, status: 'a_faire',
+        },
+        include: {
+          assignee: { select: { id: true, firstName: true, lastName: true } },
+          assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+          timeEntries: { select: { heures: true } },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+  }
+
   async updateTask(taskId: string, organizationId: string, dto: any) {
     const task = await this.prisma.projectTask.findFirst({
       where: { id: taskId, organizationId },
@@ -298,7 +334,7 @@ export class MandateService {
         throw new ConflictException('La tâche est déjà liée à une autre activité');
       }
       if (task._count.timeEntries > 0 || task.status !== 'a_faire') {
-        throw new ConflictException("La provenance d'une tâche commencée ou avec du temps saisi ne peut pas être modifiée");
+        throw new ConflictException("Cette tâche contient déjà un historique d'exécution et ne peut pas être déplacée.");
       }
 
       if (activityId) {

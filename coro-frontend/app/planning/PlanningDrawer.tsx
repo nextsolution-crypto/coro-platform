@@ -10,6 +10,7 @@ import { dateKey, formatClock, localBoundary, timeValue } from './time';
 import type { TeamDraft } from './teamPickerState';
 import TeamPicker from './TeamPicker';
 import SchedulingPreview from './SchedulingPreview';
+import ActivityTasksSection from './ActivityTasksSection';
 import { buildTeamPreviewRequest, createPreviewCycleGuard, isPreviewCancellation } from './previewCycle';
 import styles from './planning.module.css';
 
@@ -36,8 +37,9 @@ const assignmentStatusLabel: Record<string, string> = {
   PENDING: 'En attente', ACCEPTED: 'Acceptée', REFUSED: 'Refusée', REMOVED: 'Retirée', REPLACED: 'Remplacée',
 };
 
-export default function PlanningDrawer({ event, users, displayTimeZone, canMutate, initialMode = 'VIEW', onClose, onMutated }: {
+export default function PlanningDrawer({ event, users, displayTimeZone, canMutate, canManageTasks, initialMode = 'VIEW', onClose, onMutated }: {
   event: PlannerEvent | null; users: PlannerUser[]; displayTimeZone: string; canMutate: boolean;
+  canManageTasks: boolean;
   initialMode?: PlanningDrawerMode; onClose: () => void; onMutated?: () => void;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -237,6 +239,8 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
         {event.warnings.length > 0 && <section className={styles.drawerSection}><h3>À vérifier</h3>
           <ul>{event.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></section>}
         {event.needsAction && <p className={styles.actionNotice}>Une action est requise pour cette planification.</p>}
+        {event.projectId && event.activityId && <ActivityTasksSection projectId={event.projectId}
+          activityId={event.activityId} canMutate={canManageTasks} />}
         {canMutate && event.bookingId && <section className={styles.drawerSection}><h3>Actions</h3><div className={styles.formActions}>
           <button type="button" className={styles.inlineButton} onClick={() => setMode('EDIT_SLOT')}>Modifier le créneau</button>
           <button type="button" className={styles.inlineButton} onClick={() => setMode('RESCHEDULE')}>Reporter</button>

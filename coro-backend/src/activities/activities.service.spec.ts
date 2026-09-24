@@ -6,7 +6,8 @@ const admin = { userId: 'admin-a', organizationId: 'org-a', role: 'ADMIN' };
 function harness() {
   const prisma = {
     project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }) },
-    projectActivity: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
+    projectActivity: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), create: jest.fn() },
+    projectTask: { findMany: jest.fn().mockResolvedValue([]) },
     activityType: { findFirst: jest.fn() },
   };
   const activityTypes = { list: jest.fn().mockResolvedValue([]) };
@@ -34,10 +35,11 @@ describe('ActivitiesService exercise report summary', () => {
   it('returns an admissible activity without a report', async () => {
     const h = harness();
     h.prisma.projectActivity.findMany.mockResolvedValue([
-      { id: 'activity-a', type: 'exercice_table', exerciseReport: null },
+      { id: 'activity-a', type: 'exercice_table', exerciseReport: null, tasks: [] },
     ]);
     await expect(h.service.getActivities('project-a', admin)).resolves.toEqual([
-      { id: 'activity-a', type: 'exercice_table', exerciseReport: null },
+      { id: 'activity-a', type: 'exercice_table', exerciseReport: null, tasks: [], taskCount: 0,
+        taskCompletedCount: 0, taskOpenCount: 0, taskProgressPercent: null, actualHours: 0 },
     ]);
   });
 
@@ -48,6 +50,7 @@ describe('ActivitiesService exercise report summary', () => {
         id: 'activity-a',
         type: 'exercice_evacuation',
         exerciseReport: { id: 'report-a', status: 'DRAFT' },
+        tasks: [],
       },
     ]);
     const result = await h.service.getActivities('project-a', admin);
@@ -60,10 +63,43 @@ describe('ActivitiesService exercise report summary', () => {
       expect.objectContaining({
         include: {
           exerciseReport: { select: { id: true, status: true } },
-          tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] },
+          tasks: {
+            include: {
+              assignee: { select: { id: true, firstName: true, lastName: true } },
+              assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+              timeEntries: { select: { heures: true } },
+            },
+            orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+          },
         },
       }),
     );
+  });
+
+  it('computes deterministic task aggregates and actual hours without N+1 queries', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findMany.mockResolvedValue([{ id: 'activity-a', exerciseReport: null, tasks: [
+      { id: 'task-b', taskTitle: 'B', status: 'a_faire', timeEntries: [{ heures: 0.5 }], assignees: [] },
+      { id: 'task-a', taskTitle: 'A', status: 'fait', timeEntries: [{ heures: 1 }, { heures: 0.75 }], assignees: [] },
+    ] }]);
+    const [activity] = await h.service.getActivities('project-a', admin);
+    expect(activity).toMatchObject({ taskCount: 2, taskCompletedCount: 1, taskOpenCount: 1,
+      taskProgressPercent: 50, actualHours: 2.25 });
+    expect(activity.tasks.map((task: any) => task.actualHours)).toEqual([0.5, 1.75]);
+    expect(h.prisma.projectActivity.findMany).toHaveBeenCalledTimes(1);
+    expect(h.prisma.projectTask.findMany).not.toHaveBeenCalled();
+    expect(h.prisma.projectActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('returns only eligible transversal tasks from the same project and tenant', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity-a' });
+    await h.service.getTaskCandidates('project-a', 'activity-a', admin);
+    expect(h.prisma.projectTask.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { projectId: 'project-a', organizationId: 'org-a', activityId: null,
+        status: 'a_faire', timeEntries: { none: {} } },
+      orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+    }));
   });
 
   it('rejects an operator without project access', async () => {

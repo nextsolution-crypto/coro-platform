@@ -127,14 +127,94 @@ export class ActivitiesService {
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
-    return this.prisma.projectActivity.findMany({
+    const activities = await this.prisma.projectActivity.findMany({
       where: { projectId, organizationId: actor.organizationId },
       orderBy: [{ scheduledDate: 'asc' }],
       include: {
         exerciseReport: { select: { id: true, status: true } },
-        tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] },
+        tasks: {
+          include: {
+            assignee: { select: { id: true, firstName: true, lastName: true } },
+            assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            timeEntries: { select: { heures: true } },
+          },
+          orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+        },
       },
     });
+    return activities.map((activity) => this.withTaskSummary(activity));
+  }
+
+  async getActivityTasks(projectId: string, activityId: string, actor: AdviserActor) {
+    const found = await this.prisma.projectActivity.findFirst({
+      where: {
+        id: activityId, projectId, organizationId: actor.organizationId,
+        project: { is: projectAccessWhere(actor) },
+      },
+      include: {
+        tasks: {
+          include: {
+            assignee: { select: { id: true, firstName: true, lastName: true } },
+            assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            timeEntries: { select: { heures: true } },
+          },
+          orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+        },
+      },
+    });
+    const activity = found ? this.withTaskSummary(found) : null;
+    if (!activity) throw new NotFoundException('Activité introuvable');
+    return {
+      activityId: activity.id,
+      tasks: activity.tasks,
+      taskCount: activity.taskCount,
+      taskCompletedCount: activity.taskCompletedCount,
+      taskOpenCount: activity.taskOpenCount,
+      taskProgressPercent: activity.taskProgressPercent,
+      actualHours: activity.actualHours,
+    };
+  }
+
+  async getTaskCandidates(projectId: string, activityId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) }, select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    const activity = await this.prisma.projectActivity.findFirst({
+      where: { id: activityId, projectId, organizationId: actor.organizationId }, select: { id: true },
+    });
+    if (!activity) throw new NotFoundException('Activité introuvable');
+    return this.prisma.projectTask.findMany({
+      where: {
+        projectId, organizationId: actor.organizationId, activityId: null,
+        status: 'a_faire', timeEntries: { none: {} },
+      },
+      select: {
+        id: true, activityId: true, taskTitle: true, categoryName: true, status: true,
+        dueDate: true, templateId: true, projectTaskListId: true,
+        assignee: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  private withTaskSummary(activity: any) {
+    const tasks = activity.tasks.map((task: any) => ({
+      ...task,
+      actualHours: task.timeEntries.reduce((total: number, entry: { heures: number }) => total + entry.heures, 0),
+      timeEntries: undefined,
+    }));
+    const taskCount = tasks.length;
+    const taskCompletedCount = tasks.filter((task: any) => task.status === 'fait').length;
+    return {
+      ...activity,
+      tasks,
+      taskCount,
+      taskCompletedCount,
+      taskOpenCount: taskCount - taskCompletedCount,
+      taskProgressPercent: taskCount ? Math.round((taskCompletedCount / taskCount) * 100) : null,
+      actualHours: tasks.reduce((total: number, task: any) => total + task.actualHours, 0),
+    };
   }
 
   // Ajouter une activité

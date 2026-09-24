@@ -188,6 +188,7 @@ export default function TeamPlannerPage() {
   const move = (direction: -1 | 1) => setDate(previous => moveDate(previous, view, direction));
   const closeDrawer = useCallback(() => { setSelected(null); setSelectedMode('VIEW'); }, []);
   const canMutate = ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role ?? '');
+  const canManageTasks = ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(authUser?.role ?? '');
   const openEvent = useCallback((event: PlannerEvent, mode: PlanningDrawerMode = 'VIEW') => {
     setSelectedMode(mode); setSelected(event);
   }, []);
@@ -285,7 +286,7 @@ export default function TeamPlannerPage() {
       {!data && !loading && !error && <p className={styles.empty}>Aucune projection disponible.</p>}
     </div>
     <PlanningDrawer event={selected} users={data?.users ?? []} displayTimeZone={displayedZone}
-      canMutate={canMutate} initialMode={selectedMode} onClose={closeDrawer}
+      canMutate={canMutate} canManageTasks={canManageTasks} initialMode={selectedMode} onClose={closeDrawer}
       onMutated={() => setRefreshKey(key => key + 1)} />
     {activityDrawer && context && <ActivityPlanningDrawer mode={activityDrawer.mode} action={activityDrawer.action}
       initialSlot={activityDrawer.initialSlot} context={context} onClose={() => setActivityDrawer(null)} onCreated={() => setRefreshKey(key => key + 1)} />}

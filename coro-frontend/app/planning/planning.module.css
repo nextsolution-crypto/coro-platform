@@ -79,6 +79,11 @@
 .drawerSection { border-top:1px solid #e9ecef; padding-top:15px; margin-top:15px; font-size:13px }.drawerSection h3 { font-size:12px; margin:0 0 8px; color:#6c757d; letter-spacing:.07em; text-transform:uppercase }.drawerSection ul { margin:0 0 15px; padding-left:20px }.drawerSection .details { margin:10px 0 }
 .actionNotice { padding:12px; background:#fff4db; color:#795500; border-radius:6px; font-size:13px }
 .drawerLinks { display:grid; gap:10px; margin-top:20px }.drawerLinks a { color:#a93226; font-size:13px; font-weight:600; text-decoration:underline }
+.taskSection { display:grid; gap:10px; border-top:1px solid #e9ecef; padding-top:15px; margin-top:15px; min-width:0 }
+.taskHeading { display:flex; align-items:start; justify-content:space-between; gap:12px }.taskHeading h3 { margin:0; color:#6c757d; font-size:12px; letter-spacing:.07em; text-transform:uppercase }.taskHeading p,.taskMetrics,.taskEmpty { margin:3px 0 0; color:#6c757d; font-size:12px }.taskHeading > strong { color:#2c3e50; white-space:nowrap }
+.taskRow { display:flex; align-items:start; justify-content:space-between; gap:10px; border:1px solid #e5e9ec; border-radius:7px; padding:10px; min-width:0 }.taskRow > div { display:grid; gap:3px; min-width:0 }.taskRow strong { overflow-wrap:anywhere; font-size:12px }.taskRow span,.taskRow small { color:#6c757d; font-size:11px; overflow-wrap:anywhere }
+.taskActions { display:flex; flex-wrap:wrap; gap:8px }.taskCreate { display:flex; align-items:end; gap:8px }.taskCreate label { display:grid; flex:1; gap:4px; color:#5d6d7e; font-size:11px; font-weight:700 }.taskCreate input { min-width:0; width:100%; border:1px solid #ced4da; border-radius:6px; padding:8px }
+.taskCandidates { display:grid; gap:7px; border:1px solid #e5e9ec; border-radius:7px; padding:10px }.taskCandidates h4,.taskCandidates p { margin:0; font-size:12px }.taskCandidates > div { display:flex; align-items:center; justify-content:space-between; gap:8px }.taskCandidates span { min-width:0; overflow-wrap:anywhere; font-size:12px }
 .primaryButton { min-height:36px; border:1px solid #a93226; border-radius:6px; background:#a93226; color:white; padding:7px 12px; font-weight:700; cursor:pointer }
 .primaryButton:disabled { opacity:.55; cursor:default }
 .inlineButton { border:1px solid #ced4da; border-radius:5px; background:white; color:#a93226; padding:5px 9px; font-weight:700; cursor:pointer }
@@ -120,6 +125,7 @@
   .drawer { width: 100vw; max-width: none; height: 100dvh; border-radius: 0; }
   .slotGrid { grid-template-columns: 1fr; }
   .candidateRow { align-items: stretch; flex-direction: column; }
+  .taskRow,.taskCreate,.taskCandidates > div { align-items:stretch; flex-direction:column }
   .actionList li { align-items: stretch; flex-direction: column; }
   .actionButtons { justify-content: flex-start; }
 }

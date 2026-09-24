@@ -470,3 +470,21 @@ test('advisor assignment inbox is personal, actionable and independent from plan
   assert.ok(notifications.includes("notif.type.startsWith('BOOKING_ASSIGNMENT_')"));
   assert.ok(notifications.includes("router.push('/planning')"));
 });
+
+test('Activity tasks expose empty, aggregate, create, link and unlink contracts without delete', () => {
+  const section = fs.readFileSync(path.join(__dirname, 'ActivityTasksSection.tsx'), 'utf8');
+  const drawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, 'planning.module.css'), 'utf8');
+  for (const label of ['Aucune tâche liée à cette activité.', 'Ajouter une tâche',
+    'Rattacher une tâche existante', 'Retirer de cette activité', 'Temps réalisé', 'Progression']) {
+    assert.ok(section.includes(label));
+  }
+  assert.ok(section.includes('/activities/${activityId}/tasks'));
+  assert.ok(section.includes('/activities/${activityId}/task-candidates'));
+  assert.ok(section.includes('/tasks/${taskId}/activity'));
+  assert.ok(section.includes("api.post(`/projects/${projectId}/tasks`"));
+  assert.ok(section.includes("taskProgressPercent === null ? '—'"));
+  assert.doesNotMatch(section, /api\.delete|Supprimer la tâche/);
+  assert.ok(drawer.includes('<ActivityTasksSection'));
+  assert.ok(css.includes('.taskRow,.taskCreate,.taskCandidates > div'));
+});
