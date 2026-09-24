@@ -132,6 +132,7 @@ export class ActivitiesService {
       orderBy: [{ scheduledDate: 'asc' }],
       include: {
         exerciseReport: { select: { id: true, status: true } },
+        tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] },
       },
     });
   }
@@ -234,6 +235,8 @@ export class ActivitiesService {
     if (!activity) throw new NotFoundException('Activité introuvable');
     const linkedBooking = await this.prisma.booking.findFirst({ where: { activityId }, select: { id: true } });
     if (linkedBooking) throw new BadRequestException('Cette activité possède un historique de réservations');
+    const linkedTask = await this.prisma.projectTask.findFirst({ where: { activityId }, select: { id: true } });
+    if (linkedTask) throw new BadRequestException('Cette activité possède des tâches liées');
     return this.prisma.projectActivity.delete({ where: { id: activityId } });
   }
 

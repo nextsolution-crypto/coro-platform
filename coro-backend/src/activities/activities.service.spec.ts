@@ -58,7 +58,10 @@ describe('ActivitiesService exercise report summary', () => {
     expect(h.prisma.projectActivity.findMany).toHaveBeenCalledTimes(1);
     expect(h.prisma.projectActivity.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        include: { exerciseReport: { select: { id: true, status: true } } },
+        include: {
+          exerciseReport: { select: { id: true, status: true } },
+          tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] },
+        },
       }),
     );
   });

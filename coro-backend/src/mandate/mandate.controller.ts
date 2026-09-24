@@ -67,6 +67,17 @@ export class MandateController {
     return this.service.updateTask(taskId, req.user.organizationId, dto);
   }
 
+  @Put('tasks/:taskId/activity')
+  setTaskActivity(
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: { activityId: string | null },
+    @Request() req: any,
+  ) {
+    requireInternal(req.user);
+    return this.service.setTaskActivity(projectId, taskId, dto.activityId ?? null, req.user);
+  }
+
   // Entrées de temps
   @Post('tasks/:taskId/time')
   addTimeEntry(@Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {

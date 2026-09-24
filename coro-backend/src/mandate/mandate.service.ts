@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import type { WorkManagementActor } from '../auth/work-management-access';
+import { projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class MandateService {
@@ -269,6 +272,70 @@ export class MandateService {
     }
 
     return updated;
+  }
+
+  async setTaskActivity(
+    projectId: string,
+    taskId: string,
+    activityId: string | null,
+    actor: WorkManagementActor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) },
+        select: { id: true },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
+      const task = await tx.projectTask.findFirst({
+        where: { id: taskId, projectId, organizationId: actor.organizationId },
+        include: { _count: { select: { timeEntries: true } } },
+      });
+      if (!task) throw new NotFoundException('Tâche introuvable');
+      if (task.activityId === activityId) {
+        return tx.projectTask.findUnique({ where: { id: task.id }, include: { activity: true } });
+      }
+      if (task.activityId && activityId) {
+        throw new ConflictException('La tâche est déjà liée à une autre activité');
+      }
+      if (task._count.timeEntries > 0 || task.status !== 'a_faire') {
+        throw new ConflictException("La provenance d'une tâche commencée ou avec du temps saisi ne peut pas être modifiée");
+      }
+
+      if (activityId) {
+        const activity = await tx.projectActivity.findFirst({
+          where: { id: activityId, organizationId: actor.organizationId },
+          select: { id: true, projectId: true },
+        });
+        if (!activity) throw new NotFoundException('Activité introuvable');
+        if (activity.projectId !== projectId) {
+          throw new BadRequestException('La tâche et l’activité doivent appartenir au même projet');
+        }
+      }
+
+      const changed = await tx.projectTask.updateMany({
+        where: {
+          id: task.id,
+          projectId,
+          organizationId: actor.organizationId,
+          activityId: task.activityId,
+          status: 'a_faire',
+          timeEntries: { none: {} },
+        },
+        data: { activityId },
+      });
+      if (changed.count !== 1) {
+        throw new ConflictException('La tâche vient d’être modifiée; rechargez les données');
+      }
+
+      await tx.auditLog.create({ data: {
+        action: activityId ? 'TASK_LINKED_TO_ACTIVITY' : 'TASK_UNLINKED_FROM_ACTIVITY',
+        entityType: 'ProjectTask', entityId: task.id, projectId,
+        description: activityId ? 'Tâche liée à une activité.' : 'Tâche déliée de son activité.',
+        metadata: { previousActivityId: task.activityId, activityId },
+        userId: actor.userId, organizationId: actor.organizationId,
+      } });
+      return tx.projectTask.findUnique({ where: { id: task.id }, include: { activity: true } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }
 
   // ── ENTRÉES DE TEMPS ─────────────────────────────────────

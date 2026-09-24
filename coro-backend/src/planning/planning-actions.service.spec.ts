@@ -158,7 +158,7 @@ describe('PlanningActionsService', () => {
 
   it('deletes a dependency-free Activity with only its intrinsic creation audit', async () => {
     const { service, tx } = setup();
-    tx.projectActivity.findFirst.mockResolvedValue({ id: 'activity', projectId: 'project', bookings: [], exerciseReport: null });
+    tx.projectActivity.findFirst.mockResolvedValue({ id: 'activity', projectId: 'project', bookings: [], exerciseReport: null, tasks: [] });
     await expect(service.deleteUnplannedActivity('activity', actor)).resolves.toEqual({ activityId: 'activity', deleted: true });
     expect(tx.auditLog.findFirst.mock.calls[0][0].where.action).toEqual({ notIn: ['PLANNING_ACTIVITY_CREATED'] });
     expect(tx.auditLog.deleteMany).toHaveBeenCalledWith({ where: { organizationId: 'org-a',
@@ -171,7 +171,7 @@ describe('PlanningActionsService', () => {
   it('refuses physical deletion with history and cancels the Activity without changing old Booking data', async () => {
     const { service, tx } = setup();
     tx.projectActivity.findFirst
-      .mockResolvedValueOnce({ id: 'activity', projectId: 'project', bookings: [{ id: 'old' }], exerciseReport: null })
+      .mockResolvedValueOnce({ id: 'activity', projectId: 'project', bookings: [{ id: 'old' }], exerciseReport: null, tasks: [] })
       .mockResolvedValueOnce({ id: 'activity', projectId: 'project', status: 'a_faire', bookings: [] });
     await expect(service.deleteUnplannedActivity('activity', actor)).rejects.toThrow('historique');
     expect(tx.projectActivity.delete).not.toHaveBeenCalled();
@@ -187,11 +187,33 @@ describe('PlanningActionsService', () => {
   it('refuses physical deletion when an operational audit exists', async () => {
     const { service, tx } = setup();
     tx.projectActivity.findFirst.mockResolvedValue({
-      id: 'activity', projectId: 'project', bookings: [], exerciseReport: null,
+      id: 'activity', projectId: 'project', bookings: [], exerciseReport: null, tasks: [],
     });
     tx.auditLog.findFirst.mockResolvedValue({ id: 'planned-audit' });
     await expect(service.deleteUnplannedActivity('activity', actor)).rejects.toThrow('historique');
     expect(tx.auditLog.deleteMany).not.toHaveBeenCalled();
+    expect(tx.projectActivity.delete).not.toHaveBeenCalled();
+  });
+
+  it('refuses physical deletion while a ProjectTask is linked', async () => {
+    const { service, tx } = setup();
+    tx.projectActivity.findFirst.mockResolvedValue({
+      id: 'activity', projectId: 'project', bookings: [], exerciseReport: null, tasks: [{ id: 'task' }],
+    });
+    await expect(service.deleteUnplannedActivity('activity', actor)).rejects.toThrow('historique');
+    expect(tx.auditLog.deleteMany).not.toHaveBeenCalled();
+    expect(tx.projectActivity.delete).not.toHaveBeenCalled();
+  });
+
+  it('cancels an Activity with a linked ProjectTask without deleting either resource', async () => {
+    const { service, tx } = setup();
+    tx.projectActivity.findFirst.mockResolvedValue({
+      id: 'activity', projectId: 'project', status: 'a_faire', bookings: [],
+    });
+    await expect(service.cancelActivity('activity', actor)).resolves.toEqual({ activityId: 'activity', status: 'annule' });
+    expect(tx.projectActivity.update).toHaveBeenCalledWith({
+      where: { id: 'activity' }, data: { status: 'annule', scheduledDate: null, reportedDate: null },
+    });
     expect(tx.projectActivity.delete).not.toHaveBeenCalled();
   });
 

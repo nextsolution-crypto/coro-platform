@@ -653,7 +653,9 @@ model ProjectActivity {
   clientBookable Boolean         @default(false)
   bookings       Booking[]
   exerciseReport ExerciseReport?
+  tasks          ProjectTask[]   @relation("ActivityTasks")
 
+  @@unique([id, projectId, organizationId])
   @@index([activityTypeId])
 }
 
@@ -761,6 +763,8 @@ model ProjectTask {
   template          TaskTemplate?    @relation(fields: [templateId], references: [id])
   projectTaskListId String?
   projectTaskList   ProjectTaskList? @relation(fields: [projectTaskListId], references: [id])
+  activityId        String?
+  activity          ProjectActivity? @relation("ActivityTasks", fields: [activityId, projectId, organizationId], references: [id, projectId, organizationId], onDelete: Restrict)
   categoryName      String
   taskTitle         String
   status            String           @default("a_faire")
@@ -774,6 +778,9 @@ model ProjectTask {
 
   timeEntries TaskTimeEntry[]
   assignees   ProjectTaskAssignee[]
+
+  @@index([activityId])
+  @@index([activityId, projectId, organizationId])
 }
 
 model ProjectTaskAssignee {
