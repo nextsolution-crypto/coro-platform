@@ -1,4 +1,8 @@
+/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-explicit-any */
 import { Metadata } from 'next';
+import { ProductPage } from '@/components/ProductPage';
+import { localeFromSearchParams } from '@/lib/site/locale';
+import { productContent } from '@/lib/site/product-content';
 
 const SITE_URL = 'https://getcoro.io';
 
@@ -78,7 +82,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function GestionDocumentairePage({
+export async function LegacyGestionDocumentairePage({
   searchParams,
 }: {
   searchParams: Promise<{ lang?: string }>;
@@ -360,3 +364,4 @@ export default async function GestionDocumentairePage({
     </div>
   );
 }
+export default async function GestionDocumentaireV2({searchParams}:{searchParams:Promise<{lang?:string}>}){const locale=localeFromSearchParams((await searchParams)??{});return <ProductPage locale={locale} path="/gestion-documentaire" variant="documents" copy={productContent.documents[locale]}/>}

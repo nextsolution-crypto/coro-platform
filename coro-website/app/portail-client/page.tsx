@@ -1,4 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 import { Metadata } from 'next';
+import { ProductPage } from '@/components/ProductPage';
+import { localeFromSearchParams } from '@/lib/site/locale';
+import { productContent } from '@/lib/site/product-content';
 
 const SITE_URL = 'https://getcoro.io';
 
@@ -77,7 +81,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function PortailClientPage({
+export async function LegacyPortailClientPage({
   searchParams,
 }: {
   searchParams: Promise<{ lang?: string }>;
@@ -1699,3 +1703,4 @@ export default async function PortailClientPage({
     </div>
   );
 }
+export default async function PortailClientV2({searchParams}:{searchParams:Promise<{lang?:string}>}){const locale=localeFromSearchParams((await searchParams)??{});return <ProductPage locale={locale} path="/portail-client" variant="client" copy={productContent.client[locale]}/>}
