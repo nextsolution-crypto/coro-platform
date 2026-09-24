@@ -1,0 +1,44 @@
+/* HeroSignature (A2) — REVIEW. Depth from media, overlap and lines; no box-shadow.
+   The picture is shown as a slice: --c0 (start) and --span (width), in percent of image width.
+   Mobile shows the building in a square crop; tablet and desktop crop the left foliage away. */
+.hero { --edge: 1rem; --text-w: 19rem; position: relative; background: var(--coro-v1-surface-0); color: var(--coro-v1-text-900); border-block-end: 1px solid var(--coro-v1-border-200); overflow-x: clip; }
+.headerSlot { position: relative; }
+.inner { display: grid; gap: var(--coro-v1-space-6); padding-block: var(--coro-v1-space-8) var(--coro-v1-space-12); }
+.text { position: relative; z-index: 4; display: grid; gap: var(--coro-v1-space-4); align-content: start; padding-inline: 1rem; }
+.label { color: var(--coro-v1-blue-700); display: inline-flex; align-items: center; gap: .6rem; }
+.label::before { content: ""; inline-size: 1.5rem; block-size: 2px; background: var(--coro-v1-red-600); }
+.title { font-size: clamp(2.125rem, 1.5rem + 2.2vw, 3rem); }
+.lead { color: var(--coro-v1-text-600); }
+
+/* Media frame: the slice geometry lives here. Radius = photographic image rule (10px on contained corners). */
+.stage { --c0: 24; --span: 56.3; position: relative; margin-inline: 1rem; }
+.frame { position: relative; overflow: hidden; border-radius: var(--coro-v1-radius-image); aspect-ratio: calc(var(--span) / 100 * var(--ratio)); background: var(--coro-v1-navy-950); isolation: isolate; }
+.plate { position: absolute; inset-block: 0; inline-size: calc(10000% / var(--span)); inset-inline-start: calc(var(--c0) * -100% / var(--span)); }
+.pin { position: absolute; z-index: 2; inset-inline-start: calc((var(--x) - var(--c0)) * 100% / var(--span)); inset-block-start: calc(var(--y) * 1%); transform: translate(-50%, -50%); inline-size: 1.5rem; block-size: 1.5rem; display: grid; place-items: center; border-radius: var(--coro-v1-radius-pill); background: var(--coro-v1-navy-950); color: #fff; border: 2px solid #fff; font-size: .6875rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.caption { position: absolute; z-index: 3; inset-inline-start: .9rem; inset-block-end: .8rem; margin: 0; display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-size: .625rem; text-transform: none; letter-spacing: .06em; font-weight: 650; }
+.caption i { inline-size: .4rem; block-size: .4rem; background: var(--coro-v1-red-600); }
+@supports (paint-order: stroke fill) { .caption { -webkit-text-stroke: 3px rgb(6 29 53 / 80%); paint-order: stroke fill; } }
+
+@media (min-width: 48rem) {
+  .text { padding-inline: 1.5rem; max-inline-size: 40rem; }
+  .stage { --c0: 16; --span: 84; margin-inline: 1.5rem; }
+}
+
+@media (min-width: 68rem) {
+  .pin { display: none; }
+  .hero { --edge: max(1.5rem, calc((100vw - 90rem) / 2)); --text-w: clamp(19rem, 26vw, 25rem); }
+  .inner { grid-template-columns: var(--text-w) minmax(0, 1fr); align-items: start; gap: 0; padding-block: var(--coro-v1-space-8) var(--coro-v1-space-16); padding-inline-start: var(--edge); }
+  .text { padding-inline: 0; max-inline-size: none; padding-block-start: var(--coro-v1-space-12); }
+  /* The headline is the one element allowed over the picture: it sits on open sky at the cropped edge. */
+  .title { inline-size: max-content; max-inline-size: calc(var(--text-w) + 0.36 * (100vw - var(--edge) - var(--text-w))); font-size: clamp(2.5rem, 1rem + 2.6vw, 3.75rem); }
+  .lead, .text > div, .label { max-inline-size: var(--text-w); }
+  .stage { margin-inline: 0; }
+  .frame { border-radius: var(--coro-v1-radius-image) 0 0 var(--coro-v1-radius-image); }
+
+  /* Integrated header (Lab study): the header floats over the hero and the photograph bleeds up under it. */
+  .hero[data-header="integrated"] .headerSlot { position: absolute; z-index: 20; inset: 0 0 auto 0; }
+  .hero[data-header="integrated"] .headerSlot > header { background: transparent; border-bottom-color: transparent; }
+  .hero[data-header="integrated"] .inner { padding-block-start: 0; }
+  .hero[data-header="integrated"] .text { padding-block-start: calc(76px + var(--coro-v1-space-12)); }
+  .hero[data-header="integrated"] .frame { border-radius: 0 0 0 var(--coro-v1-radius-image); }
+}

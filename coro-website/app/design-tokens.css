@@ -71,6 +71,8 @@
 /* LAB-01B — refinement. Additive tokens: controlled radii hierarchy, drafting-surface details, technical label. */
 :root {
   /* Radii by role: frame 2 · panel 4 (default for content surfaces) · control 8 · md/lg/xl are EXCEPTIONAL · pill for status/tags only */
+  /* Photographic / architectural media: 10px on VISIBLE, contained corners only (never where the image bleeds off-canvas). */
+  --coro-v1-radius-image: .625rem;
   --coro-v1-radius-frame: .125rem; --coro-v1-radius-panel: .25rem; --coro-v1-radius-control: .5rem;
   /* Architectural soft surface ("drafting paper"): surface-2 tone + hairline structure, never a gradient */
   --coro-v1-paper: var(--coro-v1-surface-2); --coro-v1-paper-line: rgb(13 79 139 / 9%); --coro-v1-paper-line-strong: rgb(13 79 139 / 22%); --coro-v1-paper-grid: 32px;

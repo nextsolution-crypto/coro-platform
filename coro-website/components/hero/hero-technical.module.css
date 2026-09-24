@@ -1,0 +1,38 @@
+/* HeroTechnical — drawing-sheet composition on the architectural soft surface. Balloons, not cards. */
+.hero { background-color: var(--coro-v1-paper); background-image: linear-gradient(var(--coro-v1-paper-line) 1px, transparent 1px), linear-gradient(90deg, var(--coro-v1-paper-line) 1px, transparent 1px); background-size: var(--coro-v1-paper-grid) var(--coro-v1-paper-grid); border-block: 1px solid var(--coro-v1-paper-line-strong); color: var(--coro-v1-text-900); }
+.inner { display: grid; gap: var(--coro-v1-space-8); padding: var(--coro-v1-space-8) 0 var(--coro-v1-space-12); }
+.text { display: grid; gap: var(--coro-v1-space-4); align-content: start; padding-inline: 1rem; }
+.label { color: var(--coro-v1-blue-700); }
+.lead { color: var(--coro-v1-text-600); }
+
+/* Numbered document index: hairline rows, no cards */
+.refs { list-style: none; margin: var(--coro-v1-space-2) 0 0; padding: 0; border-block-start: 1px solid var(--coro-v1-paper-line-strong); }
+.refs li { display: grid; grid-template-columns: 1.5rem 3rem minmax(0, 1fr); align-items: baseline; gap: var(--coro-v1-space-3); padding-block: .7rem; border-block-end: 1px solid var(--coro-v1-paper-line-strong); }
+.refN { display: inline-grid; place-items: center; inline-size: 1.25rem; block-size: 1.25rem; border-radius: var(--coro-v1-radius-pill); background: var(--coro-v1-navy-950); color: #fff; font-size: .625rem; font-weight: 800; align-self: center; }
+.refCode { font-size: var(--coro-v1-text-small); font-weight: 850; letter-spacing: .06em; color: var(--coro-v1-blue-700); }
+.refText { display: grid; font-size: var(--coro-v1-text-small); font-weight: 650; line-height: 1.35; }
+.refText small { color: var(--coro-v1-text-600); font-weight: 400; font-size: var(--coro-v1-text-micro); letter-spacing: .03em; }
+
+/* Drawing sheet: hairline frame, blueprint plate, title block */
+.sheetWrap { position: relative; padding-inline: 0; }
+.sheet { margin: 0; border: 1px solid var(--coro-v1-blue-700); background: var(--coro-v1-navy-900); border-radius: var(--coro-v1-radius-frame); }
+.titleBlock { display: grid; grid-template-columns: 1fr; border-block-start: 1px solid var(--coro-v1-blue-700); background: var(--coro-v1-navy-950); color: var(--coro-v1-on-dark-600); }
+.titleBlock > span { padding: .55rem .8rem; font-size: .625rem; }
+.titleBlock > span + span { border-block-start: 1px solid rgb(255 255 255 / 12%); }
+.inset { display: none; }
+
+@media (min-width: 48rem) {
+  .text { padding-inline: 1.5rem; max-inline-size: 38rem; }
+  .sheetWrap { padding-inline: 1.5rem; }
+  .titleBlock { grid-template-columns: auto 1fr auto; }
+  .titleBlock > span + span { border-block-start: 0; border-inline-start: 1px solid rgb(255 255 255 / 12%); }
+}
+@media (min-width: 68rem) {
+  .inner { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: center; gap: var(--coro-v1-space-12); padding-block: var(--coro-v1-space-16); padding-inline: max(1.5rem, calc((100vw - var(--coro-v1-content-wide)) / 2)); }
+  .text { padding-inline: 0; max-inline-size: none; }
+  .sheetWrap { padding-inline: 0; padding-block-start: 1.25rem; }
+  .inset { display: block; position: absolute; z-index: 3; inset-inline-end: -1.25rem; inset-block-start: -1.25rem; inline-size: 12rem; margin: 0; background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-blue-700); padding: .4rem .4rem .5rem; border-radius: var(--coro-v1-radius-frame); }
+  .insetMedia { position: relative; aspect-ratio: 3 / 2; }
+  .insetMedia img { object-fit: cover; }
+  .inset figcaption { padding-block-start: .4rem; color: var(--coro-v1-blue-700); font-size: .625rem; }
+}

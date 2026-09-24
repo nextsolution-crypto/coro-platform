@@ -1,9 +1,11 @@
 import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { SiteHeader } from '@/components/site/SiteHeader';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { localeFromSearchParams, localizedHref, type Locale } from '@/lib/site/locale';
+import { HeroStudyView, HeroSystemZone, heroStudyKeys, type HeroStudyKey } from './HeroSystemZone';
 import { SkipLink } from './SkipLink';
 import './design-lab-global.css';
 import styles from './design-lab.module.css';
@@ -19,11 +21,11 @@ export const metadata: Metadata = {
 
 const copy = {
   fr: {
-    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-01B',
+    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-02',
     title: 'Fondations et navigation.',
     lead: 'Laboratoire interne de validation du système visuel : jetons cibles, surfaces, typographie, focus, boutons et navigation. Ce n’est pas une page du site.',
     internal: 'Route interne — noindex, hors sitemap, hors navigation publique. Statut : DRAFT.',
-    zones: 'Zones', z00: '00 — Fondations', z01: '01 — Navigation',
+    zones: 'Zones', z00: '00 — Fondations', z01: '01 — Navigation', z02: '02 — Héros',
     primary: 'Action principale', secondary: 'Action secondaire', ghost: 'Texte / discrète', disabled: 'Indisponible',
     palette: 'Palette cible', paletteText: 'Le marine porte l’identité, le bleu structure l’information, le rouge signale l’action. Le rouge n’est jamais une couleur de remplissage.',
     redTitle: 'Rouge : actuel contre cible', redText: 'Le rouge d’action CORO cible est #E51B2A. Les deux rouges de production restent inchangés dans ce lot.',
@@ -52,16 +54,16 @@ const copy = {
     rhythmTitle: 'Rythme des surfaces', rhythmLead: 'Blanc → surface architecturale → blanc → marine profond. Le changement de fond structure la page ; aucune grille de cartes n’est nécessaire.',
     rhythm: [['SURFACE 0', 'Lecture. Texte, respiration.'], ['SURFACE ARCHITECTURALE', 'Papier de dessin : ton doux, filets fins, cotes. Un cadre, pas une carte.'], ['SURFACE 0', 'Retour au réel.'], ['MARINE 950', 'Immersion, produit, commandement.']],
     roles: [['Titre', 'Fort, compact, éditorial.'], ['Texte', 'Calme, lisible, retenu : la hiérarchie vient de la taille et de l’espace.'], ['Étiquette technique', 'Petite, précise, légèrement espacée.']],
-    radiiTitle: 'Rayons par rôle', radii: [['frame', '2 px', 'Cadres, médias, filets d’architecture'], ['panel', '4 px', 'Panneaux et surfaces de contenu — défaut'], ['control', '8 px', 'Boutons, champs, contrôles'], ['exceptionnel', '16 / 24 px', 'Exceptionnel : grand média ou élément flottant justifié'], ['pill', '999 px', 'Statuts et étiquettes seulement']],
+    radiiTitle: 'Rayons par rôle', radii: [['cadre technique', '2–4 px', 'Cadres techniques, planches, filets d’architecture'], ['panneau', '4 px', 'Panneaux et surfaces de contenu — défaut'], ['contrôle', '8 px', 'Boutons, champs, contrôles'], ['image', '10 px', 'Photos et médias d’architecture : coins visibles et contenus seulement'], ['exceptionnel', '16 / 24 px', 'Exceptionnel : grand média ou élément flottant justifié'], ['pill', '999 px', 'Statuts et étiquettes seulement']],
     elevTitle: 'Ombre : dernier recours', elevText: 'Les niveaux 1 et 2 suffisent presque toujours. Les niveaux 3 et 4 sont exceptionnels.', exception: 'exceptionnel',
     frameTitle: 'Aperçu mobile du composant SiteHeader', filler: 'Contenu de démonstration sous l’en-tête.',
   },
   en: {
-    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-01B',
+    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-02',
     title: 'Foundations and navigation.',
     lead: 'Internal laboratory validating the visual system: target tokens, surfaces, typography, focus, buttons and navigation. This is not a site page.',
     internal: 'Internal route — noindex, excluded from the sitemap and public navigation. Status: DRAFT.',
-    zones: 'Zones', z00: '00 — Foundations', z01: '01 — Navigation',
+    zones: 'Zones', z00: '00 — Foundations', z01: '01 — Navigation', z02: '02 — Heroes',
     primary: 'Primary action', secondary: 'Secondary action', ghost: 'Text / quiet', disabled: 'Unavailable',
     palette: 'Target palette', paletteText: 'Navy carries identity, blue structures information, red signals action. Red is never a fill colour.',
     redTitle: 'Red: current versus target', redText: 'The target CORO action red is #E51B2A. Both production reds are left unchanged in this lot.',
@@ -90,7 +92,7 @@ const copy = {
     rhythmTitle: 'Surface rhythm', rhythmLead: 'White → architectural surface → white → deep navy. The change of ground structures the page; no card grid is needed.',
     rhythm: [['SURFACE 0', 'Reading. Text, breathing room.'], ['ARCHITECTURAL SURFACE', 'Drafting paper: soft tone, hairlines, dimensions. A frame, not a card.'], ['SURFACE 0', 'Back to the real world.'], ['NAVY 950', 'Immersion, product, command.']],
     roles: [['Headline', 'Strong, compact, editorial.'], ['Body', 'Calm, readable, restrained: hierarchy comes from size and space.'], ['Technical label', 'Small, precise, slightly spaced.']],
-    radiiTitle: 'Radii by role', radii: [['frame', '2 px', 'Frames, media, architectural rules'], ['panel', '4 px', 'Panels and content surfaces — default'], ['control', '8 px', 'Buttons, fields, controls'], ['exceptional', '16 / 24 px', 'Exceptional: a large media or a justified floating element'], ['pill', '999 px', 'Statuses and tags only']],
+    radiiTitle: 'Radii by role', radii: [['technical frame', '2–4 px', 'Technical frames, drawing sheets, architectural rules'], ['panel', '4 px', 'Panels and content surfaces — default'], ['control', '8 px', 'Buttons, fields, controls'], ['image', '10 px', 'Photos and architectural media: visible, contained corners only'], ['exceptional', '16 / 24 px', 'Exceptional: a large media or a justified floating element'], ['pill', '999 px', 'Statuses and tags only']],
     elevTitle: 'Shadow: last resort', elevText: 'Levels 1 and 2 almost always suffice. Levels 3 and 4 are exceptional.', exception: 'exceptional',
     frameTitle: 'Mobile preview of the SiteHeader component', filler: 'Demonstration content below the header.',
   },
@@ -137,6 +139,8 @@ export default async function DesignLabPage({ searchParams }: Props) {
   const locale = localeFromSearchParams(query);
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
   if (view === 'mobile-light' || view === 'mobile-dark') return <Stage locale={locale} tone={view === 'mobile-dark' ? 'dark' : 'light'} view={view} />;
+  const studyKey = view?.startsWith('hero-') ? (view.slice(5) as HeroStudyKey) : undefined;
+  if (studyKey && heroStudyKeys.includes(studyKey)) return <HeroStudyView locale={locale} study={studyKey} />;
   const t = copy[locale];
   const frame = (name: string) => `${localizedHref('/design-lab', locale)}${locale === 'en' ? '&' : '?'}view=${name}`;
   return (
@@ -145,7 +149,7 @@ export default async function DesignLabPage({ searchParams }: Props) {
       <div data-surface="dark" className={styles.bar}>
         <Container className={styles.barInner}>
           <span className={styles.barMark}>CO<span>RO</span> <em>Design Lab</em></span>
-          <nav aria-label={t.zones}><a href="#foundations">{t.z00}</a><a href="#navigation">{t.z01}</a></nav>
+          <nav aria-label={t.zones}><a href="#foundations">{t.z00}</a><a href="#navigation">{t.z01}</a><a href="#heroes">{t.z02}</a></nav>
           <a lang={locale === 'fr' ? 'en' : 'fr'} hrefLang={locale === 'fr' ? 'en-CA' : 'fr-CA'} href={locale === 'fr' ? '/design-lab?lang=en' : '/design-lab'} className={styles.barLang} aria-label={locale === 'fr' ? 'View this page in English' : 'Voir cette page en français'}>{locale === 'fr' ? 'EN' : 'FR'}</a>
         </Container>
       </div>
@@ -214,7 +218,7 @@ export default async function DesignLabPage({ searchParams }: Props) {
           <Band tone="paper">
             <div className={styles.block}>
               <h3>{t.radiiTitle}</h3>
-              <ul className={styles.radii}>{t.radii.map(([name, size, role], i) => <li key={name} data-i={i}><span className={styles.radiusSample} /><b>{name}</b><code>{size}</code><small>{role}</small></li>)}</ul>
+              <ul className={styles.radii}>{t.radii.map(([name, size, role], i) => <li key={name} data-i={i}><span className={styles.radiusSample}>{name === 'image' && <Image src="/website-v2/architecture/building-hero-day.webp" alt="" fill sizes="200px" style={{ objectFit: 'cover', objectPosition: '62% 40%' }} />}</span><b>{name}</b><code>{size}</code><small>{role}</small></li>)}</ul>
             </div>
             <div className={styles.block}>
               <h3>{t.elevTitle}</h3><p className={styles.blockLead}>{t.elevText}</p>
@@ -283,8 +287,10 @@ export default async function DesignLabPage({ searchParams }: Props) {
             </div>
           </Band>
         </Zone>
+
+        <HeroSystemZone locale={locale} />
       </main>
-      <footer className={styles.labFooter}><Container>CORO Website V2 · Design Lab · LAB-01B · DRAFT</Container></footer>
+      <footer className={styles.labFooter}><Container>CORO Website V2 · Design Lab · LAB-02 · DRAFT</Container></footer>
     </div>
   );
 }
