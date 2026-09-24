@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { localeFromSearchParams, localizedHref, type Locale } from '@/lib/site/locale';
 import { HeroStudyView, HeroSystemZone, heroStudyKeys, type HeroStudyKey } from './HeroSystemZone';
+import { PageRhythmZone, RhythmView, rhythmStudyKeys, type RhythmStudyKey } from './RhythmStudies';
 import { SkipLink } from './SkipLink';
 import './design-lab-global.css';
 import styles from './design-lab.module.css';
@@ -21,11 +22,11 @@ export const metadata: Metadata = {
 
 const copy = {
   fr: {
-    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-02',
+    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-03',
     title: 'Fondations et navigation.',
     lead: 'Laboratoire interne de validation du système visuel : jetons cibles, surfaces, typographie, focus, boutons et navigation. Ce n’est pas une page du site.',
     internal: 'Route interne — noindex, hors sitemap, hors navigation publique. Statut : DRAFT.',
-    zones: 'Zones', z00: '00 — Fondations', z01: '01 — Navigation', z02: '02 — Héros',
+    zones: 'Zones', z00: '00 — Fondations', z01: '01 — Navigation', z02: '02 — Héros', z03: '03 — Rythme',
     primary: 'Action principale', secondary: 'Action secondaire', ghost: 'Texte / discrète', disabled: 'Indisponible',
     palette: 'Palette cible', paletteText: 'Le marine porte l’identité, le bleu structure l’information, le rouge signale l’action. Le rouge n’est jamais une couleur de remplissage.',
     redTitle: 'Rouge : actuel contre cible', redText: 'Le rouge d’action CORO cible est #E51B2A. Les deux rouges de production restent inchangés dans ce lot.',
@@ -59,11 +60,11 @@ const copy = {
     frameTitle: 'Aperçu mobile du composant SiteHeader', filler: 'Contenu de démonstration sous l’en-tête.',
   },
   en: {
-    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-02',
+    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-03',
     title: 'Foundations and navigation.',
     lead: 'Internal laboratory validating the visual system: target tokens, surfaces, typography, focus, buttons and navigation. This is not a site page.',
     internal: 'Internal route — noindex, excluded from the sitemap and public navigation. Status: DRAFT.',
-    zones: 'Zones', z00: '00 — Foundations', z01: '01 — Navigation', z02: '02 — Heroes',
+    zones: 'Zones', z00: '00 — Foundations', z01: '01 — Navigation', z02: '02 — Heroes', z03: '03 — Rhythm',
     primary: 'Primary action', secondary: 'Secondary action', ghost: 'Text / quiet', disabled: 'Unavailable',
     palette: 'Target palette', paletteText: 'Navy carries identity, blue structures information, red signals action. Red is never a fill colour.',
     redTitle: 'Red: current versus target', redText: 'The target CORO action red is #E51B2A. Both production reds are left unchanged in this lot.',
@@ -139,6 +140,8 @@ export default async function DesignLabPage({ searchParams }: Props) {
   const locale = localeFromSearchParams(query);
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
   if (view === 'mobile-light' || view === 'mobile-dark') return <Stage locale={locale} tone={view === 'mobile-dark' ? 'dark' : 'light'} view={view} />;
+  const rhythmKey = view && (rhythmStudyKeys as readonly string[]).includes(view) ? (view as RhythmStudyKey) : undefined;
+  if (rhythmKey) return <RhythmView locale={locale} study={rhythmKey.slice(-1) as 'a' | 'b' | 'c'} />;
   const studyKey = view?.startsWith('hero-') ? (view.slice(5) as HeroStudyKey) : undefined;
   if (studyKey && heroStudyKeys.includes(studyKey)) return <HeroStudyView locale={locale} study={studyKey} />;
   const t = copy[locale];
@@ -149,7 +152,7 @@ export default async function DesignLabPage({ searchParams }: Props) {
       <div data-surface="dark" className={styles.bar}>
         <Container className={styles.barInner}>
           <span className={styles.barMark}>CO<span>RO</span> <em>Design Lab</em></span>
-          <nav aria-label={t.zones}><a href="#foundations">{t.z00}</a><a href="#navigation">{t.z01}</a><a href="#heroes">{t.z02}</a></nav>
+          <nav aria-label={t.zones}><a href="#foundations">{t.z00}</a><a href="#navigation">{t.z01}</a><a href="#heroes">{t.z02}</a><a href="#page-rhythm">{t.z03}</a></nav>
           <a lang={locale === 'fr' ? 'en' : 'fr'} hrefLang={locale === 'fr' ? 'en-CA' : 'fr-CA'} href={locale === 'fr' ? '/design-lab?lang=en' : '/design-lab'} className={styles.barLang} aria-label={locale === 'fr' ? 'View this page in English' : 'Voir cette page en français'}>{locale === 'fr' ? 'EN' : 'FR'}</a>
         </Container>
       </div>
@@ -289,8 +292,10 @@ export default async function DesignLabPage({ searchParams }: Props) {
         </Zone>
 
         <HeroSystemZone locale={locale} />
+
+        <PageRhythmZone locale={locale} />
       </main>
-      <footer className={styles.labFooter}><Container>CORO Website V2 · Design Lab · LAB-02 · DRAFT</Container></footer>
+      <footer className={styles.labFooter}><Container>CORO Website V2 · Design Lab · LAB-03 · DRAFT</Container></footer>
     </div>
   );
 }

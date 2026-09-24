@@ -219,3 +219,27 @@
 .notes dt { margin: 0; }
 .notes dd { margin: 0; font-size: var(--coro-v1-text-small); line-height: 1.6; color: var(--coro-v1-text-900); }
 @media (min-width: 48rem) { .notes dl { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--coro-v1-space-8); } }
+
+/* ── LAB-03: page rhythm & content ───────────────────────────────────── */
+.primBar { background: var(--coro-v1-surface-0); border-block: 1px solid var(--coro-v1-border-200); }
+.primBar > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem 1.5rem; padding-block: .8rem; }
+.primBar code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--coro-v1-text-small); font-weight: 700; color: var(--coro-v1-blue-700); }
+.primBar span { font-size: var(--coro-v1-text-small); color: var(--coro-v1-text-600); }
+.primBar b { font-size: var(--coro-v1-label-size); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; color: var(--coro-v1-text-900); margin-inline-end: .35rem; }
+.heroRef { border-block-end: 1px solid var(--coro-v1-border-200); background: var(--coro-v1-surface-0); }
+.heroRef[data-tone="navy"] { background: var(--coro-v1-navy-950); color: #fff; border-block-end-color: var(--coro-v1-border-on-dark); }
+.heroRef[data-tone="paper"] { background: var(--coro-v1-paper); }
+.heroRef > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.25rem; padding-block: 1.25rem; }
+.heroRef b { font-size: var(--coro-v1-text-body); letter-spacing: -.01em; }
+.heroRef a { margin-inline-start: auto; font-size: var(--coro-v1-text-small); font-weight: 700; color: inherit; text-underline-offset: .3em; }
+.mediaPair { display: grid; gap: var(--coro-v1-space-6); }
+@media (min-width: 68rem) { .mediaPair { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: end; gap: var(--coro-v1-space-12); } }
+.ctaPlaceholder { display: grid; gap: var(--coro-v1-space-4); justify-items: start; padding-block: var(--coro-v1-space-4); border-block-start: 1px solid var(--coro-v1-paper-line-strong); }
+.ctaText { margin: 0; font-size: var(--coro-v1-text-h3); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+
+/* LAB-03B: compact family / surface guidance */
+.familyRule { display: grid; gap: var(--coro-v1-space-3); padding-block-start: var(--coro-v1-space-6); }
+.familyRule dl { margin: 0; display: grid; gap: var(--coro-v1-space-4); }
+.familyRule dl > div { display: grid; gap: .3rem; padding-block-start: .6rem; border-block-start: 1px solid var(--coro-v1-paper-line-strong); }
+.familyRule dd { margin: 0; font-size: var(--coro-v1-text-small); color: var(--coro-v1-text-600); line-height: 1.5; }
+@media (min-width: 48rem) { .familyRule dl { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--coro-v1-space-8); } }

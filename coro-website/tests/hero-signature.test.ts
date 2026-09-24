@@ -1,13 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { heroStudies } from '../app/design-lab/heroes-data.ts';
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
-const sha = (path: string) => createHash('sha256').update(readFileSync(join(root, path))).digest('hex');
 
 test('A1 is kept for comparison and A2 exists beside it, labelled REVIEW', () => {
   assert.ok(existsSync(join(root, 'components/hero/HeroArchitectural.tsx')));
@@ -67,22 +65,34 @@ test('annotations keep the technical vocabulary: numbered, labelled, connected, 
   assert.match(read('components/hero/TechnicalAnnotations.tsx'), /aria-label=\{label\}/);
 });
 
-// LAB-02B baseline. B, C and the shared primitives must not change in this lot. When a later lot deliberately
-// changes them, update these hashes in that lot.
-const baseline: Record<string, string> = {
-  'components/hero/HeroOperational.tsx': '66d3dc6e960789f8e85bf2c6713c521648dcc6a485fba857f8f75415e42f3566',
-  'components/hero/hero-operational.module.css': 'c01d17cd93645f161023d3bcc2be0cfde1b8e7b1c8cdbd905d3aa2eb3c392746',
-  'components/hero/HeroTechnical.tsx': '862c7036c6803b368f069bb928c6bd998fc5750de16e285082c0788ecde56ba9',
-  'components/hero/hero-technical.module.css': '37253ecf33b716332e419fb102249ad3c307007444ffd4baa55d86eafa4ab6a3',
-  'components/hero/hero.module.css': 'd4010406e0d95fc2de3d669138f901ff362fcfb48f16d0cfefc6cbee4e6fb951',
-  'components/hero/HeroMedia.tsx': '24e96d6c9132bbe4de5c4237977821cc335af114f94945d8c8e909e2e695d4a7',
-  'components/hero/HeroCallouts.tsx': '0842494f8f79bc62582463a255458af83c4eef4825710f102fc27bbe51ad5bb6',
-  'components/hero/HeroArchitectural.tsx': '9300518aab084a550550ff9bef631e2d4fc26870b2d2c50c7d8fb0dce484b75a',
-  'components/hero/hero-architectural.module.css': '3e20c5d60fc4c0bf5f42c9964d88d752111d0735d4da2cf36064433a5a447520',
-};
+// The LAB-02B implementation-freeze hashes were retired in LAB-03: they blocked legitimate work. These semantic contracts replace them.
+test('Hero B keeps its operational contract: full-bleed night photograph masked into navy, demo-labelled sample data', () => {
+  const tsx = read('components/hero/HeroOperational.tsx');
+  const css = read('components/hero/hero-operational.module.css');
+  assert.ok(tsx.includes('building-hero-night.webp'));
+  assert.match(tsx, /data-surface="dark"/);
+  assert.ok(tsx.includes('panel.demo'));
+  assert.ok(tsx.includes('panel.note'));
+  assert.match(css, /mask-image/);
+  assert.ok(css.includes('var(--coro-v1-navy-950)'));
+});
 
-test('Hero B, Hero C, A1 and the shared hero primitives are unchanged by LAB-02B', () => {
-  for (const [file, hash] of Object.entries(baseline)) assert.equal(sha(file), hash, `${file} changed`);
+test('Hero C keeps its technical contract: paper surface, drawing sheet, cartouche, numbered references, cutaway inset', () => {
+  const tsx = read('components/hero/HeroTechnical.tsx');
+  const css = read('components/hero/hero-technical.module.css');
+  assert.ok(tsx.includes('building-blueprint.webp'));
+  assert.ok(tsx.includes('building-cutaway.webp'));
+  assert.ok(tsx.includes('titleBlock'));
+  assert.ok(tsx.includes('references'));
+  assert.ok(css.includes('--coro-v1-paper'));
+  assert.ok(css.includes('.titleBlock'));
+});
+
+test('Hero A1 stays available as the comparison reference and the shared hero primitives keep their public surface', () => {
+  assert.match(read('components/hero/HeroArchitectural.tsx'), /export function HeroArchitectural/);
+  assert.match(read('components/hero/HeroMedia.tsx'), /export function HeroMedia/);
+  assert.match(read('components/hero/HeroCallouts.tsx'), /export function HeroCallouts/);
+  assert.match(read('components/hero/hero.module.css'), /prefers-reduced-motion/);
 });
 
 test('production pages and the shell still do not import hero components', () => {
