@@ -63,6 +63,7 @@
 .fieldError { margin: 0; display: flex; gap: .5rem; align-items: baseline; font-size: var(--coro-v1-text-small); font-weight: 650; color: var(--err); }
 .fieldError > span[aria-hidden] { display: inline-grid; place-items: center; flex: none; inline-size: 1.1rem; block-size: 1.1rem; border-radius: var(--coro-v1-radius-frame); background: var(--err); color: #fff; font-size: .75rem; font-weight: 800; }
 .formBanner { padding: var(--coro-v1-space-4); border: 1px solid var(--err); border-inline-start-width: 4px; border-radius: var(--coro-v1-radius-panel); display: grid; gap: .4rem; font-size: var(--coro-v1-text-small); }
+.formBanner:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
 .formBanner p, .formBanner ul { margin: 0; }
 .formBanner ul { padding-inline-start: 1.1rem; display: grid; gap: .25rem; list-style: disc; }
 .formBanner a { color: var(--ink); text-underline-offset: .2em; min-block-size: 1.5rem; display: inline-block; }

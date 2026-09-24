@@ -1,6 +1,6 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import { useEffect, useRef, type FormEvent } from 'react';
 import Link from 'next/link';
 import { localizedHref, type Locale } from '@/lib/site/locale';
 import styles from './conversion.module.css';
@@ -50,6 +50,9 @@ export function LeadForm({ locale, state, errors = {}, referral, defaults, onSub
 }) {
   const t = leadFormCopy[locale];
   const busy = state === 'submitting';
+  const summary = useRef<HTMLDivElement>(null);
+  // LAB08-009: the error summary takes focus when it appears, so keyboard users land on the list of fields to fix.
+  useEffect(() => { if (state === 'error') summary.current?.focus(); }, [state]);
   const invalid = FIELDS.filter((field) => errors[field]);
   const describe = (field: LeadField, help?: boolean) => [errors[field] ? `lf-${field}-error` : '', help ? `lf-${field}-help` : ''].filter(Boolean).join(' ') || undefined;
 
@@ -81,7 +84,7 @@ export function LeadForm({ locale, state, errors = {}, referral, defaults, onSub
         <div className={styles.formBanner} role="alert" data-kind="failure"><p className={styles.formBannerTitle}><span aria-hidden="true">!</span> {t.failureTitle}</p><p>{t.failureText}</p></div>
       )}
       {state === 'error' && invalid.length > 0 && (
-        <div className={styles.formBanner} role="alert" data-kind="error" tabIndex={-1}>
+        <div className={styles.formBanner} ref={summary} role="alert" data-kind="error" tabIndex={-1}>
           <p className={styles.formBannerTitle}><span aria-hidden="true">!</span> {t.errorTitle}</p>
           <p>{t.errorIntro}</p>
           <ul>{invalid.map((id) => <li key={id}><a href={`#lf-${id}`}>{t[id]}</a></li>)}</ul>

@@ -7,3 +7,6 @@
 .headerDark .mobilePanel{background:var(--coro-navy-900);border-bottom-color:rgb(255 255 255 / 16%)}.headerDark .mobileNav section{border-bottom-color:rgb(255 255 255 / 14%)}.headerDark .mobileNav button,.headerDark .mobileNav>a{background:transparent;color:#fff}.headerDark .mobileNav section div a{color:#d5e0ea}.headerDark .mobileActions a{border-color:rgb(255 255 255 / 28%);color:#fff}.headerDark .mobileActions a:last-child{background:var(--coro-red-600);border-color:transparent}
 /* Pressed + pointer-only affordances kept subtle (Motion & Interaction §19–21). */
 .demo:active,.mobileActions a:last-child:active{transform:translateY(1px)}
+/* LAB-08 (LAB08-004): desktop header labels never wrap. Between 68rem and 75rem the paddings tighten so the longest French labels fit on one line. */
+@media(min-width:68rem){.dropdown>button,.directLink,.login,.demo,.language{white-space:nowrap}}
+@media(min-width:68rem) and (max-width:74.99rem){.headerInner{gap:.5rem}.desktopNav{gap:0}.dropdown>button,.directLink{padding-inline:.5rem}.headerActions{gap:.2rem}.login,.demo{padding-inline:.5rem}}

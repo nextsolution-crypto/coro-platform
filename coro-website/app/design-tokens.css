@@ -32,11 +32,11 @@
   --coro-v1-red-600: #e51b2a; --coro-v1-red-700: #bf1522; --coro-v1-red-300: #ff5a66; --coro-v1-red-100: #fdecee;
   /* Surfaces, text, borders */
   --coro-v1-surface-0: #ffffff; --coro-v1-surface-1: #f6f8fa; --coro-v1-surface-2: #eef3f7;
-  --coro-v1-text-900: #162b3e; --coro-v1-text-600: #617283;
+  --coro-v1-text-900: #162b3e; --coro-v1-text-600: #5d6e7f;
   --coro-v1-on-dark-900: #ffffff; --coro-v1-on-dark-600: #b8c9d8;
   --coro-v1-border-200: #dce4ea; --coro-v1-border-on-dark: rgb(255 255 255 / 16%);
   /* Semantic states — never rely on colour alone (pair with icon + label) */
-  --coro-v1-success: #12804a; --coro-v1-warning: #a15c00; --coro-v1-critical: #bf1522; --coro-v1-info: #0d4f8b;
+  --coro-v1-success: #107c47; --coro-v1-warning: #a15c00; --coro-v1-critical: #bf1522; --coro-v1-info: #0d4f8b;
   /* LAB-05B: on-dark counterparts for the two semantic hues that need them (contrast >= 4.5:1 on navy-900). Info reuses --coro-v1-focus-on-dark, critical reuses --coro-v1-red-300. */
   --coro-v1-success-on-dark: #4cc38a; --coro-v1-warning-on-dark: #f0b34a;
   /* Typography (family stays Inter; sizes are fluid, desktop → mobile targets) */

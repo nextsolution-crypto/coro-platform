@@ -65,7 +65,7 @@
   /* Floor marker: compact level notation */
   .tag { display: inline-flex; flex-direction: column; align-items: center; position: absolute; inset-block-start: 0; transform: translateY(-50%); padding: .18rem .45rem; background: #fff; color: var(--coro-v1-navy-950); border: 1px solid var(--coro-v1-navy-950); border-radius: var(--coro-v1-radius-frame); line-height: 1.1; animation: fade var(--coro-v1-motion-base) var(--coro-v1-ease-enter) both; animation-delay: calc(var(--d, 0ms) + 200ms); }
   .tag b { font-size: .875rem; font-weight: 850; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
-  .tag i { font-style: normal; font-size: .5rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+  .tag i { font-style: normal; font-size: .625rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
   .mk[data-kind="floor"][data-side="right"] .tag { inset-inline-start: 1.6rem; }
   .mk[data-kind="floor"][data-side="left"] .tag { inset-inline-end: 1.6rem; }
 
