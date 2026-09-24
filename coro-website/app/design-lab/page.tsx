@@ -7,6 +7,7 @@ import { Container } from '@/components/ui/Container';
 import { localeFromSearchParams, localizedHref, type Locale } from '@/lib/site/locale';
 import { HeroStudyView, HeroSystemZone, heroStudyKeys, type HeroStudyKey } from './HeroSystemZone';
 import { PageRhythmZone, RhythmView, rhythmStudyKeys, type RhythmStudyKey } from './RhythmStudies';
+import { ConversionView, ConversionZone, conversionViewKeys } from './ConversionStudies';
 import { FlowView, FlowZone, flowViewKeys } from './FlowStudies';
 import { OperationalView, OperationalZone, opsViewKeys } from './OperationalStudies';
 import { SpatialView, SpatialZone } from './SpatialStudies';
@@ -25,11 +26,11 @@ export const metadata: Metadata = {
 
 const copy = {
   fr: {
-    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-06',
+    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-07',
     title: 'Fondations et navigation.',
     lead: 'Laboratoire interne de validation du système visuel : jetons cibles, surfaces, typographie, focus, boutons et navigation. Ce n’est pas une page du site.',
     internal: 'Route interne — noindex, hors sitemap, hors navigation publique. Statut : DRAFT.',
-    zones: 'Zones', z00: '00 — Fondations', z01: '01 — Navigation', z02: '02 — Héros', z03: '03 — Rythme', z04: '04 — Bâtiment', z05: '05 — Opérationnel', z06: '06 — Continuum',
+    zones: 'Zones', z00: '00 — Fondations', z01: '01 — Navigation', z02: '02 — Héros', z03: '03 — Rythme', z04: '04 — Bâtiment', z05: '05 — Opérationnel', z06: '06 — Continuum', z07: '07 — Conversion',
     primary: 'Action principale', secondary: 'Action secondaire', ghost: 'Texte / discrète', disabled: 'Indisponible',
     palette: 'Palette cible', paletteText: 'Le marine porte l’identité, le bleu structure l’information, le rouge signale l’action. Le rouge n’est jamais une couleur de remplissage.',
     redTitle: 'Rouge : actuel contre cible', redText: 'Le rouge d’action CORO cible est #E51B2A. Les deux rouges de production restent inchangés dans ce lot.',
@@ -63,11 +64,11 @@ const copy = {
     frameTitle: 'Aperçu mobile du composant SiteHeader', filler: 'Contenu de démonstration sous l’en-tête.',
   },
   en: {
-    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-06',
+    eyebrow: 'CORO WEBSITE V2 · DESIGN LAB · LAB-07',
     title: 'Foundations and navigation.',
     lead: 'Internal laboratory validating the visual system: target tokens, surfaces, typography, focus, buttons and navigation. This is not a site page.',
     internal: 'Internal route — noindex, excluded from the sitemap and public navigation. Status: DRAFT.',
-    zones: 'Zones', z00: '00 — Foundations', z01: '01 — Navigation', z02: '02 — Heroes', z03: '03 — Rhythm', z04: '04 — Building', z05: '05 — Operational', z06: '06 — Continuum',
+    zones: 'Zones', z00: '00 — Foundations', z01: '01 — Navigation', z02: '02 — Heroes', z03: '03 — Rhythm', z04: '04 — Building', z05: '05 — Operational', z06: '06 — Continuum', z07: '07 — Conversion',
     primary: 'Primary action', secondary: 'Secondary action', ghost: 'Text / quiet', disabled: 'Unavailable',
     palette: 'Target palette', paletteText: 'Navy carries identity, blue structures information, red signals action. Red is never a fill colour.',
     redTitle: 'Red: current versus target', redText: 'The target CORO action red is #E51B2A. Both production reds are left unchanged in this lot.',
@@ -144,6 +145,7 @@ export default async function DesignLabPage({ searchParams }: Props) {
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
   if (view === 'mobile-light' || view === 'mobile-dark') return <Stage locale={locale} tone={view === 'mobile-dark' ? 'dark' : 'light'} view={view} />;
   if (view && (flowViewKeys as readonly string[]).includes(view)) return <FlowView locale={locale} study={view.slice(-1) as 'a' | 'b' | 'c' | 'd'} />;
+  if (view && (conversionViewKeys as readonly string[]).includes(view)) return <ConversionView locale={locale} study={view.slice('conversion-'.length) as 'a' | 'b' | 'c' | 'd' | 'e' | 'end'} />;
   if (view === 'spatial') return <SpatialView locale={locale} />;
   if (view && (opsViewKeys as readonly string[]).includes(view)) return <OperationalView locale={locale} study={view.slice(-1) as 'a' | 'b' | 'c' | 'd'} />;
   const rhythmKey = view && (rhythmStudyKeys as readonly string[]).includes(view) ? (view as RhythmStudyKey) : undefined;
@@ -158,7 +160,7 @@ export default async function DesignLabPage({ searchParams }: Props) {
       <div data-surface="dark" className={styles.bar}>
         <Container className={styles.barInner}>
           <span className={styles.barMark}>CO<span>RO</span> <em>Design Lab</em></span>
-          <nav aria-label={t.zones}><a href="#foundations">{t.z00}</a><a href="#navigation">{t.z01}</a><a href="#heroes">{t.z02}</a><a href="#page-rhythm">{t.z03}</a><a href="#spatial">{t.z04}</a><a href="#operational">{t.z05}</a><a href="#flows">{t.z06}</a><a href="#spatial">{t.z04}</a></nav>
+          <nav aria-label={t.zones}><a href="#foundations">{t.z00}</a><a href="#navigation">{t.z01}</a><a href="#heroes">{t.z02}</a><a href="#page-rhythm">{t.z03}</a><a href="#spatial">{t.z04}</a><a href="#operational">{t.z05}</a><a href="#flows">{t.z06}</a><a href="#conversion">{t.z07}</a><a href="#spatial">{t.z04}</a></nav>
           <a lang={locale === 'fr' ? 'en' : 'fr'} hrefLang={locale === 'fr' ? 'en-CA' : 'fr-CA'} href={locale === 'fr' ? '/design-lab?lang=en' : '/design-lab'} className={styles.barLang} aria-label={locale === 'fr' ? 'View this page in English' : 'Voir cette page en français'}>{locale === 'fr' ? 'EN' : 'FR'}</a>
         </Container>
       </div>
@@ -306,8 +308,10 @@ export default async function DesignLabPage({ searchParams }: Props) {
         <OperationalZone locale={locale} />
 
         <FlowZone locale={locale} />
+
+        <ConversionZone locale={locale} />
       </main>
-      <footer className={styles.labFooter}><Container>CORO Website V2 · Design Lab · LAB-06 · DRAFT</Container></footer>
+      <footer className={styles.labFooter}><Container>CORO Website V2 · Design Lab · LAB-07 · DRAFT</Container></footer>
     </div>
   );
 }
