@@ -1,0 +1,19 @@
+:root {
+  --coro-red-700: #a93226; --coro-red-600: #c0392b; --coro-red-500: #d64b3f;
+  --coro-navy-950: #07111f; --coro-navy-900: #102434; --coro-navy-800: #1a2d3d; --coro-slate-700: #2c3e50;
+  --coro-white: #fff; --coro-surface: #f6f8f9; --coro-border: #dce3e7; --coro-muted: #637381;
+  --coro-success: #18864b; --coro-warning: #a96300; --coro-info: #176b9c;
+  --coro-font-sans: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --coro-text-xs: .75rem; --coro-text-sm: .875rem; --coro-text-md: 1rem; --coro-text-lg: 1.125rem;
+  --coro-text-xl: clamp(1.5rem, 2vw, 2rem); --coro-text-display: clamp(2.25rem, 6vw, 4.75rem);
+  --coro-space-1: .25rem; --coro-space-2: .5rem; --coro-space-3: .75rem; --coro-space-4: 1rem;
+  --coro-space-6: 1.5rem; --coro-space-8: 2rem; --coro-space-12: 3rem; --coro-space-16: 4rem;
+  --coro-radius-sm: .375rem; --coro-radius-md: .625rem; --coro-radius-lg: 1rem; --coro-radius-pill: 999px;
+  --coro-shadow-sm: 0 4px 16px rgb(16 36 52 / 8%); --coro-shadow-lg: 0 22px 60px rgb(7 17 31 / 16%);
+  --coro-content: 75rem; --coro-reading: 48rem; --coro-focus: #1689cf;
+  --coro-duration-fast: 160ms; --coro-duration-medium: 260ms;
+  --coro-z-header: 100; --coro-z-menu: 110; --coro-z-modal: 200;
+}
+
+:where(a, button, input, select, textarea):focus-visible { outline: 3px solid var(--coro-focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

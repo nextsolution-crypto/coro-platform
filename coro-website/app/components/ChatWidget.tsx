@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { publicApiUrl } from '@/lib/site/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -77,7 +78,7 @@ export default function ChatWidget() {
       const history = messages.map(m =>
         `${m.role === 'user' ? '👤 Visiteur' : '🤖 Sophie (CORO IA)'} : ${m.content}`
       ).join('\n\n');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.getcoro.io'}/api/chat/notify`, {
+      await fetch(publicApiUrl('chat/notify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: visitorEmail, history }),
@@ -97,7 +98,7 @@ export default function ChatWidget() {
 
     try {
       const history = messages.slice(1).map(m => ({ role: m.role, content: m.content }));
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.getcoro.io'}/api/chat/vitrine`, {
+      const res = await fetch(publicApiUrl('chat/vitrine'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, history }),

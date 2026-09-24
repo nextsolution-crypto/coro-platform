@@ -1,8 +1,7 @@
 import { Metadata } from 'next';
+import { serverApiUrl } from '@/lib/site/api';
 
 export const revalidate = 0;
-
-const API_URL = 'http://coro_backend:3002/api';
 
 const SITE_URL = 'https://getcoro.io';
 
@@ -170,7 +169,7 @@ export async function generateMetadata({
 async function getPosts() {
   try {
     const res = await fetch(
-      `${API_URL}/blog/public`,
+      serverApiUrl('blog/public'),
       {
         cache: 'no-store',
       }

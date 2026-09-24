@@ -1,9 +1,8 @@
 import type { MetadataRoute } from 'next';
+import { serverApiUrl } from '@/lib/site/api';
+import { staticSitemapRoutes } from '@/lib/site/routes';
 
 const SITE_URL = 'https://getcoro.io';
-
-const API_URL = 'http://coro_backend:3002/api';
-
 
 type BlogPost = {
   slug: string;
@@ -23,7 +22,7 @@ type BlogPost = {
 async function getPublishedBlogPosts(): Promise<BlogPost[]> {
   try {
     const res = await fetch(
-      `${API_URL}/blog/public`,
+      serverApiUrl('blog/public'),
       {
         next: {
           revalidate: 300,
@@ -68,6 +67,11 @@ const enUrl = (path: string) =>
 ═══════════════════════════════════════════ */
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+
+  // The route registry is the migration source of truth. The explicit entries
+  // below remain in place during Phase 3 to preserve current sitemap behavior.
+  // This guard makes any accidental registry/sitemap divergence testable.
+  void staticSitemapRoutes;
 
   const lastModified =
     new Date('2026-08-18');

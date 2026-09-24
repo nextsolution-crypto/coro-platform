@@ -1,9 +1,9 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { serverApiUrl } from '@/lib/site/api';
 
 export const revalidate = 0;
 
-const API_URL = 'http://coro_backend:3002/api';
 const SITE_URL = 'https://getcoro.io';
 
 
@@ -14,7 +14,7 @@ const SITE_URL = 'https://getcoro.io';
 async function getPost(slug: string) {
   try {
     const res = await fetch(
-      `${API_URL}/blog/public/${slug}`,
+      serverApiUrl(`blog/public/${slug}`),
       { cache: 'no-store' }
     );
 
