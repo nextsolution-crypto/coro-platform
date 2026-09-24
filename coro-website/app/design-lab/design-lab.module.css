@@ -286,3 +286,14 @@
   .recCol { border-block-end: 0; }
   .recEvidence { margin-block: var(--coro-v1-space-4); }
 }
+
+/* Zone 06 */
+.opsBand .flowLead { margin: 0 0 var(--coro-v1-space-6); max-inline-size: 40rem; font-size: var(--coro-v1-text-body-l); color: var(--coro-v1-text-600); }
+[data-surface="dark"] .flowLead { color: var(--coro-v1-on-dark-600); }
+.scenarioLayout { display: grid; gap: var(--coro-v1-space-6); }
+.scenarioMedia { position: relative; overflow: hidden; border-radius: var(--coro-v1-radius-image); aspect-ratio: 4 / 3; background: var(--coro-v1-navy-950); }
+.scenarioAfter { display: grid; gap: .6rem; padding: var(--coro-v1-space-4) 0 0; }
+.scenarioAfter ol { list-style: none; margin: 0; padding: 0; display: grid; }
+.scenarioAfter li { display: grid; gap: .1rem; padding-block: .6rem; border-block-end: 1px solid var(--coro-v1-border-200); font-size: var(--coro-v1-text-small); }
+@media (min-width: 48rem) { .scenarioMedia { aspect-ratio: 3 / 2; } }
+@media (min-width: 68rem) { .scenarioLayout { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: var(--coro-v1-space-8); align-items: start; } .scenarioMedia { aspect-ratio: auto; min-block-size: 32rem; block-size: 100%; } }
