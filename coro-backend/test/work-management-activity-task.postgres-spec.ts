@@ -6,6 +6,18 @@ import { MandateService } from '../src/mandate/mandate.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
+const activityTaskForeignKey = 'ProjectTask_activityId_projectId_organizationId_fkey';
+
+async function expectActivityTaskForeignKeyViolation(operation: Promise<unknown>) {
+  try {
+    await operation;
+    throw new Error('Expected the Activity/Task foreign key to reject the operation');
+  } catch (error) {
+    const prismaError = error as { code?: unknown; meta?: unknown; message?: unknown };
+    const details = `${JSON.stringify(prismaError.meta ?? {})} ${String(prismaError.message ?? '')}`;
+    expect(prismaError.code === 'P2003' || details.includes(activityTaskForeignKey)).toBe(true);
+  }
+}
 
 describePostgres('ProjectActivity to ProjectTask integrity on PostgreSQL', () => {
   const prisma = databaseUrl
@@ -75,15 +87,32 @@ describePostgres('ProjectActivity to ProjectTask integrity on PostgreSQL', () =>
     const fixture = await createBookingFixture(prisma);
     const activity = await createActivity(fixture);
     const task = await createTask(fixture, activity.id);
-    await expect(prisma.projectActivity.delete({ where: { id: activity.id } }))
-      .rejects.toThrow('violates RESTRICT setting');
-    expect(await prisma.projectTask.findUnique({ where: { id: task.id } })).not.toBeNull();
+    const historicalTask = await createTask(fixture);
+    const [entry, assignment] = await Promise.all([
+      prisma.taskTimeEntry.create({ data: {
+        taskId: historicalTask.id, userId: fixture.owner.id, organizationId: fixture.org.id,
+        date: new Date('2026-09-23T12:00:00.000Z'), heures: 1,
+      } }),
+      prisma.projectTaskAssignee.create({ data: { taskId: historicalTask.id, userId: fixture.colleague.id } }),
+    ]);
+
+    await expectActivityTaskForeignKeyViolation(
+      prisma.projectActivity.delete({ where: { id: activity.id } }),
+    );
+    expect(await prisma.projectActivity.findUnique({ where: { id: activity.id } })).not.toBeNull();
+    expect(await prisma.projectTask.findUniqueOrThrow({ where: { id: task.id } })).toMatchObject({
+      activityId: activity.id,
+    });
+    expect(await prisma.taskTimeEntry.findUnique({ where: { id: entry.id } })).not.toBeNull();
+    expect(await prisma.projectTaskAssignee.findUnique({ where: { id: assignment.id } })).not.toBeNull();
 
     await new MandateService(prisma as any).setTaskActivity(fixture.project.id, task.id, null, {
       userId: fixture.admin.id, organizationId: fixture.org.id, role: 'ADMIN',
     });
     await expect(prisma.projectActivity.delete({ where: { id: activity.id } })).resolves.toMatchObject({ id: activity.id });
-    expect(await prisma.projectTask.findUnique({ where: { id: task.id } })).not.toBeNull();
+    expect(await prisma.projectTask.findUniqueOrThrow({ where: { id: task.id } })).toMatchObject({ activityId: null });
+    expect(await prisma.taskTimeEntry.findUnique({ where: { id: entry.id } })).not.toBeNull();
+    expect(await prisma.projectTaskAssignee.findUnique({ where: { id: assignment.id } })).not.toBeNull();
   });
 
   it('preserves time and assignments when provenance changes are refused', async () => {
