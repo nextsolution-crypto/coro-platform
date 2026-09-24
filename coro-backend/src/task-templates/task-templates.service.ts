@@ -59,20 +59,20 @@ export class TaskTemplatesService {
     return { templates, grouped };
   }
 
-  async create(dto: any) {
+  async create(dto: any, organizationId: string | null) {
     return this.prisma.taskTemplate.create({
       data: {
         categoryName: dto.categoryName,
         taskTitle: dto.taskTitle,
         documentTypes: dto.documentTypes || [],
         order: dto.order || 0,
-        organizationId: dto.organizationId || null,
+        organizationId,
       },
     });
   }
 
-  async update(id: string, dto: any) {
-    const template = await this.prisma.taskTemplate.findUnique({ where: { id } });
+  async update(id: string, dto: any, organizationId: string | null) {
+    const template = await this.prisma.taskTemplate.findFirst({ where: { id, organizationId } });
     if (!template) throw new NotFoundException('Template introuvable');
     return this.prisma.taskTemplate.update({
       where: { id },
@@ -86,7 +86,9 @@ export class TaskTemplatesService {
     });
   }
 
-  async delete(id: string) {
+  async delete(id: string, organizationId: string | null) {
+    const template = await this.prisma.taskTemplate.findFirst({ where: { id, organizationId } });
+    if (!template) throw new NotFoundException('Template introuvable');
     return this.prisma.taskTemplate.update({
       where: { id },
       data: { isActive: false },

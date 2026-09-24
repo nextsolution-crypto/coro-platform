@@ -102,7 +102,9 @@ export default function TaskListsTab({ projectId, teamMembers }: Props) {
   };
 
   const handleDeleteList = async (listId: string) => {
-    if (!confirm('Supprimer cette liste et toutes ses tâches ?')) return;
+    if (!confirm(
+      'Retirer cette liste de tâches ?\n\nLes tâches déjà créées dans le mandat seront conservées avec leur état, leurs responsables et leur temps saisi. Elles ne seront simplement plus regroupées dans cette liste.',
+    )) return;
     setDeletingListId(listId);
     try {
       await api.delete(`/task-lists/project-list/${listId}`);

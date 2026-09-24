@@ -56,8 +56,8 @@ export class TaskListsService {
   }
 
   // Mettre à jour une liste
-  async update(id: string, dto: any) {
-    const list = await this.prisma.taskList.findUnique({ where: { id } });
+  async update(id: string, dto: any, organizationId: string | null) {
+    const list = await this.prisma.taskList.findFirst({ where: { id, organizationId } });
     if (!list) throw new NotFoundException('Liste introuvable');
     return this.prisma.taskList.update({
       where: { id },
@@ -71,7 +71,9 @@ export class TaskListsService {
   }
 
   // Supprimer une liste
-  async delete(id: string) {
+  async delete(id: string, organizationId: string | null) {
+    const list = await this.prisma.taskList.findFirst({ where: { id, organizationId } });
+    if (!list) throw new NotFoundException('Liste introuvable');
     return this.prisma.taskList.update({
       where: { id },
       data: { isActive: false },
@@ -79,8 +81,8 @@ export class TaskListsService {
   }
 
   // Ajouter un template à une liste
-  async addTemplate(listId: string, dto: any) {
-    const list = await this.prisma.taskList.findUnique({ where: { id: listId } });
+  async addTemplate(listId: string, dto: any, organizationId: string) {
+    const list = await this.prisma.taskList.findFirst({ where: { id: listId, organizationId } });
     if (!list) throw new NotFoundException('Liste introuvable');
 
     const count = await this.prisma.taskTemplate.count({ where: { taskListId: listId } });
@@ -99,8 +101,10 @@ export class TaskListsService {
 
   // Importer une liste dans un projet (crée une copie indépendante)
   async importToProject(listId: string, projectId: string, customName: string, organizationId: string) {
-    const list = await this.prisma.taskList.findUnique({
-      where: { id: listId },
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    const list = await this.prisma.taskList.findFirst({
+      where: { id: listId, OR: [{ organizationId: null }, { organizationId }] },
       include: {
         templates: {
           where: { isActive: true },
@@ -144,9 +148,11 @@ export class TaskListsService {
   }
 
   // Listes d'un projet
-  async getProjectTaskLists(projectId: string) {
+  async getProjectTaskLists(projectId: string, organizationId: string) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+    if (!project) throw new NotFoundException('Projet introuvable');
     return this.prisma.projectTaskList.findMany({
-      where: { projectId },
+      where: { projectId, organizationId },
       include: {
         taskList: true,
         tasks: {
@@ -164,7 +170,9 @@ export class TaskListsService {
   }
 
   // Renommer une instance de liste dans un projet
-  async renameProjectTaskList(id: string, customName: string) {
+  async renameProjectTaskList(id: string, customName: string, organizationId: string) {
+    const list = await this.prisma.projectTaskList.findFirst({ where: { id, organizationId } });
+    if (!list) throw new NotFoundException('Liste de projet introuvable');
     return this.prisma.projectTaskList.update({
       where: { id },
       data: { customName },
@@ -172,11 +180,11 @@ export class TaskListsService {
   }
 
   // Supprimer une instance de liste d'un projet
-  async deleteProjectTaskList(id: string) {
-    // Supprimer les tâches associées d'abord
-    await this.prisma.projectTask.deleteMany({
-      where: { projectTaskListId: id },
-    });
+  async deleteProjectTaskList(id: string, organizationId: string) {
+    const list = await this.prisma.projectTaskList.findFirst({ where: { id, organizationId } });
+    if (!list) throw new NotFoundException('Liste de projet introuvable');
+    // PostgreSQL détache atomiquement les tâches via ON DELETE SET NULL.
+    // Le travail, les affectations et le temps saisi restent intacts.
     return this.prisma.projectTaskList.delete({
       where: { id },
     });

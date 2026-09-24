@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { MandateService } from './mandate.service';
+import { requireInternal } from '../auth/work-management-access';
 
 @Controller('rendement')
 @UseGuards(AuthGuard('jwt'))
@@ -14,6 +15,10 @@ export class RendementController {
     @Query('to') to: string,
     @Request() req: any,
   ) {
-    return this.service.getRendement(req.user.organizationId, userId || undefined, from, to);
+    requireInternal(req.user);
+    const effectiveUserId = ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role)
+      ? userId || undefined
+      : req.user.userId;
+    return this.service.getRendement(req.user.organizationId, effectiveUserId, from, to);
   }
 }
