@@ -37,6 +37,8 @@
   --coro-v1-border-200: #dce4ea; --coro-v1-border-on-dark: rgb(255 255 255 / 16%);
   /* Semantic states — never rely on colour alone (pair with icon + label) */
   --coro-v1-success: #12804a; --coro-v1-warning: #a15c00; --coro-v1-critical: #bf1522; --coro-v1-info: #0d4f8b;
+  /* LAB-05B: on-dark counterparts for the two semantic hues that need them (contrast >= 4.5:1 on navy-900). Info reuses --coro-v1-focus-on-dark, critical reuses --coro-v1-red-300. */
+  --coro-v1-success-on-dark: #4cc38a; --coro-v1-warning-on-dark: #f0b34a;
   /* Typography (family stays Inter; sizes are fluid, desktop → mobile targets) */
   --coro-v1-text-display-xl: clamp(2.625rem, 1.6rem + 4vw, 4.75rem);
   --coro-v1-text-display-l: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
