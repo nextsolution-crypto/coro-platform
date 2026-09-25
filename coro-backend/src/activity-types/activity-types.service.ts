@@ -15,6 +15,13 @@ export class ActivityTypesService {
   private assertAdmin(actor: AdviserActor) {
     if (!['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) throw new ForbiddenException('Accès réservé aux administrateurs');
   }
+  private assertConfigurationAdmin(actor: AdviserActor, scope: 'global' | 'tenant') {
+    if (scope === 'global') {
+      if (actor.role !== 'SUPER_ADMIN') throw new ForbiddenException('Configuration CORO réservée au super administrateur');
+      return;
+    }
+    this.assertAdmin(actor);
+  }
   private scope(actor: AdviserActor) { return { OR: [{ organizationId: null }, { organizationId: actor.organizationId }] }; }
 
   async list(actor: AdviserActor, includeArchived = false) {
@@ -90,5 +97,118 @@ export class ActivityTypesService {
       }
       throw error;
     }
+  }
+
+  async getTaskListConfiguration(id: string, actor: AdviserActor) {
+    this.assertReader(actor);
+    const activityType = await this.get(id, actor, true);
+    const policies = await this.prisma.activityTypeTaskListPolicy.findMany({
+      where: { activityTypeId: id, OR: [{ organizationId: null }, { organizationId: actor.organizationId }] },
+      include: { associations: { include: { taskList: true }, orderBy: [{ displayOrder: 'asc' }, { taskListId: 'asc' }] } },
+    });
+    const global = policies.find((policy) => policy.organizationId === null) ?? null;
+    const tenant = policies.find((policy) => policy.organizationId === actor.organizationId) ?? null;
+    return {
+      activityType,
+      global: global ? this.policyView(global) : null,
+      tenant: tenant ? this.policyView(tenant) : { mode: 'INHERIT', taskLists: [] },
+      resolved: await this.resolveTaskLists({ activityTypeId: id, organizationId: actor.organizationId }),
+    };
+  }
+
+  async resolveTaskLists(input: { activityTypeId: string; organizationId: string; documentType?: string }) {
+    const activityType = await this.prisma.activityType.findFirst({ where: {
+      id: input.activityTypeId, isActive: true,
+      OR: [{ organizationId: null }, { organizationId: input.organizationId }],
+    } });
+    if (!activityType) throw new NotFoundException("Type d'activité introuvable");
+    const policies = await this.prisma.activityTypeTaskListPolicy.findMany({
+      where: { activityTypeId: activityType.id, OR: [{ organizationId: null }, { organizationId: input.organizationId }] },
+      include: { associations: { where: { isActive: true, taskList: { isActive: true } }, include: { taskList: true },
+        orderBy: [{ displayOrder: 'asc' }, { taskList: { name: 'asc' } }, { taskListId: 'asc' }] } },
+    });
+    const acceptsDocument = (list: { documentTypes: string[] }) => !input.documentType ||
+      list.documentTypes.length === 0 || list.documentTypes.includes(input.documentType);
+    const global = policies.find((policy) => policy.organizationId === null);
+    const tenant = policies.find((policy) => policy.organizationId === input.organizationId);
+    const items = (policy: any, source: 'GLOBAL' | 'TENANT') => (policy?.associations ?? [])
+      .filter((association: any) => acceptsDocument(association.taskList))
+      .map((association: any) => ({ ...association.taskList, source, displayOrder: association.displayOrder }));
+    const globalItems = items(global, 'GLOBAL');
+    if (!tenant) return globalItems;
+    if (tenant.mode === 'DISABLE') return [];
+    const tenantItems = items(tenant, 'TENANT');
+    if (tenant.mode === 'REPLACE') return tenantItems;
+    const tenantIds = new Set(tenantItems.map((item: any) => item.id));
+    return [...globalItems.filter((item: any) => !tenantIds.has(item.id)), ...tenantItems];
+  }
+
+  async resolveTaskListsForActor(activityTypeId: string, documentType: string | undefined, actor: AdviserActor) {
+    this.assertReader(actor);
+    return this.resolveTaskLists({ activityTypeId, organizationId: actor.organizationId, documentType });
+  }
+
+  async updateTaskListConfiguration(id: string, dto: {
+    scope: 'global' | 'tenant'; mode: 'INHERIT' | 'APPEND' | 'REPLACE' | 'DISABLE';
+    taskLists?: Array<{ taskListId: string; displayOrder?: number }>;
+  }, actor: AdviserActor) {
+    this.assertConfigurationAdmin(actor, dto.scope);
+    const organizationId = dto.scope === 'global' ? null : actor.organizationId;
+    if (dto.scope === 'global' && dto.mode !== 'REPLACE') throw new BadRequestException('La configuration CORO utilise le mode REPLACE');
+    if (dto.scope === 'tenant' && dto.mode === 'INHERIT' && (dto.taskLists?.length ?? 0) > 0) {
+      throw new BadRequestException('INHERIT ne contient aucune liste');
+    }
+    if (dto.mode === 'DISABLE' && (dto.taskLists?.length ?? 0) > 0) throw new BadRequestException('DISABLE ne contient aucune liste');
+    const requested = dto.taskLists ?? [];
+    if (!['INHERIT', 'DISABLE'].includes(dto.mode) && requested.length === 0) {
+      throw new BadRequestException('Sélectionnez au moins une liste de tâches');
+    }
+    const uniqueIds = [...new Set(requested.map((item) => item.taskListId))];
+    if (uniqueIds.length !== requested.length) throw new BadRequestException('Une liste de tâches ne peut être associée deux fois');
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "ActivityType" WHERE "id" = ${id} FOR UPDATE`;
+      const activityType = await tx.activityType.findFirst({ where: {
+        id, ...(dto.scope === 'global'
+          ? { organizationId: null, isSystem: true }
+          : { OR: [{ organizationId: null }, { organizationId: actor.organizationId }] }),
+      } });
+      if (!activityType) throw new NotFoundException("Type d'activité introuvable");
+      const lists = uniqueIds.length ? await tx.taskList.findMany({ where: {
+        id: { in: uniqueIds }, isActive: true,
+        ...(dto.scope === 'global' ? { organizationId: null } : { OR: [{ organizationId: null }, { organizationId: actor.organizationId }] }),
+      } }) : [];
+      if (lists.length !== uniqueIds.length) throw new NotFoundException('Liste de tâches introuvable');
+      const before = await tx.activityTypeTaskListPolicy.findFirst({
+        where: { activityTypeId: id, organizationId }, include: { associations: true },
+      });
+      if (dto.mode === 'INHERIT') {
+        if (before) await tx.activityTypeTaskListPolicy.delete({ where: { id: before.id } });
+      } else {
+        const policy = before
+          ? await tx.activityTypeTaskListPolicy.update({ where: { id: before.id }, data: { mode: dto.mode as any } })
+          : await tx.activityTypeTaskListPolicy.create({ data: { activityTypeId: id, organizationId, mode: dto.mode as any } });
+        await tx.activityTypeTaskList.deleteMany({ where: { policyId: policy.id } });
+        if (requested.length) await tx.activityTypeTaskList.createMany({ data: requested.map((item, index) => ({
+          policyId: policy.id, taskListId: item.taskListId,
+          displayOrder: item.displayOrder ?? (index + 1) * 10,
+        })) });
+      }
+      await tx.auditLog.create({ data: {
+        action: 'ACTIVITY_TYPE_TASK_LIST_CONFIG_UPDATED', entityType: 'ActivityType', entityId: id,
+        description: 'Configuration des listes de tâches mise à jour.',
+        metadata: { scope: dto.scope, before: before ? { mode: before.mode,
+          taskListIds: before.associations.map((item) => item.taskListId) } : { mode: 'INHERIT', taskListIds: [] },
+          after: { mode: dto.mode, taskListIds: uniqueIds } },
+        userId: actor.userId, organizationId: actor.organizationId,
+      } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+    return this.getTaskListConfiguration(id, actor);
+  }
+
+  private policyView(policy: any) {
+    return { mode: policy.mode, taskLists: policy.associations.map((association: any) => ({
+      ...association.taskList, displayOrder: association.displayOrder, isActive: association.isActive,
+    })) };
   }
 }

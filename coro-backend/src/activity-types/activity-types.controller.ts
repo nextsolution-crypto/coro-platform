@@ -9,6 +9,15 @@ import { ActivityTypesService } from './activity-types.service';
 export class ActivityTypesController {
   constructor(private readonly service: ActivityTypesService) {}
   @Get() list(@Request() req: { user: AdviserActor }, @Query('includeArchived') value?: string) { return this.service.list(req.user, value === 'true'); }
+  @Get(':id/task-lists/configuration') getTaskListConfiguration(@Param('id') id: string, @Request() req: { user: AdviserActor }) {
+    return this.service.getTaskListConfiguration(id, req.user);
+  }
+  @Get(':id/task-lists/resolved') resolveTaskLists(@Param('id') id: string, @Request() req: { user: AdviserActor }, @Query('documentType') documentType?: string) {
+    return this.service.resolveTaskListsForActor(id, documentType, req.user);
+  }
+  @Put(':id/task-lists/configuration') updateTaskListConfiguration(@Param('id') id: string, @Body() dto: any, @Request() req: { user: AdviserActor }) {
+    return this.service.updateTaskListConfiguration(id, dto, req.user);
+  }
   @Get(':id') get(@Param('id') id: string, @Request() req: { user: AdviserActor }) { return this.service.get(id, req.user); }
   @Post() create(@Body() dto: ActivityTypeInputDto, @Request() req: { user: AdviserActor }) { return this.service.create(dto, req.user); }
   @Put(':id') update(@Param('id') id: string, @Body() dto: ActivityTypeInputDto, @Request() req: { user: AdviserActor }) { return this.service.update(id, dto, req.user); }

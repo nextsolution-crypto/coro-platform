@@ -45,3 +45,18 @@ test('archived state exposes an explicit label and restore action', () => {
   assert.deepEqual(presentation.activityTypeState(false), { label: 'Archivé', action: 'Réactiver' });
   assert.deepEqual(presentation.activityTypeState(true), { label: 'Actif', action: 'Archiver' });
 });
+
+test('task-list settings expose tenant modes, effective resolution and no instantiation action', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'ActivityTypeTaskLists.tsx'), 'utf8');
+  for (const contract of ['INHERIT', 'APPEND', 'REPLACE', 'DISABLE', 'Configuration CORO',
+    'Votre organisation', 'Résultat effectif']) assert.match(source, new RegExp(contract));
+  assert.match(source, /save\('tenant'\)/);
+  assert.match(source, /scope,mode:selectedMode/);
+  assert.doesNotMatch(source, />\s*(Générer|Instancier|Synchroniser)/);
+});
+
+test('global editing is restricted in the UI to SUPER_ADMIN and system types', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'ActivityTypeTaskLists.tsx'), 'utf8');
+  assert.match(source, /role==='SUPER_ADMIN'&&isSystem/);
+  assert.match(source, /save\('global'\)/);
+});

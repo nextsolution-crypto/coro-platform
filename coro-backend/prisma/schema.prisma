@@ -25,32 +25,33 @@ model Organization {
   employeeCount  Int? // Nombre d'employés
   operatingHours String? // Heures d'opération
 
-  users                       User[]
-  clients                     Client[]
-  buildings                   Building[]
-  projects                    Project[]
-  procedureOverrides          ProcedureOverride[]
-  feedbacks                   Feedback[]
-  projectTemplates            ProjectTemplate[]
-  auditLogs                   AuditLog[]
-  customProcedures            CustomProcedure[]
-  clientUsers                 ClientUser[]
-  module1Template             OrganizationModule1Template?
-  bookings                    Booking[]
-  files                       ProjectFile[]
-  exerciseReports             ExerciseReport[]
-  complianceRequirements      ComplianceRequirement[]
-  complianceEvidence          ComplianceEvidence[]
-  populationOperationalEvents PopulationOperationalEvent[]
-  populationEvidenceRecords   PopulationEvidenceRecord[]
-  populationEvidenceManifests PopulationEvidenceManifest[]
-  populationEvidenceReports   PopulationEvidenceReport[]
-  operationalReviewReports    OperationalReviewReport[]
-  activityTypes               ActivityType[]
+  users                        User[]
+  clients                      Client[]
+  buildings                    Building[]
+  projects                     Project[]
+  procedureOverrides           ProcedureOverride[]
+  feedbacks                    Feedback[]
+  projectTemplates             ProjectTemplate[]
+  auditLogs                    AuditLog[]
+  customProcedures             CustomProcedure[]
+  clientUsers                  ClientUser[]
+  module1Template              OrganizationModule1Template?
+  bookings                     Booking[]
+  files                        ProjectFile[]
+  exerciseReports              ExerciseReport[]
+  complianceRequirements       ComplianceRequirement[]
+  complianceEvidence           ComplianceEvidence[]
+  populationOperationalEvents  PopulationOperationalEvent[]
+  populationEvidenceRecords    PopulationEvidenceRecord[]
+  populationEvidenceManifests  PopulationEvidenceManifest[]
+  populationEvidenceReports    PopulationEvidenceReport[]
+  operationalReviewReports     OperationalReviewReport[]
+  activityTypes                ActivityType[]
+  activityTypeTaskListPolicies ActivityTypeTaskListPolicy[]
   // Programme de recommandation
-  referralsSent               Referral[]                   @relation("ReferralReferrer")
-  referralReceived            Referral?                    @relation("ReferralReferred")
-  referralCredits             ReferralCredit[]             @relation("ReferralCreditOrganization")
+  referralsSent                Referral[]                   @relation("ReferralReferrer")
+  referralReceived             Referral?                    @relation("ReferralReferred")
+  referralCredits              ReferralCredit[]             @relation("ReferralCreditOrganization")
 }
 
 model User {
@@ -685,25 +686,26 @@ enum ActivityTypeIconKey {
 }
 
 model ActivityType {
-  id                     String                  @id @default(uuid())
+  id                     String                       @id @default(uuid())
   organizationId         String?
-  organization           Organization?           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization           Organization?                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   code                   String
   nameFR                 String
   nameEN                 String?
   descriptionFR          String?
   descriptionEN          String?
-  visualToken            ActivityTypeVisualToken @default(NEUTRAL)
+  visualToken            ActivityTypeVisualToken      @default(NEUTRAL)
   iconKey                ActivityTypeIconKey?
   defaultDurationMinutes Int?
-  clientBookableDefault  Boolean                 @default(false)
-  isSystem               Boolean                 @default(false)
-  isActive               Boolean                 @default(true)
-  displayOrder           Int                     @default(0)
+  clientBookableDefault  Boolean                      @default(false)
+  isSystem               Boolean                      @default(false)
+  isActive               Boolean                      @default(true)
+  displayOrder           Int                          @default(0)
   archivedAt             DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
   activities             ProjectActivity[]
+  taskListPolicies       ActivityTypeTaskListPolicy[]
 
   @@unique([organizationId, code])
   @@index([organizationId, isActive, displayOrder, nameFR, id], map: "ActivityType_organizationId_isActive_displayOrder_idx")
@@ -721,8 +723,46 @@ model TaskList {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  templates        TaskTemplate[]
-  projectTaskLists ProjectTaskList[]
+  templates         TaskTemplate[]
+  projectTaskLists  ProjectTaskList[]
+  activityTypeLinks ActivityTypeTaskList[]
+}
+
+enum ActivityTypeTaskListMode {
+  APPEND
+  REPLACE
+  DISABLE
+}
+
+model ActivityTypeTaskListPolicy {
+  id             String                   @id @default(uuid())
+  activityTypeId String
+  activityType   ActivityType             @relation(fields: [activityTypeId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mode           ActivityTypeTaskListMode
+  associations   ActivityTypeTaskList[]
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  @@unique([activityTypeId, organizationId])
+  @@index([organizationId, activityTypeId])
+}
+
+model ActivityTypeTaskList {
+  id           String                     @id @default(uuid())
+  policyId     String
+  policy       ActivityTypeTaskListPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  taskListId   String
+  taskList     TaskList                   @relation(fields: [taskListId], references: [id], onDelete: Cascade)
+  displayOrder Int                        @default(0)
+  isActive     Boolean                    @default(true)
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  @@unique([policyId, taskListId])
+  @@unique([policyId, displayOrder])
+  @@index([taskListId])
 }
 
 model TaskTemplate {
