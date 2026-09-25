@@ -59,7 +59,7 @@ export default async function Page({ searchParams }: P) {
   const t = c[l];
   return (
     <V2Shell locale={l} pathname="/programme-recommandation">
-      <EditorialHero id="referral-title" label={t.label} title={t.lines} lead={t.intro} actions={<><Button href="https://app.getcoro.io/login">{t.login}</Button><Button href={localizedHref('/#demo', l)} variant="ghost">{t.demo}</Button></>} />
+      <EditorialHero id="referral-title" label={t.label} title={t.lines} lead={t.intro} photo={{ src: '/website-v2/referral/referral-coro-conversation.webp', side: 'end', position: '55% 35%', mobilePosition: '50% 30%' }} actions={<><Button href="https://app.getcoro.io/login" surface="dark">{t.login}</Button><Button href={localizedHref('/#demo', l)} variant="ghost" surface="dark">{t.demo}</Button></>} />
 
       <PageSection tone="soft" density="compact" labelledBy="referral-reward-title">
         <div className={styles.reward}>

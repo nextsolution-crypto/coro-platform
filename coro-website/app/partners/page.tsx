@@ -30,10 +30,10 @@ export default async function Page({ searchParams }: P) {
   const t = c[l];
   return (
     <V2Shell locale={l} pathname="/partners">
-      <EditorialHero id="partners-title" label={t.title} title={t.h1} lead={t.intro} actions={<Button href={localizedHref('/contact', l)}>{t.cta}</Button>} />
+      <EditorialHero id="partners-title" label={t.title} title={t.h1} lead={t.intro} photo={{ src: '/website-v2/partners/partners-coro-collaboration.webp', side: 'end', position: '50% 40%', mobilePosition: '50% 45%' }} actions={<Button href={localizedHref('/contact', l)} surface="dark">{t.cta}</Button>} />
 
       <PageSection tone="soft" labelledBy="partners-who-title">
-        <SplitContent ratio="5-7" align="start" text={<EditorialBlock id="partners-who-title" heading={t.who} />} media={<ol className={styles.list}>{t.items.map((item) => <li key={item}><h3>{item}</h3></li>)}</ol>} />
+        <SplitContent ratio="5-7" align="start" text={<EditorialBlock id="partners-who-title" heading={t.who} />} media={<ol className={styles.cards}>{t.items.map((item) => <li key={item}><h3>{item}</h3></li>)}</ol>} />
       </PageSection>
 
       <PageSection tone="white" labelledBy="partners-model-title">

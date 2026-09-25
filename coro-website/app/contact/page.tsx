@@ -27,7 +27,7 @@ export default async function Page({ searchParams }: Props) {
   const t = copy[locale];
   return (
     <V2Shell locale={locale} pathname="/contact">
-      <EditorialHero id="contact-title" label="Contact" title={t.h1} lead={t.intro} density="standard" narrow />
+      <EditorialHero id="contact-title" label="Contact" title={t.h1} lead={t.intro} photo={{ src: '/website-v2/contact/contact-coro-consultation.webp', side: 'start', position: '38% 40%', mobilePosition: '40% 35%' }} />
 
       <PageSection tone="soft" labelledBy="contact-form-title">
         <SplitContent

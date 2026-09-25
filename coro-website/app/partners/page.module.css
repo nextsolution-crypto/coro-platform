@@ -6,3 +6,9 @@
 .stack { display: grid; gap: var(--coro-v1-space-6); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
 @media (max-width: 30rem) { .actions > * { inline-size: 100%; justify-content: center; text-align: center; } }
+
+/* Partner categories: four distinct objects, as restrained numbered cards (1px border, V1 surface and radius, no shadow, no icon). */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); counter-reset: card; }
+.cards li { counter-increment: card; display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-8) var(--coro-v1-space-6); min-block-size: 9rem; background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-block-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); }
+.cards li::before { content: counter(card, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-small); font-weight: 750; letter-spacing: .08em; }
+.cards h3 { overflow-wrap: break-word; margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }

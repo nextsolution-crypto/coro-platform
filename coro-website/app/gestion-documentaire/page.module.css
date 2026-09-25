@@ -26,3 +26,10 @@
 .connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
 .connect p { margin: 0; color: var(--muted); line-height: 1.6; }
 .connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+
+/* VISUAL-01: the six documents are distinct objects, so they read as restrained cards. Available = solid border; Phase 2 = dashed and muted. */
+.docs { border-block-start: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.docs li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "code status" "name name" "guide guide"; gap: var(--coro-v1-space-2) var(--coro-v1-space-3); padding: var(--coro-v1-space-6); background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-radius: var(--coro-v1-radius-panel); align-content: start; }
+.docs li[data-available="false"] { border-style: dashed; background: transparent; }
+.docs .name { font-size: var(--coro-v1-text-body-l); }
+@media (max-width: 40rem) { .docs li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "code status" "name name" "guide guide"; } }

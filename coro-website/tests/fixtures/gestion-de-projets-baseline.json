@@ -1,0 +1,1016 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Gestion de Projets &amp; Mandats — CORO | CORO",
+  "description": "Pilotez vos mandats de conformité du démarrage à la livraison. Centralisez clients, bâtiments, tâches, échéances, responsabilités et heures avec CORO.",
+  "canonical": "https://getcoro.io/gestion-de-projets",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/gestion-de-projets"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/gestion-de-projets?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/gestion-de-projets"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/gestion-de-projets",
+  "ogTitle": "Gestion de Projets & Mandats — CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Piloter les mandats, les activités et les ressources."
+   ],
+   [
+    "h2",
+    "Client + Bâtiment + Besoin"
+   ],
+   [
+    "h3",
+    "Mandat"
+   ],
+   [
+    "h3",
+    "Activités"
+   ],
+   [
+    "h3",
+    "Équipe"
+   ],
+   [
+    "h3",
+    "Planning"
+   ],
+   [
+    "h3",
+    "Booking"
+   ],
+   [
+    "h3",
+    "Tâches"
+   ],
+   [
+    "h3",
+    "Heures"
+   ],
+   [
+    "h3",
+    "Livrables"
+   ],
+   [
+    "h2",
+    "Planning et Booking appartiennent au mandat."
+   ],
+   [
+    "h3",
+    "Une capacité Projects, pas un produit isolé"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Booking remplace-t-il Projects?"
+   ],
+   [
+    "h3",
+    "Peut-on suivre les heures?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Projects"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [
+   "Interface CORO Projects insérée dans le parcours du mandat"
+  ],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 2,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Gestion de projets Piloter les mandats, les activités et les ressources. CORO Projects relie clients, bâtiments, mandats, activités, équipes et livrables dans un même environnement opérationnel. Découvrir CORO Projects Le point de départ Client + Bâtiment + Besoin CORO Projects relie clients, bâtiments, mandats, activités, équipes et livrables dans un même environnement opérationnel. 01 Mandat 02 Activités 03 Équipe Interface CORO Projects insérée dans le parcours du mandat 04 Planning Le planning permet de visualiser les ressources, préparer les affectations et coordonner la charge. 05 Booking Les demandes, réservations, affectations, reports et réassignations disposent de parcours applicatifs dédiés. 06 Tâches 07 Heures 08 Livrables Deux capacités reliées Planning et Booking appartiennent au mandat. Planning Le planning permet de visualiser les ressources, préparer les affectations et coordonner la charge. Booking Les demandes, réservations, affectations, reports et réassignations disposent de parcours applicatifs dédiés. Une capacité Projects, pas un produit isolé Planning et Booking sont intégrés à la gestion opérationnelle des mandats. Aucune synchronisation Outlook bidirectionnelle n’est annoncée ici. La lecture transversale Network s’inscrit dans l’architecture visée, sans être présentée comme automatique. Du besoin au travail réalisé. Cette partie de la plateforme Un socle produit relié Documents Structure les données et les livrables. Explorer Projects Organise les mandats et le travail. Explorer Performance Mesure activité, objectifs et capacité. Explorer Client Rend l’information accessible au client. Explorer FAQ Questions fréquentes Booking remplace-t-il Projects? Non. Booking et Planning sont des capacités de coordination au sein du cycle du mandat. Peut-on suivre les heures? Oui. Le code actuel comprend tâches, activités et feuilles de temps associées aux mandats."
+ },
+ "en": {
+  "status": 200,
+  "title": "Project &amp; Mandate Management — CORO | CORO",
+  "description": "Manage compliance projects from kickoff to delivery. Centralize clients, buildings, tasks, deadlines, responsibilities and hours with CORO.",
+  "canonical": "https://getcoro.io/gestion-de-projets?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/gestion-de-projets"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/gestion-de-projets?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/gestion-de-projets"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/gestion-de-projets?lang=en",
+  "ogTitle": "Project & Mandate Management — CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Manage mandates, activities and resources."
+   ],
+   [
+    "h2",
+    "Client + Building + Need"
+   ],
+   [
+    "h3",
+    "Mandate"
+   ],
+   [
+    "h3",
+    "Activities"
+   ],
+   [
+    "h3",
+    "Team"
+   ],
+   [
+    "h3",
+    "Planning"
+   ],
+   [
+    "h3",
+    "Booking"
+   ],
+   [
+    "h3",
+    "Tasks"
+   ],
+   [
+    "h3",
+    "Hours"
+   ],
+   [
+    "h3",
+    "Deliverables"
+   ],
+   [
+    "h2",
+    "Planning and Booking belong to the mandate."
+   ],
+   [
+    "h3",
+    "A Projects capability, not an isolated product"
+   ],
+   [
+    "h2",
+    "A connected product foundation"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Frequently asked questions"
+   ],
+   [
+    "h3",
+    "Does Booking replace Projects?"
+   ],
+   [
+    "h3",
+    "Can hours be tracked?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/gestion-de-projets",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/?lang=en#demo",
+    "Discover CORO Projects"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Explore"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Explore"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Explore"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Explore"
+   ],
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/gestion-de-projets",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [
+   "CORO Projects interface within the mandate journey"
+  ],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 2,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Project management Manage mandates, activities and resources. CORO Projects connects clients, buildings, mandates, activities, teams and deliverables in one operational environment. Discover CORO Projects The starting point Client + Building + Need CORO Projects connects clients, buildings, mandates, activities, teams and deliverables in one operational environment. 01 Mandate 02 Activities 03 Team CORO Projects interface within the mandate journey 04 Planning Planning provides resource visibility, assignment preparation and workload coordination. 05 Booking Requests, bookings, assignments, rescheduling and reassignment have dedicated application flows. 06 Tasks 07 Hours 08 Deliverables Two connected capabilities Planning and Booking belong to the mandate. Planning Planning provides resource visibility, assignment preparation and workload coordination. Booking Requests, bookings, assignments, rescheduling and reassignment have dedicated application flows. A Projects capability, not an isolated product Planning and Booking belong to mandate operations. No bidirectional Outlook synchronization is claimed. A cross-organizational Network view is part of the architecture direction, not an automatic current capability. From need to completed work. This part of the platform A connected product foundation Documents Structures data and deliverables. Explore Projects Organizes mandates and work. Explore Performance Measures activity, goals and capacity. Explore Client Makes information accessible to clients. Explore FAQ Frequently asked questions Does Booking replace Projects? No. Booking and Planning are coordination capabilities within the mandate lifecycle. Can hours be tracked? Yes. The current code includes tasks, activities and mandate timesheets."
+ },
+ "fr-ref": {
+  "status": 200,
+  "title": "Gestion de Projets &amp; Mandats — CORO | CORO",
+  "description": "Pilotez vos mandats de conformité du démarrage à la livraison. Centralisez clients, bâtiments, tâches, échéances, responsabilités et heures avec CORO.",
+  "canonical": "https://getcoro.io/gestion-de-projets",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/gestion-de-projets"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/gestion-de-projets?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/gestion-de-projets"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/gestion-de-projets",
+  "ogTitle": "Gestion de Projets & Mandats — CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Piloter les mandats, les activités et les ressources."
+   ],
+   [
+    "h2",
+    "Client + Bâtiment + Besoin"
+   ],
+   [
+    "h3",
+    "Mandat"
+   ],
+   [
+    "h3",
+    "Activités"
+   ],
+   [
+    "h3",
+    "Équipe"
+   ],
+   [
+    "h3",
+    "Planning"
+   ],
+   [
+    "h3",
+    "Booking"
+   ],
+   [
+    "h3",
+    "Tâches"
+   ],
+   [
+    "h3",
+    "Heures"
+   ],
+   [
+    "h3",
+    "Livrables"
+   ],
+   [
+    "h2",
+    "Planning et Booking appartiennent au mandat."
+   ],
+   [
+    "h3",
+    "Une capacité Projects, pas un produit isolé"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Booking remplace-t-il Projects?"
+   ],
+   [
+    "h3",
+    "Peut-on suivre les heures?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Projects"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [
+   "Interface CORO Projects insérée dans le parcours du mandat"
+  ],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 2,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Gestion de projets Piloter les mandats, les activités et les ressources. CORO Projects relie clients, bâtiments, mandats, activités, équipes et livrables dans un même environnement opérationnel. Découvrir CORO Projects Le point de départ Client + Bâtiment + Besoin CORO Projects relie clients, bâtiments, mandats, activités, équipes et livrables dans un même environnement opérationnel. 01 Mandat 02 Activités 03 Équipe Interface CORO Projects insérée dans le parcours du mandat 04 Planning Le planning permet de visualiser les ressources, préparer les affectations et coordonner la charge. 05 Booking Les demandes, réservations, affectations, reports et réassignations disposent de parcours applicatifs dédiés. 06 Tâches 07 Heures 08 Livrables Deux capacités reliées Planning et Booking appartiennent au mandat. Planning Le planning permet de visualiser les ressources, préparer les affectations et coordonner la charge. Booking Les demandes, réservations, affectations, reports et réassignations disposent de parcours applicatifs dédiés. Une capacité Projects, pas un produit isolé Planning et Booking sont intégrés à la gestion opérationnelle des mandats. Aucune synchronisation Outlook bidirectionnelle n’est annoncée ici. La lecture transversale Network s’inscrit dans l’architecture visée, sans être présentée comme automatique. Du besoin au travail réalisé. Cette partie de la plateforme Un socle produit relié Documents Structure les données et les livrables. Explorer Projects Organise les mandats et le travail. Explorer Performance Mesure activité, objectifs et capacité. Explorer Client Rend l’information accessible au client. Explorer FAQ Questions fréquentes Booking remplace-t-il Projects? Non. Booking et Planning sont des capacités de coordination au sein du cycle du mandat. Peut-on suivre les heures? Oui. Le code actuel comprend tâches, activités et feuilles de temps associées aux mandats."
+ }
+}

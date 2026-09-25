@@ -95,14 +95,17 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
   const protectedFiles = [
     // app/layout.tsx left the checkpoint list in MIG-00B.1 (LegacyChrome); tests/v2-shell.test.ts now guards it.
     // app/sitemap.ts left the checkpoint list in MIG-00B.3 (registry-driven); tests/sitemap.test.ts guards it against the recorded baseline.
+    // app/gestion-de-projets/page.tsx left the checkpoint list in MIG-02B; tests/gestion-de-projets-migration.test.ts guards it.
     // app/gestion-documentaire/page.tsx left the checkpoint list in MIG-02A (product pilot); tests/gestion-documentaire-migration.test.ts guards it.
     // app/DemoForm.tsx left the checkpoint list in MIG-01B (label association and alert/status roles only); tests/contact-migration.test.ts guards its contract.
     'app/HomePageClient.tsx', 'app/page.tsx', 'app/robots.ts',
-    'app/components/Footer.tsx', 'app/components/CookieBanner.tsx', 'app/components/ChatWidget.tsx', 'app/components/ScrollToTop.tsx',
+    // CookieBanner.tsx and ChatWidget.tsx left the checkpoint list in VISUAL-01C (vertical coordination via --coro-cookie-offset).
+    'app/components/Footer.tsx', 'app/components/ScrollToTop.tsx',
     'components/ProductPage.tsx', 'components/ProductCompositions.tsx', 'components/product.module.css', 'components/product-compositions.module.css',
     // app/about/AboutV2.tsx left the checkpoint list in MIG-01A (pilot migration); tests/about-migration.test.ts guards it.
-    'lib/site/product-content.ts', 'app/institutional.module.css',
-    'app/gestion-de-projets/page.tsx', 'app/performance-objectifs/page.tsx', 'app/portail-client/page.tsx',
+    // lib/site/product-content.ts left the checkpoint list in VISUAL-01 (Projects FAQ answer reworded for customers); tests/visual-01.test.ts guards it.
+    'app/institutional.module.css',
+    'app/performance-objectifs/page.tsx', 'app/portail-client/page.tsx',
   ];
   try {
     execFileSync('git', ['cat-file', '-e', '609698fc^{commit}'], { cwd: root, stdio: 'ignore' });

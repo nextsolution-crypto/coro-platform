@@ -228,3 +228,11 @@ La section autoritative est `02-design/CORO-VISUAL-LANGUAGE.md` §16. Elle n'est
 Si l'on masque le logo, une page doit encore être reconnaissable comme CORO. Si l'on change de produit, elle peut changer de composition sans cesser d'appartenir au même système.
 
 Le Design System est réussi lorsqu'il réduit les décisions arbitraires sans réduire la personnalité du site.
+
+## Évolution V1.1 — VISUAL-01 (approuvée)
+
+Le Design System V1 évolue, il n'est pas redessiné. Principe directeur : MONDE RÉEL → PRODUIT → PROCESSUS → PREUVE → CONVERSION.
+
+- **Héros photographique** : approuvé comme mode d'ouverture de page lorsque le contexte du monde réel renforce matériellement l'identité de la page (`EditorialHero` avec l'option `photo`). Le texte reste en HTML sur un champ marine ; la photographie occupe environ les deux tiers de la largeur et se fond dans le marine par un dégradé confiné au bord côté texte. Aucun dégradé décoratif sans image, aucune lueur, aucun flou, aucun mouvement.
+- **Cartes** : autorisées de façon sélective comme dispositifs de profondeur et de regroupement lorsqu'elles représentent un objet distinct (capacité, document, preuve, ressource, statut, connexion produit, moyen de contact) : bordure de 1 px, surface V1, rayon V1, aucune ombre. Les murs de cartes restent rejetés ; au plus un ensemble de cartes majeur par page.
+- **Gouvernance des images générées** : les photographies sont des ILLUSTRATIONS MARKETING, décoratives par défaut (`alt=""`), jamais une preuve du produit. Seules les captures approuvées servent de preuve produit.

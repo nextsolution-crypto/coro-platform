@@ -121,8 +121,8 @@ export default function ChatWidget() {
 
   // Dimensions selon mobile
   const widgetW = isMobile ? '100vw' : 360;
-  const widgetH = isMobile ? '100dvh' : 520;
-  const widgetBottom = isMobile ? 0 : 92;
+  const widgetH = isMobile ? 'calc(100dvh - var(--coro-cookie-offset, 0px))' : 520;
+  const widgetBottom = isMobile ? 'var(--coro-cookie-offset, 0px)' : 92;
   const widgetLeft = isMobile ? 0 : 24;
   const widgetBorderRadius = isMobile ? 0 : 16;
 
@@ -134,7 +134,7 @@ export default function ChatWidget() {
           onClick={handleOpen}
           style={{
             position: 'fixed',
-            bottom: 92,
+            bottom: 'calc(92px + var(--coro-cookie-offset, 0px))',
             left: 24,
             backgroundColor: '#FFFFFF',
             border: '1px solid #E9ECEF',
@@ -162,7 +162,7 @@ export default function ChatWidget() {
         onClick={() => open ? setOpen(false) : handleOpen()}
         style={{
           position: 'fixed',
-          bottom: 24,
+          bottom: 'calc(24px + var(--coro-cookie-offset, 0px))',
           left: 24,
           width: 56,
           height: 56,

@@ -96,7 +96,7 @@ test('rhythm studies only use committed assets and the real product capture', ()
 test('no production page or shell imports the page-composition primitives yet', () => {
   const offenders = [...walk('app'), ...walk('components'), ...walk('lib')]
     .filter((path) => /\.(tsx?|css)$/.test(path))
-    .filter((path) => !path.startsWith(join('app', 'design-lab')) && !path.startsWith(join('app', 'about')) && !path.startsWith(join('app', 'contact')) && !path.startsWith(join('app', 'partners')) && !path.startsWith(join('app', 'programme-recommandation')) && !path.startsWith(join('app', 'gestion-documentaire')) && !path.startsWith(join('components', 'page')) && !path.startsWith(join('components', 'spatial')))
+    .filter((path) => !path.startsWith(join('app', 'design-lab')) && !path.startsWith(join('app', 'about')) && !path.startsWith(join('app', 'contact')) && !path.startsWith(join('app', 'partners')) && !path.startsWith(join('app', 'programme-recommandation')) && !path.startsWith(join('app', 'gestion-documentaire')) && !path.startsWith(join('app', 'gestion-de-projets')) && !path.startsWith(join('components', 'page')) && !path.startsWith(join('components', 'spatial')))
     .filter((path) => /components\/page\//.test(read(path)));
   assert.deepEqual(offenders, []);
 });

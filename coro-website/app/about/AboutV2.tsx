@@ -24,7 +24,7 @@ export function AboutV2({ locale, content: t }: { locale: Locale; content: About
   const continuum = flowCopy[locale].continuum;
   return (
     <>
-      <EditorialHero id="about-title" label={t.hero.eyebrow} title={t.hero.title.split('\n')} lead={t.hero.intro} detail={t.hero.detail} signature={t.hero.signature} compactTop actions={<><Button href="#about-vision">{t.hero.primary}</Button><Button href={demo} variant="ghost">{t.hero.secondary}</Button></>} />
+      <EditorialHero id="about-title" label={t.hero.eyebrow} title={t.hero.title.split('\n')} lead={t.hero.intro} detail={t.hero.detail} signature={t.hero.signature} photo={{ src: '/website-v2/about/about-coro-team-collaboration.webp', side: 'end', position: '62% 40%', mobilePosition: '52% 30%' }} actions={<><Button href="#about-vision" surface="dark">{t.hero.primary}</Button><Button href={demo} variant="ghost" surface="dark">{t.hero.secondary}</Button></>} />
 
       <PageSection tone="soft" labelledBy="about-why-title">
         <SplitContent ratio="7-5" text={<EditorialBlock id="about-why-title" label={t.why.eyebrow} heading={t.why.title}>{t.why.paragraphs.map((p) => <p key={p}>{p}</p>)}<p><strong>{t.why.conclusion}</strong></p></EditorialBlock>} media={<Sequence items={t.why.sequence} label={t.why.eyebrow} />} />

@@ -12,9 +12,9 @@ const baseline = JSON.parse(read('tests/fixtures/partners-baseline.json')) as Ba
 const page = read('app/partners/page.tsx');
 
 test('the registry holds exactly /about, /contact and /partners; /partners has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets']);
   assert.equal(isLegacyFooterVisible('/partners'), false);
-  assert.equal(isLegacyFooterVisible('/gestion-de-projets'), true);
+  assert.equal(isLegacyFooterVisible('/performance-objectifs'), true);
   assert.equal(isLegacyFooterVisible('/'), true);
 });
 
@@ -94,10 +94,9 @@ test('EditorialHero is the shared opening of About, Contact and Partners, and ke
   assert.match(hero, /PageSection/);
   for (const file of ['app/about/AboutV2.tsx', 'app/contact/page.tsx', 'app/partners/page.tsx']) assert.match(read(file), /<EditorialHero\b/, file);
   const css = read('components/page/editorial-hero.module.css');
-  assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|gradient|box-shadow/);
-  // About keeps its compact mobile opening and stacked actions; Contact keeps its standard density and narrower measure.
-  assert.match(read('app/about/AboutV2.tsx'), /EditorialHero[^>]*compactTop/);
-  assert.match(read('app/contact/page.tsx'), /density="standard" narrow/);
+  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|box-shadow|blur|@keyframes|animation/);
+  // The plain-mode options survive (VISUAL-01 moved About and Contact to photographic mode, which is additive).
+  assert.match(hero, /compactTop = false, density = 'immersive', narrow = false, photo/);
   assert.match(css, /\.hero\[data-compact="true"\]/);
   assert.match(css, /max-width: 30rem/);
 });

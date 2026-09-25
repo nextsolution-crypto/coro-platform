@@ -180,3 +180,7 @@ Objectif, quand l'utiliser, quand ne pas l'utiliser, variantes, props, responsiv
 # 15. Gouvernance
 
 Les composants suivent DRAFT → REVIEW → APPROVED → LOCKED. Un composant LOCKED n'est modifié que si le besoin est explicite, l'impact sur les pages consommatrices est connu et la régression est testée. Une page nouvelle n'est jamais une autorisation implicite de modifier un composant LOCKED.
+
+## Addendum VISUAL-01 — `EditorialHero` (mode photographique)
+
+`components/page/EditorialHero.tsx` accepte `photo?: { src, alt?, side?: 'start' | 'end', position?, mobilePosition?, priority? }`. Sans `photo`, le rendu est inchangé (section blanche). Avec `photo` : champ marine, photographie à 64 % de la largeur (au-dessus du texte sur mobile), dégradé aux jetons V1 confiné au bord côté texte, recadrage contrôlé par page (`position`, `mobilePosition`), image décorative par défaut. Les boutons d'action reçoivent `surface="dark"`. Ne pas modifier `HeroTechnical` (signature de Documents).

@@ -39,3 +39,6 @@
 .formPanel :global(.coro-demo-form-success) p { color: var(--coro-v1-success) !important; }
 .formPanel form p, .formPanel form p a { color: var(--coro-v1-text-600) !important; }
 .formPanel form p a { color: var(--coro-v1-text-900) !important; }
+
+/* Contact methods: one restrained card (1px border, V1 surface and radius, no shadow). */
+.reach { padding: clamp(1rem, 3vw, 2rem); background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); }

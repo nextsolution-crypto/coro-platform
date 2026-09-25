@@ -13,9 +13,9 @@ const page = read('app/programme-recommandation/page.tsx');
 const norm = (s: string) => s.replace(/ /g, ' ');
 
 test('the registry holds exactly the four MIG-01 routes; the referral page has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets']);
   assert.equal(isLegacyFooterVisible('/programme-recommandation'), false);
-  assert.equal(isLegacyFooterVisible('/gestion-de-projets'), true);
+  assert.equal(isLegacyFooterVisible('/performance-objectifs'), true);
   assert.equal(isLegacyFooterVisible('/'), true);
 });
 
@@ -51,7 +51,7 @@ test('BUSINESS CONTRACT: the $250 amount and every published condition, step and
 });
 
 test('CTA destinations are preserved: the application login and the demo anchor', () => {
-  assert.match(page, /<Button href="https:\/\/app\.getcoro\.io\/login">\{t\.login\}<\/Button>/);
+  assert.match(page, /<Button href="https:\/\/app\.getcoro\.io\/login"(?: surface="dark")?>\{t\.login\}<\/Button>/);
   assert.match(page, /localizedHref\('\/#demo', l\)/);
   assert.doesNotMatch(page, /signup|register|inscription/i, 'no invented signup route');
   for (const locale of ['fr', 'en'] as const) {
