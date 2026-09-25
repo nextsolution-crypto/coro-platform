@@ -95,7 +95,8 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
   const protectedFiles = [
     // app/layout.tsx left the checkpoint list in MIG-00B.1 (LegacyChrome); tests/v2-shell.test.ts now guards it.
     // app/sitemap.ts left the checkpoint list in MIG-00B.3 (registry-driven); tests/sitemap.test.ts guards it against the recorded baseline.
-    'app/HomePageClient.tsx', 'app/page.tsx', 'app/robots.ts', 'app/DemoForm.tsx',
+    // app/DemoForm.tsx left the checkpoint list in MIG-01B (label association and alert/status roles only); tests/contact-migration.test.ts guards its contract.
+    'app/HomePageClient.tsx', 'app/page.tsx', 'app/robots.ts',
     'app/components/Footer.tsx', 'app/components/CookieBanner.tsx', 'app/components/ChatWidget.tsx', 'app/components/ScrollToTop.tsx',
     'components/ProductPage.tsx', 'components/ProductCompositions.tsx', 'components/product.module.css', 'components/product-compositions.module.css',
     // app/about/AboutV2.tsx left the checkpoint list in MIG-01A (pilot migration); tests/about-migration.test.ts guards it.

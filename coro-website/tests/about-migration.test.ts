@@ -13,8 +13,8 @@ const baseline = JSON.parse(read('tests/fixtures/about-baseline.json')) as Basel
 const view = read('app/about/AboutV2.tsx');
 const page = read('app/about/page.tsx');
 
-test('/about is the ONLY migrated route, and it has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about']);
+test('/about is a migrated route (with /contact) and has no legacy footer', () => {
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact']);
   assert.equal(isLegacyFooterVisible('/about'), false);
   assert.equal(isLegacyFooterVisible('/about?lang=en'), false);
 });
