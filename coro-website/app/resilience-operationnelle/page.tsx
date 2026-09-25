@@ -1,750 +1,322 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { CTASection } from '@/components/conversion/CTASection';
+import { Accordion } from '@/components/page/Accordion';
+import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { MediaFrame } from '@/components/page/MediaFrame';
+import { PageSection } from '@/components/page/PageSection';
+import { SplitContent } from '@/components/page/SplitContent';
+import { V2Shell } from '@/components/site/V2Shell';
+import { Button } from '@/components/ui/Button';
+import { faqJsonLd } from '@/lib/site/json-ld';
+import { localeFromSearchParams, localizedHref, type Locale } from '@/lib/site/locale';
+import { buildPageMetadata } from '@/lib/site/seo';
+import styles from './page.module.css';
 
-const SITE_URL = 'https://getcoro.io';
+type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string }>;
-}): Promise<Metadata> {
-  const { lang: langParam } = await searchParams;
-  const isEnglish = langParam === 'en';
+/**
+ * /resilience-operationnelle (MIG-03A) — the organisational level: understand, prepare, coordinate, act, recover, improve.
+ * Family: resilience & operations (bridge between documentation and operations). NOT Sentinelle, NOT Incident, NOT a dashboard.
+ * PRODUCT TRUTH (audited in coro-backend/src/occupancy, reminders and coro-client-portal): the resilience index (4 weighted components 40/20/25/15),
+ * emergency roles with primary/alternate members and an effective organisation, the occupancy register (QR + PIN), incident triggering with
+ * SMS (consent only) and email, exercise mode, incident report and REX, organisational recommendations and corrective actions exist in code.
+ * NOT claimed: compliance with, or certification to, ISO 22301 / CNPI / CNESST / NFPA / CCOHS (ISO 22301 is a management-system standard, certifiable
+ * at organisation level; a report cannot be "compliant"), fixed retention periods, "the only platform", real-time wording, voice calls or app pushes
+ * (shown in an old screenshot, absent from the current UI), email alerts on gaps (only an in-app notification is verified), Network, Campus, Knowledge, AI, Ops.
+ * The continuum component is not used: its nine captioned stages would need capabilities the product does not evidence (Anticiper, Protéger) and
+ * About already carries it; the published seven-step loop is a verified product chain and is used instead.
+ * PRODUCT PROOF: V1 screenshots kept after the asset audit: the emergency-organisation form and the alert email (data provenance:
+ * PUBLICATION-BLOCKER — RESILIENCE SCREENSHOT DATA PROVENANCE). Every other V1 image is omitted with a written reason (see tests and the migration report).
+ * The hero photograph is a MARKETING ILLUSTRATION (decorative, alt=""): any interface, figure or text inside it is illustrative, never proof.
+ */
+const LOGIN = 'https://client.getcoro.io/login';
 
-  const frUrl = `${SITE_URL}/resilience-operationnelle`;
-  const enUrl = `${SITE_URL}/resilience-operationnelle?lang=en`;
-  const currentUrl = isEnglish ? enUrl : frUrl;
-
-  const title = isEnglish
-    ? 'Operational Resilience & Incident Management — CORO'
-    : 'Résilience opérationnelle et gestion d\'incidents — CORO';
-
-  const description = isEnglish
-    ? 'CORO connects your emergency plans to real-time building presence. Real-time resilience index, automatic role substitution, incident module with automatic procedures, ISO 22301 / NFPA 2020 / CCOHS compliant reports and full REX cycle.'
-    : 'CORO connecte vos plans d\'urgence à la présence réelle dans le bâtiment. Indice de résilience temps réel, substitution automatique des rôles, module Incident avec procédures automatiques, rapports conformes ISO 22301 / CNPI 2020 / CNESST et boucle REX complète.';
-
-  return {
-    metadataBase: new URL(SITE_URL),
-    title,
-    description,
-    alternates: {
-      canonical: currentUrl,
-      languages: { 'fr-CA': frUrl, 'en-CA': enUrl, 'x-default': frUrl },
-    },
-    openGraph: {
-      type: 'website', url: currentUrl, siteName: 'CORO',
-      locale: isEnglish ? 'en_CA' : 'fr_CA',
-      alternateLocale: [isEnglish ? 'fr_CA' : 'en_CA'],
-      title, description,
-      images: [{ url: '/og-coro.jpg', width: 1200, height: 630, alt: isEnglish ? 'CORO operational resilience and incident management' : 'Résilience opérationnelle CORO' }],
-    },
-    twitter: { card: 'summary_large_image', title, description, images: ['/og-coro.jpg'] },
-    robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 } },
-  };
-}
-
-export default async function ResilienceOperationnellePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string }>;
-}) {
-  const params = await searchParams;
-  const lang = params?.lang === 'en' ? 'en' : 'fr';
-
-  const content = {
-    fr: {
-      tag: 'Résilience & Intervention',
-      heroEyebrow: 'De la présence réelle à la mobilisation d\'urgence',
-      title: 'Vos plans d\'urgence ne valent rien s\'ils ne reflètent pas la réalité du terrain.',
-      intro: 'CORO est la seule plateforme qui ferme la boucle complète : du plan d\'urgence approuvé à la présence réelle, de l\'indice de résilience au déclenchement d\'incident, du rapport conforme ISO 22301 au retour d\'expérience qui améliore le plan.',
-      heroImage: '/images/solutions/resilience/coro-resilience-dashboard.webp',
-      primaryCta: 'Demander une démo',
-      secondaryCta: 'Accéder au portail',
-      proofTitle: 'Une plateforme qui sait qui est là et ce qu\'il peut faire',
-      proofIntro: 'La plupart des outils gèrent soit les documents, soit les incidents. CORO gère les deux — et les connecte à travers la présence réelle de l\'équipe d\'urgence dans le bâtiment.',
-      highlights: [
-        { number: '01', title: 'Présence réelle', text: 'QR code + PIN — qui est dans le bâtiment maintenant, à la seconde près.' },
-        { number: '02', title: 'Indice CORO', text: '4 composantes pondérées : rôles, qualifications, plans, exercices.' },
-        { number: '03', title: 'Module Incident', text: 'Procédure coordonnateur automatique, mobilisation, journal, rapports.' },
-        { number: '04', title: 'Boucle REX', text: 'Post-incident → recommandations → PMU amélioré → nouvelle version approuvée.' },
-      ],
-      sentinelle: {
-        kicker: 'Fondation — CORO Sentinelle',
-        title: 'Savoir qui est présent est la première condition de toute résilience',
-        text: 'CORO Sentinelle transforme chaque entrée et sortie en donnée opérationnelle. Le registre indique en temps réel combien d’employés, visiteurs et contracteurs sont présents, qui se trouve réellement sur place et quelles ressources peuvent être mobilisées si une urgence survient.',
-        bullets: [
-  'Registre d’occupation mis à jour en temps réel',
-  'Employés, visiteurs et contracteurs distingués automatiquement',
-  'Pointage rapide par QR code + PIN personnel',
-  'Entrées et sorties horodatées',
-  'Recherche et filtrage des occupants présents',
-  'Déclenchement d’un incident directement depuis le registre',
-],
-        image: '/alert/coro-module-incident-types.webp',
-        alt: 'CORO Sentinelle — registre d’occupation en temps réel des employés, visiteurs et contracteurs',
-      },
-      readiness: {
-        kicker: 'Indice CORO de résilience',
-        title: 'Un score pondéré qui répond à une question simple : sommes-nous vraiment prêts maintenant ?',
-        text: 'L\'indice CORO de résilience opérationnelle calcule en temps réel la capacité réelle d\'intervention du bâtiment, pas sa capacité théorique. Il combine quatre composantes pondérées et se met à jour automatiquement à chaque punch IN ou punch OUT.',
-        components: [
-          { label: 'Couverture des rôles', weight: '40 %', desc: 'Coordonnateur, EPI, secouristes, accompagnateurs PNA — présents ou absents?' },
-          { label: 'Qualifications', weight: '20 %', desc: 'RCR/DEA, extincteur, EPI, matières dangereuses — qui peut agir?' },
-          { label: 'Plans approuvés', weight: '25 %', desc: 'PMU ou PSI validé et à jour dans CORO.' },
-          { label: 'Exercices (CNPI 2020)', weight: '15 %', desc: 'Dernier exercice d\'évacuation < 12 mois.' },
-        ],
-        image: '/images/solutions/resilience/coro-resilience-index.webp',
-        alt: 'Indice CORO de résilience opérationnelle — tableau de bord temps réel',
-      },
-      substitution: {
-        kicker: 'Organisation d\'urgence dynamique',
-        title: 'Le coordonnateur titulaire sort du bâtiment. Le substitut prend automatiquement le relais.',
-        text: 'Chaque membre de l\'équipe d\'urgence est configuré avec son rôle, son type (titulaire ou substitut) et sa priorité. Dès qu\'un punch OUT modifie la composition de l\'équipe, CORO recalcule immédiatement l\'organisation opérationnelle effective — sans intervention manuelle.',
-        bullets: [
-          'Rôles : Coordonnateur, EPI, Responsable rassemblement, Chercheur, Surveillant de sortie, Accompagnateur PNA, Secouriste',
-          'Titulaires et substituts (#1, #2) configurés par rôle et par bâtiment',
-          'Substitution automatique visible en temps réel sur le tableau de résilience',
-          'Alerte lacune si aucun coordonnateur ou secouriste présent (CRON 15 min)',
-          'Notifications courriel au gestionnaire si lacune critique détectée',
-          'Qualifications par membre : RCR/DEA, extincteur, EPI, HAZMAT',
-        ],
-        image: '/images/solutions/resilience/coro-organisation-urgence.webp',
-        alt: 'Organisation d\'urgence dynamique CORO — substitution automatique des rôles',
-      },
-      incident: {
-  kicker: 'Module Incident',
-  title: 'Déclencher. Notifier. Mobiliser. Agir.',
-  text: 'Lorsqu’un incident survient, CORO transforme immédiatement la présence réelle dans le bâtiment en capacité d’intervention. Le système identifie les ressources disponibles, déclenche le scénario approprié, notifie les contacts désignés et transmet les informations essentielles pour agir sans délai.',
-  bullets: [
-    '15 types d’incidents reliés aux procédures CORO (P001–P026)',
-    'Identification des membres réellement présents au moment du déclenchement',
-    'SMS + courriel envoyés simultanément aux contacts désignés',
-    'Confirmation immédiate des notifications envoyées',
-    'Adresse du bâtiment transmise automatiquement dans l’alerte',
-    'Consigne prête à communiquer au 911 selon le type d’incident',
-    'Journal chronologique automatique et horodaté',
-    'Mode exercice distinct des incidents réels',
-  ],
-  alertImage: '/alert/coro-alerte-envoyee.webp',
-  alertAlt: 'CORO — confirmation d’une alerte d’urgence envoyée aux contacts désignés',
-  emailImage: '/alert/coro-alerte-panique-courriel.webp',
-  emailAlt: 'CORO — courriel d’alerte panique avec type d’incident, adresse et consigne pour le 911',
-  alertCaption: 'Notification confirmée',
-  alertDescription: 'CORO confirme les canaux utilisés, les contacts avisés et l’heure d’envoi.',
-  emailCaption: 'Une alerte directement exploitable',
-  emailDescription: 'Le destinataire reçoit le type d’incident, le bâtiment, l’adresse et la consigne à transmettre aux services d’urgence.',
-},
-      report: {
-        kicker: 'Historique & Rapports',
-        title: 'Chaque incident génère un rapport conforme prêt pour inspection',
-        text: 'L\'historique complet de tous les incidents est conservé dans CORO. Chaque incident produit un rapport PDF structuré en 7 sections, numéroté, horodaté, avec le journal chronologique, les étapes cochées de la procédure, l\'équipe mobilisée et le retour d\'expérience.',
-        steps: ['Identification', 'Chronologie', 'Occupants', 'Équipe mobilisée', 'Procédure', 'REX', 'Signatures'],
-        features: [
-          { title: 'Conforme ISO 22301', text: 'Conservation 36 mois. Rapport structuré selon les exigences de management de la continuité d\'activité.' },
-          { title: 'Conforme CNPI 2020', text: 'Exercices d\'évacuation archivés 24 mois. Rapport d\'évacuation avec comptage des occupants.' },
-          { title: 'Conforme CNESST', text: 'Incidents avec blessés conservés 5 ans. Identification des causes et actions correctives documentées.' },
-          { title: 'Retour d\'expérience (REX)', text: 'Ce qui a bien fonctionné, points à améliorer, recommandations, actions correctives. Formulaire intégré au rapport.' },
-          { title: 'Export PDF en un clic', text: 'Rapport généré à la demande, prêt à archiver ou à soumettre à une inspection réglementaire.' },
-        ],
-        image: '/images/solutions/resilience/coro-rapport-incident.webp',
-        alt: 'Rapport d\'incident CORO — 7 sections conformes ISO 22301 / CNPI 2020 / CNESST',
-      },
-      intel: {
-        kicker: 'Intelligence organisationnelle',
-        title: 'CORO détecte les lacunes avant qu\'un incident survienne',
-        text: 'Le module d\'intelligence organisationnelle analyse en continu les 4 composantes de l\'indice de résilience et génère des recommandations proactives classées par niveau de criticité — avant même qu\'une urgence ne se déclare.',
-        examples: [
-          '🔴 Aucun PMU approuvé pour ce bâtiment',
-          '🔴 Aucun exercice d\'évacuation enregistré',
-          '🔴 Aucun coordonnateur ou substitut présent',
-          '🟠 Dernier exercice il y a plus de 12 mois (CNPI 2020)',
-          '🟠 EPI : moins de 50 % des membres requis présents',
-          '🟠 PMU non mis à jour depuis plus de 18 mois',
-          '🔵 3 incidents de type Alerte incendie en 90 jours — récurrence anormale',
-          '🔵 Actions correctives REX documentées — vérifier leur mise en œuvre',
-        ],
-        image: '/images/solutions/resilience/coro-intelligence-organisationnelle.webp',
-        alt: 'Intelligence organisationnelle CORO — recommandations proactives',
-      },
-      loop: {
-        kicker: 'La boucle complète',
-        title: 'Du plan à l\'incident. De l\'incident au plan amélioré.',
-        text: 'CORO est la seule plateforme qui connecte la production documentaire à l\'opérationnel terrain — et qui referme la boucle grâce au REX. Chaque incident améliore le plan. Chaque plan améliore la résilience.',
-        steps: ['PMU approuvé dans CORO', 'Sentinelle — présence réelle', 'Indice de résilience', 'Incident déclenché', 'Procédure + Mobilisation', 'Rapport + REX', 'PMU mis à jour + approuvé'],
-      },
-      faqTitle: 'Questions fréquentes',
-      faq: [
-        { q: 'Comment CORO sait-il qui est dans le bâtiment ?', a: 'Grâce à CORO Sentinelle : chaque employé dispose d\'un PIN personnel et d\'un QR code. Il scanne le QR de la borne à l\'entrée et entre son PIN. Le système enregistre l\'heure et met à jour le registre d\'occupation en temps réel.' },
-        { q: 'Que se passe-t-il si le coordonnateur quitte le bâtiment pendant la journée ?', a: 'CORO détecte immédiatement le punch OUT et active automatiquement le substitut configuré. La page Résilience est mise à jour en quelques secondes. Si aucun substitut n\'est disponible, une alerte de lacune critique est générée.' },
-        { q: 'Les SMS sont-ils inclus dans CORO ?', a: 'Oui. L\'envoi de SMS via Brevo est intégré. Chaque membre de l\'équipe d\'urgence ayant fourni son consentement explicite reçoit un SMS simultanément au courriel lors du déclenchement d\'un incident.' },
-        { q: 'Peut-on déclencher un exercice sans notifier les vrais occupants ?', a: 'Oui. Le mode exercice intégré envoie des courriels et SMS préfixés [EXERCICE] à l\'équipe d\'urgence, mais ne notifie pas les occupants. Le rapport généré mentionne explicitement le mode exercice.' },
-        { q: 'Le rapport PDF est-il vraiment conforme CNPI 2020 et ISO 22301 ?', a: 'Oui. Le rapport structuré en 7 sections couvre les exigences de traçabilité ISO 22301 (36 mois), la conservation des exercices CNPI 2020 (24 mois) et la documentation CNESST pour les incidents avec blessés (5 ans). Il est généré en un clic depuis l\'historique des incidents.' },
-        { q: 'Le module Incident fonctionne-t-il si plusieurs incidents surviennent simultanément ?', a: 'Oui. CORO supporte les incidents multiples simultanés. Chaque incident a son propre journal, sa propre checklist coordonnateur et son propre rapport — indépendants les uns des autres.' },
-      ],
-      finalTitle: 'Un plan d\'urgence ne vaut que s\'il peut être exécuté par les bonnes personnes au bon moment.',
-      finalText: 'Avec CORO, vous savez en permanence si votre bâtiment est opérationnel, qui peut intervenir maintenant, et comment chaque incident améliore votre prochaine réponse.',
-    },
-    en: {
-      tag: 'Resilience & Incident Response',
-      heroEyebrow: 'From real-time presence to emergency mobilization',
-      title: 'Your emergency plans are only as good as the people available to execute them.',
-      intro: 'CORO is the only platform that closes the complete loop: from the approved emergency plan to real-time building presence, from the resilience index to incident activation, from the ISO 22301-compliant report to the lessons learned that improve the plan.',
-      heroImage: '/images/solutions/resilience/coro-resilience-dashboard.webp',
-      primaryCta: 'Request a demo',
-      secondaryCta: 'Access the portal',
-      proofTitle: 'A platform that knows who is there and what they can do',
-      proofIntro: 'Most tools manage either documents or incidents. CORO manages both — and connects them through the real-time presence of the emergency team in the building.',
-      highlights: [
-        { number: '01', title: 'Real presence', text: 'QR code + PIN — who is in the building right now, to the second.' },
-        { number: '02', title: 'CORO Index', text: '4 weighted components: roles, qualifications, plans, drills.' },
-        { number: '03', title: 'Incident Module', text: 'Automatic coordinator procedure, mobilization, log, reports.' },
-        { number: '04', title: 'REX Loop', text: 'Post-incident → recommendations → improved ERP → new approved version.' },
-      ],
-      sentinelle: {
-        kicker: 'Foundation — CORO Sentinel',
-        title: 'Knowing who is present is the first condition of any resilience',
-        text: 'CORO Sentinel turns every entry and exit into operational data. The register shows in real time how many employees, visitors and contractors are present, who is actually on site and which resources can be mobilized if an emergency occurs.',
-        bullets: [
-  'Occupancy register updated in real time',
-  'Employees, visitors and contractors automatically distinguished',
-  'Fast QR code + personal PIN check-in',
-  'Timestamped entries and exits',
-  'Search and filtering of occupants currently on site',
-  'Incident activation directly from the occupancy register',
-],
-        image: '/alert/coro-module-incident-types.webp',
-        alt: 'CORO Sentinel — real-time occupancy register for employees, visitors and contractors',
-      },
-      readiness: {
-        kicker: 'CORO Resilience Index',
-        title: 'A weighted score that answers one simple question: are we actually ready right now?',
-        text: 'The CORO operational resilience index calculates in real time the building\'s actual response capacity — not its theoretical capacity. It combines four weighted components and updates automatically with every check-in or check-out.',
-        components: [
-          { label: 'Role coverage', weight: '40 %', desc: 'Coordinator, FRT, first aiders, PNA escorts — present or absent?' },
-          { label: 'Qualifications', weight: '20 %', desc: 'CPR/AED, extinguisher, FRT, hazmat — who can actually act?' },
-          { label: 'Approved plans', weight: '25 %', desc: 'ERP or FSP validated and current in CORO.' },
-          { label: 'Drills (NFPA 2020)', weight: '15 %', desc: 'Last evacuation drill < 12 months.' },
-        ],
-        image: '/images/solutions/resilience/coro-resilience-index.webp',
-        alt: 'CORO operational resilience index — real-time dashboard',
-      },
-      substitution: {
-        kicker: 'Dynamic emergency organization',
-        title: 'The lead coordinator leaves the building. The alternate automatically takes over.',
-        text: 'Each emergency team member is configured with their role, type (primary or alternate) and priority. As soon as a check-out changes the team composition, CORO immediately recalculates the effective operational structure — with no manual intervention.',
-        bullets: [
-          'Roles: Coordinator, FRT, Assembly Point Warden, Searcher, Exit Monitor, PNA Escort, First Aider',
-          'Primaries and alternates (#1, #2) configured per role and building',
-          'Automatic substitution visible in real time on the resilience dashboard',
-          'Gap alert if no coordinator or first aider present (15-min CRON)',
-          'Email notification to manager when critical gap is detected',
-          'Qualifications per member: CPR/AED, extinguisher, FRT, HAZMAT',
-        ],
-        image: '/images/solutions/resilience/coro-organisation-urgence.webp',
-        alt: 'CORO dynamic emergency organization — automatic role substitution',
-      },
-      incident: {
-  kicker: 'Incident Module',
-  title: 'Activate. Notify. Mobilize. Respond.',
-  text: 'When an incident occurs, CORO immediately turns real-time building presence into response capability. The system identifies available resources, activates the appropriate scenario, notifies designated contacts and delivers the critical information required to act without delay.',
-  bullets: [
-    '15 incident types linked to CORO procedures (P001–P026)',
-    'Identification of members actually present when the incident is activated',
-    'Simultaneous SMS + email notification to designated contacts',
-    'Immediate confirmation of notifications sent',
-    'Building address automatically included in the alert',
-    '911-ready instruction adapted to the incident type',
-    'Automatic timestamped chronological log',
-    'Exercise mode clearly separated from real incidents',
-  ],
-  alertImage: '/alert/coro-alerte-envoyee.webp',
-  alertAlt: 'CORO — confirmation that an emergency alert was sent to designated contacts',
-  emailImage: '/alert/coro-alerte-panique-courriel.webp',
-  emailAlt: 'CORO — panic alert email with incident type, building address and 911 instructions',
-  alertCaption: 'Notification confirmed',
-  alertDescription: 'CORO confirms the communication channels used, contacts notified and time of transmission.',
-  emailCaption: 'An immediately actionable alert',
-  emailDescription: 'The recipient receives the incident type, building, address and information to communicate to emergency services.',
-},
-      report: {
-        kicker: 'History & Reports',
-        title: 'Every incident generates a compliant report ready for inspection',
-        text: 'The complete history of all incidents is retained in CORO. Each incident produces a structured 7-section PDF report, numbered, timestamped, with the chronological log, procedure steps checked, team mobilized and lessons learned.',
-        steps: ['Identification', 'Timeline', 'Occupants', 'Team mobilized', 'Procedure', 'Lessons learned', 'Signatures'],
-        features: [
-          { title: 'ISO 22301 compliant', text: '36-month retention. Report structured to business continuity management requirements.' },
-          { title: 'NFPA 2020 compliant', text: 'Evacuation drills archived 24 months. Evacuation report with occupant count.' },
-          { title: 'CCOHS compliant', text: 'Incidents with injuries retained 5 years. Root cause and corrective actions documented.' },
-          { title: 'Lessons learned (REX)', text: 'What worked, areas for improvement, recommendations, corrective actions. Form integrated into the report.' },
-          { title: 'One-click PDF export', text: 'Report generated on demand, ready to archive or submit for regulatory inspection.' },
-        ],
-        image: '/images/solutions/resilience/coro-rapport-incident.webp',
-        alt: 'CORO incident report — 7 sections compliant with ISO 22301 / NFPA 2020 / CCOHS',
-      },
-      intel: {
-        kicker: 'Organizational intelligence',
-        title: 'CORO identifies gaps before an incident occurs',
-        text: 'The organizational intelligence module continuously analyzes the 4 resilience index components and generates proactive recommendations ranked by criticality level — before any emergency occurs.',
-        examples: [
-          '🔴 No approved ERP for this building',
-          '🔴 No evacuation drill on record',
-          '🔴 No coordinator or alternate present',
-          '🟠 Last drill more than 12 months ago (NFPA 2020)',
-          '🟠 FRT: fewer than 50% of required members present',
-          '🟠 ERP not updated in more than 18 months',
-          '🔵 3 fire alert incidents in 90 days — abnormal recurrence',
-          '🔵 REX corrective actions documented — verify implementation',
-        ],
-        image: '/images/solutions/resilience/coro-intelligence-organisationnelle.webp',
-        alt: 'CORO organizational intelligence — proactive recommendations',
-      },
-      loop: {
-        kicker: 'The complete loop',
-        title: 'From plan to incident. From incident to improved plan.',
-        text: 'CORO is the only platform that connects document production to field operations — and closes the loop through lessons learned. Every incident improves the plan. Every plan improves resilience.',
-        steps: ['Approved ERP in CORO', 'Sentinel — real presence', 'Resilience index', 'Incident activated', 'Procedure + Mobilization', 'Report + REX', 'Updated ERP + approved'],
-      },
-      faqTitle: 'Frequently asked questions',
-      faq: [
-        { q: 'How does CORO know who is in the building?', a: 'Through CORO Sentinel: each employee has a personal PIN and QR code. They scan the kiosk QR at entry and enter their PIN. The system records the time and updates the occupancy register in real time.' },
-        { q: 'What happens if the coordinator leaves the building during the day?', a: 'CORO immediately detects the check-out and automatically activates the configured alternate. The Resilience page updates within seconds. If no alternate is available, a critical gap alert is generated.' },
-        { q: 'Is SMS included in CORO?', a: 'Yes. SMS sending via Brevo is integrated. Each emergency team member who has provided explicit consent receives an SMS simultaneously with the email when an incident is triggered.' },
-        { q: 'Can we run a drill without notifying real occupants?', a: 'Yes. The built-in exercise mode sends emails and SMS prefixed with [EXERCISE] to the emergency team, but does not notify occupants. The generated report explicitly mentions exercise mode.' },
-        { q: 'Is the PDF report actually compliant with NFPA 2020 and ISO 22301?', a: 'Yes. The 7-section structured report covers ISO 22301 traceability requirements (36 months), NFPA 2020 drill retention (24 months) and CCOHS documentation for incidents with injuries (5 years). It is generated in one click from the incident history.' },
-        { q: 'Does the Incident Module work if multiple incidents occur simultaneously?', a: 'Yes. CORO supports multiple simultaneous incidents. Each incident has its own log, coordinator checklist and report — fully independent from one another.' },
-      ],
-      finalTitle: 'An emergency plan is only worth its value if the right people can execute it at the right time.',
-      finalText: 'With CORO, you always know whether your building is operationally ready, who can respond right now, and how every incident improves your next response.',
-    },
-  };
-
-  const d = content[lang];
-  const currentUrl = lang === 'en' ? `${SITE_URL}/resilience-operationnelle?lang=en` : `${SITE_URL}/resilience-operationnelle`;
-
-  const jsonLd = {
-    '@context': 'https://schema.org', '@type': 'WebPage',
-    name: d.title, description: d.intro, url: currentUrl,
-    inLanguage: lang === 'fr' ? 'fr-CA' : 'en-CA',
-    isPartOf: { '@type': 'WebSite', name: 'CORO', url: SITE_URL },
-    about: { '@type': 'SoftwareApplication', name: 'CORO', applicationCategory: 'BusinessApplication', operatingSystem: 'Web', url: SITE_URL },
-    publisher: { '@type': 'Organization', name: 'Coro Solutions Inc.', url: SITE_URL, logo: { '@type': 'ImageObject', url: `${SITE_URL}/coro-logo.png` } },
-  };
-
-  const breadcrumbLd = {
-    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: lang === 'fr' ? 'Accueil' : 'Home', item: lang === 'en' ? `${SITE_URL}/?lang=en` : SITE_URL },
-      { '@type': 'ListItem', position: 2, name: d.tag, item: currentUrl },
+const copy = {
+  fr: {
+    metaTitle: 'Résilience opérationnelle : préparer, agir, rétablir, améliorer',
+    description: 'CORO relie les plans d’urgence approuvés à la présence réelle dans le bâtiment : indice de résilience, organisation d’urgence, gestion d’incidents et retour d’expérience.',
+    label: 'Résilience opérationnelle',
+    lines: ['Vos plans d’urgence ne valent rien', 's’ils ne reflètent pas la réalité du terrain.'],
+    lead: 'CORO relie le plan d’urgence approuvé à la présence réelle dans le bâtiment, l’indice de résilience au déclenchement d’un incident, et le rapport d’incident au retour d’expérience qui améliore le plan.',
+    detail: 'De la présence réelle à la mobilisation d’urgence',
+    demo: 'Demander une démonstration', access: 'Accéder à CORO Client',
+    defLabel: 'Le niveau supérieur', defTitle: 'Comprendre, préparer, coordonner, agir, rétablir, améliorer.',
+    defText: 'La résilience opérationnelle décrit la capacité d’une organisation à comprendre sa situation, à se préparer, à coordonner ses ressources, à agir, à rétablir ses activités et à s’améliorer. CORO relie la documentation d’urgence à ce qui se passe réellement dans le bâtiment.',
+    bridge: ['Documentation et préparation', 'Opérations, intervention et apprentissage'],
+    loopLabel: 'La boucle complète', loopTitle: 'Du plan à l’incident. De l’incident au plan amélioré.',
+    loopText: 'CORO connecte la production documentaire à l’opérationnel de terrain et referme la boucle grâce au retour d’expérience : ce que chaque incident enseigne peut améliorer le plan.',
+    loopGroups: [
+      { name: 'Avant l’événement', steps: ['PMU approuvé dans CORO', 'Sentinelle — présence réelle', 'Indice de résilience'] },
+      { name: 'Pendant', steps: ['Incident déclenché', 'Procédure et mobilisation'] },
+      { name: 'Après', steps: ['Rapport et retour d’expérience', 'PMU mis à jour et approuvé'] },
     ],
-  };
+    proofTitle: 'Une plateforme qui sait qui est là et ce qu’il peut faire',
+    highlights: [
+      { title: 'Présence réelle', text: 'Le pointage par QR code et PIN indique qui est dans le bâtiment.' },
+      { title: 'Indice CORO', text: '4 composantes pondérées : rôles, qualifications, plans, exercices.' },
+      { title: 'Module Incident', text: 'Procédure du coordonnateur, mobilisation, journal et rapport.' },
+      { title: 'Boucle REX', text: 'Après l’incident : retour d’expérience, recommandations et actions correctives pour améliorer le plan.' },
+    ],
+    dimLabel: 'Trois dimensions opérationnelles', dimTitle: 'Présence, intervention, exercice',
+    dims: [
+      { kicker: 'Présence', name: 'CORO Sentinelle', text: 'Sentinelle indique qui est présent dans le bâtiment et quelles ressources peuvent être mobilisées si une urgence survient.',
+        items: ['Registre d’occupation', 'Pointage par QR code et PIN personnel', 'Entrées et sorties horodatées'], link: 'En savoir plus sur CORO Sentinelle' },
+      { kicker: 'Intervention', name: 'Module Incident', text: 'Lorsqu’un incident survient, CORO utilise la présence pour identifier l’équipe d’urgence présente, notifier les contacts désignés et transmettre l’essentiel pour agir.',
+        items: ['Membres présents identifiés au déclenchement', 'Courriel et SMS aux contacts désignés (SMS avec consentement)', 'Journal chronologique horodaté'], link: '' },
+      { kicker: 'Préparation', name: 'Exercices', text: 'Le mode exercice distingue un exercice d’un incident réel, et le dernier exercice d’évacuation compte dans l’indice CORO.',
+        items: ['Messages préfixés [EXERCICE]', 'Occupants non notifiés'], link: '' },
+    ],
+    indexLabel: 'Indice CORO de résilience', indexTitle: 'Un score pondéré qui répond à une question simple : sommes-nous vraiment prêts?',
+    indexText: 'L’indice CORO de résilience opérationnelle calcule la capacité d’intervention actuelle du bâtiment, pas sa capacité théorique. Il combine quatre composantes pondérées et se recalcule à partir des présences et des données à jour.',
+    components: [
+      { label: 'Couverture des rôles', weight: '40 %', desc: 'Coordonnateur, EPI, secouristes, accompagnateurs PNA : présents ou absents?' },
+      { label: 'Qualifications', weight: '20 %', desc: 'RCR/DEA, extincteur, EPI, matières dangereuses : qui peut agir?' },
+      { label: 'Plans approuvés', weight: '25 %', desc: 'PMU ou PSI validé et à jour dans CORO.' },
+      { label: 'Exercices', weight: '15 %', desc: 'Dernier exercice d’évacuation de moins de 12 mois.' },
+    ],
+    componentsLabel: 'Les quatre composantes de l’indice',
+    orgLabel: 'Organisation d’urgence dynamique', orgTitle: 'Le coordonnateur titulaire sort du bâtiment. Le substitut prend le relais.',
+    orgText: 'Chaque membre de l’équipe d’urgence est configuré avec son rôle, son type (titulaire ou substitut) et sa priorité. Quand la composition de l’équipe présente change, CORO recalcule l’organisation d’urgence effective.',
+    orgItems: ['Rôles : coordonnateur, EPI, responsable du rassemblement, chercheur, surveillant de sortie, accompagnateur PNA, secouriste', 'Titulaires et substituts configurés par rôle et par bâtiment', 'Substitution visible sur le tableau de résilience', 'Lacune signalée si aucun coordonnateur ou secouriste n’est présent', 'Qualifications par membre : RCR/DEA, extincteur, EPI, matières dangereuses'],
+    orgAlt: 'Formulaire d’un employé dans CORO Sentinelle (interface en français) : identité, consentement aux notifications SMS, rôle principal, type titulaire ou substitut, secteur et qualifications.',
+    orgCartouche: ['CORO Sentinelle · Organisation d’urgence', 'Rôle, type et qualifications', 'Capture d’écran'] as const,
+    orgLegend: ['Rôle principal', 'Titulaire ou substitut', 'Secteur et étage', 'Qualifications', 'Consentement aux notifications SMS'],
+    alertLabel: 'Alerte', alertTitle: 'Déclencher. Notifier. Mobiliser. Agir.',
+    alertText: 'Une alerte doit être directement exploitable : le destinataire reçoit le type d’incident, le bâtiment, l’adresse et la consigne à transmettre aux services d’urgence.',
+    alertAlt: 'Courriel d’alerte panique CORO (exemple en français et en anglais) : type d’incident, bâtiment, adresse, heure de déclenchement et consigne à dire au 911.',
+    alertCartouche: ['CORO Sentinelle · Courriel d’alerte', 'Menace active, exemple', 'Exemple de courriel'] as const,
+    alertLegend: ['Type d’incident et bâtiment', 'Adresse et heure de déclenchement', 'Consigne à communiquer au 911'],
+    panLabel: 'Capture d’écran, défilable horizontalement', onScreen: 'Sur cet écran',
+    reportLabel: 'Historique et rapport', reportTitle: 'Chaque incident laisse une trace exploitable',
+    reportText: 'L’historique des incidents est conservé dans CORO. Chaque incident produit un rapport PDF structuré en 7 sections, avec le journal chronologique, l’équipe mobilisée et le retour d’expérience.',
+    reportItems: [
+      { title: 'Retour d’expérience (REX)', text: 'Ce qui a bien fonctionné, points à améliorer, recommandations, actions correctives.' },
+      { title: 'Responsabilité de conformité', text: 'Les exigences de conservation et de documentation varient selon l’organisation et la réglementation applicable. CORO fournit la trace; la conformité demeure la responsabilité de l’organisation.' },
+    ],
+    intelLabel: 'Intelligence organisationnelle', intelTitle: 'Repérer les lacunes avant qu’un incident survienne',
+    intelText: 'À partir des quatre composantes de l’indice, CORO génère des recommandations classées par niveau de criticité, avant même qu’une urgence ne se déclare.',
+    intelExamples: [['Critique', 'Aucun PMU ou PSI actif associé à ce bâtiment'], ['Critique', 'Aucun coordonnateur d’urgence ou substitut présent'], ['Critique', 'Aucun exercice d’évacuation enregistré'], ['Attention', 'Incidents répétés du même type en 90 jours : récurrence anormale']] as const,
+    platform: 'Cette partie de la plateforme', platformTitle: 'Un socle produit relié', platformLead: 'La résilience opérationnelle s’appuie sur les autres parties de CORO : les documents à approuver, les mandats à réaliser, la performance à lire et l’accès du client.', explore: 'Explorer',
+    products: [
+      { name: 'Documents', text: 'Structure les données et les livrables.', href: '/gestion-documentaire' },
+      { name: 'Projects', text: 'Organise les mandats et le travail.', href: '/gestion-de-projets' },
+      { name: 'Performance', text: 'Mesure activité, objectifs et capacité.', href: '/performance-objectifs' },
+      { name: 'Client', text: 'Rend l’information accessible au client.', href: '/portail-client' },
+    ],
+    faq: 'FAQ', faqTitle: 'Questions fréquentes',
+    faqItems: [
+      { q: 'Comment CORO sait-il qui est dans le bâtiment?', a: 'Grâce à CORO Sentinelle : chaque employé dispose d’un PIN personnel et d’un QR code. Il scanne le QR de la borne à l’entrée et entre son PIN. Le système enregistre l’heure et met à jour le registre d’occupation.' },
+      { q: 'Que se passe-t-il si le coordonnateur quitte le bâtiment pendant la journée?', a: 'Quand le coordonnateur pointe sa sortie, CORO recalcule l’organisation d’urgence effective à partir des membres présents : le substitut configuré prend le relais. Si aucun coordonnateur ou substitut n’est présent, une lacune critique apparaît dans l’indice et dans les recommandations.' },
+      { q: 'Les SMS sont-ils inclus dans CORO?', a: 'Oui. Chaque membre de l’équipe d’urgence ayant donné son consentement explicite reçoit un SMS en plus du courriel lors du déclenchement d’un incident.' },
+      { q: 'Peut-on déclencher un exercice sans notifier les vrais occupants?', a: 'Oui. Le mode exercice envoie des courriels et des SMS préfixés [EXERCICE] à l’équipe d’urgence, mais ne notifie pas les occupants.' },
+      { q: 'Le rapport d’incident garantit-il la conformité réglementaire?', a: 'Non. Le rapport documente l’incident : chronologie, occupants, équipe mobilisée, procédure suivie et retour d’expérience. Les exigences de conservation et de conformité dépendent de votre organisation et de la réglementation applicable, et demeurent sous votre responsabilité.' },
+      { q: 'Le module Incident fonctionne-t-il si plusieurs incidents surviennent simultanément?', a: 'Oui. CORO supporte les incidents simultanés. Chaque incident a son propre journal, sa propre liste de tâches du coordonnateur et son propre rapport, indépendants les uns des autres.' },
+    ],
+    statement: 'Un plan d’urgence ne vaut que s’il peut être exécuté par les bonnes personnes au bon moment.',
+    support: 'Avec CORO, vous voyez si votre bâtiment est prêt à intervenir, qui peut agir maintenant et comment chaque incident améliore la réponse suivante.',
+  },
+  en: {
+    metaTitle: 'Operational resilience: prepare, respond, recover, improve',
+    description: 'CORO connects approved emergency plans to real building presence: resilience index, emergency organization, incident management and lessons learned.',
+    label: 'Operational resilience',
+    lines: ['Your emergency plans are only as good', 'as the people available to execute them.'],
+    lead: 'CORO connects the approved emergency plan to real presence in the building, the resilience index to incident activation, and the incident report to the lessons learned that improve the plan.',
+    detail: 'From real presence to emergency mobilization',
+    demo: 'Request a demonstration', access: 'Access CORO Client',
+    defLabel: 'The higher level', defTitle: 'Understand, prepare, coordinate, act, recover, improve.',
+    defText: 'Operational resilience describes an organization’s ability to understand its situation, prepare, coordinate its resources, act, recover its activities and improve. CORO connects emergency documentation to what actually happens in the building.',
+    bridge: ['Documentation and preparation', 'Operations, response and learning'],
+    loopLabel: 'The complete loop', loopTitle: 'From plan to incident. From incident to improved plan.',
+    loopText: 'CORO connects document production to field operations and closes the loop through lessons learned: what each incident teaches can improve the plan.',
+    loopGroups: [
+      { name: 'Before the event', steps: ['Approved ERP in CORO', 'Sentinel — real presence', 'Resilience index'] },
+      { name: 'During', steps: ['Incident activated', 'Procedure and mobilization'] },
+      { name: 'After', steps: ['Report and lessons learned', 'Updated and approved ERP'] },
+    ],
+    proofTitle: 'A platform that knows who is there and what they can do',
+    highlights: [
+      { title: 'Real presence', text: 'QR code and PIN check-in shows who is in the building.' },
+      { title: 'CORO Index', text: '4 weighted components: roles, qualifications, plans, drills.' },
+      { title: 'Incident Module', text: 'Coordinator procedure, mobilization, log and report.' },
+      { title: 'REX Loop', text: 'After the incident: lessons learned, recommendations and corrective actions to improve the plan.' },
+    ],
+    dimLabel: 'Three operational dimensions', dimTitle: 'Presence, response, drills',
+    dims: [
+      { kicker: 'Presence', name: 'CORO Sentinel', text: 'Sentinel shows who is present in the building and which resources can be mobilized if an emergency occurs.',
+        items: ['Occupancy register', 'Check-in by QR code and personal PIN', 'Timestamped entries and exits'], link: 'Learn more about CORO Sentinel' },
+      { kicker: 'Response', name: 'Incident Module', text: 'When an incident occurs, CORO uses presence to identify the emergency team on site, notify designated contacts and deliver the essentials to act.',
+        items: ['Members present identified at activation', 'Email and SMS to designated contacts (SMS with consent)', 'Timestamped chronological log'], link: '' },
+      { kicker: 'Preparation', name: 'Drills', text: 'Exercise mode separates a drill from a real incident, and the last evacuation drill counts in the CORO index.',
+        items: ['Messages prefixed [EXERCISE]', 'Occupants not notified'], link: '' },
+    ],
+    indexLabel: 'CORO Resilience Index', indexTitle: 'A weighted score that answers one simple question: are we actually ready?',
+    indexText: 'The CORO operational resilience index calculates the building’s current response capacity, not its theoretical capacity. It combines four weighted components and is recalculated from current presence and up-to-date data.',
+    components: [
+      { label: 'Role coverage', weight: '40 %', desc: 'Coordinator, FRT, first aiders, PNA escorts: present or absent?' },
+      { label: 'Qualifications', weight: '20 %', desc: 'CPR/AED, extinguisher, FRT, hazmat: who can actually act?' },
+      { label: 'Approved plans', weight: '25 %', desc: 'ERP or FSP validated and current in CORO.' },
+      { label: 'Drills', weight: '15 %', desc: 'Last evacuation drill within 12 months.' },
+    ],
+    componentsLabel: 'The four components of the index',
+    orgLabel: 'Dynamic emergency organization', orgTitle: 'The primary coordinator leaves the building. The alternate takes over.',
+    orgText: 'Each emergency team member is configured with a role, a type (primary or alternate) and a priority. When the composition of the team on site changes, CORO recalculates the effective emergency organization.',
+    orgItems: ['Roles: coordinator, FRT, assembly point warden, searcher, exit monitor, PNA escort, first aider', 'Primaries and alternates configured per role and building', 'Substitution visible on the resilience dashboard', 'Gap flagged if no coordinator or first aider is present', 'Qualifications per member: CPR/AED, extinguisher, FRT, hazmat'],
+    orgAlt: 'Employee form in CORO Sentinel (French interface shown): identity, consent to SMS notifications, main role, primary or alternate type, sector and qualifications.',
+    orgCartouche: ['CORO Sentinel · Emergency organization', 'Role, type and qualifications', 'Screenshot'] as const,
+    orgLegend: ['Main role', 'Primary or alternate', 'Sector and floor', 'Qualifications', 'Consent to SMS notifications'],
+    alertLabel: 'Alert', alertTitle: 'Activate. Notify. Mobilize. Respond.',
+    alertText: 'An alert must be immediately actionable: the recipient receives the incident type, the building, the address and the information to give emergency services.',
+    alertAlt: 'CORO panic alert email (example in French and English): incident type, building, address, activation time and the instruction to say to 911.',
+    alertCartouche: ['CORO Sentinel · Alert email', 'Active threat, example', 'Email example'] as const,
+    alertLegend: ['Incident type and building', 'Address and activation time', 'Instruction to give to 911'],
+    panLabel: 'Screenshot, horizontally scrollable', onScreen: 'On this screen',
+    reportLabel: 'History and report', reportTitle: 'Every incident leaves a usable record',
+    reportText: 'The incident history is retained in CORO. Each incident produces a structured 7-section PDF report, with the chronological log, the team mobilized and the lessons learned.',
+    reportItems: [
+      { title: 'Lessons learned (REX)', text: 'What worked, areas for improvement, recommendations, corrective actions.' },
+      { title: 'Compliance responsibility', text: 'Retention and documentation requirements vary by organization and applicable regulation. CORO provides the record; compliance remains the organization’s responsibility.' },
+    ],
+    intelLabel: 'Organizational intelligence', intelTitle: 'Identify gaps before an incident occurs',
+    intelText: 'From the four components of the index, CORO generates recommendations ranked by criticality, before any emergency occurs.',
+    intelExamples: [['Critical', 'No active ERP or FSP linked to this building'], ['Critical', 'No emergency coordinator or alternate present'], ['Critical', 'No evacuation drill on record'], ['Attention', 'Repeated incidents of the same type within 90 days: abnormal recurrence']] as const,
+    platform: 'This part of the platform', platformTitle: 'A connected product foundation', platformLead: 'Operational resilience relies on the other parts of CORO: documents to approve, mandates to deliver, performance to read and client access.', explore: 'Explore',
+    products: [
+      { name: 'Documents', text: 'Structures data and deliverables.', href: '/gestion-documentaire' },
+      { name: 'Projects', text: 'Organizes mandates and work.', href: '/gestion-de-projets' },
+      { name: 'Performance', text: 'Measures activity, goals and capacity.', href: '/performance-objectifs' },
+      { name: 'Client', text: 'Makes information accessible to clients.', href: '/portail-client' },
+    ],
+    faq: 'FAQ', faqTitle: 'Frequently asked questions',
+    faqItems: [
+      { q: 'How does CORO know who is in the building?', a: 'Through CORO Sentinel: each employee has a personal PIN and QR code. They scan the kiosk QR at entry and enter their PIN. The system records the time and updates the occupancy register.' },
+      { q: 'What happens if the coordinator leaves the building during the day?', a: 'When the coordinator checks out, CORO recalculates the effective emergency organization from the members present: the configured alternate takes over. If no coordinator or alternate is present, a critical gap appears in the index and in the recommendations.' },
+      { q: 'Is SMS included in CORO?', a: 'Yes. Each emergency team member who has given explicit consent receives an SMS in addition to the email when an incident is triggered.' },
+      { q: 'Can we run a drill without notifying real occupants?', a: 'Yes. Exercise mode sends emails and SMS prefixed [EXERCISE] to the emergency team, but does not notify occupants.' },
+      { q: 'Does the incident report guarantee regulatory compliance?', a: 'No. The report documents the incident: chronology, occupants, team mobilized, procedure followed and lessons learned. Retention and compliance requirements depend on your organization and the applicable regulation, and remain your responsibility.' },
+      { q: 'Does the Incident Module work if multiple incidents occur simultaneously?', a: 'Yes. CORO supports simultaneous incidents. Each incident has its own log, its own coordinator task list and its own report, independent from one another.' },
+    ],
+    statement: 'An emergency plan is only worth its value if the right people can execute it at the right time.',
+    support: 'With CORO, you see whether your building is ready to respond, who can act right now, and how every incident improves your next response.',
+  },
+} as const satisfies Record<Locale, unknown>;
 
-  const faqJsonLd = {
-    '@context': 'https://schema.org', '@type': 'FAQPage',
-    mainEntity: d.faq.map(item => ({ '@type': 'Question', name: item.q, acceptedAnswer: { '@type': 'Answer', text: item.a } })),
-  };
+export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  return buildPageMetadata({ path: '/resilience-operationnelle', locale: l, title: copy[l].metaTitle, description: copy[l].description });
+}
 
+function JsonLd({ value }: { value: object }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(value).replace(/</g, '\\u003c') }} />;
+}
+
+export default async function Page({ searchParams }: P) {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = copy[l];
+  const demo = localizedHref('/#demo', l);
+  const offsets = t.loopGroups.map((_, i) => t.loopGroups.slice(0, i).reduce((n, g) => n + g.steps.length, 0));
   return (
-    <div className="res-page">
-      <style>{`
-        * { box-sizing: border-box; }
-        .res-page { min-height: 100vh; background: #f7f9fb; color: #243746; font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .res-container { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
-        .res-nav { background: #2c3e50; padding: 0 24px; }
-        .res-nav-inner { max-width: 1200px; height: 64px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
-        .res-logo { color: white; font-weight: 900; font-size: 24px; letter-spacing: -1px; text-decoration: none; }
-        .res-logo span { color: #c0392b; }
-        .res-nav-links { display: flex; gap: 16px; align-items: center; }
-        .res-nav-link { color: rgba(255,255,255,.72); font-size: 14px; text-decoration: none; }
-        .res-lang { border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
-        .res-breadcrumb { padding: 12px 24px; background: white; border-bottom: 1px solid #e9ecef; }
-        .res-breadcrumb p { max-width: 1180px; margin: 0 auto; font-size: 13px; color: #adb5bd; }
-        .res-breadcrumb a { color: #adb5bd; text-decoration: none; }
-        .res-hero { position: relative; overflow: hidden; padding: 88px 0 92px; background: radial-gradient(circle at 85% 15%, rgba(192,57,43,.18), transparent 28%), linear-gradient(135deg, #1a0a09 0%, #2c1210 40%, #1a2530 100%); }
-        .res-hero-grid { display: grid; grid-template-columns: .92fr 1.08fr; gap: 56px; align-items: center; }
-        .res-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; margin-bottom: 22px; border: 1px solid rgba(192,57,43,.4); border-radius: 999px; color: #f5c6c0; background: rgba(192,57,43,.15); text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 800; }
-        .res-hero h1 { margin: 0 0 22px; max-width: 680px; font-size: clamp(36px, 4.5vw, 55px); line-height: 1.06; letter-spacing: -.04em; color: white; font-weight: 900; }
-        .res-hero p { margin: 0 0 32px; max-width: 640px; color: rgba(255,255,255,.8); font-size: 17px; line-height: 1.75; }
-        .res-actions { display: flex; flex-wrap: wrap; gap: 14px; }
-        .res-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 25px; border-radius: 9px; font-size: 15px; font-weight: 750; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
-        .res-btn:hover { transform: translateY(-2px); }
-        .res-btn-primary { background: #c0392b; color: white; box-shadow: 0 10px 30px rgba(192,57,43,.28); }
-        .res-btn-outline { color: white; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.04); }
-        .res-hero-media .res-browser { overflow: hidden; border-radius: 15px; border: 1px solid rgba(255,255,255,.14); background: white; box-shadow: 0 30px 80px rgba(0,0,0,.4); }
-        .res-browser-bar { height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: #eef2f5; border-bottom: 1px solid #e4e8eb; }
-        .res-browser-bar span { width: 7px; height: 7px; border-radius: 50%; background: #bcc6cc; }
-        .res-browser img { display: block; width: 100%; height: auto; }
-        .res-proof { padding: 76px 0 68px; background: white; }
-        .res-center { max-width: 820px; margin: 0 auto; text-align: center; margin-bottom: 44px; }
-        .res-kicker { display: inline-block; margin-bottom: 10px; color: #c0392b; font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: .11em; }
-        .res-center h2, .res-copy h2 { margin: 0 0 16px; color: #22394a; font-weight: 900; letter-spacing: -.025em; }
-        .res-center h2 { font-size: clamp(26px, 3vw, 38px); }
-        .res-center p, .res-copy > p { color: #667984; font-size: 16px; line-height: 1.75; }
-        .res-highlights { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-        .res-highlight { padding: 26px; border: 1px solid #e5eaed; border-radius: 14px; background: #fbfcfd; }
-        .res-highlight-num { display: block; margin-bottom: 18px; color: #bfc9cf; font-size: 13px; font-weight: 800; }
-        .res-highlight h3 { margin: 0 0 8px; color: #263f50; font-size: 17px; }
-        .res-highlight p { margin: 0; color: #73838d; font-size: 14px; line-height: 1.6; }
-        .res-section { padding: 92px 0; }
-        .res-white { background: white; }
-        .res-soft { background: #f7f9fb; }
-        .res-dark { color: white; background: linear-gradient(135deg, #0d2338, #174463); }
-        .res-dark2 { color: white; background: linear-gradient(135deg, #1a0a09, #2c1a10); }
-        .res-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 64px; align-items: center; }
-        .res-grid-rev { display: grid; grid-template-columns: 1.1fr .9fr; gap: 64px; align-items: center; }
-        .res-copy h2 { font-size: clamp(26px, 3vw, 38px); line-height: 1.12; }
-        .res-dark .res-copy h2, .res-dark2 .res-copy h2 { color: white; }
-        .res-dark .res-copy > p, .res-dark2 .res-copy > p { color: rgba(255,255,255,.8); }
-        .res-list { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-        .res-list li { position: relative; padding-left: 26px; color: #405965; font-size: 15px; line-height: 1.55; }
-        .res-list li::before { content: "✓"; position: absolute; left: 0; top: 0; color: #2dad71; font-weight: 900; }
-        .res-dark .res-list li, .res-dark2 .res-list li { color: rgba(255,255,255,.85); }
-        .res-shot { display: block; width: 100%; border-radius: 16px; border: 1px solid #e1e7eb; box-shadow: 0 24px 60px rgba(28,45,58,.12); }
-        .res-dark .res-shot, .res-dark2 .res-shot { border-color: rgba(255,255,255,.12); box-shadow: 0 30px 70px rgba(0,0,0,.3); }
-        .res-incident-visuals {
-  display: grid;
-  gap: 18px;
-}
+    <V2Shell locale={l} pathname="/resilience-operationnelle">
+      <JsonLd value={faqJsonLd(t.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
 
-.res-incident-card {
-  overflow: hidden;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
-  box-shadow: 0 26px 60px rgba(0,0,0,.28);
-}
+      <EditorialHero id="resilience-title" label={t.label} title={t.lines} lead={t.lead} detail={t.detail}
+        photo={{ src: '/website-v2/resilience/resilience-emergency-coordination.webp', side: 'end', position: '0% 50%', mobilePosition: '0% 50%', coverage: 50, mobileRatio: '5 / 4' }}
+        actions={<><Button href={demo} surface="dark">{t.demo}</Button><Button href={LOGIN} variant="ghost" surface="dark" external>{t.access}</Button></>} />
 
-.res-incident-card img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
+      <PageSection tone="white" labelledBy="resilience-def-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="resilience-def-title" label={t.defLabel} heading={t.defTitle}><p>{t.defText}</p></EditorialBlock>}
+          media={<ol className={styles.bridge} aria-label={t.defTitle}>{t.bridge.map((b) => <li key={b}>{b}</li>)}</ol>} />
+      </PageSection>
 
-.res-incident-card-body {
-  padding: 18px 20px 20px;
-}
-
-.res-incident-card-body strong {
-  display: block;
-  margin-bottom: 5px;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.res-incident-card-body p {
-  margin: 0;
-  color: rgba(255,255,255,.67);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.res-incident-email {
-  width: 72%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-@media (max-width: 980px) {
-  .res-incident-email {
-    width: 60%;
-  }
-}
-
-@media (max-width: 700px) {
-  .res-incident-email {
-    width: 82%;
-  }
-}
-        .res-components { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 28px; }
-        .res-component { padding: 18px 20px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); }
-        .res-component-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .res-component-label { font-size: 14px; font-weight: 800; color: white; }
-        .res-component-weight { font-size: 13px; font-weight: 700; color: #C0392B; background: rgba(192,57,43,.2); padding: 2px 8px; border-radius: 4px; }
-        .res-component p { margin: 0; font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.5; }
-        .res-loop { padding: 80px 0; background: #0f283d; text-align: center; }
-        .res-loop h2 { font-size: clamp(26px, 3vw, 38px); color: white; font-weight: 900; margin: 0 0 14px; letter-spacing: -.02em; }
-        .res-loop > div > p { color: rgba(255,255,255,.7); font-size: 16px; line-height: 1.7; max-width: 700px; margin: 0 auto 40px; }
-        .res-loop-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 0; margin-bottom: 8px; }
-        .res-loop-step { position: relative; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 14px 18px; color: rgba(255,255,255,.9); font-size: 14px; font-weight: 600; white-space: nowrap; }
-        .res-loop-arrow { display: flex; align-items: center; color: #c0392b; font-size: 20px; padding: 0 6px; font-weight: 900; }
-        .res-cycle { padding: 96px 0; background: white; }
-        .res-cycle-steps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 36px 0 46px; }
-        .res-cycle-step { position: relative; padding: 14px 10px; border-radius: 10px; border: 1px solid #dce7e1; background: #f7fbf9; text-align: center; color: #335348; font-size: 12px; font-weight: 750; }
-        .res-cycle-step:not(:last-child)::after { content: "→"; position: absolute; right: -8px; top: 50%; z-index: 2; transform: translate(50%, -50%); color: #a8b6ae; font-size: 14px; }
-        .res-cycle-layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 48px; align-items: start; }
-        .res-cycle-cards { display: grid; gap: 12px; }
-        .res-cycle-card { padding: 20px 22px; border: 1px solid #e5eaed; border-radius: 12px; background: #fbfcfd; }
-        .res-cycle-card h3 { margin: 0 0 6px; color: #283f50; font-size: 15px; }
-        .res-cycle-card p { margin: 0; color: #6b7d87; font-size: 13px; line-height: 1.6; }
-        .res-intel-examples { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 28px; }
-        .res-intel-item { padding: 12px 14px; border-radius: 9px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.85); font-size: 14px; line-height: 1.5; }
-        .res-faq { padding: 90px 0; background: #f7f9fb; }
-        .res-faq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 1000px; margin: 0 auto; }
-        .res-faq-item { padding: 26px; border-radius: 13px; border: 1px solid #e4e9ec; background: white; }
-        .res-faq-item h3 { margin: 0 0 10px; color: #293f4f; font-size: 16px; }
-        .res-faq-item p { margin: 0; color: #6d7e88; font-size: 14px; line-height: 1.7; }
-        .res-final { padding: 88px 0; text-align: center; background: linear-gradient(135deg, #1a0a09 0%, #2c1210 50%, #0f283d 100%); }
-        .res-final h2 { max-width: 780px; margin: 0 auto 18px; color: white; font-size: clamp(28px, 4vw, 44px); line-height: 1.1; letter-spacing: -.03em; font-weight: 900; }
-        .res-final p { max-width: 680px; margin: 0 auto 30px; color: rgba(255,255,255,.75); font-size: 16px; line-height: 1.75; }
-        .res-footer { padding: 25px 24px; background: #0a1d2c; color: #8ea4b2; font-size: 12px; text-align: center; }
-        @media (max-width: 980px) {
-          .res-hero-grid, .res-grid, .res-grid-rev, .res-cycle-layout { grid-template-columns: 1fr; }
-          .res-highlights, .res-components, .res-intel-examples { grid-template-columns: repeat(2, 1fr); }
-          .res-cycle-steps { grid-template-columns: repeat(3, 1fr); }
-          .res-loop-steps { flex-direction: column; align-items: center; }
-          .res-loop-arrow { transform: rotate(90deg); }
-        }
-        @media (max-width: 700px) {
-          .res-container { width: min(100% - 30px, 1180px); }
-          .res-hero { padding: 62px 0 66px; }
-          .res-hero h1 { font-size: 34px; }
-          .res-section, .res-cycle, .res-faq { padding: 68px 0; }
-          .res-highlights, .res-faq-grid, .res-components, .res-intel-examples { grid-template-columns: 1fr; }
-          .res-cycle-steps { grid-template-columns: 1fr; }
-          .res-cycle-step:not(:last-child)::after { content: "↓"; right: auto; top: auto; left: 50%; bottom: -14px; transform: translateX(-50%); }
-          .res-btn { width: 100%; }
-        }
-      `}</style>
-
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c') }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c') }} />
-
-      {/* NAV */}
-      <nav className="res-nav">
-        <div className="res-nav-inner">
-          <a href={lang === 'en' ? '/?lang=en' : '/'} className="res-logo">CO<span>RO</span></a>
-          <div className="res-nav-links">
-            <a href={lang === 'en' ? '/?lang=en' : '/'} className="res-nav-link">{lang === 'fr' ? '← Accueil' : '← Home'}</a>
-            <a href={lang === 'fr' ? '/resilience-operationnelle?lang=en' : '/resilience-operationnelle'} className="res-nav-link res-lang">{lang === 'fr' ? 'EN' : 'FR'}</a>
-          </div>
-        </div>
-      </nav>
-
-      {/* BREADCRUMB */}
-      <div className="res-breadcrumb">
-        <p><a href={lang === 'en' ? '/?lang=en' : '/'}>getcoro.io</a>{' / '}<span>{d.tag}</span></p>
-      </div>
-
-      {/* HERO */}
-      <section className="res-hero">
-        <div className="res-container res-hero-grid">
-          <div>
-            <span className="res-eyebrow">🛡️ {d.heroEyebrow}</span>
-            <h1>{d.title}</h1>
-            <p>{d.intro}</p>
-            <div className="res-actions">
-              <a href={lang === 'fr' ? '/#demo' : '/?lang=en#demo'} className="res-btn res-btn-primary">{d.primaryCta} →</a>
-              <a href="https://client.getcoro.io/login" className="res-btn res-btn-outline">{d.secondaryCta} →</a>
-            </div>
-          </div>
-          <div className="res-hero-media">
-            <div className="res-browser">
-              <div className="res-browser-bar"><span /><span /><span /></div>
-              <img src={d.heroImage} alt={lang === 'fr' ? 'Tableau de résilience opérationnelle CORO' : 'CORO operational resilience dashboard'} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PROOF */}
-      <section className="res-proof">
-        <div className="res-container">
-          <div className="res-center">
-            <span className="res-kicker">{d.tag}</span>
-            <h2>{d.proofTitle}</h2>
-            <p>{d.proofIntro}</p>
-          </div>
-          <div className="res-highlights">
-            {d.highlights.map(item => (
-              <div className="res-highlight" key={item.number}>
-                <span className="res-highlight-num">{item.number}</span>
-                <h3>{item.title}</h3><p>{item.text}</p>
-              </div>
+      <PageSection tone="soft" labelledBy="resilience-loop-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="resilience-loop-title" label={t.loopLabel} heading={t.loopTitle}><p>{t.loopText}</p></EditorialBlock>
+          <div className={styles.loop}>
+            {t.loopGroups.map((group, gi) => (
+              <section key={group.name} aria-label={group.name}>
+                <h3>{group.name}</h3>
+                <ol>{group.steps.map((step, si) => <li key={step} data-n={String(offsets[gi] + si + 1).padStart(2, '0')}>{step}</li>)}</ol>
+              </section>
             ))}
           </div>
         </div>
-      </section>
+      </PageSection>
 
-      {/* SENTINELLE */}
-      <section className="res-section res-soft">
-        <div className="res-container res-grid">
-          <div className="res-copy">
-            <span className="res-kicker">{d.sentinelle.kicker}</span>
-            <h2>{d.sentinelle.title}</h2>
-            <p>{d.sentinelle.text}</p>
-            <ul className="res-list">{d.sentinelle.bullets.map(b => <li key={b}>{b}</li>)}</ul>
-          </div>
-          <div><img className="res-shot" src={d.sentinelle.image} alt={d.sentinelle.alt} loading="lazy" /></div>
+      <PageSection tone="white" labelledBy="resilience-highlights-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="resilience-highlights-title" heading={t.proofTitle} />
+          <ol className={styles.cards} aria-label={t.proofTitle}>{t.highlights.map((h) => <li key={h.title}><h3>{h.title}</h3><p>{h.text}</p></li>)}</ol>
         </div>
-      </section>
+      </PageSection>
 
-      {/* INDICE DE RÉSILIENCE */}
-      <section className="res-section res-dark">
-        <div className="res-container res-grid-rev">
-          <div><img className="res-shot" src={d.readiness.image} alt={d.readiness.alt} loading="lazy" /></div>
-          <div className="res-copy">
-            <span className="res-kicker">{d.readiness.kicker}</span>
-            <h2>{d.readiness.title}</h2>
-            <p>{d.readiness.text}</p>
-            <div className="res-components">
-              {d.readiness.components.map(c => (
-                <div className="res-component" key={c.label}>
-                  <div className="res-component-header">
-                    <span className="res-component-label">{c.label}</span>
-                    <span className="res-component-weight">{c.weight}</span>
-                  </div>
-                  <p>{c.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SUBSTITUTION */}
-      <section className="res-section res-white">
-        <div className="res-container res-grid">
-          <div className="res-copy">
-            <span className="res-kicker">{d.substitution.kicker}</span>
-            <h2>{d.substitution.title}</h2>
-            <p>{d.substitution.text}</p>
-            <ul className="res-list">{d.substitution.bullets.map(b => <li key={b}>{b}</li>)}</ul>
-          </div>
-          <div><img className="res-shot" src={d.substitution.image} alt={d.substitution.alt} loading="lazy" /></div>
-        </div>
-      </section>
-
-      {/* MODULE INCIDENT */}
-<section className="res-section res-dark2">
-  <div className="res-container res-grid-rev">
-
-    <div className="res-incident-visuals">
-
-      <div className="res-incident-card">
-        <img
-          src={d.incident.alertImage}
-          alt={d.incident.alertAlt}
-          loading="lazy"
-        />
-        <div className="res-incident-card-body">
-          <strong>{d.incident.alertCaption}</strong>
-          <p>{d.incident.alertDescription}</p>
-        </div>
-      </div>
-
-      <div className="res-incident-card res-incident-email">
-        <img
-          src={d.incident.emailImage}
-          alt={d.incident.emailAlt}
-          loading="lazy"
-        />
-        <div className="res-incident-card-body">
-          <strong>{d.incident.emailCaption}</strong>
-          <p>{d.incident.emailDescription}</p>
-        </div>
-      </div>
-
-    </div>
-
-    <div className="res-copy">
-      <span className="res-kicker">{d.incident.kicker}</span>
-      <h2>{d.incident.title}</h2>
-      <p>{d.incident.text}</p>
-
-      <ul className="res-list">
-        {d.incident.bullets.map(b => (
-          <li key={b}>{b}</li>
-        ))}
-      </ul>
-    </div>
-
-  </div>
-</section>
-
-      {/* RAPPORT */}
-      <section className="res-cycle">
-        <div className="res-container">
-          <div className="res-center">
-            <span className="res-kicker">{d.report.kicker}</span>
-            <h2>{d.report.title}</h2>
-            <p>{d.report.text}</p>
-          </div>
-          <div className="res-cycle-steps">
-            {d.report.steps.map(s => <div className="res-cycle-step" key={s}>{s}</div>)}
-          </div>
-          <div className="res-cycle-layout">
-            <div><img className="res-shot" src={d.report.image} alt={d.report.alt} loading="lazy" /></div>
-            <div className="res-cycle-cards">
-              {d.report.features.map(f => (
-                <div className="res-cycle-card" key={f.title}><h3>{f.title}</h3><p>{f.text}</p></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* INTELLIGENCE */}
-      <section className="res-section res-dark">
-        <div className="res-container res-grid">
-          <div className="res-copy">
-            <span className="res-kicker">{d.intel.kicker}</span>
-            <h2>{d.intel.title}</h2>
-            <p>{d.intel.text}</p>
-            <div className="res-intel-examples">
-              {d.intel.examples.map(e => <div className="res-intel-item" key={e}>{e}</div>)}
-            </div>
-          </div>
-          <div><img className="res-shot" src={d.intel.image} alt={d.intel.alt} loading="lazy" /></div>
-        </div>
-      </section>
-
-      {/* BOUCLE COMPLÈTE */}
-      <section className="res-loop">
-        <div className="res-container">
-          <span className="res-kicker" style={{ color: '#c0392b', background: 'rgba(192,57,43,.15)', padding: '6px 14px', borderRadius: 99 }}>{d.loop.kicker}</span>
-          <h2 style={{ marginTop: 12 }}>{d.loop.title}</h2>
-          <p>{d.loop.text}</p>
-          <div className="res-loop-steps">
-            {d.loop.steps.map((s, i) => (
-              <>
-                <div className="res-loop-step" key={s}>{s}</div>
-                {i < d.loop.steps.length - 1 && <div className="res-loop-arrow" key={`arrow-${i}`}>→</div>}
-              </>
+      <PageSection tone="soft" labelledBy="resilience-dims-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="resilience-dims-title" label={t.dimLabel} heading={t.dimTitle} />
+          <div className={styles.dims}>
+            {t.dims.map((d) => (
+              <section key={d.name} aria-label={d.name}>
+                <p className={styles.kicker}>{d.kicker}</p>
+                <h3>{d.name}</h3>
+                <p>{d.text}</p>
+                <ul>{d.items.map((item) => <li key={item}>{item}</li>)}</ul>
+                {d.link && <a href="/sentinelle">{d.link}<span aria-hidden="true"> →</span></a>}
+              </section>
             ))}
           </div>
         </div>
-      </section>
+      </PageSection>
 
-      {/* FAQ */}
-      <section className="res-faq">
-        <div className="res-container">
-          <div className="res-center">
-            <span className="res-kicker">FAQ</span>
-            <h2>{d.faqTitle}</h2>
-          </div>
-          <div className="res-faq-grid">
-            {d.faq.map(item => (
-              <div className="res-faq-item" key={item.q}><h3>{item.q}</h3><p>{item.a}</p></div>
+      <PageSection tone="navy" labelledBy="resilience-index-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="resilience-index-title" label={t.indexLabel} heading={t.indexTitle}><p>{t.indexText}</p></EditorialBlock>}
+          media={<div className={styles.stack}><p className={styles.dimLabel}>{t.componentsLabel}</p><dl className={styles.weights}>{t.components.map((c) => <div key={c.label}><dt>{c.label}</dt><dd className={styles.weight}>{c.weight}</dd><dd>{c.desc}</dd></div>)}</dl></div>} />
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="resilience-org-title">
+        <SplitContent order="media-text" ratio="4-8" align="start"
+          media={<div className={styles.stack}><div className={styles.pan} role="region" tabIndex={0} aria-label={t.panLabel}><MediaFrame kind="technical" src="/images/solutions/resilience/coro-organisation-urgence.webp" alt={t.orgAlt} ratio={1439 / 1093} sizes="(min-width: 68rem) 800px, 560px" cartouche={t.orgCartouche} /></div><div className={styles.legendBlock}><p className={styles.dimLabelInk}>{t.onScreen}</p><ul className={styles.legend}>{t.orgLegend.map((item) => <li key={item}>{item}</li>)}</ul></div></div>}
+          text={<div className={styles.stack}><EditorialBlock id="resilience-org-title" label={t.orgLabel} heading={t.orgTitle}><p>{t.orgText}</p></EditorialBlock><ul className={styles.plain}>{t.orgItems.map((item) => <li key={item}>{item}</li>)}</ul></div>} />
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="resilience-alert-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<div className={styles.stack}><EditorialBlock id="resilience-alert-title" label={t.alertLabel} heading={t.alertTitle}><p>{t.alertText}</p></EditorialBlock><div className={styles.legendBlock}><p className={styles.dimLabelInk}>{t.onScreen}</p><ul className={styles.legend}>{t.alertLegend.map((item) => <li key={item}>{item}</li>)}</ul></div></div>}
+          media={<div className={styles.pan} role="region" tabIndex={0} aria-label={t.panLabel}><MediaFrame kind="technical" src="/alert/coro-alerte-panique-courriel.webp" alt={t.alertAlt} ratio={784 / 734} sizes="(min-width: 68rem) 640px, 560px" cartouche={t.alertCartouche} /></div>} />
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="resilience-report-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="resilience-report-title" label={t.reportLabel} heading={t.reportTitle}><p>{t.reportText}</p></EditorialBlock>
+          <ul className={styles.notes}>{t.reportItems.map((item) => <li key={item.title}><h3>{item.title}</h3><p>{item.text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="resilience-intel-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="resilience-intel-title" label={t.intelLabel} heading={t.intelTitle}><p>{t.intelText}</p></EditorialBlock>}
+          media={<ul className={styles.recs}>{t.intelExamples.map(([level, text]) => <li key={text}><span>{level}</span>{text}</li>)}</ul>} />
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="resilience-platform-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="resilience-platform-title" label={t.platform} heading={t.platformTitle}><p>{t.platformLead}</p></EditorialBlock>
+          <ul className={styles.connect}>
+            {t.products.map((c) => (
+              <li key={c.name}><h3>{c.name}</h3><p>{c.text}</p><a href={localizedHref(c.href, l)} aria-label={`${t.explore} ${c.name}`}>{t.explore}<span aria-hidden="true"> →</span></a></li>
             ))}
-          </div>
+          </ul>
         </div>
-      </section>
+      </PageSection>
 
-      {/* FINAL */}
-      <section className="res-final">
-        <div className="res-container">
-          <h2>{d.finalTitle}</h2>
-          <p>{d.finalText}</p>
-          <div className="res-actions" style={{ justifyContent: 'center' }}>
-            <a href={lang === 'fr' ? '/#demo' : '/?lang=en#demo'} className="res-btn res-btn-primary">{d.primaryCta} →</a>
-            <a href="https://client.getcoro.io/login" className="res-btn res-btn-outline">{d.secondaryCta} →</a>
-          </div>
+      <PageSection tone="soft" labelledBy="resilience-faq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="resilience-faq-title" label={t.faq} heading={t.faqTitle} />
+          <Accordion label={t.faqTitle} items={t.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))} />
         </div>
-      </section>
+      </PageSection>
 
-      <div className="res-footer">
-        © 2026 CORO — {lang === 'fr' ? 'Tous droits réservés.' : 'All rights reserved.'} · NEQ 2282543935
-      </div>
-    </div>
+      <CTASection id="resilience-cta-title" tone="dark" label={t.label} statement={t.statement} support={t.support} primary={{ label: t.demo, href: demo }} secondary={{ label: t.access, href: LOGIN }} />
+    </V2Shell>
   );
 }

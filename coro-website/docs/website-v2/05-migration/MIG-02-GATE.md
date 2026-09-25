@@ -107,3 +107,12 @@ Aucune extraction n'est recommandée avant MIG-03.
 | J. Gouvernance des preuves | PASS WITH GO-LIVE ITEMS (blockers de provenance) |
 | K. Documentation de migration | PASS |
 | L. Intégrité du registre | PASS |
+
+## 8. Ajouts MIG-03A (`/resilience-operationnelle`)
+
+| Classe | Portée | Élément |
+|---|---|---|
+| BLOCKER | Résilience | PUBLICATION-BLOCKER — RESILIENCE SCREENSHOT DATA PROVENANCE : les deux captures conservées (`coro-organisation-urgence.webp`, `coro-alerte-panique-courriel.webp`) montrent des noms de personnes, un courriel, des numéros de téléphone, une organisation, un bâtiment et une adresse, non confirmés fictifs ou autorisés |
+| RECAPTURE | Résilience | Captures V1 à refaire si elles doivent servir : registre d'occupation (`coro-module-incident-types.webp`, jeton d'URL de borne visible), indice de résilience, alerte envoyée (canaux voix / application absents de l'UI actuelle), rapport d'incident (mention « ISO 22301 » incrustée) |
+| REVIEW | Résilience | Références normatives (ISO 22301, CNPI, CNESST, NFPA, CCOHS) et durées de conservation retirées du texte public (ISO 22301 est une norme de système de management certifiable au niveau de l'organisation) ; à réintroduire seulement après validation humaine ou juridique |
+| REVIEW | Résilience | Le lien `/sentinelle` mène à une page FR seulement (`en: false`), y compris depuis la page EN |

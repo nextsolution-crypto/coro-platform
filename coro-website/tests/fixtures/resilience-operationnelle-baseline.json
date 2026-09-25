@@ -1,0 +1,1211 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Résilience opérationnelle et gestion d'incidents — CORO | CORO",
+  "description": "CORO connecte vos plans d'urgence à la présence réelle dans le bâtiment. Indice de résilience temps réel, substitution automatique des rôles, module Incident avec procédures automatiques, rapports conformes ISO 22301 / CNPI 2020 / CNESST et boucle REX complète.",
+  "canonical": "https://getcoro.io/resilience-operationnelle",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/resilience-operationnelle"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/resilience-operationnelle?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/resilience-operationnelle"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/resilience-operationnelle",
+  "ogTitle": "Résilience opérationnelle et gestion d'incidents — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Vos plans d'urgence ne valent rien s'ils ne reflètent pas la réalité du terrain."
+   ],
+   [
+    "h2",
+    "Une plateforme qui sait qui est là et ce qu'il peut faire"
+   ],
+   [
+    "h3",
+    "Présence réelle"
+   ],
+   [
+    "h3",
+    "Indice CORO"
+   ],
+   [
+    "h3",
+    "Module Incident"
+   ],
+   [
+    "h3",
+    "Boucle REX"
+   ],
+   [
+    "h2",
+    "Savoir qui est présent est la première condition de toute résilience"
+   ],
+   [
+    "h2",
+    "Un score pondéré qui répond à une question simple : sommes-nous vraiment prêts maintenant ?"
+   ],
+   [
+    "h2",
+    "Le coordonnateur titulaire sort du bâtiment. Le substitut prend automatiquement le relais."
+   ],
+   [
+    "h2",
+    "Déclencher. Notifier. Mobiliser. Agir."
+   ],
+   [
+    "h2",
+    "Chaque incident génère un rapport conforme prêt pour inspection"
+   ],
+   [
+    "h3",
+    "Conforme ISO 22301"
+   ],
+   [
+    "h3",
+    "Conforme CNPI 2020"
+   ],
+   [
+    "h3",
+    "Conforme CNESST"
+   ],
+   [
+    "h3",
+    "Retour d'expérience (REX)"
+   ],
+   [
+    "h3",
+    "Export PDF en un clic"
+   ],
+   [
+    "h2",
+    "CORO détecte les lacunes avant qu'un incident survienne"
+   ],
+   [
+    "h2",
+    "Du plan à l'incident. De l'incident au plan amélioré."
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Comment CORO sait-il qui est dans le bâtiment ?"
+   ],
+   [
+    "h3",
+    "Que se passe-t-il si le coordonnateur quitte le bâtiment pendant la journée ?"
+   ],
+   [
+    "h3",
+    "Les SMS sont-ils inclus dans CORO ?"
+   ],
+   [
+    "h3",
+    "Peut-on déclencher un exercice sans notifier les vrais occupants ?"
+   ],
+   [
+    "h3",
+    "Le rapport PDF est-il vraiment conforme CNPI 2020 et ISO 22301 ?"
+   ],
+   [
+    "h3",
+    "Le module Incident fonctionne-t-il si plusieurs incidents surviennent simultanément ?"
+   ],
+   [
+    "h2",
+    "Un plan d'urgence ne vaut que s'il peut être exécuté par les bonnes personnes au bon moment."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/",
+    "← Accueil"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "EN"
+   ],
+   [
+    "/",
+    "getcoro.io"
+   ],
+   [
+    "/#demo",
+    "Demander une démo →"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Accéder au portail →"
+   ],
+   [
+    "/#demo",
+    "Demander une démo →"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Accéder au portail →"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-resilience-dashboard.webp",
+    "Tableau de résilience opérationnelle CORO"
+   ],
+   [
+    "http://localhost:3232/alert/coro-module-incident-types.webp",
+    "CORO Sentinelle — registre d’occupation en temps réel des employés, visiteurs et contracteurs"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-resilience-index.webp",
+    "Indice CORO de résilience opérationnelle — tableau de bord temps réel"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-organisation-urgence.webp",
+    "Organisation d'urgence dynamique CORO — substitution automatique des rôles"
+   ],
+   [
+    "http://localhost:3232/alert/coro-alerte-envoyee.webp",
+    "CORO — confirmation d’une alerte d’urgence envoyée aux contacts désignés"
+   ],
+   [
+    "http://localhost:3232/alert/coro-alerte-panique-courriel.webp",
+    "CORO — courriel d’alerte panique avec type d’incident, adresse et consigne pour le 911"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-rapport-incident.webp",
+    "Rapport d'incident CORO — 7 sections conformes ISO 22301 / CNPI 2020 / CNESST"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-intelligence-organisationnelle.webp",
+    "Intelligence organisationnelle CORO — recommandations proactives"
+   ]
+  ],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Vos plans d'urgence ne valent rien s'ils ne reflètent pas la réalité du terrain.",
+    "description": "CORO est la seule plateforme qui ferme la boucle complète : du plan d'urgence approuvé à la présence réelle, de l'indice de résilience au déclenchement d'incident, du rapport conforme ISO 22301 au retour d'expérience qui améliore le plan.",
+    "url": "https://getcoro.io/resilience-operationnelle",
+    "inLanguage": "fr-CA",
+    "isPartOf": {
+     "@type": "WebSite",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    },
+    "about": {
+     "@type": "SoftwareApplication",
+     "name": "CORO",
+     "applicationCategory": "BusinessApplication",
+     "operatingSystem": "Web",
+     "url": "https://getcoro.io"
+    },
+    "publisher": {
+     "@type": "Organization",
+     "name": "Coro Solutions Inc.",
+     "url": "https://getcoro.io",
+     "logo": {
+      "@type": "ImageObject",
+      "url": "https://getcoro.io/coro-logo.png"
+     }
+    }
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+     {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Accueil",
+      "item": "https://getcoro.io"
+     },
+     {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Résilience & Intervention",
+      "item": "https://getcoro.io/resilience-operationnelle"
+     }
+    ]
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "Comment CORO sait-il qui est dans le bâtiment ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Grâce à CORO Sentinelle : chaque employé dispose d'un PIN personnel et d'un QR code. Il scanne le QR de la borne à l'entrée et entre son PIN. Le système enregistre l'heure et met à jour le registre d'occupation en temps réel."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Que se passe-t-il si le coordonnateur quitte le bâtiment pendant la journée ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "CORO détecte immédiatement le punch OUT et active automatiquement le substitut configuré. La page Résilience est mise à jour en quelques secondes. Si aucun substitut n'est disponible, une alerte de lacune critique est générée."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Les SMS sont-ils inclus dans CORO ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. L'envoi de SMS via Brevo est intégré. Chaque membre de l'équipe d'urgence ayant fourni son consentement explicite reçoit un SMS simultanément au courriel lors du déclenchement d'un incident."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Peut-on déclencher un exercice sans notifier les vrais occupants ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le mode exercice intégré envoie des courriels et SMS préfixés [EXERCICE] à l'équipe d'urgence, mais ne notifie pas les occupants. Le rapport généré mentionne explicitement le mode exercice."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Le rapport PDF est-il vraiment conforme CNPI 2020 et ISO 22301 ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le rapport structuré en 7 sections couvre les exigences de traçabilité ISO 22301 (36 mois), la conservation des exercices CNPI 2020 (24 mois) et la documentation CNESST pour les incidents avec blessés (5 ans). Il est généré en un clic depuis l'historique des incidents."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Le module Incident fonctionne-t-il si plusieurs incidents surviennent simultanément ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. CORO supporte les incidents multiples simultanés. Chaque incident a son propre journal, sa propre checklist coordonnateur et son propre rapport — indépendants les uns des autres."
+      }
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "main": 0,
+   "header": 0,
+   "footer": 1,
+   "h1": 1
+  },
+  "mainText": ""
+ },
+ "en": {
+  "status": 200,
+  "title": "Operational Resilience & Incident Management — CORO | CORO",
+  "description": "CORO connects your emergency plans to real-time building presence. Real-time resilience index, automatic role substitution, incident module with automatic procedures, ISO 22301 / NFPA 2020 / CCOHS compliant reports and full REX cycle.",
+  "canonical": "https://getcoro.io/resilience-operationnelle?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/resilience-operationnelle"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/resilience-operationnelle?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/resilience-operationnelle"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/resilience-operationnelle?lang=en",
+  "ogTitle": "Operational Resilience & Incident Management — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Your emergency plans are only as good as the people available to execute them."
+   ],
+   [
+    "h2",
+    "A platform that knows who is there and what they can do"
+   ],
+   [
+    "h3",
+    "Real presence"
+   ],
+   [
+    "h3",
+    "CORO Index"
+   ],
+   [
+    "h3",
+    "Incident Module"
+   ],
+   [
+    "h3",
+    "REX Loop"
+   ],
+   [
+    "h2",
+    "Knowing who is present is the first condition of any resilience"
+   ],
+   [
+    "h2",
+    "A weighted score that answers one simple question: are we actually ready right now?"
+   ],
+   [
+    "h2",
+    "The lead coordinator leaves the building. The alternate automatically takes over."
+   ],
+   [
+    "h2",
+    "Activate. Notify. Mobilize. Respond."
+   ],
+   [
+    "h2",
+    "Every incident generates a compliant report ready for inspection"
+   ],
+   [
+    "h3",
+    "ISO 22301 compliant"
+   ],
+   [
+    "h3",
+    "NFPA 2020 compliant"
+   ],
+   [
+    "h3",
+    "CCOHS compliant"
+   ],
+   [
+    "h3",
+    "Lessons learned (REX)"
+   ],
+   [
+    "h3",
+    "One-click PDF export"
+   ],
+   [
+    "h2",
+    "CORO identifies gaps before an incident occurs"
+   ],
+   [
+    "h2",
+    "From plan to incident. From incident to improved plan."
+   ],
+   [
+    "h2",
+    "Frequently asked questions"
+   ],
+   [
+    "h3",
+    "How does CORO know who is in the building?"
+   ],
+   [
+    "h3",
+    "What happens if the coordinator leaves the building during the day?"
+   ],
+   [
+    "h3",
+    "Is SMS included in CORO?"
+   ],
+   [
+    "h3",
+    "Can we run a drill without notifying real occupants?"
+   ],
+   [
+    "h3",
+    "Is the PDF report actually compliant with NFPA 2020 and ISO 22301?"
+   ],
+   [
+    "h3",
+    "Does the Incident Module work if multiple incidents occur simultaneously?"
+   ],
+   [
+    "h2",
+    "An emergency plan is only worth its value if the right people can execute it at the right time."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Product"
+   ],
+   [
+    "h4",
+    "Company"
+   ],
+   [
+    "h4",
+    "Legal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CORO"
+   ],
+   [
+    "/?lang=en",
+    "← Home"
+   ],
+   [
+    "/resilience-operationnelle",
+    "FR"
+   ],
+   [
+    "/?lang=en",
+    "getcoro.io"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo →"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Access the portal →"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo →"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Access the portal →"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Features"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Advisor login"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Client portal"
+   ],
+   [
+    "/about?lang=en",
+    "About us"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral Program"
+   ],
+   [
+    "/blog",
+    "Blog"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact us"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Learn more"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-resilience-dashboard.webp",
+    "CORO operational resilience dashboard"
+   ],
+   [
+    "http://localhost:3232/alert/coro-module-incident-types.webp",
+    "CORO Sentinel — real-time occupancy register for employees, visitors and contractors"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-resilience-index.webp",
+    "CORO operational resilience index — real-time dashboard"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-organisation-urgence.webp",
+    "CORO dynamic emergency organization — automatic role substitution"
+   ],
+   [
+    "http://localhost:3232/alert/coro-alerte-envoyee.webp",
+    "CORO — confirmation that an emergency alert was sent to designated contacts"
+   ],
+   [
+    "http://localhost:3232/alert/coro-alerte-panique-courriel.webp",
+    "CORO — panic alert email with incident type, building address and 911 instructions"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-rapport-incident.webp",
+    "CORO incident report — 7 sections compliant with ISO 22301 / NFPA 2020 / CCOHS"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-intelligence-organisationnelle.webp",
+    "CORO organizational intelligence — proactive recommendations"
+   ]
+  ],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Your emergency plans are only as good as the people available to execute them.",
+    "description": "CORO is the only platform that closes the complete loop: from the approved emergency plan to real-time building presence, from the resilience index to incident activation, from the ISO 22301-compliant report to the lessons learned that improve the plan.",
+    "url": "https://getcoro.io/resilience-operationnelle?lang=en",
+    "inLanguage": "en-CA",
+    "isPartOf": {
+     "@type": "WebSite",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    },
+    "about": {
+     "@type": "SoftwareApplication",
+     "name": "CORO",
+     "applicationCategory": "BusinessApplication",
+     "operatingSystem": "Web",
+     "url": "https://getcoro.io"
+    },
+    "publisher": {
+     "@type": "Organization",
+     "name": "Coro Solutions Inc.",
+     "url": "https://getcoro.io",
+     "logo": {
+      "@type": "ImageObject",
+      "url": "https://getcoro.io/coro-logo.png"
+     }
+    }
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+     {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://getcoro.io/?lang=en"
+     },
+     {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resilience & Incident Response",
+      "item": "https://getcoro.io/resilience-operationnelle?lang=en"
+     }
+    ]
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "How does CORO know who is in the building?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Through CORO Sentinel: each employee has a personal PIN and QR code. They scan the kiosk QR at entry and enter their PIN. The system records the time and updates the occupancy register in real time."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "What happens if the coordinator leaves the building during the day?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "CORO immediately detects the check-out and automatically activates the configured alternate. The Resilience page updates within seconds. If no alternate is available, a critical gap alert is generated."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Is SMS included in CORO?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Yes. SMS sending via Brevo is integrated. Each emergency team member who has provided explicit consent receives an SMS simultaneously with the email when an incident is triggered."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Can we run a drill without notifying real occupants?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Yes. The built-in exercise mode sends emails and SMS prefixed with [EXERCISE] to the emergency team, but does not notify occupants. The generated report explicitly mentions exercise mode."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Is the PDF report actually compliant with NFPA 2020 and ISO 22301?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Yes. The 7-section structured report covers ISO 22301 traceability requirements (36 months), NFPA 2020 drill retention (24 months) and CCOHS documentation for incidents with injuries (5 years). It is generated in one click from the incident history."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Does the Incident Module work if multiple incidents occur simultaneously?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Yes. CORO supports multiple simultaneous incidents. Each incident has its own log, coordinator checklist and report — fully independent from one another."
+      }
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "main": 0,
+   "header": 0,
+   "footer": 1,
+   "h1": 1
+  },
+  "mainText": ""
+ },
+ "ref": {
+  "status": 200,
+  "title": "Résilience opérationnelle et gestion d'incidents — CORO | CORO",
+  "description": "CORO connecte vos plans d'urgence à la présence réelle dans le bâtiment. Indice de résilience temps réel, substitution automatique des rôles, module Incident avec procédures automatiques, rapports conformes ISO 22301 / CNPI 2020 / CNESST et boucle REX complète.",
+  "canonical": "https://getcoro.io/resilience-operationnelle",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/resilience-operationnelle"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/resilience-operationnelle?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/resilience-operationnelle"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/resilience-operationnelle",
+  "ogTitle": "Résilience opérationnelle et gestion d'incidents — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Vos plans d'urgence ne valent rien s'ils ne reflètent pas la réalité du terrain."
+   ],
+   [
+    "h2",
+    "Une plateforme qui sait qui est là et ce qu'il peut faire"
+   ],
+   [
+    "h3",
+    "Présence réelle"
+   ],
+   [
+    "h3",
+    "Indice CORO"
+   ],
+   [
+    "h3",
+    "Module Incident"
+   ],
+   [
+    "h3",
+    "Boucle REX"
+   ],
+   [
+    "h2",
+    "Savoir qui est présent est la première condition de toute résilience"
+   ],
+   [
+    "h2",
+    "Un score pondéré qui répond à une question simple : sommes-nous vraiment prêts maintenant ?"
+   ],
+   [
+    "h2",
+    "Le coordonnateur titulaire sort du bâtiment. Le substitut prend automatiquement le relais."
+   ],
+   [
+    "h2",
+    "Déclencher. Notifier. Mobiliser. Agir."
+   ],
+   [
+    "h2",
+    "Chaque incident génère un rapport conforme prêt pour inspection"
+   ],
+   [
+    "h3",
+    "Conforme ISO 22301"
+   ],
+   [
+    "h3",
+    "Conforme CNPI 2020"
+   ],
+   [
+    "h3",
+    "Conforme CNESST"
+   ],
+   [
+    "h3",
+    "Retour d'expérience (REX)"
+   ],
+   [
+    "h3",
+    "Export PDF en un clic"
+   ],
+   [
+    "h2",
+    "CORO détecte les lacunes avant qu'un incident survienne"
+   ],
+   [
+    "h2",
+    "Du plan à l'incident. De l'incident au plan amélioré."
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Comment CORO sait-il qui est dans le bâtiment ?"
+   ],
+   [
+    "h3",
+    "Que se passe-t-il si le coordonnateur quitte le bâtiment pendant la journée ?"
+   ],
+   [
+    "h3",
+    "Les SMS sont-ils inclus dans CORO ?"
+   ],
+   [
+    "h3",
+    "Peut-on déclencher un exercice sans notifier les vrais occupants ?"
+   ],
+   [
+    "h3",
+    "Le rapport PDF est-il vraiment conforme CNPI 2020 et ISO 22301 ?"
+   ],
+   [
+    "h3",
+    "Le module Incident fonctionne-t-il si plusieurs incidents surviennent simultanément ?"
+   ],
+   [
+    "h2",
+    "Un plan d'urgence ne vaut que s'il peut être exécuté par les bonnes personnes au bon moment."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/",
+    "← Accueil"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "EN"
+   ],
+   [
+    "/",
+    "getcoro.io"
+   ],
+   [
+    "/#demo",
+    "Demander une démo →"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Accéder au portail →"
+   ],
+   [
+    "/#demo",
+    "Demander une démo →"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Accéder au portail →"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-resilience-dashboard.webp",
+    "Tableau de résilience opérationnelle CORO"
+   ],
+   [
+    "http://localhost:3232/alert/coro-module-incident-types.webp",
+    "CORO Sentinelle — registre d’occupation en temps réel des employés, visiteurs et contracteurs"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-resilience-index.webp",
+    "Indice CORO de résilience opérationnelle — tableau de bord temps réel"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-organisation-urgence.webp",
+    "Organisation d'urgence dynamique CORO — substitution automatique des rôles"
+   ],
+   [
+    "http://localhost:3232/alert/coro-alerte-envoyee.webp",
+    "CORO — confirmation d’une alerte d’urgence envoyée aux contacts désignés"
+   ],
+   [
+    "http://localhost:3232/alert/coro-alerte-panique-courriel.webp",
+    "CORO — courriel d’alerte panique avec type d’incident, adresse et consigne pour le 911"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-rapport-incident.webp",
+    "Rapport d'incident CORO — 7 sections conformes ISO 22301 / CNPI 2020 / CNESST"
+   ],
+   [
+    "http://localhost:3232/images/solutions/resilience/coro-intelligence-organisationnelle.webp",
+    "Intelligence organisationnelle CORO — recommandations proactives"
+   ]
+  ],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Vos plans d'urgence ne valent rien s'ils ne reflètent pas la réalité du terrain.",
+    "description": "CORO est la seule plateforme qui ferme la boucle complète : du plan d'urgence approuvé à la présence réelle, de l'indice de résilience au déclenchement d'incident, du rapport conforme ISO 22301 au retour d'expérience qui améliore le plan.",
+    "url": "https://getcoro.io/resilience-operationnelle",
+    "inLanguage": "fr-CA",
+    "isPartOf": {
+     "@type": "WebSite",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    },
+    "about": {
+     "@type": "SoftwareApplication",
+     "name": "CORO",
+     "applicationCategory": "BusinessApplication",
+     "operatingSystem": "Web",
+     "url": "https://getcoro.io"
+    },
+    "publisher": {
+     "@type": "Organization",
+     "name": "Coro Solutions Inc.",
+     "url": "https://getcoro.io",
+     "logo": {
+      "@type": "ImageObject",
+      "url": "https://getcoro.io/coro-logo.png"
+     }
+    }
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+     {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Accueil",
+      "item": "https://getcoro.io"
+     },
+     {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Résilience & Intervention",
+      "item": "https://getcoro.io/resilience-operationnelle"
+     }
+    ]
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "Comment CORO sait-il qui est dans le bâtiment ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Grâce à CORO Sentinelle : chaque employé dispose d'un PIN personnel et d'un QR code. Il scanne le QR de la borne à l'entrée et entre son PIN. Le système enregistre l'heure et met à jour le registre d'occupation en temps réel."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Que se passe-t-il si le coordonnateur quitte le bâtiment pendant la journée ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "CORO détecte immédiatement le punch OUT et active automatiquement le substitut configuré. La page Résilience est mise à jour en quelques secondes. Si aucun substitut n'est disponible, une alerte de lacune critique est générée."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Les SMS sont-ils inclus dans CORO ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. L'envoi de SMS via Brevo est intégré. Chaque membre de l'équipe d'urgence ayant fourni son consentement explicite reçoit un SMS simultanément au courriel lors du déclenchement d'un incident."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Peut-on déclencher un exercice sans notifier les vrais occupants ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le mode exercice intégré envoie des courriels et SMS préfixés [EXERCICE] à l'équipe d'urgence, mais ne notifie pas les occupants. Le rapport généré mentionne explicitement le mode exercice."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Le rapport PDF est-il vraiment conforme CNPI 2020 et ISO 22301 ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le rapport structuré en 7 sections couvre les exigences de traçabilité ISO 22301 (36 mois), la conservation des exercices CNPI 2020 (24 mois) et la documentation CNESST pour les incidents avec blessés (5 ans). Il est généré en un clic depuis l'historique des incidents."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Le module Incident fonctionne-t-il si plusieurs incidents surviennent simultanément ?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. CORO supporte les incidents multiples simultanés. Chaque incident a son propre journal, sa propre checklist coordonnateur et son propre rapport — indépendants les uns des autres."
+      }
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "main": 0,
+   "header": 0,
+   "footer": 1,
+   "h1": 1
+  },
+  "mainText": ""
+ }
+}
