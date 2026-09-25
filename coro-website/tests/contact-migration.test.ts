@@ -13,9 +13,9 @@ const page = read('app/contact/page.tsx');
 const form = read('app/DemoForm.tsx');
 
 test('the registry holds exactly /about and /contact; /contact has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners']);
   assert.equal(isLegacyFooterVisible('/contact'), false);
-  assert.equal(isLegacyFooterVisible('/partners'), true);
+  assert.equal(isLegacyFooterVisible('/programme-recommandation'), true);
   assert.equal(isLegacyFooterVisible('/'), true);
 });
 
@@ -86,8 +86,8 @@ test('metadata: unchanged meaning, no double branding, canonical and alternates 
 });
 
 test('accessibility structure: one h1, form panel is a labelled section, decorative icons removed, no FUTURE route linked', () => {
-  assert.equal((page.match(/<h1\b/g) ?? []).length, 1);
-  assert.match(page, /labelledBy="contact-title"/);
+  assert.match(page, /<EditorialHero id="contact-title"/);
+  assert.equal((page.match(/<h1\b/g) ?? []).length, 0, 'the single h1 is rendered by EditorialHero');
   assert.match(page, /labelledBy="contact-form-title"/);
   assert.doesNotMatch(page, /lucide-react/);
   assert.doesNotMatch(page, /coro-incident|coro-exercices|\/guides|\/plateforme['"`]/);

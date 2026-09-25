@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import DemoForm from '@/app/DemoForm';
 import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
 import { PageSection } from '@/components/page/PageSection';
 import { SplitContent } from '@/components/page/SplitContent';
 import { V2Shell } from '@/components/site/V2Shell';
@@ -26,13 +27,7 @@ export default async function Page({ searchParams }: Props) {
   const t = copy[locale];
   return (
     <V2Shell locale={locale} pathname="/contact">
-      <PageSection tone="white" labelledBy="contact-title">
-        <div className={styles.hero}>
-          <p className={styles.heroLabel}>Contact</p>
-          <h1 id="contact-title" className={styles.heroTitle}>{t.h1}</h1>
-          <p className={styles.heroLead}>{t.intro}</p>
-        </div>
-      </PageSection>
+      <EditorialHero id="contact-title" label="Contact" title={t.h1} lead={t.intro} density="standard" narrow />
 
       <PageSection tone="soft" labelledBy="contact-form-title">
         <SplitContent

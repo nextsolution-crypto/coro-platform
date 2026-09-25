@@ -1,0 +1,20 @@
+/* EditorialHero — V1 tokens only. Colours come from the surrounding PageSection (--ink, --muted, --accent, --line). */
+.hero { display: grid; gap: var(--coro-v1-space-6); max-inline-size: 60rem; }
+.hero[data-narrow="true"] { max-inline-size: 52rem; }
+.label { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.title { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-display-l); font-weight: 850; line-height: 1.04; letter-spacing: -.035em; text-wrap: balance; }
+.title span { display: block; }
+.lead { margin: 0; max-inline-size: 54ch; color: var(--ink); font-size: var(--coro-v1-text-body-l); line-height: 1.6; }
+.detail { margin: 0; max-inline-size: 54ch; color: var(--muted); line-height: 1.7; }
+.signature { margin: 0; padding-block-start: var(--coro-v1-space-4); border-block-start: 1px solid var(--line); color: var(--muted); font-size: var(--coro-v1-text-small); font-weight: 650; letter-spacing: .04em; max-inline-size: 30rem; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
+
+/* Narrow screens: the section's generous top padding is desktop composition, so a compact opening starts sooner. */
+@media (max-width: 40rem) {
+  .hero[data-compact="true"] { margin-block-start: calc(-1 * var(--coro-v1-space-12)); }
+}
+/* Two actions that no longer fit comfortably side by side stack, full width. */
+@media (max-width: 30rem) {
+  .actions { flex-direction: column; align-items: stretch; }
+  .actions > * { inline-size: 100%; justify-content: center; text-align: center; }
+}

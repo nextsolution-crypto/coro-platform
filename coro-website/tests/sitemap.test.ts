@@ -87,7 +87,7 @@ test('PUBLISH-NOW routes that do not exist yet (/guides, /coro-incident) are exc
 });
 
 test('publication status is independent from implementation and from V2 migration', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners']);
   assert.ok(publicRoutes.some((r) => r.publication === 'PUBLISH-NOW' && r.implemented), 'published and implemented, yet not V2 migrated');
   assert.ok(publicRoutes.some((r) => r.publication === 'PUBLISH-NOW' && !r.implemented), 'published target, not implemented');
   assert.ok(!('v2Migrated' in publicRoutes[0]) && !('migrated' in publicRoutes[0]), 'the route registry does not own migration state');

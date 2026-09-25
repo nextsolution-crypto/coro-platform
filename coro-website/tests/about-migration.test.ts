@@ -14,7 +14,7 @@ const view = read('app/about/AboutV2.tsx');
 const page = read('app/about/page.tsx');
 
 test('/about is a migrated route (with /contact) and has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners']);
   assert.equal(isLegacyFooterVisible('/about'), false);
   assert.equal(isLegacyFooterVisible('/about?lang=en'), false);
 });
@@ -99,8 +99,8 @@ test('links: original in-page destinations are preserved, the broken /#features 
 });
 
 test('accessibility structure: one h1, labelled sections, no decorative-icon dependency', () => {
-  assert.equal((view.match(/<h1\b/g) ?? []).length, 1);
-  assert.match(view, /labelledBy="about-title"/);
+  assert.match(view, /<EditorialHero id="about-title"/);
+  assert.equal((view.match(/<h1\b/g) ?? []).length, 0, 'the single h1 is rendered by EditorialHero');
   assert.doesNotMatch(view, /lucide-react/, 'no icon libraries required for meaning');
 });
 

@@ -1,0 +1,8 @@
+/* /partners — V1 tokens only; the opening is the shared EditorialHero. */
+.list { list-style: none; margin: 0; padding: 0; counter-reset: item; border-block-start: 1px solid var(--line); max-inline-size: 46ch; }
+.list li { counter-increment: item; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: baseline; gap: var(--coro-v1-space-3); padding-block: .9rem; border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.list li::before { content: counter(item, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+.list h3 { margin: 0; font: inherit; }
+.stack { display: grid; gap: var(--coro-v1-space-6); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
+@media (max-width: 30rem) { .actions > * { inline-size: 100%; justify-content: center; text-align: center; } }

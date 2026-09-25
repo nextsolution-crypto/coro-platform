@@ -1,6 +1,7 @@
 import { Continuum } from '@/components/flow/Continuum';
 import { CTASection } from '@/components/conversion/CTASection';
 import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
 import { FeatureIndex } from '@/components/page/FeatureIndex';
 import { PageSection } from '@/components/page/PageSection';
 import { SplitContent } from '@/components/page/SplitContent';
@@ -23,19 +24,7 @@ export function AboutV2({ locale, content: t }: { locale: Locale; content: About
   const continuum = flowCopy[locale].continuum;
   return (
     <>
-      <PageSection tone="white" density="immersive" labelledBy="about-title">
-        <div className={styles.hero}>
-          <p className={styles.heroLabel}>{t.hero.eyebrow}</p>
-          <h1 id="about-title" className={styles.heroTitle}>{t.hero.title.split('\n').map((line) => <span key={line}>{line}</span>)}</h1>
-          <p className={styles.heroLead}>{t.hero.intro}</p>
-          <p className={styles.heroDetail}>{t.hero.detail}</p>
-          <p className={styles.heroSignature}>{t.hero.signature}</p>
-          <div className={styles.actions}>
-            <Button href="#about-vision">{t.hero.primary}</Button>
-            <Button href={demo} variant="ghost">{t.hero.secondary}</Button>
-          </div>
-        </div>
-      </PageSection>
+      <EditorialHero id="about-title" label={t.hero.eyebrow} title={t.hero.title.split('\n')} lead={t.hero.intro} detail={t.hero.detail} signature={t.hero.signature} compactTop actions={<><Button href="#about-vision">{t.hero.primary}</Button><Button href={demo} variant="ghost">{t.hero.secondary}</Button></>} />
 
       <PageSection tone="soft" labelledBy="about-why-title">
         <SplitContent ratio="7-5" text={<EditorialBlock id="about-why-title" label={t.why.eyebrow} heading={t.why.title}>{t.why.paragraphs.map((p) => <p key={p}>{p}</p>)}<p><strong>{t.why.conclusion}</strong></p></EditorialBlock>} media={<Sequence items={t.why.sequence} label={t.why.eyebrow} />} />

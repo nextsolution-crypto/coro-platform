@@ -1,0 +1,818 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Partenaires CORO | CORO",
+  "description": "Découvrez l’écosystème de partenaires CORO pour les professionnels du bâtiment, de la sécurité et de la résilience.",
+  "canonical": "https://getcoro.io/partners",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/partners"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/partners?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/partners"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/partners",
+  "ogTitle": "Partenaires CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Un écosystème qui relie expertise et opérations."
+   ],
+   [
+    "h2",
+    "À qui s’adresse cet écosystème?"
+   ],
+   [
+    "h3",
+    "Consultants et firmes-conseils"
+   ],
+   [
+    "h3",
+    "Professionnels en sécurité incendie et mesures d’urgence"
+   ],
+   [
+    "h3",
+    "Gestionnaires immobiliers et spécialistes du risque"
+   ],
+   [
+    "h3",
+    "Intégrateurs et fournisseurs de solutions complémentaires"
+   ],
+   [
+    "h2",
+    "Un cadre adapté à chaque collaboration"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/partners?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/contact",
+    "Discuter d’une collaboration"
+   ],
+   [
+    "/programme-recommandation",
+    "Voir le programme de recommandation"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/partners?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Partenaires CORO Un écosystème qui relie expertise et opérations. CORO collabore avec les professionnels qui accompagnent les organisations dans la sécurité incendie, les mesures d’urgence, la continuité, la gestion immobilière et la résilience. Discuter d’une collaboration À qui s’adresse cet écosystème? 01 Consultants et firmes-conseils 02 Professionnels en sécurité incendie et mesures d’urgence 03 Gestionnaires immobiliers et spécialistes du risque 04 Intégrateurs et fournisseurs de solutions complémentaires Écosystème CORO Un cadre adapté à chaque collaboration Recommandation, accompagnement, intégration ou revente peuvent être envisagés selon le contexte et doivent faire l’objet d’une entente écrite. Voir le programme de recommandation 01 Expertise 02 Collaboration 03 Valeur pour l’organisation"
+ },
+ "en": {
+  "status": 200,
+  "title": "CORO Partners | CORO",
+  "description": "Discover the CORO partner ecosystem for building, safety and resilience professionals.",
+  "canonical": "https://getcoro.io/partners?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/partners"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/partners?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/partners"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/partners?lang=en",
+  "ogTitle": "CORO Partners",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "An ecosystem connecting expertise and operations."
+   ],
+   [
+    "h2",
+    "Who is this ecosystem for?"
+   ],
+   [
+    "h3",
+    "Consultants and advisory firms"
+   ],
+   [
+    "h3",
+    "Fire safety and emergency management professionals"
+   ],
+   [
+    "h3",
+    "Property managers and risk specialists"
+   ],
+   [
+    "h3",
+    "Integrators and complementary solution providers"
+   ],
+   [
+    "h2",
+    "A framework suited to each collaboration"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/partners",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/contact?lang=en",
+    "Discuss a collaboration"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "View the referral program"
+   ],
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/partners",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "CORO Partners An ecosystem connecting expertise and operations. CORO works with professionals supporting organizations in fire safety, emergency management, continuity, property management and resilience. Discuss a collaboration Who is this ecosystem for? 01 Consultants and advisory firms 02 Fire safety and emergency management professionals 03 Property managers and risk specialists 04 Integrators and complementary solution providers CORO ecosystem A framework suited to each collaboration Referral, advisory, integration or resale relationships may be considered depending on context and require a written agreement. View the referral program 01 Expertise 02 Collaboration 03 Value for the organization"
+ },
+ "fr-ref": {
+  "status": 200,
+  "title": "Partenaires CORO | CORO",
+  "description": "Découvrez l’écosystème de partenaires CORO pour les professionnels du bâtiment, de la sécurité et de la résilience.",
+  "canonical": "https://getcoro.io/partners",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/partners"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/partners?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/partners"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/partners",
+  "ogTitle": "Partenaires CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Un écosystème qui relie expertise et opérations."
+   ],
+   [
+    "h2",
+    "À qui s’adresse cet écosystème?"
+   ],
+   [
+    "h3",
+    "Consultants et firmes-conseils"
+   ],
+   [
+    "h3",
+    "Professionnels en sécurité incendie et mesures d’urgence"
+   ],
+   [
+    "h3",
+    "Gestionnaires immobiliers et spécialistes du risque"
+   ],
+   [
+    "h3",
+    "Intégrateurs et fournisseurs de solutions complémentaires"
+   ],
+   [
+    "h2",
+    "Un cadre adapté à chaque collaboration"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/partners?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/contact",
+    "Discuter d’une collaboration"
+   ],
+   [
+    "/programme-recommandation",
+    "Voir le programme de recommandation"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/partners?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Partenaires CORO Un écosystème qui relie expertise et opérations. CORO collabore avec les professionnels qui accompagnent les organisations dans la sécurité incendie, les mesures d’urgence, la continuité, la gestion immobilière et la résilience. Discuter d’une collaboration À qui s’adresse cet écosystème? 01 Consultants et firmes-conseils 02 Professionnels en sécurité incendie et mesures d’urgence 03 Gestionnaires immobiliers et spécialistes du risque 04 Intégrateurs et fournisseurs de solutions complémentaires Écosystème CORO Un cadre adapté à chaque collaboration Recommandation, accompagnement, intégration ou revente peuvent être envisagés selon le contexte et doivent faire l’objet d’une entente écrite. Voir le programme de recommandation 01 Expertise 02 Collaboration 03 Valeur pour l’organisation"
+ }
+}

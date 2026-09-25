@@ -1,9 +1,5 @@
-/* /contact — MIG-01B. V1 tokens only. The opening is the same local stand-in as /about for the unbuilt HeroMinimal (D-08).
+/* /contact — V1 tokens only (the opening is the shared EditorialHero).
    DemoForm is the production form and keeps its own inline styling; only the layout around it is defined here. */
-.hero { display: grid; gap: var(--coro-v1-space-6); max-inline-size: 52rem; }
-.heroLabel { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
-.heroTitle { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-display-l); font-weight: 850; line-height: 1.04; letter-spacing: -.035em; text-wrap: balance; }
-.heroLead { margin: 0; max-inline-size: 54ch; color: var(--ink); font-size: var(--coro-v1-text-body-l); line-height: 1.6; }
 
 /* The form is the primary action: an open panel with a hairline, not a floating card. */
 .formPanel { display: grid; gap: var(--coro-v1-space-6); padding: clamp(1rem, 3vw, 2rem); background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); min-inline-size: 0; }
