@@ -1,0 +1,28 @@
+/* /gestion-documentaire — V1 tokens only. Hero, sections, media, index, accordion and CTA come from the component library. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+
+/* The lifecycle: short titled steps in order (same pattern as the About sequence). */
+.sequence { list-style: none; margin: 0; padding: 0; counter-reset: seq; border-block-start: 1px solid var(--line); max-inline-size: 46ch; }
+.sequence li { counter-increment: seq; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: baseline; gap: var(--coro-v1-space-3); padding-block: .7rem; border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.sequence li::before { content: counter(seq, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+
+/* Documents: an index with an explicit availability word (never colour alone). Phase 2 rows are visibly secondary. */
+.docs { list-style: none; margin: 0; padding: 0; border-block-start: 1px solid var(--line); }
+.docs li { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) auto; grid-template-areas: "code name status" "code guide status"; gap: .15rem var(--coro-v1-space-4); align-items: baseline; padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.code { grid-area: code; color: var(--accent); font-size: var(--coro-v1-text-small); font-weight: 800; letter-spacing: .08em; }
+.name { grid-area: name; color: var(--ink); font-weight: 700; }
+.status { grid-area: status; padding: .15rem .6rem; border: 1px solid var(--line); border-radius: var(--coro-v1-radius-pill); color: var(--ink); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.docs li[data-available="false"] .name, .docs li[data-available="false"] .code { color: var(--muted); }
+.docs li[data-available="false"] .status { border-style: dashed; color: var(--muted); }
+.guide { grid-area: guide; justify-self: start; color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: .2em; font-size: var(--coro-v1-text-small); }
+@media (max-width: 40rem) {
+  .docs li { grid-template-columns: 3.5rem minmax(0, 1fr); grid-template-areas: "code name" "code status" "code guide"; }
+  .status { justify-self: start; }
+}
+
+/* Connected product pages. */
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }

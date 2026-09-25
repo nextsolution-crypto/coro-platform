@@ -12,9 +12,9 @@ const baseline = JSON.parse(read('tests/fixtures/partners-baseline.json')) as Ba
 const page = read('app/partners/page.tsx');
 
 test('the registry holds exactly /about, /contact and /partners; /partners has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire']);
   assert.equal(isLegacyFooterVisible('/partners'), false);
-  assert.equal(isLegacyFooterVisible('/gestion-documentaire'), true);
+  assert.equal(isLegacyFooterVisible('/gestion-de-projets'), true);
   assert.equal(isLegacyFooterVisible('/'), true);
 });
 

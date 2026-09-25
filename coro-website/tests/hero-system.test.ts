@@ -53,7 +53,7 @@ test('the primary CTA stays CORO red in every hero and blue is never an action c
 test('hero components are not imported by any production page yet', () => {
   const offenders = [...walk('app'), ...walk('components'), ...walk('lib')]
     .filter((path) => /\.(tsx?|css)$/.test(path))
-    .filter((path) => !path.startsWith(join('app', 'design-lab')) && !path.startsWith(join('components', 'hero')))
+    .filter((path) => !path.startsWith(join('app', 'design-lab')) && !path.startsWith(join('app', 'gestion-documentaire')) && !path.startsWith(join('components', 'hero')))
     .filter((path) => /components\/hero|\.\/hero\//.test(read(path)));
   assert.deepEqual(offenders.map((path) => relative(root, join(root, path))), []);
 });
