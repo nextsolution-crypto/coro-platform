@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CapacityService } from '../mandate/capacity.service';
 import { SchedulingService, bookingInterval, overlaps } from '../scheduling/scheduling.service';
@@ -9,6 +9,7 @@ import { scheduleRanges } from '../work-schedules/work-schedule-time';
 import { CreatePlanningActivityDto, PlanningActionsDto, PlanningContextDto, PlanningTeamPreviewDto, PlanningWindowDto } from './planning.dto';
 import { projectAccessWhere } from '../auth/project-access';
 import { isOperationalActivityAudit } from './planning-activity-history';
+import { ActivityTaskListsService } from '../activities/activity-task-lists.service';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const DAY = 86_400_000;
@@ -60,7 +61,8 @@ function activityInterval(activity: any) {
 @Injectable()
 export class PlanningService {
   constructor(private readonly prisma: PrismaService, private readonly scheduling: SchedulingService,
-    private readonly capacity: CapacityService) {}
+    private readonly capacity: CapacityService,
+    @Optional() private readonly activityTaskLists?: ActivityTaskListsService) {}
 
   async context(query: PlanningContextDto, actor: Actor) {
     staff(actor);
@@ -124,6 +126,8 @@ export class PlanningService {
         customLabel, notes: dto.notes?.trim() || null, scheduledDate: null,
         status: 'a_faire', sourceMandate: true, clientVisible, clientBookable,
       } });
+      if (!this.activityTaskLists) throw new Error('ActivityTaskListsService indisponible');
+      await this.activityTaskLists.instantiateMissingTaskListsForActivity(tx, project.id, activity.id, actor);
       await tx.auditLog.create({ data: {
         action: 'PLANNING_ACTIVITY_CREATED', entityType: 'ProjectActivity', entityId: activity.id,
         projectId: project.id, description: 'Activite creee depuis le Planner et ajoutee au backlog.',

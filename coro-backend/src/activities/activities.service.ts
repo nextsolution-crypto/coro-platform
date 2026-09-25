@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
+import { ActivityTaskListsService } from './activity-task-lists.service';
 
 export const ACTIVITY_CATALOG = [
   {
@@ -92,7 +93,8 @@ export const ACTIVITY_CATALOG = [
 
 @Injectable()
 export class ActivitiesService {
-  constructor(private prisma: PrismaService, private readonly activityTypes: ActivityTypesService) {}
+  constructor(private prisma: PrismaService, private readonly activityTypes: ActivityTypesService,
+    @Optional() private readonly activityTaskLists?: ActivityTaskListsService) {}
 
   // Vérification propriété
   private async assertOwnership(projectId: string, organizationId: string) {
@@ -218,40 +220,51 @@ export class ActivitiesService {
   }
 
   // Ajouter une activité
-  async createActivity(projectId: string, organizationId: string, dto: any) {
-    await this.assertOwnership(projectId, organizationId);
-    const selectedType = dto.activityTypeId ? await this.prisma.activityType.findFirst({ where: {
-      id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
-    } }) : null;
-    if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
-    const type = selectedType?.code ?? dto.type;
-    const customLabel = dto.customLabel?.trim() || null;
-    if (type === 'autre' && !customLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
-    const duration = dto.duration ?? (selectedType?.defaultDurationMinutes ? this.formatDuration(selectedType.defaultDurationMinutes) : '');
-    const clientBookable = dto.clientBookable === undefined ? (selectedType?.clientBookableDefault ?? false) : dto.clientBookable === true;
-    if (dto.clientVisible === false && clientBookable) {
-      throw new BadRequestException('Une activité réservable doit être visible par le client');
-    }
-    return this.prisma.projectActivity.create({
-      data: {
-        projectId,
-        organizationId,
-        type,
-        activityTypeId: selectedType?.id ?? null,
-        label: selectedType?.nameFR ?? dto.label,
-        duration,
-        mode: dto.mode || 'presentiel',
-        customLabel,
-        customDuration: dto.customDuration || null,
-        scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : null,
-        status: dto.status || 'a_faire',
-        assigneeEmail: dto.assigneeEmail || null,
-        clientEmail: dto.clientEmail || null,
-        notes: dto.notes || null,
-        clientVisible: dto.clientVisible === undefined ? true : dto.clientVisible,
-        clientBookable,
-        dureeHeures: dto.dureeHeures ?? (selectedType?.defaultDurationMinutes ? selectedType.defaultDurationMinutes / 60 : null),
-      },
+  async createActivity(projectId: string, actor: AdviserActor, dto: any) {
+    const organizationId = actor.organizationId;
+    return this.prisma.$transaction(async tx => {
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) }, select: { id: true },
+      });
+      if (!project) throw new NotFoundException('Projet introuvable');
+      const selectedType = dto.activityTypeId ? await tx.activityType.findFirst({ where: {
+        id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
+      } }) : null;
+      if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
+      const type = selectedType?.code ?? dto.type;
+      const customLabel = dto.customLabel?.trim() || null;
+      if (type === 'autre' && !customLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
+      const duration = dto.duration ?? (selectedType?.defaultDurationMinutes ? this.formatDuration(selectedType.defaultDurationMinutes) : '');
+      const clientBookable = dto.clientBookable === undefined ? (selectedType?.clientBookableDefault ?? false) : dto.clientBookable === true;
+      if (dto.clientVisible === false && clientBookable) {
+        throw new BadRequestException('Une activité réservable doit être visible par le client');
+      }
+      const activity = await tx.projectActivity.create({
+        data: {
+          projectId,
+          organizationId,
+          type,
+          activityTypeId: selectedType?.id ?? null,
+          label: selectedType?.nameFR ?? dto.label,
+          duration,
+          mode: dto.mode || 'presentiel',
+          customLabel,
+          customDuration: dto.customDuration || null,
+          scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : null,
+          status: dto.status || 'a_faire',
+          assigneeEmail: dto.assigneeEmail || null,
+          clientEmail: dto.clientEmail || null,
+          notes: dto.notes || null,
+          clientVisible: dto.clientVisible === undefined ? true : dto.clientVisible,
+          clientBookable,
+          dureeHeures: dto.dureeHeures ?? (selectedType?.defaultDurationMinutes ? selectedType.defaultDurationMinutes / 60 : null),
+        },
+      });
+      if (activity.activityTypeId) {
+        if (!this.activityTaskLists) throw new Error('ActivityTaskListsService indisponible');
+        await this.activityTaskLists.instantiateMissingTaskListsForActivity(tx, projectId, activity.id, actor);
+      }
+      return activity;
     });
   }
 

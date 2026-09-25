@@ -29,10 +29,35 @@ function setup(status: 'AVAILABLE' | 'BLOCKED' | 'UNKNOWN' = 'AVAILABLE') {
   const result = { status, conflicts: status === 'BLOCKED' ? [{ severity: 'BLOCKED' }] : [], warnings: [], sourcesChecked: [] };
   const scheduling = { lockUsers: jest.fn(), lockBooking: jest.fn(),
     analyzeUsers: jest.fn().mockResolvedValue(new Map([['lead', result], ['support', result]])) };
-  return { tx, prisma, scheduling, service: new PlanningActionsService(prisma as any, scheduling as any) };
+  const activityTaskLists = { instantiateMissingTaskListsForActivity: jest.fn().mockResolvedValue({ createdLists: [] }) };
+  return { tx, prisma, scheduling, activityTaskLists,
+    service: new PlanningActionsService(prisma as any, scheduling as any, activityTaskLists as any) };
 }
 
 describe('PlanningActionsService', () => {
+  it('instantiates canonical checklists before creating the Booking', async () => {
+    const { service, tx, activityTaskLists } = setup();
+    tx.project.findFirst.mockResolvedValue(activity.project);
+    tx.activityType.findFirst.mockResolvedValue({ id: 'type', code: 'inspection', nameFR: 'Inspection', clientBookableDefault: false });
+    tx.projectActivity.create.mockResolvedValue({ ...activity, activityTypeId: 'type' });
+    await service.createAndPlan({ projectId: 'project', activityTypeId: 'type', ...dto }, actor);
+    expect(activityTaskLists.instantiateMissingTaskListsForActivity).toHaveBeenCalledWith(tx, 'project', 'activity', actor);
+    expect(activityTaskLists.instantiateMissingTaskListsForActivity.mock.invocationCallOrder[0])
+      .toBeLessThan(tx.booking.create.mock.invocationCallOrder[0]);
+  });
+
+  it('creates no Booking when automatic checklist instantiation fails', async () => {
+    const { service, tx, activityTaskLists } = setup();
+    tx.project.findFirst.mockResolvedValue(activity.project);
+    tx.activityType.findFirst.mockResolvedValue({ id: 'type', code: 'inspection', nameFR: 'Inspection', clientBookableDefault: false });
+    tx.projectActivity.create.mockResolvedValue({ ...activity, activityTypeId: 'type' });
+    activityTaskLists.instantiateMissingTaskListsForActivity.mockRejectedValue(new Error('instantiation failed'));
+    await expect(service.createAndPlan({ projectId: 'project', activityTypeId: 'type', ...dto }, actor))
+      .rejects.toThrow('instantiation failed');
+    expect(tx.booking.create).not.toHaveBeenCalled();
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
+  });
+
   it('plans the same Activity atomically with one Booking and PENDING LEAD/SUPPORT', async () => {
     const { service, tx, prisma, scheduling } = setup();
     const result = await service.planExisting('activity', dto, actor);

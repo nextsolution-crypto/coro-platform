@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SchedulingService } from '../scheduling/scheduling.service';
@@ -6,13 +6,15 @@ import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 import { CreateAndPlanActivityDto, PlanExistingActivityDto, ReassignPlanningTeamDto, UpdatePlanningSlotDto } from './planning.dto';
 import { INTRINSIC_ACTIVITY_AUDIT_ACTIONS } from './planning-activity-history';
 import { createAssignmentNotification, type AssignmentNotificationKind } from '../bookings/booking-assignment-notifications';
+import { ActivityTaskListsService } from '../activities/activity-task-lists.service';
 
 type Actor = { userId: string; organizationId: string; role: string };
 const ACTIVE_ASSIGNMENTS: Array<'PENDING' | 'ACCEPTED'> = ['PENDING', 'ACCEPTED'];
 
 @Injectable()
 export class PlanningActionsService {
-  constructor(private readonly prisma: PrismaService, private readonly scheduling: SchedulingService) {}
+  constructor(private readonly prisma: PrismaService, private readonly scheduling: SchedulingService,
+    @Optional() private readonly activityTaskLists?: ActivityTaskListsService) {}
 
   private manager(actor: Actor) {
     if (!actor?.organizationId || !actor.userId || !['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) {
@@ -181,6 +183,8 @@ export class PlanningActionsService {
         type: type.code, activityTypeId: type.id, label: type.nameFR, duration: '', dureeHeures: null,
         mode: dto.mode ?? 'presentiel', customLabel, notes: dto.notes?.trim() || null, scheduledDate: null,
         status: 'a_faire', sourceMandate: true, clientVisible, clientBookable } });
+      if (!this.activityTaskLists) throw new Error('ActivityTaskListsService indisponible');
+      await this.activityTaskLists.instantiateMissingTaskListsForActivity(tx, project.id, activity.id, actor);
       return this.createBooking(tx, { ...activity, project }, actor, dto);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }

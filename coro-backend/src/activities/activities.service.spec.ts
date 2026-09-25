@@ -10,23 +10,45 @@ function harness() {
     projectTask: { findMany: jest.fn().mockResolvedValue([]) },
     projectTaskList: { findFirst: jest.fn() },
     activityType: { findFirst: jest.fn() },
+    $transaction: jest.fn(async (callback: any) => callback(prisma)),
   };
   const activityTypes = { list: jest.fn().mockResolvedValue([]) };
-  return { prisma, service: new ActivitiesService(prisma as never, activityTypes as never) };
+  const activityTaskLists = { instantiateMissingTaskListsForActivity: jest.fn().mockResolvedValue({ createdLists: [] }) };
+  return { prisma, activityTaskLists,
+    service: new ActivitiesService(prisma as never, activityTypes as never, activityTaskLists as never) };
 }
 
 describe('ActivitiesService exercise report summary', () => {
   it('applies catalog defaults once when creating an activity', async () => {
     const h = harness();
     h.prisma.activityType.findFirst.mockResolvedValue({ id:'type-a', code:'custom-inspection', nameFR:'Inspection', defaultDurationMinutes:90, clientBookableDefault:true });
-    h.prisma.projectActivity.create.mockImplementation(({ data }: any) => data);
-    const result:any = await h.service.createActivity('project-a','org-a',{ activityTypeId:'type-a' });
+    h.prisma.projectActivity.create.mockImplementation(({ data }: any) => ({ id: 'activity-a', ...data }));
+    const result:any = await h.service.createActivity('project-a', admin,{ activityTypeId:'type-a' });
     expect(result).toMatchObject({ activityTypeId:'type-a', type:'custom-inspection', label:'Inspection', duration:'1h30', dureeHeures:1.5, clientBookable:true });
+    expect(h.activityTaskLists.instantiateMissingTaskListsForActivity).toHaveBeenCalledWith(
+      h.prisma, 'project-a', 'activity-a', admin,
+    );
+  });
+
+  it('keeps legacy creation without a canonical type outside automatic instantiation', async () => {
+    const h = harness();
+    h.prisma.projectActivity.create.mockImplementation(({ data }: any) => ({ id: 'legacy', ...data }));
+    await h.service.createActivity('project-a', admin, { type: 'legacy', label: 'Legacy' });
+    expect(h.activityTaskLists.instantiateMissingTaskListsForActivity).not.toHaveBeenCalled();
+  });
+
+  it('propagates instantiation failure from the same creation transaction', async () => {
+    const h = harness();
+    h.prisma.activityType.findFirst.mockResolvedValue({ id: 'type-a', code: 'inspection', nameFR: 'Inspection' });
+    h.prisma.projectActivity.create.mockResolvedValue({ id: 'activity-a', activityTypeId: 'type-a' });
+    h.activityTaskLists.instantiateMissingTaskListsForActivity.mockRejectedValue(new Error('instantiation failed'));
+    await expect(h.service.createActivity('project-a', admin, { activityTypeId: 'type-a' }))
+      .rejects.toThrow('instantiation failed');
   });
 
   it('requires a custom label for the system Other type', async () => {
     const h = harness(); h.prisma.activityType.findFirst.mockResolvedValue({ id:'other', code:'autre', nameFR:'Autre' });
-    await expect(h.service.createActivity('project-a','org-a',{ activityTypeId:'other' })).rejects.toThrow('libellé personnalisé');
+    await expect(h.service.createActivity('project-a', admin,{ activityTypeId:'other' })).rejects.toThrow('libellé personnalisé');
   });
   it('emits one UTC Z suffix in activity ICS dates', () => {
     const ics = harness().service.generateIcs({ id: 'activity-a', scheduledDate: new Date('2026-10-01T13:00:00Z'), duration: '1h', title: 'Test' });

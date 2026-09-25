@@ -7,6 +7,8 @@ import { PlanningActionsService } from '../src/planning/planning-actions.service
 import { PlanningService } from '../src/planning/planning.service';
 import { BookingsService } from '../src/bookings/bookings.service';
 import { BookingAssignmentsService } from '../src/bookings/booking-assignments.service';
+import { ActivityTypesService } from '../src/activity-types/activity-types.service';
+import { ActivityTaskListsService } from '../src/activities/activity-task-lists.service';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
@@ -16,11 +18,12 @@ describePostgres('Planner mutations on PostgreSQL', () => {
   let fixture: Awaited<ReturnType<typeof createBookingFixture>>;
   let service: PlanningActionsService;
   let assignments: BookingAssignmentsService;
+  const taskLists = () => new ActivityTaskListsService(prisma as any, new ActivityTypesService(prisma as any));
 
   beforeAll(async () => {
     await prisma.$connect();
     fixture = await createBookingFixture(prisma, true);
-    service = new PlanningActionsService(prisma as any, new SchedulingService(prisma as any));
+    service = new PlanningActionsService(prisma as any, new SchedulingService(prisma as any), taskLists());
     assignments = new BookingAssignmentsService(prisma as any, new SchedulingService(prisma as any), {
       getCapacityPlanning: jest.fn().mockResolvedValue([]),
     } as any);
@@ -36,7 +39,7 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     leadUserId: fixture.owner.id, supportUserIds: [fixture.colleague.id], confirmUnknown: true });
   const backlog = () => new PlanningService(prisma as any, new SchedulingService(prisma as any), {
     getCapacityPlanning: jest.fn().mockResolvedValue([]),
-  } as any).actions({ start: '2026-10-01T04:00:00.000Z', end: '2026-10-31T04:00:00.000Z',
+  } as any, taskLists()).actions({ start: '2026-10-01T04:00:00.000Z', end: '2026-10-31T04:00:00.000Z',
     type: 'UNPLANNED_ACTIVITY' }, actor());
 
   it('commits Activity, Booking, assignments and audit together and preserves the Project chain', async () => {
@@ -225,7 +228,7 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     } });
     const planning = new PlanningService(prisma as any, new SchedulingService(prisma as any), {
       getCapacityPlanning: jest.fn().mockResolvedValue([]),
-    } as any);
+    } as any, taskLists());
     const source = await planning.createUnplannedActivity({
       projectId: fixture.project.id, activityTypeId: activityType.id,
     }, actor());

@@ -68,7 +68,7 @@ export class ActivitiesController {
     @Body() dto: any,
     @Request() req: any,
   ) {
-    return this.service.createActivity(projectId, req.user.organizationId, dto);
+    return this.service.createActivity(projectId, req.user, dto);
   }
 
   @Put('activities/:activityId')

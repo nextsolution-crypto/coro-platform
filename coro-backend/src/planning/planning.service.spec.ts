@@ -30,8 +30,9 @@ function setup() {
     { userId: 'u1', chargeEngagee: 10, chargeProvisoire: 2, tauxUtilisationConfirmee: 10 },
     { userId: 'u2', chargeEngagee: 20, chargeProvisoire: 3, tauxUtilisationConfirmee: 20 },
   ]) };
+  const activityTaskLists = { instantiateMissingTaskListsForActivity: jest.fn().mockResolvedValue({ createdLists: [] }) };
   return { prisma, scheduling, capacity,
-    service: new PlanningService(prisma as any, scheduling as any, capacity as any) };
+    service: new PlanningService(prisma as any, scheduling as any, capacity as any, activityTaskLists as any) };
 }
 
 describe('PlanningService', () => {
@@ -322,7 +323,7 @@ describe('PlanningService', () => {
         mandate: { id: 'm1', ownerId: 'owner', owner: { firstName: 'Real', lastName: 'Owner' } } }]) },
       activityType: { findMany: jest.fn().mockResolvedValue([{ id: 't1', nameFR: 'Inspection' }]) },
     };
-    const service = new PlanningService(prisma as any, {} as any, {} as any);
+    const service = new PlanningService(prisma as any, {} as any, {} as any, {} as any);
     const result = await service.context({ clientId: 'c1', buildingId: 'bd1' }, actor);
     expect(prisma.client.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a' });
     expect(prisma.building.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a', clientId: 'c1' });
@@ -336,7 +337,7 @@ describe('PlanningService', () => {
       client: { findMany: jest.fn().mockResolvedValue([]) }, building: { findMany: jest.fn().mockResolvedValue([]) },
       project: { findMany: jest.fn().mockResolvedValue([]) }, activityType: { findMany: jest.fn().mockResolvedValue([]) },
     };
-    const service = new PlanningService(prisma as any, {} as any, {} as any);
+    const service = new PlanningService(prisma as any, {} as any, {} as any, {} as any);
     await service.context({}, { ...actor, role: 'OPERATOR' });
     const scope = { organizationId: 'org-a', OR: [{ userId: 'u1' }, { lastEditedById: 'u1' }] };
     expect(prisma.client.findMany.mock.calls[0][0].where.projects.some).toEqual(scope);
@@ -352,13 +353,32 @@ describe('PlanningService', () => {
         defaultDurationMinutes: 90, clientBookableDefault: false }) },
       $transaction: jest.fn(async (callback: any) => callback(tx)),
     };
-    const service = new PlanningService(prisma as any, {} as any, {} as any);
+    const activityTaskLists = { instantiateMissingTaskListsForActivity: jest.fn().mockResolvedValue({ createdLists: [] }) };
+    const service = new PlanningService(prisma as any, {} as any, {} as any, activityTaskLists as any);
     await service.createUnplannedActivity({ projectId: 'project-1', activityTypeId: 'type-1' }, actor);
     expect(prisma.project.findFirst.mock.calls[0][0].where).toMatchObject({ id: 'project-1', organizationId: 'org-a' });
     expect(tx.projectActivity.create.mock.calls[0][0].data).toMatchObject({ organizationId: 'org-a', projectId: 'project-1',
       scheduledDate: null, status: 'a_faire', sourceMandate: true, duration: '1h30' });
     expect(tx.auditLog.create.mock.calls[0][0].data).toMatchObject({ action: 'PLANNING_ACTIVITY_CREATED', entityId: 'activity-1' });
+    expect(activityTaskLists.instantiateMissingTaskListsForActivity).toHaveBeenCalledWith(
+      tx, 'project-1', 'activity-1', actor,
+    );
+    expect(activityTaskLists.instantiateMissingTaskListsForActivity.mock.invocationCallOrder[0])
+      .toBeLessThan(tx.auditLog.create.mock.invocationCallOrder[0]);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not write the Planner creation audit after checklist instantiation fails', async () => {
+    const tx = { projectActivity: { create: jest.fn().mockResolvedValue({ id: 'activity-1' }) },
+      auditLog: { create: jest.fn() } };
+    const prisma = { project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-1' }) },
+      activityType: { findFirst: jest.fn().mockResolvedValue({ id: 'type-1', code: 'inspection', nameFR: 'Inspection' }) },
+      $transaction: jest.fn(async (callback: any) => callback(tx)) };
+    const activityTaskLists = { instantiateMissingTaskListsForActivity: jest.fn().mockRejectedValue(new Error('instantiation failed')) };
+    const service = new PlanningService(prisma as any, {} as any, {} as any, activityTaskLists as any);
+    await expect(service.createUnplannedActivity({ projectId: 'project-1', activityTypeId: 'type-1' }, actor))
+      .rejects.toThrow('instantiation failed');
+    expect(tx.auditLog.create).not.toHaveBeenCalled();
   });
 
   it('previews active candidates in one Scheduling batch with generic confidential reasons', async () => {
@@ -380,7 +400,7 @@ describe('PlanningService', () => {
     const capacity = { getCapacityPlanning: jest.fn().mockResolvedValue([
       { userId: 'available', tauxUtilisationConfirmee: 32 },
     ]) };
-    const service = new PlanningService(prisma as any, scheduling as any, capacity as any);
+    const service = new PlanningService(prisma as any, scheduling as any, capacity as any, {} as any);
     const result = await service.teamPreview({ buildingId: 'building-a',
       startUtc: '2026-09-23T17:30:00.000Z', durationMinutes: 90 }, actor);
     expect(result.candidates.map(candidate => candidate.availabilityStatus)).toEqual(['AVAILABLE', 'UNKNOWN', 'BLOCKED']);
@@ -398,7 +418,7 @@ describe('PlanningService', () => {
       user: { findMany: jest.fn().mockResolvedValue([]) } };
     const scheduling = { analyzeUsers: jest.fn().mockResolvedValue(new Map()) };
     const capacity = { getCapacityPlanning: jest.fn().mockResolvedValue([]) };
-    const service = new PlanningService(prisma as any, scheduling as any, capacity as any);
+    const service = new PlanningService(prisma as any, scheduling as any, capacity as any, {} as any);
     await service.teamPreview({ buildingId: 'building-a', startUtc: start, durationMinutes: 60 }, { ...actor, role: 'OPERATOR' });
     expect(prisma.user.findMany.mock.calls[0][0].where).toMatchObject({ organizationId: 'org-a', id: 'u1' });
     prisma.building.findFirst.mockClear();
