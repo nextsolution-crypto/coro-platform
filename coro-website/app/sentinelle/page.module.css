@@ -1,0 +1,63 @@
+/* /sentinelle — V1 tokens only. Opening (EditorialHero photographic mode), sections, media frame, accordion and CTA come from the component library. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.lead { color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 700; line-height: 1.35; }
+
+/* The daily register becomes operational information: one large statement. */
+.statement { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.15; border-inline-start: 3px solid var(--accent); padding-inline-start: var(--coro-v1-space-6); }
+
+/* The three principles: the page's single card cluster (1px border, V1 surface and radius, numbered, no accent bar, no shadow, no icon). */
+.principles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); counter-reset: p; }
+.principles li { counter-increment: p; display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-6); background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-radius: var(--coro-v1-radius-panel); }
+.principles li::before { content: counter(p, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-h2); font-weight: 850; line-height: 1; }
+.principles h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }
+.principles p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* Entry: QR then PIN, two steps in order. */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-8); }
+.steps > li { display: grid; gap: var(--coro-v1-space-3); border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-4); }
+.steps > li:last-child { border-block-start-color: var(--accent); }
+.steps h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.steps p { margin: 0; color: var(--muted); line-height: 1.6; }
+.steps p.kicker { color: var(--accent); }
+.steps ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.steps ul li { padding-block: var(--coro-v1-space-2); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 600; font-size: var(--coro-v1-text-small); }
+
+/* Occupant types: three plain rows (a fixed set in the product). */
+.types { margin: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.types > div { display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); gap: var(--coro-v1-space-4); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); align-items: baseline; }
+.types dt { color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.types dd { margin: 0; color: var(--muted); line-height: 1.5; }
+.note { margin: 0; color: var(--ink); font-weight: 650; }
+@media (max-width: 40rem) { .types > div { grid-template-columns: 1fr; gap: var(--coro-v1-space-1); } }
+
+.plain { list-style: none; margin: 0; padding: 0; display: grid; }
+.plain li { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.plain li:first-child { border-block-start: 1px solid var(--line); }
+
+/* Continuity on the navy section: four moments in one row, the last in the accent. Vertical on narrow screens. */
+.seq { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--coro-v1-space-8); }
+.seq li { border-block-start: 1px solid var(--line); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.seq li:last-child { border-block-start: 3px solid var(--accent); }
+.seq h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.1; }
+.seq p { margin: 0; color: var(--muted); line-height: 1.55; }
+.seq p.kicker { color: var(--accent); }
+
+/* Use cases: four plain columns separated by rules (not cards). */
+.uses { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.uses li { border-block-start: 1px solid var(--line); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.uses h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.uses p { margin: 0; color: var(--muted); line-height: 1.55; }
+.uses p.kicker { color: var(--accent); }
+
+/* Connected product pages. */
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+
+/* Related articles: a plain two-column list of links. */
+.articles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); column-gap: var(--coro-v1-space-8); border-block-start: 1px solid var(--line); }
+.articles li { border-block-end: 1px solid var(--line); }
+.articles a { display: block; padding-block: var(--coro-v1-space-4); color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }

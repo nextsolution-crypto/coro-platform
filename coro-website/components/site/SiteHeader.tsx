@@ -10,7 +10,7 @@ import styles from './SiteShell.module.css';
 
 export type SiteHeaderTone = 'light' | 'dark';
 
-export function SiteHeader({ locale, pathname = '/', tone = 'light' }: { locale: Locale; pathname?: string; tone?: SiteHeaderTone }) {
+export function SiteHeader({ locale, pathname = '/', tone = 'light', englishAvailable = true }: { locale: Locale; pathname?: string; tone?: SiteHeaderTone; englishAvailable?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
   const menuId = useId();
@@ -27,7 +27,7 @@ export function SiteHeader({ locale, pathname = '/', tone = 'light' }: { locale:
         <Link className={styles.logo} href={localizedHref('/', locale)} aria-label={locale === 'fr' ? 'CORO — Accueil' : 'CORO — Home'}>CO<span>RO</span></Link>
         <DesktopNavigation locale={locale} />
         <div className={styles.headerActions}>
-          <LanguageSwitcher locale={locale} pathname={pathname} />
+          {englishAvailable && <LanguageSwitcher locale={locale} pathname={pathname} />}
           <a className={styles.login} href="https://app.getcoro.io/login">{locale === 'fr' ? 'Connexion' : 'Login'}</a>
           <Link className={styles.demo} href={localizedHref('/#demo', locale)}>{locale === 'fr' ? 'Demander une démo' : 'Request a demo'}</Link>
         </div>

@@ -12,13 +12,13 @@ import styles from './V2Shell.module.css';
  * `lang` covers the migrated content only; the document-level <html lang> is a separate, open migration item.
  * Pages pass CONTENT as children and must not render their own <main>.
  */
-export function V2Shell({ locale, pathname = '/', headerTone = 'light', children }: { locale: Locale; pathname?: string; headerTone?: SiteHeaderTone; children: ReactNode }) {
+export function V2Shell({ locale, pathname = '/', headerTone = 'light', englishAvailable = true, children }: { locale: Locale; pathname?: string; headerTone?: SiteHeaderTone; englishAvailable?: boolean; children: ReactNode }) {
   return (
     <div className={styles.shell} data-coro-system="v1" lang={locale}>
       <SkipLink locale={locale} />
-      <SiteHeader locale={locale} pathname={pathname} tone={headerTone} />
+      <SiteHeader locale={locale} pathname={pathname} tone={headerTone} englishAvailable={englishAvailable} />
       <main id="main-content" tabIndex={-1} className={styles.main}>{children}</main>
-      <SiteFooterV2 locale={locale} pathname={pathname} />
+      <SiteFooterV2 locale={locale} pathname={pathname} englishAvailable={englishAvailable} />
     </div>
   );
 }

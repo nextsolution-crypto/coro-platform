@@ -10,7 +10,7 @@ import styles from './conversion.module.css';
  * Designed to replace BOTH production footers (app/components/Footer.tsx, components/site/SiteFooter.tsx); it replaces neither yet.
  * Only implemented routes are linked; a route missing in a language is left out of that language.
  */
-export function SiteFooterV2({ locale, pathname = '/' }: { locale: Locale; pathname?: string }) {
+export function SiteFooterV2({ locale, pathname = '/', englishAvailable = true }: { locale: Locale; pathname?: string; englishAvailable?: boolean }) {
   const t = footerCopy[locale];
   return (
     <footer className={styles.footer} data-surface="dark" lang={locale}>
@@ -52,7 +52,7 @@ export function SiteFooterV2({ locale, pathname = '/' }: { locale: Locale; pathn
             <p className={styles.footerLegalLine}>© {business.year} {business.name}. {t.rights} <span className={styles.nowrap}>· {t.neq} {business.neq}</span></p>
             <ul className={styles.footerLegal}>
               {footerGroups.find((group) => group.id === 'legal')!.links.map((link) => <li key={link.path}><Link href={localizedHref(link.path, locale)}>{link.label[locale]}</Link></li>)}
-              <li><Link href={switchLocaleHref(pathname, locale)} lang={locale === 'fr' ? 'en' : 'fr'} hrefLang={locale === 'fr' ? 'en-CA' : 'fr-CA'} aria-label={t.switchLabel}>{t.switchTo}</Link></li>
+              {englishAvailable && <li><Link href={switchLocaleHref(pathname, locale)} lang={locale === 'fr' ? 'en' : 'fr'} hrefLang={locale === 'fr' ? 'en-CA' : 'fr-CA'} aria-label={t.switchLabel}>{t.switchTo}</Link></li>}
             </ul>
           </div>
         </div>

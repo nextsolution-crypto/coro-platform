@@ -16,7 +16,7 @@ const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 const p = productContent.performance;
 
 test('the registry ends with /performance-objectifs after the six approved routes; nothing else is migrated', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle']);
   assert.equal(isLegacyFooterVisible('/performance-objectifs'), false);
   for (const legacy of ['/']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
 });

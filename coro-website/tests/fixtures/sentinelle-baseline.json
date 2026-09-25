@@ -1,0 +1,1229 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Registre de présence numérique et évacuation | CORO Sentinelle | CORO",
+  "description": "CORO Sentinelle est un registre numérique de présence conçu pour savoir qui est présent dans un bâtiment et faciliter le décompte des occupants lors d'une évacuation.",
+  "canonical": "https://getcoro.io/sentinelle",
+  "hreflang": [],
+  "ogLocale": null,
+  "ogUrl": "https://getcoro.io/sentinelle",
+  "ogTitle": "CORO Sentinelle | Registre de présence et gestion d'évacuation",
+  "ogImage": "https://getcoro.io/images/sentinelle/coro-sentinelle-registre-presence.webp",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Sachez qui est présent. Sachez qui manque."
+   ],
+   [
+    "h2",
+    "Un registre de présence pensé pour les situations réelles."
+   ],
+   [
+    "h2",
+    "De l'arrivée à l'évacuation."
+   ],
+   [
+    "h3",
+    "S'enregistrer"
+   ],
+   [
+    "h3",
+    "Connaître les présences"
+   ],
+   [
+    "h3",
+    "Faciliter le décompte"
+   ],
+   [
+    "h2",
+    "Un QR code à l'entrée du bâtiment."
+   ],
+   [
+    "h2",
+    "Identification rapide par code PIN."
+   ],
+   [
+    "h2",
+    "Une vision actualisée des personnes présentes."
+   ],
+   [
+    "h2",
+    "Le registre prend une nouvelle valeur."
+   ],
+   [
+    "h2",
+    "Une continuité de l'information."
+   ],
+   [
+    "h3",
+    "Présence"
+   ],
+   [
+    "h3",
+    "Évacuation"
+   ],
+   [
+    "h3",
+    "Décompte"
+   ],
+   [
+    "h3",
+    "Vérification"
+   ],
+   [
+    "h2",
+    "Faciliter le recensement après l'évacuation."
+   ],
+   [
+    "h2",
+    "Passer de « combien? » à « qui? »."
+   ],
+   [
+    "h2",
+    "Plusieurs types d'occupants."
+   ],
+   [
+    "h2",
+    "Une solution adaptée à différents environnements."
+   ],
+   [
+    "h3",
+    "Tours de bureaux"
+   ],
+   [
+    "h3",
+    "Sites industriels"
+   ],
+   [
+    "h3",
+    "Organisations multi-usagers"
+   ],
+   [
+    "h3",
+    "Portefeuilles immobiliers"
+   ],
+   [
+    "h2",
+    "Un bâtiment aujourd'hui. Plusieurs sites demain."
+   ],
+   [
+    "h2",
+    "Registre papier ou registre numérique?"
+   ],
+   [
+    "h2",
+    "Sentinelle s'inscrit dans l'écosystème CORO."
+   ],
+   [
+    "h2",
+    "Tarifs Sentinelle"
+   ],
+   [
+    "h3",
+    "Essentiel"
+   ],
+   [
+    "h3",
+    "Résilience"
+   ],
+   [
+    "h3",
+    "Intervention"
+   ],
+   [
+    "h2",
+    "Votre organisation sait-elle réellement qui est présent lorsqu'une urgence survient?"
+   ],
+   [
+    "h2",
+    "CORO Sentinelle en quelques réponses."
+   ],
+   [
+    "h2",
+    "Approfondir la gestion des présences et de l'évacuation."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/",
+    "← Accueil"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "EN"
+   ],
+   [
+    "/contact",
+    "Demander une démonstration"
+   ],
+   [
+    "#fonctionnement",
+    "Voir comment ça fonctionne"
+   ],
+   [
+    "#demo",
+    "Demander une démo"
+   ],
+   [
+    "#demo",
+    "Demander une soumission"
+   ],
+   [
+    "#demo",
+    "Parler à notre équipe"
+   ],
+   [
+    "/contact",
+    "Demander une démonstration"
+   ],
+   [
+    "/",
+    "Découvrir la plateforme CORO"
+   ],
+   [
+    "/blog/decompte-occupants-evacuation",
+    "Comment faire le décompte des occupants lors d'une évacuation?Lire l'article →"
+   ],
+   [
+    "/blog/registre-presence-situation-urgence",
+    "Pourquoi le registre de présence est essentiel en situation d'urgenceLire l'article →"
+   ],
+   [
+    "/blog/registre-papier-ou-numerique",
+    "Registre papier ou numérique : lequel choisir?Lire l'article →"
+   ],
+   [
+    "/blog/visiteurs-evacuation",
+    "Comment gérer les visiteurs lors d'une évacuation?Lire l'article →"
+   ],
+   [
+    "/blog/point-rassemblement-decompte",
+    "Point de rassemblement : comment organiser le décompte?Lire l'article →"
+   ],
+   [
+    "/blog/qui-recencer-evacuation",
+    "Employés, visiteurs et entrepreneurs : qui doit être recensé?Lire l'article →"
+   ],
+   [
+    "/blog/qr-code-registre-presence",
+    "QR code et registre de présence : comment ça fonctionne?Lire l'article →"
+   ],
+   [
+    "/blog/pmu-registre-presence",
+    "Comment intégrer un registre de présence à un plan de mesures d'urgence?Lire l'article →"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-registre-presence.webp",
+    "CORO Sentinelle, registre numérique de présence et gestion d'évacuation"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-qr-code-entree.webp",
+    "Utilisateur scannant le QR code CORO Sentinelle à l'entrée d'un bâtiment"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-code-pin.webp",
+    "Interface mobile CORO Sentinelle permettant la saisie d'un code PIN"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-registre-temps-reel.webp",
+    "Tableau de bord CORO Sentinelle affichant le registre de présence"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-evacuation.webp",
+    "Évacuation d'un bâtiment avec utilisation du registre de présence CORO Sentinelle"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-point-rassemblement.webp",
+    "Décompte des occupants au point de rassemblement avec CORO Sentinelle"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-personnes-manquantes.webp",
+    "Interface CORO Sentinelle permettant d'identifier les personnes non encore recensées"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-multi-sites.webp",
+    "Gestion de plusieurs bâtiments et établissements avec CORO Sentinelle"
+   ]
+  ],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "CORO Sentinelle",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Registre numérique de présence destiné aux bâtiments et organisations permettant de soutenir la gestion des présences et le décompte des occupants lors d'une évacuation.",
+    "url": "https://getcoro.io/sentinelle",
+    "publisher": {
+     "@type": "Organization",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    }
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "Qu'est-ce qu'un registre numérique de présence?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Un registre numérique de présence permet d'enregistrer et de consulter les personnes présentes dans un bâtiment ou un établissement, notamment les employés, visiteurs, entrepreneurs et fournisseurs."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Comment CORO Sentinelle fonctionne-t-il?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "L'utilisateur peut accéder à Sentinelle à partir d'un QR code placé à l'entrée du bâtiment puis s'identifier au moyen de l'interface prévue par l'organisation."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "CORO Sentinelle peut-il être utilisé pendant une évacuation?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le registre de présence peut soutenir le processus de recensement en permettant de comparer les personnes enregistrées comme présentes avec celles qui ont été confirmées après l'évacuation."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Sentinelle remplace-t-il le plan de mesures d'urgence?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Non. Sentinelle est un outil opérationnel complémentaire et ne remplace ni le plan de mesures d'urgence ni les procédures d'évacuation de l'organisation."
+      }
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "main": 1,
+   "header": 0,
+   "footer": 1,
+   "h1": 1
+  },
+  "mainText": "CORO\n← Accueil\nEN\nCORO SENTINELLE\nSachez qui est présent. Sachez qui manque.\n\nCORO Sentinelle est un registre numérique de présence conçu pour les bâtiments et les organisations. Employés, visiteurs, entrepreneurs et autres occupants peuvent s'enregistrer simplement à leur arrivée afin de fournir aux responsables une information utile lorsque chaque minute compte.\n\nDemander une démonstration\nVoir comment ça fonctionne\nEnregistrement simple\nQR code et code PIN\nPrésence actualisée\nVue opérationnelle du bâtiment\nUtilisable en urgence\nDécompte et suivi d'évacuation\nPRÉSENCE ET SÉCURITÉ\nUn registre de présence pensé pour les situations réelles.\n\nDans de nombreux bâtiments, savoir qui est entré ne suffit pas. Lorsqu'une alarme survient, la véritable question devient : qui était présent et qui doit maintenant être localisé?\n\nLe registre quotidien devient une information opérationnelle en situation d'urgence.\nUNE LOGIQUE SIMPLE\nDe l'arrivée à l'évacuation.\n\nSentinelle relie le contrôle quotidien des présences aux besoins opérationnels d'une organisation lorsqu'une situation d'urgence survient.\n\n01\nS'enregistrer\n\nLa personne scanne le QR code de l'établissement, s'identifie depuis son téléphone et confirme sa présence.\n\n02\nConnaître les présences\n\nLes personnes actuellement enregistrées peuvent être consultées dans une interface centralisée par les utilisateurs autorisés.\n\n03\nFaciliter le décompte\n\nLors d'une évacuation, cette information contribue au recensement des occupants et au suivi des personnes qui n'ont pas encore été confirmées.\n\nÉTAPE 01\nUn QR code à l'entrée du bâtiment.\n\nUne borne ou une signalisation Sentinelle permet à l'utilisateur de démarrer son enregistrement depuis son propre téléphone.\n\nAucune application à installer pour l'utilisateur\nAccès rapide depuis un téléphone intelligent\nExpérience adaptée aux employés et visiteurs\nProcessus utilisable sur plusieurs points d'accès\nÉTAPE 02\nIdentification rapide par code PIN.\n\nAprès avoir scanné le code QR, l'utilisateur accède directement à l'interface Sentinelle et peut s'identifier selon la configuration établie par l'organisation.\n\nInterface mobile simplifiée\nIdentification rapide\nProcessus adapté aux environnements professionnels\nRéduction des manipulations à l'accueil\nÉTAPE 03\nUne vision actualisée des personnes présentes.\n\nLes responsables autorisés peuvent consulter les informations nécessaires pour connaître les personnes actuellement enregistrées dans l'établissement.\n\nEmployés présents\nVisiteurs enregistrés\nEntrepreneurs et fournisseurs\nPrésences consultables depuis une interface centralisée\nLORSQU'UNE URGENCE SURVIENT\nLe registre prend une nouvelle valeur.\n\nPendant une évacuation, il ne suffit plus de savoir combien de personnes se trouvaient dans le bâtiment. Les responsables doivent pouvoir déterminer quelles personnes ont été recensées et lesquelles nécessitent encore une vérification.\n\nAppuyer le décompte des occupants\nFaciliter le travail des responsables d'évacuation\nIdentifier les personnes non encore confirmées\nCentraliser l'information disponible\nDU BÂTIMENT AU POINT DE RASSEMBLEMENT\nUne continuité de l'information.\n01 — AVANT\nPrésence\n\nL'organisation dispose d'une liste des personnes enregistrées comme présentes.\n\n02 — ALARME\nÉvacuation\n\nLes occupants quittent le bâtiment conformément aux procédures de l'établissement.\n\n03 — EXTÉRIEUR\nDécompte\n\nLes responsables effectuent le recensement au point de rassemblement.\n\n04 — ANALYSE\nVérification\n\nLes informations recueillies permettent de déterminer quelles personnes n'ont pas encore été confirmées.\n\nPOINT DE RASSEMBLEMENT\nFaciliter le recensement après l'évacuation.\n\nLe point de rassemblement constitue l'un des moments les plus importants du processus d'évacuation. CORO Sentinelle permet de soutenir les responsables qui doivent établir une situation aussi claire que possible après la sortie des occupants.\n\nL'objectif n'est pas simplement d'obtenir un nombre, mais de transformer le registre de présence en information utile à la gestion de l'événement.\n\nINFORMATION OPÉRATIONNELLE\nPasser de « combien? » à « qui? ».\n\nDans une situation d'urgence, connaître le nombre approximatif d'occupants ne répond pas toujours aux besoins de l'équipe responsable.\n\nSentinelle contribue à établir une information nominative permettant de comparer les personnes enregistrées comme présentes avec celles qui ont effectivement été recensées.\n\nUNE SEULE LOGIQUE\nPlusieurs types d'occupants.\n\nUn bâtiment ne contient pas uniquement des employés. Sentinelle permet de penser la présence de manière plus globale.\n\nEmployés\nPersonnel régulier et utilisateurs du bâtiment.\nVisiteurs\nClients, invités et visiteurs ponctuels.\nEntrepreneurs\nTravailleurs externes et fournisseurs.\nAutres occupants\nToute catégorie définie selon les besoins de l'organisation.\nCAS D'UTILISATION\nUne solution adaptée à différents environnements.\nIMMEUBLES\nTours de bureaux\n\nGestion quotidienne des présences et soutien aux procédures d'évacuation du bâtiment.\n\nINDUSTRIE\nSites industriels\n\nIdentification des employés, entrepreneurs et fournisseurs présents sur le site.\n\nINSTITUTIONS\nOrganisations multi-usagers\n\nUne approche structurée de la présence adaptée aux réalités opérationnelles de l'organisation.\n\nMULTI-SITES\nPortefeuilles immobiliers\n\nDéploiement d'une logique commune dans plusieurs bâtiments ou établissements.\n\nÉVOLUTIF\nUn bâtiment aujourd'hui. Plusieurs sites demain.\n\nLa logique Sentinelle peut accompagner les organisations qui disposent de plusieurs établissements et qui souhaitent uniformiser leur approche de gestion des présences.\n\nMODERNISER LE REGISTRE\nRegistre papier ou registre numérique?\n\nLe registre papier peut fonctionner dans certains contextes. Sentinelle vise toutefois à réduire plusieurs limites associées aux processus manuels.\n\nCritère\tRegistre papier\tCORO Sentinelle\nConsultation\tÀ l'endroit où se trouve le registre\tDepuis l'interface autorisée\nLisibilité\tVariable\tInformation structurée\nMise à jour\tManuelle\tLiée aux enregistrements utilisateurs\nUtilisation en évacuation\tNécessite de récupérer le registre\tInformation disponible numériquement\nRecherche d'une personne\tLecture manuelle\tConsultation structurée\nMulti-sites\tRegistres distincts\tApproche centralisable\nPLUS QU'UN REGISTRE\nSentinelle s'inscrit dans l'écosystème CORO.\n\nCORO est conçu pour aider les organisations et les professionnels à structurer leur préparation, leur documentation et leurs outils liés aux mesures d'urgence et à la continuité des activités.\n\nSentinelle ajoute une dimension essentielle : connecter la planification à la réalité du terrain.\nTarifs Sentinelle\n\nPar bâtiment, par mois. Aucun contrat à long terme.\n\nDisponible maintenant\nEssentiel\n149 $/mois\nRegistre d'occupation temps réel\nPointage QR code + PIN\nMode évacuation instantané\nInvitations visiteurs\nHistorique 12 mois\nRapport PDF évacuation ISO 22301\nApplication web progressive (PWA)\nDemander une démo\n⭐ Le plus populaire\nRésilience\nÀ partir de 249 $/mois\nTout Essentiel, plus :\nIndice CORO de résilience (4 composantes)\nRôles d'urgence en temps réel\nSubstitution automatique des rôles\nIntelligence organisationnelle multi-bâtiments\nActions correctives avec suivi\nGraphique tendance 90 jours\nDemander une soumission\nRésilience complète\nIntervention\nSur mesure\nTout Résilience, plus :\nModule Incident (15 types de sinistres)\nBouton panique bilingue FR/EN\nSMS + courriel coordonnateurs et occupants\nChecklist coordonnateur cochable\nRapport REX post-incident ISO 22301\nConformité CNPI 2020 / CNESST\nParler à notre équipe\nDÉCOUVRIR CORO SENTINELLE\nVotre organisation sait-elle réellement qui est présent lorsqu'une urgence survient?\n\nDécouvrez comment CORO Sentinelle peut intégrer la gestion des présences à votre organisation et soutenir vos procédures d'évacuation.\n\nDemander une démonstration\nDécouvrir la plateforme CORO\nQUESTIONS FRÉQUENTES\nCORO Sentinelle en quelques réponses.\nQu'est-ce qu'un registre numérique de présence?\nComment CORO Sentinelle fonctionne-t-il?\nCORO Sentinelle peut-il être utilisé pendant une évacuation?\nSentinelle remplace-t-il le plan de mesures d'urgence?\nPeut-on utiliser Sentinelle pour les visiteurs?\nPourquoi connaître les personnes présentes lors d'une urgence?\nSentinelle peut-il être utilisé dans plusieurs bâtiments?\nUne application doit-elle être installée sur le téléphone?\nRESSOURCES\nApprofondir la gestion des présences et de l'évacuation.\nComment faire le décompte des occupants lors d'une évacuation?\nLire l'article →\nPourquoi le registre de présence est essentiel en situation d'urgence\nLire l'article →\nRegistre papier ou numérique : lequel choisir?\nLire l'article →\nComment gérer les visiteurs lors d'une évacuation?\nLire l'article →\nPoint de rassemblement : comment organiser le décompte?\nLire l'article →\nEmployés, visiteurs et entrepreneurs : qui doit être recensé?\nLire l'article →\nQR code et registre de présence : comment ça fonctionne?\nLire l'article →\nComment intégrer un registre de présence à un plan de mesures d'urgence?\nLire l'article →"
+ },
+ "en": {
+  "status": 200,
+  "title": "Registre de présence numérique et évacuation | CORO Sentinelle | CORO",
+  "description": "CORO Sentinelle est un registre numérique de présence conçu pour savoir qui est présent dans un bâtiment et faciliter le décompte des occupants lors d'une évacuation.",
+  "canonical": "https://getcoro.io/sentinelle",
+  "hreflang": [],
+  "ogLocale": null,
+  "ogUrl": "https://getcoro.io/sentinelle",
+  "ogTitle": "CORO Sentinelle | Registre de présence et gestion d'évacuation",
+  "ogImage": "https://getcoro.io/images/sentinelle/coro-sentinelle-registre-presence.webp",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Sachez qui est présent. Sachez qui manque."
+   ],
+   [
+    "h2",
+    "Un registre de présence pensé pour les situations réelles."
+   ],
+   [
+    "h2",
+    "De l'arrivée à l'évacuation."
+   ],
+   [
+    "h3",
+    "S'enregistrer"
+   ],
+   [
+    "h3",
+    "Connaître les présences"
+   ],
+   [
+    "h3",
+    "Faciliter le décompte"
+   ],
+   [
+    "h2",
+    "Un QR code à l'entrée du bâtiment."
+   ],
+   [
+    "h2",
+    "Identification rapide par code PIN."
+   ],
+   [
+    "h2",
+    "Une vision actualisée des personnes présentes."
+   ],
+   [
+    "h2",
+    "Le registre prend une nouvelle valeur."
+   ],
+   [
+    "h2",
+    "Une continuité de l'information."
+   ],
+   [
+    "h3",
+    "Présence"
+   ],
+   [
+    "h3",
+    "Évacuation"
+   ],
+   [
+    "h3",
+    "Décompte"
+   ],
+   [
+    "h3",
+    "Vérification"
+   ],
+   [
+    "h2",
+    "Faciliter le recensement après l'évacuation."
+   ],
+   [
+    "h2",
+    "Passer de « combien? » à « qui? »."
+   ],
+   [
+    "h2",
+    "Plusieurs types d'occupants."
+   ],
+   [
+    "h2",
+    "Une solution adaptée à différents environnements."
+   ],
+   [
+    "h3",
+    "Tours de bureaux"
+   ],
+   [
+    "h3",
+    "Sites industriels"
+   ],
+   [
+    "h3",
+    "Organisations multi-usagers"
+   ],
+   [
+    "h3",
+    "Portefeuilles immobiliers"
+   ],
+   [
+    "h2",
+    "Un bâtiment aujourd'hui. Plusieurs sites demain."
+   ],
+   [
+    "h2",
+    "Registre papier ou registre numérique?"
+   ],
+   [
+    "h2",
+    "Sentinelle s'inscrit dans l'écosystème CORO."
+   ],
+   [
+    "h2",
+    "Sentinel Pricing"
+   ],
+   [
+    "h3",
+    "Essential"
+   ],
+   [
+    "h3",
+    "Resilience"
+   ],
+   [
+    "h3",
+    "Intervention"
+   ],
+   [
+    "h2",
+    "Votre organisation sait-elle réellement qui est présent lorsqu'une urgence survient?"
+   ],
+   [
+    "h2",
+    "CORO Sentinelle en quelques réponses."
+   ],
+   [
+    "h2",
+    "Approfondir la gestion des présences et de l'évacuation."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Product"
+   ],
+   [
+    "h4",
+    "Company"
+   ],
+   [
+    "h4",
+    "Legal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CORO"
+   ],
+   [
+    "/?lang=en",
+    "← Home"
+   ],
+   [
+    "/sentinelle",
+    "FR"
+   ],
+   [
+    "/contact",
+    "Demander une démonstration"
+   ],
+   [
+    "#fonctionnement",
+    "Voir comment ça fonctionne"
+   ],
+   [
+    "#demo",
+    "Request a demo"
+   ],
+   [
+    "#demo",
+    "Request a quote"
+   ],
+   [
+    "#demo",
+    "Talk to our team"
+   ],
+   [
+    "/contact",
+    "Demander une démonstration"
+   ],
+   [
+    "/",
+    "Découvrir la plateforme CORO"
+   ],
+   [
+    "/blog/decompte-occupants-evacuation",
+    "Comment faire le décompte des occupants lors d'une évacuation?Lire l'article →"
+   ],
+   [
+    "/blog/registre-presence-situation-urgence",
+    "Pourquoi le registre de présence est essentiel en situation d'urgenceLire l'article →"
+   ],
+   [
+    "/blog/registre-papier-ou-numerique",
+    "Registre papier ou numérique : lequel choisir?Lire l'article →"
+   ],
+   [
+    "/blog/visiteurs-evacuation",
+    "Comment gérer les visiteurs lors d'une évacuation?Lire l'article →"
+   ],
+   [
+    "/blog/point-rassemblement-decompte",
+    "Point de rassemblement : comment organiser le décompte?Lire l'article →"
+   ],
+   [
+    "/blog/qui-recencer-evacuation",
+    "Employés, visiteurs et entrepreneurs : qui doit être recensé?Lire l'article →"
+   ],
+   [
+    "/blog/qr-code-registre-presence",
+    "QR code et registre de présence : comment ça fonctionne?Lire l'article →"
+   ],
+   [
+    "/blog/pmu-registre-presence",
+    "Comment intégrer un registre de présence à un plan de mesures d'urgence?Lire l'article →"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Features"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Advisor login"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Client portal"
+   ],
+   [
+    "/about?lang=en",
+    "About us"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral Program"
+   ],
+   [
+    "/blog",
+    "Blog"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact us"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Learn more"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-registre-presence.webp",
+    "CORO Sentinelle, registre numérique de présence et gestion d'évacuation"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-qr-code-entree.webp",
+    "Utilisateur scannant le QR code CORO Sentinelle à l'entrée d'un bâtiment"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-code-pin.webp",
+    "Interface mobile CORO Sentinelle permettant la saisie d'un code PIN"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-registre-temps-reel.webp",
+    "Tableau de bord CORO Sentinelle affichant le registre de présence"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-evacuation.webp",
+    "Évacuation d'un bâtiment avec utilisation du registre de présence CORO Sentinelle"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-point-rassemblement.webp",
+    "Décompte des occupants au point de rassemblement avec CORO Sentinelle"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-personnes-manquantes.webp",
+    "Interface CORO Sentinelle permettant d'identifier les personnes non encore recensées"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-multi-sites.webp",
+    "Gestion de plusieurs bâtiments et établissements avec CORO Sentinelle"
+   ]
+  ],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "CORO Sentinelle",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Registre numérique de présence destiné aux bâtiments et organisations permettant de soutenir la gestion des présences et le décompte des occupants lors d'une évacuation.",
+    "url": "https://getcoro.io/sentinelle",
+    "publisher": {
+     "@type": "Organization",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    }
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "Qu'est-ce qu'un registre numérique de présence?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Un registre numérique de présence permet d'enregistrer et de consulter les personnes présentes dans un bâtiment ou un établissement, notamment les employés, visiteurs, entrepreneurs et fournisseurs."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Comment CORO Sentinelle fonctionne-t-il?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "L'utilisateur peut accéder à Sentinelle à partir d'un QR code placé à l'entrée du bâtiment puis s'identifier au moyen de l'interface prévue par l'organisation."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "CORO Sentinelle peut-il être utilisé pendant une évacuation?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le registre de présence peut soutenir le processus de recensement en permettant de comparer les personnes enregistrées comme présentes avec celles qui ont été confirmées après l'évacuation."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Sentinelle remplace-t-il le plan de mesures d'urgence?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Non. Sentinelle est un outil opérationnel complémentaire et ne remplace ni le plan de mesures d'urgence ni les procédures d'évacuation de l'organisation."
+      }
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "main": 1,
+   "header": 0,
+   "footer": 1,
+   "h1": 1
+  },
+  "mainText": "CORO\n← Home\nFR\nCORO SENTINELLE\nSachez qui est présent. Sachez qui manque.\n\nCORO Sentinelle est un registre numérique de présence conçu pour les bâtiments et les organisations. Employés, visiteurs, entrepreneurs et autres occupants peuvent s'enregistrer simplement à leur arrivée afin de fournir aux responsables une information utile lorsque chaque minute compte.\n\nDemander une démonstration\nVoir comment ça fonctionne\nEnregistrement simple\nQR code et code PIN\nPrésence actualisée\nVue opérationnelle du bâtiment\nUtilisable en urgence\nDécompte et suivi d'évacuation\nPRÉSENCE ET SÉCURITÉ\nUn registre de présence pensé pour les situations réelles.\n\nDans de nombreux bâtiments, savoir qui est entré ne suffit pas. Lorsqu'une alarme survient, la véritable question devient : qui était présent et qui doit maintenant être localisé?\n\nLe registre quotidien devient une information opérationnelle en situation d'urgence.\nUNE LOGIQUE SIMPLE\nDe l'arrivée à l'évacuation.\n\nSentinelle relie le contrôle quotidien des présences aux besoins opérationnels d'une organisation lorsqu'une situation d'urgence survient.\n\n01\nS'enregistrer\n\nLa personne scanne le QR code de l'établissement, s'identifie depuis son téléphone et confirme sa présence.\n\n02\nConnaître les présences\n\nLes personnes actuellement enregistrées peuvent être consultées dans une interface centralisée par les utilisateurs autorisés.\n\n03\nFaciliter le décompte\n\nLors d'une évacuation, cette information contribue au recensement des occupants et au suivi des personnes qui n'ont pas encore été confirmées.\n\nÉTAPE 01\nUn QR code à l'entrée du bâtiment.\n\nUne borne ou une signalisation Sentinelle permet à l'utilisateur de démarrer son enregistrement depuis son propre téléphone.\n\nAucune application à installer pour l'utilisateur\nAccès rapide depuis un téléphone intelligent\nExpérience adaptée aux employés et visiteurs\nProcessus utilisable sur plusieurs points d'accès\nÉTAPE 02\nIdentification rapide par code PIN.\n\nAprès avoir scanné le code QR, l'utilisateur accède directement à l'interface Sentinelle et peut s'identifier selon la configuration établie par l'organisation.\n\nInterface mobile simplifiée\nIdentification rapide\nProcessus adapté aux environnements professionnels\nRéduction des manipulations à l'accueil\nÉTAPE 03\nUne vision actualisée des personnes présentes.\n\nLes responsables autorisés peuvent consulter les informations nécessaires pour connaître les personnes actuellement enregistrées dans l'établissement.\n\nEmployés présents\nVisiteurs enregistrés\nEntrepreneurs et fournisseurs\nPrésences consultables depuis une interface centralisée\nLORSQU'UNE URGENCE SURVIENT\nLe registre prend une nouvelle valeur.\n\nPendant une évacuation, il ne suffit plus de savoir combien de personnes se trouvaient dans le bâtiment. Les responsables doivent pouvoir déterminer quelles personnes ont été recensées et lesquelles nécessitent encore une vérification.\n\nAppuyer le décompte des occupants\nFaciliter le travail des responsables d'évacuation\nIdentifier les personnes non encore confirmées\nCentraliser l'information disponible\nDU BÂTIMENT AU POINT DE RASSEMBLEMENT\nUne continuité de l'information.\n01 — AVANT\nPrésence\n\nL'organisation dispose d'une liste des personnes enregistrées comme présentes.\n\n02 — ALARME\nÉvacuation\n\nLes occupants quittent le bâtiment conformément aux procédures de l'établissement.\n\n03 — EXTÉRIEUR\nDécompte\n\nLes responsables effectuent le recensement au point de rassemblement.\n\n04 — ANALYSE\nVérification\n\nLes informations recueillies permettent de déterminer quelles personnes n'ont pas encore été confirmées.\n\nPOINT DE RASSEMBLEMENT\nFaciliter le recensement après l'évacuation.\n\nLe point de rassemblement constitue l'un des moments les plus importants du processus d'évacuation. CORO Sentinelle permet de soutenir les responsables qui doivent établir une situation aussi claire que possible après la sortie des occupants.\n\nL'objectif n'est pas simplement d'obtenir un nombre, mais de transformer le registre de présence en information utile à la gestion de l'événement.\n\nINFORMATION OPÉRATIONNELLE\nPasser de « combien? » à « qui? ».\n\nDans une situation d'urgence, connaître le nombre approximatif d'occupants ne répond pas toujours aux besoins de l'équipe responsable.\n\nSentinelle contribue à établir une information nominative permettant de comparer les personnes enregistrées comme présentes avec celles qui ont effectivement été recensées.\n\nUNE SEULE LOGIQUE\nPlusieurs types d'occupants.\n\nUn bâtiment ne contient pas uniquement des employés. Sentinelle permet de penser la présence de manière plus globale.\n\nEmployés\nPersonnel régulier et utilisateurs du bâtiment.\nVisiteurs\nClients, invités et visiteurs ponctuels.\nEntrepreneurs\nTravailleurs externes et fournisseurs.\nAutres occupants\nToute catégorie définie selon les besoins de l'organisation.\nCAS D'UTILISATION\nUne solution adaptée à différents environnements.\nIMMEUBLES\nTours de bureaux\n\nGestion quotidienne des présences et soutien aux procédures d'évacuation du bâtiment.\n\nINDUSTRIE\nSites industriels\n\nIdentification des employés, entrepreneurs et fournisseurs présents sur le site.\n\nINSTITUTIONS\nOrganisations multi-usagers\n\nUne approche structurée de la présence adaptée aux réalités opérationnelles de l'organisation.\n\nMULTI-SITES\nPortefeuilles immobiliers\n\nDéploiement d'une logique commune dans plusieurs bâtiments ou établissements.\n\nÉVOLUTIF\nUn bâtiment aujourd'hui. Plusieurs sites demain.\n\nLa logique Sentinelle peut accompagner les organisations qui disposent de plusieurs établissements et qui souhaitent uniformiser leur approche de gestion des présences.\n\nMODERNISER LE REGISTRE\nRegistre papier ou registre numérique?\n\nLe registre papier peut fonctionner dans certains contextes. Sentinelle vise toutefois à réduire plusieurs limites associées aux processus manuels.\n\nCritère\tRegistre papier\tCORO Sentinelle\nConsultation\tÀ l'endroit où se trouve le registre\tDepuis l'interface autorisée\nLisibilité\tVariable\tInformation structurée\nMise à jour\tManuelle\tLiée aux enregistrements utilisateurs\nUtilisation en évacuation\tNécessite de récupérer le registre\tInformation disponible numériquement\nRecherche d'une personne\tLecture manuelle\tConsultation structurée\nMulti-sites\tRegistres distincts\tApproche centralisable\nPLUS QU'UN REGISTRE\nSentinelle s'inscrit dans l'écosystème CORO.\n\nCORO est conçu pour aider les organisations et les professionnels à structurer leur préparation, leur documentation et leurs outils liés aux mesures d'urgence et à la continuité des activités.\n\nSentinelle ajoute une dimension essentielle : connecter la planification à la réalité du terrain.\nSentinel Pricing\n\nPer building, per month. No long-term contract.\n\nAvailable now\nEssential\n$149/month\nReal-time occupancy registry\nQR code + PIN check-in\nInstant evacuation mode\nVisitor invitations\n12-month history\nISO 22301 evacuation PDF report\nProgressive web app (PWA)\nRequest a demo\n⭐ Most popular\nResilience\nFrom $249/month\nEverything in Essential, plus:\nCORO resilience index (4 components)\nReal-time emergency roles\nAutomatic role substitution\nMulti-building organizational intelligence\nCorrective actions with tracking\n90-day trend chart\nRequest a quote\nFull resilience\nIntervention\nCustom\nEverything in Resilience, plus:\nIncident Module (15 incident types)\nBilingual FR/EN panic button\nSMS + email to coordinators and occupants\nCheckable coordinator checklist\nISO 22301 post-incident REX report\nNFPA 2020 / CCOHS compliance\nTalk to our team\nDÉCOUVRIR CORO SENTINELLE\nVotre organisation sait-elle réellement qui est présent lorsqu'une urgence survient?\n\nDécouvrez comment CORO Sentinelle peut intégrer la gestion des présences à votre organisation et soutenir vos procédures d'évacuation.\n\nDemander une démonstration\nDécouvrir la plateforme CORO\nQUESTIONS FRÉQUENTES\nCORO Sentinelle en quelques réponses.\nQu'est-ce qu'un registre numérique de présence?\nComment CORO Sentinelle fonctionne-t-il?\nCORO Sentinelle peut-il être utilisé pendant une évacuation?\nSentinelle remplace-t-il le plan de mesures d'urgence?\nPeut-on utiliser Sentinelle pour les visiteurs?\nPourquoi connaître les personnes présentes lors d'une urgence?\nSentinelle peut-il être utilisé dans plusieurs bâtiments?\nUne application doit-elle être installée sur le téléphone?\nRESSOURCES\nApprofondir la gestion des présences et de l'évacuation.\nComment faire le décompte des occupants lors d'une évacuation?\nLire l'article →\nPourquoi le registre de présence est essentiel en situation d'urgence\nLire l'article →\nRegistre papier ou numérique : lequel choisir?\nLire l'article →\nComment gérer les visiteurs lors d'une évacuation?\nLire l'article →\nPoint de rassemblement : comment organiser le décompte?\nLire l'article →\nEmployés, visiteurs et entrepreneurs : qui doit être recensé?\nLire l'article →\nQR code et registre de présence : comment ça fonctionne?\nLire l'article →\nComment intégrer un registre de présence à un plan de mesures d'urgence?\nLire l'article →"
+ },
+ "ref": {
+  "status": 200,
+  "title": "Registre de présence numérique et évacuation | CORO Sentinelle | CORO",
+  "description": "CORO Sentinelle est un registre numérique de présence conçu pour savoir qui est présent dans un bâtiment et faciliter le décompte des occupants lors d'une évacuation.",
+  "canonical": "https://getcoro.io/sentinelle",
+  "hreflang": [],
+  "ogLocale": null,
+  "ogUrl": "https://getcoro.io/sentinelle",
+  "ogTitle": "CORO Sentinelle | Registre de présence et gestion d'évacuation",
+  "ogImage": "https://getcoro.io/images/sentinelle/coro-sentinelle-registre-presence.webp",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Sachez qui est présent. Sachez qui manque."
+   ],
+   [
+    "h2",
+    "Un registre de présence pensé pour les situations réelles."
+   ],
+   [
+    "h2",
+    "De l'arrivée à l'évacuation."
+   ],
+   [
+    "h3",
+    "S'enregistrer"
+   ],
+   [
+    "h3",
+    "Connaître les présences"
+   ],
+   [
+    "h3",
+    "Faciliter le décompte"
+   ],
+   [
+    "h2",
+    "Un QR code à l'entrée du bâtiment."
+   ],
+   [
+    "h2",
+    "Identification rapide par code PIN."
+   ],
+   [
+    "h2",
+    "Une vision actualisée des personnes présentes."
+   ],
+   [
+    "h2",
+    "Le registre prend une nouvelle valeur."
+   ],
+   [
+    "h2",
+    "Une continuité de l'information."
+   ],
+   [
+    "h3",
+    "Présence"
+   ],
+   [
+    "h3",
+    "Évacuation"
+   ],
+   [
+    "h3",
+    "Décompte"
+   ],
+   [
+    "h3",
+    "Vérification"
+   ],
+   [
+    "h2",
+    "Faciliter le recensement après l'évacuation."
+   ],
+   [
+    "h2",
+    "Passer de « combien? » à « qui? »."
+   ],
+   [
+    "h2",
+    "Plusieurs types d'occupants."
+   ],
+   [
+    "h2",
+    "Une solution adaptée à différents environnements."
+   ],
+   [
+    "h3",
+    "Tours de bureaux"
+   ],
+   [
+    "h3",
+    "Sites industriels"
+   ],
+   [
+    "h3",
+    "Organisations multi-usagers"
+   ],
+   [
+    "h3",
+    "Portefeuilles immobiliers"
+   ],
+   [
+    "h2",
+    "Un bâtiment aujourd'hui. Plusieurs sites demain."
+   ],
+   [
+    "h2",
+    "Registre papier ou registre numérique?"
+   ],
+   [
+    "h2",
+    "Sentinelle s'inscrit dans l'écosystème CORO."
+   ],
+   [
+    "h2",
+    "Tarifs Sentinelle"
+   ],
+   [
+    "h3",
+    "Essentiel"
+   ],
+   [
+    "h3",
+    "Résilience"
+   ],
+   [
+    "h3",
+    "Intervention"
+   ],
+   [
+    "h2",
+    "Votre organisation sait-elle réellement qui est présent lorsqu'une urgence survient?"
+   ],
+   [
+    "h2",
+    "CORO Sentinelle en quelques réponses."
+   ],
+   [
+    "h2",
+    "Approfondir la gestion des présences et de l'évacuation."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/",
+    "← Accueil"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "EN"
+   ],
+   [
+    "/contact",
+    "Demander une démonstration"
+   ],
+   [
+    "#fonctionnement",
+    "Voir comment ça fonctionne"
+   ],
+   [
+    "#demo",
+    "Demander une démo"
+   ],
+   [
+    "#demo",
+    "Demander une soumission"
+   ],
+   [
+    "#demo",
+    "Parler à notre équipe"
+   ],
+   [
+    "/contact",
+    "Demander une démonstration"
+   ],
+   [
+    "/",
+    "Découvrir la plateforme CORO"
+   ],
+   [
+    "/blog/decompte-occupants-evacuation",
+    "Comment faire le décompte des occupants lors d'une évacuation?Lire l'article →"
+   ],
+   [
+    "/blog/registre-presence-situation-urgence",
+    "Pourquoi le registre de présence est essentiel en situation d'urgenceLire l'article →"
+   ],
+   [
+    "/blog/registre-papier-ou-numerique",
+    "Registre papier ou numérique : lequel choisir?Lire l'article →"
+   ],
+   [
+    "/blog/visiteurs-evacuation",
+    "Comment gérer les visiteurs lors d'une évacuation?Lire l'article →"
+   ],
+   [
+    "/blog/point-rassemblement-decompte",
+    "Point de rassemblement : comment organiser le décompte?Lire l'article →"
+   ],
+   [
+    "/blog/qui-recencer-evacuation",
+    "Employés, visiteurs et entrepreneurs : qui doit être recensé?Lire l'article →"
+   ],
+   [
+    "/blog/qr-code-registre-presence",
+    "QR code et registre de présence : comment ça fonctionne?Lire l'article →"
+   ],
+   [
+    "/blog/pmu-registre-presence",
+    "Comment intégrer un registre de présence à un plan de mesures d'urgence?Lire l'article →"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-registre-presence.webp",
+    "CORO Sentinelle, registre numérique de présence et gestion d'évacuation"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-qr-code-entree.webp",
+    "Utilisateur scannant le QR code CORO Sentinelle à l'entrée d'un bâtiment"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-code-pin.webp",
+    "Interface mobile CORO Sentinelle permettant la saisie d'un code PIN"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-registre-temps-reel.webp",
+    "Tableau de bord CORO Sentinelle affichant le registre de présence"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-evacuation.webp",
+    "Évacuation d'un bâtiment avec utilisation du registre de présence CORO Sentinelle"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-point-rassemblement.webp",
+    "Décompte des occupants au point de rassemblement avec CORO Sentinelle"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-personnes-manquantes.webp",
+    "Interface CORO Sentinelle permettant d'identifier les personnes non encore recensées"
+   ],
+   [
+    "http://localhost:3232/images/sentinelle/coro-sentinelle-multi-sites.webp",
+    "Gestion de plusieurs bâtiments et établissements avec CORO Sentinelle"
+   ]
+  ],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "CORO Sentinelle",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Registre numérique de présence destiné aux bâtiments et organisations permettant de soutenir la gestion des présences et le décompte des occupants lors d'une évacuation.",
+    "url": "https://getcoro.io/sentinelle",
+    "publisher": {
+     "@type": "Organization",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    }
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+     {
+      "@type": "Question",
+      "name": "Qu'est-ce qu'un registre numérique de présence?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Un registre numérique de présence permet d'enregistrer et de consulter les personnes présentes dans un bâtiment ou un établissement, notamment les employés, visiteurs, entrepreneurs et fournisseurs."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Comment CORO Sentinelle fonctionne-t-il?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "L'utilisateur peut accéder à Sentinelle à partir d'un QR code placé à l'entrée du bâtiment puis s'identifier au moyen de l'interface prévue par l'organisation."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "CORO Sentinelle peut-il être utilisé pendant une évacuation?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Oui. Le registre de présence peut soutenir le processus de recensement en permettant de comparer les personnes enregistrées comme présentes avec celles qui ont été confirmées après l'évacuation."
+      }
+     },
+     {
+      "@type": "Question",
+      "name": "Sentinelle remplace-t-il le plan de mesures d'urgence?",
+      "acceptedAnswer": {
+       "@type": "Answer",
+       "text": "Non. Sentinelle est un outil opérationnel complémentaire et ne remplace ni le plan de mesures d'urgence ni les procédures d'évacuation de l'organisation."
+      }
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "main": 1,
+   "header": 0,
+   "footer": 1,
+   "h1": 1
+  },
+  "mainText": "CORO\n← Accueil\nEN\nCORO SENTINELLE\nSachez qui est présent. Sachez qui manque.\n\nCORO Sentinelle est un registre numérique de présence conçu pour les bâtiments et les organisations. Employés, visiteurs, entrepreneurs et autres occupants peuvent s'enregistrer simplement à leur arrivée afin de fournir aux responsables une information utile lorsque chaque minute compte.\n\nDemander une démonstration\nVoir comment ça fonctionne\nEnregistrement simple\nQR code et code PIN\nPrésence actualisée\nVue opérationnelle du bâtiment\nUtilisable en urgence\nDécompte et suivi d'évacuation\nPRÉSENCE ET SÉCURITÉ\nUn registre de présence pensé pour les situations réelles.\n\nDans de nombreux bâtiments, savoir qui est entré ne suffit pas. Lorsqu'une alarme survient, la véritable question devient : qui était présent et qui doit maintenant être localisé?\n\nLe registre quotidien devient une information opérationnelle en situation d'urgence.\nUNE LOGIQUE SIMPLE\nDe l'arrivée à l'évacuation.\n\nSentinelle relie le contrôle quotidien des présences aux besoins opérationnels d'une organisation lorsqu'une situation d'urgence survient.\n\n01\nS'enregistrer\n\nLa personne scanne le QR code de l'établissement, s'identifie depuis son téléphone et confirme sa présence.\n\n02\nConnaître les présences\n\nLes personnes actuellement enregistrées peuvent être consultées dans une interface centralisée par les utilisateurs autorisés.\n\n03\nFaciliter le décompte\n\nLors d'une évacuation, cette information contribue au recensement des occupants et au suivi des personnes qui n'ont pas encore été confirmées.\n\nÉTAPE 01\nUn QR code à l'entrée du bâtiment.\n\nUne borne ou une signalisation Sentinelle permet à l'utilisateur de démarrer son enregistrement depuis son propre téléphone.\n\nAucune application à installer pour l'utilisateur\nAccès rapide depuis un téléphone intelligent\nExpérience adaptée aux employés et visiteurs\nProcessus utilisable sur plusieurs points d'accès\nÉTAPE 02\nIdentification rapide par code PIN.\n\nAprès avoir scanné le code QR, l'utilisateur accède directement à l'interface Sentinelle et peut s'identifier selon la configuration établie par l'organisation.\n\nInterface mobile simplifiée\nIdentification rapide\nProcessus adapté aux environnements professionnels\nRéduction des manipulations à l'accueil\nÉTAPE 03\nUne vision actualisée des personnes présentes.\n\nLes responsables autorisés peuvent consulter les informations nécessaires pour connaître les personnes actuellement enregistrées dans l'établissement.\n\nEmployés présents\nVisiteurs enregistrés\nEntrepreneurs et fournisseurs\nPrésences consultables depuis une interface centralisée\nLORSQU'UNE URGENCE SURVIENT\nLe registre prend une nouvelle valeur.\n\nPendant une évacuation, il ne suffit plus de savoir combien de personnes se trouvaient dans le bâtiment. Les responsables doivent pouvoir déterminer quelles personnes ont été recensées et lesquelles nécessitent encore une vérification.\n\nAppuyer le décompte des occupants\nFaciliter le travail des responsables d'évacuation\nIdentifier les personnes non encore confirmées\nCentraliser l'information disponible\nDU BÂTIMENT AU POINT DE RASSEMBLEMENT\nUne continuité de l'information.\n01 — AVANT\nPrésence\n\nL'organisation dispose d'une liste des personnes enregistrées comme présentes.\n\n02 — ALARME\nÉvacuation\n\nLes occupants quittent le bâtiment conformément aux procédures de l'établissement.\n\n03 — EXTÉRIEUR\nDécompte\n\nLes responsables effectuent le recensement au point de rassemblement.\n\n04 — ANALYSE\nVérification\n\nLes informations recueillies permettent de déterminer quelles personnes n'ont pas encore été confirmées.\n\nPOINT DE RASSEMBLEMENT\nFaciliter le recensement après l'évacuation.\n\nLe point de rassemblement constitue l'un des moments les plus importants du processus d'évacuation. CORO Sentinelle permet de soutenir les responsables qui doivent établir une situation aussi claire que possible après la sortie des occupants.\n\nL'objectif n'est pas simplement d'obtenir un nombre, mais de transformer le registre de présence en information utile à la gestion de l'événement.\n\nINFORMATION OPÉRATIONNELLE\nPasser de « combien? » à « qui? ».\n\nDans une situation d'urgence, connaître le nombre approximatif d'occupants ne répond pas toujours aux besoins de l'équipe responsable.\n\nSentinelle contribue à établir une information nominative permettant de comparer les personnes enregistrées comme présentes avec celles qui ont effectivement été recensées.\n\nUNE SEULE LOGIQUE\nPlusieurs types d'occupants.\n\nUn bâtiment ne contient pas uniquement des employés. Sentinelle permet de penser la présence de manière plus globale.\n\nEmployés\nPersonnel régulier et utilisateurs du bâtiment.\nVisiteurs\nClients, invités et visiteurs ponctuels.\nEntrepreneurs\nTravailleurs externes et fournisseurs.\nAutres occupants\nToute catégorie définie selon les besoins de l'organisation.\nCAS D'UTILISATION\nUne solution adaptée à différents environnements.\nIMMEUBLES\nTours de bureaux\n\nGestion quotidienne des présences et soutien aux procédures d'évacuation du bâtiment.\n\nINDUSTRIE\nSites industriels\n\nIdentification des employés, entrepreneurs et fournisseurs présents sur le site.\n\nINSTITUTIONS\nOrganisations multi-usagers\n\nUne approche structurée de la présence adaptée aux réalités opérationnelles de l'organisation.\n\nMULTI-SITES\nPortefeuilles immobiliers\n\nDéploiement d'une logique commune dans plusieurs bâtiments ou établissements.\n\nÉVOLUTIF\nUn bâtiment aujourd'hui. Plusieurs sites demain.\n\nLa logique Sentinelle peut accompagner les organisations qui disposent de plusieurs établissements et qui souhaitent uniformiser leur approche de gestion des présences.\n\nMODERNISER LE REGISTRE\nRegistre papier ou registre numérique?\n\nLe registre papier peut fonctionner dans certains contextes. Sentinelle vise toutefois à réduire plusieurs limites associées aux processus manuels.\n\nCritère\tRegistre papier\tCORO Sentinelle\nConsultation\tÀ l'endroit où se trouve le registre\tDepuis l'interface autorisée\nLisibilité\tVariable\tInformation structurée\nMise à jour\tManuelle\tLiée aux enregistrements utilisateurs\nUtilisation en évacuation\tNécessite de récupérer le registre\tInformation disponible numériquement\nRecherche d'une personne\tLecture manuelle\tConsultation structurée\nMulti-sites\tRegistres distincts\tApproche centralisable\nPLUS QU'UN REGISTRE\nSentinelle s'inscrit dans l'écosystème CORO.\n\nCORO est conçu pour aider les organisations et les professionnels à structurer leur préparation, leur documentation et leurs outils liés aux mesures d'urgence et à la continuité des activités.\n\nSentinelle ajoute une dimension essentielle : connecter la planification à la réalité du terrain.\nTarifs Sentinelle\n\nPar bâtiment, par mois. Aucun contrat à long terme.\n\nDisponible maintenant\nEssentiel\n149 $/mois\nRegistre d'occupation temps réel\nPointage QR code + PIN\nMode évacuation instantané\nInvitations visiteurs\nHistorique 12 mois\nRapport PDF évacuation ISO 22301\nApplication web progressive (PWA)\nDemander une démo\n⭐ Le plus populaire\nRésilience\nÀ partir de 249 $/mois\nTout Essentiel, plus :\nIndice CORO de résilience (4 composantes)\nRôles d'urgence en temps réel\nSubstitution automatique des rôles\nIntelligence organisationnelle multi-bâtiments\nActions correctives avec suivi\nGraphique tendance 90 jours\nDemander une soumission\nRésilience complète\nIntervention\nSur mesure\nTout Résilience, plus :\nModule Incident (15 types de sinistres)\nBouton panique bilingue FR/EN\nSMS + courriel coordonnateurs et occupants\nChecklist coordonnateur cochable\nRapport REX post-incident ISO 22301\nConformité CNPI 2020 / CNESST\nParler à notre équipe\nDÉCOUVRIR CORO SENTINELLE\nVotre organisation sait-elle réellement qui est présent lorsqu'une urgence survient?\n\nDécouvrez comment CORO Sentinelle peut intégrer la gestion des présences à votre organisation et soutenir vos procédures d'évacuation.\n\nDemander une démonstration\nDécouvrir la plateforme CORO\nQUESTIONS FRÉQUENTES\nCORO Sentinelle en quelques réponses.\nQu'est-ce qu'un registre numérique de présence?\nComment CORO Sentinelle fonctionne-t-il?\nCORO Sentinelle peut-il être utilisé pendant une évacuation?\nSentinelle remplace-t-il le plan de mesures d'urgence?\nPeut-on utiliser Sentinelle pour les visiteurs?\nPourquoi connaître les personnes présentes lors d'une urgence?\nSentinelle peut-il être utilisé dans plusieurs bâtiments?\nUne application doit-elle être installée sur le téléphone?\nRESSOURCES\nApprofondir la gestion des présences et de l'évacuation.\nComment faire le décompte des occupants lors d'une évacuation?\nLire l'article →\nPourquoi le registre de présence est essentiel en situation d'urgence\nLire l'article →\nRegistre papier ou numérique : lequel choisir?\nLire l'article →\nComment gérer les visiteurs lors d'une évacuation?\nLire l'article →\nPoint de rassemblement : comment organiser le décompte?\nLire l'article →\nEmployés, visiteurs et entrepreneurs : qui doit être recensé?\nLire l'article →\nQR code et registre de présence : comment ça fonctionne?\nLire l'article →\nComment intégrer un registre de présence à un plan de mesures d'urgence?\nLire l'article →"
+ }
+}

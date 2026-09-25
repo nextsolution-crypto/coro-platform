@@ -43,6 +43,7 @@ Aucune page de production n'a été migrée sous le Design System V1.0. L'adopti
 | 02 | Current Site Inventory | `05-migration/CURRENT-SITE-INVENTORY.md` | AUDIT VALIDÉ, mis à jour V1.1 |
 | 03 | Content Migration Matrix | `05-migration/CONTENT-MIGRATION-MATRIX.md` | REVIEW, priorités V1.0 ajoutées |
 | 03b | MIG-02 Gate (protocole de migration, règle des actifs visuels V1, registre des blockers) | `05-migration/MIG-02-GATE.md` | Gate MIG-02, à lire avant MIG-03 |
+| 03c | MIG-03 Register (famille Résilience & opérations) | `05-migration/MIG-03-REGISTER.md` | Points de mise en ligne MIG-03 |
 | 04 | CORO Visual Language | `02-design/CORO-VISUAL-LANGUAGE.md` | APPROVED, V1.1 (motifs interdits autoritatifs §16) |
 | 05 | CORO Design System | `02-design/CORO-DESIGN-SYSTEM.md` | V1.0 gelé |
 | 06 | CORO Component Library | `02-design/CORO-COMPONENT-LIBRARY.md` | V1.0 gelé (catalogue autoritatif) |
