@@ -13,9 +13,9 @@ const page = read('app/contact/page.tsx');
 const form = read('app/DemoForm.tsx');
 
 test('the registry holds exactly /about and /contact; /contact has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation']);
   assert.equal(isLegacyFooterVisible('/contact'), false);
-  assert.equal(isLegacyFooterVisible('/programme-recommandation'), true);
+  assert.equal(isLegacyFooterVisible('/gestion-documentaire'), true);
   assert.equal(isLegacyFooterVisible('/'), true);
 });
 
