@@ -13,6 +13,9 @@ export type HeroPhoto = {
   /** object-position of the crop on wide screens and on narrow screens: keeps the subject in frame. */
   position?: string;
   mobilePosition?: string;
+  /** Optional tighter crop for a photograph whose far edge must stay out of frame: width of the photo field on wide screens (percent, default 64) and its aspect ratio on narrow screens (default "16 / 11"). */
+  coverage?: number;
+  mobileRatio?: string;
   priority?: boolean;
 };
 
@@ -44,7 +47,7 @@ export function EditorialHero({ id, label, title, lead, detail, signature, actio
   );
   if (photo) {
     const side = photo.side ?? 'end';
-    const vars = { '--pos': photo.position ?? 'center', '--pos-m': photo.mobilePosition ?? photo.position ?? 'center' } as CSSProperties;
+    const vars = { '--pos': photo.position ?? 'center', '--pos-m': photo.mobilePosition ?? photo.position ?? 'center', '--cov': `${photo.coverage ?? 64}%`, '--ratio': photo.mobileRatio ?? '16 / 11' } as CSSProperties;
     return (
       <section className={styles.photoHero} data-side={side} data-surface="dark" aria-labelledby={id} style={vars}>
         <div className={styles.photoField}>

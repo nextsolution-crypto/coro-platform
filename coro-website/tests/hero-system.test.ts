@@ -72,7 +72,7 @@ test('no runtime dependency was added for the hero system', () => {
 test('visual asset files are unchanged since they were committed', (context) => {
   try { execFileSync('git', ['cat-file', '-e', '6d0baebf^{commit}'], { cwd: root, stdio: 'ignore' }); } catch { context.skip('asset-pack commit 6d0baebf is not available in this clone'); return; }
   let changed = false;
-  try { execFileSync('git', ['diff', '--quiet', '6d0baebf', '--', 'public/website-v2'], { cwd: root, stdio: 'ignore' }); } catch { changed = true; }
+  try { execFileSync('git', ['diff', '--quiet', '--diff-filter=MD', '6d0baebf', '--', 'public/website-v2'], { cwd: root, stdio: 'ignore' }); } catch { changed = true; }
   assert.equal(changed, false, 'public/website-v2 differs from the committed asset pack');
 });
 

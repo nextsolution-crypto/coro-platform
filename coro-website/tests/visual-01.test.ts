@@ -34,7 +34,7 @@ test('photographic hero styling: V1 tokens only, gradient confined to the photo 
   assert.doesNotMatch(heroCssCode, /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|box-shadow|blur|glow|@keyframes|animation|transition|parallax|backdrop-filter/);
   assert.match(heroCssCode, /\.photoHero \{[^}]*background: var\(--coro-v1-navy-950\)/);
   assert.match(heroCssCode, /color-mix\(in srgb, var\(--coro-v1-navy-950\)/);
-  assert.match(heroCssCode, /\.photoField \{[^}]*inline-size: 64%/);
+  assert.match(heroCssCode, /\.photoField \{[^}]*inline-size: var\(--cov\)/);
   assert.match(heroCssCode, /data-side="end"\] \.scrim \{ background: linear-gradient\(to right/);
   assert.match(heroCssCode, /data-side="start"\] \.scrim \{ background: linear-gradient\(to left/);
   assert.match(heroCssCode, /object-position: var\(--pos-m\)/);
@@ -119,7 +119,7 @@ test('no product-truth expansion: the Projects boundary and Booking/Planner limi
 });
 
 test('registry, metadata and routes are unchanged by the visual enrichment', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs']);
   assert.ok(read('app/gestion-documentaire/page.tsx').includes("metaTitle: 'Gestion documentaire des plans d’urgence et de continuité'"));
   assert.ok(read('app/gestion-de-projets/page.tsx').includes("metaTitle: 'Gestion de projets et de mandats en mesures d’urgence'"));
   assert.ok(read('app/partners/page.tsx').includes("metaTitle: 'Partenaires et collaborations'"));

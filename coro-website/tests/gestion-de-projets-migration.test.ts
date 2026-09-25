@@ -14,9 +14,9 @@ const page = read('app/gestion-de-projets/page.tsx');
 const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 test('the registry adds only /gestion-de-projets to the five approved routes; the other product pages stay legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs']);
   assert.equal(isLegacyFooterVisible('/gestion-de-projets'), false);
-  for (const legacy of ['/performance-objectifs', '/portail-client', '/']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
+  for (const legacy of ['/portail-client', '/']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
 });
 
 test('V2Shell owns the chrome: no page-owned header, main, footer or legacy shell; V1 tokens only', () => {

@@ -1,0 +1,1001 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Performance & Objectifs — CORO | CORO",
+  "description": "Transformez vos opérations en données exploitables. Suivez les heures, budgets, rendement des mandats, capacité de production et objectifs avec CORO.",
+  "canonical": "https://getcoro.io/performance-objectifs",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/performance-objectifs"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/performance-objectifs?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/performance-objectifs"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/performance-objectifs",
+  "ogTitle": "Performance & Objectifs — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Transformer l’activité en capacité de pilotage."
+   ],
+   [
+    "h2",
+    "Où va le temps?"
+   ],
+   [
+    "h2",
+    "Où sont les écarts?"
+   ],
+   [
+    "h2",
+    "Quelle est la capacité?"
+   ],
+   [
+    "h2",
+    "Quels objectifs avancent?"
+   ],
+   [
+    "h2",
+    "Répondre aux questions de pilotage"
+   ],
+   [
+    "h2",
+    "Performance ≠ Indice CORO"
+   ],
+   [
+    "h3",
+    "Activité · Charge · Budgets · Objectifs"
+   ],
+   [
+    "h3",
+    "Préparation · Capacité face aux événements"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Que mesure CORO Performance?"
+   ],
+   [
+    "h3",
+    "Est-ce un indice de résilience?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Performance"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fcoro-performance-objectifs.webp&w=1080&q=75",
+    "Fenêtre analytique CORO Performance"
+   ]
+  ],
+  "jsonLd": [],
+  "counts": {
+   "main": 1,
+   "header": 3,
+   "footer": 2,
+   "h1": 1
+  },
+  "mainText": "PERFORMANCE ET OBJECTIFS\n\nTransformer l’activité en capacité de pilotage.\n\nCORO Performance met en relation heures, budgets, charge, objectifs et écarts pour éclairer les décisions de gestion.\n\nDécouvrir CORO Performance\n01\nOù va le temps?\n\nLes heures par mandat, activité et membre rendent l’effort observable.\n\n02\nOù sont les écarts?\n\nLe rapprochement budget, heures prévues et réalisées révèle les écarts.\n\n03\nQuelle est la capacité?\n\nLa charge et le planning soutiennent les décisions d’affectation.\n\n04\nQuels objectifs avancent?\n\nLes objectifs et KPI donnent une lecture commune de la progression.\n\nFENÊTRE ANALYTIQUE\n\nRépondre aux questions de pilotage\nFenêtre analytique CORO Performance\nACTIVITÉ\nMESURE\nÉCART\nLECTURE\nDÉCISION\nPerformance ≠ Indice CORO\n\nPERFORMANCE\n\nActivité · Charge · Budgets · Objectifs\n\nRÉSILIENCE\n\nPréparation · Capacité face aux événements\n\nPerformance mesure principalement l’activité, la capacité et les objectifs. La Résilience vise progressivement la préparation organisationnelle face aux événements. Les deux lectures peuvent se rejoindre dans une vision Network, mais restent distinctes.\n\nMesurer pour décider. Décider pour progresser.\n\nCETTE PARTIE DE LA PLATEFORME\n\nUn socle produit relié\nDocuments\n\nStructure les données et les livrables.\n\nExplorer\nProjects\n\nOrganise les mandats et le travail.\n\nExplorer\nPerformance\n\nMesure activité, objectifs et capacité.\n\nExplorer\nClient\n\nRend l’information accessible au client.\n\nExplorer\n\nFAQ\n\nQuestions fréquentes\nQue mesure CORO Performance?\n\nLes activités, heures, budgets, capacité, objectifs et écarts issus des opérations suivies.\n\nEst-ce un indice de résilience?\n\nNon. La performance opérationnelle et la préparation organisationnelle sont deux concepts distincts."
+ },
+ "en": {
+  "status": 200,
+  "title": "Performance & Objectives — CORO | CORO",
+  "description": "Turn your operations into actionable data. Track hours, budgets, mandate performance, production capacity and objectives with CORO.",
+  "canonical": "https://getcoro.io/performance-objectifs?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/performance-objectifs"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/performance-objectifs?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/performance-objectifs"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/performance-objectifs?lang=en",
+  "ogTitle": "Performance & Objectives — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Turn activity into management insight."
+   ],
+   [
+    "h2",
+    "Where does time go?"
+   ],
+   [
+    "h2",
+    "Where are the variances?"
+   ],
+   [
+    "h2",
+    "What is our capacity?"
+   ],
+   [
+    "h2",
+    "Which goals are progressing?"
+   ],
+   [
+    "h2",
+    "Answer management questions"
+   ],
+   [
+    "h2",
+    "Performance ≠ CORO Index"
+   ],
+   [
+    "h3",
+    "Activity · Workload · Budgets · Goals"
+   ],
+   [
+    "h3",
+    "Preparedness · Capacity for events"
+   ],
+   [
+    "h2",
+    "A connected product foundation"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Frequently asked questions"
+   ],
+   [
+    "h3",
+    "What does CORO Performance measure?"
+   ],
+   [
+    "h3",
+    "Is it a resilience index?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Product"
+   ],
+   [
+    "h4",
+    "Company"
+   ],
+   [
+    "h4",
+    "Legal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CORO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/performance-objectifs",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/?lang=en#demo",
+    "Discover CORO Performance"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Explore"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Explore"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Explore"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Explore"
+   ],
+   [
+    "/?lang=en",
+    "CORO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/performance-objectifs",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Features"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Advisor login"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Client portal"
+   ],
+   [
+    "/about?lang=en",
+    "About us"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral Program"
+   ],
+   [
+    "/blog",
+    "Blog"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact us"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Learn more"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fen%2Fcoro-performance-objectives.webp&w=1080&q=75",
+    "CORO Performance analytical window"
+   ]
+  ],
+  "jsonLd": [],
+  "counts": {
+   "main": 1,
+   "header": 3,
+   "footer": 2,
+   "h1": 1
+  },
+  "mainText": "PERFORMANCE AND GOALS\n\nTurn activity into management insight.\n\nCORO Performance connects hours, budgets, workload, goals and variances to inform management decisions.\n\nDiscover CORO Performance\n01\nWhere does time go?\n\nHours by mandate, activity and team member make effort visible.\n\n02\nWhere are the variances?\n\nComparing budgets with planned and actual hours reveals gaps.\n\n03\nWhat is our capacity?\n\nWorkload and planning support assignment decisions.\n\n04\nWhich goals are progressing?\n\nGoals and KPIs provide a shared view of progress.\n\nANALYTICAL WINDOW\n\nAnswer management questions\nCORO Performance analytical window\nACTIVITY\nMEASURE\nVARIANCE\nINSIGHT\nDECISION\nPerformance ≠ CORO Index\n\nPERFORMANCE\n\nActivity · Workload · Budgets · Goals\n\nRESILIENCE\n\nPreparedness · Capacity for events\n\nPerformance primarily measures activity, capacity and goals. Resilience progressively addresses organizational preparedness for events. Both may meet in a Network view while remaining distinct concepts.\n\nMeasure to decide. Decide to progress.\n\nTHIS PART OF THE PLATFORM\n\nA connected product foundation\nDocuments\n\nStructures data and deliverables.\n\nExplore\nProjects\n\nOrganizes mandates and work.\n\nExplore\nPerformance\n\nMeasures activity, goals and capacity.\n\nExplore\nClient\n\nMakes information accessible to clients.\n\nExplore\n\nFAQ\n\nFrequently asked questions\nWhat does CORO Performance measure?\n\nActivity, hours, budgets, capacity, goals and operational variances.\n\nIs it a resilience index?\n\nNo. Operational performance and organizational preparedness are distinct concepts."
+ },
+ "ref": {
+  "status": 200,
+  "title": "Performance & Objectifs — CORO | CORO",
+  "description": "Transformez vos opérations en données exploitables. Suivez les heures, budgets, rendement des mandats, capacité de production et objectifs avec CORO.",
+  "canonical": "https://getcoro.io/performance-objectifs",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/performance-objectifs"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/performance-objectifs?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/performance-objectifs"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/performance-objectifs",
+  "ogTitle": "Performance & Objectifs — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Transformer l’activité en capacité de pilotage."
+   ],
+   [
+    "h2",
+    "Où va le temps?"
+   ],
+   [
+    "h2",
+    "Où sont les écarts?"
+   ],
+   [
+    "h2",
+    "Quelle est la capacité?"
+   ],
+   [
+    "h2",
+    "Quels objectifs avancent?"
+   ],
+   [
+    "h2",
+    "Répondre aux questions de pilotage"
+   ],
+   [
+    "h2",
+    "Performance ≠ Indice CORO"
+   ],
+   [
+    "h3",
+    "Activité · Charge · Budgets · Objectifs"
+   ],
+   [
+    "h3",
+    "Préparation · Capacité face aux événements"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Que mesure CORO Performance?"
+   ],
+   [
+    "h3",
+    "Est-ce un indice de résilience?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Performance"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fcoro-performance-objectifs.webp&w=1080&q=75",
+    "Fenêtre analytique CORO Performance"
+   ]
+  ],
+  "jsonLd": [],
+  "counts": {
+   "main": 1,
+   "header": 3,
+   "footer": 2,
+   "h1": 1
+  },
+  "mainText": "PERFORMANCE ET OBJECTIFS\n\nTransformer l’activité en capacité de pilotage.\n\nCORO Performance met en relation heures, budgets, charge, objectifs et écarts pour éclairer les décisions de gestion.\n\nDécouvrir CORO Performance\n01\nOù va le temps?\n\nLes heures par mandat, activité et membre rendent l’effort observable.\n\n02\nOù sont les écarts?\n\nLe rapprochement budget, heures prévues et réalisées révèle les écarts.\n\n03\nQuelle est la capacité?\n\nLa charge et le planning soutiennent les décisions d’affectation.\n\n04\nQuels objectifs avancent?\n\nLes objectifs et KPI donnent une lecture commune de la progression.\n\nFENÊTRE ANALYTIQUE\n\nRépondre aux questions de pilotage\nFenêtre analytique CORO Performance\nACTIVITÉ\nMESURE\nÉCART\nLECTURE\nDÉCISION\nPerformance ≠ Indice CORO\n\nPERFORMANCE\n\nActivité · Charge · Budgets · Objectifs\n\nRÉSILIENCE\n\nPréparation · Capacité face aux événements\n\nPerformance mesure principalement l’activité, la capacité et les objectifs. La Résilience vise progressivement la préparation organisationnelle face aux événements. Les deux lectures peuvent se rejoindre dans une vision Network, mais restent distinctes.\n\nMesurer pour décider. Décider pour progresser.\n\nCETTE PARTIE DE LA PLATEFORME\n\nUn socle produit relié\nDocuments\n\nStructure les données et les livrables.\n\nExplorer\nProjects\n\nOrganise les mandats et le travail.\n\nExplorer\nPerformance\n\nMesure activité, objectifs et capacité.\n\nExplorer\nClient\n\nRend l’information accessible au client.\n\nExplorer\n\nFAQ\n\nQuestions fréquentes\nQue mesure CORO Performance?\n\nLes activités, heures, budgets, capacité, objectifs et écarts issus des opérations suivies.\n\nEst-ce un indice de résilience?\n\nNon. La performance opérationnelle et la préparation organisationnelle sont deux concepts distincts."
+ }
+}

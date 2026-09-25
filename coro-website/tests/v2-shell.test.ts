@@ -7,9 +7,9 @@ import { isLegacyFooterVisible, isV2MigratedRoute, migratedV2Routes } from '../l
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 test('the V2 migration registry holds ONLY the approved migrated routes; every other current route stays legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs']);
   assert.equal(isV2MigratedRoute('/about'), true); assert.equal(isV2MigratedRoute('/contact'), true);
-  const partial = ['/', '/performance-objectifs', '/portail-client', '/sentinelle', '/blog', '/design-lab'];
+  const partial = ['/', '/portail-client', '/sentinelle', '/blog', '/design-lab'];
   for (const path of partial) assert.equal(isV2MigratedRoute(path), false, path);
   assert.equal(isV2MigratedRoute('/unknown-route'), false);
   assert.equal(isV2MigratedRoute(null), false);
@@ -27,7 +27,7 @@ test('the registry matches exact paths only and ignores query, hash and trailing
 test('the legacy footer is kept for legacy routes and suppressed only for migrated ones', () => {
   assert.equal(isLegacyFooterVisible('/about'), false, '/about is migrated: no legacy footer');
   assert.equal(isLegacyFooterVisible('/'), true);
-  assert.equal(isLegacyFooterVisible('/performance-objectifs'), true);
+  assert.equal(isLegacyFooterVisible('/performance-objectifs'), false); // migrated in MIG-02C
   assert.equal(isLegacyFooterVisible('/about', ['/about']), false);
   assert.equal(isLegacyFooterVisible('/contact', ['/about']), true);
 });

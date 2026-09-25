@@ -14,7 +14,7 @@ const view = read('app/about/AboutV2.tsx');
 const page = read('app/about/page.tsx');
 
 test('/about is a migrated route (with /contact) and has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs']);
   assert.equal(isLegacyFooterVisible('/about'), false);
   assert.equal(isLegacyFooterVisible('/about?lang=en'), false);
 });

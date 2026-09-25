@@ -1,0 +1,33 @@
+/* /performance-objectifs — V1 tokens only. Opening (EditorialHero photographic mode), sections, accordion and CTA come from the component library. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+
+/* The reading chain: four words in order on one baseline (a control-room read-out, not a card row). Vertical on narrow screens. */
+.chain { list-style: none; margin: 0; padding: 0; counter-reset: link; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block-start: 2px solid var(--ink); }
+.chain li { counter-increment: link; position: relative; display: grid; gap: var(--coro-v1-space-2); padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-4) 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.1; }
+.chain li::before { content: counter(link, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+.chain li:not(:last-child)::after { content: "→"; position: absolute; inset-inline-end: var(--coro-v1-space-4); inset-block-start: var(--coro-v1-space-4); color: var(--accent); font-weight: 600; }
+@media (max-width: 48rem) {
+  .chain { grid-template-columns: 1fr; border-block-start: 0; }
+  .chain li { border-block-start: 1px solid var(--line); font-size: var(--coro-v1-text-h3); }
+  .chain li:not(:last-child)::after { content: none; }
+}
+
+/* The four management questions: the page's single card cluster (1px border, V1 surface and radius, accent rule, no shadow, no icon). */
+.capCards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); counter-reset: cap; }
+.capCards li { counter-increment: cap; display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-8) var(--coro-v1-space-6); min-block-size: 11rem; background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-block-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); }
+.capCards li::before { content: counter(cap, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-small); font-weight: 750; letter-spacing: .08em; }
+.capCards h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; overflow-wrap: break-word; }
+.capCards p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* Performance ≠ CORO Index: two readings on the navy section. */
+.divide { margin: 0; display: grid; gap: 0; border-block-start: 1px solid var(--line); }
+.divide div { display: grid; gap: var(--coro-v1-space-2); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.divide dt { color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.divide dd { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 700; line-height: 1.3; }
+
+/* Connected product pages. */
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
