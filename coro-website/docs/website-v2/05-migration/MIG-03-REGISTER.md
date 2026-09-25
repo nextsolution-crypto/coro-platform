@@ -64,3 +64,5 @@ Registre minimal des points de mise en ligne propres à MIG-03. Les points MIG-0
 | DÉFÉRÉ | Audit produit autorités, premiers répondants, rétention, multi-site, seuils : aucune allégation publique ; NOT REQUIRED FOR MIGRATION |
 
 Détail complet (matrice des 19 assets, données, canaux, réglementaire, capacités) : `MIG-03C-SENTINELLE-POPULATION-GATE.md`.
+
+Gate avant Incident (frontières, transmission, Go-Live consolidé) : `MIG-03-PRE-INCIDENT-GATE.md`.
