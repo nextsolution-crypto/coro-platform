@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { requireInternal, requireSuperAdmin, requireTenantAdmin } from './auth/work-management-access';
 import { TaskTemplatesService } from './task-templates/task-templates.service';
 import { TaskListsService } from './task-lists/task-lists.service';
@@ -84,6 +84,15 @@ describe('Work Management security hardening', () => {
     await new TaskListsService(prisma).deleteProjectTaskList('list-with-tasks', 'org-a');
     expect(prisma.projectTask.deleteMany).not.toHaveBeenCalled();
     expect(prisma.projectTask.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses deletion of an Activity-configured ProjectTaskList', async () => {
+    const prisma: any = { projectTaskList: model(), projectTask: model() };
+    prisma.projectTaskList.findFirst.mockResolvedValue({ id: 'configured', organizationId: 'org-a',
+      instantiationSource: 'ACTIVITY_TYPE_CONFIG' });
+    await expect(new TaskListsService(prisma).deleteProjectTaskList('configured', 'org-a'))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.projectTaskList.delete).not.toHaveBeenCalled();
   });
 
   it('denies cross-tenant ProjectTaskList removal before delete', async () => {

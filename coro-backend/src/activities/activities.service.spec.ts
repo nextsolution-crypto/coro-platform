@@ -6,8 +6,9 @@ const admin = { userId: 'admin-a', organizationId: 'org-a', role: 'ADMIN' };
 function harness() {
   const prisma = {
     project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }) },
-    projectActivity: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), create: jest.fn() },
+    projectActivity: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
     projectTask: { findMany: jest.fn().mockResolvedValue([]) },
+    projectTaskList: { findFirst: jest.fn() },
     activityType: { findFirst: jest.fn() },
   };
   const activityTypes = { list: jest.fn().mockResolvedValue([]) };
@@ -124,6 +125,16 @@ describe('ActivitiesService exercise report summary', () => {
 });
 
 describe('ActivitiesService mandate origin', () => {
+  it('refuses changing ActivityType after a configured checklist exists', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity-a', activityTypeId: 'old', type: 'old', clientVisible: true, clientBookable: false });
+    h.prisma.activityType.findFirst.mockResolvedValue({ id: 'new', code: 'new', nameFR: 'Nouveau' });
+    h.prisma.projectTaskList.findFirst.mockResolvedValue({ id: 'instance-a' });
+    await expect(h.service.updateActivity('activity-a', 'org-a', { activityTypeId: 'new' }))
+      .rejects.toThrow("ne peut plus être modifié");
+    expect(h.prisma.projectActivity.update).not.toHaveBeenCalled();
+  });
+
   it('does not let the generic update forge sourceMandate', async () => {
     const h = harness();
     (h.prisma.projectActivity as any).findFirst = jest.fn().mockResolvedValue({

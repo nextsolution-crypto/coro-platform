@@ -224,6 +224,16 @@ describe('PlanningService', () => {
       lastEffectiveStartUtc: undefined, removalAction: 'DELETE' });
   });
 
+  it('marks an Activity with an instantiated checklist for business cancellation', async () => {
+    const { service, prisma } = setup();
+    prisma.projectActivity.findMany.mockResolvedValue([{ id: 'configured', scheduledDate: null, duration: '1h',
+      customDuration: null, label: 'Inspection', customLabel: null, type: 'inspection', assigneeEmail: null,
+      sourceMandate: true, clientBookable: false, activityTypeId: 'type-a', activityType: { nameFR: 'Inspection' },
+      projectId: 'project-a', project, exerciseReport: null, bookings: [], taskLists: [{ id: 'list-a' }] }]);
+    const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+    expect(result.items[0]).toMatchObject({ activityId: 'configured', removalAction: 'CANCEL' });
+  });
+
   it('projects UNKNOWN Scheduling as a separate action', async () => {
     const { service, prisma, scheduling } = setup();
     prisma.booking.findMany.mockResolvedValue([booking('CONFIRMEE', 'ACCEPTED')]);

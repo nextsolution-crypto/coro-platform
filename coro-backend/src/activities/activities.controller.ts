@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ActivitiesService } from './activities.service';
+import { ActivityTaskListsService } from './activity-task-lists.service';
 import type { Response } from 'express';
 import { AdviserActor } from '../auth/project-access';
 
@@ -22,7 +23,13 @@ interface AuthenticatedRequest {
 @Controller()
 @UseGuards(AuthGuard('jwt'))
 export class ActivitiesController {
-  constructor(private readonly service: ActivitiesService) {}
+  constructor(private readonly service: ActivitiesService, private readonly taskLists: ActivityTaskListsService) {}
+
+  @Post('projects/:projectId/activities/:activityId/task-lists/instantiate')
+  instantiateTaskLists(@Param('projectId') projectId: string, @Param('activityId') activityId: string,
+    @Request() req: AuthenticatedRequest) {
+    return this.taskLists.instantiateForActor(projectId, activityId, req.user);
+  }
 
   @Get('activities/catalog')
   getCatalog(@Request() req: AuthenticatedRequest) {

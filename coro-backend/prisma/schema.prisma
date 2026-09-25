@@ -627,34 +627,35 @@ model AuditLog {
 }
 
 model ProjectActivity {
-  id             String          @id @default(uuid())
+  id             String            @id @default(uuid())
   projectId      String
-  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   type           String
   activityTypeId String?
-  activityType   ActivityType?   @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
+  activityType   ActivityType?     @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
   label          String
   duration       String
-  mode           String          @default("presentiel")
+  mode           String            @default("presentiel")
   customLabel    String?
   customDuration String?
   scheduledDate  DateTime?
-  status         String          @default("a_faire")
+  status         String            @default("a_faire")
   reportedDate   DateTime?
   assigneeEmail  String?
   clientEmail    String?
   notes          String?
   organizationId String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  isRecurring    Boolean         @default(false)
-  sourceMandate  Boolean         @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  isRecurring    Boolean           @default(false)
+  sourceMandate  Boolean           @default(false)
   dureeHeures    Float? // Durée réelle ou estimée en heures
-  clientVisible  Boolean         @default(true)
-  clientBookable Boolean         @default(false)
+  clientVisible  Boolean           @default(true)
+  clientBookable Boolean           @default(false)
   bookings       Booking[]
   exerciseReport ExerciseReport?
-  tasks          ProjectTask[]   @relation("ActivityTasks")
+  tasks          ProjectTask[]     @relation("ActivityTasks")
+  taskLists      ProjectTaskList[] @relation("ActivityTaskLists")
 
   @@unique([id, projectId, organizationId])
   @@index([activityTypeId])
@@ -782,17 +783,28 @@ model TaskTemplate {
 }
 
 model ProjectTaskList {
-  id             String   @id @default(uuid())
-  projectId      String
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  taskListId     String
-  taskList       TaskList @relation(fields: [taskListId], references: [id])
-  customName     String
-  organizationId String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                           String                              @id @default(uuid())
+  projectId                    String
+  project                      Project                             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskListId                   String
+  taskList                     TaskList                            @relation(fields: [taskListId], references: [id])
+  customName                   String
+  organizationId               String
+  activityId                   String?
+  activity                     ProjectActivity?                    @relation("ActivityTaskLists", fields: [activityId, projectId, organizationId], references: [id, projectId, organizationId], onDelete: Restrict)
+  instantiationSource          ProjectTaskListInstantiationSource?
+  sourceActivityTypeTaskListId String?
+  createdAt                    DateTime                            @default(now())
+  updatedAt                    DateTime                            @updatedAt
 
   tasks ProjectTask[]
+
+  @@index([activityId])
+  @@index([activityId, taskListId])
+}
+
+enum ProjectTaskListInstantiationSource {
+  ACTIVITY_TYPE_CONFIG
 }
 
 model ProjectTask {

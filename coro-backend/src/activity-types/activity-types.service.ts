@@ -116,13 +116,13 @@ export class ActivityTypesService {
     };
   }
 
-  async resolveTaskLists(input: { activityTypeId: string; organizationId: string; documentType?: string }) {
-    const activityType = await this.prisma.activityType.findFirst({ where: {
+  async resolveTaskLists(input: { activityTypeId: string; organizationId: string; documentType?: string }, db: any = this.prisma) {
+    const activityType = await db.activityType.findFirst({ where: {
       id: input.activityTypeId, isActive: true,
       OR: [{ organizationId: null }, { organizationId: input.organizationId }],
     } });
     if (!activityType) throw new NotFoundException("Type d'activité introuvable");
-    const policies = await this.prisma.activityTypeTaskListPolicy.findMany({
+    const policies = await db.activityTypeTaskListPolicy.findMany({
       where: { activityTypeId: activityType.id, OR: [{ organizationId: null }, { organizationId: input.organizationId }] },
       include: { associations: { where: { isActive: true, taskList: { isActive: true } }, include: { taskList: true },
         orderBy: [{ displayOrder: 'asc' }, { taskList: { name: 'asc' } }, { taskListId: 'asc' }] } },
@@ -133,7 +133,8 @@ export class ActivityTypesService {
     const tenant = policies.find((policy) => policy.organizationId === input.organizationId);
     const items = (policy: any, source: 'GLOBAL' | 'TENANT') => (policy?.associations ?? [])
       .filter((association: any) => acceptsDocument(association.taskList))
-      .map((association: any) => ({ ...association.taskList, source, displayOrder: association.displayOrder }));
+      .map((association: any) => ({ ...association.taskList, source, displayOrder: association.displayOrder,
+        sourceActivityTypeTaskListId: association.id }));
     const globalItems = items(global, 'GLOBAL');
     if (!tenant) return globalItems;
     if (tenant.mode === 'DISABLE') return [];

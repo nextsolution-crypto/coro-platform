@@ -126,12 +126,13 @@ export class PlanningActionsService {
       const activity = await tx.projectActivity.findFirst({ where: { id: activityId,
         organizationId: actor.organizationId, status: { notIn: ['annule', 'fait', 'termine'] } },
         select: { id: true, projectId: true, bookings: { select: { id: true }, take: 1 },
-          exerciseReport: { select: { id: true } }, tasks: { select: { id: true }, take: 1 } } });
+          exerciseReport: { select: { id: true } }, tasks: { select: { id: true }, take: 1 },
+          taskLists: { where: { instantiationSource: 'ACTIVITY_TYPE_CONFIG' }, select: { id: true }, take: 1 } } });
       if (!activity) throw new NotFoundException('Activite introuvable');
       const audit = await tx.auditLog.findFirst({ where: { organizationId: actor.organizationId,
         entityType: 'ProjectActivity', entityId: activity.id,
         action: { notIn: [...INTRINSIC_ACTIVITY_AUDIT_ACTIONS] } }, select: { id: true } });
-      if (activity.bookings.length || activity.exerciseReport || activity.tasks.length || audit) {
+      if (activity.bookings.length || activity.exerciseReport || activity.tasks.length || (activity.taskLists?.length ?? 0) || audit) {
         throw new BadRequestException("Cette activite possede un historique et ne peut pas etre supprimee physiquement.");
       }
       await tx.auditLog.deleteMany({ where: { organizationId: actor.organizationId,

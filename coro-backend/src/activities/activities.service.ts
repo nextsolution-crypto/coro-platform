@@ -266,6 +266,12 @@ export class ActivitiesService {
       id: dto.activityTypeId, isActive: true, OR: [{ organizationId: null }, { organizationId }],
     } }) : null;
     if (dto.activityTypeId && !selectedType) throw new BadRequestException("Type d'activité indisponible");
+    if (dto.activityTypeId !== undefined && dto.activityTypeId !== activity.activityTypeId) {
+      const instantiated = await this.prisma.projectTaskList.findFirst({ where: {
+        activityId, instantiationSource: 'ACTIVITY_TYPE_CONFIG',
+      }, select: { id: true } });
+      if (instantiated) throw new BadRequestException("Le type d'activité ne peut plus être modifié après l'instanciation d'une checklist");
+    }
     const resultingType = selectedType?.code ?? dto.type ?? activity.type;
     const resultingCustomLabel = dto.customLabel === undefined ? activity.customLabel : dto.customLabel?.trim() || null;
     if (resultingType === 'autre' && !resultingCustomLabel) throw new BadRequestException('Un libellé personnalisé est requis pour Autre');
@@ -317,6 +323,8 @@ export class ActivitiesService {
     if (linkedBooking) throw new BadRequestException('Cette activité possède un historique de réservations');
     const linkedTask = await this.prisma.projectTask.findFirst({ where: { activityId }, select: { id: true } });
     if (linkedTask) throw new BadRequestException('Cette activité possède des tâches liées');
+    const linkedTaskList = await this.prisma.projectTaskList.findFirst({ where: { activityId }, select: { id: true } });
+    if (linkedTaskList) throw new BadRequestException('Cette activité possède des checklists liées');
     return this.prisma.projectActivity.delete({ where: { id: activityId } });
   }
 
@@ -341,6 +349,7 @@ export class ActivitiesService {
             projectId,
             organizationId,
             type: a.type,
+            activityTypeId: a.activityTypeId,
             label: a.label,
             duration: a.duration,
             mode: a.mode,

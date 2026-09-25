@@ -296,6 +296,7 @@ export class PlanningService {
           client: { select: { name: true } },
           building: { select: { name: true, timeZone: true, timeZoneVerified: true } } } },
         exerciseReport: { select: { id: true } },
+        taskLists: { where: { instantiationSource: 'ACTIVITY_TYPE_CONFIG' }, select: { id: true }, take: 1 },
         bookings: { orderBy: { createdAt: 'desc' }, select: { id: true, status: true, requestedDate: true,
           reportedDate: true, duration: true, createdAt: true,
           assignments: { where: { role: 'LEAD' }, orderBy: { assignedAt: 'desc' }, take: 1,
@@ -453,7 +454,7 @@ export class PlanningService {
           lastBookingStatus: lastBooking?.status,
           lastLead: lastLead ? { userId: lastLead.userId,
             displayName: `${lastLead.user.firstName} ${lastLead.user.lastName}`.trim() } : undefined,
-          removalAction: activity.bookings.length === 0 && !activity.exerciseReport && !activityAuditIds.has(activity.id)
+          removalAction: activity.bookings.length === 0 && !activity.exerciseReport && !(activity.taskLists?.length ?? 0) && !activityAuditIds.has(activity.id)
             ? 'DELETE' : 'CANCEL',
           durationMinutes: (() => { const hours = parseActivityDurationHours(activity.customDuration || activity.duration);
             return hours ? Math.round(hours * 60) : undefined; })() });

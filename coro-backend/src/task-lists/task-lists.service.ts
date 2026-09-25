@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -183,6 +183,9 @@ export class TaskListsService {
   async deleteProjectTaskList(id: string, organizationId: string) {
     const list = await this.prisma.projectTaskList.findFirst({ where: { id, organizationId } });
     if (!list) throw new NotFoundException('Liste de projet introuvable');
+    if (list.instantiationSource === 'ACTIVITY_TYPE_CONFIG') {
+      throw new BadRequestException("Une checklist instanciée depuis une activité ne peut pas être supprimée");
+    }
     // PostgreSQL détache atomiquement les tâches via ON DELETE SET NULL.
     // Le travail, les affectations et le temps saisi restent intacts.
     return this.prisma.projectTaskList.delete({
