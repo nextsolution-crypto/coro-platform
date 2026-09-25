@@ -46,6 +46,7 @@ Aucune page de production n'a été migrée sous le Design System V1.0. L'adopti
 | 05 | CORO Design System | `02-design/CORO-DESIGN-SYSTEM.md` | V1.0 gelé |
 | 06 | CORO Component Library | `02-design/CORO-COMPONENT-LIBRARY.md` | V1.0 gelé (catalogue autoritatif) |
 | 07 | Target Page Architecture | `01-strategy/TARGET-PAGE-ARCHITECTURE.md` | APPROVED TARGET, sous réserve du Document 09 |
+| 07b | Site Architecture & Page Blueprints (MIG-00A) | `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` | Plan de construction du site cible, à valider ; à lire avant toute migration |
 | 08 | CORO Content Guidelines | `03-content/CONTENT-GUIDELINES.md` | APPROVED |
 | 09 | SEO Migration Plan | `05-migration/SEO-MIGRATION-PLAN.md` | APPROVED MIGRATION PLAN, addendum V1.0 |
 | 10 | Responsive & Accessibility | `04-quality/RESPONSIVE-ACCESSIBILITY.md` | APPROVED, V1.1 (constats LAB-08 §30) |
@@ -210,3 +211,5 @@ La phase de conception et de validation par le Lab est terminée. De nouvelles i
 SOURCE DE VÉRITÉ — Website V2 progresse par décisions explicites, versionnées et vérifiables.
 
 Le but n'est pas seulement un beau site. C'est un système Web CORO distinctif, cohérent, maintenable, accessible, performant et migré sans perte.
+
+> **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).

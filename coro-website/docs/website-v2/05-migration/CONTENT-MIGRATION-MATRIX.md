@@ -363,7 +363,7 @@ FR/EN et accessibilité.
 Le fait qu'un claim existe aujourd'hui ne constitue pas automatiquement
 son approbation pour une nouvelle page V2.
 
-## 15. Routes futures --- `REVIEW`
+## 15. Routes enregistrées non implémentées
 
 `/plateforme`, `/coro-platform`, `/resilience-operations`,
 `/coro-incident`, `/coro-exercices`, `/coro-ops`, `/qr-intervention`,
@@ -371,8 +371,7 @@ son approbation pour une nouvelle page V2.
 `/solutions/multi-sites`, `/ressources`, `/guides`,
 `/conformite-reglementation`.
 
-Ce sont des candidates d'architecture cible, pas encore des destinations
-de migration approuvées.
+Statuts cibles (autorité : `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` §5) : `/guides` et `/coro-incident` PUBLISH-NOW (Incident sous audit de vérité fonctionnelle) ; `/plateforme` BUILD-NOW-HIDDEN ; `/coro-exercices` et `/conformite-reglementation` REVIEW ; `/coro-platform` et `/resilience-operations` MERGE-REVIEW (aucune fusion décidée) ; les autres FUTURE. Aucune n'est créée par MIG-00A.
 
 ## 16. Non-décisions explicites
 
@@ -468,3 +467,8 @@ d'implémentation.
 Le nouveau site peut transformer radicalement la présentation de CORO
 sans perdre les URLs, contenus, contrats métier et acquis SEO qui ont
 déjà de la valeur.
+
+
+> **MIG-00A :** statuts de route, blueprints, SEO par route (constats R-01 à R-13), maillage et ordre de migration : voir `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`. Ce document ne duplique pas ce contenu.
+
+> **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).

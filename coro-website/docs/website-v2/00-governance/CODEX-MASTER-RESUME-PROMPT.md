@@ -498,3 +498,8 @@ avant de l'utiliser comme instrument de construction.
 Le premier gain attendu au retour du quota n'est pas une nouvelle page
 Web : c'est une cartographie fiable de ce qui existe afin que Website V2
 puisse être reconstruit sans perte et sans dérive.
+
+
+> **MIG-00A :** statuts de route, blueprints, SEO par route (constats R-01 à R-13), maillage et ordre de migration : voir `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`. Ce document ne duplique pas ce contenu.
+
+> **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).

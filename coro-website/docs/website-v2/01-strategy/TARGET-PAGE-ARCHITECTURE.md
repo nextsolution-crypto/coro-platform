@@ -7,6 +7,8 @@ in Document 09\
 **Inputs:** `CURRENT-SITE-INVENTORY.md`, `CONTENT-MIGRATION-MATRIX.md`,
 Visual Language, Content Guidelines, Page Family Art Direction Matrix.
 
+> **MIG-00A :** statuts de publication, blueprints par route, cartes SEO, maillage et ordre de migration : voir `SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`, référence des statuts de lancement.
+
 > Website V2 must reduce the perceived complexity of CORO without
 > reducing the real richness of the ecosystem.
 
@@ -149,7 +151,7 @@ Current destinations under this family may include:
 -   CORO Client → `/portail-client`
 -   Security → `/security`
 
-The conceptual `/plateforme` page remains `REVIEW` until its incremental
+The conceptual `/plateforme` page is `BUILD-NOW-HIDDEN` (MIG-00A-B); public exposure is evaluated after MIG-02 for its incremental
 value is demonstrated.
 
 ## 7. Solutions navigation family
@@ -206,18 +208,16 @@ Products should be grouped, not rendered as a flat wall of cards.
 
 ### Future / gated products
 
-The following remain `REVIEW` and must not be presented as fully
-available merely because route placeholders exist:
+The following are not launch products; their statuses are set in `SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (Incident is `PUBLISH-NOW` and is therefore listed there, not here; Exercices is `REVIEW`; the others are `FUTURE`). None may be presented as available merely because a route placeholder exists:
 
--   CORO Incident
--   CORO Exercices
--   CORO Knowledge
--   CORO AI
--   CORO Network
--   CORO Campus
--   CORO Ops
--   QR Intervention
--   Multi-sites dedicated solution page
+-   CORO Exercices (`REVIEW`)
+-   CORO Knowledge (`FUTURE`)
+-   CORO AI (`FUTURE`)
+-   CORO Network (`FUTURE`)
+-   CORO Campus (`FUTURE`)
+-   CORO Ops (`FUTURE`)
+-   QR Intervention (`FUTURE`)
+-   Multi-sites dedicated solution page (`FUTURE`)
 
 Their public launch requires explicit product-status validation.
 
@@ -359,16 +359,16 @@ product brand.
 
 ## 16. Incident and Exercises
 
-CORO Incident and CORO Exercises are important target capabilities but
-their registered future routes remain `REVIEW`.
+CORO Incident is `PUBLISH-NOW` (MIG-04, before the homepage), with a mandatory functional-truth audit before any public copy: only verified functionality may be described. CORO Exercises stays `REVIEW`; it becomes hidden-buildable only if a functional audit shows sufficient public readiness, otherwise `FUTURE`.
 
-Until product status is explicitly validated:
+
+Rules:
 
 -   the homepage may describe the ecosystem capability only if accurate;
 -   navigation must not promise an unavailable public product;
--   no indexable product page is launched.
+-   no Exercises page is indexed while its status is `REVIEW`.
 
-When approved, their art direction follows the Page Family Matrix and
+Art direction follows the Page Family Matrix and
 their route strategy must pass Document 09.
 
 ## 17. Knowledge / AI / Network / Campus
@@ -395,10 +395,10 @@ Existing slugs remain authoritative.
 
 Keep the six current `/documents/...` guide URLs.
 
-A future `/ressources` or `/guides` hub may be created if it improves
+`/guides` is `PUBLISH-NOW` (resource hub for the six guides, available from MIG-02); `/ressources` stays `FUTURE`. The hub must improve
 discovery without replacing existing indexed URLs.
 
-Status of `/ressources` and `/guides`: `REVIEW`.
+Status: `/guides` `PUBLISH-NOW`; `/ressources` `FUTURE`.
 
 ## 19. Pricing
 
@@ -569,23 +569,23 @@ actual locale.
 
   Route                          V1.0 disposition
   ------------------------------ ------------------
-  `/plateforme`                  `REVIEW`
+  `/plateforme`                  `BUILD-NOW-HIDDEN`
   `/coro-platform`               `REVIEW`
   `/resilience-operations`       `REVIEW`
-  `/coro-incident`               `REVIEW`
+  `/coro-incident`               `PUBLISH-NOW` (functional-truth audit first)
   `/coro-exercices`              `REVIEW`
-  `/coro-ops`                    `REVIEW`
-  `/qr-intervention`             `REVIEW`
-  `/coro-knowledge`              `REVIEW`
-  `/coro-ai`                     `REVIEW`
-  `/coro-network`                `REVIEW`
-  `/coro-campus`                 `REVIEW`
-  `/solutions/multi-sites`       `REVIEW`
-  `/ressources`                  `REVIEW`
-  `/guides`                      `REVIEW`
+  `/coro-ops`                    `FUTURE`
+  `/qr-intervention`             `FUTURE`
+  `/coro-knowledge`              `FUTURE`
+  `/coro-ai`                     `FUTURE`
+  `/coro-network`                `FUTURE`
+  `/coro-campus`                 `FUTURE`
+  `/solutions/multi-sites`       `FUTURE`
+  `/ressources`                  `FUTURE`
+  `/guides`                      `PUBLISH-NOW`
   `/conformite-reglementation`   `REVIEW`
 
-No route above is required to complete the first Website V2 migration.
+`/coro-exercices` and `/conformite-reglementation` stay `REVIEW`; `/coro-platform` and `/resilience-operations` stay `REVIEW` (MERGE-REVIEW candidates). Launch statuses are authoritative in `SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`.
 
 ## 31. Priority user journeys
 
@@ -660,14 +660,14 @@ Sequence remains:
 
 ## 35. Open decisions after V1.0
 
--   exact public-launch status of Incident;
--   exact public-launch status of Exercises;
+-   Incident: `PUBLISH-NOW`, wording subject to the functional-truth audit;
+-   exact public-launch status of Exercises (`REVIEW`);
 -   Knowledge / AI / Network / Campus exposure;
--   whether `/plateforme` adds enough value to create;
--   whether `/ressources` or `/guides` hub is useful;
+-   public exposure of `/plateforme` after MIG-02;
+-   `/ressources` (`FUTURE`); `/guides` is decided (`PUBLISH-NOW`);
 -   whether sector pages are launch-ready;
--   final EN status of Sentinelle;
--   final EN status of Sentinelle Population;
+-   final EN of Sentinelle (target FR + EN, MIG-04);
+-   final EN of Sentinelle Population (target FR + EN after genuine translation, MIG-05);
 -   long-term locale URL strategy.
 
 These open decisions do not block the Design Lab.
@@ -693,3 +693,5 @@ This architecture is acceptable when:
 The architecture achieves this through progressive disclosure and stable
 entry points---not by deleting useful content, flattening the product,
 or renaming URLs without evidence.
+
+> **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).

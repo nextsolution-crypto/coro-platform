@@ -40,7 +40,7 @@ Ce document reste la photographie factuelle d'origine (HEAD `fff4af81`). Cette s
 | `CookieBanner` en `role="dialog"` non modal sans gestion du focus | LEGACY-DEBT | Durcissement du consentement hors Design System. |
 | `ChatWidget` : focus du champ à l'ouverture seulement ; FR seulement | LEGACY-DEBT | Déjà REVIEW. |
 | `/programme-recommandation` : la liste d'étapes déborde de 5 px à 320 px | LEGACY-DEBT | CSS de la page institutionnelle. |
-| `<html lang="fr">` fixe ; titre de `/about` identique au titre générique du site (à confirmer page par page) | SEO-MIGRATION | Voir Document 09. |
+| `<html lang="fr">` fixe ; titre de `/about` contenant déjà la marque, le gabarit ajoutant `| CORO` (double marque) | SEO-MIGRATION | Voir Document 09. |
 | `/design-lab` servi en HTTP 200 en production (`noindex, nofollow`, hors sitemap, `robots.txt` autorise tout) | MIGRATION-ONLY | Verrouillage par environnement avant fusion vers `main`. |
 | Jetons V1 appliqués seulement dans le Lab (`data-coro-system="v1"`) ; les pages migrées utilisent encore les jetons legacy | MIGRATION-ONLY | Décision d'adoption dans le registre de gel §11. |
 | Build local : récupération du blogue en échec (backend `coro_backend` absent) | ENVIRONMENT | Confirme la fragilité du sitemap noté au §5. |
@@ -332,3 +332,5 @@ suppression/reconstruction aveugle.
 
 La prochaine décision formelle appartient au Document 03 --- Content
 Migration Matrix.
+
+> **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).

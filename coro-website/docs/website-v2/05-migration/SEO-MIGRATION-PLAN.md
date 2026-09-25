@@ -70,12 +70,11 @@ Ne jamais émettre `en-CA` si le contenu anglais réel n'existe pas.
 ### Sentinelle
 
 Le contenu EN existe mais registre/sitemap/metadata le traitent FR-only.
-Après décision produit, aligner registre, metadata, sitemap et hreflang.
+Cible FR + EN (MIG-04) : auditer et valider le contenu EN, puis aligner registre, metadata, sitemap et hreflang.
 
 ### Sentinelle Population
 
-Le site annonce EN alors que le contenu reste FR. Soit implémenter un
-vrai EN approuvé, soit retirer les signaux EN jusqu'à disponibilité.
+Le site annonce EN alors que le contenu reste FR. Cible FR + EN (MIG-05) uniquement après une vraie traduction complète validée ; d'ici là, aucun signal hreflang EN vers du contenu français.
 
 ## 7. Langue du document
 
@@ -239,9 +238,7 @@ correspondre à l'offre actuelle.
 
 ## 23. Routes futures
 
-Aucune page placeholder indexable pour Incident, Exercices, Knowledge,
-AI, Network, Campus, Ops, QR Intervention, Multi-sites, hubs
-Resources/Platform/réglementation.
+Aucune page placeholder indexable : Incident et `/guides` (PUBLISH-NOW) n'entrent au sitemap qu'une fois implémentées avec un contenu réel ; Exercices, Knowledge, AI, Network, Campus, Ops, QR Intervention, Multi-sites, `/plateforme`, `/ressources` et `/conformite-reglementation` n'y entrent pas au lancement (REVIEW, BUILD-NOW-HIDDEN ou FUTURE).
 
 Une route future entre au sitemap uniquement lorsqu'elle est
 implémentée, approuvée et porte un contenu réel.
@@ -370,9 +367,14 @@ Ajouts issus du gel du Design System. Ils ne modifient aucune décision d'URL du
 
 1. `<html lang>` : reste SEO-01 / MIGRATION-ONLY. Le Design System ne le corrige pas. Certains composants V2 posent `lang` sur leur racine locale (`LeadForm`, `SiteFooterV2`, liens de langue) : ces attributs doivent rester cohérents avec la langue du document une fois `<html lang>` corrigé.
 2. `/design-lab` : la route est `noindex, nofollow`, absente du sitemap, mais servie en production, et `robots.txt` autorise tout. Exigence PRÉ-FUSION : la rendre indisponible en production (404 par environnement) avant toute fusion vers `main`. Ne jamais l'inclure dans le sitemap. À confirmer dans le crawl comparatif : aucune URL `/design-lab` indexée.
-3. Titres : `/about` affiche un titre identique au titre générique du site (à confirmer page par page). Chaque page migrée reçoit un title unique (critère d'acceptation §33).
+3. Titres : le titre de `/about` contient déjà la marque et le gabarit ajoute `| CORO` (double marque, R-12). Chaque page migrée reçoit un title unique (critère d'acceptation §33).
 4. JSON-LD des pages produit : toujours à inventorier puis restaurer avant retrait du legacy (SEO-02). Les composants V2 ne produisent aucune donnée structurée.
 5. Liens externes du Design System : CORO Platform `https://app.getcoro.io/login` et CORO Client `https://client.getcoro.io/login` sont des destinations applicatives hors périmètre SEO ; elles ne sont pas des pages marketing.
 6. Rendu serveur : les composants V1.0 sont des composants serveur (sauf en-tête, navigation et `LeadForm`) ; le H1 et le contenu principal sont donc présents dans le HTML serveur dès qu'une page les consomme.
 7. Médias : `next/image` avec `sizes` et dimensions réservées est la norme V1.0 ; les images legacy en `<img>` brut restent à traiter page par page avec les `alt` existants préservés.
 8. Ce que le gel n'approuve pas : migration vers `/en/…`, changement de slug, suppression de contenu, publication de routes futures.
+
+
+> **MIG-00A :** statuts de route, blueprints, SEO par route (constats R-01 à R-13), maillage et ordre de migration : voir `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`. Ce document ne duplique pas ce contenu.
+
+> **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).
