@@ -37,7 +37,7 @@ export const footerGroups: readonly FooterGroup[] = [
   { id: 'resilience', label: { fr: 'Résilience et opérations', en: 'Resilience and operations' }, links: [
     { path: '/resilience-operationnelle', label: { fr: 'Résilience opérationnelle', en: 'Operational resilience' }, fr: true, en: true },
     { path: '/sentinelle', label: { fr: 'Sentinelle', en: 'Sentinelle' }, fr: true, en: false },
-    { path: '/sentinelle-population', label: { fr: 'Sentinelle Population', en: 'Sentinelle Population' }, fr: true, en: true },
+    { path: '/sentinelle-population', label: { fr: 'Sentinelle Population', en: 'Sentinelle Population' }, fr: true, en: false },
   ] },
   { id: 'company', label: { fr: 'Entreprise', en: 'Company' }, links: [
     { path: '/about', label: { fr: 'À propos', en: 'About' }, fr: true, en: true },

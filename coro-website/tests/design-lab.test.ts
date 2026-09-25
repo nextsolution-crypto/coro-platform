@@ -94,7 +94,8 @@ test('Button supports dark surfaces and a non-navigable disabled state without c
 test('protected checkpoint and production files are unchanged since checkpoint 609698fc', (context) => {
   const protectedFiles = [
     // app/layout.tsx left the checkpoint list in MIG-00B.1 (LegacyChrome); tests/v2-shell.test.ts now guards it.
-    'app/HomePageClient.tsx', 'app/page.tsx', 'app/sitemap.ts', 'app/robots.ts', 'app/DemoForm.tsx',
+    // app/sitemap.ts left the checkpoint list in MIG-00B.3 (registry-driven); tests/sitemap.test.ts guards it against the recorded baseline.
+    'app/HomePageClient.tsx', 'app/page.tsx', 'app/robots.ts', 'app/DemoForm.tsx',
     'app/components/Footer.tsx', 'app/components/CookieBanner.tsx', 'app/components/ChatWidget.tsx', 'app/components/ScrollToTop.tsx',
     'components/ProductPage.tsx', 'components/ProductCompositions.tsx', 'components/product.module.css', 'components/product-compositions.module.css',
     'lib/site/product-content.ts', 'app/about/AboutV2.tsx', 'app/institutional.module.css',

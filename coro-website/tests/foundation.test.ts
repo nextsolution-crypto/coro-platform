@@ -45,12 +45,10 @@ test('all sitemap routes are indexable and have their declared locale variants',
   }
 });
 
-test('the current sitemap source contains every registered historical path', () => {
+test('the sitemap is generated from the route registry, not from a manual route list', () => {
   const source = readFileSync(resolve('app/sitemap.ts'), 'utf8');
-  for (const route of staticSitemapRoutes) {
-    if (route.path === '/') continue;
-    assert.ok(source.includes(route.path), `${route.path} is absent from app/sitemap.ts`);
-  }
+  assert.match(source, /buildStaticSitemapEntries\(staticSitemapRoutes/);
+  for (const route of staticSitemapRoutes) assert.ok(!source.includes(route.path === '/' ? '@@' : `'${route.path}'`), `${route.path} must not be hard-coded in app/sitemap.ts`);
 });
 
 test('locale helpers preserve paths, queries and fragments', () => {
