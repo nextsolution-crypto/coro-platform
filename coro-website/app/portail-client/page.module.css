@@ -1,0 +1,45 @@
+/* /portail-client — V1 tokens only. Opening (EditorialHero photographic mode), sections, accordion and CTA come from the component library. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+
+/* From overview to useful information: a drill-down, each step nested one level deeper (portfolio > building > information > action). */
+.descent { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: 0; }
+.descent li { counter-increment: step; display: flex; align-items: baseline; gap: var(--coro-v1-space-4); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.1; }
+.descent li::before { content: counter(step, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+.descent li:nth-child(2) { padding-inline-start: var(--coro-v1-space-6); }
+.descent li:nth-child(3) { padding-inline-start: var(--coro-v1-space-12); }
+.descent li:nth-child(4) { padding-inline-start: calc(var(--coro-v1-space-12) + var(--coro-v1-space-6)); }
+@media (max-width: 40rem) { .descent li { font-size: var(--coro-v1-text-h3); } .descent li:nth-child(n+2) { padding-inline-start: var(--coro-v1-space-4); } }
+
+/* The client's objects (buildings, documents, activities, authorised capabilities): the page's single card cluster, 2 x 2, accent rule on the inline start. */
+.objects { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.objects li { display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-6) var(--coro-v1-space-8); background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-inline-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); }
+.objects h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; overflow-wrap: break-word; }
+.objects p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* See / act: two plain typographic columns (no cards), so seeing is never confused with acting. */
+.seeAct { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+.seeAct section { border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-4); align-content: start; }
+.seeAct section:last-child { border-block-start-color: var(--accent); }
+.seeAct h3 { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.seeAct ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.seeAct li { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-size: var(--coro-v1-text-body-l); font-weight: 650; }
+
+/* Real screens stay readable on narrow screens: a minimum width inside a keyboard-focusable, horizontally scrollable region, with the visible labels repeated as text. */
+.pan { overflow-x: auto; }
+.pan:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+@media (max-width: 48rem) { .pan > * { min-inline-size: 34rem; } }
+.legendBlock { display: grid; gap: var(--coro-v1-space-2); }
+.legendLabel { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-2); }
+.legend li { color: var(--ink); font-weight: 650; }
+.legend li::before { content: "— "; color: var(--accent); }
+
+/* Connected product pages. */
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+
+/* Access according to granted rights: one statement, set large on the navy section. */
+.rights { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 650; line-height: 1.4; max-inline-size: 34rem; }

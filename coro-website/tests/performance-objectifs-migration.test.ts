@@ -16,9 +16,9 @@ const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 const p = productContent.performance;
 
 test('the registry ends with /performance-objectifs after the six approved routes; nothing else is migrated', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client']);
   assert.equal(isLegacyFooterVisible('/performance-objectifs'), false);
-  for (const legacy of ['/portail-client', '/']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
+  for (const legacy of ['/']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
 });
 
 test('V2Shell owns the chrome: no page-owned header, main, footer or legacy shell; V1 tokens only', () => {

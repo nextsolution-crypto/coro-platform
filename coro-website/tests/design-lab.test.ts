@@ -106,7 +106,7 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
     // lib/site/product-content.ts left the checkpoint list in VISUAL-01 (Projects FAQ answer reworded for customers); tests/visual-01.test.ts guards it.
     'app/institutional.module.css',
     // app/performance-objectifs/page.tsx left the checkpoint list in MIG-02C (migrated to V2Shell); tests/performance-objectifs-migration.test.ts guards it.
-    'app/portail-client/page.tsx',
+    // app/portail-client/page.tsx left the checkpoint list in MIG-02D (migrated to V2Shell); tests/portail-client-migration.test.ts guards it.
   ];
   try {
     execFileSync('git', ['cat-file', '-e', '609698fc^{commit}'], { cwd: root, stdio: 'ignore' });
