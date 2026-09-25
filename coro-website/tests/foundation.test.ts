@@ -97,8 +97,8 @@ test('API URL helpers never duplicate the api segment', () => {
 test('the about pilot uses the shared Website V2 shell and locale foundations', () => {
   const page = readFileSync(resolve('app/about/page.tsx'), 'utf8');
   const view = readFileSync(resolve('app/about/AboutV2.tsx'), 'utf8');
-  assert.match(view, /<SiteHeader locale=\{locale\} pathname="\/about" \/>/);
-  assert.match(view, /<SiteFooter locale=\{locale\} pathname="\/about" \/>/);
+  assert.match(page, /<V2Shell locale=\{locale\} pathname="\/about">/);
+  assert.doesNotMatch(view, /<SiteHeader|<SiteFooter|<main\b/);
   assert.match(page, /localeFromSearchParams/);
   assert.match(view, /localizedHref/);
   assert.match(page, /buildPageMetadata/);

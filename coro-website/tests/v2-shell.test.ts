@@ -6,9 +6,10 @@ import { isLegacyFooterVisible, isV2MigratedRoute, migratedV2Routes } from '../l
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
-test('the V2 migration registry starts empty: no current route is migrated', () => {
-  assert.equal(migratedV2Routes.length, 0);
-  const partial = ['/', '/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/sentinelle', '/blog', '/design-lab'];
+test('the V2 migration registry holds ONLY the approved pilot route; every other current route stays legacy', () => {
+  assert.deepEqual([...migratedV2Routes], ['/about']);
+  assert.equal(isV2MigratedRoute('/about'), true);
+  const partial = ['/', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/sentinelle', '/blog', '/design-lab'];
   for (const path of partial) assert.equal(isV2MigratedRoute(path), false, path);
   assert.equal(isV2MigratedRoute('/unknown-route'), false);
   assert.equal(isV2MigratedRoute(null), false);
@@ -24,8 +25,9 @@ test('the registry matches exact paths only and ignores query, hash and trailing
 });
 
 test('the legacy footer is kept for legacy routes and suppressed only for migrated ones', () => {
-  assert.equal(isLegacyFooterVisible('/about'), true);
+  assert.equal(isLegacyFooterVisible('/about'), false, '/about is migrated: no legacy footer');
   assert.equal(isLegacyFooterVisible('/'), true);
+  assert.equal(isLegacyFooterVisible('/contact'), true);
   assert.equal(isLegacyFooterVisible('/about', ['/about']), false);
   assert.equal(isLegacyFooterVisible('/contact', ['/about']), true);
 });
@@ -72,8 +74,9 @@ test('LegacyChrome guards only the footer; cookie notice, scroll-to-top and chat
   }
 });
 
-test('no production page uses V2Shell yet', () => {
-  for (const file of ['app/about/page.tsx', 'app/about/AboutV2.tsx', 'app/contact/page.tsx', 'app/page.tsx', 'components/ProductPage.tsx']) {
+test('only the migrated pilot page uses V2Shell; every other production page stays outside it', () => {
+  assert.match(read('app/about/page.tsx'), /<V2Shell\b/);
+  for (const file of ['app/about/AboutV2.tsx', 'app/contact/page.tsx', 'app/partners/page.tsx', 'app/programme-recommandation/page.tsx', 'app/page.tsx', 'components/ProductPage.tsx']) {
     assert.doesNotMatch(read(file), /V2Shell/, file);
   }
 });

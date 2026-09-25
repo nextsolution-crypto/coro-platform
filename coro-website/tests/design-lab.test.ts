@@ -98,7 +98,8 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
     'app/HomePageClient.tsx', 'app/page.tsx', 'app/robots.ts', 'app/DemoForm.tsx',
     'app/components/Footer.tsx', 'app/components/CookieBanner.tsx', 'app/components/ChatWidget.tsx', 'app/components/ScrollToTop.tsx',
     'components/ProductPage.tsx', 'components/ProductCompositions.tsx', 'components/product.module.css', 'components/product-compositions.module.css',
-    'lib/site/product-content.ts', 'app/about/AboutV2.tsx', 'app/institutional.module.css',
+    // app/about/AboutV2.tsx left the checkpoint list in MIG-01A (pilot migration); tests/about-migration.test.ts guards it.
+    'lib/site/product-content.ts', 'app/institutional.module.css',
     'app/gestion-documentaire/page.tsx', 'app/gestion-de-projets/page.tsx', 'app/performance-objectifs/page.tsx', 'app/portail-client/page.tsx',
   ];
   try {

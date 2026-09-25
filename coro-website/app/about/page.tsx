@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { V2Shell } from '@/components/site/V2Shell';
 import { AboutV2 } from './AboutV2';
 import { aboutContent } from './content';
 import { organizationJsonLd } from '@/lib/site/json-ld';
@@ -35,7 +36,7 @@ export default async function AboutPage({ searchParams }: PageProps) {
   const aboutPageJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'AboutPage',
-    name: content.metadata.title,
+    name: content.metadata.schemaName,
     description: content.metadata.description,
     url: absoluteUrl('/about', locale),
     inLanguage: locale === 'fr' ? 'fr-CA' : 'en-CA',
@@ -47,7 +48,9 @@ export default async function AboutPage({ searchParams }: PageProps) {
     <>
       <JsonLd value={organizationJsonLd()} />
       <JsonLd value={aboutPageJsonLd} />
-      <AboutV2 locale={locale} content={content} />
+      <V2Shell locale={locale} pathname="/about">
+        <AboutV2 locale={locale} content={content} />
+      </V2Shell>
     </>
   );
 }

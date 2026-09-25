@@ -7,9 +7,9 @@
  * and lives in the route registry, not here.
  *
  * Exact paths only (no prefix matching). Dynamic routes such as /blog/[slug] are out of scope until they are migrated on purpose.
- * The registry starts EMPTY: every current route is legacy.
+ * Migrated so far: /about only (MIG-01A pilot, added after QA passed). Every other current route is legacy.
  */
-export const migratedV2Routes: readonly string[] = [];
+export const migratedV2Routes: readonly string[] = ['/about'];
 
 function normalizePath(pathname: string): string {
   const path = pathname.split(/[?#]/)[0] || '/';
