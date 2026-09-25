@@ -187,6 +187,16 @@ export function formatDay(key: string): string {
     .format(new Date(`${key}T12:00:00Z`));
 }
 
+export function formatCivilDate(value: string | Date, options: Intl.DateTimeFormatOptions = {
+  day: 'numeric', month: 'long', year: 'numeric',
+}): string {
+  const key = value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+  const date = new Date(`${key}T12:00:00.000Z`);
+  if (!Number.isFinite(date.getTime())) return '';
+  return new Intl.DateTimeFormat('fr-CA', { ...options, timeZone: 'UTC' }).format(date);
+}
+
 export function visibleHours(days: string[], timeZone: string,
   intervals: Array<{ startUtc: string; endUtc: string }>): { start: number; end: number } {
   let first = 7 * 60;

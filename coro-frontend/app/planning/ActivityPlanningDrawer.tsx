@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import type { PlanningAction, PlanningContext, TeamCandidate, TeamPreview } from './types';
 import { completeSlot, selectLead, teamDirty, type TeamDraft } from './teamPickerState';
 import { dateKey, localBoundary, timeValue } from './time';
@@ -89,6 +90,7 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
     setSaving(true);
     try {
       await api.post('/planning/activities', { projectId, activityTypeId, customLabel: customLabel || undefined, notes: notes || undefined, mode: modeValue, clientVisible, clientBookable });
+      toast('Activité créée.');
       onCreated(); onClose();
     } catch (cause) {
       const message = axios.isAxiosError(cause) ? cause.response?.data?.message : null;
@@ -118,6 +120,7 @@ export default function ActivityPlanningDrawer({ mode, action, context, initialS
         if (!action?.activityId) throw new Error('Activité introuvable.');
         await api.post(`/planning/activities/${action.activityId}/plan`, common);
       }
+      toast('Activité planifiée.');
       onCreated(); onClose();
     } catch (cause) {
       const message = axios.isAxiosError(cause) ? cause.response?.data?.message : cause instanceof Error ? cause.message : null;

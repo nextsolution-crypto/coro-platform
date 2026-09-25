@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import type { PlannerEvent, PlannerUser, TeamCandidate, TeamPreview } from './types';
 import { eventLabel, eventStatus } from './projection';
 import { dateKey, formatClock, localBoundary, timeValue } from './time';
@@ -170,6 +171,8 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
           reschedule: mode === 'RESCHEDULE', confirmUnknown,
         });
       }
+      toast(mode === 'REASSIGN' ? 'Équipe réaffectée.' : mode === 'RESCHEDULE'
+        ? 'Planification reportée.' : 'Créneau enregistré.');
       setRefreshing(true); onMutated?.(); setMode('VIEW');
     } catch (cause) {
       setError(serverMessage(cause, 'La planification a changé. Vérifiez les disponibilités et réessayez.'));
@@ -182,6 +185,7 @@ export default function PlanningDrawer({ event, users, displayTimeZone, canMutat
     setSaving(true); setError('');
     try {
       await api.post(`/planning/bookings/${event.bookingId}/cancel-schedule`);
+      toast('Planification retirée.');
       onMutated?.(); onClose();
     } catch (cause) { setError(serverMessage(cause, 'L’annulation de la planification est impossible.')); }
     finally { setSaving(false); }

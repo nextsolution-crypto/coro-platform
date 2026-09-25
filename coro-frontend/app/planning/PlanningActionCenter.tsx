@@ -70,18 +70,19 @@ export default function PlanningActionCenter({ summary, activeType, items, total
               onClick={() => onAction(item, 'RESCHEDULE')}>Reporter</button>}
           </>}
           {item.type === 'UNPLANNED_ACTIVITY' && canManage && <button type="button" className={styles.inlineButton}
-            onClick={() => setPendingRemoval(item)}>{item.removalAction === 'DELETE' ? 'Supprimer' : 'Ne plus planifier'}</button>}
+            onClick={() => setPendingRemoval(item)}>{item.removalAction === 'DELETE' ? 'Supprimer' : 'Annuler l’activité'}</button>}
         </div>
       </li>)}</ul> : <p className={styles.compactEmpty}>{activeType === 'UNPLANNED_ACTIVITY' ? '✓ Toutes les activités sont planifiées ou traitées.' : emptyLabels[activeType] ?? 'Aucune action de ce type.'}</p>)}
       {pendingRemoval && <section className={styles.confirmPanel} role="alertdialog" aria-label="Confirmer le retrait de l’activité">
-        <h3>{pendingRemoval.removalAction === 'DELETE' ? 'Supprimer cette activité ?' : 'Ne plus planifier cette activité ?'}</h3>
+        <h3>{pendingRemoval.removalAction === 'DELETE' ? 'Supprimer cette activité ?' : 'Annuler cette activité ?'}</h3>
         <p>{pendingRemoval.removalAction === 'DELETE'
           ? 'Cette activité n’a jamais été planifiée. Elle sera supprimée définitivement.'
-          : 'Cette activité ne sera plus à planifier. Son historique de planification sera conservé.'}</p>
+          : 'Cette activité sera annulée. Ses tâches et son historique seront conservés.'}</p>
         <div className={styles.formActions}><button type="button" disabled={removing} onClick={() => setPendingRemoval(null)}>Retour</button>
           <button type="button" className={styles.dangerButton} disabled={removing} onClick={async () => {
             setRemoving(true); try { await onRemove(pendingRemoval); setPendingRemoval(null); } finally { setRemoving(false); }
-          }}>{removing ? 'Traitement…' : pendingRemoval.removalAction === 'DELETE' ? 'Supprimer définitivement' : 'Ne plus planifier'}</button></div>
+          }}>{removing ? 'Traitement…' : pendingRemoval.removalAction === 'DELETE' ? 'Supprimer définitivement' :
+            'Annuler l’activité'}</button></div>
       </section>}
       {total > 25 && <div className={styles.actionPager}>
         <button type="button" disabled={page === 1} onClick={() => onPage(page - 1)}>Précédent</button>

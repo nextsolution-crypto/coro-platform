@@ -41,6 +41,13 @@ test('day, full week and work week use exact civil windows', () => {
   assert.equal(time.requestWindow(time.viewDays('2026-09-23', 'day'), 'America/Toronto').end, '2026-09-24T04:00:00.000Z');
 });
 
+test('civil Activity dates keep the entered calendar day through winter and summer DST', () => {
+  assert.equal(time.formatCivilDate('2026-09-28T00:00:00.000Z'), '28 septembre 2026');
+  assert.equal(time.formatCivilDate('2026-01-15T00:00:00.000Z'), '15 janvier 2026');
+  assert.equal(time.formatCivilDate('2026-07-15T00:00:00.000Z'), '15 juillet 2026');
+  assert.equal(time.formatClock('2026-07-15T14:30:00.000Z', 'America/Toronto'), '10 h 30');
+});
+
 test('request window uses local boundaries in the display time zone', () => {
   const window = time.requestWindow(time.viewDays('2026-09-23', 'workweek'), 'America/Toronto');
   assert.equal(window.start, '2026-09-21T04:00:00.000Z');
@@ -421,7 +428,7 @@ test('backlog distinguishes replanning context and keeps destructive actions exp
   const preview = fs.readFileSync(path.join(__dirname, 'SchedulingPreview.tsx'), 'utf8');
   const page = fs.readFileSync(path.join(__dirname, 'page.tsx'), 'utf8');
   for (const label of ['À replanifier', 'Dernier créneau', 'Dernier LEAD', 'Replanifier',
-    'Supprimer cette activité ?', 'Supprimer définitivement', 'Ne plus planifier cette activité ?', 'Ne plus planifier']) {
+    'Supprimer cette activité ?', 'Supprimer définitivement', 'Annuler cette activité ?', 'Annuler l’activité']) {
     assert.ok(center.includes(label));
   }
   for (const label of ['actionTitle', 'actionHistory', 'activityTypeName', 'Toutes les activités sont planifiées ou traitées']) {
@@ -445,6 +452,34 @@ test('backlog distinguishes replanning context and keeps destructive actions exp
   assert.ok(planningDrawer.includes('Retirer du calendrier'));
   assert.doesNotMatch(planningDrawer, /<dt>Booking<\/dt>/);
   assert.doesNotMatch(page, /<label>Booking /);
+});
+
+test('fresh Activities with retained history use cancellation wording instead of fake deplanning', () => {
+  const center = fs.readFileSync(path.join(__dirname, 'PlanningActionCenter.tsx'), 'utf8');
+  for (const label of ['Annuler l’activité', 'Annuler cette activité ?', 'Ses tâches et son historique seront conservés.']) {
+    assert.ok(center.includes(label));
+  }
+  assert.doesNotMatch(center, /Ne plus planifier/);
+  assert.match(center, /item\.removalAction === 'DELETE' \? 'Supprimer' : 'Annuler l’activité'/);
+});
+
+test('Planner success feedback follows successful API mutations and closing remains silent', () => {
+  const activityDrawer = fs.readFileSync(path.join(__dirname, 'ActivityPlanningDrawer.tsx'), 'utf8');
+  const bookingDrawer = fs.readFileSync(path.join(__dirname, 'PlanningDrawer.tsx'), 'utf8');
+  const assignments = fs.readFileSync(path.join(__dirname, 'MyAssignmentsPanel.tsx'), 'utf8');
+  for (const label of ['Activité créée.', 'Activité planifiée.']) assert.ok(activityDrawer.includes(`toast('${label}')`));
+  for (const label of ['Équipe réaffectée.', 'Planification reportée.', 'Planification retirée.']) assert.ok(bookingDrawer.includes(label));
+  assert.doesNotMatch(activityDrawer.match(/const requestClose[\s\S]*?useEffect/)?.[0] ?? '', /toast\(/);
+  assert.doesNotMatch(bookingDrawer.match(/const requestClose[\s\S]*?useEffect/)?.[0] ?? '', /toast\(/);
+  assert.match(assignments, /setOpen\(value => !value\); setMessage\(''\); setError\(''\)/);
+});
+
+test('Project Activity cards distinguish equal titles with exact civil dates and visible status', () => {
+  const activities = fs.readFileSync(path.join(__dirname, '../projects/[id]/activities/page.tsx'), 'utf8');
+  assert.ok(activities.includes('formatCivilDate(activity.scheduledDate)'));
+  assert.ok(activities.includes('STATUS_CONFIG[activity.status]'));
+  assert.ok(activities.includes('<select value={activity.status}'));
+  assert.doesNotMatch(activities, /new Date\(activity\.scheduledDate\)\.toLocaleDateString/);
 });
 
 test('advisor assignment inbox is personal, actionable and independent from planner filters', () => {

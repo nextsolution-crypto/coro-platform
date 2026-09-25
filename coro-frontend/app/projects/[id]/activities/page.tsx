@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Plus, Trash2, Download, Copy } from 'lucide-react';
 import api from '@/lib/api';
+import { toast } from '@/lib/toast';
 import { useAuthStore } from '@/stores/auth.store';
 import ActivityTasksSection from '@/app/planning/ActivityTasksSection';
+import { formatCivilDate } from '@/app/planning/time';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB' },
@@ -79,10 +81,11 @@ export default function ActivitiesPage() {
         clientEmail: form.clientEmails.filter(e => e.trim()).join(','),
         notes: form.notes || null,
       });
+      toast('Activité créée.');
       setShowAddModal(false);
       resetForm();
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); toast('Impossible de créer l’activité.', 'error'); }
   };
 
   const handleStatusChange = async (activity: any, newStatus: string) => {
@@ -236,6 +239,9 @@ export default function ActivitiesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span className="text-sm font-semibold" style={{ color: '#2C3E50' }}>{label}</span>
+                        {activity.scheduledDate && (
+                          <span className="text-xs font-semibold" style={{ color: '#6C757D' }}>📅 {formatCivilDate(activity.scheduledDate)}</span>
+                        )}
                         <span className="text-xs px-2 py-0.5 rounded-full"
                           style={{ backgroundColor: activity.mode === 'teams' ? '#EBF5FB' : '#EAFAF1', color: activity.mode === 'teams' ? '#2980B9' : '#27AE60' }}>
                           {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
@@ -245,9 +251,6 @@ export default function ActivitiesPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-xs" style={{ color: '#6C757D' }}>
-                        {activity.scheduledDate && (
-                          <span>📅 {new Date(activity.scheduledDate).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                        )}
                         {activity.assigneeEmail && <span>👤 {activity.assigneeEmail}</span>}
                         {activity.clientEmail && <span>🏢 {activity.clientEmail}</span>}
                       </div>

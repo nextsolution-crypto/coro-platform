@@ -50,14 +50,14 @@ export default function MyAssignmentsPanel({ refreshKey, onChanged }: {
   if (!loading && data && count === 0 && !message && !error) return null;
   return <section className={styles.myAssignments} aria-label="Mes affectations">
     <button type="button" className={`${styles.summaryCard} ${count ? styles.summaryCardActive : ''}`}
-      onClick={() => setOpen(value => !value)} aria-expanded={open} aria-controls="my-assignments-panel">
+      onClick={() => { setOpen(value => !value); setMessage(''); setError(''); }} aria-expanded={open} aria-controls="my-assignments-panel">
       <strong>{loading ? '…' : count}</strong><span>Mes affectations à confirmer{count > 0 && <em>À traiter</em>}</span>
     </button>
     {message && <p className={styles.success} role="status">{message}</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     {open && <div id="my-assignments-panel" className={styles.actionList}>
       <div className={styles.actionListHeader}><h2>Mes affectations à confirmer</h2>
-        <button type="button" onClick={() => setOpen(false)} aria-label="Fermer mes affectations">×</button></div>
+        <button type="button" onClick={() => { setOpen(false); setMessage(''); setError(''); }} aria-label="Fermer mes affectations">×</button></div>
       {!loading && !data?.items.length && <p className={styles.compactEmpty}>✓ Aucune affectation en attente.</p>}
       <ul>{data?.items.map(item => <li key={item.assignmentId} className={styles.assignmentCard}>
         <div className={styles.actionContent}><div className={styles.actionTitle}><strong>{item.title}</strong><em>{item.role}</em></div>

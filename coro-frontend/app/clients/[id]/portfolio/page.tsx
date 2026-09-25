@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Download } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+import { formatCivilDate } from '@/app/planning/time';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   a_faire:  { label: 'À faire',  color: '#2980B9', bg: '#EBF5FB', border: '#AED6F1' },
@@ -258,7 +259,7 @@ export default function ClientPortfolioPage() {
 
                       <span className="text-xs" style={{ color: '#495057' }}>
                         {activity.scheduledDate
-                          ? `📅 ${new Date(activity.scheduledDate).toLocaleDateString('fr-CA', {
+                          ? `📅 ${formatCivilDate(activity.scheduledDate, {
                               day: 'numeric',
                               month: 'short',
                               year: 'numeric',
@@ -343,7 +344,7 @@ export default function ClientPortfolioPage() {
   }}
 >
                           {activity.scheduledDate
-                            ? new Date(activity.scheduledDate).toLocaleDateString('fr-CA', {
+                            ? formatCivilDate(activity.scheduledDate, {
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric',
