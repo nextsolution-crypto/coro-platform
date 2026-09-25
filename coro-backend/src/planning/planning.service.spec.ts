@@ -235,6 +235,61 @@ describe('PlanningService', () => {
     expect(result.items[0]).toMatchObject({ activityId: 'configured', removalAction: 'CANCEL' });
   });
 
+  it('keeps the production date-only internal Activity with generated tasks in the backlog', async () => {
+    const { service, prisma } = setup();
+    prisma.projectActivity.findMany.mockResolvedValue([{ id: 'production-case',
+      scheduledDate: new Date('2026-09-23T00:00:00.000Z'), duration: '1h', customDuration: null,
+      label: 'Inspection / visite technique', customLabel: null, type: 'custom-inspection', assigneeEmail: null,
+      sourceMandate: false, clientBookable: false, activityTypeId: 'type-inspection',
+      activityType: { nameFR: 'Inspection / visite technique' }, projectId: 'project-a', project,
+      exerciseReport: null, bookings: [], taskLists: [{ id: 'generated-checklist' }] }]);
+    const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ activityId: 'production-case',
+      startUtc: new Date('2026-09-23T00:00:00.000Z'), removalAction: 'CANCEL' });
+  });
+
+  it('keeps a true-hour legacy Activity visible both as an event and as unplanned work without an open Booking', async () => {
+    const { service, prisma } = setup();
+    prisma.projectActivity.findMany.mockResolvedValue([{ id: 'legacy-hour',
+      scheduledDate: new Date('2026-09-23T14:00:00.000Z'), duration: '1h', customDuration: null,
+      label: 'Visite legacy', customLabel: null, type: 'inspection', assigneeEmail: 'u2@example.com',
+      sourceMandate: false, clientBookable: false, activityTypeId: 'type-inspection',
+      activityType: { code: 'inspection', nameFR: 'Inspection', visualToken: 'NEUTRAL', iconKey: null },
+      projectId: 'project-a', project, exerciseReport: null, bookings: [], taskLists: [] }]);
+    const result = await service.team({ start, end }, actor);
+    expect(result.events).toEqual(expect.arrayContaining([expect.objectContaining({
+      source: 'LEGACY_ACTIVITY', activityId: 'legacy-hour',
+    })]));
+    expect(result.actionSummary.unplannedActivities).toBe(1);
+  });
+
+  it.each(['DEMANDEE', 'CONFIRMEE', 'REPORTEE', 'REASSIGNEE'])(
+    'excludes an Activity with an open %s Booking from backlog', async status => {
+      const { service, prisma } = setup();
+      prisma.projectActivity.findMany.mockResolvedValue([{ id: `open-${status}`, scheduledDate: null,
+        duration: '1h', customDuration: null, label: 'Inspection', customLabel: null, type: 'inspection',
+        assigneeEmail: null, sourceMandate: false, clientBookable: false, activityTypeId: 'type-a',
+        activityType: { nameFR: 'Inspection' }, projectId: 'project-a', project, exerciseReport: null,
+        taskLists: [], bookings: [{ id: `booking-${status}`, status }] }]);
+      const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+      expect(result.items).toHaveLength(0);
+    });
+
+  it.each(['ANNULEE', 'COMPLETEE', 'REFUSEE'])(
+    'returns an active Activity with a terminal %s Booking to backlog', async status => {
+      const { service, prisma } = setup();
+      prisma.projectActivity.findMany.mockResolvedValue([{ id: `terminal-${status}`, scheduledDate: null,
+        duration: '1h', customDuration: null, label: 'Inspection', customLabel: null, type: 'inspection',
+        assigneeEmail: null, sourceMandate: false, clientBookable: false, activityTypeId: 'type-a',
+        activityType: { nameFR: 'Inspection' }, projectId: 'project-a', project, exerciseReport: null, taskLists: [],
+        bookings: [{ id: `booking-${status}`, status, requestedDate: new Date('2026-09-20T14:00:00Z'),
+          reportedDate: null, duration: 60, assignments: [] }] }]);
+      const result = await service.actions({ start, end, type: 'UNPLANNED_ACTIVITY' }, actor);
+      expect(result.items).toEqual([expect.objectContaining({ activityId: `terminal-${status}`,
+        lastBookingStatus: status })]);
+    });
+
   it('projects UNKNOWN Scheduling as a separate action', async () => {
     const { service, prisma, scheduling } = setup();
     prisma.booking.findMany.mockResolvedValue([booking('CONFIRMEE', 'ACCEPTED')]);
@@ -258,11 +313,12 @@ describe('PlanningService', () => {
   it('accepts exactly 2,000 Activity candidates', async () => {
     const { service, prisma } = setup();
     prisma.projectActivity.findMany.mockResolvedValue(Array(2000).fill({
-      id: 'inactive-for-window', scheduledDate: null, sourceMandate: false, clientBookable: false,
-      assigneeEmail: null, bookings: [], project: { clientId: 'client-a', buildingId: 'building-a' },
+      id: 'internal-activity', scheduledDate: null, duration: '1h', label: 'Interne',
+      sourceMandate: false, clientBookable: false, assigneeEmail: null, bookings: [], taskLists: [],
+      projectId: 'project-a', project,
     }));
     const result = await service.actions({ start, end }, actor);
-    expect(result.total).toBe(0);
+    expect(result.total).toBe(2000);
     expect(prisma.projectActivity.findMany.mock.calls[0][0].take).toBe(2001);
   });
 

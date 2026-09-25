@@ -56,6 +56,44 @@ describePostgres('Planner mutations on PostgreSQL', () => {
     expect(await prisma.auditLog.count({ where: { entityId: source.id, action: 'PLANNED' } })).toBe(1);
   });
 
+  it('uses open Booking status as backlog authority for date-only internal Activities', async () => {
+    const other = await createBookingFixture(prisma);
+    const activityType = await prisma.activityType.create({ data: { organizationId: fixture.org.id,
+      code: `custom-backlog-${randomUUID()}`, nameFR: 'Inspection backlog', defaultDurationMinutes: 60,
+      clientBookableDefault: false } });
+    const make = (data: { status?: string; organizationId?: string; projectId?: string; scheduledDate?: Date | null }) =>
+      prisma.projectActivity.create({ data: { organizationId: data.organizationId ?? fixture.org.id,
+        projectId: data.projectId ?? fixture.project.id, activityTypeId: data.organizationId ? null : activityType.id,
+        type: 'custom-inspection', label: 'Inspection / visite technique', duration: '1h00',
+        status: data.status ?? 'a_faire', scheduledDate: data.scheduledDate ?? null,
+        sourceMandate: false, clientVisible: true, clientBookable: false } });
+    const [dateOnly, open, cancelled, terminal, foreign] = await Promise.all([
+      make({ scheduledDate: new Date('2026-09-28T00:00:00.000Z') }), make({}), make({}),
+      make({ status: 'annule' }), make({ organizationId: other.org.id, projectId: other.project.id }),
+    ]);
+    await prisma.projectTask.createMany({ data: Array.from({ length: 10 }, (_, index) => ({
+      projectId: fixture.project.id, organizationId: fixture.org.id, activityId: dateOnly.id,
+      categoryName: 'Inspection', taskTitle: `Contrôle ${index + 1}`, order: index + 1, status: 'a_faire',
+    })) });
+    await prisma.booking.createMany({ data: [
+      { organizationId: fixture.org.id, projectId: fixture.project.id, activityId: open.id,
+        clientUserId: fixture.clientUser.id, assignedUserId: fixture.owner.id, activityType: open.type,
+        requestedDate: new Date('2026-09-29T14:00:00.000Z'), duration: 60, status: 'CONFIRMEE' },
+      { organizationId: fixture.org.id, projectId: fixture.project.id, activityId: cancelled.id,
+        clientUserId: fixture.clientUser.id, assignedUserId: fixture.owner.id, activityType: cancelled.type,
+        requestedDate: new Date('2026-09-29T15:00:00.000Z'), duration: 60, status: 'ANNULEE' },
+    ] });
+    const planning = new PlanningService(prisma as any, new SchedulingService(prisma as any), {
+      getCapacityPlanning: jest.fn().mockResolvedValue([]),
+    } as any, taskLists());
+    const result = await planning.actions({ start: '2026-09-27T04:00:00.000Z', end: '2026-10-03T04:00:00.000Z',
+      type: 'UNPLANNED_ACTIVITY', projectId: fixture.project.id }, actor());
+    const ids = result.items.map(item => item.activityId);
+    expect(ids).toEqual(expect.arrayContaining([dateOnly.id, cancelled.id]));
+    expect(ids).not.toEqual(expect.arrayContaining([open.id, terminal.id, foreign.id]));
+    expect(await prisma.projectTask.count({ where: { activityId: dateOnly.id } })).toBe(10);
+  });
+
   it('rolls back an invalid assignment and serializes two plans of the same Activity', async () => {
     const invalid = await activity();
     await expect(service.planExisting(invalid.id, { ...input('2026-10-02T14:00:00.000Z'),

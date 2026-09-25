@@ -438,9 +438,8 @@ export class PlanningService {
             buildingName: activity.project.building?.name } : {}),
           needsAction: false, warnings: [] });
       }
-      if ((activity.clientBookable || activity.sourceMandate) &&
-        !activity.bookings.some(booking => OPEN_BOOKING_STATUSES.includes(booking.status as any)) &&
-        (!own || userId === actor.userId) && (!activity.scheduledDate || (interval && overlaps(window, interval)))) {
+      if (!activity.bookings.some(booking => OPEN_BOOKING_STATUSES.includes(booking.status as any)) &&
+        (!own || userId === actor.userId)) {
         const lastBooking = activity.bookings.find(booking => !OPEN_BOOKING_STATUSES.includes(booking.status as any));
         const lastLead = lastBooking?.assignments[0];
         actions.push({ id: `unplanned:${activity.id}`, type: 'UNPLANNED_ACTIVITY', groupId: activity.id,
