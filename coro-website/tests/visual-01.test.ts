@@ -111,11 +111,11 @@ test('Projects FAQ: customer-facing answer, no internal audit language, and the 
 });
 
 test('no product-truth expansion: the Projects boundary and Booking/Planner limits are unchanged', () => {
-  assert.match(productContent.projects.fr.boundary, /Aucune synchronisation Outlook bidirectionnelle n’est annoncée ici/);
-  assert.match(productContent.projects.en.boundary, /No bidirectional Outlook synchronization is claimed/);
+  // MIG-02E reworded the Projects boundary (no Network, no meta-statement); tests/mig-02e-copy.test.ts guards it.
+  assert.equal(productContent.projects.fr.boundary, 'Planning et Booking sont intégrés à la gestion opérationnelle des mandats.');
   const page = read('app/gestion-de-projets/page.tsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(page, /temps réel|real-time|conflit|conflict|multi-conseiller|Outlook/i);
-  assert.match(productContent.documents.fr.boundary, /PMU, PSI et PCA sont confirmés/);
+  assert.match(productContent.documents.fr.boundary, /PMU, PSI et PCA sont disponibles/);
 });
 
 test('registry, metadata and routes are unchanged by the visual enrichment', () => {

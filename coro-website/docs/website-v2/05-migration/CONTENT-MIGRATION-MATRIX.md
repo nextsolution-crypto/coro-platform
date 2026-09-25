@@ -471,4 +471,6 @@ déjà de la valeur.
 
 > **MIG-00A :** statuts de route, blueprints, SEO par route (constats R-01 à R-13), maillage et ordre de migration : voir `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`. Ce document ne duplique pas ce contenu.
 
+> **MIG-02 (gate) :** protocole de migration consolidé, règle d'audit des actifs visuels V1, registre des blockers de mise en ligne, plan de recapture des captures Client et critères de sortie : voir `05-migration/MIG-02-GATE.md`.
+
 > **MIG-00A-B :** décisions humaines intégrées (statuts `/guides`, `/coro-incident`, `/plateforme`, `/coro-exercices`, gouvernance des affirmations, validation SEO préalable) : voir §26 de `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` (statuts déjà reportés dans ce document).

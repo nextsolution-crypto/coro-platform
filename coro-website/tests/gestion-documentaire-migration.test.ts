@@ -37,8 +37,8 @@ test('PRODUCT TRUTH: only PMU, PSI and PCA are available; PGC, PRA and PUE are P
   assert.match(page, /available: 'Available', phase2: 'Phase 2'/);
   assert.match(page, /refs: \[\['PMU'[^\]]*\], \['PSI'[^\]]*\], \['PCA'[^\]]*\]\]/);
   assert.match(page, /refs: \[\['ERP'[^\]]*\], \['FSP'[^\]]*\], \['BCP'[^\]]*\]\]/);
-  // The published boundary text is kept verbatim from the product content, which itself separates confirmed and unvalidated documents.
-  assert.match(productContent.documents.fr.boundary, /PMU, PSI et PCA sont confirmés.*PGC, PRA et PUE/);
+  // MIG-02E: the boundary separates the available plans from the Phase 2 plans in customer-facing language.
+  assert.match(productContent.documents.fr.boundary, /PMU, PSI et PCA sont disponibles.*PGC, PRA et PUE sont prévus en Phase 2/);
   assert.match(page, /p\.boundary/);
   assert.match(page, /pas d'authorité|Phase 2/);
 });

@@ -33,7 +33,7 @@ const copy = {
     signal: 'Du signal à la décision', platform: 'Cette partie de la plateforme', platformTitle: 'Un socle produit relié', explore: 'Explorer',
     divide: 'Deux lectures distinctes', dividePerf: 'Performance', divideRes: 'Résilience',
     divideTitle: 'Performance ≠ Indice CORO', divideA: 'Activité · Charge · Budgets · Objectifs', divideB: 'Préparation · Capacité face aux événements',
-    statement: 'Mesurer pour décider. Décider pour progresser.', faq: 'FAQ', faqTitle: 'Questions fréquentes',
+    demo: 'Demander une démonstration', statement: 'Mesurer pour décider. Décider pour progresser.', faq: 'FAQ', faqTitle: 'Questions fréquentes',
   },
   en: {
     metaTitle: 'Mandate performance, hours and team capacity',
@@ -42,7 +42,7 @@ const copy = {
     signal: 'From signal to decision', platform: 'This part of the platform', platformTitle: 'A connected product foundation', explore: 'Explore',
     divide: 'Two distinct readings', dividePerf: 'Performance', divideRes: 'Resilience',
     divideTitle: 'Performance ≠ CORO Index', divideA: 'Activity · Workload · Budgets · Goals', divideB: 'Preparedness · Capacity for events',
-    statement: 'Measure to decide. Decide to progress.', faq: 'FAQ', faqTitle: 'Frequently asked questions',
+    demo: 'Request a demonstration', statement: 'Measure to decide. Decide to progress.', faq: 'FAQ', faqTitle: 'Frequently asked questions',
   },
 } as const satisfies Record<Locale, unknown>;
 
@@ -104,7 +104,7 @@ export default async function Page({ searchParams }: P) {
         </div>
       </PageSection>
 
-      <CTASection id="performance-cta-title" tone="dark" label={p.eyebrow} statement={t.statement} primary={{ label: p.cta, href: demo }} />
+      <CTASection id="performance-cta-title" tone="dark" label={p.eyebrow} statement={t.statement} primary={{ label: t.demo, href: demo }} />
     </V2Shell>
   );
 }

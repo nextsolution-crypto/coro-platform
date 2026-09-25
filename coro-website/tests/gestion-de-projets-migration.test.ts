@@ -38,14 +38,15 @@ test('PRODUCT TRUTH: only the already published Projects claims are used; no Boo
   const p = productContent.projects;
   for (const locale of ['fr', 'en'] as const) {
     const before = baseline[locale].mainText;
-    for (const s of [p[locale].intro, p[locale].capabilities[1].text, p[locale].capabilities[2].text, p[locale].boundary]) assert.ok(before.includes(s), `baseline ${locale}: ${s.slice(0, 40)}`);
+    for (const s of [p[locale].intro, p[locale].capabilities[1].text]) assert.ok(before.includes(s), `baseline ${locale}: ${s.slice(0, 40)}`);
   }
   for (const s of ['p.intro', 'p.flowTitle', 'p.capTitle', 'p.capabilities', 'p.boundaryTitle', 'p.boundary', 'p.faq', 'p.cta', 'p.connections']) assert.ok(page.includes(s), s);
   // Rejected or unverified claims stay out (only an outlookEventId field exists in the backend; no synchronisation).
   assert.doesNotMatch(code, /temps réel|real-time|realtime|synchronis(?!ation Outlook bidirectionnelle)|Outlook|conflit|conflict|disponibilit|availability|notification|multi-conseiller|multi-advis|capacit(?:y|é) (?:intelligen|planning)|automatique|automatic|\d+\s?% (?:de |of |plus|more|less|faster|moins)|gain de temps|time saved|économ/i);
   assert.doesNotMatch(code, /\bIA\b|\bAI\b/, 'no AI claim (case-sensitive: "aria-label" is not one)');
-  assert.match(p.fr.boundary, /Aucune synchronisation Outlook bidirectionnelle n’est annoncée ici/);
-  assert.match(p.en.boundary, /No bidirectional Outlook synchronization is claimed/);
+  // MIG-02E: the boundary states only the current product; no negative meta-statement, no future concept (see tests/mig-02e-copy.test.ts).
+  assert.equal(p.fr.boundary, 'Planning et Booking sont intégrés à la gestion opérationnelle des mandats.');
+  assert.equal(p.en.boundary, 'Planning and Booking belong to mandate operations.');
 });
 
 test('copy preserved: title, steps, capabilities, boundary, FAQ, closing statement and CTA in both languages', () => {

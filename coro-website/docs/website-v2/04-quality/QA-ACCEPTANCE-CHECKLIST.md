@@ -23,6 +23,7 @@ Références : `00-governance/DESIGN-SYSTEM-V1-FREEZE.md`, `02-design/CORO-COMPO
 ☐ Comparaison du contenu legacy et V2 faite : aucune omission de contenu utile ; les omissions sont décidées et notées.
 ☐ URL, slug et ancres historiques conservés ou remappés explicitement.
 ☐ Médias historiques préservés ; aucun actif supprimé sur une recherche textuelle seule.
+☐ **Audit de préservation des actifs visuels V1** fait AVANT le redesign : inventaire des actifs propres à la page (nom, dimensions, format) ; chaque actif ouvert et regardé ; nature classée (REAL PRODUCT UI / MARKETING ILLUSTRATION / DIAGRAM / OUTDATED-UNCLEAR) ; comparé au produit actuel ; décision KEEP / KEEP WITH PUBLICATION REVIEW / REPLACE / REJECT / UNCLEAR ; raison écrite pour chaque actif omis. Une capture produit utile est un contenu de migration, pas une décoration jetable (voir `05-migration/MIG-02-GATE.md` §2).
 ☐ Destinations externes exactes : CORO Platform `https://app.getcoro.io/login`, CORO Client `https://client.getcoro.io/login`, aucun autre portail.
 ☐ Contrats métier préservés lorsque la page les touche : parrainage (cookies `coro_referral_code`, `coro_referral_first_touch` ; capture sur `/`, lecture par `DemoForm`) et formulaire de démonstration (fournisseur et destination inchangés sauf décision approuvée).
 ☐ Aucun secret, aucun point d'accès sensible recopié dans un document ou exposé côté client.
@@ -72,6 +73,8 @@ Références : `00-governance/DESIGN-SYSTEM-V1-FREEZE.md`, `02-design/CORO-COMPO
 ☐ `next/image` avec `sizes`, dimensions réservées, `priority` seulement pour le média du premier écran.
 ☐ Recadrage desktop / mobile vérifié ; pas de sujet important rogné ; pas de décalage de mise en page.
 ☐ Média de référence contenant du texte ou une marque incrustés non utilisé comme source de copie.
+☐ Chaque image classée : MARKETING ILLUSTRATION (décorative, `alt` vide, jamais preuve), TECHNICAL ILLUSTRATION, REAL PRODUCT SCREENSHOT ou OTHER ; une illustration marketing n'est jamais décrite comme preuve produit et son interface générée n'est jamais une affirmation fonctionnelle.
+☐ Captures produit : cartouche factuelle « Capture d'écran » (jamais « capture réelle »), `alt` exact, région défilable nommée et résumé texte adjacent sur mobile ; données visibles (noms, courriels, adresses, dates) vérifiées comme fictives ou autorisées, sinon PUBLICATION-BLOCKER ; aucun pixel modifié sans approbation humaine.
 
 ## 0.8 SEO de migration
 
