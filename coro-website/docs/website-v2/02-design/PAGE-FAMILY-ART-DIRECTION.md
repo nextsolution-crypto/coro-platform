@@ -6,8 +6,8 @@ Website V2 · Matrice de personnalité visuelle par famille de pages
 
 UNE MARQUE. PLUSIEURS ATMOSPHÈRES. AUCUNE DÉRIVE.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : direction artistique
-complémentaire
+Version 1.1 \| 24 septembre 2026 \| Statut : direction artistique
+complémentaire, réconciliée avec le Design Lab (V1.0 gelée)
 
 # 1. Objectif
 
@@ -25,6 +25,40 @@ Bleu marine CORO, blanc architectural, rouge signal; typographie et
 tokens communs; profondeur contrôlée; architecture, personnes, données
 et action; composants partagés; règles responsive/accessibilité/motion;
 ton professionnel et concret.
+
+# 2A. Trois familles de pages reliées (V1.0 gelée)
+
+Le Design Lab a prouvé trois familles de composition. Ce sont des familles reliées d'une même marque, pas trois marques : elles partagent les mêmes jetons, les mêmes rayons, le même rouge d'action, les mêmes règles de profondeur, de mouvement et d'accessibilité. Elles se distinguent par la surface dominante, la place du média, la densité d'interface et le vocabulaire technique. Une page peut emprunter à plusieurs familles selon sa section.
+
+La matrice par produit (§4) et l'intensité visuelle (§21) restent valables ; les trois familles décrivent la composition, pas le produit.
+
+| | ARCHITECTURAL | OPÉRATIONNEL | TECHNIQUE |
+|---|---|---|---|
+| Caractère | Lumineux, éditorial, photographique, ouvert | Situationnel, humain, décisif | Structuré, documentaire, précis |
+| Surfaces | Blanc et surface douce ; photographie dominante ; marine en accent | Marine, blanc et terrain (photographies de situation) | Papier, plans, indexation ; blanc ; marine pour la preuve |
+| Héros | HeroSignature (A2) | HeroOperational | HeroTechnical |
+| Média | Bâtiment ou site, 10 px | Personnes et situation, 10 px ; interface à côté du sujet, jamais dessus | Plan, document, capture : cadre net de 2 à 4 px et cartouche |
+| Vocabulaire | Annotations reliées au bâtiment, index éditorial | États, chronologie, décompte, action ; intensité proportionnée | Références numérotées, cartouches, filets, indexation |
+| Contextes | Plateforme, Client, bâtiment, homepage | Incident, Sentinelle, réponse, évacuation, reprise | Documents, planification, conformité |
+| Rythme | `PageSection` white / soft ; `SplitContent` ; `SectionStatement` | Blanc / marine / terrain ; `OperationalScene` ; chronologie | `paper` (contextuel) ; `BlueprintFrame` ; `FeatureIndex` |
+| Composants dominants | MediaFrame photo, BuildingFrame, EditorialBlock | OperationalScene, StatusChip, Timeline, PeopleStatus, ActionItem | BlueprintFrame, MapFrame, TechLabel, Cartouche, Accordion |
+
+## Règles communes aux trois familles
+
+- Le papier et la grille sont contextuels : ils appartiennent à la famille technique ; ils ne sont pas la recette de toutes les pages.
+- Un média dense reçoit peu de superpositions (repères numérotés plutôt qu'étiquettes complètes).
+- La présence de l'interface suit l'intensité opérationnelle : Normal minimal, Incident fort, Personnes piloté par l'humain, Reprise ouverte.
+- Le rouge signale l'action et l'état Critique ; il disparaît en reprise.
+- La fin d'une page suit le même rythme dans toutes les familles : contenu, preuve, action, pied de page.
+
+## Exemples approuvés au Lab (lots)
+
+- Architectural : LAB-02 (HeroSignature), LAB-03 (rythme A : surface douce, photographie).
+- Opérationnel : LAB-02 (HeroOperational), LAB-05 (Normal, Incident, Personnes, Reprise).
+- Technique : LAB-02 (HeroTechnical), LAB-03 (rythme C : papier, plans, indexation), LAB-04 (plan).
+- Transversal : LAB-06 (continuum et flux), LAB-07 (CTA, confiance, formulaire, pied de page).
+
+Il n'existe pas de gabarit unique par famille : les exemples sont des références de composition, pas des templates à recopier.
 
 # 3. Axes de variation
 

@@ -11,7 +11,43 @@ Le mouvement CORO doit donner vie aux relations entre bâtiment,
 personnes, données, décisions et actions sans transformer le site en
 démonstration d'effets.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : direction motion
+Version 1.1 \| 24 septembre 2026 \| Statut : direction motion, gelée V1.0 avec les motifs implémentés
+
+# 0. GEL V1.0 — motifs réellement implémentés
+
+Cette section fait foi sur ce qui existe dans le code. Le reste du document reste la direction générale ; s'il diverge, cette section prévaut.
+
+## Principes gelés
+
+- Le mouvement améliore les relations ; il ne porte jamais l'information. Le sens est statique d'abord.
+- Aucun pulse infini, aucun défilement forcé (scroll-jacking), aucune animation obligatoire, aucun compteur animé, aucun clignotement d'état critique.
+- Reduced motion est complet : aucun contenu ne disparaît ; les états et les relations restent disponibles sous forme statique.
+- Le mouvement de ligne et de révélation est retenu : une fois, court, précis.
+
+## Jetons (`app/design-tokens.css`)
+
+Durées : `--coro-v1-motion-instant` 80 ms, `-fast` 140 ms, `-base` 220 ms, `-slow` 420 ms, `-narrative` 650 ms. Courbes : `--coro-v1-ease-enter` (`cubic-bezier(.16,.84,.3,1)`), `--coro-v1-ease-exit`, `--coro-v1-ease-standard`. Ces valeurs sont retenues ; les mentions « À valider au Lab » de §5 et §28 sont levées.
+
+## Motifs implémentés
+
+| Motif | Où | Comportement | Reduced motion |
+|---|---|---|---|
+| Apparition d'un bloc de héros | `components/hero` (`rise`) | Fondu et déplacement de 14 px, une fois, échelonné. | `animation: none`. |
+| Tracé d'un repère et d'un appel | `hero`, `spatial` (`drawX`, `drawY`, `fade`) | La ligne se trace, l'étiquette apparaît. Uniquement sur grand écran. | `animation: none`. |
+| Révélation au défilement | `components/page` (`reveal`, `rule`, `mediaReveal`) | `animation-timeline: view()` sous `@supports`. Sans support, le contenu est déjà visible. | `animation: none`. |
+| Apparition du journal et des actions | `components/operational` (`opsIn`) | Fondu et déplacement de 4 px, échelonné, une fois. | `animation: none`. |
+| Tracé de la ligne du continuum et du connecteur | `components/flow` (`drawX`, `wipe`) | Défilement piloté sous `@supports` et `prefers-reduced-motion: no-preference`. | `animation: none`. |
+| Retour de l'état du formulaire | `components/conversion` (`settle`) | Fondu court du résumé d'erreurs et du succès. | `animation: none`. |
+| Menus et transitions d'interface | `components/site` | Opacité, visibilité et déplacement rapides (`--coro-duration-fast`). | Règle globale ci-dessous. |
+
+Règle globale : `@media (prefers-reduced-motion: reduce)` dans `app/design-tokens.css` ramène animations et transitions à 0,01 ms et supprime le défilement doux. Un test (`tests/hardening.test.ts`) exige un bloc reduced-motion dans tout fichier qui déclare une animation et interdit `infinite`.
+
+## Ce qui n'est PAS fait
+
+- Aucune émulation de `prefers-reduced-motion` dans un navigateur n'a été réalisée : la vérification est statique. C'est un point de QA manuelle avant production.
+- Aucun défilement narratif collant (sticky) ni séquence longue n'est implémenté ; ils restent REVIEW si un besoin réel apparaît, avec version mobile et reduced-motion.
+
+Le catalogue de motifs interdits est `02-design/CORO-VISUAL-LANGUAGE.md` §16.
 
 # 1. Objet
 

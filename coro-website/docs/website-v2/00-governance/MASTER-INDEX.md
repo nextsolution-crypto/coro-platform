@@ -4,374 +4,209 @@ WEBSITE V2
 
 MASTER INDEX & GOVERNANCE
 
-Référentiel maître du chantier · Documents, références, statuts et
-règles de décision
+Référentiel maître du chantier · Documents, références, statuts et règles de décision
 
 UNE SEULE PORTE D'ENTRÉE. UNE SEULE HIÉRARCHIE DE DÉCISION.
 
-Ce document devient le point de départ officiel de toute session de
-travail Website V2.
+Ce document est le point de départ officiel de toute session de travail Website V2.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : gouvernance active
+Version 2.0 | 24 septembre 2026 | Statut : gouvernance active, Design System V1.0 gelé (prend effet à la validation humaine du gel LAB-09)
+
+# 0. À LIRE EN PREMIER (agent qui reprend le chantier)
+
+1. Ce Master Index.
+2. `00-governance/DESIGN-SYSTEM-V1-FREEZE.md` : l'état gelé, les statuts, les éléments ouverts, la QA manuelle restante.
+3. `00-governance/CODEX-WEBSITE-RULES.md` et `00-governance/CODEX-MASTER-RESUME-PROMPT.md` (section V1.0 en tête).
+4. Pour une page à migrer : `05-migration/CONTENT-MIGRATION-MATRIX.md` (décision, priorité, risque), `02-design/CORO-COMPONENT-LIBRARY.md`, `02-design/PAGE-FAMILY-ART-DIRECTION.md`, `03-content/CONTENT-GUIDELINES.md`, puis la checklist `04-quality/QA-ACCEPTANCE-CHECKLIST.md` §0.
+
+RÈGLE — NE PAS REDESSINER LE DESIGN SYSTEM PENDANT LA MIGRATION D'UNE PAGE. Utiliser d'abord les composants et patterns approuvés. Escalader une lacune plutôt que d'inventer un nouveau langage visuel.
 
 # 1. Rôle du Master Index
 
-Ce document indique quels livrables existent, lesquels font autorité,
-dans quel ordre ils doivent être consultés et quelles décisions restent
-ouvertes.
+Ce document indique quels livrables existent, lesquels font autorité, dans quel ordre les consulter et quelles décisions restent ouvertes.
 
-SOURCE DE VÉRITÉ --- toute session Website V2 commence par ce Master
-Index, puis consulte uniquement les références nécessaires à la tâche.
+SOURCE DE VÉRITÉ — toute session Website V2 commence par ce Master Index, puis consulte uniquement les références nécessaires à la tâche.
 
 # 2. État global du chantier
 
-PHASE --- PRE-DESIGN / PRE-AUDIT largement complétée.
+PHASE — DESIGN LAB TERMINÉ ; DESIGN SYSTEM V1.0 GELÉ ; MIGRATION DE PRODUCTION À DÉMARRER.
 
-La direction artistique, le système cible, la gouvernance, la QA, le
-responsive, le motion, l'architecture cible et les références visuelles
-ont été définis.
+L'audit, l'inventaire, la matrice de migration, l'architecture cible, le plan SEO et la QA sont produits. Le Design Lab (LAB-01 à LAB-08) a construit, testé et approuvé le système : jetons, navigation, héros, rythme de page, spatial, opérationnel, flux, conversion, durcissement. LAB-09 documente et fige l'état.
 
-Restent dépendants de l'audit réel : inventaire du site actuel, matrice
-de migration, architecture finale et plan SEO final.
+Aucune page de production n'a été migrée sous le Design System V1.0. L'adoption des jetons V1 en production est une décision de migration (registre de gel §11).
 
 # 3. Registre documentaire officiel
 
-  ID   Document                     Statut
-  ---- ---------------------------- ------------------
-  01   WEBSITE V2 BRIEF             APPROVED
-  02   CURRENT SITE INVENTORY       PENDING AUDIT
-  03   CONTENT MIGRATION MATRIX     PENDING AUDIT
-  04   CORO VISUAL LANGUAGE         APPROVED
-  05   CORO DESIGN SYSTEM           V0.1 / PRE-LAB
-  06   CORO COMPONENT LIBRARY       V0.1 / PRE-AUDIT
-  07   TARGET PAGE ARCHITECTURE     V0.1 / PRE-AUDIT
-  08   CORO CONTENT GUIDELINES      APPROVED
-  09   SEO MIGRATION PLAN           PENDING AUDIT
-  10   RESPONSIVE & ACCESSIBILITY   APPROVED
-  11   QA ACCEPTANCE CHECKLIST      APPROVED
-  12   CODEX WEBSITE RULES          APPROVED
+| ID | Document | Fichier | Statut |
+|---|---|---|---|
+| 01 | Website V2 Brief | `01-strategy/WEBSITE-V2-BRIEF.md` | APPROVED |
+| 02 | Current Site Inventory | `05-migration/CURRENT-SITE-INVENTORY.md` | AUDIT VALIDÉ, mis à jour V1.1 |
+| 03 | Content Migration Matrix | `05-migration/CONTENT-MIGRATION-MATRIX.md` | REVIEW, priorités V1.0 ajoutées |
+| 04 | CORO Visual Language | `02-design/CORO-VISUAL-LANGUAGE.md` | APPROVED, V1.1 (motifs interdits autoritatifs §16) |
+| 05 | CORO Design System | `02-design/CORO-DESIGN-SYSTEM.md` | V1.0 gelé |
+| 06 | CORO Component Library | `02-design/CORO-COMPONENT-LIBRARY.md` | V1.0 gelé (catalogue autoritatif) |
+| 07 | Target Page Architecture | `01-strategy/TARGET-PAGE-ARCHITECTURE.md` | APPROVED TARGET, sous réserve du Document 09 |
+| 08 | CORO Content Guidelines | `03-content/CONTENT-GUIDELINES.md` | APPROVED |
+| 09 | SEO Migration Plan | `05-migration/SEO-MIGRATION-PLAN.md` | APPROVED MIGRATION PLAN, addendum V1.0 |
+| 10 | Responsive & Accessibility | `04-quality/RESPONSIVE-ACCESSIBILITY.md` | APPROVED, V1.1 (constats LAB-08 §30) |
+| 11 | QA Acceptance Checklist | `04-quality/QA-ACCEPTANCE-CHECKLIST.md` | APPROVED, V1.1 (checklist de migration §0) |
+| 12 | Codex Website Rules | `00-governance/CODEX-WEBSITE-RULES.md` | APPROVED |
+| 13 | Design System V1.0 Freeze Register | `00-governance/DESIGN-SYSTEM-V1-FREEZE.md` | Gel V1.0 (LAB-09) |
 
 # 4. Documents complémentaires normatifs
 
-  Document                             Statut            Rôle
-  ------------------------------------ ----------------- --------------------------------------
-  Design Lab Specification             APPROVED          Validation Web avant production.
-  Page Family Art Direction Matrix     APPROVED          Variété contrôlée entre familles.
-  Motion & Interaction Specification   APPROVED          Signature de mouvement.
-  Homepage V2 Blueprint                APPROVED TARGET   Narration cible homepage.
-  Codex Master Resume Prompt           READY             Audit lecture seule au retour Codex.
+| Document | Fichier | Statut | Rôle |
+|---|---|---|---|
+| Design Lab Specification | `02-design/DESIGN-LAB-SPECIFICATION.md` | APPROVED, avancement en tête | Lots LAB-01 à LAB-09. |
+| Page Family Art Direction Matrix | `02-design/PAGE-FAMILY-ART-DIRECTION.md` | APPROVED, V1.1 (trois familles) | Variété contrôlée entre familles. |
+| Motion & Interaction Specification | `02-design/MOTION-INTERACTION.md` | APPROVED, V1.1 (gel §0) | Signature de mouvement. |
+| Homepage V2 Blueprint | `01-strategy/HOMEPAGE-V2-BLUEPRINT.md` | APPROVED TARGET | Narration cible de la homepage. |
+| Codex Master Resume Prompt | `00-governance/CODEX-MASTER-RESUME-PROMPT.md` | Section V1.0 en tête ; prompt d'audit d'origine conservé pour l'historique | Reprise depuis l'état gelé. |
 
 # 5. Références visuelles maîtresses
 
-Les références visuelles définissent l'intention, le niveau de qualité,
-la profondeur et l'atmosphère. Elles ne sont jamais des spécifications
-pixel-perfect.
-
-  Référence   Sujet                          Statut
-  ----------- ------------------------------ --------------------
-  REF-01      Homepage Master                APPROVED DIRECTION
-  REF-02      Sentinelle Master              APPROVED DIRECTION
-  REF-03      Documents Master               APPROVED DIRECTION
-  REF-04      Incident Master                APPROVED DIRECTION
-  REF-05      Sentinelle Population Master   APPROVED DIRECTION
-  REF-06      Résilience Master              APPROVED DIRECTION
-  REF-07      Mobile Master Reference        APPROVED DIRECTION
+Les références visuelles (`02-design/references/REF-01` à `REF-07`) définissent l'intention, le niveau de qualité, la profondeur et l'atmosphère. Elles ne sont jamais des spécifications pixel-perfect. Homepage, Sentinelle, Documents, Incident, Population, Résilience, Mobile : APPROVED DIRECTION.
 
 # 6. Hiérarchie des sources de vérité
 
 En cas de conflit, appliquer cet ordre :
 
-1\. Décision humaine explicite la plus récente.
+1. Décision humaine explicite la plus récente.
+2. Règles LOCKED (registre de gel).
+3. Design System V1.0 (jetons, composants).
+4. Document normatif APPROVED pertinent.
+5. Référence visuelle APPROVED.
+6. Blueprint / page cible.
+7. Besoin local d'implémentation.
 
-2\. Composant/page LOCKED.
-
-3\. Design System V1.0 lorsqu'il existera.
-
-4\. Document normatif APPROVED pertinent.
-
-5\. Référence visuelle APPROVED.
-
-6\. Blueprint/page target.
-
-7\. Besoin local d'implémentation.
-
-RÈGLE --- un besoin local ne peut jamais écraser silencieusement une
-règle supérieure.
+RÈGLE — un besoin local ne peut jamais écraser silencieusement une règle supérieure.
 
 # 7. Quel document lire selon la tâche
 
-  Tâche            Références obligatoires
-  ---------------- ----------------------------------------
-  Audit dépôt      01 + 12 + Master Resume Prompt
-  Design général   04 + 05 + 06
-  Nouvelle page    07 + Page Family Matrix + 08
-  Homepage         Homepage Blueprint + REF-01 + 04/05/06
-  Sentinelle       Page Family Matrix + REF-02 + 04/05/06
-  Documents        Page Family Matrix + REF-03 + 04/05/06
-  Incident         Page Family Matrix + REF-04 + Motion
-  Population       Page Family Matrix + REF-05 + Motion
-  Résilience       Page Family Matrix + REF-06
-  Mobile           10 + REF-07 + 05/06
-  Animation        Motion Specification + 10
-  SEO/migration    02 + 03 + 09 + 07 final
-  QA               11 + 10 + 12
+| Tâche | Références obligatoires |
+|---|---|
+| Migrer une page | Matrice de migration (03) + Component Library (06) + Page Family + Content Guidelines (08) + QA §0 |
+| Homepage | Homepage Blueprint + REF-01 + 03 + 05 + 06 |
+| Sentinelle / Population | Page Family + Matrice (03) + décision de langue EN + 06 |
+| Documents / Projets / Performance / Client | Page Family + Matrice (03) + 06 |
+| Composant nouveau | STOP : escalader (voir Codex Rules §9 et registre de gel §5) |
+| Mobile | Responsive & Accessibility (10) §30 + 06 |
+| Animation | Motion §0 + 10 |
+| SEO / langue | 02 + 03 + 09 |
+| QA | 11 §0 + 10 + 12 |
+| Prohibitions | Visual Language §16 (section autoritative) |
 
 # 8. Statuts de gouvernance
 
-  Statut          Signification
-  --------------- -------------------------------------------
-  DRAFT           Exploration; non stable.
-  REVIEW          Prêt pour revue.
-  APPROVED        Direction ou implémentation validée.
-  LOCKED          Référence stable; modification contrôlée.
-  PENDING AUDIT   Impossible à finaliser sans dépôt.
-  BLOCKED         Une condition empêche de poursuivre.
+Cycle de vie : DRAFT → REVIEW → APPROVED → LOCKED. Le registre V1.0 emploie : LOCKED, APPROVED, REVIEW, REJECTED, MIGRATION-ONLY, LEGACY-DEBT (définitions dans le registre de gel §2). PENDING AUDIT et BLOCKED restent valables pour des éléments hors registre.
 
 # 9. Règle LOCKED
 
-RÈGLE --- un élément LOCKED ne peut pas être modifié parce qu'une
-nouvelle page serait plus simple à construire autrement.
-
-Toute modification nécessite : motif, impact, pages consommatrices,
-tests de régression et validation explicite.
+Un élément LOCKED ne peut pas être modifié parce qu'une nouvelle page serait plus simple à construire autrement. Toute modification nécessite : motif, impact, pages consommatrices, tests de régression et validation explicite. Le gel LAB-09 applique LOCKED aux règles listées au registre de gel §3 ; il prend effet à la validation humaine.
 
 # 10. Gouvernance des références visuelles
 
 - Une image APPROVED fixe le caractère et la qualité.
-
-- Les textes ou détails générés dans une maquette ne deviennent pas
-automatiquement des vérités produit.
-
-- Les logos, normes, clients, chiffres et fonctionnalités doivent être
-vérifiés avant implémentation.
-
-- Le navigateur et le système validé peuvent améliorer la maquette.
-
-RÈGLE --- reproduire l'intention, pas les imperfections d'une image
-générée.
+- Les textes ou détails générés dans une maquette ou un média ne deviennent pas des vérités produit ; un média avec texte ou marque incrustés est une référence de laboratoire.
+- Les logos, normes, clients, chiffres et fonctionnalités doivent être vérifiés avant implémentation.
 
 # 11. Gouvernance du contenu
 
-Le Content Guidelines est la référence éditoriale.
-
-Les textes des maquettes sont des propositions, sauf lorsqu'ils sont
-explicitement approuvés comme copy finale.
-
-Les affirmations réglementaires, sécurité, conformité, statistiques et
-clients nécessitent une source ou validation avant publication.
+Le Content Guidelines est la référence éditoriale. Les textes des maquettes et du Lab sont des propositions. Les affirmations réglementaires, sécurité, conformité, statistiques et clients nécessitent une source ou validation avant publication. Éléments ouverts : registre de gel §9.
 
 # 12. Gouvernance du Design System
 
-Le Design System V0.1 est une cible, pas encore un contrat CSS.
-
-Après audit et Design Lab, il devient V1.0 lorsque tokens, breakpoints,
-typo, motion et composants fondamentaux ont été testés dans le
-navigateur.
-
-STOP --- ne pas implémenter aveuglément V0.1 en ignorant l'existant.
+Le Design System est V1.0 : jetons, typographie, rayons, profondeur, composants, responsive et accessibilité ont été testés dans le navigateur et figés. Les jetons `--coro-v1-*` sont additifs et s'appliquent sous `data-coro-system="v1"`. La règle d'adoption en production est une décision MIGRATION-ONLY.
 
 # 13. Gouvernance de la Component Library
 
-Après audit, chaque composant cible reçoit REUSE, ADAPT, MERGE, CREATE
-ou DROP.
-
-DROP nécessite une validation d'impact. CREATE n'est choisi qu'après
-recherche de l'existant.
-
-Les composants fondamentaux passent progressivement APPROVED puis LOCKED
-via le Design Lab.
+Chaque composant a un statut dans le catalogue (06). CREATE n'est choisi qu'après recherche de l'existant et escalade. DROP nécessite une validation d'impact.
 
 # 14. Gouvernance des URL et SEO
 
-RÈGLE --- aucune URL publique n'est supprimée ou renommée avant Document
-02 + Document 03 + analyse SEO.
-
-Chaque URL reçoit une décision explicite : KEEP, REBUILD, MERGE,
-REDIRECT, ARCHIVE-WITH-APPROVAL ou REVIEW.
-
-Les redirections et changements de slug ne sont jamais implicites.
+RÈGLE — aucune URL publique n'est supprimée ou renommée sans Document 02 + Document 03 + Document 09. Chaque URL a une décision explicite : KEEP, REBUILD, MERGE, REDIRECT, ARCHIVE-WITH-APPROVAL ou REVIEW. Les redirections et changements de slug ne sont jamais implicites.
 
 # 15. Gouvernance FR / EN
 
-Les deux langues ont une parité fonctionnelle et éditoriale.
-
-Une différence volontaire doit être documentée.
-
-Les composants doivent être testés avec les longueurs réelles des deux
-langues avant APPROVED.
+Les deux langues ont une parité fonctionnelle et éditoriale. Une différence volontaire est documentée. Les composants sont testés avec les longueurs réelles des deux langues.
 
 # 16. Gouvernance responsive
 
-REF-07 prouve la direction mobile; le Document 10 fixe les règles.
-
-RÈGLE --- mobile n'est pas une version appauvrie. La composition peut
-changer, l'information essentielle et la personnalité restent.
+Mobile n'est pas une version appauvrie. La composition peut changer ; l'information essentielle et la personnalité restent. Plancher : 320 px.
 
 # 17. Gouvernance motion
 
-Motion Specification est normative.
-
-Tout nouveau pattern animé doit expliquer un état, une relation ou une
-opération.
-
-Reduced motion est obligatoire.
-
-Une animation décorative ne justifie pas une nouvelle dépendance.
+La Motion Specification est normative (§0 gelé). Tout pattern animé explique un état, une relation ou une opération. Reduced motion est obligatoire. Aucune dépendance de mouvement décorative.
 
 # 18. Gouvernance QA
 
-Le Document 11 définit les critères d'acceptation.
+La checklist de migration (QA §0) s'applique à chaque page migrée. Une validation esthétique ne suffit pas pour APPROVED. La QA manuelle non réalisée est listée au registre de gel §10 et reste requise avant production.
 
-Une validation esthétique ne suffit pas pour APPROVED.
+# 19. Séquences déjà réalisées
 
-Avant LOCKED : responsive, FR/EN, accessibilité, interactions et
-régression doivent être vérifiés.
+- Audit de l'existant, inventaire (02), matrice (03), architecture cible (07), plan SEO (09) : réalisés.
+- Design Lab LAB-01 à LAB-08 : réalisés et approuvés (avancement dans Design Lab Specification §0).
+- LAB-09 : gel V1.0 documentaire, en cours de validation humaine.
 
-# 19. Séquence officielle au retour de Codex
+# 20. Phases restantes
 
-1\. Ouvrir le worktree/branche Website V2.
+1. Validation humaine du gel V1.0 et commit du gel.
+2. Pré-fusion : verrouiller `/design-lab` par environnement ; décider la stratégie de fusion vers `main`.
+3. Décision d'adoption des jetons V1 en production ; fusion des pieds de page ; layout racine (lien d'évitement, cible `main`).
+4. Migration des pages selon la séquence de la matrice §18B.
+5. Migration du contenu, FR/EN, SEO et redirections (Document 09).
+6. QA manuelle avant production (registre de gel §10) et crawl comparatif.
+7. Go / No-Go, déploiement, QA post-déploiement.
 
-2\. Donner le Codex Master Resume Prompt.
+# 21. Séquence de production après le gel
 
-3\. Audit lecture seule.
-
-4\. Vérifier AUDIT STATUS: READY FOR REVIEW et git status inchangé.
-
-5\. Analyser le rapport.
-
-6\. Produire Document 02.
-
-7\. Produire Document 03.
-
-8\. Mettre Document 07 à jour vers V1.0.
-
-9\. Produire Document 09.
-
-10\. Matrice composants EXISTANT → CIBLE.
-
-11\. Lancer LAB-01 seulement après validation.
-
-# 20. Séquence Design Lab
-
-LAB-01 Foundations + navigation.
-
-LAB-02 HeroArchitectural + second Hero.
-
-LAB-03 surfaces + contenu.
-
-LAB-04 blueprint + overlays.
-
-LAB-05 Operational UI.
-
-LAB-06 continuum + motion.
-
-LAB-07 CTA + formulaires + footer.
-
-LAB-08 responsive/accessibility hardening.
-
-LAB-09 regression review + gel V1.0.
-
-# 21. Séquence de production après Lab
-
-1\. Homepage réelle.
-
-2\. Revue et LOCK si stable.
-
-3\. Pages maîtresses : Sentinelle, Documents, Incident, Population,
-Résilience.
-
-4\. Pages secondaires en réutilisant le système.
-
-5\. Ressources / secteurs / pricing / entreprise.
-
-6\. Migration finale contenus.
-
-7\. SEO/redirections.
-
-8\. QA globale.
-
-9\. Crawl comparatif.
-
-10\. Go / No-Go.
-
-11\. Déploiement + QA post-prod.
+1. Shell partagé unique et pied de page unique.
+2. Pages institutionnelles déjà V2.
+3. Pages produit, puis Sentinelle et Sentinelle Population, Pricing, Security.
+4. Guides et blog (shell).
+5. Homepage.
+6. Migration finale des contenus, SEO et redirections.
+7. QA globale, crawl comparatif, Go / No-Go, déploiement.
 
 # 22. Conditions de STOP
 
-STOP si : mauvaise branche/worktree; suppression d'URL envisagée sans
-matrice; page/composant LOCKED à modifier; application hors périmètre à
-toucher; dépendance majeure à ajouter; donnée/claim incertain; migration
-destructive; contradiction entre sources normatives; risque SEO ou
-sécurité non compris.
+STOP si : mauvaise branche / worktree ; suppression d'URL envisagée sans matrice ; page ou composant LOCKED à modifier ; application hors périmètre à toucher ; dépendance majeure à ajouter ; donnée ou allégation incertaine ; migration destructive ; contradiction entre sources normatives ; risque SEO ou sécurité non compris ; besoin d'un composant ou d'un langage visuel absent du catalogue.
 
 # 23. Décisions encore ouvertes
 
-- Inventaire exact des routes.
+Gouvernance de contenu :
 
-- Slugs finaux.
+- Énoncé « Traçabilité » (REVIEW avant publication).
+- Identité légale et formulation du copyright (REVIEW avant migration).
+- Typographie de l'adresse (REVIEW avant migration).
+- Hébergement au Canada, prix, parrainage, nombre de procédures, références réglementaires, fournisseur / SLA (REVIEW avant republication).
 
-- Navigation finale après confrontation à l'existant.
+Architecture et migration :
 
-- Pages Knowledge/AI/Campus publiques au lancement.
-
-- Composants existants réutilisables.
-
-- Tokens techniques finaux.
-
-- Breakpoints finaux.
-
-- Polices finales selon existant/licence.
-
-- Copy finale de toutes les pages.
-
-- Preuves clients et témoignages.
-
-- SEO final et redirections.
+- Où poser `data-coro-system="v1"` (enveloppe de page ou layout racine).
+- Statut EN de Sentinelle et de Sentinelle Population.
+- Stratégie locale à long terme (`?lang=en` conservé au lancement).
+- Statut public de Incident, Exercices, Knowledge, AI, Network, Campus, Ops, QR Intervention.
+- Nécessité d'une primitive de dialogue (vidéo d'accueil).
+- Exposition de `/design-lab` : verrouillage par environnement avant fusion vers `main`.
+- Inventaire live du blog (slugs, traductions, images).
+- Preuves clients et témoignages : seulement avec contenu réel et autorisation.
 
 # 24. Ce qui est désormais décidé
 
-- ADN visuel CORO.
+- ADN visuel CORO, refus du SaaS générique, alternance clair / sombre, mouvement fonctionnel, mobile comme expérience complète.
+- Rouge d'action `#E51B2A`, rayons 10 / 4 / 8 / 2–4, profondeur par surface d'abord.
+- Trois familles de pages reliées : Architectural, Opérationnel, Technique.
+- Continuum canonique en neuf étapes, quatre mouvements.
+- Design Lab avant migration, migration progressive, protection absolue des URL, contenus et SEO.
+- Gouvernance DRAFT → REVIEW → APPROVED → LOCKED avec le registre V1.0.
 
-- Refus du SaaS générique.
+# 25. Fin de phase Design Lab
 
-- Architecture opérationnelle augmentée.
-
-- Variété contrôlée par famille.
-
-- Rouge comme signal.
-
-- Alternance clair/sombre.
-
-- Bâtiment/plan/personnes/données comme territoire.
-
-- Motion fonctionnel.
-
-- Mobile comme expérience complète.
-
-- Design Lab avant reconstruction massive.
-
-- Protection absolue des URL/contenus/SEO.
-
-- Gouvernance DRAFT → REVIEW → APPROVED → LOCKED.
-
-# 25. Fin de phase PRE-DESIGN
-
-PHASE --- à la publication de ce Master Index, la phase de conception
-préalable est considérée suffisamment complète pour attendre l'audit
-technique.
-
-De nouvelles idées peuvent être consignées, mais aucune expansion
-importante de l'architecture ou de la direction artistique n'est
-nécessaire avant confrontation au dépôt.
-
-RÈGLE --- éviter de continuer à produire des variantes qui créeraient de
-nouvelles décisions avant d'avoir vu l'existant.
+La phase de conception et de validation par le Lab est terminée. De nouvelles idées peuvent être consignées, mais aucune extension du Design System n'est nécessaire avant la migration. RÈGLE — éviter de produire des variantes qui créeraient de nouvelles décisions avant que les pages n'aient consommé le système.
 
 # 26. Règle finale
 
-SOURCE DE VÉRITÉ --- Website V2 doit progresser par décisions
-explicites, versionnées et vérifiables.
+SOURCE DE VÉRITÉ — Website V2 progresse par décisions explicites, versionnées et vérifiables.
 
-Le but n'est pas seulement d'obtenir un beau site. Le but est de
-construire un système Web CORO distinctif, cohérent, maintenable,
-accessible, performant et migré sans perte.
+Le but n'est pas seulement un beau site. C'est un système Web CORO distinctif, cohérent, maintenable, accessible, performant et migré sans perte.

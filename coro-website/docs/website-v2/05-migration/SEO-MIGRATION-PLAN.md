@@ -363,3 +363,16 @@ comparée avant retrait.
 Website V2 doit lancer avec des URLs stables, des signaux linguistiques
 véridiques, une équité de contenu préservée et une architecture SEO plus
 simple et plus fiable que l'existant.
+
+## 35. Addendum V1.0 (LAB-08 / LAB-09)
+
+Ajouts issus du gel du Design System. Ils ne modifient aucune décision d'URL du plan.
+
+1. `<html lang>` : reste SEO-01 / MIGRATION-ONLY. Le Design System ne le corrige pas. Certains composants V2 posent `lang` sur leur racine locale (`LeadForm`, `SiteFooterV2`, liens de langue) : ces attributs doivent rester cohérents avec la langue du document une fois `<html lang>` corrigé.
+2. `/design-lab` : la route est `noindex, nofollow`, absente du sitemap, mais servie en production, et `robots.txt` autorise tout. Exigence PRÉ-FUSION : la rendre indisponible en production (404 par environnement) avant toute fusion vers `main`. Ne jamais l'inclure dans le sitemap. À confirmer dans le crawl comparatif : aucune URL `/design-lab` indexée.
+3. Titres : `/about` affiche un titre identique au titre générique du site (à confirmer page par page). Chaque page migrée reçoit un title unique (critère d'acceptation §33).
+4. JSON-LD des pages produit : toujours à inventorier puis restaurer avant retrait du legacy (SEO-02). Les composants V2 ne produisent aucune donnée structurée.
+5. Liens externes du Design System : CORO Platform `https://app.getcoro.io/login` et CORO Client `https://client.getcoro.io/login` sont des destinations applicatives hors périmètre SEO ; elles ne sont pas des pages marketing.
+6. Rendu serveur : les composants V1.0 sont des composants serveur (sauf en-tête, navigation et `LeadForm`) ; le H1 et le contenu principal sont donc présents dans le HTML serveur dès qu'une page les consomme.
+7. Médias : `next/image` avec `sizes` et dimensions réservées est la norme V1.0 ; les images legacy en `<img>` brut restent à traiter page par page avec les `alt` existants préservés.
+8. Ce que le gel n'approuve pas : migration vers `/en/…`, changement de slug, suppression de contenu, publication de routes futures.

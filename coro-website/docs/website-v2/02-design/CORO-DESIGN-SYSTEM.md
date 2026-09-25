@@ -1,322 +1,230 @@
 CORO
 
-DESIGN SYSTEM
+WEBSITE DESIGN SYSTEM V1.0
 
-Website V2 · Spécification V0.1 pré-implémentation
+Website V2 · Spécification gelée
 
-UN SYSTÈME POUR PRODUIRE CORO --- PAS UNE COLLECTION DE PAGES
+UN SYSTÈME POUR PRODUIRE CORO — PAS UNE COLLECTION DE PAGES
 
-Ce document traduit le Visual Language en règles réutilisables. Les
-valeurs marquées PROVISOIRE devront être confrontées au code existant et
-au Design Lab avant gel.
+Ce document remplace la spécification V0.1 pré-implémentation. Il décrit le système tel qu'il a été construit et approuvé dans le Design Lab (LAB-01 à LAB-08), et non plus une cible.
 
-Version 0.1 \| 23 septembre 2026 \| Statut : pré-implémentation
+Version 1.0 | 24 septembre 2026 | Statut : V1.0 gelé (prend effet à la validation humaine du gel LAB-09)
 
 # 1. Objet et statut
 
-Le Design System CORO Website V2 transforme la direction artistique
-approuvée en règles suffisamment précises pour empêcher la dérive
-interpages tout en laissant de la liberté de composition.
+Le Design System CORO Website V2 transforme la direction artistique approuvée en règles vérifiables qui empêchent la dérive entre pages tout en laissant de la liberté de composition.
 
-IMPORTANT --- V0.1 n'est pas encore un contrat CSS. Les valeurs
-proposées servent de cible et devront être comparées au dépôt puis
-validées dans le Design Lab avant V1.0 / LOCKED.
+Il est le contrat de référence pour la migration des pages de production. La source de vérité du code est `app/design-tokens.css` (jetons) et `components/*` (composants). Le registre des statuts est `00-governance/DESIGN-SYSTEM-V1-FREEZE.md`. Le catalogue est `02-design/CORO-COMPONENT-LIBRARY.md`.
+
+RÈGLE — pendant la migration, on ne redessine pas le Design System. On utilise les composants et patterns approuvés d'abord. Une lacune est escaladée, jamais comblée par un nouveau langage visuel local.
 
 # 2. Hiérarchie des sources de vérité
 
-En cas de conflit, la source de priorité supérieure prévaut. Toute
-exception doit être documentée.
+En cas de conflit, la source de priorité supérieure prévaut.
 
-  Priorité   Source                      Rôle
-  ---------- --------------------------- --------------------------------------------------
-  1          Composants LOCKED           Rendu déjà approuvé.
-  2          Tokens Design System V1.0   Valeurs techniques officielles.
-  3          CORO Visual Language        Intention et règles de marque.
-  4          Références APPROVED         Cible de composition et sensation.
-  5          Page locale                 Adaptation au contenu, jamais nouvelle identité.
+| Priorité | Source | Rôle |
+|---|---|---|
+| 1 | Décision humaine explicite la plus récente | — |
+| 2 | Règles LOCKED de ce document | Rendu et principes gelés. |
+| 3 | Jetons V1.0 (`--coro-v1-*`) | Valeurs techniques officielles. |
+| 4 | CORO Visual Language | Intention et règles de marque. |
+| 5 | Références APPROVED (`02-design/references/`) | Niveau d'ambition et sensation. |
+| 6 | Page locale | Adaptation au contenu, jamais nouvelle identité. |
 
-# 3. Principes du système
+# 3. Cadre de lecture : cinq niveaux
 
-- Tokeniser avant de styliser localement.
+Ce document distingue cinq niveaux. Chaque règle appartient à un seul.
 
-- Composer avec des primitives et patterns réutilisables.
+- RÈGLES LOCKED : ne changent pas pendant une migration ordinaire sans approbation explicite.
+- DÉFAUTS APPROUVÉS (APPROVED) : le choix par défaut sûr.
+- EXCEPTIONS CONTEXTUELLES : permises seulement dans le contexte décrit.
+- ÉLÉMENTS À REVOIR (REVIEW) : valides, mais à valider en usage réel.
+- MOTIFS REJETÉS (REJECTED) : voir la section autoritative du Visual Language §16.
 
-- Créer des variantes plutôt que dupliquer un composant.
+# 4. Couleur
 
-- Limiter les valeurs arbitraires.
+## 4.1 Palette (jetons V1)
 
-- Maintenir une sémantique stable pour couleur, profondeur et état.
+| Jeton | Valeur | Rôle | Niveau |
+|---|---|---|---|
+| `--coro-v1-red-600` | `#e51b2a` | Action (CTA principal) et signal. Rare. | LOCKED |
+| `--coro-v1-red-700` | `#bf1522` | Survol, texte critique sur clair. | APPROVED |
+| `--coro-v1-red-300` | `#ff5a66` | Rouge sur fond sombre (texte, critique). | APPROVED |
+| `--coro-v1-navy-950` / `-900` / `-800` | `#061d35` / `#082b52` / `#0f3a68` | Autorité, profondeur opérationnelle. | LOCKED (950 / 900) |
+| `--coro-v1-blue-700` | `#0d4f8b` | Bleu structurel : information, données, étiquettes techniques. | LOCKED |
+| `--coro-v1-blue-500` / `-100` | `#1a6fb8` / `#e6eef6` | Focus sur clair ; teinte de fond bleue. | APPROVED |
+| `--coro-v1-surface-0` / `-1` / `-2` | `#ffffff` / `#f6f8fa` / `#eef3f7` | Surfaces claires : blanc, alternance, doux / papier. | APPROVED |
+| `--coro-v1-text-900` | `#162b3e` | Texte principal. | APPROVED |
+| `--coro-v1-text-600` | `#5d6e7f` | Texte secondaire (≥ 4,5:1 sur toutes les surfaces claires). | APPROVED |
+| `--coro-v1-on-dark-900` / `-600` | `#ffffff` / `#b8c9d8` | Texte sur marine. | APPROVED |
+| `--coro-v1-border-200` | `#dce4ea` | Bordure neutre décorative. | APPROVED |
+| `--coro-v1-success` / `-warning` / `-critical` / `-info` | `#107c47` / `#a15c00` / `#bf1522` / `#0d4f8b` | États sur clair. | APPROVED |
+| `--coro-v1-success-on-dark` / `-warning-on-dark` | `#4cc38a` / `#f0b34a` | États sur marine ; information réutilise `--coro-v1-focus-on-dark`, critique réutilise `--coro-v1-red-300`. | APPROVED |
+| `--coro-v1-focus` / `-focus-on-dark` | `#1a6fb8` / `#8cc8ff` | Anneau de focus. | LOCKED |
 
-- Concevoir desktop, tablette et mobile ensemble.
+Le rouge est une ressource rare : il attire l'œil et ne devient jamais une couleur de remplissage généralisée. Le vert, l'ambre et le rouge signalent des états stables ; ils ne portent jamais un état seuls (glyphe et libellé textuel obligatoires).
 
-RÈGLE --- une nouvelle composition est permise; un nouveau langage
-visuel ne l'est pas.
+Contrastes vérifiés (WCAG AA) : texte principal et secondaire sur blanc, surface 1 et surface douce ; blanc et texte clair sur marine ; blanc sur rouge CORO (4,64:1) ; états sur clair et sur marine ; anneau de focus (≥ 3:1) sur clair et marine. Un test (`tests/hardening.test.ts`) protège ces ratios.
 
-# 4. Palette fonctionnelle V0.1
+## 4.2 Règles
 
-Le rouge CORO est une ressource rare : il attire l'œil et ne devient pas
-une couleur de remplissage généralisée.
-
-  Token proposé                     Valeur cible   Usage
-  --------------------------------- -------------- --------------------------------
-  \--coro-navy-950                  #061D35        Sections immersives profondes.
-  \--coro-navy-900                  #082B52        Marine principal / identité.
-  \--coro-blue-700                  #0D4F8B        Accent technique / données.
-  \--coro-red-600                   #E51B2A        Signal / CTA / événement.
-  \--surface-0                      #FFFFFF        Surface claire principale.
-  \--surface-1                      #F6F8FA        Alternance claire.
-  \--surface-2                      #EEF3F7        Blueprint / technique.
-  \--text-900                       #162B3E        Texte principal.
-  \--text-600                       #617283        Texte secondaire.
-  \--border-200                     #DCE4EA        Bordure neutre.
-  \--success / warning / critical   PROVISOIRE     États sémantiques.
+- Aucune couleur locale lorsqu'un jeton existe. Aucune valeur hexadécimale locale dans les composants sans justification système.
+- Le rouge signifie toujours signal ou action, jamais décoration. Un état Normal ou Terminé n'utilise pas de rouge. Le rouge apparaît sur l'état Critique.
+- État et surface sont indépendants : le Normal existe sur marine, le Critique sur blanc.
 
 # 5. Typographie
 
-Famille exacte : À VALIDER après audit des polices déjà chargées et des
-licences. Les titres sont courts et affirmés; le body privilégie
-lisibilité et densité B2B.
+Famille : Inter (déjà chargée). Titres courts et affirmés ; corps lisible et dense B2B. Les tailles sont fluides.
 
-  Style           Desktop   Mobile   Usage
-  --------------- --------- -------- ----------------------
-  Display XL      64--76    42--50   Hero exceptionnel.
-  Display L       52--60    36--42   Hero standard.
-  H1              44--52    34--40   Titre page.
-  H2              34--42    28--34   Grande section.
-  H3              24--30    22--26   Sous-section.
-  Body L          18--20    17--19   Intro.
-  Body            16--18    16--17   Lecture.
-  Small / Micro   11--14    11--14   Meta, statut, label.
+| Jeton | Valeur | Usage |
+|---|---|---|
+| `--coro-v1-text-display-xl` | `clamp(2.625rem, 1.6rem + 4vw, 4.75rem)` | Héros exceptionnel. |
+| `--coro-v1-text-display-l` | `clamp(2.25rem, 1.5rem + 3vw, 3.75rem)` | Héros standard. |
+| `--coro-v1-text-h1` / `-h2` / `-h3` | `clamp(2.125rem, …, 3.25rem)` / `clamp(1.75rem, …, 2.625rem)` / `clamp(1.375rem, …, 1.875rem)` | Titre de page, grande section, sous-section. |
+| `--coro-v1-text-body-l` / `-body` / `-small` / `-micro` | 1.0625–1.25rem / 1rem / .875rem / .75rem | Introduction, lecture, secondaire, méta. |
+| Étiquette technique | `--coro-v1-label-*` : .75rem, poids 750, interlettrage .12em, capitales | Micro-libellés, indices, statuts. |
 
-# 6. Grille et rythme
+RÈGLES — aucun texte V2 sous 10 px (.625rem), plancher protégé par test. Le corps ne descend jamais sous une taille confortable pour faire tenir une composition. Un mot long doit pouvoir se couper plutôt que d'élargir la page.
 
-L'espacement suit une échelle discrète plutôt que des valeurs inventées
-localement.
+# 6. Grille, largeur et espacement
 
-  Règle               Cible V0.1      Note
-  ------------------- --------------- ---------------------
-  Max content         1200--1320 px   Selon densité.
-  Text measure        620--760 px     Lecture éditoriale.
-  Gutter desktop      32--48 px       À tester.
-  Gutter tablet       24--32 px       Transition.
-  Gutter mobile       20--24 px       Respiration.
-  Section standard    96--128 px      Rythme principal.
-  Section immersive   128--176 px     Hero / statement.
+- Largeur de contenu : 75 rem (`--coro-v1-content`), large 82,5 rem, lecture 44 rem (`--coro-v1-reading`).
+- Échelle d'espacement discrète : `--coro-v1-space-1 / 2 / 3 / 4 / 6 / 8 / 12 / 16 / 24 / 32 / 40` (4 à 160 px).
+- Sections : `PageSection` densité `compact`, `standard`, `immersive`.
+- Aucun espacement arbitraire lorsqu'un jeton répond au besoin.
 
-# 7. Espacement
+# 7. Géométrie (rayons)
 
-Échelle proposée : 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 96 / 128 / 160
-px.
+| Rôle | Jeton | Valeur | Niveau |
+|---|---|---|---|
+| Cadre technique | `--coro-v1-radius-frame` | 2 px | LOCKED |
+| Panneau (défaut des surfaces de contenu) | `--coro-v1-radius-panel` | 4 px | LOCKED |
+| Contrôle (boutons, champs) | `--coro-v1-radius-control` | 8 px | LOCKED |
+| Média photographique | `--coro-v1-radius-image` | 10 px, coins visibles et contenus | LOCKED |
+| Grands rayons | `--coro-v1-radius-md` / `-lg` / `-xl` | 12 / 16 / 24 px | Exceptionnel, justifié |
+| Pill | `--coro-v1-radius-pill` | 999 px | Statut ou étiquette sémantique seulement |
 
-# 8. Géométrie
+Un média technique (plan, carte, capture) n'utilise jamais 10 px : il prend un cadre net (2 à 4 px).
 
-Rayons cibles : 8 / 12 / 16 / 24 px, plus pill lorsque sémantiquement
-nécessaire.
+# 8. Profondeur
 
-CORO doit rester plus architectural que « bubbly ». Les grands rayons
-sont réservés aux surfaces qui les justifient.
+Hiérarchie : SURFACE → BORDURE → MÉDIA → SUPERPOSITION → LUMIÈRE → OMBRE. On cherche la profondeur d'abord dans le contraste de surface, le filet de 1 px, le média et l'information reliée à l'objet, l'ombre en dernier.
 
-# 9. Profondeur
+- Aucune ombre lourde par défaut. Niveaux 1 et 2 suffisent presque toujours. Niveaux 3 et 4 : exceptionnels (élément flottant justifié, signal).
+- Sur fond sombre : contraste, bordure et lumière contrôlée, pas de halo.
+- Aucun flou, aucun verre, aucune lueur décorative.
 
-Niveaux : 0 Flat → 1 Structure → 2 Raised → 3 Floating UI → 4 Signal.
+# 9. Surfaces et rythme
 
-- Ombres diffuses et sobres.
+Tons de `PageSection` : `white`, `soft`, `paper`, `navy`. La surface douce et le papier (grille de dessin) sont contextuels : le papier convient aux familles techniques et documentaires, pas à toutes les pages. Une famille architecturale privilégie `soft` et la photographie.
 
-- Sur fond sombre, préférer contraste, bordure et lumière contrôlée.
-
-- Le contexte détermine l'élévation; pas le composant seul.
+L'alternance clair / sombre suit le récit (respiration, immersion opérationnelle, retour au réel, preuve, action). Elle ne devient pas mécanique et ne répète pas la même structure deux sections de suite.
 
 # 10. Boutons et CTA
 
-- Primary : rouge CORO, action dominante.
+- Principal : rouge CORO, action dominante (`Button` variante `primary`). Un seul principal par contexte.
+- Secondaire : marine ou contour selon le fond (`secondary`, `ghost`). Sur fond sombre, `surface="dark"`.
+- Cible minimale 44 px ; états hover, focus-visible, pressed et disabled traités.
+- Les libellés décrivent l'action et ce qui se passe ensuite (« Demander une démonstration »).
 
-- Secondary : marine ou outline selon fond.
+# 11. Cartes et panneaux
 
-- Ghost : navigation contextuelle.
+Une carte n'est pas le composant par défaut de l'information. Préférer un index (`FeatureIndex`), un filet, une composition de média ou un panneau structuré ; un panneau opérationnel reste un plateau à 4 px, sans ombre.
 
-- Text link : approfondissement.
+INTERDIT — grille de trois cartes identiques répétée ; mur de cartes. Voir Visual Language §16.
 
-- Hover, focus, active et disabled obligatoires en V1.0.
+# 12. Héros
 
-- Les libellés décrivent l'action concrète.
+Trois variantes approuvées : `HeroSignature` (architectural, A2, direction préférée), `HeroOperational`, `HeroTechnical`. Un héros n'a pas obligatoirement de badge, deux CTA ou une capture. Le H1 reste compréhensible sans le visuel. Sur mobile, recomposition et non empilement. `HeroArchitectural` (A1) est une comparaison historique (REVIEW). Le mode d'en-tête intégré de `HeroSignature` est une direction approuvée quand la lisibilité du média est maîtrisée, pas un défaut global.
 
-# 11. Cards et panneaux
+# 13. Médias
 
-Une card n'est pas le composant par défaut de toute information.
+- Photographie : rayon 10 px, coins visibles. Cadrage responsive prévu (`object-position`, tranche de l'image). Alt décrivant le média seulement ; aucun texte essentiel uniquement dans l'image.
+- Média technique : cadre net, cartouche fermant, jamais 10 px.
+- Média de référence (contient du texte ou une marque incrustés) : jamais source de copie ou de vérité produit ; à annoncer comme média de référence.
+- Actifs visuels : `public/website-v2/*`, non modifiés par le Lab.
 
-Familles : Editorial Card, Product Card, Metric Card, Operational Panel,
-Floating UI, Proof Card.
+# 14. Superpositions spatiales
 
-INTERDIT --- transformer chaque section en grille de trois cartes
-identiques.
+- La densité des superpositions est inverse à la densité du média source : photo simple, plusieurs repères ; coupe, nombre modéré ; plan complexe ou carte déjà chargée, très peu d'étiquettes.
+- Un repère complet est exceptionnel ; le repère numéroté (`density="ref"`) est la norme sur un média dense ; le détail vit dans la liste sémantique.
+- Un repère est aria-hidden ; une liste ordonnée réelle porte tout le contenu. Sur petit écran : marqueurs numérotés limités (2 à 3) sur le média, liste complète dessous (pattern LOCKED).
+- Aucune donnée de carte de démonstration n'est présentée comme réelle.
 
-# 12. Sections
+# 15. Interface opérationnelle
 
-Primitives : SectionLight, SectionSoft, SectionDark, SectionBlueprint,
-SectionMedia, SectionStatement, SectionProof.
+- L'intensité opérationnelle détermine la présence de l'interface : Normal = présence minimale (`OperationalScene layout="lead"` + `OperationalRail`) ; Incident = hiérarchie forte (`layout="plate"` + `OperationalPanel`) ; Personnes / évacuation = piloté par l'humain (`layout="people"`) ; Reprise = ouvert, chronologie, preuve, apprentissage (`layout="open"`).
+- Situation d'abord, interface ensuite. Ne montrer que ce qui change la décision.
+- Toute valeur inventée est identifiée comme démonstration.
+- Cinq états : Normal, Information, Attention, Critique, Terminé, chacun avec glyphe et libellé.
+- Aucun `LiveIndicator` autonome : « actif » est un état statique avec un mot.
 
-Les pages alternent ces primitives selon leur histoire; aucune séquence
-fixe ne doit être répétée mécaniquement.
+# 16. Flux et continuum
 
-# 13. Heroes
+- `Continuum` : neuf étapes canoniques, quatre mouvements, une ligne structurelle unique, boucle d'amélioration vers 01 et 02. Le pic d'intensité (05–06) vient de la surface, de la masse et du profil, pas d'un écart typographique excessif : toutes les étapes ont une autorité comparable.
+- Cassure mobile : recomposition verticale avec colonne vertébrale.
+- Point de rupture 75 rem (contenu) pour les rangées de flux.
+- `DataToActionFlow` : exactement quatre concepts (Données, Décision, Action, Amélioration).
+- Le sens est entièrement statique ; le mouvement ne fait que tracer des lignes.
 
-Variantes : HeroArchitectural, HeroProduct, HeroEditorial,
-HeroOperational, HeroMinimal.
+# 17. Conversion et confiance
 
-- Un Hero n'a pas obligatoirement un badge, deux CTA ou un screenshot.
+- La conversion est la prochaine étape, pas une interruption : énoncé, filet, action. Pas de grande carte arrondie, pas de dégradé, pas de bandeau flottant, pas de compte à rebours.
+- Deux intensités : `CTASection` clair ou doux (ouvert) après une page calme ; sombre (compact, sur une ligne) après un contenu opérationnel.
+- Confiance par la preuve : chaque repère renvoie à la page qui le porte ; un énoncé non vérifié est marqué « À valider ».
+- `LeadForm` : vrais labels, `autocomplete`, erreurs associées (`aria-invalid`, `aria-describedby`), résumé d'erreurs qui reçoit le focus, cible 44 px, bouton principal rouge. Le contrat de parrainage et le fournisseur du formulaire de production sont à préserver.
+- `SiteFooterV2` : marque et énoncé → navigation → accès (Platform, Client) → coordonnées puis légal. Uniquement des routes implémentées.
 
-- Le H1 reste compréhensible sans le visuel.
+# 18. Mouvement
 
-- Le mobile conserve la hiérarchie au lieu d'empiler mécaniquement le
-desktop.
+Jetons : `--coro-v1-motion-instant` 80 ms, `-fast` 140 ms, `-base` 220 ms, `-slow` 420 ms, `-narrative` 650 ms ; courbes `--coro-v1-ease-enter` (`cubic-bezier(.16,.84,.3,1)`), `-exit`, `-standard`. Détail et motifs implémentés : `02-design/MOTION-INTERACTION.md` §V1.0.
 
-# 14. Data overlays
+RÈGLES — le sens est statique d'abord ; aucune boucle infinie, aucun pulse, aucun scroll-jacking ; `prefers-reduced-motion` donne une expérience complète ; règle globale dans `app/design-tokens.css` (animations et transitions ramenées à 0,01 ms).
 
-- Chaque overlay a une source claire : bâtiment, zone, personne,
-événement ou indicateur.
+# 19. Responsive
 
-- Limiter les overlays simultanés.
+- Points de rupture partagés : 48 rem et 68 rem.
+- Exceptions dictées par le contenu : 75 rem (flux : continuum, données → action) ; 80 rem (annotations techniques du héros). L'en-tête resserre ses espacements entre 68 et 75 rem plutôt que de créer un point de rupture.
+- Aucun point de rupture inventé page par page.
+- Le mobile est une recomposition, pas une réduction. 320 px est le plancher de sûreté.
 
-- Utiliser des données plausibles et des fonctions réelles.
+Détail : `04-quality/RESPONSIVE-ACCESSIBILITY.md`.
 
-- Rouge = signal; vert = positif; bleus = contexte.
+# 20. Accessibilité
 
-- Éviter les overlays purement décoratifs.
+- Contrastes AA ; focus visible et cohérent (3 px) ; aucun état porté par la couleur seule ; cibles d'au moins 44 px pour les contrôles ; ordre DOM logique ; alt pertinent ; `prefers-reduced-motion` respecté ; libellés longs FR/EN sans débordement.
+- Un audit manuel (zoom réel, Tab réel, lecteur d'écran, mouvement réduit émulé) reste à faire avant production.
 
-# 15. Médias
+# 21. Gouvernance des jetons et des composants
 
-- Ratios standardisés par famille de composant.
-
-- Recadrage responsive prévu dès la conception.
-
-- Aucun texte essentiel uniquement dans une image.
-
-- Alt text, lazy loading et formats modernes.
-
-- Les médias hero ont une stratégie de performance et de fallback.
-
-# 16. Mouvement
-
-Le mouvement raconte une transition d'état ou une relation. Réduction
-des animations obligatoire.
-
-  Type       Durée cible   Usage
-  ---------- ------------- ------------------------------
-  Micro      120--180 ms   Hover / focus / état.
-  UI         180--280 ms   Panel / navigation.
-  Narratif   350--700 ms   Donnée / relation spatiale.
-  Ambient    Très lent     Subtil, utile, désactivable.
-
-# 17. Responsive
-
-- Les breakpoints exacts seront alignés sur le code existant après
-audit.
-
-- Hero riche sur desktop, hiérarchie simplifiée mais identité conservée
-sur mobile.
-
-- Overlays : 1--2 éléments prioritaires maximum sur mobile.
-
-- Blueprint : recadrage ou séquence guidée.
-
-- Aucun breakpoint inventé page par page.
-
-# 18. Accessibilité
-
-- Contrastes conformes pour texte, contrôles et états.
-
-- Focus clavier visible et cohérent.
-
-- Ordre DOM logique indépendamment de la composition.
-
-- Un état n'est jamais communiqué uniquement par couleur.
-
-- Cibles tactiles suffisantes.
-
-- Alt text pertinent.
-
-- prefers-reduced-motion pris en charge.
-
-- Zoom et agrandissement du texte ne cassent pas les compositions.
-
-# 19. Composants pressentis
-
-SiteHeader / MegaNav / MobileNav; HeroArchitectural / HeroProduct /
-HeroEditorial / HeroOperational; Section / SectionDark /
-SectionBlueprint / SectionMedia; ProductCard / MetricCard /
-OperationalPanel / FloatingUI / ProofCard; BuildingOverlay /
-BlueprintFrame / DataCallout; Continuum / Timeline / ProcessFlow /
-ArchitectureDiagram; LogoCloud / Testimonial / CTASection / SiteFooter.
-
-Cette liste sera validée et dédupliquée dans le Document 06 après audit
-du code.
-
-# 20. Gouvernance des tokens
-
-- Aucune couleur locale lorsqu'un token existe.
-
-- Aucun spacing arbitraire lorsqu'un token répond au besoin.
-
-- Aucun nouveau radius ou shadow sans justification système.
-
-- Les changements de token sont évalués sur toutes les pages APPROVED /
-LOCKED.
-
-# 21. Gouvernance des composants
-
-- Rechercher l'existant avant de créer.
-
-- Préférer une variante documentée à une copie locale.
-
-- Un nouveau composant répond à un besoin réel non couvert.
-
-- Les props ne servent pas à recréer des styles arbitraires.
-
-- Tester les composants partagés sur toutes leurs pages avant merge.
-
+- Aucune couleur, aucun espacement, rayon ou ombre locaux quand un jeton existe. Un nouveau jeton répond à un besoin système, pas à une préférence locale, et se teste sur toutes les pages APPROVED / LOCKED.
+- Rechercher l'existant avant de créer ; préférer une variante documentée à une copie ; ne pas dupliquer un composant partagé pour contourner le système.
 - Les composants LOCKED ne sont pas modifiés indirectement.
+- Adoption des jetons V1 en production : voir `00-governance/DESIGN-SYSTEM-V1-FREEZE.md` §11. Une page migrée n'est pas conforme sans le scope `data-coro-system="v1"`.
 
-# 22. États de validation
+# 22. Statuts
 
-DRAFT → REVIEW → APPROVED → LOCKED.
+DRAFT → REVIEW → APPROVED → LOCKED restent le cycle de vie. Le registre V1.0 utilise LOCKED, APPROVED, REVIEW, REJECTED, MIGRATION-ONLY et LEGACY-DEBT (voir le registre de gel).
 
-  Statut     Signification
-  ---------- ----------------------------------------------------------------------
-  DRAFT      Exploration; aucune garantie de stabilité.
-  REVIEW     Assez mature pour revue visuelle et responsive.
-  APPROVED   Conforme à la direction et réutilisable comme référence.
-  LOCKED     Référence stable; modification uniquement avec validation explicite.
+# 23. Motifs interdits
 
-# 23. Conditions de passage V0.1 → V1.0
+La section autoritative est `02-design/CORO-VISUAL-LANGUAGE.md` §16. Elle n'est pas dupliquée ici.
 
-- Audit des styles, polices, composants et breakpoints actuels.
+# 24. Historique V0.1 → V1.0 (utile pour la lecture d'anciens documents)
 
-- Construction du Design Lab.
+| Sujet | V0.1 | V1.0 |
+|---|---|---|
+| Rayons | 8 / 12 / 16 / 24 px | 2 / 4 / 8 px + image 10 px ; 12 / 16 / 24 exceptionnels |
+| Texte secondaire | `#617283` | `#5d6e7f` |
+| Succès | provisoire | `#107c47` (clair), `#4cc38a` (sombre) |
+| Ombres | 0 à 4, diffuses | Niveaux 1–2 ; 3–4 exceptionnels ; profondeur par surface d'abord |
+| Points de rupture | à aligner après audit | 48 rem / 68 rem partagés ; exceptions 75 rem et 80 rem |
+| Familles de pages | par produit | trois familles reliées : Architectural, Opérationnel, Technique (voir Page Family) |
+| Typographie | à valider | Inter ; échelle fluide gelée |
+| Statut | pré-implémentation | V1.0 gelé, code de référence dans le dépôt |
 
-- Test des tokens sur au moins un Hero, une section claire, une section
-sombre, un blueprint, une interface flottante, des cards, un CTA et le
-footer.
+# 25. Critère de réussite
 
-- Validation desktop / tablette / mobile.
+Si l'on masque le logo, une page doit encore être reconnaissable comme CORO. Si l'on change de produit, elle peut changer de composition sans cesser d'appartenir au même système.
 
-- Contrôle accessibilité et performance.
-
-- Suppression ou justification de toute valeur provisoire.
-
-- Validation finale de Mathieu avant statut LOCKED.
-
-# 24. Critère de réussite
-
-Si l'on masque le logo, une page doit encore être reconnaissable comme
-CORO. Si l'on change de produit, elle doit pouvoir changer de
-composition sans cesser d'appartenir au même système.
-
-Le Design System est réussi lorsqu'il réduit les décisions arbitraires
-de Codex sans réduire la personnalité du site.
-
-# 25. Prochaine étape
-
-Cette V0.1 peut être utilisée pour préparer le Design Lab, mais elle ne
-doit pas être implémentée aveuglément avant l'audit du dépôt. Au retour
-de Codex : inventaire technique → confrontation avec V0.1 → Design Lab →
-ajustements → Design System V1.0.
+Le Design System est réussi lorsqu'il réduit les décisions arbitraires sans réduire la personnalité du site.

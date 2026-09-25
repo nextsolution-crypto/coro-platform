@@ -20,6 +20,37 @@ feature/website-v2, HEAD fff4af81.
 
 Version 1.0 \| 24 septembre 2026 \| Statut : AUDIT VALIDÉ
 
+# 0. MISE À JOUR V1.1 (LAB-09) — état après le Design Lab
+
+Ce document reste la photographie factuelle d'origine (HEAD `fff4af81`). Cette section réconcilie les points devenus périmés et ajoute les constats de LAB-01 à LAB-08. Les décisions restent dans le Document 03.
+
+## Points périmés depuis l'audit d'origine
+
+- Travail « non committé » (§3) : les pages produit, `ProductPage`, `ProductCompositions` et la documentation sont désormais dans l'historique Git (`6697a036` documentation, `609698fc` point de contrôle produit, `6d0baebf` actifs, puis les lots LAB-01 à LAB-08). Le statut des pages produit reste REVIEW jusqu'à la migration sous Design System V1.0.
+- Suite de tests : 143 tests passent (26 au moment de l'audit d'origine).
+- « Desktop nav sans aria-expanded » (§9) : corrigé. `DesktopNavigation` expose `aria-expanded` / `aria-controls`, ferme sur Échap et rend le focus.
+- « Double footer potentiel — à confirmer dans le navigateur » (§7) : CONFIRMÉ. Sur les pages V2 (vérifié sur `/about`), le layout racine rend aussi le pied de page legacy ; il est masqué par CSS (`display: none`) mais reste dans le DOM. Un seul pied de page est visible. C'est de la dette héritée (LEGACY-DEBT) à retirer à la migration.
+
+## Nouveaux constats (LAB-08)
+
+| Constat | Classe | Note |
+|---|---|---|
+| Aucun lien d'évitement en production ; `<main>` sans `tabIndex={-1}` | MIGRATION-ONLY | `SkipLink` existe au Lab. |
+| Dialogue vidéo d'accueil (`aria-modal`) sans gestion du focus ni Échap | LEGACY-DEBT | `HomePageClient`. |
+| `CookieBanner` en `role="dialog"` non modal sans gestion du focus | LEGACY-DEBT | Durcissement du consentement hors Design System. |
+| `ChatWidget` : focus du champ à l'ouverture seulement ; FR seulement | LEGACY-DEBT | Déjà REVIEW. |
+| `/programme-recommandation` : la liste d'étapes déborde de 5 px à 320 px | LEGACY-DEBT | CSS de la page institutionnelle. |
+| `<html lang="fr">` fixe ; titre de `/about` identique au titre générique du site (à confirmer page par page) | SEO-MIGRATION | Voir Document 09. |
+| `/design-lab` servi en HTTP 200 en production (`noindex, nofollow`, hors sitemap, `robots.txt` autorise tout) | MIGRATION-ONLY | Verrouillage par environnement avant fusion vers `main`. |
+| Jetons V1 appliqués seulement dans le Lab (`data-coro-system="v1"`) ; les pages migrées utilisent encore les jetons legacy | MIGRATION-ONLY | Décision d'adoption dans le registre de gel §11. |
+| Build local : récupération du blogue en échec (backend `coro_backend` absent) | ENVIRONMENT | Confirme la fragilité du sitemap noté au §5. |
+
+## Actifs et code de référence
+
+Les actifs visuels du Lab sont dans `public/website-v2/*` et ne sont pas des actifs de production : ils ne remplacent aucun média historique. Le code de référence du Design System est `components/*` et `app/design-tokens.css`.
+
+---
+
 # 1. Objet et validation
 
 Ce document remplace le placeholder PENDING AUDIT du Document 02 et

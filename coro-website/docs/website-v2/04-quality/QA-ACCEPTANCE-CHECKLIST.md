@@ -9,7 +9,91 @@ UNE PAGE N'EST PAS TERMINÉE PARCE QU'ELLE EST BELLE.
 Elle est terminée lorsqu'elle est cohérente, complète, accessible,
 responsive, performante, bilingue, testée et sans régression.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : référence QA
+Version 1.1 \| 24 septembre 2026 \| Statut : référence QA, checklist de migration V1.0 en tête
+
+# 0. CHECKLIST DE MIGRATION D'UNE PAGE (V1.0) — À UTILISER POUR CHAQUE PAGE MIGRÉE
+
+Cette checklist est obligatoire pour toute page de production migrée vers le Design System V1.0. Les sections 1 à 30 ci-dessous détaillent les contrôles. Une case non applicable est notée « N/A » avec une raison ; une case non vérifiée n'est pas cochée.
+
+Références : `00-governance/DESIGN-SYSTEM-V1-FREEZE.md`, `02-design/CORO-COMPONENT-LIBRARY.md`, `02-design/CORO-VISUAL-LANGUAGE.md` §16.
+
+## 0.1 Préservation du contenu et des contrats
+
+☐ La décision de la ligne de la page dans `05-migration/CONTENT-MIGRATION-MATRIX.md` est respectée (KEEP / REBUILD…).
+☐ Comparaison du contenu legacy et V2 faite : aucune omission de contenu utile ; les omissions sont décidées et notées.
+☐ URL, slug et ancres historiques conservés ou remappés explicitement.
+☐ Médias historiques préservés ; aucun actif supprimé sur une recherche textuelle seule.
+☐ Destinations externes exactes : CORO Platform `https://app.getcoro.io/login`, CORO Client `https://client.getcoro.io/login`, aucun autre portail.
+☐ Contrats métier préservés lorsque la page les touche : parrainage (cookies `coro_referral_code`, `coro_referral_first_touch` ; capture sur `/`, lecture par `DemoForm`) et formulaire de démonstration (fournisseur et destination inchangés sauf décision approuvée).
+☐ Aucun secret, aucun point d'accès sensible recopié dans un document ou exposé côté client.
+
+## 0.2 Design System et prohibitions
+
+☐ Scope des jetons V1 actif (`data-coro-system="v1"`) ; aucune valeur locale (couleur, rayon, ombre, espacement, point de rupture).
+☐ Composants et patterns APPROVED utilisés d'abord ; toute lacune escaladée, jamais comblée localement.
+☐ Rouge CORO uniquement pour l'action et l'état Critique ; jamais en remplissage décoratif.
+☐ Rayons : média photo 10 px, panneau 4 px, contrôle 8 px, cadre technique 2 à 4 px ; pas de média technique à 10 px.
+☐ Aucune ombre lourde par défaut ; profondeur par surface, bordure, média d'abord.
+☐ Papier et grille seulement si la famille de la page le justifie.
+☐ Aucune régression en mur de cartes (pas de grille de cartes identiques répétée) ni en gabarit SaaS générique.
+☐ Aucun motif de la liste autoritative (Visual Language §16).
+☐ Densité des superpositions inverse à la densité du média ; interface proportionnée à l'intensité opérationnelle ; situation d'abord.
+☐ Hero adapté au rôle de la page ; deux pages voisines ne sont pas des clones.
+
+## 0.3 FR / EN
+
+☐ Version FR complète et version EN complète (ou décision documentée de parité).
+☐ Aucun texte utilisateur codé en dur dans une seule langue ; nomenclature produit conforme.
+☐ Longueurs FR et EN testées (libellés longs, titres, boutons, pied de page).
+☐ Sélecteur de langue conserve la page ; `hrefLang` correct ; attribut `lang` correct (MIGRATION-ONLY tant que `<html lang>` est fixe).
+
+## 0.4 Responsive
+
+☐ 320, 360, 390, 430, 768, 1024, 1200, 1440 et 1920 px vérifiés ; aucune barre de défilement horizontale.
+☐ Le mobile est une recomposition : médias recadrés, superpositions réduites avec liste sémantique complète.
+☐ Aucun libellé long n'élargit la page ; aucun texte sous 10 px.
+
+## 0.5 Clavier, focus, lecteur d'écran
+
+☐ Parcours clavier RÉEL (Tab, Maj+Tab, Entrée, Espace, Échap) sur en-tête, langue, boutons, accordéons, formulaire et pied de page.
+☐ Focus visible sur toutes les surfaces (clair, doux, papier, marine, photographie) ; pas de piège clavier.
+☐ Un H1 unique, ordre des titres logique ; landmarks header / nav / main / footer cohérents.
+☐ Noms accessibles, `alt` pertinent (vide seulement si décoratif), listes et `<time>` sémantiques.
+☐ Lecteur d'écran testé sur la navigation et le formulaire s'il y en a un.
+
+## 0.6 Mouvement et contraste
+
+☐ Sens entièrement statique ; aucun contenu dépend du mouvement, du survol ou de la couleur seule.
+☐ `prefers-reduced-motion` vérifié dans un navigateur (émulation), pas seulement par lecture du code.
+☐ Contrastes AA vérifiés (texte, contrôles, états, anneau de focus) ; zoom réel à 200 % et 400 % vérifié.
+
+## 0.7 Médias
+
+☐ `next/image` avec `sizes`, dimensions réservées, `priority` seulement pour le média du premier écran.
+☐ Recadrage desktop / mobile vérifié ; pas de sujet important rogné ; pas de décalage de mise en page.
+☐ Média de référence contenant du texte ou une marque incrustés non utilisé comme source de copie.
+
+## 0.8 SEO de migration
+
+☐ Title unique, description, canonical, hreflang, Open Graph et Twitter conformes à `05-migration/SEO-MIGRATION-PLAN.md`.
+☐ JSON-LD existant inventorié puis restauré ou remplacé ; H1 rendu côté serveur dans la bonne langue.
+☐ Aucun `noindex` accidentel ; page incluse ou exclue du sitemap selon la décision ; liens internes sans lien mort.
+☐ Décision de langue de la page (Sentinelle, Sentinelle Population) appliquée.
+
+## 0.9 Formulaires, confiance et conversion
+
+☐ Formulaire : labels, erreurs associées, résumé d'erreurs, état d'envoi, succès, échec récupérable ; destination et fournisseur vérifiés ; aucune donnée sensible exposée.
+☐ La conversion est la suite logique (pas d'interruption) ; CTA précis ; un seul principal par contexte.
+☐ Aucune allégation non vérifiée : claims juridiques, réglementaires, sécurité, hébergement, prix et références marqués REVIEW tant qu'ils ne sont pas validés (voir Freeze §9).
+☐ Aucun faux logo, faux témoignage, fausse certification ; données de démonstration identifiées comme telles.
+☐ Un seul pied de page visible (SiteFooterV2 une fois le pied de page fusionné).
+
+## 0.10 Régression et clôture
+
+☐ Pages consommatrices d'un composant partagé identifiées et vérifiées (FR/EN, mobile / desktop).
+☐ `npm test`, `npm run typecheck`, lint et `npm run build` verts.
+☐ Aucun composant LOCKED modifié sans approbation ; aucun refactor opportuniste.
+☐ Anomalies consignées avec classe (DS-BLOCKER, DS-MAJOR, DS-MINOR, LEGACY-DEBT, SEO-MIGRATION, CONTENT-GOVERNANCE, ENVIRONMENT) ; aucun BLOCKER / CRITICAL ouvert avant APPROVED.
 
 # 1. Objet
 

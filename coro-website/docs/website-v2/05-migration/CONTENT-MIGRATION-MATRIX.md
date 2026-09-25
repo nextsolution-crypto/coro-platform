@@ -422,6 +422,37 @@ Lab.
 -   Document 09 confirme stratégie canonical/hreflang/redirections;
 -   aucun contrat métier critique n'est orphelin.
 
+## 18A. Priorité et risque de migration après le gel V1.0 (LAB-09)
+
+Ce tableau n'ajoute aucune décision d'URL. Il place chaque route dans l'ordre de migration visuelle en tenant compte du risque et des composants V1.0 disponibles. Les décisions KEEP / REBUILD du §3 restent inchangées.
+
+| Route | Risque | Priorité | Famille DS | Composants V1.0 pertinents | Pré-requis et points à préserver |
+|---|---|---|---|---|---|
+| `/` | Très élevé | Après le shell, le pied de page et les pages produit | Architectural, avec passages opérationnels | HeroSignature, Continuum, SpatialFigure, OperationalScene, CTASection, SiteFooterV2 | Parrainage `?ref=` et cookies, `DemoForm`, `#demo`, ancres historiques, vidéo, SSR de la langue, JSON-LD. Jamais avant l'adoption des jetons V1. |
+| Pages produit (`/gestion-documentaire`, `/gestion-de-projets`, `/performance-objectifs`, `/portail-client`) | Élevé | Premiers lots produit | Documents : Technique ; Client : Architectural ; Projets / Performance : Architectural ou Technique | HeroTechnical ou HeroSignature, PageSection, FeatureIndex, BlueprintFrame, MetricComposition, CTASection | Contenu et médias historiques, JSON-LD à restaurer, `product-content.ts` bilingue, aucun lien vers un produit futur. Travail actuel = REVIEW. |
+| `/sentinelle` | Élevé | Après le premier lot produit | Opérationnel | HeroOperational, OperationalScene (`people`), SpatialFigure, PeopleStatus | Décision de langue EN, JSON-LD, contenu utile ; ne pas réduire Sentinelle à un registre. |
+| `/sentinelle-population` | Élevé | Avec Sentinelle | Opérationnel, cartographique | MapFrame (densité `ref`), OperationalScene, Timeline | Vrai EN ou retrait des signaux EN ; chaînes hors dictionnaire ; ne pas laisser croire à une portée universelle ; média de démonstration marqué. |
+| `/resilience-operationnelle` | Élevé | Lot produit | Technique et architectural | Continuum, MetricComposition, EditorialBlock | Préserver le slug et le SEO ; distinguer Performance et Indice CORO. |
+| `/pricing` | Élevé | Après validation des prix | Éditorial sobre | PageSection, Accordion, CTASection ; cartes seulement si la comparaison les justifie | Prix, essai / démo, Phase 2, JSON-LD FAQ validés. |
+| `/security` | Moyen à élevé | Avec les prérequis de contenu | Technique | TrustStrip, EditorialBlock, PageSection | Hébergement, fournisseur, SLA, MFA validés ; chaque énoncé renvoie à sa source. |
+| `/blog`, `/blog/[slug]` | Très élevé | Alignement du shell seulement | Éditorial | Shell (SiteHeader, SiteFooterV2), Container | Aucun changement de slug, contenu, métadonnées ou images avant l'inventaire live ; contrat API protégé ; ne pas restyler le contenu à l'aveugle. |
+| `/documents/plan-*` (6 guides) | Élevé | Après le blog | Technique (FR seulement) | HeroTechnical, FeatureIndex, Accordion | Citations, références réglementaires à valider, JSON-LD, liens internes. |
+| `/privacy`, `/terms` | Élevé (juridique) | Shell seulement | Utilitaire | Shell ; texte inchangé | Texte légal complet ; aucune réécriture substantielle ; identité légale et copyright REVIEW. |
+| `/about`, `/contact`, `/partners`, `/programme-recommandation` | Faible à moyen | Adoption des jetons V1 et du pied de page | Selon la page | Shell, composants déjà migrés, LeadForm ou `DemoForm` | `/contact` porte `DemoForm` et le parrainage ; `/programme-recommandation` : dette de 5 px à 320 px ; valider le contenu partenaire. |
+
+## 18B. Séquence de migration recommandée après le gel
+
+0. Pré-fusion : verrouiller `/design-lab` par environnement ; confirmer la stratégie de fusion.
+1. Adoption des jetons V1 et fusion des pieds de page (SiteFooterV2 unique) ; layout racine : lien d'évitement, cible `main`.
+2. Pages institutionnelles déjà migrées : alignement sur V1.0.
+3. Pages produit, une à la fois, avec restauration du JSON-LD.
+4. Sentinelle et Sentinelle Population (après décision EN).
+5. Pricing et Security (après validation des énoncés).
+6. Guides et blog (shell seulement pour le blog).
+7. Homepage, en dernier des grands lots, avec les contrats de parrainage, `DemoForm` et ancres testés.
+
+Aucune étape ne redessine le Design System. Une lacune est escaladée.
+
 ## 19. Étape suivante
 
 Mettre **07 --- Target Page Architecture** à jour de V0.1 vers V1.0 à

@@ -9,9 +9,74 @@ AUDIT FIRST. CHANGE NOTHING.
 Ce document contient le prompt à remettre à Codex lorsque le chantier
 Website V2 reprend. La première passe est strictement en lecture seule.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : prêt pour reprise
+Version 2.0 \| 24 septembre 2026 \| Statut : reprise depuis l'état gelé V1.0 (section 0) ; prompt d'audit d'origine conservé pour l'historique
 
-# 1. Mode d'emploi
+# 0. REPRISE DEPUIS L'ÉTAT GELÉ V1.0 — PROMPT À UTILISER
+
+Utiliser ce prompt pour toute nouvelle session qui migre une page ou prépare la migration. Il suppose que le gel LAB-09 est validé et commité.
+
+## 0.1 Règle maîtresse
+
+NE PAS REDESSINER LE DESIGN SYSTEM PENDANT LA MIGRATION D'UNE PAGE. Utiliser d'abord les composants et patterns approuvés. Une lacune est escaladée à Mathieu ; elle n'est jamais comblée en inventant un nouveau langage visuel, un nouveau jeton, un nouveau rayon, une nouvelle ombre ou un nouveau point de rupture.
+
+## 0.2 Prompt
+
+```
+You are resuming CORO Website V2 from the FROZEN Design System V1.0 state.
+
+DO NOT redo LAB-01 to LAB-08. DO NOT audit the whole repository again.
+DO NOT REDESIGN THE DESIGN SYSTEM DURING PAGE MIGRATION.
+Use approved components and patterns first. Escalate gaps instead of inventing a new visual system.
+
+BEFORE ANY WORK
+1. Print the working directory and Git branch. Confirm the worktree is the Website V2 worktree (feature/website-v2). If not, STOP.
+2. Print git status --short and git log -8 --oneline --decorate. If the tree is not clean, STOP and report.
+3. Read, in this order:
+   coro-website/docs/website-v2/00-governance/MASTER-INDEX.md
+   coro-website/docs/website-v2/00-governance/DESIGN-SYSTEM-V1-FREEZE.md
+   coro-website/docs/website-v2/00-governance/CODEX-WEBSITE-RULES.md
+   coro-website/docs/website-v2/02-design/CORO-COMPONENT-LIBRARY.md
+   coro-website/docs/website-v2/02-design/CORO-DESIGN-SYSTEM.md
+   coro-website/docs/website-v2/02-design/CORO-VISUAL-LANGUAGE.md (section 16 = authoritative prohibited patterns)
+   coro-website/docs/website-v2/02-design/PAGE-FAMILY-ART-DIRECTION.md
+   coro-website/docs/website-v2/03-content/CONTENT-GUIDELINES.md
+   coro-website/docs/website-v2/05-migration/CONTENT-MIGRATION-MATRIX.md (the row for the target page, plus 18A / 18B)
+   coro-website/docs/website-v2/04-quality/QA-ACCEPTANCE-CHECKLIST.md (section 0 = per-page migration checklist)
+4. Identify the target page, its migration decision (KEEP / REBUILD ...), its Design System family
+   (Architectural / Operational / Technical) and the APPROVED components you will use.
+5. State the exact scope and any conflict or uncertainty BEFORE modifying anything.
+
+WHAT YOU MAY DO
+- Migrate ONE page or one coherent lot at a time, in coro-website only.
+- Compose pages from the APPROVED components in components/*. Read the tests in tests/ to understand each contract.
+- Use the --coro-v1-* tokens through the data-coro-system="v1" scope (see the freeze register, section 11).
+
+WHAT YOU MUST NOT DO
+- No new visual language, colour, radius, shadow, breakpoint or component. If a needed component is not in the catalogue, STOP and escalate.
+- No change to LOCKED rules or components without explicit approval.
+- No removal or rename of a public URL, slug, anchor, content or SEO signal without a decision in the migration matrix.
+- No change to the referral capture (cookies coro_referral_code and coro_referral_first_touch), to DemoForm's provider or destination, or to the CORO Platform / CORO Client login URLs.
+- No invented customer logos, testimonials, certifications, figures or claims. Any claim listed as REVIEW stays REVIEW until Mathieu validates it.
+- No production business/legal decision (legal identity, copyright wording, address typography, prices, hosting statement).
+- Do not change other applications in the repository.
+- Do not commit or push unless asked.
+
+QUALITY
+- Run the migration checklist (QA section 0) for every page.
+- Run npm test, npm run typecheck, lint and npm run build. Report results honestly, including what could not be verified
+  (real browser zoom, real Tab journey, screen reader, reduced-motion emulation are MANUAL QA BEFORE PRODUCTION).
+- Classify every issue as DS-BLOCKER, DS-MAJOR, DS-MINOR, LEGACY-DEBT, SEO-MIGRATION, CONTENT-GOVERNANCE, ENVIRONMENT or NOT-A-DEFECT.
+
+END EVERY TASK WITH A REPORT: files changed, decisions, checks run and their results, deviations, risks, and what needs human validation.
+```
+
+## 0.3 Ce que le prompt évite volontairement
+
+Ne pas demander « refais la homepage » en une passe. La homepage est le dernier grand lot (matrice §18B) car elle porte le parrainage, `DemoForm`, les ancres historiques, la vidéo et le JSON-LD. Ne pas demander de créer de nouveaux composants « pour aller plus vite ».
+
+# 1. Mode d'emploi (prompt d'audit d'origine — HISTORIQUE)
+
+Les sections 1 à 8 décrivent la première reprise (audit en lecture seule). Cet audit, l'inventaire, la matrice, le plan SEO et le Design Lab (LAB-01 à LAB-08) sont réalisés. Ne pas rejouer ces étapes : utiliser la section 0.
 
 Copier le prompt de la section 2 dans Codex depuis le worktree/terminal
 qui servira au chantier Website V2.
@@ -22,7 +87,7 @@ La première réponse attendue est uniquement un audit structuré.
 Après réception du rapport Codex, le faire analyser avant d'autoriser la
 moindre implémentation.
 
-# 2. PROMPT MAÎTRE --- À COPIER DANS CODEX
+# 2. PROMPT MAÎTRE D'AUDIT --- HISTORIQUE (audit déjà réalisé, ne pas rejouer)
 
 You are resuming the CORO Website V2 project.\
 \

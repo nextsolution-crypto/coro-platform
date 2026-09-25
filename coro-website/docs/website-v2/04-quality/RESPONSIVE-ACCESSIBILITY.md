@@ -10,7 +10,7 @@ Le responsive et l'accessibilité ne sont pas des corrections de fin de
 chantier. Ils font partie du système de conception dès le premier
 composant.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : référence de conception
+Version 1.1 \| 24 septembre 2026 \| Statut : référence de conception, constats LAB-08 en §30
 
 # 1. Objet et portée
 
@@ -448,25 +448,48 @@ devrait combiner tests automatisés et vérification humaine.
 IMPORTANT --- un score automatisé ne constitue pas à lui seul une
 validation d'accessibilité.
 
-# 30. À confirmer après audit du code
+# 30. V1.0 — règles gelées, constats LAB-08 et QA manuelle restante
 
-- Breakpoints existants.
+Cette section fait foi. Elle remplace la liste « À confirmer après audit du code » : les points d'inventaire (points de rupture, framework CSS, composants interactifs, gestion du focus) ont été audités. Les gaps sont classés dans `00-governance/DESIGN-SYSTEM-V1-FREEZE.md`.
 
-- Framework CSS et stratégie responsive.
+## 30.1 Points de rupture
 
-- Bibliothèque de composants.
+- Partagés : 48 rem et 68 rem (héros, rythme de page, spatial, opérationnel, conversion, en-tête et pied de page).
+- Exceptions dictées par le contenu : 75 rem pour les rangées de flux (le continuum et « données → action » rognaient des mots à 68 rem) ; 80 rem pour les annotations techniques du héros (les étiquettes ont besoin de place).
+- L'en-tête desktop ne coupe plus ses libellés : entre 68 et 75 rem il resserre ses espacements plutôt que de créer un point de rupture.
+- Aucun point de rupture n'est inventé page par page. Un test protège l'inventaire.
 
-- Outils de test actuels.
+## 30.2 Sûreté à 320 px et libellés longs
 
-- Gestion du focus dans navigation/modales.
+- 320 px est le plancher : aucun débordement horizontal accepté. Mesuré sur 25 vues du Lab à 320, 360, 390, 430, 768, 1024, 1200, 1440, 1920 et 2560 px (mesure automatique ; une partie seulement a été inspectée visuellement).
+- Un libellé de statut, une action ou un état peut passer à la ligne ; une colonne d'état est plafonnée (45 % de la ligne). Un mot très long se coupe dans son bloc.
+- Les libellés FR longs (« Résilience et opérations », « Programme de recommandation », « Demander une démonstration ») sont testés ; l'anglais reçoit les mêmes tests.
+- Plancher typographique : aucun texte V2 sous 10 px.
 
-- Fonts et stratégie de chargement.
+## 30.3 Focus, contraste et formulaires
 
-- Architecture i18n.
+- Anneau de focus de 3 px : `--coro-v1-focus` sur clair, `--coro-v1-focus-on-dark` sur marine ; contrasté d'au moins 3:1 avec la surface environnante (vérifié sur 13 vues du Lab).
+- Contrastes de texte : AA sur toutes les surfaces claires et sur marine (deux jetons ont été ajustés en LAB-08). Les filets décoratifs ne sont pas du contenu ; une bordure de champ utilise un gris à 4,95:1.
+- Formulaire : vrais labels, `autocomplete`, `aria-invalid`, `aria-describedby`, résumé d'erreurs qui prend le focus, état d'envoi lisible sans animation, cible de 44 px.
+- Navigation : `aria-expanded` / `aria-controls`, Échap et retour du focus, menus fermés non focalisables, bascule sans recouvrement ni vide entre 767 / 768 et 1087 / 1088.
 
-- Composants interactifs existants à auditer.
+## 30.4 Recomposition mobile
 
-- Niveau actuel de conformité et dette d'accessibilité.
+Le mobile est une recomposition. Exemples gelés : héros (épingles numérotées et liste), spatial (2 à 3 pastilles, liste complète), opérationnel (l'ordre média / panneau change selon l'étude), continuum (colonne vertébrale verticale), pied de page (groupes empilés sans entrelacement).
+
+## 30.5 QA MANUELLE AVANT PRODUCTION (non réalisée à ce jour)
+
+Ne pas déclarer ces éléments vérifiés :
+
+- zoom navigateur réel à 200 % et à 400 % (seuls les équivalents en largeur CSS, 640 px et 320 px, ont été mesurés ; un iframe étroit n'est pas un zoom réel) ;
+- parcours réel au clavier avec la touche Tab (Tab, Maj+Tab, Espace) sur en-tête, langue, boutons, accordéon, formulaire et pied de page ;
+- audit réel au lecteur d'écran ;
+- émulation de `prefers-reduced-motion` dans un navigateur ;
+- test mobile réel ou émulation fiable, et navigateurs Safari / Firefox.
+
+## 30.6 Migration et héritage (hors Design System)
+
+Voir le registre de gel : `<html lang>` global, lien d'évitement et cible `main` en production, dialogue / modale (vidéo d'accueil, CookieBanner, ChatWidget), pied de page legacy dupliqué, débordement de 5 px à 320 px de `/programme-recommandation`.
 
 # 31. Règle finale
 

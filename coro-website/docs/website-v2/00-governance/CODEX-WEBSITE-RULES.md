@@ -12,6 +12,10 @@ public.
 
 Version 1.0 \| 23 septembre 2026 \| Statut : règles de chantier
 
+# 0. Note V1.0 (gel du Design System, LAB-09)
+
+Le Design System est gelé en V1.0. Pendant la migration d'une page : lire `DESIGN-SYSTEM-V1-FREEZE.md`, utiliser d'abord les composants approuvés du `CORO-COMPONENT-LIBRARY.md`, appliquer la checklist `QA-ACCEPTANCE-CHECKLIST.md` §0, et escalader toute lacune. Les §8 (anti-patterns) et §9 (avant de créer un composant) ci-dessous s'appliquent avec la section autoritative « Motifs interdits » du Visual Language §16. Ne pas redessiner le Design System pendant une migration.
+
 # 1. Mandat de Codex
 
 Codex intervient comme agent d'implémentation du chantier Website V2. Il

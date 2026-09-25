@@ -9,7 +9,32 @@ VALIDER LE SYSTÈME AVANT DE CONSTRUIRE LES PAGES.
 Le Design Lab transforme la direction artistique CORO en composants Web
 réels, testables et comparables avant toute reconstruction massive.
 
-Version 1.0 \| 24 septembre 2026 \| Statut : spécification de chantier
+Version 1.1 \| 24 septembre 2026 \| Statut : spécification de chantier, avancement du Lab en tête
+
+# 0. AVANCEMENT DU LAB (état au gel LAB-09)
+
+Le Design Lab existe dans `coro-website/app/design-lab/*` (route `/design-lab`, `noindex`, hors sitemap et navigation). Les lots LAB-01 à LAB-08 sont réalisés et approuvés ; LAB-09 est le gel V1.0 (documentation). Aucune migration de production n'a eu lieu.
+
+| Lot | Contenu | Commit | Statut | Exceptions REVIEW |
+|---|---|---|---|---|
+| Actifs | Pack d'actifs visuels `public/website-v2/*` | `6d0baebf` | APPROVED | — |
+| LAB-01 (+01B) | Fondations, jetons V1, navigation (en-tête, menu mobile, langue), primitives | `ae51ede0` | APPROVED | — |
+| LAB-02 (+02B) | Système de héros : HeroSignature (A2), HeroOperational, HeroTechnical ; A1 conservé | `5871d0f0` | APPROVED | HeroArchitectural (A1) : comparaison historique |
+| LAB-03 (+03B) | Rythme de page et différenciation des familles | `c00eb328` | APPROVED | SectionProof ; FeatureIndex « sequence » REJECTED |
+| LAB-04 (+04B) | Bâtiment, plan, superpositions, densité full/ref | `585384d7` | APPROVED | PointMarker |
+| LAB-05 (+05B) | Interface opérationnelle et intensité | `2852bb1e` | APPROVED | DocumentStatus ; LiveIndicator REJECTED |
+| LAB-06 (+06B) | Continuum, flux, données → action | `2c2f8f87` | APPROVED | ProcessFlow, ScenarioFlow (usage réel) ; FlowConnector REJECTED |
+| LAB-07 (+07B) | CTA, confiance, formulaire, pied de page V2 | `24822a70` | APPROVED | LeadForm (intégration production) ; énoncé « Traçabilité » REVIEW |
+| LAB-08 | Durcissement responsive, accessibilité, résilience | `d212543a` | APPROVED | QA manuelle restante (zoom réel, Tab réel, lecteur d'écran, mouvement réduit émulé) |
+| LAB-09 | Gel Design System V1.0 (documentation) | — | GEL EN COURS | Prend effet à la validation humaine |
+
+## Zones réellement implémentées
+
+Le Lab est organisé en huit zones numérotées par lot : 00 Foundations, 01 Navigation, 02 Heroes, 03 Rhythm, 04 Building, 05 Operational, 06 Continuum, 07 Conversion. Les zones 09 Responsive et 10 Accessibility de la spécification n'ont pas été construites comme zones : elles ont été traitées par l'audit LAB-08. Chaque étude a une vue isolée `?view=…` pour la QA responsive.
+
+## Suite
+
+Le Lab n'est pas le site. Il absorbe l'exploration ; la migration consomme des décisions gelées. Exposition de production : le Lab doit être verrouillé par environnement avant toute fusion vers `main` (voir `00-governance/DESIGN-SYSTEM-V1-FREEZE.md` §12).
 
 # 1. Objet
 

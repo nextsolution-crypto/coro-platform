@@ -3,27 +3,42 @@
 This folder is the operational source of truth for the CORO Website V2
 project.
 
+## Current state
+
+Design Lab complete (LAB-01 to LAB-08). **Design System V1.0 is frozen
+(LAB-09)**; the freeze takes effect when it is validated by a human and
+committed. Production pages have not been migrated yet.
+
 ## Start here
 
 1.  Read `00-governance/MASTER-INDEX.md`.
-2.  For any Codex task, also read
-    `00-governance/CODEX-WEBSITE-RULES.md`.
-3.  Before implementation begins, run the read-only audit using
+2.  Read `00-governance/DESIGN-SYSTEM-V1-FREEZE.md` --- the frozen state,
+    statuses, open items and manual QA still required.
+3.  For any Codex or agent task, also read
+    `00-governance/CODEX-WEBSITE-RULES.md` and section 0 of
     `00-governance/CODEX-MASTER-RESUME-PROMPT.md`.
-4.  Do not redesign or implement Website V2 before the audit-dependent
-    documents are completed and reviewed.
+4.  To migrate a page: its row in
+    `05-migration/CONTENT-MIGRATION-MATRIX.md`, then
+    `02-design/CORO-COMPONENT-LIBRARY.md`, then the per-page checklist
+    in `04-quality/QA-ACCEPTANCE-CHECKLIST.md` section 0.
+
+**DO NOT REDESIGN THE DESIGN SYSTEM DURING PAGE MIGRATION.** Use approved
+components first; escalate gaps.
 
 ## Folder map
 
--   `00-governance/` --- authority, rules, Codex operating instructions.
+-   `00-governance/` --- authority, rules, freeze register, agent resume
+    prompt.
 -   `01-strategy/` --- brief, target information architecture, homepage
     blueprint.
--   `02-design/` --- visual language, design system, component library,
-    motion, Design Lab, visual references.
+-   `02-design/` --- visual language (with the authoritative prohibited
+    patterns), design system V1.0, component library V1.0, motion, page
+    families, Design Lab specification, visual references.
 -   `03-content/` --- editorial voice and terminology.
--   `04-quality/` --- responsive, accessibility and QA acceptance.
--   `05-migration/` --- audit-dependent inventory, migration and SEO
-    documents.
+-   `04-quality/` --- responsive, accessibility and QA acceptance
+    (including the per-page migration checklist).
+-   `05-migration/` --- inventory, migration matrix (with migration
+    priority and risk) and SEO migration plan.
 
 ## Visual references
 
@@ -40,7 +55,9 @@ pixel-perfect implementation.
 
 ## Governance
 
-Statuses: `DRAFT → REVIEW → APPROVED → LOCKED`.
+Lifecycle: `DRAFT → REVIEW → APPROVED → LOCKED`. The V1.0 register uses
+`LOCKED`, `APPROVED`, `REVIEW`, `REJECTED`, `MIGRATION-ONLY` and
+`LEGACY-DEBT` (definitions in the freeze register).
 
 A `LOCKED` page/component must not be changed indirectly to make another
 page easier to implement.
@@ -53,9 +70,4 @@ redirected, archived with approval, or explicitly reviewed.
 
 ## Repository destination
 
-Place this folder at:
-
-`coro-website/docs/website-v2/`
-
-Commit the documentation as project capital so future Codex sessions and
-contributors can work from the same references.
+This folder lives at `coro-website/docs/website-v2/`.
