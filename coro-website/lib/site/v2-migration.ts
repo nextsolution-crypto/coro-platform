@@ -1,0 +1,27 @@
+/**
+ * V2 migration registry.
+ *
+ * A route belongs here ONLY when its migration is COMPLETE AND APPROVED: migrated against the frozen Design System V1.0,
+ * page blueprint applied, content and contracts preserved, QA passed, human approval given.
+ * It does NOT mean "already uses some V2 components". Target publication status (PUBLISH-NOW, ...) is a separate concept
+ * and lives in the route registry, not here.
+ *
+ * Exact paths only (no prefix matching). Dynamic routes such as /blog/[slug] are out of scope until they are migrated on purpose.
+ * The registry starts EMPTY: every current route is legacy.
+ */
+export const migratedV2Routes: readonly string[] = [];
+
+function normalizePath(pathname: string): string {
+  const path = pathname.split(/[?#]/)[0] || '/';
+  return path.length > 1 ? path.replace(/\/+$/, '') || '/' : path;
+}
+
+export function isV2MigratedRoute(pathname: string | null | undefined, routes: readonly string[] = migratedV2Routes): boolean {
+  if (!pathname) return false;
+  return routes.includes(normalizePath(pathname));
+}
+
+/** The legacy root footer renders on every route that is not migrated. */
+export function isLegacyFooterVisible(pathname: string | null | undefined, routes: readonly string[] = migratedV2Routes): boolean {
+  return !isV2MigratedRoute(pathname, routes);
+}

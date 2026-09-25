@@ -9,10 +9,7 @@ const inter = Inter({
   display: 'swap',
 });
 
-import ScrollToTop from './components/ScrollToTop';
-import ChatWidget from './components/ChatWidget';
-import Footer from './components/Footer';
-import CookieBanner from './components/CookieBanner';
+import LegacyChrome from './components/LegacyChrome';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://getcoro.io'),
@@ -146,10 +143,7 @@ export default function RootLayout({
     <html lang="fr" className={inter.variable}>
       <body>
         {children}
-        <Footer />
-        <CookieBanner />
-        <ScrollToTop />
-        <ChatWidget />
+        <LegacyChrome />
       </body>
     </html>
   );

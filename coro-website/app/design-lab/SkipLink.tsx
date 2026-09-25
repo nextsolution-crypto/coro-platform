@@ -1,10 +1,7 @@
 import type { Locale } from '@/lib/site/locale';
-import styles from './design-lab.module.css';
+import { SkipLink as SiteSkipLink } from '@/components/site/SkipLink';
 
-/**
- * Keyboard skip link. First focusable element of the page; visible only while focused.
- * Demonstrated in the Design Lab first — it is NOT installed in the root layout yet.
- */
+/** Design Lab wrapper: same shared skip link, targeting the Lab's own main landmark. */
 export function SkipLink({ locale, targetId = 'lab-main' }: { locale: Locale; targetId?: string }) {
-  return <a className={styles.skipLink} href={`#${targetId}`}>{locale === 'fr' ? 'Aller au contenu principal' : 'Skip to main content'}</a>;
+  return <SiteSkipLink locale={locale} targetId={targetId} />;
 }
