@@ -12,6 +12,7 @@ import { FlowView, FlowZone, flowViewKeys } from './FlowStudies';
 import { OperationalView, OperationalZone, opsViewKeys } from './OperationalStudies';
 import { SpatialView, SpatialZone } from './SpatialStudies';
 import { SkipLink } from './SkipLink';
+import { assertDesignLabEnabled } from './gate';
 import './design-lab-global.css';
 import styles from './design-lab.module.css';
 
@@ -140,6 +141,7 @@ function Stage({ locale, tone, view }: { locale: Locale; tone: 'light' | 'dark';
 }
 
 export default async function DesignLabPage({ searchParams }: Props) {
+  assertDesignLabEnabled(); // the layout gate alone would not stop this page from being rendered into the 404 payload
   const query = (await searchParams) ?? {};
   const locale = localeFromSearchParams(query);
   const view = Array.isArray(query.view) ? query.view[0] : query.view;
