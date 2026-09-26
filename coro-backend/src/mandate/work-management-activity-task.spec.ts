@@ -153,7 +153,7 @@ describe('ProjectTask activity provenance', () => {
       project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }) },
       projectTask: { findMany: jest.fn().mockResolvedValue(tasks) },
     };
-    const result = await new MandateService(prisma as any).getTasks('project-a', 'org-a');
+    const result = await new MandateService(prisma as any).getTasks('project-a', actor);
     expect(result).toEqual(tasks);
     expect(prisma.projectTask.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { projectId: 'project-a', organizationId: 'org-a' },

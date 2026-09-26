@@ -16,6 +16,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [error, setError] = useState('');
 
   // Dates selon le mode
   const getDateRange = (mode: ViewMode) => {
@@ -53,6 +54,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
 
   const fetchTimesheet = async () => {
     setLoading(true);
+    setError('');
     try {
       const { from, to } = getDateRange(viewMode);
       const res = await api.get(`/projects/${projectId}/timesheet`, {
@@ -60,12 +62,13 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
       });
       setEntries(res.data?.entries || []);
       setTotalHeures(res.data?.totalHeures || 0);
-    } catch (err) { console.error(err); }
+    } catch { setError("La feuille de temps n'a pas pu être chargée."); }
     finally { setLoading(false); }
   };
 
   const handleExportPDF = async () => {
     setExporting(true);
+    setError('');
     try {
       const { from, to } = getDateRange(viewMode);
       const token = localStorage.getItem('coro_token');
@@ -73,6 +76,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
         `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/timesheet/export?from=${from}&to=${to}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      if (!res.ok) throw new Error(`Export HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -80,7 +84,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
       a.download = `feuille-temps-${from}-${to}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) { console.error(err); }
+    } catch { setError("L'export PDF a échoué. Réessayez."); }
     finally { setExporting(false); }
   };
 
@@ -118,6 +122,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
 
   return (
     <div>
+      {error && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{error}</p>}
       {/* Contrôles */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex gap-2 flex-wrap">

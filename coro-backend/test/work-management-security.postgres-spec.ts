@@ -66,14 +66,28 @@ describePostgres('Work Management tenant security on PostgreSQL', () => {
       organizationId: b.org.id, taskId: task.id, userId: b.owner.id, date: new Date(), heures: 1,
     } });
     const service = new MandateService(prisma as any);
-    await expect(service.updateTask(task.id, a.org.id, { status: 'fait' })).rejects.toBeInstanceOf(NotFoundException);
-    await expect(service.updateComment(b.project.id, comment.id, b.owner.id, a.org.id, 'Pwned'))
+    await expect(service.updateTask(b.project.id, task.id, { userId: b.owner.id, organizationId: a.org.id, role: 'ADMIN' }, { status: 'fait' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.updateComment(b.project.id, comment.id, { userId: b.owner.id, organizationId: a.org.id, role: 'ADMIN' }, 'Pwned'))
       .rejects.toBeInstanceOf(NotFoundException);
-    await expect(service.deleteTimeEntry(b.project.id, entry.id, b.owner.id, a.org.id))
+    await expect(service.deleteTimeEntry(b.project.id, entry.id, { userId: b.owner.id, organizationId: a.org.id, role: 'ADMIN' }))
       .rejects.toBeInstanceOf(NotFoundException);
     expect((await prisma.projectTask.findUniqueOrThrow({ where: { id: task.id } })).status).toBe('a_faire');
     expect((await prisma.projectComment.findUniqueOrThrow({ where: { id: comment.id } })).contenu).toBe('Original');
     expect(await prisma.taskTimeEntry.count({ where: { id: entry.id } })).toBe(1);
+  });
+
+  it('allows an assigned OPERATOR and denies an unassigned OPERATOR across Mandate surfaces', async () => {
+    const service = new MandateService(prisma as any);
+    const assigned = { userId: a.owner.id, organizationId: a.org.id, role: 'OPERATOR' };
+    const unassigned = { userId: a.colleague.id, organizationId: a.org.id, role: 'OPERATOR' };
+    await expect(service.getMandate(a.project.id, assigned)).resolves.toBeDefined();
+    await expect(service.getComments(a.project.id, assigned)).resolves.toBeDefined();
+    await expect(service.getTimesheet(a.project.id, assigned)).resolves.toBeDefined();
+    await expect(service.exportTimesheetPdf(a.project.id, assigned)).resolves.toContain('<!DOCTYPE html>');
+    await expect(service.getMandate(a.project.id, unassigned)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.getComments(a.project.id, unassigned)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.getTimesheet(a.project.id, unassigned)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.exportTimesheetPdf(a.project.id, unassigned)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('removes only ProjectTaskList and preserves task history through ON DELETE SET NULL', async () => {

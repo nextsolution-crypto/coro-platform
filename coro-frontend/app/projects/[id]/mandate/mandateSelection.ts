@@ -22,6 +22,12 @@ export function reconstructMandateServices(activities: any[]): SelectedService[]
     }));
 }
 
+export function cancelledMandateActivityTypeIds(activities: any[]): Set<string> {
+  return new Set(activities
+    .filter(activity => activity.sourceMandate && activity.activityTypeId && activity.status === 'annule')
+    .map(activity => activity.activityTypeId));
+}
+
 export function toggleMandateService(
   selected: SelectedService[],
   activity: ActivityCatalogItem,

@@ -18,10 +18,19 @@ export class MandateService {
     return project;
   }
 
+  private async assertProjectAccess(projectId: string, actor: WorkManagementActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    return project;
+  }
+
   // ── MANDAT ──────────────────────────────────────────────
 
-  async getMandate(projectId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async getMandate(projectId: string, actor: WorkManagementActor) {
+    await this.assertProjectAccess(projectId, actor);
     const mandate = await this.prisma.projectMandate.findUnique({
       where: { projectId },
       include: {
@@ -30,7 +39,7 @@ export class MandateService {
     });
 
     const tasks = await this.prisma.projectTask.findMany({
-      where: { projectId, organizationId },
+      where: { projectId, organizationId: actor.organizationId },
       include: { timeEntries: true },
     });
     const heuresReelles = tasks.reduce((sum, t) =>
@@ -167,8 +176,9 @@ export class MandateService {
     };
   }
 
-  async saveMandate(projectId: string, organizationId: string, dto: any) {
-    await this.assertOwnership(projectId, organizationId);
+  async saveMandate(projectId: string, actor: WorkManagementActor, dto: any) {
+    await this.assertProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
     if (dto.ownerId) {
       const owner = await this.prisma.user.findFirst({ where: { id: dto.ownerId, organizationId, isActive: true } });
       if (!owner) throw new NotFoundException('Responsable introuvable');
@@ -267,8 +277,9 @@ export class MandateService {
 
   // ── COMMENTAIRES ─────────────────────────────────────────
 
-  async getComments(projectId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async getComments(projectId: string, actor: WorkManagementActor) {
+    await this.assertProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
     return this.prisma.projectComment.findMany({
       where: { projectId, organizationId },
       include: { user: { select: { firstName: true, lastName: true, id: true } } },
@@ -276,16 +287,18 @@ export class MandateService {
     });
   }
 
-  async addComment(projectId: string, organizationId: string, userId: string, contenu: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async addComment(projectId: string, actor: WorkManagementActor, contenu: string) {
+    await this.assertProjectAccess(projectId, actor);
+    const { organizationId, userId } = actor;
     return this.prisma.projectComment.create({
       data: { projectId, organizationId, userId, contenu },
       include: { user: { select: { firstName: true, lastName: true, id: true } } },
     });
   }
 
-  async updateComment(projectId: string, commentId: string, userId: string, organizationId: string, contenu: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async updateComment(projectId: string, commentId: string, actor: WorkManagementActor, contenu: string) {
+    await this.assertProjectAccess(projectId, actor);
+    const { organizationId, userId } = actor;
     const comment = await this.prisma.projectComment.findFirst({
       where: { id: commentId, projectId, organizationId, userId },
     });
@@ -297,8 +310,9 @@ export class MandateService {
     });
   }
 
-  async deleteComment(projectId: string, commentId: string, userId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async deleteComment(projectId: string, commentId: string, actor: WorkManagementActor) {
+    await this.assertProjectAccess(projectId, actor);
+    const { organizationId, userId } = actor;
     const comment = await this.prisma.projectComment.findFirst({
       where: { id: commentId, projectId, organizationId, userId },
     });
@@ -308,8 +322,9 @@ export class MandateService {
 
   // ── TÂCHES ───────────────────────────────────────────────
 
-  async getTasks(projectId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async getTasks(projectId: string, actor: WorkManagementActor) {
+    await this.assertProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
     return this.prisma.projectTask.findMany({
       where: { projectId, organizationId },
       include: {
@@ -327,8 +342,9 @@ export class MandateService {
     });
   }
 
-  async initTasksFromTemplate(projectId: string, organizationId: string, documentType: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async initTasksFromTemplate(projectId: string, actor: WorkManagementActor, documentType: string) {
+    await this.assertProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
 
     const existing = await this.prisma.projectTask.count({ where: { projectId } });
     if (existing > 0) return { message: 'Tâches déjà initialisées' };
@@ -375,7 +391,7 @@ export class MandateService {
       })),
     });
 
-    return this.getTasks(projectId, organizationId);
+    return this.getTasks(projectId, actor);
   }
 
   async createTask(projectId: string, dto: any, actor: WorkManagementActor) {
@@ -414,9 +430,11 @@ export class MandateService {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }
 
-  async updateTask(taskId: string, organizationId: string, dto: any) {
+  async updateTask(projectId: string, taskId: string, actor: WorkManagementActor, dto: any) {
+    await this.assertProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
     const task = await this.prisma.projectTask.findFirst({
-      where: { id: taskId, organizationId },
+      where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
     if (dto.assigneeId) {
@@ -507,9 +525,11 @@ export class MandateService {
 
   // ── ENTRÉES DE TEMPS ─────────────────────────────────────
 
-  async addTimeEntry(taskId: string, organizationId: string, userId: string, dto: any) {
+  async addTimeEntry(projectId: string, taskId: string, actor: WorkManagementActor, dto: any) {
+    await this.assertProjectAccess(projectId, actor);
+    const { organizationId, userId } = actor;
     const task = await this.prisma.projectTask.findFirst({
-      where: { id: taskId, organizationId },
+      where: { id: taskId, projectId, organizationId },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
     return this.prisma.taskTimeEntry.create({
@@ -525,8 +545,9 @@ export class MandateService {
     });
   }
 
-  async deleteTimeEntry(projectId: string, entryId: string, userId: string, organizationId: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async deleteTimeEntry(projectId: string, entryId: string, actor: WorkManagementActor) {
+    await this.assertProjectAccess(projectId, actor);
+    const { organizationId, userId } = actor;
     const entry = await this.prisma.taskTimeEntry.findFirst({
       where: { id: entryId, userId, organizationId, task: { projectId, organizationId } },
     });
@@ -536,10 +557,11 @@ export class MandateService {
 
   // ── FEUILLE D'HEURES ─────────────────────────────────────
 
-  async getTimesheet(projectId: string, organizationId: string, dateFrom?: string, dateTo?: string) {
-    await this.assertOwnership(projectId, organizationId);
+  async getTimesheet(projectId: string, actor: WorkManagementActor, dateFrom?: string, dateTo?: string) {
+    await this.assertProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
 
-    const where: any = { task: { projectId } };
+    const where: any = { organizationId, task: { projectId, organizationId } };
     if (dateFrom || dateTo) {
       where.date = {};
       if (dateFrom) where.date.gte = new Date(dateFrom);
@@ -560,9 +582,9 @@ export class MandateService {
     return { entries, totalHeures };
   }
 
-  async exportTimesheetPdf(projectId: string, organizationId: string, dateFrom?: string, dateTo?: string) {
+  async exportTimesheetPdf(projectId: string, actor: WorkManagementActor, dateFrom?: string, dateTo?: string) {
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, ...projectAccessWhere(actor) },
       include: {
         client: true,
         building: true,
@@ -570,10 +592,11 @@ export class MandateService {
       },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
+    const organizationId = actor.organizationId;
 
     const mandate = await this.prisma.projectMandate.findUnique({ where: { projectId } });
 
-    const where: any = { task: { projectId } };
+    const where: any = { organizationId, task: { projectId, organizationId } };
     if (dateFrom || dateTo) {
       where.date = {};
       if (dateFrom) where.date.gte = new Date(dateFrom);

@@ -13,7 +13,7 @@ export class MandateController {
   @Get('mandate')
   getMandate(@Param('projectId') projectId: string, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.getMandate(projectId, req.user.organizationId);
+    return this.service.getMandate(projectId, req.user);
   }
 
   @Get('mandate/work')
@@ -25,46 +25,45 @@ export class MandateController {
   @Put('mandate')
   saveMandate(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
     requireTenantAdmin(req.user);
-    return this.service.saveMandate(projectId, req.user.organizationId, dto);
+    return this.service.saveMandate(projectId, req.user, dto);
   }
 
   // Commentaires
   @Get('comments')
   getComments(@Param('projectId') projectId: string, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.getComments(projectId, req.user.organizationId);
+    return this.service.getComments(projectId, req.user);
   }
 
   @Post('comments')
   addComment(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
     requireInternal(req.user);
-    const userId = req.user.userId;
-    return this.service.addComment(projectId, req.user.organizationId, userId, dto.contenu);
+    return this.service.addComment(projectId, req.user, dto.contenu);
   }
 
   @Put('comments/:commentId')
   updateComment(@Param('projectId') projectId: string, @Param('commentId') commentId: string, @Body() dto: any, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.updateComment(projectId, commentId, req.user.userId, req.user.organizationId, dto.contenu);
+    return this.service.updateComment(projectId, commentId, req.user, dto.contenu);
   }
 
   @Delete('comments/:commentId')
   deleteComment(@Param('projectId') projectId: string, @Param('commentId') commentId: string, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.deleteComment(projectId, commentId, req.user.userId, req.user.organizationId);
+    return this.service.deleteComment(projectId, commentId, req.user);
   }
 
   // Tâches
   @Get('tasks')
   getTasks(@Param('projectId') projectId: string, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.getTasks(projectId, req.user.organizationId);
+    return this.service.getTasks(projectId, req.user);
   }
 
   @Post('tasks/init')
   initTasks(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.initTasksFromTemplate(projectId, req.user.organizationId, dto.documentType);
+    return this.service.initTasksFromTemplate(projectId, req.user, dto.documentType);
   }
 
   @Post('tasks')
@@ -74,9 +73,9 @@ export class MandateController {
   }
 
   @Put('tasks/:taskId')
-  updateTask(@Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
+  updateTask(@Param('projectId') projectId: string, @Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.updateTask(taskId, req.user.organizationId, dto);
+    return this.service.updateTask(projectId, taskId, req.user, dto);
   }
 
   @Put('tasks/:taskId/activity')
@@ -92,15 +91,15 @@ export class MandateController {
 
   // Entrées de temps
   @Post('tasks/:taskId/time')
-  addTimeEntry(@Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
+  addTimeEntry(@Param('projectId') projectId: string, @Param('taskId') taskId: string, @Body() dto: any, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.addTimeEntry(taskId, req.user.organizationId, req.user.userId, dto);
+    return this.service.addTimeEntry(projectId, taskId, req.user, dto);
   }
 
   @Delete('time/:entryId')
   deleteTimeEntry(@Param('projectId') projectId: string, @Param('entryId') entryId: string, @Request() req: any) {
     requireInternal(req.user);
-    return this.service.deleteTimeEntry(projectId, entryId, req.user.userId, req.user.organizationId);
+    return this.service.deleteTimeEntry(projectId, entryId, req.user);
   }
 
   // Feuille d'heures
@@ -112,7 +111,7 @@ export class MandateController {
     @Request() req: any,
   ) {
     requireInternal(req.user);
-    return this.service.getTimesheet(projectId, req.user.organizationId, from, to);
+    return this.service.getTimesheet(projectId, req.user, from, to);
   }
 
   @Get('timesheet/export')
@@ -124,7 +123,7 @@ export class MandateController {
     @Res() res: Response,
   ) {
     requireInternal(req.user);
-    const html = await this.service.exportTimesheetPdf(projectId, req.user.organizationId, from, to);
+    const html = await this.service.exportTimesheetPdf(projectId, req.user, from, to);
     
     const puppeteer = require('puppeteer');
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });

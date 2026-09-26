@@ -128,31 +128,85 @@ describe('Work Management security hardening', () => {
   });
 
   it('denies cross-tenant ProjectTask update', async () => {
-    const prisma: any = { projectTask: model() };
+    const prisma: any = { project: model(), projectTask: model() };
+    prisma.project.findFirst.mockResolvedValue(null);
     prisma.projectTask.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).updateTask('task-b', 'org-a', { status: 'fait' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(new MandateService(prisma).updateTask('project-b', 'task-b', actor('OPERATOR'), { status: 'fait' })).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTask.update).not.toHaveBeenCalled();
   });
 
   it('denies assigning a ProjectTask to a foreign tenant user', async () => {
-    const prisma: any = { projectTask: model(), user: model() };
+    const prisma: any = { project: model(), projectTask: model(), user: model() };
+    prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
     prisma.projectTask.findFirst.mockResolvedValue({ id: 'task-a', organizationId: 'org-a' });
     prisma.user.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).updateTask('task-a', 'org-a', { assigneeId: 'user-b' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(new MandateService(prisma).updateTask('project-a', 'task-a', actor('OPERATOR'), { assigneeId: 'user-b' })).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectTask.update).not.toHaveBeenCalled();
   });
 
   it('denies a foreign Project before changing a Comment', async () => {
     const prisma: any = { project: model(), projectComment: model() };
     prisma.project.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).updateComment('project-b', 'comment-b', 'user-a', 'org-a', 'pwned')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(new MandateService(prisma).updateComment('project-b', 'comment-b', actor('OPERATOR'), 'pwned')).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.projectComment.update).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['ADMIN', { organizationId: 'org-a' }],
+    ['SUPER_ADMIN', { organizationId: 'org-a' }],
+    ['OPERATOR', { organizationId: 'org-a', OR: [{ userId: 'user-a' }, { lastEditedById: 'user-a' }] }],
+  ])('applies Project access to Mandate reads for %s', async (role, accessWhere) => {
+    const prisma: any = { project: model(), projectMandate: model(), projectTask: model() };
+    prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
+    prisma.projectMandate.findUnique.mockResolvedValue(null);
+    prisma.projectTask.findMany.mockResolvedValue([]);
+    await new MandateService(prisma).getMandate('project-a', actor(role));
+    expect(prisma.project.findFirst).toHaveBeenCalledWith({
+      where: { id: 'project-a', ...accessWhere }, select: { id: true },
+    });
+  });
+
+  it.each(['getMandate', 'getComments', 'getTimesheet', 'exportTimesheetPdf'])
+  ('denies an inaccessible Project before %s data is read', async method => {
+    const prisma: any = { project: model(), projectMandate: model(), projectComment: model(), taskTimeEntry: model() };
+    prisma.project.findFirst.mockResolvedValue(null);
+    const service: any = new MandateService(prisma);
+    await expect(service[method]('project-b', actor('OPERATOR'))).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.project.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'project-b', organizationId: 'org-a' }),
+    }));
+  });
+
+  it.each(['CLIENT_MANAGER', 'CLIENT_CORPORATE'])('denies client role %s from Mandate Project access', async role => {
+    const prisma: any = { project: model() };
+    await expect(new MandateService(prisma).getMandate('project-a', actor(role))).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.project.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('checks Project access before creating a Comment and derives tenant and author from the actor', async () => {
+    const prisma: any = { project: model(), projectComment: model() };
+    prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
+    prisma.projectComment.create.mockResolvedValue({ id: 'comment-a' });
+    await new MandateService(prisma).addComment('project-a', actor('OPERATOR'), 'Bonjour');
+    expect(prisma.projectComment.create.mock.calls[0][0].data).toEqual({
+      projectId: 'project-a', organizationId: 'org-a', userId: 'user-a', contenu: 'Bonjour',
+    });
+  });
+
+  it('scopes Timesheet rows to the accessed Project and tenant', async () => {
+    const prisma: any = { project: model(), taskTimeEntry: model() };
+    prisma.project.findFirst.mockResolvedValue({ id: 'project-a' });
+    prisma.taskTimeEntry.findMany.mockResolvedValue([]);
+    await new MandateService(prisma).getTimesheet('project-a', actor('OPERATOR'));
+    expect(prisma.taskTimeEntry.findMany.mock.calls[0][0].where).toEqual({
+      organizationId: 'org-a', task: { projectId: 'project-a', organizationId: 'org-a' },
+    });
   });
 
   it('denies a foreign Project before deleting a TaskTimeEntry', async () => {
     const prisma: any = { project: model(), taskTimeEntry: model() };
     prisma.project.findFirst.mockResolvedValue(null);
-    await expect(new MandateService(prisma).deleteTimeEntry('project-b', 'entry-b', 'user-a', 'org-a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(new MandateService(prisma).deleteTimeEntry('project-b', 'entry-b', actor('OPERATOR'))).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.taskTimeEntry.delete).not.toHaveBeenCalled();
   });
 });

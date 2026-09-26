@@ -24,6 +24,7 @@ const activityVisual = loadTypescript('activityTypeVisual.ts');
 const teamPicker = loadTypescript('teamPickerState.ts');
 const previewCycle = loadTypescript('previewCycle.ts');
 const mandateSelection = loadTypescript('../projects/[id]/mandate/mandateSelection.ts');
+const mandateFormState = loadTypescript('../projects/[id]/mandate/mandateFormState.ts');
 
 test('activity type visual mapping is controlled and shared by planner views', () => {
   assert.deepEqual(activityVisual.getActivityTypeVisual({ nameFR: 'Formation', visualToken: 'VIOLET', iconKey: 'TRAINING' }),
@@ -603,4 +604,48 @@ test('Mandate selection keeps A and B in the payload and reconstructs both after
     { sourceMandate: true, status: 'a_faire', activityTypeId: 'type-a', type: 'inspection', isRecurring: false },
     { sourceMandate: true, status: 'a_faire', activityTypeId: 'type-b', type: 'exercice_table', isRecurring: false },
   ]), selected);
+});
+
+test('Mandate dirty state normalizes null, empty values, numbers, booleans and civil dates', () => {
+  const server = mandateFormState.mandateFormFromServer({ montantVendu: 1200, tauxHoraire: null,
+    heuresBudgetees: 10, dateDebutDelai: '2026-09-26T00:00:00.000Z', alerteActive: false });
+  const equivalent = { ...server, montantVendu: '1200.00', tauxHoraire: '', heuresBudgetees: '10.0' };
+  assert.equal(mandateFormState.mandateFieldsAreEqual(server, equivalent), true);
+  assert.equal(mandateFormState.mandateFieldsAreEqual(server, { ...equivalent, heuresBudgetees: '11' }), false);
+  assert.equal(mandateFormState.mandateFieldsAreEqual(server, { ...equivalent, heuresBudgetees: '10' }), true);
+  assert.equal(mandateFormState.mandateFieldsAreEqual(server, { ...equivalent, alerteActive: true }), false);
+  assert.equal(server.dateDebutDelai, '2026-09-26');
+});
+
+test('Mandate service dirty state ignores ordering but includes recurrence and selection', () => {
+  const a = { activityTypeId: 'a', type: 'inspection', isRecurring: false };
+  const b = { activityTypeId: 'b', type: 'formation', isRecurring: true };
+  assert.equal(mandateFormState.serviceSelectionsAreEqual([a, b], [b, a]), true);
+  assert.equal(mandateFormState.serviceSelectionsAreEqual([a], [a, b]), false);
+  assert.equal(mandateFormState.serviceSelectionsAreEqual([a, b], [a, { ...b, isRecurring: false }]), false);
+});
+
+test('Mandate page preserves independent drafts across save, generation and tab changes', () => {
+  const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
+  assert.ok(page.includes('serverSnapshot'));
+  assert.ok(page.includes('serverServiceSelection'));
+  assert.ok(page.includes('mandateFieldsDirty'));
+  assert.ok(page.includes('serviceSelectionDirty'));
+  assert.ok(page.includes("window.addEventListener('beforeunload'"));
+  assert.ok(page.includes("window.confirm('Des modifications ne sont pas enregistrées."));
+  assert.doesNotMatch(page.match(/const handleSave[\s\S]*?const handleGenerateActivities/)?.[0] ?? '', /fetchData\(/);
+  assert.match(page, /const activitiesRes = await api\.get\(`\/projects\/\$\{projectId\}\/activities`\)/);
+  assert.ok(page.includes("['ADMIN', 'SUPER_ADMIN'].includes"));
+  assert.ok(page.includes('Fiche et offre en lecture seule'));
+  assert.ok(page.includes('Activité précédente annulée'));
+});
+
+test('Mandate comments and timesheet expose contextual errors and reject failed exports', () => {
+  const comments = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/CommentsTab.tsx'), 'utf8');
+  const timesheet = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/TimesheetTab.tsx'), 'utf8');
+  assert.ok(comments.includes('role="alert"'));
+  assert.ok(comments.includes('aria-label="Modifier le commentaire"'));
+  assert.ok(comments.includes('aria-label="Supprimer le commentaire"'));
+  assert.ok(timesheet.includes('if (!res.ok)'));
+  assert.ok(timesheet.includes('role="alert"'));
 });

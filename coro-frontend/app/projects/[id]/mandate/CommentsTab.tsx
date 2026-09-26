@@ -17,44 +17,50 @@ export default function CommentsTab({ projectId }: Props) {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => { fetchComments(); }, [projectId]);
 
   const fetchComments = async () => {
+    setError('');
     try {
       const res = await api.get(`/projects/${projectId}/comments`);
       setComments(res.data || []);
-    } catch (err) { console.error(err); }
+    } catch { setError('Impossible de charger les commentaires.'); }
     finally { setLoading(false); }
   };
 
   const handleAdd = async () => {
     if (!newComment.trim()) return;
     setSaving(true);
+    setError(''); setSuccess('');
     try {
       await api.post(`/projects/${projectId}/comments`, { contenu: newComment.trim() });
       setNewComment('');
-      fetchComments();
-    } catch (err) { console.error(err); }
+      await fetchComments(); setSuccess('Commentaire enregistré.');
+    } catch { setError("Le commentaire n'a pas pu être enregistré."); }
     finally { setSaving(false); }
   };
 
   const handleEdit = async (commentId: string) => {
     if (!editingText.trim()) return;
+    setError(''); setSuccess('');
     try {
       await api.put(`/projects/${projectId}/comments/${commentId}`, { contenu: editingText.trim() });
       setEditingId(null);
       setEditingText('');
-      fetchComments();
-    } catch (err) { console.error(err); }
+      await fetchComments(); setSuccess('Commentaire enregistré.');
+    } catch { setError("Le commentaire n'a pas pu être modifié."); }
   };
 
   const handleDelete = async (commentId: string) => {
     if (!confirm('Supprimer ce commentaire ?')) return;
+    setError(''); setSuccess('');
     try {
       await api.delete(`/projects/${projectId}/comments/${commentId}`);
-      fetchComments();
-    } catch (err) { console.error(err); }
+      await fetchComments(); setSuccess('Commentaire supprimé.');
+    } catch { setError("Le commentaire n'a pas pu être supprimé."); }
   };
 
   if (loading) return (
@@ -65,6 +71,8 @@ export default function CommentsTab({ projectId }: Props) {
 
   return (
     <div className="max-w-3xl">
+      {error && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{error}</p>}
+      {success && <p className="text-sm mb-4" style={{ color: '#27AE60' }}>{success}</p>}
 
       {/* Zone de saisie */}
       <div className="rounded-md p-5 mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
@@ -73,7 +81,7 @@ export default function CommentsTab({ projectId }: Props) {
         </label>
         <textarea
           value={newComment}
-          onChange={e => setNewComment(e.target.value)}
+          onChange={e => { setNewComment(e.target.value); setError(''); setSuccess(''); }}
           rows={3}
           placeholder="Ajouter une note importante, une information client, un suivi..."
           className="w-full px-3 py-2.5 text-sm rounded resize-vertical focus:outline-none mb-3"
@@ -130,14 +138,14 @@ export default function CommentsTab({ projectId }: Props) {
 
                   {isOwner && !isEditing && (
                     <div className="flex gap-1.5 flex-shrink-0">
-                      <button onClick={() => { setEditingId(comment.id); setEditingText(comment.contenu); }}
+                      <button aria-label="Modifier le commentaire" onClick={() => { setEditingId(comment.id); setEditingText(comment.contenu); }}
                         className="p-1.5 rounded transition-colors"
                         style={{ color: '#2980B9', border: '1px solid #AED6F1' }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EBF5FB'}
                         onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <Pencil size={13} />
                       </button>
-                      <button onClick={() => handleDelete(comment.id)}
+                      <button aria-label="Supprimer le commentaire" onClick={() => handleDelete(comment.id)}
                         className="p-1.5 rounded transition-colors"
                         style={{ color: '#C0392B', border: '1px solid #F1948A' }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FDEDEC'}
@@ -153,7 +161,7 @@ export default function CommentsTab({ projectId }: Props) {
                     <div>
                       <textarea
                         value={editingText}
-                        onChange={e => setEditingText(e.target.value)}
+                        onChange={e => { setEditingText(e.target.value); setError(''); setSuccess(''); }}
                         rows={3}
                         className="w-full px-3 py-2 text-sm rounded resize-vertical focus:outline-none mb-2"
                         style={{ border: '1px solid #C0392B', color: '#2C3E50', backgroundColor: '#FFFFFF' }}

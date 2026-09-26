@@ -8,8 +8,11 @@ import AppLayout from '@/components/layout/AppLayout';
 import MandateWorkTab from './MandateWorkTab';
 import CommentsTab from './CommentsTab';
 import TimesheetTab from './TimesheetTab';
-import { ActivityCatalogItem, mandateServicesPayload, reconstructMandateServices,
+import { useAuthStore } from '@/stores/auth.store';
+import { ActivityCatalogItem, cancelledMandateActivityTypeIds, mandateServicesPayload, reconstructMandateServices,
   SelectedService, toggleMandateService } from './mandateSelection';
+import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer,
+  serviceSelectionsAreEqual } from './mandateFormState';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
@@ -21,6 +24,7 @@ const TABS = [
 export default function MandatePage() {
   const params = useParams();
   const router = useRouter();
+  const authUser = useAuthStore(state => state.user);
   const projectId = params.id as string;
 
   const [project, setProject] = useState<any>(null);
@@ -28,25 +32,18 @@ export default function MandatePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [activeTab, setActiveTab] = useState('fiche');
   const [activityCatalog, setActivityCatalog] = useState<ActivityCatalogItem[]>([]);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+  const [serverServiceSelection, setServerServiceSelection] = useState<SelectedService[]>([]);
+  const [cancelledActivityTypes, setCancelledActivityTypes] = useState<Set<string>>(new Set());
   const [generatingActivities, setGeneratingActivities] = useState(false);
   const [activitiesGenerated, setActivitiesGenerated] = useState(false);
   const [generationError, setGenerationError] = useState('');
 
-  const [form, setForm] = useState({
-    description: '',
-    montantVendu: '',
-    tauxHoraire: '',
-    heuresBudgetees: '',
-    lienDrive: '',
-    ownerId: '',
-    typeMandat: '',
-    typeDelai: 'STANDARD',
-    dateDebutDelai: '',
-    alerteActive: true,
-  });
+  const [form, setForm] = useState<MandateForm>(emptyMandateForm);
+  const [serverSnapshot, setServerSnapshot] = useState<MandateForm>(emptyMandateForm);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [showTypeMandatPopup, setShowTypeMandatPopup] = useState(false);
 
@@ -66,35 +63,36 @@ export default function MandatePage() {
       setProject(projectRes.data);
       const m = mandateRes.data;
       setMandate(m);
+      const nextForm = mandateFormFromServer(m);
+      setServerSnapshot(nextForm);
+      setForm(nextForm);
       if (m) {
-        setForm({
-          description: m.description || '',
-          montantVendu: m.montantVendu?.toString() || '',
-          tauxHoraire: m.tauxHoraire?.toString() || '',
-          heuresBudgetees: m.heuresBudgetees?.toString() || '',
-          lienDrive: m.lienDrive || '',
-          ownerId: m.ownerId || '',
-          typeMandat: m.typeMandat || '',
-          typeDelai: m.typeDelai || 'STANDARD',
-          dateDebutDelai: m.dateDebutDelai ? new Date(m.dateDebutDelai).toISOString().split('T')[0] : '',
-          alerteActive: m.alerteActive !== false,
-        });
         // Popup migration si typeMandat pas encore défini
         if (!m.typeMandat || m.typeMandat === '') setShowTypeMandatPopup(true);
       }
-      setSelectedServices(reconstructMandateServices(activitiesRes.data || []));
+      const services = reconstructMandateServices(activitiesRes.data || []);
+      setServerServiceSelection(services);
+      setSelectedServices(services);
+      setCancelledActivityTypes(cancelledMandateActivityTypeIds(activitiesRes.data || []));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
   const handleSave = async () => {
+    setSaveError('');
+    setSaved(false);
     setSaving(true);
     try {
-      await api.put(`/projects/${projectId}/mandate`, form);
+      const response = await api.put(`/projects/${projectId}/mandate`, form);
+      const persisted = mandateFormFromServer(response.data);
+      setMandate((current: any) => ({ ...current, ...response.data }));
+      setServerSnapshot(persisted);
+      setForm(persisted);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-      fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message || "L'enregistrement du mandat a échoué.");
+    }
     finally { setSaving(false); }
   };
 
@@ -105,7 +103,11 @@ export default function MandatePage() {
       await api.post(`/projects/${projectId}/activities/from-mandate`, {
         services: mandateServicesPayload(selectedServices),
       });
-      await fetchData();
+      const activitiesRes = await api.get(`/projects/${projectId}/activities`);
+      const services = reconstructMandateServices(activitiesRes.data || []);
+      setServerServiceSelection(services);
+      setSelectedServices(services);
+      setCancelledActivityTypes(cancelledMandateActivityTypeIds(activitiesRes.data || []));
       setActivitiesGenerated(true);
       setTimeout(() => setActivitiesGenerated(false), 3000);
     } catch (err: any) {
@@ -114,6 +116,36 @@ export default function MandatePage() {
     }
     finally { setGeneratingActivities(false); }
   };
+
+  const canEditMandate = ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role || '');
+  const mandateFieldsDirty = !mandateFieldsAreEqual(form, serverSnapshot);
+  const serviceSelectionDirty = !serviceSelectionsAreEqual(selectedServices, serverServiceSelection);
+  const isDirty = mandateFieldsDirty || serviceSelectionDirty;
+  const updateForm = (change: Partial<MandateForm>) => {
+    setForm(current => ({ ...current, ...change }));
+    setSaveError('');
+    setSaved(false);
+  };
+  const updateServices = (next: SelectedService[]) => {
+    setSelectedServices(next);
+    setGenerationError('');
+    setActivitiesGenerated(false);
+  };
+  const leaveMandate = () => {
+    if (!isDirty || window.confirm('Des modifications ne sont pas enregistrées. Quitter le mandat ?')) {
+      router.push(`/projects/${projectId}`);
+    }
+  };
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isDirty]);
 
   const montant = parseFloat(form.montantVendu) || 0;
   const taux = parseFloat(form.tauxHoraire) || 0;
@@ -149,7 +181,7 @@ export default function MandatePage() {
   if (loading) return (
     <AppLayout>
       {/* Popup migration type de mandat */}
-      {showTypeMandatPopup && (
+      {showTypeMandatPopup && canEditMandate && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="w-full max-w-md rounded-md p-8"
@@ -166,7 +198,7 @@ export default function MandatePage() {
             <div className="flex gap-4">
               <button
                 onClick={() => {
-                  setForm(f => ({ ...f, typeMandat: 'FORFAITAIRE' }));
+                  updateForm({ typeMandat: 'FORFAITAIRE' });
                   setShowTypeMandatPopup(false);
                 }}
                 className="flex-1 py-4 rounded-md font-semibold text-sm transition-colors"
@@ -181,7 +213,7 @@ export default function MandatePage() {
               </button>
               <button
                 onClick={() => {
-                  setForm(f => ({ ...f, typeMandat: 'ANNUEL' }));
+                  updateForm({ typeMandat: 'ANNUEL' });
                   setShowTypeMandatPopup(false);
                 }}
                 className="flex-1 py-4 rounded-md font-semibold text-sm transition-colors"
@@ -214,7 +246,7 @@ export default function MandatePage() {
 
   return (
     <AppLayout>
-      <button onClick={() => router.push(`/projects/${projectId}`)}
+      <button onClick={leaveMandate}
         className="text-sm mb-4 flex items-center gap-1 transition-colors"
         style={{ color: '#6C757D' }}
         onMouseEnter={e => e.currentTarget.style.color = '#2C3E50'}
@@ -238,22 +270,27 @@ export default function MandatePage() {
                 ✓ Activités générées
               </span>
             )}
-            <button onClick={handleSave} disabled={saving}
+            {canEditMandate && <button onClick={handleSave} disabled={saving || !mandateFieldsDirty}
               className="text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
               onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
               onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}>
               <Save size={14} />
               {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé' : 'Sauvegarder'}
-            </button>
-            {selectedServices.length > 0 && (
+            </button>}
+            {isDirty && (
               <p className="text-xs mt-1" style={{ color: '#F39C12' }}>
-                ⚠ Cliquez sur "Générer les activités" pour sauvegarder les services cochés
+                Modifications non enregistrées{serviceSelectionDirty ? ' · appliquez séparément les changements aux activités' : ''}
               </p>
             )}
           </div>
         )}
       </div>
+
+      {saveError && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{saveError}</p>}
+      {!canEditMandate && activeTab === 'fiche' && (
+        <p className="text-sm mb-4" style={{ color: '#6C757D' }}>Fiche et offre en lecture seule. Seuls les administrateurs peuvent les modifier.</p>
+      )}
 
       <div className="flex gap-2 mb-6 pb-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
         {TABS.map(tab => (
@@ -280,7 +317,7 @@ export default function MandatePage() {
                 Briefing pour le conseiller — contexte, particularités, informations importantes
               </p>
               <textarea value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
+                disabled={!canEditMandate} onChange={e => updateForm({ description: e.target.value })}
                 rows={8}
                 placeholder="Ex: Client multi-locataires avec 3 bâtiments distincts. Contact principal : Marie Tremblay..."
                 className="w-full px-3 py-2.5 text-sm rounded resize-vertical focus:outline-none"
@@ -296,7 +333,7 @@ export default function MandatePage() {
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Montant vendu ($)</label>
                   <input type="number" value={form.montantVendu}
-                    onChange={e => setForm({ ...form, montantVendu: e.target.value })}
+                    disabled={!canEditMandate} onChange={e => updateForm({ montantVendu: e.target.value })}
                     placeholder="0.00" min="0" step="0.01"
                     className={inputCls} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -305,7 +342,7 @@ export default function MandatePage() {
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Taux horaire ($/h)</label>
                   <input type="number" value={form.tauxHoraire}
-                    onChange={e => setForm({ ...form, tauxHoraire: e.target.value })}
+                    disabled={!canEditMandate} onChange={e => updateForm({ tauxHoraire: e.target.value })}
                     placeholder="0.00" min="0" step="0.01"
                     className={inputCls} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -314,7 +351,7 @@ export default function MandatePage() {
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Heures budgétées</label>
                   <input type="number" value={form.heuresBudgetees}
-                    onChange={e => setForm({ ...form, heuresBudgetees: e.target.value })}
+                    disabled={!canEditMandate} onChange={e => updateForm({ heuresBudgetees: e.target.value })}
                     placeholder="0" min="0" step="0.5"
                     className={inputCls} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -326,7 +363,7 @@ export default function MandatePage() {
                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Lien Google Drive</label>
                 <div className="flex gap-2">
                   <input type="url" value={form.lienDrive}
-                    onChange={e => setForm({ ...form, lienDrive: e.target.value })}
+                    disabled={!canEditMandate} onChange={e => updateForm({ lienDrive: e.target.value })}
                     placeholder="https://drive.google.com/drive/folders/..."
                     className={`flex-1 ${inputCls}`} style={inputSty}
                     onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -349,7 +386,7 @@ export default function MandatePage() {
                   Conseiller responsable du mandat
                 </label>
                 <select value={form.ownerId}
-                  onChange={e => setForm({ ...form, ownerId: e.target.value })}
+                  disabled={!canEditMandate} onChange={e => updateForm({ ownerId: e.target.value })}
                   className="w-full px-3 py-2.5 text-sm rounded"
                   style={{ border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' }}>
                   <option value="">— Non assigné —</option>
@@ -374,12 +411,12 @@ export default function MandatePage() {
                     )}
                   </h3>
                   <button onClick={handleGenerateActivities}
-                    disabled={generatingActivities}
+                    disabled={generatingActivities || !canEditMandate || !serviceSelectionDirty}
                     className="text-xs font-medium px-3 py-1.5 rounded flex items-center gap-1.5 disabled:opacity-50"
                     style={{ backgroundColor: '#C0392B', color: '#FFFFFF' }}
                     onMouseEnter={e => { if (selectedServices.length > 0) e.currentTarget.style.backgroundColor = '#A93226'; }}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
-                    {generatingActivities ? '⏳ Génération...' : '⚡ Générer les activités'}
+                    {generatingActivities ? '⏳ Application...' : '⚡ Appliquer les changements aux activités'}
                   </button>
                 </div>
                 <p className="text-xs mb-3" style={{ color: '#ADB5BD' }}>
@@ -399,12 +436,16 @@ export default function MandatePage() {
                         <label className="flex items-center gap-3 cursor-pointer flex-1">
                           <input type="checkbox"
                             checked={!!selected}
+                            disabled={!canEditMandate}
                             onChange={e => {
-                              setSelectedServices(toggleMandateService(selectedServices, activity, e.target.checked));
+                              updateServices(toggleMandateService(selectedServices, activity, e.target.checked));
                             }}
                             style={{ accentColor: '#27AE60', width: '16px', height: '16px', flexShrink: 0 }} />
                           <div>
                             <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{activity.label}</p>
+                            {cancelledActivityTypes.has(activity.activityTypeId) && (
+                              <p className="text-xs" style={{ color: '#F39C12' }}>Activité précédente annulée</p>
+                            )}
                             <p className="text-xs" style={{ color: '#ADB5BD' }}>
                               ⏱ {activity.duration} · {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
                             </p>
@@ -417,7 +458,8 @@ export default function MandatePage() {
                               { key: 'recurring', label: '↺ Récurrent', isRecurring: true },
                             ].map(opt => (
                               <button key={opt.key}
-                                onClick={() => setSelectedServices(selectedServices.map(s =>
+                                disabled={!canEditMandate}
+                                onClick={() => updateServices(selectedServices.map(s =>
                                   s.activityTypeId === activity.activityTypeId ? { ...s, isRecurring: opt.isRecurring } : s
                                 ))}
                                 className="text-xs px-2.5 py-1 rounded font-medium transition-colors"
@@ -503,7 +545,7 @@ export default function MandatePage() {
                     { value: 'ANNUEL', label: '🔄 Annuel' },
                   ].map(opt => (
                     <button key={opt.value}
-                      onClick={() => setForm(f => ({ ...f, typeMandat: opt.value }))}
+                      disabled={!canEditMandate} onClick={() => updateForm({ typeMandat: opt.value })}
                       className="flex-1 py-2 rounded text-xs font-medium transition-colors"
                       style={{
                         backgroundColor: form.typeMandat === opt.value ? '#2C3E50' : '#F8F9FA',
@@ -529,7 +571,7 @@ export default function MandatePage() {
                         { value: 'EVACUATION', label: 'Plan évacuation' },
                       ].map(opt => (
                         <button key={opt.value}
-                          onClick={() => setForm(f => ({ ...f, typeDelai: opt.value }))}
+                          disabled={!canEditMandate} onClick={() => updateForm({ typeDelai: opt.value })}
                           className="flex-1 py-1.5 rounded text-xs font-medium transition-colors"
                           style={{
                             backgroundColor: form.typeDelai === opt.value ? '#C0392B' : '#F8F9FA',
@@ -552,7 +594,7 @@ export default function MandatePage() {
                     </label>
                     <input type="date"
                       value={form.dateDebutDelai}
-                      onChange={e => setForm(f => ({ ...f, dateDebutDelai: e.target.value }))}
+                      disabled={!canEditMandate} onChange={e => updateForm({ dateDebutDelai: e.target.value })}
                       className="w-full px-3 py-2 text-sm rounded focus:outline-none"
                       style={{ border: '1px solid #CED4DA', color: '#2C3E50' }}
                       onFocus={e => e.target.style.borderColor = '#C0392B'}
@@ -566,7 +608,7 @@ export default function MandatePage() {
                   <label className="flex items-center gap-2 mb-3 cursor-pointer">
                     <input type="checkbox"
                       checked={form.alerteActive}
-                      onChange={e => setForm(f => ({ ...f, alerteActive: e.target.checked }))}
+                      disabled={!canEditMandate} onChange={e => updateForm({ alerteActive: e.target.checked })}
                       style={{ accentColor: '#C0392B', width: '14px', height: '14px' }} />
                     <span className="text-xs" style={{ color: '#6C757D' }}>Alertes actives</span>
                   </label>
