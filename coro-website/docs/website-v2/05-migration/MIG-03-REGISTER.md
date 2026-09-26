@@ -66,3 +66,79 @@ Registre minimal des points de mise en ligne propres à MIG-03. Les points MIG-0
 Détail complet (matrice des 19 assets, données, canaux, réglementaire, capacités) : `MIG-03C-SENTINELLE-POPULATION-GATE.md`.
 
 Gate avant Incident (frontières, transmission, Go-Live consolidé) : `MIG-03-PRE-INCIDENT-GATE.md`.
+
+Audit MIG-03D (stade A) : `MIG-03D-INCIDENT-AUDIT.md`.
+
+## MIG-03D — `/coro-incident` (page neuve)
+| Classe | Élément |
+|---|---|
+| DÉCISION | FR seulement (`englishAvailable={false}`) ; route implémentée, sitemap FR seul, registre V2 |
+| PUBLICATION-BLOCKER | `alert/fiche_intervention.webp` (preuve de la section 05) : adresse d'apparence réelle (1200 boul. Robert-Bourassa, Montréal) et détails de site ; SANITIZE OR RECAPTURE BEFORE GO-LIVE |
+| DÉCISION | Lien d'intervention sécurisé : valide tant que l'incident est actif ; aucune durée ni révocation revendiquée ; aucun « QR » revendiqué |
+| EXCLU | Pont PAI (PARTIAL), voix, notification d'application, 911 et répartition, normes et conformité, conservation, codes de procédure, heures inventées |
+| RECAPTURE | Aucune capture actuelle du journal ni du détail d'incident |
+| REVIEW | Hero `first-responders-arrival.webp` : QR et texte illustratifs, partiellement rognés ; rapport PDF : sections 4 et 7 non relues |
+
+## MIG-03D-C — Incident visual assets
+
+Three marketing illustrations (`alt=""`, decorative, no cartouche, no caption) placed in `/coro-incident`; the real proof `fiche_intervention.webp` and the timeline are unchanged.
+
+- `incident-building.webp` — full-width 21:9 band opening section 01 (event). Shows fire crews on site; does not imply CORO dispatched them.
+- `incident-command.webp` — section 03, dominant 4-8 split (8 columns of image).
+- `normal-operations.webp` — full-width 16:9 closing band of section 07, before complementary capabilities.
+
+REVIEW (baked text in the illustrations, not product proof): command image shows an illustrated screen with "Services d’urgence avisés" and "Caméra en direct" (invented UI, not CORO); normal-operations shows CORO-branded illustrated screens ("Le continuum CORO", "Projet clôturé"); building has a fictional sign "Tour Prémont" and a garbled vehicle lettering. Decision pending for human review; none was judged a blocking factual contradiction.
+
+## MIG-03D-D — Final SEO and commit gate
+
+**Illustrations** (classification MARKETING ILLUSTRATION; decorative, `alt=""`, not product proof):
+
+| File | Note |
+|---|---|
+| `incident-building.webp` | Event context; fictional sign "Tour Prémont"; no product content. |
+| `incident-command.webp` | Contains illustrative emergency-service wording ("Services d’urgence avisés", "Caméra en direct") on an illustrated screen; not CORO UI. |
+| `normal-operations.webp` | Contains illustrative CORO-like screens; not real UI. |
+
+None is a publication blocker unless a new contradiction appears.
+
+**PUBLICATION-BLOCKER (kept):** `alert/fiche_intervention.webp` shows a real-looking address (1200 boul. Robert-Bourassa, Montréal) → SANITIZE OR RECAPTURE BEFORE GO-LIVE.
+
+**SEO:** targeted research done (FR Québec terms + EN terminology). Result: KEEP title and description. The FR SERP for "gestion incident" is dominated by IT/EHS incident tools; Québec institutional vocabulary is "mesures d’urgence", "intervention d’urgence", "coordination". Current title/description already carry incident, activation, chronologie, rapport, équipe d’urgence, intervenants. No volume or ranking is claimed.
+
+**Copy:** "Personnes inscrites comme présentes" is correct (no physical-detection claim). One FAQ answer said "Les employés présents"; changed to "inscrits comme présents" for consistency.
+
+## MIG-03D-E — Contextual resources (Incident) and global rule
+
+Rule added to `04-quality/QA-ACCEPTANCE-CHECKLIST.md` (« Editorial resource discovery »).
+
+Blog inventory: 56 published articles from `GET https://api.getcoro.io/api/blog/public` (2026-09-26). None is dedicated to incident management, incident log, incident report or after-action review; the closest are emergency-team, exercise and gap-analysis articles. All candidates below answer 200 on `getcoro.io/blog/<slug>` and have a French and an English version.
+
+| Article | URL | Topic | Relation to Incident | Status | Decision |
+|---|---|---|---|---|---|
+| Équipe d’urgence : qui est réellement disponible dans le bâtiment | `/blog/equipe-urgence-disponible-batiment` | Disponibilité réelle de l’équipe | Équipe mobilisable et personnes inscrites comme présentes (sections 02, 03) | published | LINK |
+| Exercice sur table : tester un plan d’urgence | `/blog/exercice-sur-table-tester-plan-urgence` | Exercices | Mode exercice ; répétition des décisions et communications | published | LINK |
+| Comment identifier les lacunes dans son organisation des mesures d’urgence | `/blog/identifier-lacunes-organisation-mesures-urgence` | Écarts, retour d’expérience, actions correctives | Section 07 (REX, actions correctives) | published | LINK |
+| Comment savoir si tout le monde a évacué un bâtiment | `/blog/savoir-si-tout-le-monde-a-evacue-batiment` | Évacuation, décompte | Territoire Sentinelle (déjà lié depuis `/sentinelle`) ; contenu incorporant du CSS | published | DO NOT LINK |
+| Comment savoir si son équipe d’urgence est réellement opérationnelle | `/blog/equipe-urgence-reellement-operationnelle` | Équipe d’urgence | Recouvre l’article retenu sur l’équipe disponible | published | DO NOT LINK (doublon) |
+| Comment tester un plan de mesures d’urgence par un exercice | `/blog/comment-tester-plan-mesures-urgence-exercice` | Exercices | Recouvre l’exercice sur table | published | DO NOT LINK (doublon) |
+| Qui est responsable du plan de mesures d’urgence | `/blog/responsable-plan-mesures-urgence-entreprise` | Gouvernance du PMU | Lien faible (rôle documentaire, pas l’incident) | published | DO NOT LINK |
+| Articles PMU / PSI / PCA / résilience organisationnelle | divers | Documents et cadre | Territoire des pages documentaires et Résilience | published | DO NOT LINK |
+
+Integration: a restrained ruled list « Approfondir la préparation à l’incident. » (3 articles, real titles, one-line reason) between the ecosystem section and the FAQ. Inline links evaluated and not added: each candidate is already in the resource list, so an inline copy would duplicate it. The heading says « préparation à l’incident » rather than « gestion des incidents » because the articles cover preparation, not incident handling.
+
+Backlog for already-migrated pages (inventory only, nothing modified):
+
+| Page | Resource opportunity? | Existing relevant content | Recommended future action |
+|---|---|---|---|
+| `/about` | Low | None specific | None |
+| `/contact` | No | None | None |
+| `/partners` | Low | `gerer-mandats-mesures-urgence`, `mesurer-performance-rentabilite-mandats` (consultants) | Decide with the partners audience; probably none |
+| `/programme-recommandation` | No | None | None |
+| `/gestion-documentaire` | Yes | `controle-versions-pmu-psi-pca`, `centraliser-gerer-documents-conformite-organisation`, `pourquoi-les-plans-urgence-deviennent-rapidement-desuets`, `frequence-mise-a-jour-plan-mesures-urgence-pmu` | Retrofit 3 to 4 |
+| `/gestion-de-projets` | Yes | `gerer-mandats-mesures-urgence`, `mesurer-performance-rentabilite-mandats` | Retrofit 1 to 2 |
+| `/performance-objectifs` | Yes | `mesurer-performance-rentabilite-mandats`, `gerer-mandats-mesures-urgence` | Retrofit 1 to 2 (avoid duplicating gestion-de-projets) |
+| `/portail-client` | Yes | `simplifier-revision-approbation-documents-clients`, `coro-sur-mobile-vos-projets-documents-et-clients-accessibles-partout` | Retrofit 1 to 2 |
+| `/resilience-operationnelle` | Yes | `indicateurs-resilience-kpi-preparation-organisation`, `resilience-operationnelle-mesurer-capacite-organisation-urgence`, `conformite-resilience-operationnelle-pmu`, `plan-urgence-formation-exercice-preparation-organisation`, `mesurer-niveau-preparation-batiment-urgence` | Retrofit 3 to 5 (strongest opportunity) |
+| `/sentinelle` | Already done | 8 Sentinelle articles already linked (all verified in the API) | Optional review of the list only |
+| `/sentinelle-population` | Unclear | No article on population alert or PUE beyond `obligations-plan-mesures-urgence-entreprise-quebec` (PUE tag only) | Check relevance before any link; likely none |
+| `/coro-incident` | Done (MIG-03D-E) | 3 articles linked | None |

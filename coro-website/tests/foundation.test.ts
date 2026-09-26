@@ -11,7 +11,7 @@ import { registeredSitemapUrls } from '../lib/site/sitemap.ts';
 import { productStatusLabel } from '../lib/site/status.ts';
 
 const protectedPaths = [
-  '/', '/about', '/security', '/privacy', '/terms', '/pricing', '/sentinelle', '/sentinelle-population',
+  '/', '/about', '/security', '/privacy', '/terms', '/pricing', '/sentinelle', '/sentinelle-population', '/coro-incident',
   '/gestion-documentaire', '/gestion-de-projets', '/resilience-operationnelle', '/performance-objectifs',
   '/portail-client', '/programme-recommandation', '/contact', '/partners', '/blog',
   '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi',

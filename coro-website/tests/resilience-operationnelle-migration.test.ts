@@ -31,7 +31,7 @@ const omitted: [string, string][] = [
 ];
 
 test('the registry ends with /resilience-operationnelle after the eight approved routes; nothing else is migrated', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident']);
   assert.equal(isLegacyFooterVisible('/resilience-operationnelle'), false);
   for (const legacy of ['/', '/pricing', '/blog']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
 });

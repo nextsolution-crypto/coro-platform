@@ -657,3 +657,20 @@ destructeur pour le SEO n'est pas un Website V2 réussi.
 CORO Website V2 est accepté lorsque design, contenu, technique,
 accessibilité, performance, bilinguisme et migration fonctionnent comme
 un seul système.
+
+## Editorial resource discovery (rule for every remaining public-page migration)
+
+A discovery requirement, not a requirement that every page carries a resource section.
+
+1. Identify the page's subject territory.
+2. Search the existing CORO blog, guides and resources. The blog is served by the API (`GET /api/blog/public`, `/blog/[slug]`), not by local files: list it from the API, do not assume slugs.
+3. Verify every candidate route exists and is publishable (article `isPublished`, page answers 200, not a FUTURE or REVIEW route).
+4. Evaluate semantic relevance to what the page actually says.
+5. Integrate only resources that materially deepen the page (typically 3 to 6 at most).
+6. Prefer contextual linking over arbitrary SEO linking; anchors are the real article titles, never keyword-stuffed.
+7. Avoid duplicate or weak links (same article twice, or an article that overlaps another already chosen).
+8. Never invent a resource route or create an article to fill a slot.
+9. Preserve FR/EN availability truth: an FR-only page links the FR article; a page offering English links to `?lang=en` only when the article has an English version.
+10. Verify the links during QA (route answers 200, focus visible, no overflow at 390 and 1440).
+
+Record the candidate table (article, URL, topic, relation, value, status, LINK / DO NOT LINK) in `MIG-03-REGISTER.md`.

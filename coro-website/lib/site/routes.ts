@@ -31,6 +31,7 @@ export const publicRoutes = [
   historical({ id: 'pricing', publication: 'PUBLISH-NOW', path: '/pricing', family: 'pricing', source: 'app/pricing/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
   historical({ id: 'sentinelle', publication: 'PUBLISH-NOW', path: '/sentinelle', family: 'resilience', source: 'app/sentinelle/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
   historical({ id: 'sentinelle-population', publication: 'PUBLISH-NOW', path: '/sentinelle-population', family: 'solutions', source: 'app/sentinelle-population/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
+  historical({ id: 'incident', publication: 'PUBLISH-NOW', path: '/coro-incident', family: 'resilience', source: 'app/coro-incident/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.8, changeFrequency: 'monthly' }),
   historical({ id: 'documents', publication: 'PUBLISH-NOW', path: '/gestion-documentaire', family: 'platform', source: 'app/gestion-documentaire/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
   historical({ id: 'projects', publication: 'PUBLISH-NOW', path: '/gestion-de-projets', family: 'platform', source: 'app/gestion-de-projets/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
   historical({ id: 'resilience', publication: 'PUBLISH-NOW', path: '/resilience-operationnelle', family: 'resilience', source: 'app/resilience-operationnelle/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.8, changeFrequency: 'monthly' }),
@@ -54,7 +55,7 @@ export const publicRoutes = [
   // English availability is false: no English content exists for an unbuilt route.
   ...([
     ['platform-overview', '/plateforme', 'platform', 'BUILD-NOW-HIDDEN'], ['coro-platform', '/coro-platform', 'platform', 'FUTURE'],
-    ['resilience-operations', '/resilience-operations', 'resilience', 'FUTURE'], ['incident', '/coro-incident', 'resilience', 'PUBLISH-NOW'],
+    ['resilience-operations', '/resilience-operations', 'resilience', 'FUTURE'],
     ['exercises', '/coro-exercices', 'resilience', 'REVIEW'], ['ops', '/coro-ops', 'resilience', 'FUTURE'],
     ['qr-intervention', '/qr-intervention', 'resilience', 'FUTURE'], ['knowledge', '/coro-knowledge', 'intelligence', 'FUTURE'],
     ['ai', '/coro-ai', 'intelligence', 'FUTURE'], ['network', '/coro-network', 'intelligence', 'FUTURE'],

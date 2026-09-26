@@ -119,7 +119,7 @@ test('no product-truth expansion: the Projects boundary and Booking/Planner limi
 });
 
 test('registry, metadata and routes are unchanged by the visual enrichment', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident']);
   assert.ok(read('app/gestion-documentaire/page.tsx').includes("metaTitle: 'Gestion documentaire des plans d’urgence et de continuité'"));
   assert.ok(read('app/gestion-de-projets/page.tsx').includes("metaTitle: 'Gestion de projets et de mandats en mesures d’urgence'"));
   assert.ok(read('app/partners/page.tsx').includes("metaTitle: 'Partenaires et collaborations'"));
