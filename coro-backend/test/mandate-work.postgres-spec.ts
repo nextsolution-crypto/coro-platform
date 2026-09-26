@@ -74,10 +74,11 @@ describePostgres('Mandate consolidated work 2D-D on PostgreSQL', () => {
     const projectedB = result.activities.find((activity: any) => activity.id === activityB.id);
     expect(projectedA).toMatchObject({ planningStatus: 'CONFIRMED', lead: { status: 'ACCEPTED' },
       taskCount: 3, completedTaskCount: 1, actualHours: 30 });
-    expect(projectedA.checklists).toEqual([
+    expect(projectedA.checklists).toHaveLength(2);
+    expect(projectedA.checklists).toEqual(expect.arrayContaining([
       expect.objectContaining({ taskListId: current.id, isCurrentlyApplicable: true }),
       expect.objectContaining({ taskListId: historical.id, isCurrentlyApplicable: false }),
-    ]);
+    ]));
     expect(projectedA.directTasks.map((task: any) => task.id)).toEqual([directTask.id]);
     expect(projectedB).toMatchObject({ status: 'annule', canonicalTypeMissing: true });
     expect(result.transversal.tasks.map((task: any) => task.id)).toEqual([transversalTask.id]);

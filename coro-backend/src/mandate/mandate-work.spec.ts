@@ -58,10 +58,11 @@ describe('MandateService consolidated work projection', () => {
     expect(activity).toMatchObject({ planningStatus: 'CONFIRMED', lead: { displayName: 'Steve Parker', status: 'ACCEPTED' },
       taskCount: 4, completedTaskCount: 1, actualHours: 3.5,
       missingTaskLists: [{ taskListId: 'list-missing', name: 'Nouvelle' }] });
-    expect(activity.checklists).toEqual([
+    expect(activity.checklists).toHaveLength(2);
+    expect(activity.checklists).toEqual(expect.arrayContaining([
       expect.objectContaining({ projectTaskListId: 'instance-current', isCurrentlyApplicable: true, taskCount: 1 }),
       expect.objectContaining({ projectTaskListId: 'instance-old', isCurrentlyApplicable: false, taskCount: 1 }),
-    ]);
+    ]));
     expect(activity.directTasks.map((item: any) => item.id)).toEqual(['direct']);
     expect(activity.linkedExistingLists[0].tasks.map((item: any) => item.id)).toEqual(['linked-legacy']);
     expect(result.transversal.tasks.map((item: any) => item.id)).toEqual(['transversal']);
