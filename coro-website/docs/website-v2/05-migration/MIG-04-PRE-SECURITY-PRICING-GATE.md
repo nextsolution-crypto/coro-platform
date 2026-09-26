@@ -586,3 +586,102 @@ Aucun modèle n'est choisi ici : décision humaine requise.
 - Pages de fournisseurs de mesures d'urgence et de continuité (contexte de terminologie et de modèles de tarification).
 
 Ces sources fournissent du contexte ; elles ne sont pas un avis juridique.
+
+---
+
+# MIG-04A — `/security` register
+
+Migration de `/security` vers V2 (2026-09-26). Autorité : les sections 2 à 22 et les décisions D1 à D14 ci-dessus. Aucun élément de Tarification n'est résolu ici. Commit de départ `d56d0ade`.
+
+## A1. Audit du héros de remplacement (fichier actuel, ouvert depuis le dépôt)
+
+`public/website-v2/security/security-canadian-hosting.webp`, 1672 × 941, remplacement fourni par l'humain. Constats propres à CETTE version (aucun n'est repris de l'ancienne) :
+
+| Élément visible | Constat |
+|---|---|
+| Texte incrusté | Aucun texte lisible |
+| Logos | Aucun logo, aucune marque, aucun sceau, aucune norme |
+| Indices géographiques | Colline du Parlement (Ottawa) avec le drapeau du Canada, à gauche ; feuille d'érable sur un pilier, au centre ; carte du Canada sur un écran |
+| Centre de données | Allée de baies de serveurs à droite : illustration générique ; la formulation de la page nomme le fournisseur d'infrastructure, ce qui évite de laisser croire que CORO exploite son propre centre de données |
+| Personnes | Une femme de dos devant deux écrans (carte, schéma de réseau), à gauche : suggère une équipe d'exploitation |
+| Écrans | Carte et schéma illustratifs, sans libellé |
+| Revendications de sécurité | Aucune |
+| Implique que CORO possède ou exploite un centre de données physique | Oui, en partie, dans le cadrage large (baies de serveurs et poste de travail dans le même espace) |
+
+**Classement : MARKETING ILLUSTRATION, utilisable avec un cadrage.** Le cadrage du héros (`position: 100% 50%`, format carré sur mobile) ne montre que l'allée de serveurs et la feuille d'érable : la Colline du Parlement, la personne devant les écrans et les cartes sont hors cadre sur ordinateur et sur mobile (vérifié visuellement à 390 et à 1440). Cela supprime l'impression d'un lien avec le gouvernement fédéral, d'une localisation à Ottawa et d'une équipe de surveillance. Le fichier n'est pas modifié ; le recadrage est fait par la propriété CSS de positionnement de l'image. `alt=""`, jamais une preuve. Ce n'est pas UNSAFE / MISLEADING dans ce cadrage ; le plan large ne serait pas retenu comme héros. Aucun logo CORO n'apparaît.
+
+## A2. Matrice de préservation du contenu V1
+
+Base : `tests/fixtures/security-baseline.json`. Aucune perte silencieuse : chaque bloc est classé, et chaque REWRITE ou REMOVE porte sa raison.
+
+| Bloc V1 | Classe | Résultat V2 et raison |
+|---|---|---|
+| H1 « La sécurité fait partie de l'architecture. » | PRESERVE | Identique (deux lignes) |
+| Introduction : « ... maintenir leurs données au Canada. Notre approche combine hébergement canadien, chiffrement des communications, contrôle d'accès, sauvegardes et surveillance. » | REWRITE | « maintenir leurs données au Canada » contredit la règle « pas toutes les données » (D6, §3.2) ; la liste de sauvegardes et de surveillance est ramenée à des formulations sourcées |
+| Boutons « Parler à notre équipe » et « Voir les fonctionnalités » | REWRITE / REMOVE | Démonstration et question de sécurité (courriel). `/#features` est une ancre legacy sans cible connue (R-08) |
+| Bandeau « Hébergement canadien. Accès contrôlés. Communications chiffrées. Sauvegardes automatisées. » | REWRITE | « Infrastructure principale au Canada · Accès contrôlés · Communications chiffrées » ; « Sauvegardes automatisées » retiré du bandeau (D10) |
+| Quatre cartes « Une approche conçue pour les environnements professionnels » | RECOMPOSE | Réparties dans les sections 01 à 04 (aucun groupe de cartes : lignes éditoriales) |
+| Carte « Données hébergées au Canada » (Toronto, « souveraineté des données ») | REWRITE | Infrastructure principale à Toronto ; « souveraineté » retiré (D6, D7) |
+| Carte « Communications chiffrées » (HTTPS/TLS, mots de passe hachés) | PRESERVE | Section 03, mots inchangés pour ces deux énoncés |
+| Carte « Contrôle d'accès » (« Les environnements clients sont isolés ») | REWRITE | « Séparées logiquement, au niveau de l'application » (PARTIAL, §2 ligne 12) |
+| Carte « Surveillance et traçabilité » (« détection d'événements inhabituels ») | REWRITE | Journalisation conservée ; « détection » retirée (non établie) ; disponibilité en termes généraux |
+| Section « Hébergement et souveraineté » : paragraphe d'infrastructure et « réduire les enjeux de transfert transfrontalier » | REWRITE | La formulation transfrontalière est retirée (des tiers traitent des données hors du Canada) ; remplacée par le « Ce que cela signifie, et ce que cela ne signifie pas » |
+| « Les caractéristiques de l'infrastructure peuvent évoluer... détails techniques fournis aux équipes TI » | PRESERVE | Section 01, sans promesse de documents |
+| Faits : Infrastructure Toronto ; Fournisseur DigitalOcean | PRESERVE | Liste de faits de la section 01 |
+| Fait : « Cadre fournisseur SOC 2 Type II » | REMOVE | D8 : ne pas en faire un argument central ni risquer l'attribution à CORO |
+| Section « Accès et authentification » : rôles et permissions ; journalisation | PRESERVE | Section 02 |
+| « Isolation des organisations clientes » | REWRITE | Voir ci-dessus |
+| « Protection contre les tentatives d'authentification abusives » | REWRITE | « Le nombre de tentatives de connexion répétées est limité » (limitation du débit : §2 ligne 9) |
+| « MFA prévu pour les environnements et offres nécessitant un niveau de sécurité renforcé » | REMOVE | D9 : la MFA n'est pas un argument de vente ; la mention d'« offres » n'existe pas dans le produit |
+| Section « Sauvegarde et continuité » : introduction générale | PRESERVE / REWRITE | Reprise du libellé général des conditions d'utilisation (§12) ; « mécanismes de sauvegarde et de continuité adaptés à son infrastructure » |
+| « Sauvegardes automatisées, toutes les 6 heures » | REMOVE | Non publiable sans confirmation du cron (D10, §2 ligne 13) |
+| « Rétention 30 jours » | REMOVE | Contradiction avec la documentation (30 dernières copies ≈ 7,5 jours) : D10 |
+| « Snapshots quotidiens » | REMOVE | Aucune source : D10 |
+| « SLA infrastructure 99,9 % » | REMOVE | Chiffre du fournisseur ambigu (Droplet 99,99 %, Spaces 99,9 %) et hors engagement de CORO ; aucun chiffre de disponibilité (§2 ligne 25) |
+| « Pare-feu réseau » | REMOVE | Non vérifié (§2 ligne 43) |
+| « En-têtes HTTP de sécurité » | REMOVE | Observés sur l'API et l'application, non sur le site ni le portail client (§2 ligne 42) |
+| « Protection de l'authentification » (bloc 4 de « Réduire la surface d'exposition ») | REWRITE | Intégré aux lignes de la section 02 et à « Limites de débit » |
+| « Surveillance de disponibilité » | REWRITE | « La disponibilité des principaux services est surveillée » (documentation du propriétaire), sans 24/7 |
+| Section « Vie privée et conformité » : « traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents » | REWRITE | Les pratiques de conservation et d'incidents ne sont pas établies (LR-03) |
+| Étiquettes « Québec — Loi 25 », « LPRPDE / PIPEDA », « Hébergement Canada » | REWRITE | Une phrase prudente sans étiquettes ni vignettes de conformité (D7) |
+| Liens « Politique de confidentialité » et « Conditions d'utilisation » | PRESERVE | Section 06 (et section 04 pour les conditions) |
+| Section « Pour les équipes TI » et liste de six sujets (architecture, identités, sauvegardes, protection réseau, journalisation, questionnaire fournisseur) | REWRITE / REMOVE | La demande par courriel est conservée ; la liste de documents est retirée : aucun de ces documents n'est établi (CR-01) |
+| CTA « La sécurité doit être vérifiable, pas seulement déclarée » | REWRITE | « La sécurité se juge sur des faits » : la formulation d'origine laissait attendre des preuves (questionnaire, documentation) qui n'existent pas |
+| Boutons « Demander une démo » et « Nous contacter » | PRESERVE / REWRITE | Démonstration inchangée ; courriel avec un objet reformulé (« Question de sécurité CORO ») |
+| Titre et description (marque répétée, « surveillance », « sauvegardes ») | REWRITE | §6 : sans marque, sans revendication non établie |
+| JSON-LD `WebPage` avec `about: SoftwareApplication` | REMOVE | Remplacé par `FAQPage` (la FAQ est visible) ; pas de `SoftwareApplication` (règle V2) |
+| En-tête, pied de page et chrome legacy | REMOVE | Remplacés par le shell V2 |
+| Aucune FAQ visible en V1 | AJOUT | FAQ de six questions dont les réponses reprennent uniquement des énoncés établis |
+| Aucune image en V1 | AJOUT | Héros de remplacement fourni par l'humain |
+| Version anglaise complète (17 titres) | PRESERVE (structure) | Réécrite en anglais avec la même structure et les mêmes limites |
+
+## A3. Énoncés publiés (V2)
+
+Infrastructure applicative principale hébergée au Canada, région de Toronto, DigitalOcean (application, base de données, stockage de fichiers) ; services de soutien par des fournisseurs spécialisés qui peuvent traiter certaines données hors du Canada ; comptes individuels, rôles et permissions, cloisonnement logique des organisations, tentatives de connexion et requêtes limitées, journal des actions ; HTTPS/TLS, mots de passe hachés ; mécanismes de sauvegarde et de continuité en termes généraux, disponibilité des principaux services surveillée, aucune promesse de disponibilité sans interruption ; modèle de responsabilité partagée (CORO / fournisseurs / organisation), dérivé des conditions d'utilisation ; phrase prudente sur la Loi 25 et la LPRPDE, aucune certification, aucune attestation attribuée à CORO ; FAQ de six questions.
+
+Énoncés non publiés : tout ce qui figure dans les décisions D6 à D11 et dans la liste « NOT published » de l'en-tête du fichier `app/security/page.tsx`. Aucun fournisseur tiers n'est nommé (pas de liste).
+
+## A4. Décisions de la migration
+
+| Sujet | Décision |
+|---|---|
+| Langue | VRAIE version FR / EN (structure de 17 titres identique en V1, contenu anglais complet). Les deux langues sont conservées ; aucun `englishAvailable={false}` |
+| Métadonnées | FR : « Sécurité et hébergement des données au Canada » ; EN : « Security and data hosting in Canada » (sans marque, sans mot de certification ni de conformité) ; descriptions basées sur l'infrastructure principale, les accès, la protection des données et la responsabilité de l'organisation ; canonical et hreflang FR / EN inchangés |
+| JSON-LD | `FAQPage` seulement, identique à la FAQ visible ; `WebPage` et `SoftwareApplication` retirés |
+| Ressources éditoriales | Aucune section : découverte faite sur les 56 articles publiés ; aucun article fort sur la sécurité SaaS, l'hébergement canadien ou la Loi 25 (`registre-visiteurs-protection-renseignements-personnels` traite de la minimisation des données dans un registre de visiteurs, sans lien direct avec la sécurité de la plateforme : NE PAS LIER ; `controle-acces-vs-registre-occupation-difference` porte sur le contrôle d'accès physique : NE PAS LIER). Lacune éditoriale : sécurité d'un logiciel infonuagique, hébergement canadien, gouvernance des accès |
+| Liens | `/privacy`, `/terms`, `/#demo`, courriel ; aucun lien FUTURE ni REVIEW ; aucun lien vers `/pricing` |
+| Sitemap | Inchangé (39 entrées : `/security` et `/security?lang=en` étaient déjà listées) |
+| Registre V2 | `/security` ajoutée après la QA ; `/pricing` non ajoutée |
+
+## A5. Éléments à traiter avant la mise en ligne (non résolus ici)
+
+| Classe | Élément |
+|---|---|
+| GO-LIVE — LEGAL / PRIVACY REVIEW | Divulgation des sous-traitants (Cloudflare, Brevo, Anthropic, Formspree, Mapbox) et évaluation des facteurs relatifs à la vie privée (LR-01) ; formulation finale de la Loi 25 et de la LPRPDE (LR-02) ; processus d'incidents de confidentialité, conservation et suppression (LR-03) ; identité de l'exploitant (LR-04) |
+| GO-LIVE — EVIDENCE | Preuve de la région de Toronto (console du fournisseur pour le serveur et le stockage) : « région de Toronto » est un énoncé déjà public, appuyé par le code de stockage et la documentation du propriétaire, non observé de l'extérieur |
+| GO-LIVE — EVIDENCE | Surveillance de disponibilité des « principaux services » : appuyée par la documentation du propriétaire (surveillance externe de l'application et de l'API) ; à confirmer |
+| SECURITY-HARDENING — MFA | Dette technique enregistrée (D9). La MFA n'est mentionnée nulle part sur la page |
+| SECURITY REVIEW | Pare-feu (SEC-05), en-têtes du site et du portail (SEC-04), objets de stockage (SEC-06), sauvegardes hors serveur (SEC-08) : sans affirmation publique tant que non vérifiés |
+| CONTENT REVIEW | Décision humaine sur l'image : le cadrage retient l'allée de serveurs ; un plan large ne serait pas retenu comme héros (A1) |
+| ACCESSIBILITY | Aucun test avec lecteur d'écran ; zoom 200 % et 400 % non vérifié ; `<html lang>` global reste « fr » |
+| ÉLÉMENT TRANSVERSAL | Promesse « 24 heures », section fondateur et parrainage : non traités ici (Tarification) |

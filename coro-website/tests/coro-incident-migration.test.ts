@@ -18,7 +18,7 @@ test('route: implemented, in the sitemap, FR only; registry ends with /coro-inci
   const r = getRoute('incident');
   assert.equal(r?.implemented, true); assert.equal(r?.sitemap, true); assert.equal(r?.en, false);
   assert.ok(staticSitemapRoutes.some((x) => x.path === '/coro-incident'));
-  assert.equal(migratedV2Routes.at(-1), '/coro-incident');
+  assert.ok(migratedV2Routes.includes('/coro-incident')); assert.equal(migratedV2Routes.at(-1), '/security');
   assert.equal(isLegacyFooterVisible('/coro-incident'), false);
 });
 
