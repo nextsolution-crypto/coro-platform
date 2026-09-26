@@ -142,3 +142,7 @@ Backlog for already-migrated pages (inventory only, nothing modified):
 | `/sentinelle` | Already done | 8 Sentinelle articles already linked (all verified in the API) | Optional review of the list only |
 | `/sentinelle-population` | Unclear | No article on population alert or PUE beyond `obligations-plan-mesures-urgence-entreprise-quebec` (PUE tag only) | Check relevance before any link; likely none |
 | `/coro-incident` | Done (MIG-03D-E) | 3 articles linked | None |
+
+## MIG-03 — Final gate
+
+Gel de la famille opérationnelle (Résilience, Sentinelle, Population, Incident) : matrice des frontières, recouvrements, signatures visuelles, langues, SEO, liens internes, données structurées, registre Go-Live consolidé, backlogs éditoriaux et dette d'accessibilité : `MIG-03-FINAL-GATE.md`. Résultat : PASS, aucun BOUNDARY CONFLICT, aucun changement runtime.

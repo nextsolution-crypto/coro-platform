@@ -7,6 +7,8 @@ in Document 09\
 **Inputs:** `CURRENT-SITE-INVENTORY.md`, `CONTENT-MIGRATION-MATRIX.md`,
 Visual Language, Content Guidelines, Page Family Art Direction Matrix.
 
+> **ARCH-V2.1 (2026-09-26) :** ce document V1.0 est conservé comme historique et supplanté en partie par `TARGET-PAGE-ARCHITECTURE-V2.1.md`, qui reflète l'état réel après MIG-03D. En cas de conflit, V2.1 gouverne (Incident implémenté ; Sentinelle et Sentinelle Population FR seulement ; vagues de migration renumérotées).
+
 > **MIG-00A :** statuts de publication, blueprints par route, cartes SEO, maillage et ordre de migration : voir `SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md`, référence des statuts de lancement.
 
 > Website V2 must reduce the perceived complexity of CORO without

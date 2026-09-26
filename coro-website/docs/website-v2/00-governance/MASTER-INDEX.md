@@ -27,6 +27,8 @@ Ce document indique quels livrables existent, lesquels font autorité, dans quel
 
 SOURCE DE VÉRITÉ — toute session Website V2 commence par ce Master Index, puis consulte uniquement les références nécessaires à la tâche.
 
+> **MISE À JOUR ARCH-V2.1 (2026-09-26) :** l'état ci-dessous date du gel V1.0. Depuis, douze routes sont migrées (MIG-01 à MIG-03D). L'état réel, la matrice de routes, le registre V2, la feuille de route restante et la dette de mise en ligne sont dans `01-strategy/TARGET-PAGE-ARCHITECTURE-V2.1.md`, qui gouverne en cas de conflit.
+
 # 2. État global du chantier
 
 PHASE — DESIGN LAB TERMINÉ ; DESIGN SYSTEM V1.0 GELÉ ; MIGRATION DE PRODUCTION À DÉMARRER.
@@ -47,7 +49,8 @@ Aucune page de production n'a été migrée sous le Design System V1.0. L'adopti
 | 04 | CORO Visual Language | `02-design/CORO-VISUAL-LANGUAGE.md` | APPROVED, V1.1 (motifs interdits autoritatifs §16) |
 | 05 | CORO Design System | `02-design/CORO-DESIGN-SYSTEM.md` | V1.0 gelé |
 | 06 | CORO Component Library | `02-design/CORO-COMPONENT-LIBRARY.md` | V1.0 gelé (catalogue autoritatif) |
-| 07 | Target Page Architecture | `01-strategy/TARGET-PAGE-ARCHITECTURE.md` | APPROVED TARGET, sous réserve du Document 09 |
+| 07 | Target Page Architecture V1.0 | `01-strategy/TARGET-PAGE-ARCHITECTURE.md` | HISTORIQUE, supplanté en partie par le Document 07c |
+| 07c | **Target Page Architecture V2.1** (état réel après MIG-03D, autorité d'architecture courante) | `01-strategy/TARGET-PAGE-ARCHITECTURE-V2.1.md` | AUTORITAIRE (ARCH-V2.1, 2026-09-26) ; V2.1 gouverne en cas de conflit avec V1.0 |
 | 07b | Site Architecture & Page Blueprints (MIG-00A) | `01-strategy/SITE-ARCHITECTURE-AND-PAGE-BLUEPRINTS.md` | Plan de construction du site cible, à valider ; à lire avant toute migration |
 | 08 | CORO Content Guidelines | `03-content/CONTENT-GUIDELINES.md` | APPROVED |
 | 09 | SEO Migration Plan | `05-migration/SEO-MIGRATION-PLAN.md` | APPROVED MIGRATION PLAN, addendum V1.0 |
