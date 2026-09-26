@@ -6,9 +6,10 @@ import { PortfolioController } from './portfolio.controller';
 import { CapacityController } from './capacity.controller';
 import { CapacityService } from './capacity.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { ActivityTypesModule } from '../activity-types/activity-types.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ActivityTypesModule],
   controllers: [MandateController, RendementController, PortfolioController, CapacityController],
   providers: [MandateService, CapacityService],
   exports: [MandateService, CapacityService],

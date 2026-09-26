@@ -16,6 +16,12 @@ export class MandateController {
     return this.service.getMandate(projectId, req.user.organizationId);
   }
 
+  @Get('mandate/work')
+  getWork(@Param('projectId') projectId: string, @Request() req: any) {
+    requireInternal(req.user);
+    return this.service.getWork(projectId, req.user);
+  }
+
   @Put('mandate')
   saveMandate(@Param('projectId') projectId: string, @Body() dto: any, @Request() req: any) {
     requireTenantAdmin(req.user);

@@ -554,3 +554,26 @@ test('Mandate Tasks keeps listed tasks and adds independent tasks exactly once',
   assert.ok(mandateTasks.includes('flex flex-wrap items-center'));
   assert.doesNotMatch(mandateTasks, /projectTaskListId\s*===\s*null.*activityId\s*===\s*null/);
 });
+
+test('Mandate Activities consolidates canonical, transversal and legacy work without eager task expansion', () => {
+  const work = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'MandateWorkTab.tsx'), 'utf8');
+  const page = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'page.tsx'), 'utf8');
+  for (const label of ['Activités', 'Travail transversal', 'Listes de travail existantes', 'Tâches de l’activité',
+    'Actuelle', 'Historique', 'Liste existante', 'Ajouter les checklists manquantes', 'Type canonique manquant',
+    'Affectation à confirmer', 'Confirmée', 'Afficher les tâches']) assert.ok(work.includes(label));
+  assert.ok(work.includes('/mandate/work'));
+  assert.ok(work.includes('/task-lists/instantiate'));
+  assert.ok(work.includes('/tasks/${taskId}/activity'));
+  assert.ok(work.includes('/tasks/${timeTask.id}/time'));
+  assert.ok(work.includes('expandedActivities[activity.id] === true'));
+  assert.ok(work.includes('expandedGroups[key] === true'));
+  assert.ok(work.includes("activity.status !== 'annule'"));
+  assert.ok(work.includes('grid-cols-2 md:grid-cols-4'));
+  assert.ok(work.includes("['Planifiées', hours(view.summary.plannedHours)]"));
+  assert.ok(work.includes("['Disponible', hours(view.summary.budgetRemainingHours)]"));
+  assert.ok(work.includes('unplannedRemainingHours'));
+  assert.doesNotMatch(work, /\['Restantes'/);
+  assert.ok(page.includes("{ id: 'activities', label: '✅ Activités' }"));
+  assert.ok(page.includes('<MandateWorkTab'));
+  assert.doesNotMatch(page, /<TaskListsTab/);
+});

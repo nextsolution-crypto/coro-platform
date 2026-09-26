@@ -1,12 +1,14 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { WorkManagementActor } from '../auth/work-management-access';
 import { projectAccessWhere } from '../auth/project-access';
+import { ActivityTypesService } from '../activity-types/activity-types.service';
+import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 
 @Injectable()
 export class MandateService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, @Optional() private readonly activityTypes?: ActivityTypesService) {}
 
   private async assertOwnership(projectId: string, organizationId: string) {
     const project = await this.prisma.project.findFirst({
@@ -35,6 +37,134 @@ export class MandateService {
       sum + t.timeEntries.reduce((s, e) => s + e.heures, 0), 0);
 
     return { ...mandate, heuresReelles };
+  }
+
+  async getWork(projectId: string, actor: WorkManagementActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: {
+        id: true, name: true, documentType: true,
+        mandate: { select: { heuresBudgetees: true } },
+        activities: {
+          orderBy: [{ scheduledDate: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          select: {
+            id: true, activityTypeId: true, label: true, customLabel: true, duration: true,
+            scheduledDate: true, status: true,
+            taskLists: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: {
+              id: true, taskListId: true, customName: true, instantiationSource: true,
+              taskList: { select: { name: true } },
+            } },
+            bookings: { where: { status: { in: OPEN_BOOKING_STATUSES } }, orderBy: { updatedAt: 'desc' }, select: {
+              id: true, status: true, requestedDate: true, reportedDate: true, duration: true,
+              assignments: { where: { role: 'LEAD', status: { in: ['PENDING', 'ACCEPTED'] } },
+                orderBy: { assignedAt: 'desc' }, take: 1,
+                select: { status: true, user: { select: { id: true, firstName: true, lastName: true } } } },
+            } },
+          },
+        },
+        projectTaskLists: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: {
+          id: true, activityId: true, taskListId: true, customName: true, instantiationSource: true,
+          taskList: { select: { name: true } },
+        } },
+        projectTasks: {
+          orderBy: [{ order: 'asc' }, { taskTitle: 'asc' }, { id: 'asc' }],
+          select: {
+            id: true, activityId: true, projectTaskListId: true, taskTitle: true, categoryName: true,
+            status: true, dueDate: true, assigneeId: true,
+            assignee: { select: { id: true, firstName: true, lastName: true } },
+            assignees: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            timeEntries: { select: { heures: true } },
+          },
+        },
+      },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+    if (!this.activityTypes) throw new Error('ActivityTypesService indisponible');
+
+    const resolvedByType = await this.activityTypes.resolveTaskListsMany({
+      activityTypeIds: project.activities.flatMap(activity => activity.activityTypeId ? [activity.activityTypeId] : []),
+      organizationId: actor.organizationId,
+      documentType: project.documentType,
+    });
+    const listById = new Map(project.projectTaskLists.map(list => [list.id, list]));
+    const tasks = project.projectTasks.map(task => ({
+      ...task,
+      actualHours: task.timeEntries.reduce((sum, entry) => sum + entry.heures, 0),
+      timeEntries: undefined,
+    }));
+    const summarizeTasks = (items: any[]) => {
+      const taskCount = items.length;
+      const completedTaskCount = items.filter(task => task.status === 'fait').length;
+      return {
+        tasks: items, taskCount, completedTaskCount, openTaskCount: taskCount - completedTaskCount,
+        taskProgressPercent: taskCount ? Math.round((completedTaskCount / taskCount) * 100) : null,
+        actualHours: items.reduce((sum, task) => sum + task.actualHours, 0),
+      };
+    };
+    const activityViews = project.activities.map(activity => {
+      const activityTasks = tasks.filter(task => task.activityId === activity.id);
+      const applicable = activity.activityTypeId ? (resolvedByType.get(activity.activityTypeId) ?? []) : [];
+      const applicableIds = new Set(applicable.map(item => item.id));
+      const configuredLists = activity.taskLists.filter(list => list.instantiationSource === 'ACTIVITY_TYPE_CONFIG');
+      const configuredIds = new Set(configuredLists.map(list => list.taskListId));
+      const summarizeList = (list: any, listTasks: any[]) => ({
+        projectTaskListId: list.id, taskListId: list.taskListId,
+        name: list.customName || list.taskList.name, instantiationSource: list.instantiationSource,
+        isCurrentlyApplicable: applicableIds.has(list.taskListId), ...summarizeTasks(listTasks),
+      });
+      const checklists = configuredLists.map(list => summarizeList(list,
+        activityTasks.filter(task => task.projectTaskListId === list.id)));
+      const configuredInstanceIds = new Set(configuredLists.map(list => list.id));
+      const linkedExistingLists = [...new Set(activityTasks
+        .filter(task => task.projectTaskListId && !configuredInstanceIds.has(task.projectTaskListId))
+        .map(task => task.projectTaskListId as string))]
+        .map(id => {
+          const list = listById.get(id);
+          return summarizeList(list ?? { id, taskListId: '', customName: 'Liste de travail existante',
+            taskList: { name: 'Liste de travail existante' }, instantiationSource: null },
+          activityTasks.filter(task => task.projectTaskListId === id));
+        });
+      const booking = activity.bookings[0] ?? null;
+      const lead = booking?.assignments[0] ?? null;
+      const planningStatus = !booking ? 'TO_PLAN' : lead?.status === 'PENDING' ? 'LEAD_PENDING'
+        : lead?.status === 'ACCEPTED' && booking.status === 'DEMANDEE' ? 'PLANNED' : 'CONFIRMED';
+      return {
+        id: activity.id, activityTypeId: activity.activityTypeId,
+        label: activity.customLabel || activity.label, duration: activity.duration,
+        scheduledDate: activity.scheduledDate, status: activity.status,
+        canonicalTypeMissing: !activity.activityTypeId, planningStatus,
+        booking: booking ? { id: booking.id, status: booking.status,
+          startUtc: booking.reportedDate ?? booking.requestedDate, durationMinutes: booking.duration } : null,
+        lead: lead ? { id: lead.user.id, displayName: `${lead.user.firstName} ${lead.user.lastName}`, status: lead.status } : null,
+        ...summarizeTasks(activityTasks),
+        checklists, historicalChecklists: checklists.filter(item => !item.isCurrentlyApplicable),
+        linkedExistingLists,
+        directTasks: activityTasks.filter(task => !task.projectTaskListId),
+        missingTaskLists: applicable.filter(item => !configuredIds.has(item.id))
+          .map(item => ({ taskListId: item.id, name: item.name })),
+      };
+    });
+    const transversal = summarizeTasks(tasks.filter(task => !task.activityId && !task.projectTaskListId));
+    const legacyLists = project.projectTaskLists.filter(list => !list.activityId).map(list => ({
+      projectTaskListId: list.id, taskListId: list.taskListId, name: list.customName || list.taskList.name,
+      ...summarizeTasks(tasks.filter(task => !task.activityId && task.projectTaskListId === list.id)),
+    }));
+    const actualHours = tasks.reduce((sum, task) => sum + task.actualHours, 0);
+    const plannedHours = project.activities.reduce((sum, activity) =>
+      sum + activity.bookings.reduce((bookingSum, booking) => bookingSum + booking.duration / 60, 0), 0);
+    const budgetHours = project.mandate?.heuresBudgetees ?? null;
+    const budgetRemainingHours = budgetHours === null ? null : Math.max(budgetHours - actualHours, 0);
+    const unplannedRemainingHours = budgetHours === null ? null : Math.max(budgetHours - actualHours - plannedHours, 0);
+    return {
+      project: { id: project.id, name: project.name, documentType: project.documentType },
+      summary: { budgetHours, actualHours, plannedHours, budgetRemainingHours, unplannedRemainingHours },
+      activities: activityViews,
+      transversal,
+      legacyLists,
+      classification: { activityTaskCount: tasks.filter(task => Boolean(task.activityId)).length,
+        legacyTaskCount: tasks.filter(task => !task.activityId && Boolean(task.projectTaskListId)).length,
+        transversalTaskCount: transversal.taskCount, totalTaskCount: tasks.length },
+    };
   }
 
   async saveMandate(projectId: string, organizationId: string, dto: any) {

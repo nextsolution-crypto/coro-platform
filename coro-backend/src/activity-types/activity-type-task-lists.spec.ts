@@ -15,7 +15,7 @@ const policy = (organizationId: string | null, mode: 'APPEND' | 'REPLACE' | 'DIS
 
 function resolutionHarness(policies: any[]) {
   const prisma = {
-    activityType: { findFirst: jest.fn().mockResolvedValue(systemType) },
+    activityType: { findFirst: jest.fn().mockResolvedValue(systemType), findMany: jest.fn().mockResolvedValue([systemType]) },
     activityTypeTaskListPolicy: { findMany: jest.fn().mockResolvedValue(policies) },
   };
   return { prisma, service: new ActivityTypesService(prisma as any) };
@@ -65,6 +65,21 @@ describe('ActivityType TaskList resolution', () => {
     const h = resolutionHarness([policy(null, 'REPLACE', [association(unrestricted, 10), association(pmu, 20), association(pca, 30)])]);
     const result = await h.service.resolveTaskLists({ activityTypeId: systemType.id, organizationId: 'org-a', documentType: 'PMU' });
     expect(result.map((item) => item.id)).toEqual(['all', 'pmu']);
+  });
+
+  it('batch resolves unique ActivityTypes with two bounded queries and the same policy semantics', async () => {
+    const shared = list('shared');
+    const h = resolutionHarness([
+      policy(null, 'REPLACE', [association(list('global'), 10), association(shared, 20)]),
+      policy('org-a', 'APPEND', [association(shared, 10), association(list('tenant', 'org-a'), 20)]),
+    ]);
+    const result = await h.service.resolveTaskListsMany({
+      activityTypeIds: [systemType.id, systemType.id], organizationId: 'org-a', documentType: 'PMU',
+    });
+    expect(result.get(systemType.id)?.map(item => `${item.id}:${item.source}`))
+      .toEqual(['global:GLOBAL', 'shared:TENANT', 'tenant:TENANT']);
+    expect(h.prisma.activityType.findMany).toHaveBeenCalledTimes(1);
+    expect(h.prisma.activityTypeTaskListPolicy.findMany).toHaveBeenCalledTimes(1);
   });
 });
 

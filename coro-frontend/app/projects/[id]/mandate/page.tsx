@@ -5,13 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { ExternalLink, Save } from 'lucide-react';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
-import TaskListsTab from './TaskListsTab';
+import MandateWorkTab from './MandateWorkTab';
 import CommentsTab from './CommentsTab';
 import TimesheetTab from './TimesheetTab';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
-  { id: 'tasks', label: '✅ Tâches' },
+  { id: 'activities', label: '✅ Activités' },
   { id: 'comments', label: '💬 Commentaires' },
   { id: 'timesheet', label: '⏱ Feuille de temps' },
 ];
@@ -632,8 +632,8 @@ export default function MandatePage() {
         </div>
       )}
 
-      {activeTab === 'tasks' && (
-        <TaskListsTab projectId={projectId} teamMembers={teamMembers} />
+      {activeTab === 'activities' && (
+        <MandateWorkTab projectId={projectId} teamMembers={teamMembers} />
       )}
 
       {activeTab === 'comments' && (

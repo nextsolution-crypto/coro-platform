@@ -144,6 +144,45 @@ export class ActivityTypesService {
     return [...globalItems.filter((item: any) => !tenantIds.has(item.id)), ...tenantItems];
   }
 
+  async resolveTaskListsMany(input: { activityTypeIds: string[]; organizationId: string; documentType?: string }) {
+    const ids = [...new Set(input.activityTypeIds)];
+    if (!ids.length) return new Map<string, any[]>();
+    const activityTypes = await this.prisma.activityType.findMany({ where: {
+      id: { in: ids }, isActive: true,
+      OR: [{ organizationId: null }, { organizationId: input.organizationId }],
+    }, select: { id: true } });
+    const accessibleIds = activityTypes.map(item => item.id);
+    const policies = await this.prisma.activityTypeTaskListPolicy.findMany({
+      where: { activityTypeId: { in: accessibleIds }, OR: [{ organizationId: null }, { organizationId: input.organizationId }] },
+      include: { associations: { where: { isActive: true, taskList: { isActive: true } }, include: { taskList: true },
+        orderBy: [{ displayOrder: 'asc' }, { taskList: { name: 'asc' } }, { taskListId: 'asc' }] } },
+    });
+    const acceptsDocument = (list: { documentTypes: string[] }) => !input.documentType ||
+      list.documentTypes.length === 0 || list.documentTypes.includes(input.documentType);
+    const result = new Map<string, any[]>();
+    for (const activityTypeId of accessibleIds) {
+      const matching = policies.filter(policy => policy.activityTypeId === activityTypeId);
+      const global = matching.find(policy => policy.organizationId === null);
+      const tenant = matching.find(policy => policy.organizationId === input.organizationId);
+      const items = (policy: any, source: 'GLOBAL' | 'TENANT') => (policy?.associations ?? [])
+        .filter((association: any) => acceptsDocument(association.taskList))
+        .map((association: any) => ({ ...association.taskList, source, displayOrder: association.displayOrder,
+          sourceActivityTypeTaskListId: association.id }));
+      const globalItems = items(global, 'GLOBAL');
+      if (!tenant) result.set(activityTypeId, globalItems);
+      else if (tenant.mode === 'DISABLE') result.set(activityTypeId, []);
+      else {
+        const tenantItems = items(tenant, 'TENANT');
+        if (tenant.mode === 'REPLACE') result.set(activityTypeId, tenantItems);
+        else {
+          const tenantIds = new Set(tenantItems.map((item: any) => item.id));
+          result.set(activityTypeId, [...globalItems.filter((item: any) => !tenantIds.has(item.id)), ...tenantItems]);
+        }
+      }
+    }
+    return result;
+  }
+
   async resolveTaskListsForActor(activityTypeId: string, documentType: string | undefined, actor: AdviserActor) {
     this.assertReader(actor);
     return this.resolveTaskLists({ activityTypeId, organizationId: actor.organizationId, documentType });
