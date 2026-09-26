@@ -1,95 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
 import { ActivityTaskListsService } from './activity-task-lists.service';
-
-export const ACTIVITY_CATALOG = [
-  {
-    type: 'creation_document',
-    label: 'Création ou mise à jour de document (PMU/PSI/PUE/PGC...)',
-    duration: 'Variable',
-    mode: 'presentiel',
-    order: 1,
-  },
-  {
-    type: 'formation_equipe_urgence',
-    label: "Formation pour équipe d'urgence",
-    duration: '2h30 – 3h00',
-    mode: 'presentiel',
-    order: 2,
-  },
-  {
-    type: 'formation_equipe_urgence_exercice',
-    label: "Formation pour équipe d'urgence + exercice simulé",
-    duration: '3h00 – 3h30',
-    mode: 'presentiel',
-    order: 3,
-  },
-  {
-    type: 'formation_travail_chaud',
-    label: 'Formation travail à chaud',
-    duration: '2h00',
-    mode: 'presentiel',
-    order: 4,
-  },
-  {
-    type: 'formation_coordonnateur',
-    label: "Formation aux coordonnateurs d'urgence",
-    duration: '2h00',
-    mode: 'presentiel',
-    order: 5,
-  },
-  {
-    type: 'formation_epi',
-    label: 'Formation équipe de première intervention (EPI)',
-    duration: '2h00',
-    mode: 'presentiel',
-    order: 6,
-  },
-  {
-    type: 'formation_communication',
-    label: "Formation communication d'urgence",
-    duration: '2h00',
-    mode: 'presentiel',
-    order: 7,
-  },
-  {
-    type: 'formation_comportement',
-    label: "Formation comportement et attitude en situation d'urgence",
-    duration: '2h00',
-    mode: 'presentiel',
-    order: 8,
-  },
-  {
-    type: 'formation_locataires',
-    label: 'Formation aux locataires',
-    duration: '1h00',
-    mode: 'teams',
-    order: 9,
-  },
-  {
-    type: 'exercice_table',
-    label: 'Exercice de table',
-    duration: '2h00',
-    mode: 'teams',
-    order: 10,
-  },
-  {
-    type: 'exercice_evacuation',
-    label: "Exercice d'évacuation annuel",
-    duration: '3h00',
-    mode: 'presentiel',
-    order: 11,
-  },
-  {
-    type: 'autre',
-    label: 'Autre',
-    duration: '',
-    mode: 'presentiel',
-    order: 12,
-  },
-];
+import { requireInternal } from '../auth/work-management-access';
+import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
 
 @Injectable()
 export class ActivitiesService {
@@ -534,133 +450,101 @@ export class ActivitiesService {
   }
   async generateFromMandate(
     projectId: string,
-    organizationId: string,
-    services: { type: string; isRecurring: boolean }[],
+    actor: AdviserActor,
+    services: { activityTypeId: string; isRecurring: boolean }[],
   ) {
-    await this.assertOwnership(projectId, organizationId);
+    requireInternal(actor);
+    if (!Array.isArray(services)) throw new BadRequestException('La liste des services est requise');
+    if (services.some(service => !service?.activityTypeId)) {
+      throw new BadRequestException("Chaque service doit referencer un type d'activite canonique");
+    }
+    const selectedIds = services.map(service => service.activityTypeId);
+    if (new Set(selectedIds).size !== selectedIds.length) {
+      throw new BadRequestException("Un type d'activite ne peut etre selectionne qu'une fois");
+    }
+    if (!this.activityTaskLists) throw new Error('ActivityTaskListsService indisponible');
+    const activityTaskLists = this.activityTaskLists;
 
-    // Correspondance type d'activité → nom de liste de tâches
-    const TASK_LIST_MAP: Record<string, string> = {
-      creation_document: 'Production documentaire',
-      exercice_table: "Exercice d'évacuation",
-      exercice_evacuation: "Exercice d'évacuation",
-      formation_equipe_urgence: "Formation mesures d'urgence",
-      formation_equipe_urgence_exercice: "Formation mesures d'urgence",
-      formation_travail_chaud: "Formation mesures d'urgence",
-      formation_coordonnateur: "Formation mesures d'urgence",
-      formation_epi: "Formation mesures d'urgence",
-      formation_communication: "Formation mesures d'urgence",
-      formation_comportement: "Formation mesures d'urgence",
-      formation_locataires: "Formation mesures d'urgence",
-    };
-
-    const results: any[] = [];
-    const importedListNames = new Set<string>();
-
-    for (const service of services) {
-      const catalog = ACTIVITY_CATALOG.find((a) => a.type === service.type);
-      if (!catalog) continue;
-
-      // Vérifier si une activité de ce type existe déjà
-      const existing = await this.prisma.projectActivity.findFirst({
-        where: {
-          projectId,
-          organizationId,
-          type: service.type,
-          sourceMandate: true,
-        },
+    return this.prisma.$transaction(async tx => {
+      await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Project"
+        WHERE "id" = ${projectId} AND "organizationId" = ${actor.organizationId} FOR UPDATE`);
+      const project = await tx.project.findFirst({
+        where: { id: projectId, ...projectAccessWhere(actor) },
+        select: { id: true, organizationId: true },
       });
-
-      if (existing) {
-        const updated = await this.prisma.projectActivity.update({
-          where: { id: existing.id },
-          data: { isRecurring: service.isRecurring },
-        });
-        results.push(updated);
-      } else {
-        const created = await this.prisma.projectActivity.create({
-          data: {
-            projectId,
-            organizationId,
-            type: service.type,
-            label: catalog.label,
-            duration: catalog.duration,
-            mode: catalog.mode,
-            status: 'a_faire',
-            isRecurring: service.isRecurring,
-            sourceMandate: true,
-          },
-        });
-        results.push(created);
+      if (!project) throw new NotFoundException('Projet introuvable');
+      const activityTypes = selectedIds.length ? await tx.activityType.findMany({ where: {
+        id: { in: selectedIds }, isActive: true,
+        OR: [{ organizationId: null }, { organizationId: actor.organizationId }],
+      } }) : [];
+      if (activityTypes.length !== selectedIds.length) {
+        throw new BadRequestException("Un ou plusieurs types d'activite sont indisponibles");
       }
-
-      // Importer la liste de tâches correspondante si pas déjà importée
-      const listName = TASK_LIST_MAP[service.type];
-      if (listName && !importedListNames.has(listName)) {
-        // Chercher la liste globale correspondante
-        const taskList = await this.prisma.taskList.findFirst({
-          where: { name: listName, organizationId: null, isActive: true },
-          include: {
-            templates: {
-              where: { isActive: true },
-              orderBy: [{ categoryName: 'asc' }, { order: 'asc' }],
-            },
-          },
-        });
-
-        if (taskList) {
-          // Vérifier si cette liste est déjà importée dans le projet
-          const existingProjectList =
-            await this.prisma.projectTaskList.findFirst({
-              where: { projectId, taskListId: taskList.id },
-            });
-
-          if (!existingProjectList) {
-            // Créer l'instance de la liste dans le projet
-            const projectTaskList = await this.prisma.projectTaskList.create({
-              data: {
-                projectId,
-                taskListId: taskList.id,
-                customName: catalog.label,
-                organizationId,
-              },
-            });
-
-            // Créer une copie de chaque tâche
-            await this.prisma.projectTask.createMany({
-              data: taskList.templates.map((t) => ({
-                projectId,
-                projectTaskListId: projectTaskList.id,
-                templateId: t.id,
-                categoryName: t.categoryName,
-                taskTitle: t.taskTitle,
-                status: 'a_faire',
-                order: t.order,
-                organizationId,
-              })),
-            });
-
-            importedListNames.add(listName);
-          } else {
-            importedListNames.add(listName);
-          }
+      const typesById = new Map(activityTypes.map(type => [type.id, type]));
+      const existingCanonical = await tx.projectActivity.findMany({ where: {
+        projectId, organizationId: actor.organizationId, sourceMandate: true,
+        activityTypeId: { not: null },
+      }, include: {
+        bookings: { select: { id: true, status: true } },
+        exerciseReport: { select: { id: true } },
+        tasks: { select: { id: true }, take: 1 },
+        taskLists: { select: { id: true }, take: 1 },
+      } });
+      const existingByType = new Map(existingCanonical.map(activity => [activity.activityTypeId!, activity]));
+      const results: any[] = [];
+      for (const service of services) {
+        const type = typesById.get(service.activityTypeId)!;
+        const existing = existingByType.get(type.id);
+        if (existing?.status === 'annule') {
+          throw new BadRequestException("L'activite Mandat correspondante est annulee; une action explicite est requise");
+        }
+        const activity = existing
+          ? await tx.projectActivity.update({ where: { id: existing.id }, data: { isRecurring: service.isRecurring } })
+          : await tx.projectActivity.create({ data: {
+            projectId, organizationId: actor.organizationId, activityTypeId: type.id,
+            type: type.code, label: type.nameFR,
+            duration: type.defaultDurationMinutes ? this.formatDuration(type.defaultDurationMinutes) : '',
+            mode: 'presentiel', status: 'a_faire', isRecurring: service.isRecurring,
+            sourceMandate: true, dureeHeures: type.defaultDurationMinutes ? type.defaultDurationMinutes / 60 : null,
+            clientVisible: true, clientBookable: type.clientBookableDefault,
+          } });
+        if (!existing) await tx.auditLog.create({ data: {
+          action: 'PLANNING_ACTIVITY_CREATED', entityType: 'ProjectActivity', entityId: activity.id,
+          projectId, description: 'Activite canonique creee depuis le Mandat.',
+          metadata: { source: 'MANDATE', activityTypeId: type.id }, userId: actor.userId,
+          organizationId: actor.organizationId,
+        } });
+        await activityTaskLists.instantiateMissingTaskListsForActivity(tx, projectId, activity.id, actor);
+        results.push(activity);
+      }
+      for (const activity of existingCanonical.filter(item =>
+        item.status !== 'annule' && !selectedIds.includes(item.activityTypeId!))) {
+        const openBooking = activity.bookings.some(booking => OPEN_BOOKING_STATUSES.includes(booking.status as any));
+        if (openBooking) throw new ConflictException("Un service planifie ne peut pas etre retire du Mandat");
+        const operationalAudit = await tx.auditLog.findFirst({ where: {
+          organizationId: actor.organizationId, entityType: 'ProjectActivity', entityId: activity.id,
+          action: { notIn: ['PLANNING_ACTIVITY_CREATED'] },
+        }, select: { id: true } });
+        const hasHistory = activity.bookings.length > 0 || !!activity.exerciseReport ||
+          activity.tasks.length > 0 || activity.taskLists.length > 0 || !!operationalAudit;
+        if (hasHistory) {
+          await tx.projectActivity.update({ where: { id: activity.id }, data: {
+            status: 'annule', scheduledDate: null, reportedDate: null,
+          } });
+          await tx.auditLog.create({ data: {
+            action: 'PLANNING_ACTIVITY_CANCELLED', entityType: 'ProjectActivity', entityId: activity.id,
+            projectId, description: 'Activite retiree du Mandat; historique conserve.',
+            metadata: { source: 'MANDATE', previousStatus: activity.status, finalStatus: 'annule' },
+            userId: actor.userId, organizationId: actor.organizationId,
+          } });
+        } else {
+          await tx.auditLog.deleteMany({ where: { organizationId: actor.organizationId,
+            entityType: 'ProjectActivity', entityId: activity.id, action: 'PLANNING_ACTIVITY_CREATED' } });
+          await tx.projectActivity.delete({ where: { id: activity.id } });
         }
       }
-    }
-
-    // Supprimer les activités sourceMandate qui ne sont plus cochées
-    const selectedTypes = services.map((s) => s.type);
-    await this.prisma.projectActivity.deleteMany({
-      where: {
-        projectId,
-        organizationId,
-        sourceMandate: true,
-        type: { notIn: selectedTypes },
-        bookings: { none: {} },
-      },
-    });
-
-    return results;
+      return results;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
   }
   // Activités récurrentes à renouveler (date passée depuis > 10 mois)
   async getRecurringToRenew(organizationId: string) {

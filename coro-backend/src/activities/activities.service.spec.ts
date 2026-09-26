@@ -6,10 +6,12 @@ const admin = { userId: 'admin-a', organizationId: 'org-a', role: 'ADMIN' };
 function harness() {
   const prisma = {
     project: { findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }) },
-    projectActivity: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+    projectActivity: { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     projectTask: { findMany: jest.fn().mockResolvedValue([]) },
     projectTaskList: { findFirst: jest.fn() },
-    activityType: { findFirst: jest.fn() },
+    activityType: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    auditLog: { create: jest.fn(), findFirst: jest.fn().mockResolvedValue(null), deleteMany: jest.fn() },
+    $queryRaw: jest.fn().mockResolvedValue([{ id: 'project-a' }]),
     $transaction: jest.fn(async (callback: any) => callback(prisma)),
   };
   const activityTypes = { list: jest.fn().mockResolvedValue([]), resolveTaskLists: jest.fn().mockResolvedValue([]) };
@@ -199,6 +201,53 @@ describe('ActivitiesService exercise report summary', () => {
 });
 
 describe('ActivitiesService mandate origin', () => {
+  it('creates canonical Mandate work and delegates checklist creation in the same transaction', async () => {
+    const h = harness();
+    h.prisma.activityType.findMany.mockResolvedValue([{ id: 'type-a', code: 'inspection', nameFR: 'Inspection',
+      defaultDurationMinutes: 90, clientBookableDefault: false }]);
+    h.prisma.projectActivity.findMany.mockResolvedValue([]);
+    h.prisma.projectActivity.create.mockImplementation(({ data }: any) => ({ id: 'activity-a', ...data }));
+    await h.service.generateFromMandate('project-a', admin, [{ activityTypeId: 'type-a', isRecurring: true }]);
+    expect(h.prisma.projectActivity.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      activityTypeId: 'type-a', sourceMandate: true, type: 'inspection', isRecurring: true,
+    }) });
+    expect(h.activityTaskLists.instantiateMissingTaskListsForActivity).toHaveBeenCalledWith(
+      h.prisma, 'project-a', 'activity-a', admin,
+    );
+    expect((h.prisma as any).taskList).toBeUndefined();
+  });
+
+  it('rejects legacy code-only input instead of creating new legacy work', async () => {
+    const h = harness();
+    await expect(h.service.generateFromMandate('project-a', admin,
+      [{ type: 'inspection', isRecurring: false } as any]))
+      .rejects.toThrow("type d'activit");
+    expect(h.prisma.projectActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('reuses canonical Mandate work without adopting a legacy Activity', async () => {
+    const h = harness();
+    h.prisma.activityType.findMany.mockResolvedValue([{ id: 'type-a', code: 'inspection', nameFR: 'Inspection',
+      defaultDurationMinutes: 60, clientBookableDefault: false }]);
+    h.prisma.projectActivity.findMany.mockResolvedValue([{ id: 'canonical', activityTypeId: 'type-a', status: 'a_faire',
+      bookings: [], exerciseReport: null, tasks: [], taskLists: [] }]);
+    h.prisma.projectActivity.update.mockResolvedValue({ id: 'canonical', activityTypeId: 'type-a' });
+    await h.service.generateFromMandate('project-a', admin, [{ activityTypeId: 'type-a', isRecurring: false }]);
+    expect(h.prisma.projectActivity.update).toHaveBeenCalledWith({ where: { id: 'canonical' }, data: { isRecurring: false } });
+    expect(h.prisma.projectActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('cancels deselected Mandate work with checklists rather than deleting history', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findMany.mockResolvedValue([{ id: 'activity-a', activityTypeId: 'type-a', status: 'a_faire',
+      bookings: [], exerciseReport: null, tasks: [{ id: 'task-a' }], taskLists: [{ id: 'list-a' }] }]);
+    await h.service.generateFromMandate('project-a', admin, []);
+    expect(h.prisma.projectActivity.update).toHaveBeenCalledWith({ where: { id: 'activity-a' }, data: {
+      status: 'annule', scheduledDate: null, reportedDate: null,
+    } });
+    expect(h.prisma.projectActivity.delete).not.toHaveBeenCalled();
+  });
+
   it('refuses changing ActivityType after a configured checklist exists', async () => {
     const h = harness();
     h.prisma.projectActivity.findFirst.mockResolvedValue({ id: 'activity-a', activityTypeId: 'old', type: 'old', clientVisible: true, clientBookable: false });

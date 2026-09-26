@@ -577,3 +577,13 @@ test('Mandate Activities consolidates canonical, transversal and legacy work wit
   assert.ok(page.includes('<MandateWorkTab'));
   assert.doesNotMatch(page, /<TaskListsTab/);
 });
+
+test('Mandate generation uses the authoritative ActivityType catalog and canonical identifiers', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'page.tsx'), 'utf8');
+  assert.ok(page.includes("api.get('/activities/catalog')"));
+  assert.ok(page.includes('activityTypeId: activity.activityTypeId'));
+  assert.ok(page.includes('a.sourceMandate && a.activityTypeId'));
+  assert.ok(page.includes('s.activityTypeId === activity.activityTypeId'));
+  assert.ok(page.includes("api.post(`/projects/${projectId}/activities/from-mandate`"));
+  assert.doesNotMatch(page, /const ACTIVITY_CATALOG\s*=\s*\[/);
+});

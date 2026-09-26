@@ -97,7 +97,7 @@ export class ActivitiesController {
   ) {
     return this.service.generateFromMandate(
       projectId,
-      req.user.organizationId,
+      req.user,
       dto.services,
     );
   }

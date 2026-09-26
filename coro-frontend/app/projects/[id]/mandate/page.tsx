@@ -16,19 +16,8 @@ const TABS = [
   { id: 'timesheet', label: '⏱ Feuille de temps' },
 ];
 
-const ACTIVITY_CATALOG = [
-  { type: 'creation_document', label: 'Création ou mise à jour de document (PMU/PSI/PUE/PGC...)', duration: 'Variable', mode: 'presentiel' },
-  { type: 'formation_equipe_urgence', label: 'Formation pour équipe d\'urgence', duration: '2h30 – 3h00', mode: 'presentiel' },
-  { type: 'formation_equipe_urgence_exercice', label: 'Formation pour équipe d\'urgence + exercice simulé', duration: '3h00 – 3h30', mode: 'presentiel' },
-  { type: 'formation_travail_chaud', label: 'Formation travail à chaud', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_coordonnateur', label: 'Formation aux coordonnateurs d\'urgence', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_epi', label: 'Formation équipe de première intervention (EPI)', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_communication', label: 'Formation communication d\'urgence', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_comportement', label: 'Formation comportement et attitude en situation d\'urgence', duration: '2h00', mode: 'presentiel' },
-  { type: 'formation_locataires', label: 'Formation aux locataires', duration: '1h00', mode: 'teams' },
-  { type: 'exercice_table', label: 'Exercice de table', duration: '2h00', mode: 'teams' },
-  { type: 'exercice_evacuation', label: 'Exercice d\'évacuation annuel', duration: '3h00', mode: 'presentiel' },
-];
+type ActivityCatalogItem = { activityTypeId: string; type: string; label: string; duration: string; mode: string };
+type SelectedService = { activityTypeId: string; type: string; isRecurring: boolean };
 
 export default function MandatePage() {
   const params = useParams();
@@ -41,7 +30,8 @@ export default function MandatePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState('fiche');
-  const [selectedServices, setSelectedServices] = useState<{ type: string; isRecurring: boolean }[]>([]);
+  const [activityCatalog, setActivityCatalog] = useState<ActivityCatalogItem[]>([]);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [generatingActivities, setGeneratingActivities] = useState(false);
   const [activitiesGenerated, setActivitiesGenerated] = useState(false);
 
@@ -64,12 +54,14 @@ export default function MandatePage() {
 
   const fetchData = async () => {
     try {
-      const [projectRes, mandateRes, activitiesRes, teamRes] = await Promise.all([
+      const [projectRes, mandateRes, activitiesRes, teamRes, catalogRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/projects/${projectId}/mandate`).catch(() => ({ data: null })),
         api.get(`/projects/${projectId}/activities`).catch(() => ({ data: [] })),
         api.get('/users/organization').catch(() => ({ data: [] })),
+        api.get('/activities/catalog'),
       ]);
+      setActivityCatalog(catalogRes.data || []);
       setTeamMembers(teamRes.data || []);
       setProject(projectRes.data);
       const m = mandateRes.data;
@@ -90,8 +82,11 @@ export default function MandatePage() {
         // Popup migration si typeMandat pas encore défini
         if (!m.typeMandat || m.typeMandat === '') setShowTypeMandatPopup(true);
       }
-      const mandateActivities = (activitiesRes.data || []).filter((a: any) => a.sourceMandate);
-      setSelectedServices(mandateActivities.map((a: any) => ({ type: a.type, isRecurring: a.isRecurring })));
+      const mandateActivities = (activitiesRes.data || []).filter((a: any) =>
+        a.sourceMandate && a.activityTypeId && a.status !== 'annule');
+      setSelectedServices(mandateActivities.map((a: any) => ({
+        activityTypeId: a.activityTypeId, type: a.type, isRecurring: a.isRecurring,
+      })));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -108,7 +103,6 @@ export default function MandatePage() {
   };
 
   const handleGenerateActivities = async () => {
-    if (selectedServices.length === 0) return;
     setGeneratingActivities(true);
     try {
       await api.post(`/projects/${projectId}/activities/from-mandate`, {
@@ -379,7 +373,7 @@ export default function MandatePage() {
                     )}
                   </h3>
                   <button onClick={handleGenerateActivities}
-                    disabled={generatingActivities || selectedServices.length === 0}
+                    disabled={generatingActivities}
                     className="text-xs font-medium px-3 py-1.5 rounded flex items-center gap-1.5 disabled:opacity-50"
                     style={{ backgroundColor: '#C0392B', color: '#FFFFFF' }}
                     onMouseEnter={e => { if (selectedServices.length > 0) e.currentTarget.style.backgroundColor = '#A93226'; }}
@@ -391,10 +385,10 @@ export default function MandatePage() {
                   Cochez les services inclus dans l'offre. Choisissez si c'est une fois ou récurrent annuellement.
                 </p>
                 <div className="space-y-2">
-                  {ACTIVITY_CATALOG.map(activity => {
-                    const selected = selectedServices.find(s => s.type === activity.type);
+                  {activityCatalog.map(activity => {
+                    const selected = selectedServices.find(s => s.activityTypeId === activity.activityTypeId);
                     return (
-                      <div key={activity.type}
+                      <div key={activity.activityTypeId}
                         className="flex items-center justify-between p-3 rounded transition-colors"
                         style={{
                           backgroundColor: selected ? '#EAFAF1' : '#F8F9FA',
@@ -405,9 +399,9 @@ export default function MandatePage() {
                             checked={!!selected}
                             onChange={e => {
                               if (e.target.checked) {
-                                setSelectedServices([...selectedServices, { type: activity.type, isRecurring: false }]);
+                                setSelectedServices([...selectedServices, { activityTypeId: activity.activityTypeId, type: activity.type, isRecurring: false }]);
                               } else {
-                                setSelectedServices(selectedServices.filter(s => s.type !== activity.type));
+                                setSelectedServices(selectedServices.filter(s => s.activityTypeId !== activity.activityTypeId));
                               }
                             }}
                             style={{ accentColor: '#27AE60', width: '16px', height: '16px', flexShrink: 0 }} />
@@ -426,7 +420,7 @@ export default function MandatePage() {
                             ].map(opt => (
                               <button key={opt.key}
                                 onClick={() => setSelectedServices(selectedServices.map(s =>
-                                  s.type === activity.type ? { ...s, isRecurring: opt.isRecurring } : s
+                                  s.activityTypeId === activity.activityTypeId ? { ...s, isRecurring: opt.isRecurring } : s
                                 ))}
                                 className="text-xs px-2.5 py-1 rounded font-medium transition-colors"
                                 style={{

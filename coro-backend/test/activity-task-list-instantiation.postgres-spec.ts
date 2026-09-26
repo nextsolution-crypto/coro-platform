@@ -242,6 +242,81 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     expect(await prisma.booking.count({ where: { id: result.bookingId, activityId: result.activityId } })).toBe(1);
   });
 
+  it('generates canonical Mandate work idempotently without adopting or extending legacy work', async () => {
+    const mandateProject = await prisma.project.create({ data: {
+      organizationId: fixture.org.id, clientId: fixture.client.id, buildingId: fixture.building.id,
+      userId: fixture.owner.id, name: `Mandate 2DE ${suffix}`, documentType: 'PMU', year: 2026,
+    } });
+    const mandateType = await prisma.activityType.create({ data: {
+      code: `gate-2de-main-${suffix}`, nameFR: `Gate 2DE mandate ${suffix}`, isSystem: true,
+    } });
+    const mandatePolicy = await prisma.activityTypeTaskListPolicy.create({ data: {
+      activityTypeId: mandateType.id, organizationId: null, mode: 'REPLACE',
+    } });
+    await prisma.activityTypeTaskList.create({ data: {
+      policyId: mandatePolicy.id, taskListId: lists.A, displayOrder: 10,
+    } });
+    const legacyActivity = await prisma.projectActivity.create({ data: {
+      projectId: mandateProject.id, organizationId: fixture.org.id, type: `legacy-${suffix}`,
+      label: 'Legacy Mandate Activity', duration: '1h', sourceMandate: true, activityTypeId: null,
+    } });
+    const legacyList = await prisma.projectTaskList.create({ data: {
+      projectId: mandateProject.id, organizationId: fixture.org.id, taskListId: lists.D,
+      customName: 'Legacy project list', activityId: null,
+    } });
+    const service = new ActivitiesService(prisma as never, activityTypes(), engine());
+    const first = await service.generateFromMandate(mandateProject.id, admin(), [
+      { activityTypeId: mandateType.id, isRecurring: true },
+    ]);
+    const countAfterFirst = await prisma.projectActivity.count({ where: {
+      projectId: mandateProject.id, sourceMandate: true, activityTypeId: mandateType.id,
+    } });
+    const second = await service.generateFromMandate(mandateProject.id, admin(), [
+      { activityTypeId: mandateType.id, isRecurring: false },
+    ]);
+    expect(second[0].id).toBe(first[0].id);
+    expect(await prisma.projectActivity.count({ where: {
+      projectId: mandateProject.id, sourceMandate: true, activityTypeId: mandateType.id,
+    } })).toBe(countAfterFirst);
+    const instance = await prisma.projectTaskList.findFirstOrThrow({ where: {
+      activityId: first[0].id, taskListId: lists.A,
+    } });
+    expect(instance.instantiationSource).toBe('ACTIVITY_TYPE_CONFIG');
+    expect(await prisma.projectTask.count({ where: {
+      projectTaskListId: instance.id, activityId: first[0].id,
+    } })).toBe(2);
+    expect(await prisma.projectTaskList.count({ where: { activityId: first[0].id } })).toBe(1);
+    expect(await prisma.projectActivity.findUnique({ where: { id: legacyActivity.id } })).toMatchObject({ activityTypeId: null });
+    expect(await prisma.projectTaskList.findUnique({ where: { id: legacyList.id } })).toMatchObject({ activityId: null });
+
+    await prisma.activityTypeTaskList.create({ data: {
+      policyId: mandatePolicy.id, taskListId: lists.B, displayOrder: 20,
+    } });
+    await service.generateFromMandate(mandateProject.id, admin(), [{ activityTypeId: mandateType.id, isRecurring: false }]);
+    expect(await prisma.projectTaskList.count({ where: { activityId: first[0].id } })).toBe(2);
+  });
+
+  it('rolls back the complete Mandate generation when checklist instantiation fails', async () => {
+    const rollbackType = await prisma.activityType.create({ data: {
+      code: `gate-2de-${suffix}`, nameFR: `Gate 2DE rollback ${suffix}`, isSystem: true,
+    } });
+    const failing = { instantiateMissingTaskListsForActivity: jest.fn().mockRejectedValue(new Error('mandate checklist failure')) };
+    const service = new ActivitiesService(prisma as never, activityTypes(), failing as never);
+    const before = await prisma.projectActivity.count({ where: {
+      projectId: fixture.project.id, activityTypeId: rollbackType.id, sourceMandate: true,
+    } });
+    await expect(service.generateFromMandate(fixture.project.id, admin(), [
+      { activityTypeId: rollbackType.id, isRecurring: false },
+    ])).rejects.toThrow('mandate checklist failure');
+    expect(await prisma.projectActivity.count({ where: {
+      projectId: fixture.project.id, activityTypeId: rollbackType.id, sourceMandate: true,
+    } })).toBe(before);
+    expect(await prisma.auditLog.count({ where: {
+      projectId: fixture.project.id, entityType: 'ProjectActivity',
+      metadata: { path: ['activityTypeId'], equals: rollbackType.id },
+    } })).toBe(0);
+  });
+
   it.each([
     ['project Activity', async (failing: ActivityTaskListsService) => new ActivitiesService(prisma as never, activityTypes(), failing)
       .createActivity(fixture.project.id, admin(), { activityTypeId: typeId, notes: `rollback-page-${suffix}` })],
