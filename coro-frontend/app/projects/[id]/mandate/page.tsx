@@ -8,6 +8,8 @@ import AppLayout from '@/components/layout/AppLayout';
 import MandateWorkTab from './MandateWorkTab';
 import CommentsTab from './CommentsTab';
 import TimesheetTab from './TimesheetTab';
+import { ActivityCatalogItem, mandateServicesPayload, reconstructMandateServices,
+  SelectedService, toggleMandateService } from './mandateSelection';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
@@ -15,9 +17,6 @@ const TABS = [
   { id: 'comments', label: '💬 Commentaires' },
   { id: 'timesheet', label: '⏱ Feuille de temps' },
 ];
-
-type ActivityCatalogItem = { activityTypeId: string; type: string; label: string; duration: string; mode: string };
-type SelectedService = { activityTypeId: string; type: string; isRecurring: boolean };
 
 export default function MandatePage() {
   const params = useParams();
@@ -34,6 +33,7 @@ export default function MandatePage() {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [generatingActivities, setGeneratingActivities] = useState(false);
   const [activitiesGenerated, setActivitiesGenerated] = useState(false);
+  const [generationError, setGenerationError] = useState('');
 
   const [form, setForm] = useState({
     description: '',
@@ -82,11 +82,7 @@ export default function MandatePage() {
         // Popup migration si typeMandat pas encore défini
         if (!m.typeMandat || m.typeMandat === '') setShowTypeMandatPopup(true);
       }
-      const mandateActivities = (activitiesRes.data || []).filter((a: any) =>
-        a.sourceMandate && a.activityTypeId && a.status !== 'annule');
-      setSelectedServices(mandateActivities.map((a: any) => ({
-        activityTypeId: a.activityTypeId, type: a.type, isRecurring: a.isRecurring,
-      })));
+      setSelectedServices(reconstructMandateServices(activitiesRes.data || []));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -104,13 +100,18 @@ export default function MandatePage() {
 
   const handleGenerateActivities = async () => {
     setGeneratingActivities(true);
+    setGenerationError('');
     try {
       await api.post(`/projects/${projectId}/activities/from-mandate`, {
-        services: selectedServices,
+        services: mandateServicesPayload(selectedServices),
       });
+      await fetchData();
       setActivitiesGenerated(true);
       setTimeout(() => setActivitiesGenerated(false), 3000);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      console.error(err);
+      setGenerationError(err?.response?.data?.message || "La génération des activités a échoué.");
+    }
     finally { setGeneratingActivities(false); }
   };
 
@@ -384,6 +385,7 @@ export default function MandatePage() {
                 <p className="text-xs mb-3" style={{ color: '#ADB5BD' }}>
                   Cochez les services inclus dans l'offre. Choisissez si c'est une fois ou récurrent annuellement.
                 </p>
+                {generationError && <p className="text-xs mb-3" role="alert" style={{ color: '#C0392B' }}>{generationError}</p>}
                 <div className="space-y-2">
                   {activityCatalog.map(activity => {
                     const selected = selectedServices.find(s => s.activityTypeId === activity.activityTypeId);
@@ -398,11 +400,7 @@ export default function MandatePage() {
                           <input type="checkbox"
                             checked={!!selected}
                             onChange={e => {
-                              if (e.target.checked) {
-                                setSelectedServices([...selectedServices, { activityTypeId: activity.activityTypeId, type: activity.type, isRecurring: false }]);
-                              } else {
-                                setSelectedServices(selectedServices.filter(s => s.activityTypeId !== activity.activityTypeId));
-                              }
+                              setSelectedServices(toggleMandateService(selectedServices, activity, e.target.checked));
                             }}
                             style={{ accentColor: '#27AE60', width: '16px', height: '16px', flexShrink: 0 }} />
                           <div>

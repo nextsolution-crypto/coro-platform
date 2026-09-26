@@ -250,6 +250,9 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     const mandateType = await prisma.activityType.create({ data: {
       code: `gate-2de-main-${suffix}`, nameFR: `Gate 2DE mandate ${suffix}`, isSystem: true,
     } });
+    const existingType = await prisma.activityType.create({ data: {
+      code: `gate-2de-existing-${suffix}`, nameFR: `Gate 2DE existing ${suffix}`, isSystem: true,
+    } });
     const mandatePolicy = await prisma.activityTypeTaskListPolicy.create({ data: {
       activityTypeId: mandateType.id, organizationId: null, mode: 'REPLACE',
     } });
@@ -265,35 +268,46 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
       customName: 'Legacy project list', activityId: null,
     } });
     const service = new ActivitiesService(prisma as never, activityTypes(), engine());
+    const existingA = await prisma.projectActivity.create({ data: {
+      projectId: mandateProject.id, organizationId: fixture.org.id, type: existingType.code,
+      label: existingType.nameFR, duration: '1h', sourceMandate: true, activityTypeId: existingType.id,
+    } });
     const first = await service.generateFromMandate(mandateProject.id, admin(), [
+      { activityTypeId: existingType.id, isRecurring: false },
       { activityTypeId: mandateType.id, isRecurring: true },
     ]);
+    expect(first.map(activity => activity.id)).toEqual([existingA.id, expect.any(String)]);
     const countAfterFirst = await prisma.projectActivity.count({ where: {
       projectId: mandateProject.id, sourceMandate: true, activityTypeId: mandateType.id,
     } });
     const second = await service.generateFromMandate(mandateProject.id, admin(), [
+      { activityTypeId: existingType.id, isRecurring: false },
       { activityTypeId: mandateType.id, isRecurring: false },
     ]);
-    expect(second[0].id).toBe(first[0].id);
+    expect(second.map(activity => activity.id)).toEqual(first.map(activity => activity.id));
     expect(await prisma.projectActivity.count({ where: {
       projectId: mandateProject.id, sourceMandate: true, activityTypeId: mandateType.id,
     } })).toBe(countAfterFirst);
     const instance = await prisma.projectTaskList.findFirstOrThrow({ where: {
-      activityId: first[0].id, taskListId: lists.A,
+      activityId: first[1].id, taskListId: lists.A,
     } });
     expect(instance.instantiationSource).toBe('ACTIVITY_TYPE_CONFIG');
     expect(await prisma.projectTask.count({ where: {
-      projectTaskListId: instance.id, activityId: first[0].id,
+      projectTaskListId: instance.id, activityId: first[1].id,
     } })).toBe(2);
-    expect(await prisma.projectTaskList.count({ where: { activityId: first[0].id } })).toBe(1);
+    expect(await prisma.projectTaskList.count({ where: { activityId: first[1].id } })).toBe(1);
     expect(await prisma.projectActivity.findUnique({ where: { id: legacyActivity.id } })).toMatchObject({ activityTypeId: null });
     expect(await prisma.projectTaskList.findUnique({ where: { id: legacyList.id } })).toMatchObject({ activityId: null });
 
     await prisma.activityTypeTaskList.create({ data: {
       policyId: mandatePolicy.id, taskListId: lists.B, displayOrder: 20,
     } });
-    await service.generateFromMandate(mandateProject.id, admin(), [{ activityTypeId: mandateType.id, isRecurring: false }]);
-    expect(await prisma.projectTaskList.count({ where: { activityId: first[0].id } })).toBe(2);
+    await service.generateFromMandate(mandateProject.id, admin(), [
+      { activityTypeId: existingType.id, isRecurring: false },
+      { activityTypeId: mandateType.id, isRecurring: false },
+    ]);
+    expect(await prisma.projectTaskList.count({ where: { activityId: first[1].id } })).toBe(2);
+
   });
 
   it('rolls back the complete Mandate generation when checklist instantiation fails', async () => {

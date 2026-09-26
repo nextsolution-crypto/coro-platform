@@ -217,6 +217,27 @@ describe('ActivitiesService mandate origin', () => {
     expect((h.prisma as any).taskList).toBeUndefined();
   });
 
+  it('keeps existing A and creates selected B from two distinct canonical identifiers', async () => {
+    const h = harness();
+    h.prisma.activityType.findMany.mockResolvedValue([
+      { id: 'type-a', code: 'inspection', nameFR: 'Inspection', defaultDurationMinutes: 60, clientBookableDefault: false },
+      { id: 'type-b', code: 'exercice_table', nameFR: 'Exercice de table', defaultDurationMinutes: 120, clientBookableDefault: false },
+    ]);
+    h.prisma.projectActivity.findMany.mockResolvedValue([{ id: 'activity-a', activityTypeId: 'type-a',
+      status: 'a_faire', bookings: [], exerciseReport: null, tasks: [], taskLists: [] }]);
+    h.prisma.projectActivity.update.mockResolvedValue({ id: 'activity-a', activityTypeId: 'type-a', status: 'a_faire' });
+    h.prisma.projectActivity.create.mockImplementation(({ data }: any) => ({ id: 'activity-b', ...data }));
+    const result: any[] = await h.service.generateFromMandate('project-a', admin, [
+      { activityTypeId: 'type-a', isRecurring: false },
+      { activityTypeId: 'type-b', isRecurring: false },
+    ]);
+    expect(result.map(activity => activity.id)).toEqual(['activity-a', 'activity-b']);
+    expect(h.prisma.projectActivity.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      activityTypeId: 'type-b', type: 'exercice_table', sourceMandate: true,
+    }) });
+    expect(h.activityTaskLists.instantiateMissingTaskListsForActivity).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects legacy code-only input instead of creating new legacy work', async () => {
     const h = harness();
     await expect(h.service.generateFromMandate('project-a', admin,

@@ -23,6 +23,7 @@ const projection = loadTypescript('projection.ts');
 const activityVisual = loadTypescript('activityTypeVisual.ts');
 const teamPicker = loadTypescript('teamPickerState.ts');
 const previewCycle = loadTypescript('previewCycle.ts');
+const mandateSelection = loadTypescript('../projects/[id]/mandate/mandateSelection.ts');
 
 test('activity type visual mapping is controlled and shared by planner views', () => {
   assert.deepEqual(activityVisual.getActivityTypeVisual({ nameFR: 'Formation', visualToken: 'VIOLET', iconKey: 'TRAINING' }),
@@ -581,9 +582,25 @@ test('Mandate Activities consolidates canonical, transversal and legacy work wit
 test('Mandate generation uses the authoritative ActivityType catalog and canonical identifiers', () => {
   const page = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'page.tsx'), 'utf8');
   assert.ok(page.includes("api.get('/activities/catalog')"));
-  assert.ok(page.includes('activityTypeId: activity.activityTypeId'));
-  assert.ok(page.includes('a.sourceMandate && a.activityTypeId'));
+  assert.ok(page.includes('mandateServicesPayload(selectedServices)'));
+  assert.ok(page.includes('reconstructMandateServices(activitiesRes.data || [])'));
   assert.ok(page.includes('s.activityTypeId === activity.activityTypeId'));
   assert.ok(page.includes("api.post(`/projects/${projectId}/activities/from-mandate`"));
   assert.doesNotMatch(page, /const ACTIVITY_CATALOG\s*=\s*\[/);
+});
+
+test('Mandate selection keeps A and B in the payload and reconstructs both after reload', () => {
+  const a = { activityTypeId: 'type-a', type: 'inspection', label: 'Inspection', duration: '1h', mode: 'presentiel' };
+  const b = { activityTypeId: 'type-b', type: 'exercice_table', label: 'Exercice de table', duration: '2h', mode: 'presentiel' };
+  const initial = [{ activityTypeId: a.activityTypeId, type: a.type, isRecurring: false }];
+  const selected = mandateSelection.toggleMandateService(initial, b, true);
+  assert.deepEqual(selected, [initial[0], { activityTypeId: 'type-b', type: 'exercice_table', isRecurring: false }]);
+  assert.deepEqual(mandateSelection.mandateServicesPayload(selected), [
+    { activityTypeId: 'type-a', isRecurring: false },
+    { activityTypeId: 'type-b', isRecurring: false },
+  ]);
+  assert.deepEqual(mandateSelection.reconstructMandateServices([
+    { sourceMandate: true, status: 'a_faire', activityTypeId: 'type-a', type: 'inspection', isRecurring: false },
+    { sourceMandate: true, status: 'a_faire', activityTypeId: 'type-b', type: 'exercice_table', isRecurring: false },
+  ]), selected);
 });
