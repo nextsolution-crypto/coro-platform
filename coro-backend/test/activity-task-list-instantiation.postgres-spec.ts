@@ -116,6 +116,42 @@ describePostgres('Activity checklist instantiation 2D-A on PostgreSQL', () => {
     expect(await prisma.projectTaskList.count({ where: { activityId: activity.id } })).toBe(4);
   });
 
+  it('projects historical adoption, missing checklists, direct tasks, time and configuration rollback without duplication', async () => {
+    await setGlobal(['A', 'B']); await setTenant('INHERIT');
+    const activity = await createActivity();
+    const instantiation = engine();
+    await instantiation.instantiateForActor(fixture.project.id, activity.id, operator());
+    const direct = await prisma.projectTask.create({ data: {
+      projectId: fixture.project.id, organizationId: fixture.org.id, activityId: activity.id,
+      projectTaskListId: null, categoryName: 'Activité', taskTitle: `Directe ${suffix}`, status: 'a_faire',
+    } });
+    await prisma.taskTimeEntry.create({ data: {
+      taskId: direct.id, userId: fixture.owner.id, organizationId: fixture.org.id, date: new Date(), heures: 1.5,
+    } });
+    await setGlobal(['C', 'D']);
+    const activities = new ActivitiesService(prisma as never, activityTypes(), instantiation);
+    const before: any = await activities.getActivityTasks(fixture.project.id, activity.id, admin());
+    expect(new Set(before.historicalTaskLists.map((item: any) => item.taskListId))).toEqual(new Set([lists.A, lists.B]));
+    expect(new Set(before.missingTaskLists.map((item: any) => item.taskListId))).toEqual(new Set([lists.C, lists.D]));
+    expect(before.directTasks).toEqual([expect.objectContaining({ id: direct.id, actualHours: 1.5 })]);
+
+    expect((await instantiation.instantiateForActor(fixture.project.id, activity.id, admin())).createdLists)
+      .toEqual([lists.C, lists.D]);
+    expect((await instantiation.instantiateForActor(fixture.project.id, activity.id, admin())).createdLists).toEqual([]);
+    await setGlobal(['A', 'B']);
+    const returned: any = await activities.getActivityTasks(fixture.project.id, activity.id, admin());
+    expect(returned.missingTaskLists).toEqual([]);
+    expect(new Set(returned.historicalTaskLists.map((item: any) => item.taskListId))).toEqual(new Set([lists.C, lists.D]));
+    expect(returned.instantiatedTaskLists).toHaveLength(4);
+    expect(await prisma.projectTask.count({ where: { id: direct.id } })).toBe(1);
+
+    await setTenant('DISABLE');
+    const disabled: any = await activities.getActivityTasks(fixture.project.id, activity.id, admin());
+    expect(disabled.currentApplicableTaskLists).toEqual([]);
+    expect(disabled.missingTaskLists).toEqual([]);
+    expect(disabled.historicalTaskLists).toHaveLength(4);
+  });
+
   it('refuses cross-tenant, legacy and cancelled Activities without writes', async () => {
     const foreign = await prisma.projectActivity.create({ data: { projectId: other.project.id, organizationId: other.org.id,
       type: 'gate', label: 'Foreign', duration: '1h', activityTypeId: typeId } });

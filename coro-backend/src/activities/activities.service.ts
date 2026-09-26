@@ -154,6 +154,11 @@ export class ActivitiesService {
         project: { is: projectAccessWhere(actor) },
       },
       include: {
+        project: { select: { documentType: true } },
+        taskLists: {
+          include: { taskList: { select: { id: true, name: true } } },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        },
         tasks: {
           include: {
             assignee: { select: { id: true, firstName: true, lastName: true } },
@@ -166,14 +171,60 @@ export class ActivitiesService {
     });
     const activity = found ? this.withTaskSummary(found) : null;
     if (!activity) throw new NotFoundException('Activité introuvable');
+    const currentApplicableTaskLists = activity.activityTypeId
+      ? await this.activityTypes.resolveTaskLists({
+        activityTypeId: activity.activityTypeId,
+        organizationId: actor.organizationId,
+        documentType: activity.project.documentType,
+      })
+      : [];
+    const applicableIds = new Set(currentApplicableTaskLists.map((item: any) => item.id));
+    const configuredInstances = activity.taskLists.filter((item: any) =>
+      item.instantiationSource === 'ACTIVITY_TYPE_CONFIG');
+    const instantiatedIds = new Set(configuredInstances.map((item: any) => item.taskListId));
+    const checklistTasks = new Map<string, any[]>();
+    for (const task of activity.tasks) {
+      if (!task.projectTaskListId) continue;
+      const grouped = checklistTasks.get(task.projectTaskListId) ?? [];
+      grouped.push(task); checklistTasks.set(task.projectTaskListId, grouped);
+    }
+    const summarizeList = (instance: any) => {
+      const tasks = checklistTasks.get(instance.id) ?? [];
+      const completedCount = tasks.filter((task: any) => task.status === 'fait').length;
+      return {
+        projectTaskListId: instance.id,
+        taskListId: instance.taskListId,
+        name: instance.customName || instance.taskList.name,
+        instantiationSource: instance.instantiationSource,
+        isCurrentlyApplicable: applicableIds.has(instance.taskListId),
+        taskCount: tasks.length,
+        completedCount,
+        actualHours: tasks.reduce((total: number, task: any) => total + task.actualHours, 0),
+        tasks,
+      };
+    };
+    const instantiatedTaskLists = configuredInstances.map(summarizeList);
+    const missingTaskLists = currentApplicableTaskLists
+      .filter((item: any) => !instantiatedIds.has(item.id))
+      .map((item: any) => ({ taskListId: item.id, name: item.name }));
     return {
+      activity: { id: activity.id, status: activity.status, activityTypeId: activity.activityTypeId },
       activityId: activity.id,
       tasks: activity.tasks,
+      directTasks: activity.tasks.filter((task: any) => !task.projectTaskListId),
       taskCount: activity.taskCount,
       taskCompletedCount: activity.taskCompletedCount,
       taskOpenCount: activity.taskOpenCount,
       taskProgressPercent: activity.taskProgressPercent,
       actualHours: activity.actualHours,
+      canonicalTypeMissing: !activity.activityTypeId,
+      isCancelled: activity.status === 'annule',
+      currentApplicableTaskLists: currentApplicableTaskLists.map((item: any) => ({
+        taskListId: item.id, name: item.name,
+      })),
+      instantiatedTaskLists,
+      missingTaskLists,
+      historicalTaskLists: instantiatedTaskLists.filter((item: any) => !item.isCurrentlyApplicable),
     };
   }
 

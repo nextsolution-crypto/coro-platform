@@ -83,6 +83,10 @@
 .taskHeading { display:flex; align-items:start; justify-content:space-between; gap:12px }.taskHeading h3 { margin:0; color:#6c757d; font-size:12px; letter-spacing:.07em; text-transform:uppercase }.taskHeading p,.taskMetrics,.taskEmpty { margin:3px 0 0; color:#6c757d; font-size:12px }.taskHeading > strong { color:#2c3e50; white-space:nowrap }
 .taskRow { display:flex; align-items:start; justify-content:space-between; gap:10px; border:1px solid #e5e9ec; border-radius:7px; padding:10px; min-width:0 }.taskRow > div { display:grid; gap:3px; min-width:0 }.taskRow strong { overflow-wrap:anywhere; font-size:12px }.taskRow span,.taskRow small { color:#6c757d; font-size:11px; overflow-wrap:anywhere }
 .taskActions { display:flex; flex-wrap:wrap; gap:8px }.taskCreate { display:flex; align-items:end; gap:8px }.taskCreate label { display:grid; flex:1; gap:4px; color:#5d6d7e; font-size:11px; font-weight:700 }.taskCreate input { min-width:0; width:100%; border:1px solid #ced4da; border-radius:6px; padding:8px }
+.missingChecklists { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid #aed6f1; border-radius:7px; padding:10px; background:#f4f9fc }.missingChecklists p { margin:0; color:#2c3e50; font-size:12px }
+.checklistGroup,.directTasks { display:grid; gap:9px }.checklistGroup > h4,.directTasks > h4 { margin:3px 0 0; color:#6c757d; font-size:11px; letter-spacing:.07em; text-transform:uppercase }
+.checklist { display:grid; gap:7px; border:1px solid #dfe6e9; border-radius:8px; padding:10px; background:#fafcfd }.checklistHeading { display:flex; align-items:start; justify-content:space-between; gap:10px }.checklistHeading > div { display:grid; gap:2px }.checklistHeading strong { color:#2c3e50; font-size:12px }.checklistHeading span { color:#6c757d; font-size:11px }.checklistHeading em { border-radius:999px; padding:2px 7px; background:#eafaf1; color:#26734d; font-size:10px; font-style:normal; font-weight:700 }.checklistHeading em:not(:first-child) { white-space:nowrap }
+.checklistHeading em.historicalChecklist { background:#f2f3f4; color:#6c757d }
 .taskCandidates { display:grid; gap:7px; border:1px solid #e5e9ec; border-radius:7px; padding:10px }.taskCandidates h4,.taskCandidates p { margin:0; font-size:12px }.taskCandidates > div { display:flex; align-items:center; justify-content:space-between; gap:8px }.taskCandidates span { min-width:0; overflow-wrap:anywhere; font-size:12px }
 .primaryButton { min-height:36px; border:1px solid #a93226; border-radius:6px; background:#a93226; color:white; padding:7px 12px; font-weight:700; cursor:pointer }
 .primaryButton:disabled { opacity:.55; cursor:default }
@@ -125,7 +129,7 @@
   .drawer { width: 100vw; max-width: none; height: 100dvh; border-radius: 0; }
   .slotGrid { grid-template-columns: 1fr; }
   .candidateRow { align-items: stretch; flex-direction: column; }
-  .taskRow,.taskCreate,.taskCandidates > div { align-items:stretch; flex-direction:column }
+  .taskRow,.taskCreate,.taskCandidates > div,.missingChecklists { align-items:stretch; flex-direction:column }
   .actionList li { align-items: stretch; flex-direction: column; }
   .actionButtons { justify-content: flex-start; }
 }

@@ -524,6 +524,23 @@ test('Activity tasks expose empty, aggregate, create, link and unlink contracts 
   assert.ok(css.includes('.taskRow,.taskCreate,.taskCandidates > div'));
 });
 
+test('Activity work groups current, historical, missing and direct tasks without duplicating data', () => {
+  const section = fs.readFileSync(path.join(__dirname, 'ActivityTasksSection.tsx'), 'utf8');
+  for (const label of ['Checklists', 'Actuelle', 'Historique', 'Tâches de l’activité',
+    'Ajouter les checklists manquantes', 'Définissez d’abord un type d’activité']) {
+    assert.ok(section.includes(label));
+  }
+  assert.ok(section.includes('/task-lists/instantiate'));
+  assert.ok(section.includes('response.data.createdLists.length'));
+  assert.ok(section.includes("count === 1 ? '1 checklist ajoutée'"));
+  assert.ok(section.includes("count > 1 ? `${count} checklists ajoutées`"));
+  assert.ok(section.includes("'Aucune nouvelle checklist à ajouter.'"));
+  assert.ok(section.includes('!view.isCancelled'));
+  assert.ok(section.includes('view.instantiatedTaskLists.map'));
+  assert.ok(section.includes('renderTasks(view.directTasks)'));
+  assert.doesNotMatch(section, /documentType/);
+});
+
 test('Mandate Tasks keeps listed tasks and adds independent tasks exactly once', () => {
   const mandateTasks = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'TaskListsTab.tsx'), 'utf8');
   assert.ok(mandateTasks.includes("api.get(`/projects/${projectId}/tasks`)"));

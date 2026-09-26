@@ -12,9 +12,9 @@ function harness() {
     activityType: { findFirst: jest.fn() },
     $transaction: jest.fn(async (callback: any) => callback(prisma)),
   };
-  const activityTypes = { list: jest.fn().mockResolvedValue([]) };
+  const activityTypes = { list: jest.fn().mockResolvedValue([]), resolveTaskLists: jest.fn().mockResolvedValue([]) };
   const activityTaskLists = { instantiateMissingTaskListsForActivity: jest.fn().mockResolvedValue({ createdLists: [] }) };
-  return { prisma, activityTaskLists,
+  return { prisma, activityTypes, activityTaskLists,
     service: new ActivitiesService(prisma as never, activityTypes as never, activityTaskLists as never) };
 }
 
@@ -112,6 +112,58 @@ describe('ActivitiesService exercise report summary', () => {
     expect(h.prisma.projectActivity.findMany).toHaveBeenCalledTimes(1);
     expect(h.prisma.projectTask.findMany).not.toHaveBeenCalled();
     expect(h.prisma.projectActivity.create).not.toHaveBeenCalled();
+  });
+
+  it('projects applicable, missing, instantiated, historical and direct Activity work without task N+1', async () => {
+    const h = harness();
+    h.activityTypes.resolveTaskLists.mockResolvedValue([
+      { id: 'list-current', name: 'Actuelle' }, { id: 'list-missing', name: 'Nouvelle' },
+    ]);
+    h.prisma.projectActivity.findFirst.mockResolvedValue({
+      id: 'activity-a', status: 'a_faire', activityTypeId: 'type-a', project: { documentType: 'PMU' },
+      taskLists: [
+        { id: 'instance-current', taskListId: 'list-current', customName: 'Actuelle',
+          instantiationSource: 'ACTIVITY_TYPE_CONFIG', taskList: { id: 'list-current', name: 'Actuelle' } },
+        { id: 'instance-old', taskListId: 'list-old', customName: 'Ancienne',
+          instantiationSource: 'ACTIVITY_TYPE_CONFIG', taskList: { id: 'list-old', name: 'Ancienne' } },
+      ],
+      tasks: [
+        { id: 'task-current', projectTaskListId: 'instance-current', status: 'fait', timeEntries: [{ heures: 2 }], assignees: [] },
+        { id: 'task-old', projectTaskListId: 'instance-old', status: 'a_faire', timeEntries: [{ heures: 1 }], assignees: [] },
+        { id: 'task-direct', projectTaskListId: null, status: 'a_faire', timeEntries: [{ heures: 0.5 }], assignees: [] },
+      ],
+    });
+
+    const result: any = await h.service.getActivityTasks('project-a', 'activity-a', admin);
+
+    expect(result).toMatchObject({
+      canonicalTypeMissing: false, isCancelled: false,
+      currentApplicableTaskLists: [{ taskListId: 'list-current', name: 'Actuelle' }, { taskListId: 'list-missing', name: 'Nouvelle' }],
+      missingTaskLists: [{ taskListId: 'list-missing', name: 'Nouvelle' }],
+      directTasks: [{ id: 'task-direct', actualHours: 0.5 }],
+      taskCount: 3, taskCompletedCount: 1, actualHours: 3.5,
+    });
+    expect(result.instantiatedTaskLists).toEqual([
+      expect.objectContaining({ projectTaskListId: 'instance-current', taskListId: 'list-current',
+        isCurrentlyApplicable: true, taskCount: 1, completedCount: 1, actualHours: 2 }),
+      expect.objectContaining({ projectTaskListId: 'instance-old', taskListId: 'list-old',
+        isCurrentlyApplicable: false, taskCount: 1, completedCount: 0, actualHours: 1 }),
+    ]);
+    expect(result.historicalTaskLists).toHaveLength(1);
+    expect(h.activityTypes.resolveTaskLists).toHaveBeenCalledWith({
+      activityTypeId: 'type-a', organizationId: 'org-a', documentType: 'PMU',
+    });
+    expect(h.prisma.projectTask.findMany).not.toHaveBeenCalled();
+  });
+
+  it('does not heuristically resolve a legacy Activity without a canonical type', async () => {
+    const h = harness();
+    h.prisma.projectActivity.findFirst.mockResolvedValue({ id: 'legacy', status: 'a_faire', activityTypeId: null,
+      project: { documentType: 'PMU' }, taskLists: [], tasks: [] });
+    await expect(h.service.getActivityTasks('project-a', 'legacy', admin)).resolves.toMatchObject({
+      canonicalTypeMissing: true, currentApplicableTaskLists: [], missingTaskLists: [],
+    });
+    expect(h.activityTypes.resolveTaskLists).not.toHaveBeenCalled();
   });
 
   it('returns only eligible transversal tasks from the same project and tenant', async () => {
