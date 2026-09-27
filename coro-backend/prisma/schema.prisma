@@ -48,6 +48,7 @@ model Organization {
   operationalReviewReports     OperationalReviewReport[]
   activityTypes                ActivityType[]
   activityTypeTaskListPolicies ActivityTypeTaskListPolicy[]
+  mandateServices              ProjectMandateService[]
   // Programme de recommandation
   referralsSent                Referral[]                   @relation("ReferralReferrer")
   referralReceived             Referral?                    @relation("ReferralReferred")
@@ -129,6 +130,9 @@ model User {
   exerciseFindingsValidated        ExerciseFinding[]        @relation("ExerciseFindingValidator")
   exerciseRecommendationsValidated ExerciseRecommendation[] @relation("ExerciseRecommendationValidator")
   exerciseActionItemsValidated     ExerciseActionItem[]     @relation("ExerciseActionItemValidator")
+  mandateServicesCreated           ProjectMandateService[]  @relation("MandateServiceCreator")
+  mandateServicesUpdated           ProjectMandateService[]  @relation("MandateServiceUpdater")
+  mandateServicesRemoved           ProjectMandateService[]  @relation("MandateServiceRemover")
 }
 
 model UserWorkSchedule {
@@ -627,38 +631,42 @@ model AuditLog {
 }
 
 model ProjectActivity {
-  id             String            @id @default(uuid())
-  projectId      String
-  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type           String
-  activityTypeId String?
-  activityType   ActivityType?     @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
-  label          String
-  duration       String
-  mode           String            @default("presentiel")
-  customLabel    String?
-  customDuration String?
-  scheduledDate  DateTime?
-  status         String            @default("a_faire")
-  reportedDate   DateTime?
-  assigneeEmail  String?
-  clientEmail    String?
-  notes          String?
-  organizationId String
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  isRecurring    Boolean           @default(false)
-  sourceMandate  Boolean           @default(false)
-  dureeHeures    Float? // Durée réelle ou estimée en heures
-  clientVisible  Boolean           @default(true)
-  clientBookable Boolean           @default(false)
-  bookings       Booking[]
-  exerciseReport ExerciseReport?
-  tasks          ProjectTask[]     @relation("ActivityTasks")
-  taskLists      ProjectTaskList[] @relation("ActivityTaskLists")
+  id               String                 @id @default(uuid())
+  projectId        String
+  project          Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type             String
+  activityTypeId   String?
+  activityType     ActivityType?          @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
+  label            String
+  duration         String
+  mode             String                 @default("presentiel")
+  customLabel      String?
+  customDuration   String?
+  scheduledDate    DateTime?
+  status           String                 @default("a_faire")
+  reportedDate     DateTime?
+  assigneeEmail    String?
+  clientEmail      String?
+  notes            String?
+  organizationId   String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  isRecurring      Boolean                @default(false)
+  sourceMandate    Boolean                @default(false)
+  mandateServiceId String?
+  mandateService   ProjectMandateService? @relation(fields: [mandateServiceId, projectId, organizationId], references: [id, projectId, organizationId], onDelete: Restrict)
+  dureeHeures      Float? // Durée réelle ou estimée en heures
+  clientVisible    Boolean                @default(true)
+  clientBookable   Boolean                @default(false)
+  bookings         Booking[]
+  exerciseReport   ExerciseReport?
+  tasks            ProjectTask[]          @relation("ActivityTasks")
+  taskLists        ProjectTaskList[]      @relation("ActivityTaskLists")
 
   @@unique([id, projectId, organizationId])
   @@index([activityTypeId])
+  @@index([mandateServiceId])
+  @@index([mandateServiceId, status])
 }
 
 enum ActivityTypeVisualToken {
@@ -707,6 +715,7 @@ model ActivityType {
   updatedAt              DateTime                     @updatedAt
   activities             ProjectActivity[]
   taskListPolicies       ActivityTypeTaskListPolicy[]
+  mandateServices        ProjectMandateService[]
 
   @@unique([organizationId, code])
   @@index([organizationId, isActive, displayOrder, nameFR, id], map: "ActivityType_organizationId_isActive_displayOrder_idx")
@@ -861,9 +870,9 @@ model TaskTimeEntry {
 }
 
 model ProjectMandate {
-  id              String    @id @default(uuid())
-  projectId       String    @unique
-  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String                  @id @default(uuid())
+  projectId       String                  @unique
+  project         Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
   description     String?
   montantVendu    Float?
   tauxHoraire     Float?
@@ -871,15 +880,65 @@ model ProjectMandate {
   lienDrive       String?
   organizationId  String
   ownerId         String?
-  owner           User?     @relation("mandateOwner", fields: [ownerId], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  owner           User?                   @relation("mandateOwner", fields: [ownerId], references: [id])
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
   typeMandat      String?
   dateDebutDelai  DateTime?
   dateLimite      DateTime?
   delaiJours      Int?
-  alerteActive    Boolean   @default(true)
+  alerteActive    Boolean                 @default(true)
   typeDelai       String?
+  services        ProjectMandateService[]
+
+  @@unique([id, projectId, organizationId])
+}
+
+enum ProjectMandateServiceStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum ProjectMandateServiceRecurrenceMode {
+  ONCE
+  ANNUAL
+}
+
+model ProjectMandateService {
+  id               String @id @default(uuid())
+  projectMandateId String
+  projectId        String
+  organizationId   String
+  activityTypeId   String
+
+  commercialStatus ProjectMandateServiceStatus         @default(ACTIVE)
+  recurrenceMode   ProjectMandateServiceRecurrenceMode @default(ONCE)
+  quantity         Int                                 @default(1)
+  displayOrder     Int                                 @default(0)
+
+  nameFRSnapshot String
+  nameENSnapshot String?
+
+  removedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  createdById String
+  updatedById String
+  removedById String?
+
+  mandate      ProjectMandate    @relation(fields: [projectMandateId, projectId, organizationId], references: [id, projectId, organizationId], onDelete: Restrict, map: "ProjectMandateService_projectMandateId_projectId_organizationId")
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  activityType ActivityType      @relation(fields: [activityTypeId], references: [id], onDelete: Restrict)
+  createdBy    User              @relation("MandateServiceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User              @relation("MandateServiceUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  removedBy    User?             @relation("MandateServiceRemover", fields: [removedById], references: [id], onDelete: Restrict)
+  activities   ProjectActivity[]
+
+  @@unique([id, projectId, organizationId])
+  @@index([organizationId, projectId, commercialStatus], map: "ProjectMandateService_organizationId_projectId_commercialStatus")
+  @@index([projectMandateId, commercialStatus, displayOrder], map: "ProjectMandateService_projectMandateId_commercialStatus_display")
+  @@index([activityTypeId])
 }
 
 model ProjectComment {
