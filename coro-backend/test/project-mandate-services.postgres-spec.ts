@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { createBookingFixture } from './booking-postgres-fixture';
 
@@ -13,6 +13,25 @@ async function expectDatabaseConstraint(promise: Promise<unknown>, pgCode: strin
     const rendered = String(error);
     expect(rendered).toContain(pgCode);
     expect(rendered).toContain(constraint);
+  }
+}
+
+async function expectForeignKeyRestriction(promise: Promise<unknown>, constraint: string) {
+  try {
+    await promise;
+    throw new Error(`Expected foreign key constraint ${constraint} to reject the write`);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      expect(error.code).toBe('P2003');
+      expect(error.meta).toEqual(expect.objectContaining({ constraint }));
+      return;
+    }
+
+    // PostgreSQL RESTRICT (SQLSTATE 23001) is not normalized to P2003 by every
+    // Prisma engine build. Keep the local engine path explicit and constrained.
+    expect(error).toBeInstanceOf(Prisma.PrismaClientUnknownRequestError);
+    expect(String(error)).toContain('23001');
+    expect(String(error)).toContain(constraint);
   }
 }
 
@@ -115,9 +134,9 @@ describePostgres('ProjectMandateService structural foundation on PostgreSQL', ()
       nameFR: 'Type structurel',
     } });
     await prisma.projectMandateService.create({ data: serviceData({ activityTypeId: type.id }) });
-    await expectDatabaseConstraint(
+    await expectForeignKeyRestriction(
       prisma.activityType.delete({ where: { id: type.id } }),
-      '23001', 'ProjectMandateService_activityTypeId_fkey',
+      'ProjectMandateService_activityTypeId_fkey',
     );
   });
 });
