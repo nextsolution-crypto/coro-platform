@@ -1,0 +1,103 @@
+/* /pricing — V1 tokens only. Model A: two intentional card clusters (customer situations, scope markers), ruled capability blocks, one scope flow and a Model-A statement band. No price table, no badge, no calculator.
+   The shared DemoForm is production code: only the layout around it is defined here (same scoped harmonisation as /contact). */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.link { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.link:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.note { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+.statement { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 700; line-height: 1.4; border-inline-start: 3px solid var(--accent); padding-inline-start: var(--coro-v1-space-6); max-inline-size: 46rem; }
+
+/* Rows: one item per row, a title and one sentence. */
+.rows { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.rows li { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.rows h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }
+.rows p { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+
+/* Reference points: four numbered dimensions on a hairline, two per row on wide screens. */
+.dims { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 var(--coro-v1-space-8); border-block-start: 2px solid var(--ink); }
+.dims li { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); column-gap: var(--coro-v1-space-3); row-gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); align-content: start; }
+.num { grid-row: 1 / span 2; color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; padding-block-start: .45rem; }
+.dims h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }
+.dims p { margin: 0; grid-column: 2; color: var(--muted); line-height: 1.6; }
+@media (min-width: 48rem) { .dims { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.plain { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.plain li { padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 700; line-height: 1.3; }
+
+/* Scope flow on the navy section: four steps in reading order joined by a line; vertical on narrow screens. */
+.flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--coro-v1-space-8) var(--coro-v1-space-6); }
+.flow li { position: relative; display: grid; gap: var(--coro-v1-space-2); align-content: start; padding-block-start: var(--coro-v1-space-8); border-block-start: 2px solid var(--coro-v1-border-on-dark); }
+.flow li:last-child { border-block-start-color: var(--coro-v1-focus-on-dark); }
+.dot { position: absolute; inset-block-start: -1.1rem; inset-inline-start: 0; display: grid; place-items: center; inline-size: 2.2rem; block-size: 2.2rem; border-radius: 50%; background: var(--coro-v1-focus-on-dark); color: var(--coro-v1-navy-950); font-size: var(--coro-v1-text-small); font-weight: 850; }
+.flow h3 { margin: 0; color: var(--coro-v1-on-dark-900); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.15; }
+.flow p { margin: 0; color: var(--coro-v1-on-dark-900); line-height: 1.55; }
+@media (max-width: 40rem) {
+  .flow { grid-template-columns: 1fr; gap: 0; border-inline-start: 2px solid var(--coro-v1-border-on-dark); margin-inline-start: 1.1rem; }
+  .flow li { border-block-start: 0; padding: 0 0 var(--coro-v1-space-8) var(--coro-v1-space-8); }
+  .dot { inset-block-start: 0; inset-inline-start: -1.2rem; }
+}
+
+/* The form is the primary action: an open panel with a hairline. */
+.formPanel { display: grid; gap: var(--coro-v1-space-6); padding: clamp(1rem, 3vw, 2rem); background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); min-inline-size: 0; }
+.formPanel :global(.coro-demo-form-row) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+.formPanel :global(.coro-demo-form-row > div) { min-width: 0; }
+.formPanel :global(.coro-demo-form-success) { padding: 40px 24px; border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); background: var(--coro-v1-surface-1); text-align: center; }
+.formPanel input, .formPanel select, .formPanel textarea { min-block-size: 44px; }
+@media (min-width: 48rem) { .formPanel :global(.coro-demo-form-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.formPanel label { color: var(--coro-v1-text-900) !important; }
+.formPanel input, .formPanel select, .formPanel textarea { color: var(--coro-v1-text-900) !important; background-color: var(--coro-v1-surface-0) !important; border: 1px solid var(--coro-v1-border-200) !important; border-radius: var(--coro-v1-radius-control) !important; }
+.formPanel select:has(option[value=""]:checked) { color: var(--coro-v1-text-600) !important; }
+.formPanel input::placeholder, .formPanel textarea::placeholder { color: var(--coro-v1-text-600); opacity: 1; }
+.formPanel input:focus, .formPanel select:focus, .formPanel textarea:focus { border-color: var(--coro-v1-focus) !important; }
+.formPanel input:focus-visible, .formPanel select:focus-visible, .formPanel textarea:focus-visible, .formPanel button:focus-visible { outline: 3px solid var(--coro-v1-focus) !important; outline-offset: 2px !important; }
+.formPanel button[type="submit"] { background-color: var(--coro-v1-red-600) !important; border-radius: var(--coro-v1-radius-control) !important; color: var(--coro-v1-on-dark-900) !important; }
+.formPanel button[type="submit"]:hover:not(:disabled) { background-color: var(--coro-v1-red-700) !important; }
+.formPanel button[type="submit"]:active:not(:disabled) { filter: brightness(.94); }
+.formPanel button[type="submit"]:disabled { background-color: var(--coro-v1-text-600) !important; }
+.formPanel [role="alert"] { background-color: var(--coro-v1-red-100) !important; border-color: var(--coro-v1-red-300) !important; border-radius: var(--coro-v1-radius-panel) !important; }
+.formPanel [role="alert"] p { color: var(--coro-v1-critical) !important; }
+.formPanel :global(.coro-demo-form-success) p { color: var(--coro-v1-success) !important; }
+.formPanel form p, .formPanel form p a { color: var(--coro-v1-text-600) !important; }
+.formPanel form p a { color: var(--coro-v1-text-900) !important; }
+
+/* MIG-04B-B commercial pass: cards appear in two intentional clusters only (situations, scope); the capability composition and the Model-A band use ruled blocks. */
+.card { position: relative; display: grid; gap: var(--coro-v1-space-3); align-content: start; padding: clamp(1.25rem, 2.5vw, 2rem); background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-border-200); border-block-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); min-inline-size: 0; }
+.cardNum { color: var(--accent); font-size: var(--coro-v1-text-h2); font-weight: 800; letter-spacing: .04em; line-height: 1; }
+.card h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.15; }
+.card p { margin: 0; color: var(--muted); line-height: 1.6; }
+.situations, .scope { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-6); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 40rem) { .scope { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 56rem) { .situations { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 72rem) { .scope { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Capability composition: the organisation at the centre, current capabilities as ruled blocks around it (never priced tiles). */
+.compose { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 60rem) { .compose { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--coro-v1-space-16); } }
+.core { display: grid; gap: var(--coro-v1-space-3); padding: clamp(1.25rem, 3vw, 2.25rem); background: var(--coro-v1-surface-2); border-block-start: 3px solid var(--ink); }
+.core h3 { margin: 0; color: var(--ink); font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; line-height: 1.05; }
+.core p { margin: 0; color: var(--muted); line-height: 1.6; }
+.coreNote { padding-block-start: var(--coro-v1-space-4); border-block-start: 1px solid var(--line); color: var(--ink) !important; font-weight: 650; }
+.blocks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-6) var(--coro-v1-space-8); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 40rem) { .blocks { grid-template-columns: repeat(2, minmax(0, 1fr)); } .blocks > li:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+.blocks li { display: grid; gap: var(--coro-v1-space-2); align-content: start; border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-3); }
+.blocks li:nth-child(even) { border-block-start-color: var(--accent); }
+.blocks h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.2; }
+.blocks p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* Model-A statement: a large editorial claim with generous space around it, then what the discussion clarifies. */
+.band { display: grid; gap: var(--coro-v1-space-16); grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 60rem) { .band { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } }
+.bandStatement { display: grid; gap: var(--coro-v1-space-6); border-inline-start: 4px solid var(--accent); padding-inline-start: clamp(1rem, 3vw, 2rem); }
+.bandStatement h2 { margin: 0; color: var(--ink); font-size: clamp(2rem, 4.6vw, 3.6rem); font-weight: 850; line-height: 1.08; letter-spacing: -.01em; }
+.bandText { margin: 0; color: var(--muted); font-size: var(--coro-v1-text-body-l); line-height: 1.65; max-inline-size: 40rem; }
+
+/* Referral callout: one standalone panel, separate from the Model-A content. */
+.callout { display: grid; gap: var(--coro-v1-space-6); align-items: center; padding: clamp(1.25rem, 3vw, 2rem); background: var(--coro-v1-surface-1); border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); }
+@media (min-width: 56rem) { .callout { grid-template-columns: minmax(0, 1fr) auto; } }
+.calloutCopy { display: grid; gap: var(--coro-v1-space-2); }
+.calloutCopy h2 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.2; }
+.calloutCopy p { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+/* Four scope cards share a row on wide screens: their titles are one step smaller so the longest word ("Accompagnement") stays inside the card. */
+.scope .card { padding: clamp(1.1rem, 1.6vw, 1.5rem); }
+.scope .card h3 { font-size: clamp(1.15rem, 1.6vw, 1.45rem); line-height: 1.2; overflow-wrap: anywhere; }
+.scope .cardNum { font-size: var(--coro-v1-text-h3); }

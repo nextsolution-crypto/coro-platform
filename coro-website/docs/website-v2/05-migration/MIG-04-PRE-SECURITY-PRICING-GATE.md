@@ -52,6 +52,8 @@ RETIRER la promesse publique ferme (« sous 24 heures », « within 24 hours »,
 
 ### D5. Parrainage
 
+> **SUPPLANTÉE le 2026-09-26 (MIG-04B-B, décision humaine) :** un encart contextuel de parrainage avec lien vers `/programme-recommandation` est désormais autorisé sur `/pricing`, le programme restant distinct du modèle de tarification (voir B8). Le texte ci-dessous est conservé comme historique.
+
 Le programme de crédit de 250 $ reste la propriété de la page de parrainage. Ne pas le promouvoir sur `/pricing` ; aucune impression de double remise (le lien discret évoqué au §15 n'est plus retenu par défaut). La validité commerciale du programme reste REVIEW (CD-08).
 
 ### D6. Sécurité : hébergement canadien
@@ -685,3 +687,159 @@ Infrastructure applicative principale hébergée au Canada, région de Toronto, 
 | CONTENT REVIEW | Décision humaine sur l'image : le cadrage retient l'allée de serveurs ; un plan large ne serait pas retenu comme héros (A1) |
 | ACCESSIBILITY | Aucun test avec lecteur d'écran ; zoom 200 % et 400 % non vérifié ; `<html lang>` global reste « fr » |
 | ÉLÉMENT TRANSVERSAL | Promesse « 24 heures », section fondateur et parrainage : non traités ici (Tarification) |
+
+---
+
+# MIG-04B — `/pricing` register
+
+Migration de `/pricing` vers V2 (2026-09-26), MODÈLE A (D1 à D14 ci-dessus). Commit de départ `795aac01`. Aucune décision de Sécurité, de parrainage, d'accueil ni de `DemoForm` n'est modifiée ici.
+
+## B1. Audit de l'image de remplacement (fichier actuel)
+
+Premier fichier `pricing-coro-modular-platform.webp` : **UNSAFE / MISLEADING** (tuiles Knowledge, Ops, AI, Network, menu Exercices et Conformité : modules futurs ou non-modules présentés comme disponibles). Migration suspendue (BLOCKED) jusqu'au remplacement. Fichier retiré du dépôt par l'humain ; jamais restauré.
+
+Première version du fichier `pricing-coro-modular-platform-v2.webp` (1672 × 941), remplacée depuis (voir B1b). Audité de zéro à ce moment :
+
+| Vérification | Constat |
+|---|---|
+| Prix, montants, devises | Aucun |
+| Rabais, pourcentages | Aucun |
+| Noms de forfaits ou de paliers | Aucun |
+| Promesse d'essai | Aucune |
+| Modules CORO nommés | Aucun (aucun libellé lisible) |
+| Capacités futures | Aucune |
+| Conformité, certification | Aucune |
+| Logo CORO ou marque | Aucun logo ; seule une inscription minuscule illisible sur le cadre de l'écran (marque du fabricant) |
+| Texte incrusté | Aucun texte lisible |
+| Personnes | Un homme de dos et une femme qui désigne l'écran, dans un bureau |
+| Écran | Représentation abstraite : bâtiments isométriques reliés par des zones ; panneau latéral avec des icônes et des barres sans libellé. Ne montre aucune interface CORO reconnaissable |
+| Contexte | Horizon de Montréal (pont Jacques-Cartier, Mont-Royal), lumière de fin de journée |
+| Pourrait être pris pour une preuve produit | Non : aucun libellé, aucun contrôle, aucune donnée ; l'écran est une figure conceptuelle organisation → sites et bâtiments → portée |
+
+**Classement : MARKETING ILLUSTRATION, sûre.** `alt=""`, aucune légende, aucune cartouche, jamais décrite comme une capture ; aucune fonctionnalité n'est déduite de son contenu. Le fichier n'est ni recadré ni modifié ; le cadrage du héros est un positionnement CSS.
+
+## B1b. Mise à jour de l'image de tarification (fichier remplacé une seconde fois)
+
+L'humain a remplacé `public/website-v2/pricing/pricing-coro-modular-platform-v2.webp` (90 604 octets, 1672 × 941) après le premier audit : **le tableau B1 ci-dessus décrit la version précédente (écran de bâtiments isométriques) et ne s'applique plus.** Audit de zéro de la version actuelle :
+
+| Vérification | Constat |
+|---|---|
+| Prix, rabais, forfaits, essai | Aucun |
+| Modules nommés, capacités futures | Aucun module nommé. La diapositive liste des thèmes génériques (BÂTIMENTS, PERSONNES, PLANS, DONNÉES, INTERVENTION, CONTINUITÉ) : ce sont des thèmes, pas des modules ni des capacités vendues |
+| Texte incrusté | Diapositive « DES ORGANISATIONS PLUS RÉSILIENTES AUJOURD'HUI » ; inscription murale « RÉSILIENCE · CONFORMITÉ · ACTION » ; livre « Résilience · Conformité · Action » |
+| Conformité, certification | Le mot « Conformité » apparaît deux fois comme valeur de marque (mur et livre) ; aucune revendication ni norme |
+| **Marque CORO** | **Deux tasses portent « CORO » en lettres blanches sans le O rouge du logo officiel : c'est un rendu généré par IA du nom de marque, pas le logo officiel.** Visibles en bas du héros, tasse à droite lisible à 1440 |
+| Écran / interface | Diapositive de présentation (photos de bâtiments et d'une installation industrielle sur une carte du Canada) ; aucune interface CORO, aucun contrôle, aucune donnée : ne peut pas passer pour une preuve produit |
+| Contexte | Horizon de Montréal ; un homme (en retrait) et une femme qui désigne la diapositive |
+
+**Classement : MARKETING ILLUSTRATION** (`alt=""`, sans légende), **avec un point de gouvernance en attente d'une décision humaine** : la règle de la décision D13 est « logo CORO officiel seulement, ou aucun logo ». Les tasses affichent le nom de marque sans être le logo officiel. Aucun cadrage CSS ne peut les retirer (elles sont au bas du champ visible sur ordinateur comme sur mobile). Le fichier n'est ni recadré ni modifié. Décision à prendre : accepter les tasses comme accessoire, ou remplacer l'image par une version sans texte de marque. Le mot « Conformité » (mur et livre) est du décor de marque, sans effet sur les textes de la page ; à confirmer par l'humain.
+
+Cadrage du héros ajusté pour la nouvelle image : position `80% 50%` (ordinateur et mobile), pour montrer la personne qui désigne la diapositive. Aucun changement de texte, de métadonnées ni de structure.
+
+Note d'environnement : le cache d'images de Next (`.next/cache/images`) servait encore l'ancienne version après le remplacement du fichier ; il a été vidé en local (dossier généré, hors dépôt). Un déploiement à partir d'une image de conteneur neuve n'est pas concerné.
+
+## B2. Matrice de préservation du contenu V1
+
+Base : `tests/fixtures/pricing-baseline.json`. Aucune perte silencieuse.
+
+| Bloc V1 | Classe | Résultat V2 et raison |
+|---|---|---|
+| En-tête et chrome legacy (« ← Accueil », sélecteur de langue) | REMOVE | Remplacés par le shell V2 |
+| H1 « Une tarification qui s'adapte à votre organisation. » | REWRITE | « Une offre configurée autour de votre organisation. » : le modèle A n'affiche aucune tarification ; le H1 d'origine laissait entendre un prix qui « s'adapte » |
+| Introduction : sites et bâtiments, utilisateurs, capacités, accompagnement ; « nous construisons cette configuration avec vous » | RECOMPOSE | L'idée « définie avec vous » est conservée ; les quatre repères passent dans la section 02 |
+| Boutons « Demander une démo » et « Voir les facteurs de configuration » | REWRITE | « Demander une offre » (ancre locale `#demo`) et « Voir comment l'offre est définie » (`#portee`) ; l'ancre `#factors` était interne (aucun lien externe) |
+| « Réponse sous 24 heures » | REMOVE | D4 : promesse ferme retirée |
+| « Conçu par des praticiens de la sécurité incendie et des mesures d'urgence » | REMOVE | Affirmation REVIEW (MIG-00A) non établie ; à ne pas migrer par défaut |
+| « Configurations types : trois profils courants » (trois cartes avec listes et un bouton chacune) | RECOMPOSE | Section 01 : trois lignes « À titre d'exemple », sans carte ni bouton par profil |
+| Listes de fonctions des profils (« Accompagnement de base », « Toutes les capacités documentaires », « Résilience et intervention complète », « Accompagnement dédié à la configuration », « Accompagnement multi-organisations ») | REMOVE | Elles se lisent comme des contenus de forfaits (emballage commercial non établi, §18 de la tâche) ; remplacées par des situations |
+| Badge « Configuration la plus courante » | REMOVE | Affirmation non appuyée |
+| « Aucun de ces profils n'est un forfait fixe » | PRESERVE | Note de la section 01 |
+| « Quatre facteurs déterminent votre configuration CORO... La tarification CORO est établie à partir de ces quatre dimensions » | REWRITE | Section 02 : quatre repères qui « aident à définir la portée » ; la phrase de tarification et la formule « détermine le prix » sont retirées (règle du modèle A, §8 de la tâche) |
+| Facteurs Sites et bâtiments, Utilisateurs, Capacités CORO, Accompagnement | PRESERVE | Contenu conservé, verbes ajustés (« aident à définir », « aident à prévoir ») |
+| Ajout | AJOUT | Phrase explicite : ces repères ne sont pas des règles de facturation (distinction « ce qu'il faut comprendre » / « variable de facturation ») |
+| « Les cinq dimensions CORO » (cinq capacités) | RECOMPOSE | Section 03, cinq lignes avec un lien vers la page produit ; phrase de frontière capacité / offre |
+| Texte Documents : « PMU, PSI et PCA disponibles dès maintenant ... PGC, PRA et PUE sont prévus en phase 2 » | REWRITE | La phrase de phase 2 est retirée (capacités futures absentes d'une page commerciale, §11 du gate) ; « génération automatisée » devient « génération » ; « conformité » retiré |
+| Texte Performance : « objectifs, indicateurs et niveaux de performance » | REWRITE | Aligné sur la page Performance (heures, capacité d'équipe, avancement) : « objectifs » et « indicateurs » étaient signalés REVIEW (MIG-02) |
+| Texte Résilience et intervention : « présence en temps réel », « information destinée aux secours », « exercices » | REWRITE | « registre de présence », « gestion d'incidents et retour d'expérience » ; « temps réel » et « exercices » retirés (formulations non alignées sur les pages V2) |
+| Section « Programme fondateur » (ruban, sceau, quatre avantages, bouton, « places limitées ») | REMOVE | D3 ; ancre `#fondateur` supprimée |
+| « Deux perspectives » (professionnels, organisations) avec leurs listes | RECOMPOSE | Contenu absorbé par les exemples de la section 01 ; les listes de puces sont retirées (doublon et allure de forfait) |
+| « Déploiement : de l'évaluation à l'accompagnement continu » (quatre étapes) | PRESERVE / REWRITE | Section 04 : mêmes quatre étapes ; « Une offre adaptée vous est ensuite proposée » ajouté à l'évaluation ; « continu » et « niveau convenu » ramenés à « selon ce qui est convenu » (aucun niveau de service) |
+| FAQ : évolution de la configuration ; plusieurs sites ; firmes ; formation et accompagnement | PRESERVE | Quatre questions inchangées quant au fond |
+| FAQ : « Pourquoi les prix ne sont-ils pas affichés directement? » | REWRITE | La réponse ne dit plus que « la tarification dépend de... » : la définition de l'offre se fait selon la situation |
+| FAQ : « Où sont hébergées nos données? » (« hébergées au Canada, sur DigitalOcean à Toronto ») | REWRITE | Aligné sur la page Sécurité (infrastructure applicative principale, région de Toronto, services de soutien) ; fournisseur non nommé ici |
+| Ajout FAQ | AJOUT | « Existe-t-il une période d'essai? » (démonstration et discussion d'abord, D2) et « Comment demander une offre? » (D4) |
+| Section « Parlons de votre environnement » avec `DemoForm` | PRESERVE | Formulaire partagé inchangé, ancre `#demo` conservée ; texte réécrit sans promesse de délai |
+| Titre et description | REWRITE | Sans marque ; sans prix, essai ni rabais ; territoire « tarification » sans laisser croire à des prix publics |
+| JSON-LD `WebPage` + `BreadcrumbList` + `FAQPage` | REWRITE | `FAQPage` seulement, identique à la FAQ visible ; `WebPage` et `BreadcrumbList` retirés pour s'aligner sur les autres pages V2 (REVIEW SEO : perte du fil d'Ariane structuré) |
+| Aucun prix, aucun forfait publié en V1 | PRESERVE | Le modèle A est le modèle publié de la V1 |
+| Version anglaise complète | PRESERVE (structure) | Réécrite en anglais avec les mêmes limites |
+
+## B3. Dimensions commerciales publiées
+
+Quatre repères qui « aident à définir la portée » : sites et bâtiments (avec leur complexité), utilisateurs, capacités CORO, accompagnement. Ils ne sont **pas** présentés comme des règles de facturation. Capacités présentées (descriptions de ce que CORO permet, jamais des modules vendus séparément) : production documentaire, gestion de projets et de mandats, performance, portail client, résilience opérationnelle ; un contexte spécialisé (alerte à la population) renvoie à une discussion de cadrage distincte, sans variable ni formule. Déploiement : évaluation, configuration, déploiement, accompagnement « selon ce qui est convenu ».
+
+## B4. Décisions commerciales futures non exposées
+
+Aucun prix, « à partir de », rabais, palier ou nom de forfait ; aucun essai standardisé ni ses limites ; aucun programme fondateur ; aucun crédit de recommandation ; aucun délai de réponse ferme ; aucun SLA, niveau de support, heures incluses ou formule de facturation ; aucun module vendu séparément ; aucun module futur (Knowledge, Network, Campus, Ops, IA comme produit) ; aucun type de document de phase 2 ; aucune structure d'emballage à déduire de l'architecture du produit.
+
+## B5. Ressources, métadonnées, langue, liens
+
+| Sujet | Décision |
+|---|---|
+| Ressources | Section « Pour situer votre besoin » : `combien-coute-plan-mesures-urgence-pmu`, `plan-mesures-urgence-word-excel-logiciel`, `gerer-plans-urgence-plusieurs-batiments` (publiés, FR et EN, HTTP 200 le 2026-09-26, aucun ne parle d'un prix ni d'un essai de CORO). Écartés : `logiciel-plan-mesures-urgence-pmu`, `logiciel-plan-securite-incendie-psi`, `logiciel-plan-continuite-activites-pca` (articles de choix de produit qui recouvrent la page Documents) |
+| Titres | FR : « Tarification : une offre configurée selon votre organisation » ; EN : « Pricing: an offer configured around your organization » |
+| Langue | Vraie version FR / EN ; aucun `englishAvailable={false}` |
+| Liens | Cinq pages produit, `/sentinelle-population` (page FR seulement : en anglais le lien mène à une page française, dette déjà connue de MIG-03A), trois articles, ancres locales ; aucun lien vers Sécurité, Parrainage ou une route FUTURE |
+| CTA | Ancre locale `#demo` vers le formulaire de la page (le même que celui de la demande de démonstration, dit explicitement) ; aucun système de soumission nouveau |
+
+## B6. Dettes transversales enregistrées (non traitées ici)
+
+| Dette | Où | Étape |
+|---|---|---|
+| Promesse « dans les 24 heures » (message de succès) | `DemoForm.tsx` (accueil, `/contact`, `/pricing`) ; elle s'affiche encore sur `/pricing` après l'envoi du formulaire | Instruction distincte sur `DemoForm` |
+| « Nous répondons habituellement dans les 24 heures » | Accueil | MIG-09 |
+| Bandeau « Programme fondateur » et lien `/pricing#fondateur` | Accueil : le lien mène maintenant à `/pricing` sans ancre (la section n'existe plus) | MIG-09 |
+| Plans « Essai gratuit / Standard / Entreprise » (code mort non rendu) | `HomePageClient.tsx` | MIG-09 |
+| Confirmation « Loi 25 » de l'accueil (code mort non rendu) | `HomePageClient.tsx` | MIG-09 |
+| Éléments juridiques et de vie privée (`DemoForm` envoie à un service tiers) | Politique de confidentialité | LR-01 |
+
+## B7. Décisions commerciales restantes
+
+Aucune décision n'est requise pour publier cette page. Restent ouvertes, sans effet sur elle : validité commerciale du programme de recommandation (CD-08) ; toute future publication de prix, forfaits, essai, SLA ou modules vendus séparément (nouvelle décision et nouveau gate).
+
+## B8. MIG-04B-B — passe visuelle commerciale et décision sur le parrainage
+
+Date : 2026-09-26. La gouvernance commerciale du modèle A est inchangée, à une exception explicite (ci-dessous). Héros et image inchangés.
+
+### Décision humaine qui remplace D5
+
+| Avant (D5, B4, tests) | Maintenant |
+|---|---|
+| Le crédit de 250 $ n'est pas promu sur `/pricing` ; aucun lien vers le parrainage | **Un encart contextuel de parrainage est autorisé sur `/pricing`**, avec un lien vers `/programme-recommandation`. Le parrainage reste un programme commercial distinct : le crédit n'est présenté ni comme un rabais de tarification, ni comme un rabais d'abonnement, ni comme une économie cumulable, ni comme un élément du modèle de tarification |
+
+Source d'autorité vérifiée le jour même : la page de parrainage publie « 250 $ » en français et « $250 » en anglais (« Lorsqu'une organisation devient un client admissible, votre organisation peut recevoir un crédit CORO de 250 $ »). Aucun écart : le montant est donc mentionné, une seule fois par langue, avec la formule « selon les conditions du programme » et la phrase « Ce programme est distinct de l'offre décrite sur cette page ». Les conditions complètes ne sont pas dupliquées. Le test compare la mention au texte de la page de parrainage. Si la page de parrainage change son montant, la mention devra être retirée ou alignée.
+
+### Décision inchangée
+
+Programme fondateur : RETIRÉ de la V2 publique. Aucune trace dans la page (test). Dette d'accueil (`#fondateur`) : MIG-09.
+
+### Recomposition visuelle
+
+| Élément | Traitement |
+|---|---|
+| Héros | Inchangé |
+| Trois cartes de situation (section 01) | « Un bâtiment », « Plusieurs bâtiments ou sites », « Firmes et professionnels » : numérotées, bordure de 1 px, filet d'accent, sans prix, sans « recommandé », sans badge, sans liste à coches ; trois colonnes sur ordinateur, une colonne sur mobile ; le texte source est conservé ; note « ces situations ne sont pas des forfaits » conservée |
+| Quatre cartes de portée (section 02) | Sites et bâtiments, Utilisateurs, Capacités CORO, Accompagnement ; quatre colonnes sur grand écran, deux sur tablette, une sur mobile ; texte conservé ; note explicite « pas des règles de facturation » conservée |
+| Composition des capacités (section 03) | L'organisation « au centre » dans un bloc de surface calme avec la phrase de frontière capacité / offre ; les cinq capacités actuelles en blocs à filets autour, avec leurs liens ; aucune tuile en carte, aucun module futur |
+| Flux marine (section 04) | Inchangé |
+| Énoncé du modèle A (section 05) | Bande blanche à grand espace : « Pas de prix générique pour une organisation qui ne l'est pas. », sans chiffre ni formule, suivie de ce que la discussion permet de clarifier |
+| Ressources | Trois lignes, inchangées (aucune carte) |
+| Encart de parrainage | Panneau autonome avant la FAQ, bouton vers le programme |
+| FAQ | Contenu inchangé (huit questions) ; parité JSON-LD conservée |
+| Conversion finale | « Construisons votre environnement CORO. » : contexte, bâtiments ou sites, besoins ; aucune promesse de délai ; `DemoForm` inchangé ; section blanche (une bande marine se fondait dans le pied de page marine) |
+
+Les cartes n'apparaissent que dans deux groupes délibérés (situations, portée) et dans l'encart de parrainage. Un ajustement local : les titres des quatre cartes de portée sont d'un cran plus petits pour que « Accompagnement » reste dans la carte.
+
+### Dettes inchangées
+
+`DemoForm` (message de succès « 24 heures ») ; bandeau fondateur, texte de 24 heures et blocs de code mort de l'accueil : MIG-09.

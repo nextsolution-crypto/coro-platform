@@ -15,7 +15,7 @@ const baseline = JSON.parse(read('tests/fixtures/security-baseline.json')) as { 
 
 test('registry and route: /security is V2, bilingual, implemented and in the sitemap in FR and EN; /pricing is not migrated', () => {
   assert.ok(migratedV2Routes.includes('/security'));
-  assert.ok(!migratedV2Routes.includes('/pricing'));
+  assert.ok(migratedV2Routes.indexOf('/security') < migratedV2Routes.indexOf('/pricing'), '/pricing was registered after /security (MIG-04B)');
   assert.equal(isLegacyFooterVisible('/security'), false);
   const r = getRoute('security');
   assert.equal(r?.implemented, true); assert.equal(r?.sitemap, true); assert.equal(r?.en, true);

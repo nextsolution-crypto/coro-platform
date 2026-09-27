@@ -13,7 +13,7 @@ const page = read('app/programme-recommandation/page.tsx');
 const norm = (s: string) => s.replace(/ /g, ' ');
 
 test('the registry holds exactly the four MIG-01 routes; the referral page has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing']);
   assert.equal(isLegacyFooterVisible('/programme-recommandation'), false);
   assert.equal(isLegacyFooterVisible('/performance-objectifs'), false); // migrated in MIG-02C
   assert.equal(isLegacyFooterVisible('/'), true);
