@@ -7,11 +7,12 @@ import { CapacityController } from './capacity.controller';
 import { CapacityService } from './capacity.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ActivityTypesModule } from '../activity-types/activity-types.module';
+import { MandateServicesService } from './mandate-services.service';
 
 @Module({
   imports: [PrismaModule, ActivityTypesModule],
   controllers: [MandateController, RendementController, PortfolioController, CapacityController],
-  providers: [MandateService, CapacityService],
+  providers: [MandateService, MandateServicesService, CapacityService],
   exports: [MandateService, CapacityService],
 })
 export class MandateModule {}

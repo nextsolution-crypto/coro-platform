@@ -3,11 +3,25 @@ import { AuthGuard } from '@nestjs/passport';
 import { MandateService } from './mandate.service';
 import type { Response } from 'express';
 import { requireInternal, requireTenantAdmin } from '../auth/work-management-access';
+import { MandateServicesService } from './mandate-services.service';
+import { SaveMandateServicesDto } from './mandate-services.dto';
 
 @Controller('projects/:projectId')
 @UseGuards(AuthGuard('jwt'))
 export class MandateController {
-  constructor(private readonly service: MandateService) {}
+  constructor(private readonly service: MandateService, private readonly mandateServices: MandateServicesService) {}
+
+  @Get('mandate/services')
+  getMandateServices(@Param('projectId') projectId: string, @Request() req: any) {
+    requireInternal(req.user);
+    return this.mandateServices.list(projectId, req.user);
+  }
+
+  @Put('mandate/services')
+  saveMandateServices(@Param('projectId') projectId: string, @Body() dto: SaveMandateServicesDto, @Request() req: any) {
+    requireTenantAdmin(req.user);
+    return this.mandateServices.save(projectId, req.user, dto);
+  }
 
   // Mandat
   @Get('mandate')
