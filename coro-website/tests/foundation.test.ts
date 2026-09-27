@@ -13,7 +13,7 @@ import { productStatusLabel } from '../lib/site/status.ts';
 const protectedPaths = [
   '/', '/about', '/security', '/privacy', '/terms', '/pricing', '/sentinelle', '/sentinelle-population', '/coro-incident',
   '/gestion-documentaire', '/gestion-de-projets', '/resilience-operationnelle', '/performance-objectifs',
-  '/portail-client', '/programme-recommandation', '/contact', '/partners', '/blog',
+  '/portail-client', '/programme-recommandation', '/contact', '/partners', '/blog', '/guides',
   '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi',
   '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc',
   '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue',

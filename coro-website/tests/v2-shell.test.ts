@@ -7,7 +7,7 @@ import { isLegacyFooterVisible, isV2MigratedRoute, migratedV2Routes } from '../l
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 test('the V2 migration registry holds ONLY the approved migrated routes; every other current route stays legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides']);
   assert.equal(isV2MigratedRoute('/about'), true); assert.equal(isV2MigratedRoute('/contact'), true);
   const partial = ['/', '/blog', '/design-lab'];
   for (const path of partial) assert.equal(isV2MigratedRoute(path), false, path);

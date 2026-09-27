@@ -41,6 +41,7 @@ export const publicRoutes = [
   historical({ id: 'contact', publication: 'PUBLISH-NOW', path: '/contact', family: 'company', source: 'app/contact/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.6, changeFrequency: 'monthly' }),
   historical({ id: 'partners', publication: 'PUBLISH-NOW', path: '/partners', family: 'company', source: 'app/partners/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.7, changeFrequency: 'monthly' }),
   historical({ id: 'blog', publication: 'LEGACY-PRESERVE', path: '/blog', family: 'resources', source: 'app/blog/page.tsx', fr: true, en: true, indexable: true, sitemap: true, priority: 0.8, changeFrequency: 'weekly' }),
+  historical({ id: 'guides', publication: 'PUBLISH-NOW', path: '/guides', family: 'resources', source: 'app/guides/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.8, changeFrequency: 'monthly' }),
   historical({ id: 'guide-pmu', publication: 'PUBLISH-NOW', path: '/documents/plan-mesures-urgence-pmu', family: 'resources', source: 'app/documents/plan-mesures-urgence-pmu/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
   historical({ id: 'guide-psi', publication: 'PUBLISH-NOW', path: '/documents/plan-securite-incendie-psi', family: 'resources', source: 'app/documents/plan-securite-incendie-psi/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
   historical({ id: 'guide-pca', publication: 'PUBLISH-NOW', path: '/documents/plan-continuite-activites-pca', family: 'resources', source: 'app/documents/plan-continuite-activites-pca/page.tsx', fr: true, en: false, indexable: true, sitemap: true, priority: 0.9, changeFrequency: 'monthly' }),
@@ -60,7 +61,7 @@ export const publicRoutes = [
     ['qr-intervention', '/qr-intervention', 'resilience', 'FUTURE'], ['knowledge', '/coro-knowledge', 'intelligence', 'FUTURE'],
     ['ai', '/coro-ai', 'intelligence', 'FUTURE'], ['network', '/coro-network', 'intelligence', 'FUTURE'],
     ['campus', '/coro-campus', 'solutions', 'FUTURE'], ['multi-site', '/solutions/multi-sites', 'solutions', 'FUTURE'],
-    ['resources', '/ressources', 'resources', 'FUTURE'], ['guides', '/guides', 'resources', 'PUBLISH-NOW'],
+    ['resources', '/ressources', 'resources', 'FUTURE'],
     ['compliance-resources', '/conformite-reglementation', 'resources', 'REVIEW'],
   ] as const).map(([id, path, family, publication]) => ({ id, path, kind: 'future' as const, family: family as RouteFamily, publication: publication as PublicationStatus, fr: true, en: false, indexable: true, sitemap: false, implemented: false, protected: false })),
 ] satisfies readonly PublicRoute[];

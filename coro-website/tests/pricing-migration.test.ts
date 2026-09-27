@@ -17,7 +17,7 @@ const baseline = JSON.parse(read('tests/fixtures/pricing-baseline.json')) as { f
 
 test('registry and route: /pricing is V2, bilingual, implemented, in the sitemap in FR and EN, registered after /security', () => {
   assert.ok(migratedV2Routes.includes('/pricing'));
-  assert.equal(migratedV2Routes.at(-1), '/pricing');
+  assert.ok(migratedV2Routes.indexOf('/pricing') < migratedV2Routes.indexOf('/guides'), '/pricing was registered before /guides (MIG-05A)');
   assert.ok(migratedV2Routes.includes('/security'));
   assert.equal(isLegacyFooterVisible('/pricing'), false);
   const r = getRoute('pricing');

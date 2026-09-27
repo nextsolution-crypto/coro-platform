@@ -15,7 +15,7 @@ const baseline = JSON.parse(readFileSync(join(process.cwd(), 'tests/fixtures/sit
 
 // Intentional corrections against the pre-MIG-00B.3 sitemap (English is not genuinely available on these two routes).
 const REMOVED_ON_PURPOSE = ['https://getcoro.io/sentinelle?lang=en', 'https://getcoro.io/sentinelle-population?lang=en'];
-const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident']; // MIG-03D: new FR-only page
+const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/guides']; // MIG-03D, MIG-05A: new FR-only pages
 const ALTERNATES_DROPPED_ON_PURPOSE = ['https://getcoro.io/sentinelle', 'https://getcoro.io/sentinelle-population'];
 
 test('every previously valid static URL is preserved, except the documented intentional corrections', () => {
@@ -76,22 +76,26 @@ test('only discoverable, implemented, sitemap-enabled routes are listed; every o
   }
 });
 
-// MIG-03D: /coro-incident is implemented and listed; only /guides is still a PUBLISH-NOW route that does not exist.
-test('PUBLISH-NOW routes that do not exist yet (/guides) are excluded until implemented', () => {
-  for (const id of ['guides']) {
-    const route = publicRoutes.find((r) => r.id === id) as PublicRoute;
-    assert.equal(route.publication, 'PUBLISH-NOW');
-    assert.equal(route.implemented, false);
-    assert.ok(!urls.some((url) => url.includes(route.path)));
-  }
-  const promoted: PublicRoute = { ...(publicRoutes.find((r) => r.id === 'guides') as PublicRoute), kind: 'historical', implemented: true, sitemap: true, en: false };
-  assert.ok(buildStaticSitemapEntries([promoted], lastModified).some((entry) => entry.url === 'https://getcoro.io/guides'), 'once implemented and enabled it is listed, FR only');
+// MIG-05A: /guides is now implemented (the hub) and listed, FR only, like the other PUBLISH-NOW routes.
+test('/guides is implemented, PUBLISH-NOW, sitemap-enabled and FR only', () => {
+  const route = publicRoutes.find((r) => r.id === 'guides') as PublicRoute;
+  assert.equal(route.publication, 'PUBLISH-NOW');
+  assert.equal(route.implemented, true);
+  assert.equal(route.kind, 'historical');
+  assert.equal(route.en, false);
+  assert.ok(urls.includes('https://getcoro.io/guides'));
+});
+
+// No PUBLISH-NOW route remains unimplemented after MIG-05A: /guides was the last one (see MIG-05-GUIDES-GATE.md).
+test('no PUBLISH-NOW route is currently unimplemented', () => {
+  const pending = publicRoutes.filter((r) => r.publication === 'PUBLISH-NOW' && !r.implemented);
+  assert.deepEqual(pending, []);
 });
 
 test('publication status is independent from implementation and from V2 migration', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides']);
   assert.ok(publicRoutes.some((r) => r.publication === 'PUBLISH-NOW' && r.implemented), 'published and implemented, yet not V2 migrated');
-  assert.ok(publicRoutes.some((r) => r.publication === 'PUBLISH-NOW' && !r.implemented), 'published target, not implemented');
+  assert.ok(publicRoutes.some((r) => r.publication === 'BUILD-NOW-HIDDEN' && !r.implemented), 'published target, not implemented (guides was the last PUBLISH-NOW gap; MIG-05A closed it)');
   assert.ok(!('v2Migrated' in publicRoutes[0]) && !('migrated' in publicRoutes[0]), 'the route registry does not own migration state');
   assert.equal(publicRoutes.find((r) => r.id === 'platform-overview')?.publication, 'BUILD-NOW-HIDDEN');
   assert.equal(publicRoutes.find((r) => r.id === 'exercises')?.publication, 'REVIEW');
