@@ -45,7 +45,7 @@ export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
       message: 'Décrivez votre besoin (optionnel)',
       submit: 'Envoyer la demande',
       sending: 'Envoi en cours...',
-      success: '✅ Demande envoyée ! Nous vous contacterons dans les 24 heures.',
+      success: '✅ Merci. Votre demande a bien été transmise. Notre équipe communiquera avec vous pour discuter de vos besoins.',
       error: '❌ Une erreur est survenue. Veuillez réessayer ou écrire à info@getcoro.io',
 privacy:
   'Vos informations sont utilisées uniquement pour traiter votre demande.',
@@ -62,7 +62,7 @@ privacyLink: 'Politique de confidentialité',
       message: 'Describe your needs (optional)',
       submit: 'Send request',
       sending: 'Sending...',
-      success: '✅ Request sent! We\'ll contact you within 24 hours.',
+      success: '✅ Thank you. Your request has been submitted. Our team will contact you to discuss your needs.',
       error: '❌ An error occurred. Please try again or email info@getcoro.io',
 privacy:
   'Your information is used only to process your request.',

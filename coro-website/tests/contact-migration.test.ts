@@ -12,6 +12,16 @@ const baseline = JSON.parse(read('tests/fixtures/contact-baseline.json')) as Bas
 const page = read('app/contact/page.tsx');
 const form = read('app/DemoForm.tsx');
 
+test('FIX-24H: DemoForm success wording makes no response-time promise, in FR and EN, and is used unchanged by /contact', () => {
+  const fr = form.slice(form.indexOf('fr: {'), form.indexOf('en: {'));
+  const en = form.slice(form.indexOf('en: {'), form.indexOf('}[lang]'));
+  assert.doesNotMatch(fr, /24 ?h|24 heures|sous 24|dans les 24|vingt-quatre/i);
+  assert.doesNotMatch(en, /24 ?h|24 hours|within 24|one business day|next business day/i);
+  assert.match(fr, /Merci\. Votre demande a bien été transmise\. Notre équipe communiquera avec vous pour discuter de vos besoins\./);
+  assert.match(en, /Thank you\. Your request has been submitted\. Our team will contact you to discuss your needs\./);
+  assert.match(page, /<DemoForm lang=\{locale\} \/>/);
+});
+
 test('the registry holds exactly /about and /contact; /contact has no legacy footer', () => {
   assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing']);
   assert.equal(isLegacyFooterVisible('/contact'), false);

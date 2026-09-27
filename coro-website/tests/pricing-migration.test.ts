@@ -67,6 +67,11 @@ test('no Free / Standard / Enterprise reconstruction, no 30-day trial or trial l
   assert.match(code, /Notre équipe vous contactera pour discuter de vos besoins/); assert.match(code, /Our team will contact you to discuss your needs/);
 });
 
+test('FIX-24H: the shared DemoForm rendered on /pricing carries no response-time promise', () => {
+  const form = read('app/DemoForm.tsx');
+  assert.doesNotMatch(form, /24 ?h|24 heures|24 hours|sous 24|within 24|vingt-quatre/i);
+});
+
 test('trial question is answered without a promise: demonstration and discussion first', () => {
   assert.match(code, /Nous commençons par une démonstration et une discussion sur votre environnement/);
   assert.match(code, /We start with a demonstration and a discussion about your environment/);

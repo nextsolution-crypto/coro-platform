@@ -796,7 +796,7 @@ Aucun prix, « à partir de », rabais, palier ou nom de forfait ; aucun essai s
 
 | Dette | Où | Étape |
 |---|---|---|
-| Promesse « dans les 24 heures » (message de succès) | `DemoForm.tsx` (accueil, `/contact`, `/pricing`) ; elle s'affiche encore sur `/pricing` après l'envoi du formulaire | Instruction distincte sur `DemoForm` |
+| ~~Promesse « dans les 24 heures » (message de succès)~~ | `DemoForm.tsx` | **RÉSOLU par FIX-24H (2026-09-27)** : message de succès remplacé, FR et EN, sans engagement de délai (« Notre équipe communiquera avec vous pour discuter de vos besoins » / « Our team will contact you to discuss your needs »). Vérifié sur `/pricing` et `/contact`. |
 | « Nous répondons habituellement dans les 24 heures » | Accueil | MIG-09 |
 | Bandeau « Programme fondateur » et lien `/pricing#fondateur` | Accueil : le lien mène maintenant à `/pricing` sans ancre (la section n'existe plus) | MIG-09 |
 | Plans « Essai gratuit / Standard / Entreprise » (code mort non rendu) | `HomePageClient.tsx` | MIG-09 |
