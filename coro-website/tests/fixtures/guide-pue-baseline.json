@@ -1,0 +1,990 @@
+{
+  "captured": "2026-09-27 (MIG-05G, before any PUE change)",
+  "fr": {
+    "status": 200,
+    "title": "Plan d&#x27;Urgence Environnementale (PUE) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan d&#x27;Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.",
+    "canonical": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan d&#x27;Urgence Environnementale (PUE)"
+      ],
+      [
+        2,
+        "Cadre réglementaire : le Règlement sur les urgences environnementales (2019)"
+      ],
+      [
+        2,
+        "Êtes-vous assujetti au Règlement ?"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PUE complet"
+      ],
+      [
+        2,
+        "Obligations de notification"
+      ],
+      [
+        2,
+        "Matières dangereuses, SIMDUT et REPTOX"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PUE"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Mon installation est-elle assujettie au Règlement ?"
+      ],
+      [
+        3,
+        "Que dois-je faire en cas de rejet accidentel ?"
+      ],
+      [
+        3,
+        "Qu&#x27;est-ce qu&#x27;une fiche de données de sécurité (FDS) ?"
+      ],
+      [
+        3,
+        "Le PUE est-il relié au PMU ?"
+      ],
+      [
+        2,
+        "Le PUE arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Générer votre PUE avec CORO →"
+      ],
+      [
+        "https://pollution-dechets.canada.ca/registre-protection-environnementale/reglements/visualiser?id=139",
+        "→ Règlement sur les urgences environnementales (2019) — DORS/2019-51"
+      ],
+      [
+        "https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/reglementation.html",
+        "→ Environnement et Changement climatique Canada — Programme des urgences environnementales"
+      ],
+      [
+        "https://laws-lois.justice.gc.ca/fra/lois/C-15.31/",
+        "→ Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE)"
+      ],
+      [
+        "https://reptox.cnesst.gouv.qc.ca/",
+        "→ IRSST — Répertoire REPTOX"
+      ],
+      [
+        "https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/signaler-urgence.html",
+        "→ Signaler une urgence environnementale — Canada.ca"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan d'Urgence Environnementale (PUE)",
+        "headline": "Plan d'Urgence Environnementale (PUE) — Guide complet | CORO",
+        "description": "Tout sur le Plan d'Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.",
+        "url": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan d'Urgence Environnementale",
+            "alternateName": "PUE"
+          },
+          {
+            "@type": "Thing",
+            "name": "Urgences environnementales"
+          },
+          {
+            "@type": "Thing",
+            "name": "Règlement sur les urgences environnementales (2019)"
+          },
+          {
+            "@type": "Thing",
+            "name": "Matières dangereuses"
+          },
+          {
+            "@type": "Thing",
+            "name": "SIMDUT"
+          },
+          {
+            "@type": "Thing",
+            "name": "Fiche de données de sécurité",
+            "alternateName": "FDS"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan d'Urgence Environnementale (PUE)",
+            "item": "https://getcoro.io/documents/plan-urgence-environnementale-pue"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Mon installation est-elle assujettie au Règlement ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Si votre installation possède ou a autorité sur une substance figurant à l'annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d'Environnement et Changement climatique Canada."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Que dois-je faire en cas de rejet accidentel ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d'Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce qu'une fiche de données de sécurité (FDS) ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "La FDS est un document standardisé décrivant les propriétés d'une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PUE est-il relié au PMU ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · Ce type de document sera disponible dans CORO prochainement. Être notifié → getcoro.io / Plan d&#x27;Urgence Environnementale (PUE) PUE Plan d&#x27;Urgence Environnementale (PUE) Le Plan d&#x27;Urgence Environnementale définit les mesures de prévention et d&#x27;intervention en cas d&#x27;incident environnemental impliquant des substances dangereuses. Au Canada, il est encadré par le Règlement sur les urgences environnementales (2019) (DORS/2019-51), pris en vertu de la Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE), entré en vigueur le 24 août 2019. Générer votre PUE avec CORO → Cadre réglementaire : le Règlement sur les urgences environnementales (2019) Le Règlement sur les urgences environnementales (2019) (DORS/2019-51) règlemente 249 substances dangereuses pour lesquelles il y a des exigences en matière de déclaration et de planification d&#x27;urgence environnementale pour les installations à risque élevé. Il s&#x27;applique à toute personne propriétaire d&#x27;une substance figurant à l&#x27;annexe 1 du Règlement, à des concentrations et quantités égales ou supérieures aux seuils définis. Six catégories de danger sont visées : toxicité en milieu aquatique, combustible, danger d&#x27;explosion, danger de feu en nappe, danger en cas d&#x27;inhalation, et oxydant pouvant exploser. Êtes-vous assujetti au Règlement ? Le Règlement s&#x27;applique si votre installation possède ou a autorité sur une substance figurant à l&#x27;annexe 1 du Règlement UE (2019), à des concentrations et quantités égales ou supérieures aux seuils définis. Les obligations varient selon que vous êtes en situation de déclaration uniquement ou en situation de planification complète. Pour vérifier si votre installation est assujettie, consultez la liste des 249 substances réglementées sur le site d&#x27;Environnement et Changement climatique Canada. Contenu d&#x27;un PUE complet Un PUE comprend : l&#x27;inventaire des substances dangereuses présentes sur le site (fiches de données de sécurité — FDS), l&#x27;identification des risques et des scénarios d&#x27;accidents potentiels, les mesures de prévention et de confinement, les procédures de notification aux autorités (avis immédiat à Environnement et Changement climatique Canada en cas de rejet), les responsabilités en cas d&#x27;intervention, les équipements de réponse disponibles, et les mesures de décontamination et de remédiation. Obligations de notification En vertu de la LCPE (1999), le gouvernement fédéral doit être avisé immédiatement du rejet ou du rejet probable d&#x27;une substance réglementée. Pour signaler une urgence environnementale, contactez la Division des urgences environnementales d&#x27;Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca. Matières dangereuses, SIMDUT et REPTOX La réglementation sur le Système d&#x27;information sur les matières dangereuses utilisées au travail (SIMDUT) exige des fiches de données de sécurité (FDS) pour toutes les matières dangereuses utilisées au travail. Au Québec, le répertoire REPTOX, géré par l&#x27;IRSST, fournit les informations toxicologiques essentielles pour la gestion sécuritaire des substances. Comment CORO supporte la production du PUE CORO intègre un module de gestion des matières dangereuses qui permet de documenter l&#x27;inventaire des substances, les fiches de données de sécurité et les procédures d&#x27;intervention par scénario. La plateforme génère les sections réglementaires du PUE et permet l&#x27;export d&#x27;un document structuré conforme aux exigences réglementaires. 📚 Sources et références officielles → Règlement sur les urgences environnementales (2019) — DORS/2019-51 → Environnement et Changement climatique Canada — Programme des urgences environnementales → Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE) → IRSST — Répertoire REPTOX → Signaler une urgence environnementale — Canada.ca ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Mon installation est-elle assujettie au Règlement ? Si votre installation possède ou a autorité sur une substance figurant à l&#x27;annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d&#x27;Environnement et Changement climatique Canada. Que dois-je faire en cas de rejet accidentel ? En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d&#x27;Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca. Qu&#x27;est-ce qu&#x27;une fiche de données de sécurité (FDS) ? La FDS est un document standardisé décrivant les propriétés d&#x27;une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail. Le PUE est-il relié au PMU ? Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales. Le PUE arrive dans CORO — Phase 2 Laissez-nous vos coordonnées et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "en": {
+    "status": 200,
+    "title": "Plan d&#x27;Urgence Environnementale (PUE) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan d&#x27;Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.",
+    "canonical": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan d&#x27;Urgence Environnementale (PUE)"
+      ],
+      [
+        2,
+        "Cadre réglementaire : le Règlement sur les urgences environnementales (2019)"
+      ],
+      [
+        2,
+        "Êtes-vous assujetti au Règlement ?"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PUE complet"
+      ],
+      [
+        2,
+        "Obligations de notification"
+      ],
+      [
+        2,
+        "Matières dangereuses, SIMDUT et REPTOX"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PUE"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Mon installation est-elle assujettie au Règlement ?"
+      ],
+      [
+        3,
+        "Que dois-je faire en cas de rejet accidentel ?"
+      ],
+      [
+        3,
+        "Qu&#x27;est-ce qu&#x27;une fiche de données de sécurité (FDS) ?"
+      ],
+      [
+        3,
+        "Le PUE est-il relié au PMU ?"
+      ],
+      [
+        2,
+        "Le PUE arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Générer votre PUE avec CORO →"
+      ],
+      [
+        "https://pollution-dechets.canada.ca/registre-protection-environnementale/reglements/visualiser?id=139",
+        "→ Règlement sur les urgences environnementales (2019) — DORS/2019-51"
+      ],
+      [
+        "https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/reglementation.html",
+        "→ Environnement et Changement climatique Canada — Programme des urgences environnementales"
+      ],
+      [
+        "https://laws-lois.justice.gc.ca/fra/lois/C-15.31/",
+        "→ Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE)"
+      ],
+      [
+        "https://reptox.cnesst.gouv.qc.ca/",
+        "→ IRSST — Répertoire REPTOX"
+      ],
+      [
+        "https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/signaler-urgence.html",
+        "→ Signaler une urgence environnementale — Canada.ca"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan d'Urgence Environnementale (PUE)",
+        "headline": "Plan d'Urgence Environnementale (PUE) — Guide complet | CORO",
+        "description": "Tout sur le Plan d'Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.",
+        "url": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan d'Urgence Environnementale",
+            "alternateName": "PUE"
+          },
+          {
+            "@type": "Thing",
+            "name": "Urgences environnementales"
+          },
+          {
+            "@type": "Thing",
+            "name": "Règlement sur les urgences environnementales (2019)"
+          },
+          {
+            "@type": "Thing",
+            "name": "Matières dangereuses"
+          },
+          {
+            "@type": "Thing",
+            "name": "SIMDUT"
+          },
+          {
+            "@type": "Thing",
+            "name": "Fiche de données de sécurité",
+            "alternateName": "FDS"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan d'Urgence Environnementale (PUE)",
+            "item": "https://getcoro.io/documents/plan-urgence-environnementale-pue"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Mon installation est-elle assujettie au Règlement ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Si votre installation possède ou a autorité sur une substance figurant à l'annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d'Environnement et Changement climatique Canada."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Que dois-je faire en cas de rejet accidentel ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d'Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce qu'une fiche de données de sécurité (FDS) ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "La FDS est un document standardisé décrivant les propriétés d'une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PUE est-il relié au PMU ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · Ce type de document sera disponible dans CORO prochainement. Être notifié → getcoro.io / Plan d&#x27;Urgence Environnementale (PUE) PUE Plan d&#x27;Urgence Environnementale (PUE) Le Plan d&#x27;Urgence Environnementale définit les mesures de prévention et d&#x27;intervention en cas d&#x27;incident environnemental impliquant des substances dangereuses. Au Canada, il est encadré par le Règlement sur les urgences environnementales (2019) (DORS/2019-51), pris en vertu de la Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE), entré en vigueur le 24 août 2019. Générer votre PUE avec CORO → Cadre réglementaire : le Règlement sur les urgences environnementales (2019) Le Règlement sur les urgences environnementales (2019) (DORS/2019-51) règlemente 249 substances dangereuses pour lesquelles il y a des exigences en matière de déclaration et de planification d&#x27;urgence environnementale pour les installations à risque élevé. Il s&#x27;applique à toute personne propriétaire d&#x27;une substance figurant à l&#x27;annexe 1 du Règlement, à des concentrations et quantités égales ou supérieures aux seuils définis. Six catégories de danger sont visées : toxicité en milieu aquatique, combustible, danger d&#x27;explosion, danger de feu en nappe, danger en cas d&#x27;inhalation, et oxydant pouvant exploser. Êtes-vous assujetti au Règlement ? Le Règlement s&#x27;applique si votre installation possède ou a autorité sur une substance figurant à l&#x27;annexe 1 du Règlement UE (2019), à des concentrations et quantités égales ou supérieures aux seuils définis. Les obligations varient selon que vous êtes en situation de déclaration uniquement ou en situation de planification complète. Pour vérifier si votre installation est assujettie, consultez la liste des 249 substances réglementées sur le site d&#x27;Environnement et Changement climatique Canada. Contenu d&#x27;un PUE complet Un PUE comprend : l&#x27;inventaire des substances dangereuses présentes sur le site (fiches de données de sécurité — FDS), l&#x27;identification des risques et des scénarios d&#x27;accidents potentiels, les mesures de prévention et de confinement, les procédures de notification aux autorités (avis immédiat à Environnement et Changement climatique Canada en cas de rejet), les responsabilités en cas d&#x27;intervention, les équipements de réponse disponibles, et les mesures de décontamination et de remédiation. Obligations de notification En vertu de la LCPE (1999), le gouvernement fédéral doit être avisé immédiatement du rejet ou du rejet probable d&#x27;une substance réglementée. Pour signaler une urgence environnementale, contactez la Division des urgences environnementales d&#x27;Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca. Matières dangereuses, SIMDUT et REPTOX La réglementation sur le Système d&#x27;information sur les matières dangereuses utilisées au travail (SIMDUT) exige des fiches de données de sécurité (FDS) pour toutes les matières dangereuses utilisées au travail. Au Québec, le répertoire REPTOX, géré par l&#x27;IRSST, fournit les informations toxicologiques essentielles pour la gestion sécuritaire des substances. Comment CORO supporte la production du PUE CORO intègre un module de gestion des matières dangereuses qui permet de documenter l&#x27;inventaire des substances, les fiches de données de sécurité et les procédures d&#x27;intervention par scénario. La plateforme génère les sections réglementaires du PUE et permet l&#x27;export d&#x27;un document structuré conforme aux exigences réglementaires. 📚 Sources et références officielles → Règlement sur les urgences environnementales (2019) — DORS/2019-51 → Environnement et Changement climatique Canada — Programme des urgences environnementales → Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE) → IRSST — Répertoire REPTOX → Signaler une urgence environnementale — Canada.ca ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Mon installation est-elle assujettie au Règlement ? Si votre installation possède ou a autorité sur une substance figurant à l&#x27;annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d&#x27;Environnement et Changement climatique Canada. Que dois-je faire en cas de rejet accidentel ? En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d&#x27;Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca. Qu&#x27;est-ce qu&#x27;une fiche de données de sécurité (FDS) ? La FDS est un document standardisé décrivant les propriétés d&#x27;une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail. Le PUE est-il relié au PMU ? Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales. Le PUE arrive dans CORO — Phase 2 Laissez-nous vos coordonnées et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "ref": {
+    "status": 200,
+    "title": "Plan d&#x27;Urgence Environnementale (PUE) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan d&#x27;Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.",
+    "canonical": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan d&#x27;Urgence Environnementale (PUE)"
+      ],
+      [
+        2,
+        "Cadre réglementaire : le Règlement sur les urgences environnementales (2019)"
+      ],
+      [
+        2,
+        "Êtes-vous assujetti au Règlement ?"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PUE complet"
+      ],
+      [
+        2,
+        "Obligations de notification"
+      ],
+      [
+        2,
+        "Matières dangereuses, SIMDUT et REPTOX"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PUE"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Mon installation est-elle assujettie au Règlement ?"
+      ],
+      [
+        3,
+        "Que dois-je faire en cas de rejet accidentel ?"
+      ],
+      [
+        3,
+        "Qu&#x27;est-ce qu&#x27;une fiche de données de sécurité (FDS) ?"
+      ],
+      [
+        3,
+        "Le PUE est-il relié au PMU ?"
+      ],
+      [
+        2,
+        "Le PUE arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Générer votre PUE avec CORO →"
+      ],
+      [
+        "https://pollution-dechets.canada.ca/registre-protection-environnementale/reglements/visualiser?id=139",
+        "→ Règlement sur les urgences environnementales (2019) — DORS/2019-51"
+      ],
+      [
+        "https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/reglementation.html",
+        "→ Environnement et Changement climatique Canada — Programme des urgences environnementales"
+      ],
+      [
+        "https://laws-lois.justice.gc.ca/fra/lois/C-15.31/",
+        "→ Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE)"
+      ],
+      [
+        "https://reptox.cnesst.gouv.qc.ca/",
+        "→ IRSST — Répertoire REPTOX"
+      ],
+      [
+        "https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/signaler-urgence.html",
+        "→ Signaler une urgence environnementale — Canada.ca"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan d'Urgence Environnementale (PUE)",
+        "headline": "Plan d'Urgence Environnementale (PUE) — Guide complet | CORO",
+        "description": "Tout sur le Plan d'Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.",
+        "url": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan d'Urgence Environnementale",
+            "alternateName": "PUE"
+          },
+          {
+            "@type": "Thing",
+            "name": "Urgences environnementales"
+          },
+          {
+            "@type": "Thing",
+            "name": "Règlement sur les urgences environnementales (2019)"
+          },
+          {
+            "@type": "Thing",
+            "name": "Matières dangereuses"
+          },
+          {
+            "@type": "Thing",
+            "name": "SIMDUT"
+          },
+          {
+            "@type": "Thing",
+            "name": "Fiche de données de sécurité",
+            "alternateName": "FDS"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan d'Urgence Environnementale (PUE)",
+            "item": "https://getcoro.io/documents/plan-urgence-environnementale-pue"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Mon installation est-elle assujettie au Règlement ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Si votre installation possède ou a autorité sur une substance figurant à l'annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d'Environnement et Changement climatique Canada."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Que dois-je faire en cas de rejet accidentel ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d'Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce qu'une fiche de données de sécurité (FDS) ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "La FDS est un document standardisé décrivant les propriétés d'une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PUE est-il relié au PMU ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · Ce type de document sera disponible dans CORO prochainement. Être notifié → getcoro.io / Plan d&#x27;Urgence Environnementale (PUE) PUE Plan d&#x27;Urgence Environnementale (PUE) Le Plan d&#x27;Urgence Environnementale définit les mesures de prévention et d&#x27;intervention en cas d&#x27;incident environnemental impliquant des substances dangereuses. Au Canada, il est encadré par le Règlement sur les urgences environnementales (2019) (DORS/2019-51), pris en vertu de la Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE), entré en vigueur le 24 août 2019. Générer votre PUE avec CORO → Cadre réglementaire : le Règlement sur les urgences environnementales (2019) Le Règlement sur les urgences environnementales (2019) (DORS/2019-51) règlemente 249 substances dangereuses pour lesquelles il y a des exigences en matière de déclaration et de planification d&#x27;urgence environnementale pour les installations à risque élevé. Il s&#x27;applique à toute personne propriétaire d&#x27;une substance figurant à l&#x27;annexe 1 du Règlement, à des concentrations et quantités égales ou supérieures aux seuils définis. Six catégories de danger sont visées : toxicité en milieu aquatique, combustible, danger d&#x27;explosion, danger de feu en nappe, danger en cas d&#x27;inhalation, et oxydant pouvant exploser. Êtes-vous assujetti au Règlement ? Le Règlement s&#x27;applique si votre installation possède ou a autorité sur une substance figurant à l&#x27;annexe 1 du Règlement UE (2019), à des concentrations et quantités égales ou supérieures aux seuils définis. Les obligations varient selon que vous êtes en situation de déclaration uniquement ou en situation de planification complète. Pour vérifier si votre installation est assujettie, consultez la liste des 249 substances réglementées sur le site d&#x27;Environnement et Changement climatique Canada. Contenu d&#x27;un PUE complet Un PUE comprend : l&#x27;inventaire des substances dangereuses présentes sur le site (fiches de données de sécurité — FDS), l&#x27;identification des risques et des scénarios d&#x27;accidents potentiels, les mesures de prévention et de confinement, les procédures de notification aux autorités (avis immédiat à Environnement et Changement climatique Canada en cas de rejet), les responsabilités en cas d&#x27;intervention, les équipements de réponse disponibles, et les mesures de décontamination et de remédiation. Obligations de notification En vertu de la LCPE (1999), le gouvernement fédéral doit être avisé immédiatement du rejet ou du rejet probable d&#x27;une substance réglementée. Pour signaler une urgence environnementale, contactez la Division des urgences environnementales d&#x27;Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca. Matières dangereuses, SIMDUT et REPTOX La réglementation sur le Système d&#x27;information sur les matières dangereuses utilisées au travail (SIMDUT) exige des fiches de données de sécurité (FDS) pour toutes les matières dangereuses utilisées au travail. Au Québec, le répertoire REPTOX, géré par l&#x27;IRSST, fournit les informations toxicologiques essentielles pour la gestion sécuritaire des substances. Comment CORO supporte la production du PUE CORO intègre un module de gestion des matières dangereuses qui permet de documenter l&#x27;inventaire des substances, les fiches de données de sécurité et les procédures d&#x27;intervention par scénario. La plateforme génère les sections réglementaires du PUE et permet l&#x27;export d&#x27;un document structuré conforme aux exigences réglementaires. 📚 Sources et références officielles → Règlement sur les urgences environnementales (2019) — DORS/2019-51 → Environnement et Changement climatique Canada — Programme des urgences environnementales → Loi canadienne sur la protection de l&#x27;environnement (1999) (LCPE) → IRSST — Répertoire REPTOX → Signaler une urgence environnementale — Canada.ca ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Mon installation est-elle assujettie au Règlement ? Si votre installation possède ou a autorité sur une substance figurant à l&#x27;annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d&#x27;Environnement et Changement climatique Canada. Que dois-je faire en cas de rejet accidentel ? En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d&#x27;Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca. Qu&#x27;est-ce qu&#x27;une fiche de données de sécurité (FDS) ? La FDS est un document standardisé décrivant les propriétés d&#x27;une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail. Le PUE est-il relié au PMU ? Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales. Le PUE arrive dans CORO — Phase 2 Laissez-nous vos coordonnées et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  }
+}

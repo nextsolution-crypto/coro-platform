@@ -875,3 +875,187 @@ Puppeteer reste indisponible dans cet environnement (limite déjà signalée en 
 Aucune nouvelle revue bloquante introduite par le PRA. Les décisions PMU, PSI, PCA et PGC restent inchangées et ne sont pas rouvertes par cette étape.
 
 **Aucun point de blocage de publication spécifique au PRA ne subsiste après cette migration.** (Les revues déjà consignées au §20 pour PUE — PUBLICATION-BLOCKER — et la dette d'accessibilité `<main>` générale restent entières et concernent PUE, pas le PRA.)
+
+# MIG-05G — PUE implementation result (sixième et dernier guide de la famille)
+
+Implémenté (2026-09-27), **construit dès le premier passage à la qualité visuelle finale**, méthode confirmée par PGC/PRA. Registre V2 : `/documents/plan-urgence-environnementale-pue` ajoutée après le PRA. PUE est le guide le plus sensible sur le plan réglementaire de toute la famille — traité avec une rigueur accrue.
+
+## État de départ
+
+Arbre propre, HEAD = commit PRA (`eb9e131b`). Route PUE confirmée, hors registre ; PMU/PSI/PCA/PGC/PRA dans le registre ; PUE Phase 2 côté CORO ; `/guides` présentait déjà PUE comme « Guide disponible · Production CORO prévue en phase 2 ».
+
+## Baseline et contrat de langue
+
+`tests/fixtures/guide-pue-baseline.json` capture FR / `?lang=en` / `?ref=CR-ABCDEF`. Comme les cinq guides précédents, aucune gestion de `searchParams` en V1 : `?lang=en` = FR fallback trivial, confirmé octet pour octet.
+
+## PUBLICATION-BLOCKER PUE-01 — fermeture
+
+| | |
+|---|---|
+| **V1** | Hero CTA « Générer votre PUE avec CORO », contredisant le bandeau Phase 2 de la V1 elle-même une ligne plus bas. Section CORO V1 affirmait aussi « CORO... génère les sections réglementaires du PUE ». |
+| **V2 final** | Hero : « Lire le guide » / « Voir tous les guides » (même famille que PGC/PRA). §09 explicite : « Guide disponible · Production CORO prévue en phase 2 ». |
+| **Statut produit** | Production du PUE dans CORO = Phase 2. |
+| **Statut** | **RESOLVED BY REMOVAL / REPLACEMENT** |
+| **Protégé par** | `guide-pue-migration.test.ts` : tests « PUBLICATION-BLOCKER PUE-01 resolved » et « CRITICAL product boundary » |
+
+Recherche grep contextuelle effectuée sur : générer/produire/créer/disponible/automatique/conformité — aucune occurrence dangereuse restante dans le code source de la page.
+
+## Matrice de préservation — résumé
+
+Les 6 sections V1 (cadre réglementaire, assujettissement, contenu PUE, obligations de notification, matières dangereuses/SIMDUT/REPTOX, simplification CORO) sont RECOMPOSÉES en 9 sections + FAQ + CTA (pas de section ressources). Les 4 questions FAQ préservées, 2 reformulées (voir décisions normatives). Aucune perte de contenu utile — SIMDUT/REPTOX explicitement conservés.
+
+## Audit RUE/E2 — sources actuelles
+
+| Source | Autorité | Statut |
+|---|---|---|
+| Règlement sur les urgences environnementales (2019), DORS/2019-51 | Justice Laws Website (texte consolidé) | VERIFIED (200 confirmé) — remplace le lien mort de V1 (pollution-dechets.canada.ca, 404) |
+| Loi canadienne sur la protection de l'environnement (1999) (LCPE) | Justice Laws Website | VERIFIED (200 confirmé) |
+| Programme des urgences environnementales — ECCC | canada.ca | BLOCKED-BUT-KNOWN — l'ensemble du domaine canada.ca a rencontré une défaillance réseau générale pendant cette passe (même la page d'accueil canada.ca a expiré, 000) ; source connue et faisant autorité, conservée avec la limite consignée plutôt que retirée sans preuve |
+| REPTOX — IRSST/CNESST | reptox.cnesst.gouv.qc.ca | VERIFIED (200 confirmé) |
+
+## Table des revendications réglementaires
+
+| Revendication | V1 | Source actuelle | Statut | Décision V2 |
+|---|---|---|---|---|
+| DORS/2019-51, publié 6 mars 2019, en vigueur 24 août 2019 | Correct | Gazette du Canada / Justice Laws | VERIFIED | Conservée telle quelle |
+| Annexe 1 = 249 substances | Correct | Aperçu réglementaire ECCC | VERIFIED | Conservée, présentée factuellement, jamais comme ancre visuelle géante |
+| Six catégories de danger | Correct (libellé français déjà exact) | Aperçu réglementaire ECCC | VERIFIED | Conservée telle quelle |
+| Assujettissement = substance + seuil + conditions | Déjà correctement conditionnel en V1 | DORS/2019-51 | VERIFIED | Renforcée : ajout explicite « L'évaluation doit se faire à partir de l'inventaire réel de l'installation, pas d'une catégorie d'industrie » |
+| Avis fédéral « immédiat » en cas de rejet | V1 : « avisé immédiatement » | LCPE Partie 8 — conditionnel à un effet nocif réel ou potentiel, formulation officielle sans l'adverbe « immédiatement » | REFINE | « Immédiatement » retiré ; reformulé « un rejet ayant ou pouvant avoir un effet nocif... doit faire l'objet d'un avis » |
+| Simulation annuelle (administrative) | Absent de la V1 | Publications ECCC (En4-376/6-2019F) | VERIFIED — **ajoutée**, à la différence des fréquences non vérifiées retirées chez PMU/PSI/PCA/PRA, celle-ci est réelle | Ajoutée, présentée avec précision |
+| Simulation à grande échelle, cycle de 5 ans | Absent de la V1 | Publications ECCC | VERIFIED — **ajoutée** | Ajoutée, présentée avec précision |
+| SIMDUT exige des FDS | Correct | Cadre réglementaire fédéral/provincial SIMDUT (non re-audité en détail, déjà bien établi) | VERIFIED (connaissance générale établie) | Conservée |
+| REPTOX / IRSST | Correct | reptox.cnesst.gouv.qc.ca | VERIFIED (200 confirmé) | Conservée |
+
+## Applicabilité — décision
+
+Structurée en 3 conditions distinctes (Substance listée / Quantité et seuil / Situation réglementaire), jamais présentée comme un calculateur oui/non. Aucune conclusion juridique propre à l'installation du lecteur (« votre installation est assujettie » n'apparaît jamais) ; formulation systématique « peut être assujettie... lorsque... » avec renvoi explicite à l'évaluation de l'inventaire réel.
+
+## Substance / Scénario / Conséquence + « Protéger »
+
+Relation conceptuelle à trois volets, aucune flèche, aucune valeur numérique, aucune modélisation. Le mot « Protéger » est un choix éditorial documenté (pas un terme réglementaire, pas un module CORO) — la copie de soutien le précise explicitement.
+
+## Territoire protégé — navy
+
+Composition à champ central dominant (« Protéger ») entouré de 4 intérêts protégés (Population, Environnement, Installation, Intervenants) — tous sourcés du texte V1/réglementaire. Le texte précise explicitement « sans prétendre calculer une zone d'impact précise ». Aucune carte, aucun cercle concentrique, aucune distance, aucun panache — géométrie entièrement distincte des cinq guides précédents (boîtes PMU / 4 colonnes égales PSI / 5 colonnes égales PCA / 3 bandes égales PGC / 1 dominant + 2 empilés PRA).
+
+## Contenu du plan
+
+7 éléments repris de la V1 (inventaire des substances, scénarios d'incident, prévention/confinement, notification, responsabilités, équipements de réponse, décontamination/remédiation), présentés en ledger ruled, aucun compte décoratif.
+
+## Exercices — décision normative centrale de cette étape
+
+**Contrairement à PMU/PSI/PCA/PRA**, où toute fréquence d'exercice non sourcée a été retirée, le PUE a une exigence RÉELLEMENT vérifiée et est donc **préservée avec précision** : simulation annuelle de nature administrative + simulation à grande échelle (déploiement de personnel, ressources et équipement) au moins une fois par cycle de cinq ans. Ces deux exigences sont distinguées dans deux bandes techniques séparées, sans date ni calendrier inventés.
+
+## Hero — audit à risque élevé
+
+`guide-pue-environmental-emergency.webp` est l'illustration la plus élaborée de toute la famille : elle inclut une carte fictive de « Scénario » avec des anneaux de zone colorés qualitatifs (« Zone d'impact élevée/modérée/faible ») et une plaque de réservoir « AMMONIAC » visible. Audit spécifique effectué : aucun logo CORO, aucune UI produit réelle, aucune valeur numérique de distance/concentration/population, aucune installation réelle identifiable. Conclusion : illustration éditoriale stylisée, cohérente avec le style déjà établi et accepté sur les cinq guides précédents (aucune n'a de branding CORO). Classification MARKETING/ÉDITORIAL maintenue, `alt=""`, image non modifiée. **Aucun fait, zone, substance ou quantité n'est dérivé de l'image** — le mot « AMMONIAC » visible sur l'image n'apparaît nulle part dans le texte de la page (vérifié par test automatisé). Ce risque est documenté explicitement comme le plus élevé de la famille ; recommandé pour l'attention particulière de Mathieu en revue visuelle.
+
+## Absence de contamination client
+
+Recherche effectuée pour Sobeys/Boucherville/Lassonde/Rougemont/Prémont, NH3/ammoniac (comme valeur), 5455/5 455, 1.98/1,98, 2.6 km/2,6 km, 150 ppm, ERPG/ZPI/ZPU : **zéro occurrence** dans le code source de la page (confirmé par test automatisé). Aucun panache, aucun rayon d'impact, aucune donnée de dispersion.
+
+## PUE et PMU
+
+Relation non hiérarchique : « Le PUE peut être intégré au PMU comme procédure propre aux incidents environnementaux, ou constituer un document distinct selon le contexte réglementaire et organisationnel. » Aucune affirmation universelle dans un sens ou l'autre. Lien contextuel vers le guide PMU.
+
+## Sentinelle Population — non contamination
+
+Recherche effectuée : aucune occurrence de « Sentinelle Population », portail citoyen, notification de masse, ou fonctionnalité d'alerte automatique dans le code de la page (confirmé par test). Le PUE reste un document de planification réglementaire, distinct de Sentinelle Population.
+
+## Frontière produit — Phase 2
+
+§09 explicite deux faits : Guide disponible aujourd'hui / Production CORO prévue en phase 2, avec une phrase contextuelle précisant que CORO Documents prend actuellement en charge PMU, PSI et PCA. Aucun badge « coming soon », aucune date de feuille de route, aucune UI de produit désactivé.
+
+## Ressources
+
+Aucun article de blogue suffisamment spécifique au PUE/urgences environnementales n'existe dans l'inventaire publié actuel (recherché durant MIG-05G). Section ressources omise, lacune éditoriale enregistrée.
+
+## SEO — décision REWRITE
+
+URL conservée à l'identique. Titre et description réécrits pour refléter RUE/E2, applicabilité et contenu, sans accroche produit ni promesse de génération automatique.
+
+## Données structurées
+
+`BreadcrumbList` et `FAQPage` (4 questions, parité avec la FAQ visible). Le `WebPage.about[Thing×6]` et le `publisher.logo` orphelin de la V1 sont retirés — aucun schéma `SoftwareApplication`, `Offer` ou `Product`.
+
+## Audit densité / largeur — section par section
+
+| Section | Classification | Traitement |
+|---|---|---|
+| Hero | STRONG | Photo pleine hauteur |
+| §1 Qu'est-ce qu'un PUE | CALM | `density="compact"` |
+| §2 Applicabilité | STRUCTURED | 3 conditions pleine largeur |
+| §3 Substance/Scénario/Conséquence + Protéger | STRONG | Mot géant + triade |
+| §4 Territoire protégé (navy) | STRONG | Champ central + périmètre |
+| §5 Contenu du plan | STRUCTURED | Ledger 7 éléments |
+| §6 Notification/SIMDUT | CALM/STRUCTURED | `density="compact"`, 2 blocs |
+| §7 Exercices | STRUCTURED | 2 bandes techniques |
+| §8 PUE et PMU | CALM | `density="compact"` |
+| §9 PUE dans CORO | CALM/STRUCTURED | `density="compact"`, 2 faits + lien |
+| FAQ | STRUCTURED | Accordéon standard |
+| CTA | STRONG | Bande finale |
+
+Aucune section « texte étroit à gauche / vide à droite » détectée dès la première passe.
+
+## Preuve responsive
+
+Puppeteer reste indisponible dans cet environnement (limite documentée depuis MIG-05B-B). Inspection visuelle réelle via navigateur à la largeur de fenêtre disponible (~1036px), défilement complet : hero, applicabilité, triade Substance/Scénario/Conséquence + Protéger, territoire protégé navy, contenu du plan, notification/SIMDUT, exercices, PUE/PMU, Phase 2, FAQ, CTA — tous rendus sans débordement ni chevauchement (un timeout de capture transitoire a été rencontré et résolu par une nouvelle capture réussie). Largeur exacte non variable dans cet environnement (limite déjà documentée) ; points de rupture CSS cohérents avec les cinq guides précédents.
+
+## Tests, build
+
+`tests/guide-pue-migration.test.ts` créé (24 tests dédiés couvrant explicitement : fermeture du blocker PUE-01, frontière Phase 2 critique, absence d'automatisation, applicabilité conditionnelle sans conclusion facility-specific, absence de carte/panache/rayon fictifs, absence de contamination client, fréquences d'exercice exactes sans invention au-delà du vérifié, notification sans « immédiatement », non-clonage des 5 signatures précédentes, composition Protéger/triade exacte, géométrie navy à champ central + périmètre, 249 substances non transformées en ancre visuelle, Sentinelle Population absente, relation PMU non hiérarchique, parité FAQ/JSON-LD, liens contextuels, absence de ressources forcées, CTA sans promesse, métadonnées, accessibilité, densité locale). **530/530 tests passent.** `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : 1 footer/1 main/1 h1 sur PUE, sitemap contient exactement 1 entrée PUE. **Régression complète des 6 guides** : PMU/PSI/PCA/PGC/PRA/PUE vérifiés individuellement — chacun 1 h1/1 main/1 footer, tous 200. `/`, `/security`, `/pricing`, `/guides`, `/coro-incident`, `/gestion-documentaire`, `/sentinelle-population`, `/blog` tous 200 — confirmation qu'aucune page approuvée n'a été modifiée.
+
+## Revue de design de famille — six guides (PMU + PSI + PCA + PGC + PRA + PUE)
+
+**Commun aux six guides** : `V2Shell` + `EditorialHero` + `PageSection`/`EditorialBlock` + `Accordion` (FAQ) + `CTASection` ; rythme éditorial dense ; méthode normative identique (matrice CLAIM/SOURCE/STATUT/DÉCISION) ; distinction rigoureuse LIVE/BLOCKED-BUT-KNOWN/DEAD pour les sources externes ; lien `/guides` obligatoire + liens contextuels ; FAQ ; CTA éditorial-d'abord ; protocole de registre identique ; frontière produit explicite partout où pertinent.
+
+**Propre à chaque sujet** : 6 ancres typographiques distinctes (« 08 » / « PSI » / « CONTINUER » / « Décider » / « Rétablir » / « Protéger ») ; 6 géométries navy distinctes (aucune répétée) ; frontières produit (PMU/PSI/PCA disponibles aujourd'hui vs PGC/PRA/PUE Phase 2) ; PUE seul a une exigence de fréquence d'exercice réellement vérifiée et préservée (tous les autres guides ont vu leurs fréquences non vérifiées retirées).
+
+**Décision finale sur un composant partagé** : **NON**. Six implémentations indépendantes, chacune avec sa propre géométrie de signature et son propre traitement normatif, confirment que les primitifs V2 existants (`PageSection`, `EditorialBlock`, `SplitContent`, `FeatureIndex`, `Accordion`, `CTASection`) suffisent. Aucune logique dupliquée stable ne justifie `GuideHero`, `GuideSection`, `GuideSignature`, `GuideRegulatoryMatrix` ou `GuideProductBoundary` — au contraire, la variation délibérée de géométrie et de méthode entre les six guides est la preuve que l'identité visuelle et normative par sujet est la valeur, pas un défaut à corriger par une abstraction.
+
+## Lacunes éditoriales de la famille (à consigner pour un backlog futur, non traitées durant MIG-05G)
+
+- Aucun article de blogue spécifique au PGC/gestion de crise.
+- Aucun article de blogue spécifique au PUE/urgences environnementales.
+- Aucune version anglaise pour aucun des six guides (tous FR seulement par contrat, confirmé par baseline).
+- Cohérence de `/guides` avec le statut produit final des six guides : vérifiée conforme (PMU/PSI/PCA = disponibles ; PGC/PRA/PUE = Phase 2) — aucune incohérence factuelle détectée, aucune modification du hub nécessaire.
+
+## Points de revue non résolus
+
+**Aucun point de blocage de publication spécifique au PUE ne subsiste après cette migration.**
+
+Le seul point restant à noter, non bloquant : la vérification live de deux sources canada.ca (ECCC E2 program, page « signaler une urgence ») n'a pas pu être reconfirmée pendant cette session en raison d'une panne réseau générale du domaine dans cet environnement ; ces sources restent des autorités connues et fiables (BLOCKED-BUT-KNOWN), à revérifier lors d'une prochaine session si une confirmation renouvelée est souhaitée. Classification : NON-BLOCKING DEBT.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante. Les décisions PMU, PSI, PCA, PGC et PRA restent inchangées et ne sont pas rouvertes par cette étape.
+
+**MIG-05 Guide-family migration : IMPLEMENTATION COMPLETE, PENDING HUMAN VISUAL APPROVAL OF PUE.** MIG-05 ne peut être considéré comme gelé qu'après l'approbation visuelle de Mathieu sur le PUE.
+
+# MIG-05G-B — PUE, polish final §02/§07 uniquement
+
+Revue visuelle complète effectuée par Mathieu sur le PUE. **Composition d'ensemble APPROUVÉE.** Aucune redésign, aucune nouvelle passe de densité générale, aucune décision réglementaire/produit rouverte.
+
+Passe limitée à deux sections :
+
+- **§02 Applicabilité** : hiérarchie renforcée uniquement (titre `text-h3`/poids 850 au lieu de `text-body`/800, filet d'accent 4px au lieu de 3px, espacement vertical `space-8` entre les 3 conditions au lieu de `space-5`). Même copie, mêmes 3 conditions, même logique conditionnelle, aucune carte, aucun badge, aucun état de couleur.
+- **§07 Exercices** : la fréquence déjà vérifiée (déjà présente dans la phrase existante — « tenu chaque année » / « cycle de cinq ans ») est exposée comme son propre libellé visuel fort (« CHAQUE ANNÉE » / « CYCLE DE CINQ ANS »), au-dessus du titre de chaque bande. Changement de structure minimal en `page.tsx` (tuple `[nom, texte]` → objet `{name, freq, text}`) pour exposer ce libellé — la phrase factuelle sous-jacente reste identique mot pour mot. Filet d'accent supérieur ajouté aux deux bandes.
+
+Toutes les autres sections (hero, §01, §03 Substance/Scénario/Conséquence + « Protéger », §04 territoire navy, §05 ledger, §06 notification/SIMDUT, §08 PUE/PMU, §09 Phase 2, FAQ, CTA, métadonnées, JSON-LD, canonical) sont **inchangées**.
+
+## Gel produit/réglementaire confirmé
+
+Aucune fréquence modifiée, aucune nouvelle revendication, aucune donnée client introduite. PUE-01 reste RESOLVED. §09 (Phase 2) non touché.
+
+## Validation
+
+`tsc --noEmit` propre. ESLint propre sur le fichier modifié. **530/530 tests passent** (aucun test cassé — les tests existants vérifient la présence des phrases « chaque année »/« cinq ans » dans le bloc `s7`, indépendamment de la structure tuple/objet). `npm run build` propre. QA structurelle post-polish : PUE 200, 1 footer, 1 main, 1 h1.
+
+## QA visuelle
+
+Méthode : navigateur (Puppeteer indisponible dans cet environnement — limite déjà documentée). Largeur inspectée : ~1036px (largeur de fenêtre disponible dans cet environnement). Inspection ciblée sur §02 et §07, puis un défilement complet hero→CTA pour confirmer que le rythme approuvé n'a pas été perturbé. §02 : hiérarchie visiblement renforcée, toujours restreinte, aucun mur de cartes, aucune apparence de calculateur de conformité. §07 : fréquences immédiatement lisibles, nuance factuelle préservée mot pour mot, composition à deux colonnes équilibrée, aucune apparence de calendrier ou de tableau de bord. Aucune autre section perturbée (vérifié : §01, §03, §04, §05, §06, §08, §09, FAQ, CTA tous visuellement identiques à MIG-05G).
+
+## Git
+
+`git diff --check` propre (avertissements de fin de ligne uniquement). Fichiers touchés par cette passe : `app/documents/plan-urgence-environnementale-pue/page.tsx` et `page.module.css` uniquement (déjà modifiés/nouveaux depuis MIG-05G). Aucun fichier étranger à PUE touché. Rien indexé, rien commité.
