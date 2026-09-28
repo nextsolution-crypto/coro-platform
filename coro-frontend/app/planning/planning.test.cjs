@@ -211,7 +211,7 @@ test('Mandate G3 projection uses service identity, planning status and one unkno
   assert.equal(retry.primaryAction, 'RETRY_CREATE');
 });
 
-test('Mandate G3 runtime uses Preview/Apply wrappers and keeps CREATE separate from Save', () => {
+test('Mandate operational runtime uses one Preview/Apply architecture and keeps mutations separate from Save', () => {
   const runtime = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/useMandateOperations.ts'), 'utf8');
   const editor = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/MandateServicesEditor.tsx'), 'utf8');
   assert.match(runtime, /previewMandateOperations\(projectId, revision, signal\)/);
@@ -220,7 +220,67 @@ test('Mandate G3 runtime uses Preview/Apply wrappers and keeps CREATE separate f
   assert.match(runtime, /void sendApply\(applyState\)/);
   assert.match(runtime, /setPreviewState\(\{ status: 'READY'.*result\.preview/s);
   assert.match(editor, /Créer l’activité/);
-  assert.doesNotMatch(runtime, /ADOPT_LEGACY_ACTIVITY|CREATE_REPLACEMENT|localStorage|sessionStorage/);
+  assert.match(runtime, /ADOPT_LEGACY_ACTIVITY/);
+  assert.match(runtime, /CREATE_REPLACEMENT/);
+  assert.doesNotMatch(runtime, /localStorage|sessionStorage/);
+});
+
+test('Mandate G4 exposes explicit ADOPT only for exact Preview candidates', () => {
+  const base = { serviceId: 'service', commercialStatus: 'ACTIVE', commerciallyClean: true,
+    previewCurrent: true, canApply: true, applyStatus: 'IDLE', applyingServiceId: null };
+  const candidate = { id: 'activity', label: 'Historique', status: 'a_faire' };
+  const single = mandateOperational.operationalViewForService({ ...base, operations: [{ serviceId: 'service',
+    action: 'REQUIRES_DECISION', reasonCode: 'LEGACY_ACTIVITY_CANDIDATE', legacyCandidates: [candidate] }] });
+  const multiple = mandateOperational.operationalViewForService({ ...base, operations: [{ serviceId: 'service',
+    action: 'REQUIRES_DECISION', reasonCode: 'LEGACY_MULTIPLE_CANDIDATES', legacyCandidates: [candidate, { ...candidate, id: 'other' }] }] });
+  assert.equal(single.primaryAction, 'EXAMINE_ADOPT');
+  assert.equal(multiple.primaryAction, 'EXAMINE_ADOPT');
+  for (const legacyCandidates of [[], [candidate, candidate]]) {
+    const unsafe = mandateOperational.operationalViewForService({ ...base, operations: [{ serviceId: 'service',
+      action: 'REQUIRES_DECISION', reasonCode: 'LEGACY_ACTIVITY_CANDIDATE', legacyCandidates }] });
+    assert.equal(unsafe.primaryAction, null);
+  }
+  assert.equal(mandateOperational.operationalViewForService({ ...base, canApply: false, operations: [{ serviceId: 'service',
+    action: 'REQUIRES_DECISION', reasonCode: 'LEGACY_ACTIVITY_CANDIDATE', legacyCandidates: [candidate] }] }).primaryAction, null);
+});
+
+test('Mandate G4 replacement requires one exact cancelled source and creatable policy', () => {
+  const source = { id: 'cancelled', label: 'Ancienne', status: 'annule' };
+  const base = { serviceId: 'service', commercialStatus: 'ACTIVE', commerciallyClean: true,
+    previewCurrent: true, activityTypeActive: true, canApply: true, applyStatus: 'IDLE', applyingServiceId: null };
+  const operation = { serviceId: 'service', action: 'REQUIRES_DECISION', reasonCode: 'LATEST_ACTIVITY_CANCELLED',
+    recurrenceMode: 'ONCE', quantity: 1, linkedActivities: [source] };
+  assert.equal(mandateOperational.operationalViewForService({ ...base, operations: [operation] }).primaryAction,
+    'EXAMINE_REPLACEMENT');
+  for (const changed of [
+    { operations: [{ ...operation, linkedActivities: [source, { ...source, id: 'other' }] }] },
+    { operations: [{ ...operation, recurrenceMode: 'ANNUAL' }] },
+    { operations: [{ ...operation, quantity: 2 }] }, { activityTypeActive: false, operations: [operation] },
+    { operations: [{ ...operation, reasonCodes: ['LATEST_ACTIVITY_CANCELLED', 'OPEN_BOOKING_EXISTS'] }] },
+    { commercialStatus: 'REMOVED', operations: [operation] },
+  ]) assert.equal(mandateOperational.operationalViewForService({ ...base, ...changed }).primaryAction, null);
+});
+
+test('Mandate G4 dialog requires human selection and exposes accessible controls without heuristics', () => {
+  const dialog = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/MandateOperationDecisionDialog.tsx'), 'utf8');
+  const runtime = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/useMandateOperations.ts'), 'utf8');
+  assert.match(dialog, /role="dialog"/); assert.match(dialog, /aria-modal="true"/);
+  assert.match(dialog, /role=\{state\.mode === 'ADOPT' \? 'radiogroup'/);
+  assert.match(dialog, /useState<string \| null>\(null\)/);
+  assert.match(dialog, /event\.key === 'Escape'/); assert.match(dialog, /previousFocus\.current\?\.focus/);
+  assert.doesNotMatch(dialog, /candidates\[0\]\.id/);
+  assert.doesNotMatch(runtime, /sort\(|matchScore|confidence|similarity|projects\/\$\{.*\}\/activities/);
+});
+
+test('Mandate G4 payload signatures separate action, candidate, revision and project', () => {
+  const adopt = [{ mandateServiceId: 's', action: 'ADOPT_LEGACY_ACTIVITY', activityId: 'a' }];
+  const replace = [{ mandateServiceId: 's', action: 'CREATE_REPLACEMENT', activityId: 'a' }];
+  assert.notEqual(mandateOperational.applyIntentSignature('r1', adopt), mandateOperational.applyIntentSignature('r1', replace));
+  assert.notEqual(mandateOperational.applyIntentSignature('r1', adopt), mandateOperational.applyIntentSignature('r1', [{ ...adopt[0], activityId: 'b' }]));
+  assert.notEqual(mandateOperational.applyIntentSignature('r1', adopt), mandateOperational.applyIntentSignature('r2', adopt));
+  const projectA = JSON.stringify({ projectId: 'a', intent: mandateOperational.applyIntentSignature('r1', adopt) });
+  const projectB = JSON.stringify({ projectId: 'b', intent: mandateOperational.applyIntentSignature('r1', adopt) });
+  assert.notEqual(projectA, projectB);
 });
 
 test('Mandate G2 loads and saves commercial services without legacy generation or operational runtime', () => {

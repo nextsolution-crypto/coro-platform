@@ -3,6 +3,9 @@ export type ApplyDecisionAction = 'CREATE_ACTIVITY' | 'ADOPT_LEGACY_ACTIVITY' | 
 
 export type PreviewOperation = {
   serviceId: string;
+  commercialStatus?: string;
+  recurrenceMode?: string;
+  quantity?: number;
   action: string;
   reasonCode: string;
   reasonCodes?: string[];
@@ -28,8 +31,14 @@ export type ApplyRuntimeState = { status: 'IDLE' | 'APPLYING' | 'UNKNOWN' | 'ERR
   mandateServiceId: string | null; intent: ApplyIntent | null; payload: ReturnType<typeof buildApplyMandateOperationsPayload> | null;
   error: string | null };
 
+export type DecisionMode = 'ADOPT' | 'REPLACEMENT';
+export type DecisionDialogState = { mode: DecisionMode; serviceId: string; serviceName: string;
+  revision: string; operation: PreviewOperation };
+export type OperationSuccess = { serviceId: string; action: ApplyDecisionAction } | null;
+
 export type OperationalServiceView = { status: string; label: string; description: string;
-  mutationAllowed: boolean; primaryAction: 'CREATE' | 'APPLYING' | 'RETRY_CREATE' | null; planningAction: boolean };
+  mutationAllowed: boolean; primaryAction: 'CREATE' | 'EXAMINE_ADOPT' | 'EXAMINE_REPLACEMENT'
+    | 'APPLYING' | 'RETRY_CREATE' | null; planningAction: boolean; decisionMode: DecisionMode | null };
 
 const knownActions = new Set<PreviewAction>(['NO_ACTION', 'CREATE_ACTIVITY', 'REQUIRES_DECISION', 'BLOCKED']);
 const knownReasons = new Set([
@@ -66,30 +75,45 @@ export function indexPreviewOperations(operations: PreviewOperation[]) {
 
 export function operationalViewForService(input: {
   serviceId?: string; commercialStatus: string; commerciallyClean: boolean; previewCurrent: boolean;
-  operations: PreviewOperation[]; canApply: boolean; applyStatus: ApplyRuntimeState['status']; applyingServiceId: string | null;
+  activityTypeActive?: boolean; operations: PreviewOperation[]; canApply: boolean;
+  applyStatus: ApplyRuntimeState['status']; applyingServiceId: string | null;
 }): OperationalServiceView {
   if (!input.serviceId) return { status: 'UNSAVED', label: 'À enregistrer',
-    description: "Enregistrez l'offre pour analyser ce service.", mutationAllowed: false, primaryAction: null, planningAction: false };
+    description: "Enregistrez l'offre pour analyser ce service.", mutationAllowed: false, primaryAction: null, planningAction: false, decisionMode: null };
   if (!input.commerciallyClean) return { status: 'STALE', label: 'Analyse en attente',
-    description: "Enregistrez l'offre avant d'appliquer les actions opérationnelles.", mutationAllowed: false, primaryAction: null, planningAction: false };
+    description: "Enregistrez l'offre avant d'appliquer les actions opérationnelles.", mutationAllowed: false, primaryAction: null, planningAction: false, decisionMode: null };
   if (!input.previewCurrent) return { status: 'VERIFY_REQUIRED', label: 'Vérification requise',
-    description: "L'état opérationnel doit être analysé.", mutationAllowed: false, primaryAction: null, planningAction: false };
+    description: "L'état opérationnel doit être analysé.", mutationAllowed: false, primaryAction: null, planningAction: false, decisionMode: null };
   if (input.operations.length !== 1) return { status: 'VERIFY_REQUIRED', label: 'Vérification requise',
     description: input.operations.length ? 'Plusieurs résultats opérationnels ont été reçus.' : 'Le service est absent de la projection opérationnelle.',
-    mutationAllowed: false, primaryAction: null, planningAction: false };
+    mutationAllowed: false, primaryAction: null, planningAction: false, decisionMode: null };
   const mapped = mapPreviewOperation(input.operations[0]);
   const candidate = input.commercialStatus === 'ACTIVE' && mapped.action === 'CREATE_ACTIVITY'
     && mapped.reasonCode === 'NO_ACTIVITY_EXISTS' && mapped.mutationAllowed;
+  const candidateIds = (mapped.legacyCandidates ?? []).map(item => item.id);
+  const adopt = input.commercialStatus === 'ACTIVE' && mapped.action === 'REQUIRES_DECISION'
+    && ['LEGACY_ACTIVITY_CANDIDATE', 'LEGACY_MULTIPLE_CANDIDATES'].includes(mapped.reasonCode)
+    && candidateIds.length > 0 && new Set(candidateIds).size === candidateIds.length;
+  const cancelled = (mapped.linkedActivities ?? []).filter(item => item.status === 'annule');
+  const replacement = input.commercialStatus === 'ACTIVE' && mapped.action === 'REQUIRES_DECISION'
+    && mapped.reasonCode === 'LATEST_ACTIVITY_CANCELLED' && cancelled.length === 1
+    && (mapped.linkedActivities ?? []).length === 1 && mapped.recurrenceMode === 'ONCE'
+    && mapped.quantity === 1 && input.activityTypeActive !== false
+    && !(mapped.reasonCodes ?? []).includes('OPEN_BOOKING_EXISTS');
   const retry = candidate && input.applyStatus === 'UNKNOWN' && input.applyingServiceId === input.serviceId;
   const applying = candidate && input.applyStatus === 'APPLYING' && input.applyingServiceId === input.serviceId;
+  const idleAllowed = input.canApply && input.applyStatus === 'IDLE';
   const allowed = candidate && input.canApply && (input.applyStatus === 'IDLE' || retry);
   const planningStatus = mapped.linkedActivities?.[0]?.planningStatus;
   return { status: planningStatus || mapped.status, label: planningStatus ? planningStatusLabel(planningStatus) : mapped.label,
     description: mapped.action === 'CREATE_ACTIVITY' ? "Le service est vendu, mais aucune activité opérationnelle n'est encore associée."
       : mapped.action === 'REQUIRES_DECISION' ? 'Une décision humaine est requise avant toute action.'
         : mapped.action === 'BLOCKED' ? 'Cet état doit être vérifié avant toute action.' : 'L’état opérationnel est à jour.',
-    mutationAllowed: allowed, primaryAction: applying ? 'APPLYING' : allowed ? (retry ? 'RETRY_CREATE' : 'CREATE') : null,
-    planningAction: mapped.action === 'NO_ACTION' && planningStatus === 'TO_PLAN' };
+    mutationAllowed: allowed || idleAllowed && (adopt || replacement),
+    primaryAction: applying ? 'APPLYING' : allowed ? (retry ? 'RETRY_CREATE' : 'CREATE')
+      : idleAllowed && adopt ? 'EXAMINE_ADOPT' : idleAllowed && replacement ? 'EXAMINE_REPLACEMENT' : null,
+    planningAction: mapped.action === 'NO_ACTION' && planningStatus === 'TO_PLAN',
+    decisionMode: adopt ? 'ADOPT' : replacement ? 'REPLACEMENT' : null };
 }
 
 export function planningStatusLabel(status?: string) {

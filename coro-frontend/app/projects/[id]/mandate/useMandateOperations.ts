@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { applyMandateOperations, previewMandateOperations } from './mandateApi';
 import { ApplyResult, ApplyRuntimeState, buildApplyMandateOperationsPayload, clearApplyIntent,
-  idempotencyKeyForIntent, indexPreviewOperations, OperationalPreview, operationalViewForService,
-  PreviewRuntimeState, applyIntentSignature } from './mandateOperationalState';
+  DecisionDialogState, idempotencyKeyForIntent, indexPreviewOperations, OperationSuccess, OperationalPreview,
+  operationalViewForService, PreviewRuntimeState, applyIntentSignature, ApplyDecision } from './mandateOperationalState';
 
 const idlePreview = (): PreviewRuntimeState => ({ status: 'IDLE', revision: null, preview: null, error: null });
 const idleApply = (): ApplyRuntimeState => ({ status: 'IDLE', mandateServiceId: null, intent: null, payload: null, error: null });
@@ -20,7 +20,8 @@ export function useMandateOperations(input: { projectId: string; revision: strin
   canApply: boolean; commercialReady: boolean }) {
   const [previewState, setPreviewState] = useState<PreviewRuntimeState>(idlePreview);
   const [applyState, setApplyState] = useState<ApplyRuntimeState>(idleApply);
-  const [successServiceId, setSuccessServiceId] = useState<string | null>(null);
+  const [success, setSuccess] = useState<OperationSuccess>(null);
+  const [decisionDialog, setDecisionDialog] = useState<DecisionDialogState | null>(null);
   const previewSequence = useRef(0);
   const projectRef = useRef(input.projectId);
   const revisionRef = useRef(input.revision);
@@ -50,7 +51,7 @@ export function useMandateOperations(input: { projectId: string; revision: strin
   useEffect(() => {
     // Project identity owns these transient states; late requests are also rejected by projectRef.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPreviewState(idlePreview()); setApplyState(idleApply()); setSuccessServiceId(null); previewSequence.current += 1;
+    setPreviewState(idlePreview()); setApplyState(idleApply()); setSuccess(null); setDecisionDialog(null); previewSequence.current += 1;
   }, [input.projectId]);
 
   useEffect(() => {
@@ -63,7 +64,10 @@ export function useMandateOperations(input: { projectId: string; revision: strin
   }, [input.commercialReady, input.revision, input.servicesDirty, loadPreview]);
 
   const retryPreview = useCallback(() => {
-    if (input.revision && !input.servicesDirty && applyState.status !== 'UNKNOWN') void loadPreview(input.revision);
+    if (input.revision && !input.servicesDirty && applyState.status !== 'UNKNOWN') {
+      setDecisionDialog(null);
+      void loadPreview(input.revision);
+    }
   }, [applyState.status, input.revision, input.servicesDirty, loadPreview]);
 
   const sendApply = useCallback(async (next: ApplyRuntimeState) => {
@@ -73,27 +77,31 @@ export function useMandateOperations(input: { projectId: string; revision: strin
     try {
       const result = await applyMandateOperations(projectId, next.payload) as ApplyResult;
       if (projectRef.current !== projectId || revisionRef.current !== next.payload.expectedRevision) return;
+      const expected = next.payload.decisions[0];
       const applied = result.applied.find(item => item.mandateServiceId === next.mandateServiceId
-        && item.action === 'CREATE_ACTIVITY');
-      if (!applied || result.commercialRevision !== next.payload.expectedRevision) {
-        setApplyState({ ...next, status: 'ERROR', error: 'La création a été traitée, mais son résultat doit être vérifié.' });
+        && item.action === expected?.action);
+      const activityMatches = expected?.action === 'ADOPT_LEGACY_ACTIVITY' ? applied?.activityId === expected.activityId
+        : expected?.action === 'CREATE_REPLACEMENT' ? applied?.sourceActivityId === expected.activityId : Boolean(applied?.activityId);
+      if (!applied || !activityMatches || result.commercialRevision !== next.payload.expectedRevision) {
+        setApplyState({ ...next, status: 'ERROR', error: "L'opération a été traitée, mais son résultat doit être vérifié." });
         return;
       }
       if (!dirtyRef.current) setPreviewState({ status: 'READY', revision: result.commercialRevision,
         preview: result.preview, error: null });
-      setSuccessServiceId(next.mandateServiceId);
+      setSuccess({ serviceId: next.mandateServiceId, action: expected.action });
+      setDecisionDialog(null);
       setApplyState({ ...idleApply(), intent: clearApplyIntent() });
     } catch (error) {
       if (projectRef.current !== projectId) return;
       if (axios.isAxiosError(error) && !error.response) {
         setApplyState({ ...next, status: 'UNKNOWN',
-          error: "Le résultat de la création n'a pas pu être confirmé." });
+          error: "Le résultat de l'opération n'a pas pu être confirmé." });
         return;
       }
       const conflict = responseStatus(error) === 409;
       setApplyState({ ...next, status: conflict ? 'CONFLICT' : 'ERROR', intent: clearApplyIntent(), payload: null,
         error: conflict ? "L'état a changé. Rechargez l'offre puis relancez l'analyse."
-          : responseMessage(error, "L'activité n'a pas pu être créée. Relancez l'analyse avant de réessayer.") });
+          : responseMessage(error, "L'opération n'a pas pu être confirmée. Relancez l'analyse avant de réessayer.") });
     }
   }, [input.projectId]);
 
@@ -105,7 +113,7 @@ export function useMandateOperations(input: { projectId: string; revision: strin
       intent: applyIntentSignature(input.revision, decisions) });
     const intent = idempotencyKeyForIntent(applyState.intent, signature);
     const payload = buildApplyMandateOperationsPayload(intent.key, input.revision, decisions);
-    setSuccessServiceId(null);
+    setSuccess(null);
     void sendApply({ status: 'APPLYING', mandateServiceId: serviceId, intent, payload, error: null });
   }, [applyState, input.canApply, input.projectId, input.revision, input.servicesDirty, sendApply]);
 
@@ -115,12 +123,62 @@ export function useMandateOperations(input: { projectId: string; revision: strin
   }, [applyState, sendApply]);
 
   const operationIndex = useMemo(() => indexPreviewOperations(previewState.preview?.operations ?? []), [previewState.preview]);
-  const viewFor = useCallback((service: { id?: string; commercialStatus: string }, commerciallyClean: boolean) =>
+
+  const openDecision = useCallback((serviceId: string, serviceName: string, activityTypeActive = true) => {
+    if (!input.canApply || input.servicesDirty || !input.revision || applyState.status !== 'IDLE'
+      || previewState.status !== 'READY' || previewState.revision !== input.revision) return;
+    const operations = operationIndex.get(serviceId) ?? [];
+    if (operations.length !== 1) return;
+    const operation = operations[0];
+    const ids = (operation.legacyCandidates ?? []).map(item => item.id);
+    const adopt = operation.action === 'REQUIRES_DECISION'
+      && ['LEGACY_ACTIVITY_CANDIDATE', 'LEGACY_MULTIPLE_CANDIDATES'].includes(operation.reasonCode)
+      && ids.length > 0 && new Set(ids).size === ids.length;
+    const replacement = operation.action === 'REQUIRES_DECISION' && operation.reasonCode === 'LATEST_ACTIVITY_CANCELLED'
+      && operation.linkedActivities?.length === 1 && operation.linkedActivities[0].status === 'annule'
+      && operation.recurrenceMode === 'ONCE' && operation.quantity === 1 && activityTypeActive
+      && !(operation.reasonCodes ?? []).includes('OPEN_BOOKING_EXISTS');
+    if (!adopt && !replacement) return;
+    setDecisionDialog({ mode: adopt ? 'ADOPT' : 'REPLACEMENT', serviceId, serviceName,
+      revision: input.revision, operation });
+    setSuccess(null);
+  }, [applyState.status, input.canApply, input.revision, input.servicesDirty, operationIndex, previewState]);
+
+  const closeDecision = useCallback(() => {
+    if (!['APPLYING', 'UNKNOWN'].includes(applyState.status)) setDecisionDialog(null);
+  }, [applyState.status]);
+
+  const executeDecision = useCallback((decision: ApplyDecision) => {
+    if (!decisionDialog || !input.canApply || input.servicesDirty || applyState.status !== 'IDLE'
+      || previewState.status !== 'READY' || previewState.revision !== decisionDialog.revision
+      || input.revision !== decisionDialog.revision || decision.mandateServiceId !== decisionDialog.serviceId) return;
+    const current = operationIndex.get(decisionDialog.serviceId) ?? [];
+    if (current.length !== 1 || current[0] !== decisionDialog.operation) return;
+    const valid = decision.action === 'ADOPT_LEGACY_ACTIVITY'
+      ? decisionDialog.mode === 'ADOPT' && decisionDialog.operation.legacyCandidates?.some(item => item.id === decision.activityId)
+      : decision.action === 'CREATE_REPLACEMENT' && decisionDialog.mode === 'REPLACEMENT'
+        && decisionDialog.operation.linkedActivities?.length === 1
+        && decisionDialog.operation.linkedActivities[0].id === decision.activityId
+        && decisionDialog.operation.linkedActivities[0].status === 'annule';
+    if (!valid) return;
+    const decisions = [{ ...decision }];
+    const signature = JSON.stringify({ projectId: input.projectId,
+      intent: applyIntentSignature(input.revision, decisions) });
+    const intent = idempotencyKeyForIntent(applyState.intent, signature);
+    const payload = buildApplyMandateOperationsPayload(intent.key, input.revision, decisions);
+    setSuccess(null);
+    void sendApply({ status: 'APPLYING', mandateServiceId: decision.mandateServiceId, intent, payload, error: null });
+  }, [applyState, decisionDialog, input.canApply, input.projectId, input.revision, input.servicesDirty,
+    operationIndex, previewState, sendApply]);
+  const viewFor = useCallback((service: { id?: string; commercialStatus: string }, commerciallyClean: boolean,
+    activityTypeActive = true) =>
     operationalViewForService({ serviceId: service.id, commercialStatus: service.commercialStatus, commerciallyClean,
+      activityTypeActive,
       previewCurrent: previewState.status === 'READY' && previewState.revision === input.revision && !input.servicesDirty,
       operations: service.id ? operationIndex.get(service.id) ?? [] : [], canApply: input.canApply,
       applyStatus: applyState.status, applyingServiceId: applyState.mandateServiceId }),
   [applyState, input.canApply, input.revision, input.servicesDirty, operationIndex, previewState]);
 
-  return { previewState, applyState, successServiceId, retryPreview, createActivity, retryCreate, viewFor };
+  return { previewState, applyState, success, decisionDialog, retryPreview, createActivity,
+    retryOperation: retryCreate, openDecision, closeDecision, executeDecision, viewFor };
 }

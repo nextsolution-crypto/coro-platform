@@ -125,6 +125,7 @@ export default function MandatePage() {
     servicesDirty: commercialServicesDirty, canApply: canEditMandate,
     commercialReady: commercialState.loadStatus === 'READY' && mandateContext?.projectId === projectId });
   const operationalLocked = ['APPLYING', 'UNKNOWN'].includes(operations.applyState.status);
+  const decisionOpen = Boolean(operations.decisionDialog);
 
   const handleSave = async () => {
     setSaveError(''); setOfferSaveError(''); setSaveSuccess('');
@@ -359,11 +360,11 @@ export default function MandatePage() {
         </div>
         {activeTab === 'fiche' && (
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {canEditMandate && isDirty && <button type="button" onClick={resetChanges} disabled={saving || operationalLocked}
+            {canEditMandate && isDirty && <button type="button" onClick={resetChanges} disabled={saving || operationalLocked || decisionOpen}
               className="text-sm px-4 py-2 rounded disabled:opacity-50" style={{ border: '1px solid #CED4DA', color: '#6C757D' }}>
               Annuler les modifications
             </button>}
-            {canEditMandate && <button type="button" onClick={handleSave} disabled={saving || operationalLocked || !isDirty}
+            {canEditMandate && <button type="button" onClick={handleSave} disabled={saving || operationalLocked || decisionOpen || !isDirty}
               aria-busy={saving}
               className="text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: '#C0392B' }}>
@@ -498,7 +499,7 @@ export default function MandatePage() {
                 historicalActivities={historicalActivityState.activities}
                 historicalKnown={historicalActivityState.known}
                 canEdit={canEditMandate}
-                disabled={saving || operationalLocked}
+                disabled={saving || operationalLocked || decisionOpen}
                 validationErrors={serviceValidationErrors}
                 saveError={offerSaveError}
                 onChange={updateCommercialServices}
@@ -507,11 +508,15 @@ export default function MandatePage() {
                 onReloadConflict={reloadMandateServices}
                 previewState={operations.previewState}
                 applyState={operations.applyState}
-                successServiceId={operations.successServiceId}
+                success={operations.success}
+                decisionDialog={operations.decisionDialog}
                 operationalView={operations.viewFor}
                 onRetryPreview={operations.retryPreview}
                 onCreateActivity={operations.createActivity}
-                onRetryCreate={operations.retryCreate}
+                onRetryCreate={operations.retryOperation}
+                onExamine={operations.openDecision}
+                onCloseDecision={operations.closeDecision}
+                onConfirmDecision={operations.executeDecision}
                 onOpenPlanner={() => router.push(`/planning?projectId=${projectId}`)}
               />
             </div>
