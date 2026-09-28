@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ExternalLink, Save } from 'lucide-react';
 import api from '@/lib/api';
@@ -19,13 +19,18 @@ import { buildSaveMandateServicesPayload, deriveHistoricalCommercialTransition, 
 import { getMandateServices, putMandateServices } from './mandateApi';
 import { mandateSavePlan } from './mandateSavePlan';
 import { useMandateOperations } from './useMandateOperations';
+import { useMandateWork } from './useMandateWork';
 
 const TABS = [
-  { id: 'fiche', label: '📋 Fiche & Offre' },
-  { id: 'activities', label: '✅ Activités' },
-  { id: 'comments', label: '💬 Commentaires' },
-  { id: 'timesheet', label: '⏱ Feuille de temps' },
+  { id: 'fiche', domId: 'offer', label: '📋 Fiche & Offre' },
+  { id: 'activities', domId: 'work', label: '✅ Activités' },
+  { id: 'timesheet', domId: 'time', label: '⏱ Temps' },
+  { id: 'comments', domId: 'comments', label: '💬 Commentaires' },
 ];
+
+function formatHours(value: number | null) {
+  return value === null ? '—' : `${Number(value.toFixed(2)).toLocaleString('fr-CA')} h`;
+}
 
 export default function MandatePage() {
   const params = useParams();
@@ -121,9 +126,11 @@ export default function MandatePage() {
   const mandateFieldsDirty = !mandateFieldsAreEqual(form, serverSnapshot);
   const commercialServicesDirty = mandateServicesAreDirty(commercialState.draft, commercialState.snapshot);
   const isDirty = mandateFieldsDirty || commercialServicesDirty;
+  const mandateWork = useMandateWork(projectId);
   const operations = useMandateOperations({ projectId, revision: commercialState.revision,
     servicesDirty: commercialServicesDirty, canApply: canEditMandate,
-    commercialReady: commercialState.loadStatus === 'READY' && mandateContext?.projectId === projectId });
+    commercialReady: commercialState.loadStatus === 'READY' && mandateContext?.projectId === projectId,
+    onApplied: mandateWork.refresh });
   const operationalLocked = ['APPLYING', 'UNKNOWN'].includes(operations.applyState.status);
   const decisionOpen = Boolean(operations.decisionDialog);
 
@@ -245,13 +252,10 @@ export default function MandatePage() {
 
   const montant = parseFloat(form.montantVendu) || 0;
   const taux = parseFloat(form.tauxHoraire) || 0;
-  const budget = parseFloat(form.heuresBudgetees) || 0;
-  const heuresReelles = mandate?.heuresReelles || 0;
-  const coutReel = heuresReelles * taux;
-  const margeEstimee = montant - coutReel;
-  const margePct = montant > 0 ? Math.round((margeEstimee / montant) * 100) : 0;
-  const heuresRestantes = budget - heuresReelles;
-  const budgetPct = budget > 0 ? Math.min(Math.round((heuresReelles / budget) * 100), 100) : 0;
+  const heuresReelles = mandateWork.data?.summary.actualHours ?? null;
+  const coutReel = heuresReelles === null ? null : heuresReelles * taux;
+  const margeEstimee = coutReel === null ? null : montant - coutReel;
+  const margePct = montant > 0 && margeEstimee !== null ? Math.round((margeEstimee / montant) * 100) : null;
 
   const inputCls = "w-full px-3 py-2.5 text-sm rounded focus:outline-none";
   const inputSty = { border: '1px solid #CED4DA', color: '#2C3E50', backgroundColor: '#FFFFFF' };
@@ -272,6 +276,18 @@ export default function MandatePage() {
     URGENT:   { bg: '#FEF9E7', text: '#E67E22', border: '#FAD7A0' },
     ATTENTION:{ bg: '#FEF9E7', text: '#F39C12', border: '#FAD7A0' },
     OK:       { bg: '#EAFAF1', text: '#27AE60', border: '#A9DFBF' },
+  };
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let next = index;
+    if (event.key === 'ArrowRight') next = (index + 1) % TABS.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + TABS.length) % TABS.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = TABS.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveTab(TABS[next].id);
+    document.getElementById(`mandate-tab-${TABS[next].domId}`)?.focus();
   };
 
   if (loading) return (
@@ -350,12 +366,13 @@ export default function MandatePage() {
         ← Retour au projet
       </button>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
             {project?.documentType} · {project?.client?.name}
           </p>
-          <h1 className="text-2xl font-black" style={{ color: '#2C3E50' }}>{project?.name}</h1>
+          <p className="text-sm font-semibold" style={{ color: '#6C757D' }}>Mandat</p>
+          <h1 className="text-2xl font-black break-words" style={{ color: '#2C3E50' }}>{project?.name}</h1>
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         {activeTab === 'fiche' && (
@@ -380,16 +397,35 @@ export default function MandatePage() {
         )}
       </div>
 
+      <section aria-label="Synthèse du mandat" aria-busy={mandateWork.loading || mandateWork.refreshing}
+        className="mb-6">
+        {mandateWork.loading && !mandateWork.data ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><div className="h-20 animate-pulse rounded bg-gray-100 col-span-2 lg:col-span-4" /><span className="sr-only">Chargement de la synthèse du mandat</span></div>
+        ) : mandateWork.data ? (
+          <><div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {([['Budget', mandateWork.data.summary.budgetHours], ['Réalisées', mandateWork.data.summary.actualHours],
+              ['Planifiées', mandateWork.data.summary.plannedHours], ['Disponible', mandateWork.data.summary.budgetRemainingHours]] as const)
+              .map(([label, value]) => <div key={label} className="rounded-md border border-gray-200 bg-white p-3 min-w-0">
+                <span className="block text-xs uppercase text-gray-500">{label}</span><strong className="block text-xl truncate">{formatHours(value)}</strong>
+              </div>)}
+          </div>{mandateWork.data.summary.unplannedRemainingHours !== null && <p className="mt-2 text-xs text-gray-500">dont {formatHours(mandateWork.data.summary.unplannedRemainingHours)} non planifiées</p>}</>
+        ) : null}
+        {mandateWork.error && <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700"><span>Synthèse indisponible. {mandateWork.error}</span><button type="button" onClick={() => void mandateWork.refresh()} className="rounded border border-red-300 px-3 py-1.5">Réessayer</button></div>}
+        {mandateWork.refreshing && <p aria-live="polite" className="mt-2 text-xs text-gray-500">Actualisation de la synthèse…</p>}
+      </section>
+
       {saveError && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{saveError}</p>}
       {saveSuccess && <p aria-live="polite" className="text-sm mb-4" style={{ color: '#27864A' }}>{saveSuccess}</p>}
       {!canEditMandate && activeTab === 'fiche' && (
         <p className="text-sm mb-4" style={{ color: '#6C757D' }}>Fiche et offre en lecture seule. Seuls les administrateurs peuvent les modifier.</p>
       )}
 
-      <div className="flex gap-2 mb-6 pb-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className="px-4 py-2 rounded text-sm font-medium transition-colors"
+      <div role="tablist" aria-label="Sections du mandat" className="flex gap-2 mb-6 pb-4 overflow-x-auto" style={{ borderBottom: '1px solid #E9ECEF' }}>
+        {TABS.map((tab, index) => (
+          <button key={tab.id} id={`mandate-tab-${tab.domId}`} role="tab" aria-selected={activeTab === tab.id}
+            aria-controls={`mandate-panel-${tab.domId}`} tabIndex={activeTab === tab.id ? 0 : -1}
+            onKeyDown={event => handleTabKeyDown(event, index)} onClick={() => setActiveTab(tab.id)}
+            className="px-4 py-2 rounded text-sm font-medium transition-colors whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{
               backgroundColor: activeTab === tab.id ? '#C0392B' : '#F8F9FA',
               color: activeTab === tab.id ? '#FFFFFF' : '#6C757D',
@@ -401,8 +437,8 @@ export default function MandatePage() {
       </div>
 
       {activeTab === 'fiche' && (
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 space-y-6">
+        <div id="mandate-panel-offer" role="tabpanel" aria-labelledby="mandate-tab-offer" tabIndex={0} className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
 
             {/* Description */}
             <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
@@ -423,7 +459,7 @@ export default function MandatePage() {
             {/* Offre de service */}
             <div className="rounded-md p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
               <h2 className="font-semibold mb-4" style={{ color: '#2C3E50' }}>💼 Offre de service</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Montant vendu ($)</label>
                   <input type="number" value={form.montantVendu}
@@ -525,26 +561,6 @@ export default function MandatePage() {
           {/* Colonne droite */}
           <div className="space-y-4">
             <div className="rounded-md p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>Budget heures</p>
-              <div className="flex items-end gap-1 mb-2">
-                <span className="text-3xl font-black"
-                  style={{ color: budgetPct > 90 ? '#C0392B' : budgetPct > 70 ? '#F39C12' : '#27AE60' }}>
-                  {heuresReelles}h
-                </span>
-                <span className="text-sm mb-1" style={{ color: '#ADB5BD' }}>/ {budget}h</span>
-              </div>
-              <div className="w-full h-2 rounded-full mb-2" style={{ backgroundColor: '#E9ECEF' }}>
-                <div className="h-2 rounded-full transition-all" style={{
-                  width: `${budgetPct}%`,
-                  backgroundColor: budgetPct > 90 ? '#C0392B' : budgetPct > 70 ? '#F39C12' : '#27AE60',
-                }} />
-              </div>
-              <p className="text-xs" style={{ color: heuresRestantes < 0 ? '#C0392B' : '#6C757D' }}>
-                {heuresRestantes >= 0 ? `${heuresRestantes}h restantes` : `${Math.abs(heuresRestantes)}h dépassées`}
-              </p>
-            </div>
-
-            <div className="rounded-md p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
               <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#ADB5BD' }}>Rentabilité estimée</p>
               <div className="space-y-3">
                 <div className="flex justify-between">
@@ -554,16 +570,16 @@ export default function MandatePage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs" style={{ color: '#6C757D' }}>Coût réel ({heuresReelles}h × {taux}$)</span>
+                  <span className="text-xs" style={{ color: '#6C757D' }}>Coût réel {heuresReelles === null ? '' : `(${heuresReelles}h × ${taux}$)`}</span>
                   <span className="text-sm font-bold" style={{ color: '#2C3E50' }}>
-                    {coutReel > 0 ? `${coutReel.toFixed(2)} $` : '—'}
+                    {coutReel !== null && coutReel > 0 ? `${coutReel.toFixed(2)} $` : '—'}
                   </span>
                 </div>
                 <div className="h-px" style={{ backgroundColor: '#E9ECEF' }} />
                 <div className="flex justify-between">
                   <span className="text-xs font-semibold" style={{ color: '#6C757D' }}>Marge estimée</span>
-                  <span className="text-sm font-black" style={{ color: margeEstimee >= 0 ? '#27AE60' : '#C0392B' }}>
-                    {montant > 0 ? `${margeEstimee.toFixed(2)} $ (${margePct}%)` : '—'}
+                  <span className="text-sm font-black" style={{ color: margeEstimee !== null && margeEstimee >= 0 ? '#27AE60' : '#C0392B' }}>
+                    {montant > 0 && margeEstimee !== null ? `${margeEstimee.toFixed(2)} $ (${margePct}%)` : '—'}
                   </span>
                 </div>
               </div>
@@ -708,15 +724,19 @@ export default function MandatePage() {
       )}
 
       {activeTab === 'activities' && (
-        <MandateWorkTab projectId={projectId} teamMembers={teamMembers} />
+        <div id="mandate-panel-work" role="tabpanel" aria-labelledby="mandate-tab-work" tabIndex={0}>
+          <MandateWorkTab projectId={projectId} teamMembers={teamMembers} view={mandateWork.data}
+            loading={mandateWork.loading} refreshing={mandateWork.refreshing} loadError={mandateWork.error}
+            onRefresh={mandateWork.refresh} />
+        </div>
       )}
 
       {activeTab === 'comments' && (
-        <CommentsTab projectId={projectId} />
+        <div id="mandate-panel-comments" role="tabpanel" aria-labelledby="mandate-tab-comments" tabIndex={0}><CommentsTab projectId={projectId} /></div>
       )}
 
       {activeTab === 'timesheet' && (
-        <TimesheetTab projectId={projectId} mandate={mandate} />
+        <div id="mandate-panel-time" role="tabpanel" aria-labelledby="mandate-tab-time" tabIndex={0}><TimesheetTab projectId={projectId} mandate={mandate} /></div>
       )}
 
     </AppLayout>

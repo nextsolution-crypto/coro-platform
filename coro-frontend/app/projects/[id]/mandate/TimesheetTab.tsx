@@ -149,7 +149,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
 
       {/* Dates personnalisées */}
       {viewMode === 'custom' && (
-        <div className="flex gap-4 mb-6 p-4 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 rounded-md" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <div>
             <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6C757D' }}>Du</label>
             <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
@@ -166,7 +166,7 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="rounded-md p-4" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
           <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>Heures saisies</p>
           <p className="text-2xl font-black" style={{ color: '#2980B9' }}>{totalHeures.toFixed(2).replace(/\.?0+$/, '')}h</p>
@@ -228,8 +228,8 @@ export default function TimesheetTab({ projectId, mandate }: Props) {
           <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune heure saisie pour cette période</p>
         </div>
       ) : (
-        <div className="rounded-md overflow-hidden" style={{ border: '1px solid #E9ECEF' }}>
-          <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+        <div className="rounded-md overflow-x-auto" style={{ border: '1px solid #E9ECEF' }}>
+          <table className="w-full min-w-[760px] text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#F8F9FA' }}>
                 {['Date', 'Catégorie', 'Tâche', 'Conseiller', 'Heures', 'Note'].map(col => (

@@ -1,26 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import api from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatCivilDate } from '@/app/planning/time';
-
-type Person = { id: string; firstName: string; lastName: string };
-type Task = { id: string; activityId: string | null; projectTaskListId: string | null; taskTitle: string;
-  categoryName: string; status: string; dueDate?: string | null; actualHours: number; assignee?: Person | null };
-type TaskGroup = { projectTaskListId: string; name: string; taskCount: number; completedTaskCount: number;
-  taskProgressPercent: number | null; actualHours: number; tasks: Task[]; isCurrentlyApplicable?: boolean };
-type Activity = { id: string; label: string; status: string; duration: string; scheduledDate?: string | null;
-  canonicalTypeMissing: boolean; planningStatus: string; lead?: { displayName: string; status: string } | null;
-  taskCount: number; completedTaskCount: number; taskProgressPercent: number | null; actualHours: number;
-  checklists: TaskGroup[]; linkedExistingLists: TaskGroup[]; directTasks: Task[];
-  missingTaskLists: Array<{ taskListId: string; name: string }> };
-type WorkView = { summary: { budgetHours: number | null; actualHours: number; plannedHours: number;
-  budgetRemainingHours: number | null; unplannedRemainingHours: number | null };
-  activities: Activity[]; transversal: TaskGroup; legacyLists: TaskGroup[];
-  classification: { activityTaskCount: number; legacyTaskCount: number; transversalTaskCount: number; totalTaskCount: number } };
+import type { MandateActivity as Activity, MandatePerson as Person, MandateTask as Task,
+  MandateTaskGroup as TaskGroup, MandateWorkView } from './useMandateWork';
 
 const planningLabels: Record<string, string> = { TO_PLAN: 'À planifier', LEAD_PENDING: 'Affectation à confirmer',
   PLANNED: 'Planifiée', CONFIRMED: 'Confirmée' };
@@ -36,10 +23,11 @@ function errorMessage(cause: unknown) {
   return typeof value === 'string' ? value : 'La modification a échoué. Actualisez puis réessayez.';
 }
 
-export default function MandateWorkTab({ projectId, teamMembers }: { projectId: string; teamMembers: Person[] }) {
+export default function MandateWorkTab({ projectId, teamMembers, view, loading, refreshing, loadError, onRefresh }:
+  { projectId: string; teamMembers: Person[]; view: MandateWorkView | null; loading: boolean;
+    refreshing: boolean; loadError: string; onRefresh: () => Promise<void> }) {
   const role = useAuthStore(state => state.user?.role);
   const canMutate = ['ADMIN', 'SUPER_ADMIN', 'OPERATOR'].includes(role ?? '');
-  const [view, setView] = useState<WorkView | null>(null);
   const [expandedActivities, setExpandedActivities] = useState<Record<string, boolean>>({});
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState('ACTIVE');
@@ -49,22 +37,16 @@ export default function MandateWorkTab({ projectId, teamMembers }: { projectId: 
   const [timeTask, setTimeTask] = useState<Task | null>(null);
   const [timeForm, setTimeForm] = useState({ date: new Date().toISOString().slice(0, 10), heures: '', note: '' });
 
-  const load = useCallback(async () => {
-    const response = await api.get<WorkView>(`/projects/${projectId}/mandate/work`);
-    setView(response.data);
-  }, [projectId]);
-  useEffect(() => { load().catch(cause => setError(errorMessage(cause))); }, [load]);
-
   const mutateTask = async (taskId: string, data: Record<string, unknown>) => {
     setBusy(taskId); setError('');
-    try { await api.put(`/projects/${projectId}/tasks/${taskId}`, data); await load(); }
+    try { await api.put(`/projects/${projectId}/tasks/${taskId}`, data); await onRefresh(); }
     catch (cause) { setError(errorMessage(cause)); }
     finally { setBusy(''); }
   };
   const linkTask = async (taskId: string) => {
     const activityId = linkTargets[taskId]; if (!activityId) return;
     setBusy(taskId); setError('');
-    try { await api.put(`/projects/${projectId}/tasks/${taskId}/activity`, { activityId }); await load(); }
+    try { await api.put(`/projects/${projectId}/tasks/${taskId}/activity`, { activityId }); await onRefresh(); }
     catch (cause) { setError(errorMessage(cause)); }
     finally { setBusy(''); }
   };
@@ -75,7 +57,7 @@ export default function MandateWorkTab({ projectId, teamMembers }: { projectId: 
       await api.post(`/projects/${projectId}/tasks/${timeTask.id}/time`, {
         date: timeForm.date, heures: Number(timeForm.heures), note: timeForm.note || null,
       });
-      setTimeTask(null); setTimeForm({ date: new Date().toISOString().slice(0, 10), heures: '', note: '' }); await load();
+      setTimeTask(null); setTimeForm({ date: new Date().toISOString().slice(0, 10), heures: '', note: '' }); await onRefresh();
     } catch (cause) { setError(errorMessage(cause)); }
     finally { setBusy(''); }
   };
@@ -87,7 +69,7 @@ export default function MandateWorkTab({ projectId, teamMembers }: { projectId: 
       );
       const count = response.data.createdLists.length;
       toast(count === 1 ? '1 checklist ajoutée' : count ? `${count} checklists ajoutées` : 'Aucune nouvelle checklist à ajouter.');
-      await load();
+      await onRefresh();
     } catch (cause) { setError(errorMessage(cause)); }
     finally { setBusy(''); }
   };
@@ -132,19 +114,14 @@ export default function MandateWorkTab({ projectId, teamMembers }: { projectId: 
     </section>;
   };
 
-  if (!view && !error) return <p className="text-sm text-gray-500">Chargement du travail du mandat…</p>;
+  if (!view && loading) return <div aria-busy="true" className="grid gap-3"><div className="h-20 animate-pulse rounded bg-gray-100" /><div className="h-32 animate-pulse rounded bg-gray-100" /><span className="sr-only">Chargement du travail du mandat</span></div>;
   const activities = view?.activities.filter(activity => filter === 'ALL' || filter === 'CANCELLED' ?
     filter === 'ALL' || activity.status === 'annule' : filter === 'DONE' ? ['fait', 'termine'].includes(activity.status) :
       filter === 'TO_PLAN' ? activity.planningStatus === 'TO_PLAN' : activity.status !== 'annule' && !['fait', 'termine'].includes(activity.status)) ?? [];
 
   return <div className="grid gap-6">
-    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3">{error}</p>}
-    {view && <section className="grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Synthèse du mandat">
-      {[['Budget', hours(view.summary.budgetHours)], ['Réalisées', hours(view.summary.actualHours)],
-        ['Planifiées', hours(view.summary.plannedHours)], ['Disponible', hours(view.summary.budgetRemainingHours)]].map(([label, value]) =>
-        <div key={label} className="rounded-md border border-gray-200 bg-white p-3"><small className="text-gray-500 uppercase">{label}</small><strong className="block text-xl">{value}</strong></div>)}
-      {view.summary.unplannedRemainingHours !== null && <p className="col-span-2 md:col-span-4 text-xs text-gray-500">dont {hours(view.summary.unplannedRemainingHours)} non planifiées</p>}
-    </section>}
+    {(loadError || error) && <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-3 flex flex-wrap items-center justify-between gap-3"><span>{loadError || error}</span><button type="button" className="rounded border border-red-300 px-3 py-1.5" onClick={() => void onRefresh()}>Réessayer</button></div>}
+    {refreshing && <p aria-live="polite" className="text-xs text-gray-500">Actualisation du travail…</p>}
     <div className="flex flex-wrap gap-2" aria-label="Filtres des activités">{[['ACTIVE', 'Actives'], ['TO_PLAN', 'À planifier'], ['DONE', 'Terminées'], ['CANCELLED', 'Annulées'], ['ALL', 'Toutes']].map(([value, label]) =>
       <button type="button" key={value} onClick={() => setFilter(value)} aria-pressed={filter === value}
         className={`text-xs rounded px-3 py-2 border ${filter === value ? 'bg-red-700 text-white' : 'bg-white'}`}>{label}</button>)}</div>

@@ -848,21 +848,41 @@ test('Mandate Activities consolidates canonical, transversal and legacy work wit
   for (const label of ['Activités', 'Travail transversal', 'Listes de travail existantes', 'Tâches de l’activité',
     'Actuelle', 'Historique', 'Liste existante', 'Ajouter les checklists manquantes', 'Type canonique manquant',
     'Affectation à confirmer', 'Confirmée', 'Afficher les tâches']) assert.ok(work.includes(label));
-  assert.ok(work.includes('/mandate/work'));
+  const workOwner = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'useMandateWork.ts'), 'utf8');
+  assert.ok(workOwner.includes('/mandate/work'));
   assert.ok(work.includes('/task-lists/instantiate'));
   assert.ok(work.includes('/tasks/${taskId}/activity'));
   assert.ok(work.includes('/tasks/${timeTask.id}/time'));
   assert.ok(work.includes('expandedActivities[activity.id] === true'));
   assert.ok(work.includes('expandedGroups[key] === true'));
   assert.ok(work.includes("activity.status !== 'annule'"));
-  assert.ok(work.includes('grid-cols-2 md:grid-cols-4'));
-  assert.ok(work.includes("['Planifiées', hours(view.summary.plannedHours)]"));
-  assert.ok(work.includes("['Disponible', hours(view.summary.budgetRemainingHours)]"));
-  assert.ok(work.includes('unplannedRemainingHours'));
+  assert.ok(page.includes('grid-cols-2 lg:grid-cols-4'));
+  assert.ok(page.includes("['Planifiées', mandateWork.data.summary.plannedHours]"));
+  assert.ok(page.includes("['Disponible', mandateWork.data.summary.budgetRemainingHours]"));
+  assert.ok(page.includes('unplannedRemainingHours'));
   assert.doesNotMatch(work, /\['Restantes'/);
-  assert.ok(page.includes("{ id: 'activities', label: '✅ Activités' }"));
+  assert.ok(page.includes("{ id: 'activities', domId: 'work', label: '✅ Activités' }"));
   assert.ok(page.includes('<MandateWorkTab'));
   assert.doesNotMatch(page, /<TaskListsTab/);
+});
+
+test('Mandate G5 shares Work with canonical KPI and accessible keyboard tabs', () => {
+  const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
+  const workOwner = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/useMandateWork.ts'), 'utf8');
+  const operations = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/useMandateOperations.ts'), 'utf8');
+  const timesheet = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/TimesheetTab.tsx'), 'utf8');
+  for (const value of ['budgetHours', 'actualHours', 'plannedHours', 'budgetRemainingHours', 'unplannedRemainingHours']) assert.ok(workOwner.includes(value));
+  for (const value of ['role="tablist"', 'role="tab"', 'aria-selected', 'aria-controls', 'role="tabpanel"']) assert.ok(page.includes(value));
+  for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) assert.ok(page.includes(`event.key === '${key}'`));
+  for (const id of ['offer', 'work', 'time', 'comments']) assert.ok(page.includes(`domId: '${id}'`));
+  assert.ok(page.includes('overflow-x-auto'));
+  assert.ok(page.includes('view={mandateWork.data}'));
+  assert.ok(page.includes('onRefresh={mandateWork.refresh}'));
+  assert.ok(operations.includes('onApplied?.()'));
+  assert.ok(workOwner.includes('controller.current?.abort()'));
+  assert.ok(workOwner.includes('request !== sequence.current'));
+  assert.ok(timesheet.includes('grid grid-cols-2 lg:grid-cols-4'));
+  assert.ok(timesheet.includes('overflow-x-auto'));
 });
 
 test('Mandate offer uses the authoritative ActivityType catalog and commercial service identities', () => {

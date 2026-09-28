@@ -17,7 +17,8 @@ function responseMessage(error: unknown, fallback: string) {
 }
 
 export function useMandateOperations(input: { projectId: string; revision: string | null; servicesDirty: boolean;
-  canApply: boolean; commercialReady: boolean }) {
+  canApply: boolean; commercialReady: boolean; onApplied?: () => void }) {
+  const onApplied = input.onApplied;
   const [previewState, setPreviewState] = useState<PreviewRuntimeState>(idlePreview);
   const [applyState, setApplyState] = useState<ApplyRuntimeState>(idleApply);
   const [success, setSuccess] = useState<OperationSuccess>(null);
@@ -89,6 +90,7 @@ export function useMandateOperations(input: { projectId: string; revision: strin
       if (!dirtyRef.current) setPreviewState({ status: 'READY', revision: result.commercialRevision,
         preview: result.preview, error: null });
       setSuccess({ serviceId: next.mandateServiceId, action: expected.action });
+      onApplied?.();
       setDecisionDialog(null);
       setApplyState({ ...idleApply(), intent: clearApplyIntent() });
     } catch (error) {
@@ -103,7 +105,7 @@ export function useMandateOperations(input: { projectId: string; revision: strin
         error: conflict ? "L'état a changé. Rechargez l'offre puis relancez l'analyse."
           : responseMessage(error, "L'opération n'a pas pu être confirmée. Relancez l'analyse avant de réessayer.") });
     }
-  }, [input.projectId]);
+  }, [input.projectId, onApplied]);
 
   const createActivity = useCallback((serviceId: string, serviceName: string) => {
     if (!input.canApply || !input.revision || input.servicesDirty || applyState.status !== 'IDLE') return;
