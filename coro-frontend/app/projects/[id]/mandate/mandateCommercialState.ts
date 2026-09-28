@@ -24,6 +24,8 @@ export type MandateServiceDraft = {
   recurrenceMode: MandateServiceRecurrence;
   quantity: number;
   displayOrder: number;
+  nameFRSnapshot?: string;
+  nameENSnapshot?: string | null;
 };
 
 export type MandateCommercialState = {
@@ -49,6 +51,8 @@ export const serviceDraftsFromServer = (services: MandateServiceServer[]): Manda
     recurrenceMode: service.recurrenceMode,
     quantity: service.quantity,
     displayOrder: service.displayOrder,
+    nameFRSnapshot: service.nameFRSnapshot,
+    nameENSnapshot: service.nameENSnapshot,
   }))
   .sort((a, b) => a.displayOrder - b.displayOrder || (a.id || '').localeCompare(b.id || ''));
 
@@ -74,6 +78,7 @@ export function updateServiceDraft(services: MandateServiceDraft[], identity: st
 }
 
 export const removeServiceDraft = (services: MandateServiceDraft[], identity: string) => services
+  .filter(service => service.id || (service.id || service.localDraftId) !== identity)
   .map(service => (service.id || service.localDraftId) === identity
     ? { ...service, commercialStatus: 'REMOVED' as const }
     : service);
@@ -126,6 +131,56 @@ export function historicalServiceSuggestions(activities: Array<{ sourceMandate?:
 
 export const canEditMandateServices = (role?: string | null) => role === 'ADMIN' || role === 'SUPER_ADMIN';
 export const canApplyMandateOperations = canEditMandateServices;
+
+export type CatalogServiceState = 'AVAILABLE' | 'ALREADY_ACTIVE' | 'REMOVED_RESTORABLE' | 'MULTIPLE_EXISTING';
+
+export function classifyCatalogService(activityTypeId: string, draft: MandateServiceDraft[]): {
+  state: CatalogServiceState; restorableId?: string;
+} {
+  const rows = draft.filter(service => service.activityTypeId === activityTypeId);
+  const active = rows.filter(service => service.commercialStatus === 'ACTIVE');
+  const removed = rows.filter(service => service.commercialStatus === 'REMOVED');
+  if (active.length > 1 || removed.length > 1) return { state: 'MULTIPLE_EXISTING' };
+  if (active.length === 1) return { state: 'ALREADY_ACTIVE' };
+  if (removed.length === 1) return { state: 'REMOVED_RESTORABLE', restorableId: removed[0].id };
+  return { state: 'AVAILABLE' };
+}
+
+export function canRestoreService(draft: MandateServiceDraft[], identity: string, activeCatalogIds: Set<string>) {
+  const row = draft.find(service => (service.id || service.localDraftId) === identity);
+  if (!row || row.commercialStatus !== 'REMOVED' || !activeCatalogIds.has(row.activityTypeId)) return false;
+  const sameType = draft.filter(service => service.activityTypeId === row.activityTypeId);
+  return sameType.filter(service => service.commercialStatus === 'ACTIVE').length === 0
+    && sameType.filter(service => service.commercialStatus === 'REMOVED').length === 1;
+}
+
+export function restoreServiceAtEnd(draft: MandateServiceDraft[], identity: string) {
+  const maxOrder = draft.filter(service => service.commercialStatus === 'ACTIVE')
+    .reduce((max, service) => Math.max(max, service.displayOrder), -1);
+  return updateServiceDraft(restoreServiceDraft(draft, identity), identity, { displayOrder: maxOrder + 1 });
+}
+
+export type MandateServiceValidation = { valid: boolean; errors: Record<string, string> };
+
+export function validateMandateServices(draft: MandateServiceDraft[], snapshot: MandateServiceDraft[],
+  activeCatalogIds: Set<string>): MandateServiceValidation {
+  const errors: Record<string, string> = {};
+  const snapshotById = new Map(snapshot.flatMap(service => service.id ? [[service.id, service] as const] : []));
+  for (const service of draft.filter(item => item.commercialStatus === 'ACTIVE')) {
+    const identity = service.id || service.localDraftId || service.activityTypeId;
+    if (!service.activityTypeId) errors[identity] = "Le type d'activité est requis.";
+    else if (!Number.isInteger(service.quantity) || service.quantity < 1) errors[identity] = 'La quantité doit être un entier supérieur ou égal à 1.';
+    else if (!['ONCE', 'ANNUAL'].includes(service.recurrenceMode)) errors[identity] = 'La récurrence est invalide.';
+    else {
+      const before = service.id ? snapshotById.get(service.id) : undefined;
+      const requiresActiveCatalog = !before || before.commercialStatus === 'REMOVED';
+      if (requiresActiveCatalog && !activeCatalogIds.has(service.activityTypeId)) {
+        errors[identity] = "Ce type d'activité n'est pas disponible dans le catalogue.";
+      }
+    }
+  }
+  return { valid: Object.keys(errors).length === 0, errors };
+}
 
 export function normalizeMandateApiError(error: unknown, fallback = 'Une erreur est survenue.') {
   const value = error as { response?: { status?: number; data?: { message?: unknown; code?: string } } };

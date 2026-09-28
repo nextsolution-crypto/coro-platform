@@ -23,10 +23,22 @@ const projection = loadTypescript('projection.ts');
 const activityVisual = loadTypescript('activityTypeVisual.ts');
 const teamPicker = loadTypescript('teamPickerState.ts');
 const previewCycle = loadTypescript('previewCycle.ts');
-const mandateSelection = loadTypescript('../projects/[id]/mandate/mandateSelection.ts');
 const mandateFormState = loadTypescript('../projects/[id]/mandate/mandateFormState.ts');
 const mandateCommercial = loadTypescript('../projects/[id]/mandate/mandateCommercialState.ts');
 const mandateOperational = loadTypescript('../projects/[id]/mandate/mandateOperationalState.ts');
+const mandateSave = loadTypescript('../projects/[id]/mandate/mandateSavePlan.ts');
+
+test('Mandate save plan separates Fiche, Services and first-Mandate bootstrap', () => {
+  assert.deepEqual(mandateSave.mandateSavePlan({ mandateExists: true, mandateFieldsDirty: true,
+    servicesDirty: false, commercialRevision: 'r' }),
+  { saveMandate: true, bootstrapCommercialRevision: false, saveServices: false });
+  assert.deepEqual(mandateSave.mandateSavePlan({ mandateExists: true, mandateFieldsDirty: false,
+    servicesDirty: true, commercialRevision: 'r' }),
+  { saveMandate: false, bootstrapCommercialRevision: false, saveServices: true });
+  assert.deepEqual(mandateSave.mandateSavePlan({ mandateExists: false, mandateFieldsDirty: false,
+    servicesDirty: true, commercialRevision: null }),
+  { saveMandate: true, bootstrapCommercialRevision: true, saveServices: true });
+});
 
 test('Mandate commercial drafts preserve persisted identity, removed rows and duplicate ActivityTypes', () => {
   const rows = mandateCommercial.serviceDraftsFromServer([
@@ -47,12 +59,10 @@ test('Mandate commercial draft mutations use row identity and build the canonica
   rows = mandateCommercial.addServiceDraft(rows, 'type-a', 'local-2', true);
   assert.deepEqual(rows.map(item => item.localDraftId), ['local-1', 'local-2']);
   rows = mandateCommercial.removeServiceDraft(rows, 'local-1');
-  assert.equal(rows[0].commercialStatus, 'REMOVED');
-  rows = mandateCommercial.restoreServiceDraft(rows, 'local-1');
-  assert.equal(rows[0].commercialStatus, 'ACTIVE');
+  assert.deepEqual(rows.map(item => item.localDraftId), ['local-2']);
   rows = mandateCommercial.removeServiceDraft(rows, 'local-2');
   assert.deepEqual(mandateCommercial.buildSaveMandateServicesPayload('revision', rows), {
-    expectedRevision: 'revision', services: [{ activityTypeId: 'type-a', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 0 }],
+    expectedRevision: 'revision', services: [],
   });
 });
 
@@ -65,6 +75,42 @@ test('Mandate historical transition detects history without deriving commercial 
     { sourceMandate: true, activityTypeId: 'a' }, { sourceMandate: true, activityTypeId: 'a' },
   ]);
   assert.deepEqual(suggestions, [{ activityTypeId: 'a', activityCount: 2, selected: false }]);
+});
+
+test('Mandate catalog classification prevents accidental duplicate additions and restorations', () => {
+  const active = { id: 'active', activityTypeId: 'a', commercialStatus: 'ACTIVE', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 0 };
+  const removed = { id: 'removed', activityTypeId: 'a', commercialStatus: 'REMOVED', recurrenceMode: 'ANNUAL', quantity: 2, displayOrder: 0 };
+  assert.deepEqual(mandateCommercial.classifyCatalogService('a', []), { state: 'AVAILABLE' });
+  assert.deepEqual(mandateCommercial.classifyCatalogService('a', [removed]),
+    { state: 'REMOVED_RESTORABLE', restorableId: 'removed' });
+  assert.equal(mandateCommercial.canRestoreService([removed], 'removed', new Set(['a'])), true);
+  assert.equal(mandateCommercial.canRestoreService([active, removed], 'removed', new Set(['a'])), false);
+  assert.equal(mandateCommercial.classifyCatalogService('a', [active, removed]).state, 'ALREADY_ACTIVE');
+  assert.equal(mandateCommercial.classifyCatalogService('a', [removed, { ...removed, id: 'removed-2' }]).state,
+    'MULTIPLE_EXISTING');
+  assert.equal(mandateCommercial.canRestoreService([removed], 'removed', new Set()), false);
+});
+
+test('Mandate desired payload preserves existing duplicates, removes omitted rows and normalizes order', () => {
+  const rows = [
+    { id: 'a1', activityTypeId: 'a', commercialStatus: 'ACTIVE', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 0 },
+    { id: 'a2', activityTypeId: 'a', commercialStatus: 'REMOVED', recurrenceMode: 'ANNUAL', quantity: 2, displayOrder: 1 },
+    { id: 'b', activityTypeId: 'b', commercialStatus: 'ACTIVE', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 2 },
+  ];
+  const payload = mandateCommercial.buildSaveMandateServicesPayload('revision', rows);
+  assert.deepEqual(payload.services.map(item => [item.id, item.displayOrder]), [['a1', 0], ['b', 1]]);
+  const restored = mandateCommercial.restoreServiceAtEnd(rows, 'a2');
+  assert.equal(restored.find(item => item.id === 'a2').displayOrder, 3);
+});
+
+test('Mandate commercial validation targets desired active rows and permits archived persisted active rows', () => {
+  const persisted = { id: 'old', activityTypeId: 'archived', commercialStatus: 'ACTIVE', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 0 };
+  assert.equal(mandateCommercial.validateMandateServices([persisted], [persisted], new Set()).valid, true);
+  const invalid = mandateCommercial.validateMandateServices([
+    { localDraftId: 'new', activityTypeId: 'active', commercialStatus: 'ACTIVE', recurrenceMode: 'ONCE', quantity: 0, displayOrder: 1 },
+  ], [], new Set(['active']));
+  assert.equal(invalid.valid, false);
+  assert.match(invalid.errors.new, /entier/);
 });
 
 test('Mandate operational preview is fail-safe for unknown actions and reasons', () => {
@@ -125,19 +171,32 @@ test('Mandate apply intent keeps one UUID across retries and changes it for a ne
     { idempotencyKey: 'uuid-1', expectedRevision: 'revision', decisions });
 });
 
-test('Mandate G1 runtime loads commercial services only after Mandate existence and keeps legacy generation isolated', () => {
+test('Mandate G2 loads and saves commercial services without legacy generation or operational runtime', () => {
   const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
   const api = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/mandateApi.ts'), 'utf8');
   assert.ok(page.includes("mandateContext?.projectId !== projectId || !mandateContext.exists"));
   assert.ok(page.includes('getMandateServices(projectId, controller.signal)'));
   assert.ok(page.includes('controller.abort()'));
   assert.ok(page.includes('request !== commercialRequest.current'));
-  assert.ok(page.includes('reconstructMandateServices(activitiesRes.data || [])'));
-  assert.ok(page.includes("api.post(`/projects/${projectId}/activities/from-mandate`"));
-  assert.doesNotMatch(page, /putMandateServices|previewMandateOperations|applyMandateOperations/);
+  assert.ok(page.includes('putMandateServices(projectId'));
+  assert.doesNotMatch(page, /reconstructMandateServices|activities\/from-mandate|previewMandateOperations|applyMandateOperations/);
   for (const wrapper of ['getMandateServices', 'putMandateServices', 'previewMandateOperations', 'applyMandateOperations']) {
     assert.ok(api.includes(`const ${wrapper}`));
   }
+});
+
+test('Mandate G2 save advances each domain snapshot only after its own successful write', () => {
+  const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
+  const mandatePut = page.indexOf("api.put(`/projects/${projectId}/mandate`, form)");
+  const revisionGet = page.indexOf('getMandateServices(projectId)', mandatePut);
+  const servicesPut = page.indexOf('putMandateServices(projectId', revisionGet);
+  assert.ok(mandatePut > 0 && revisionGet > mandatePut && servicesPut > revisionGet);
+  assert.ok(page.includes('setServerSnapshot(persisted)'));
+  assert.ok(page.includes('snapshot: services, draft: services.map'));
+  assert.ok(page.includes('let servicesAttempted = false'));
+  assert.ok(page.includes('if (servicesAttempted) setOfferSaveError'));
+  assert.ok(page.includes('Votre brouillon est conservé'));
+  assert.ok(page.includes('resetServiceDrafts(current.snapshot)'));
 });
 
 test('activity type visual mapping is controlled and shared by planner views', () => {
@@ -694,30 +753,15 @@ test('Mandate Activities consolidates canonical, transversal and legacy work wit
   assert.doesNotMatch(page, /<TaskListsTab/);
 });
 
-test('Mandate generation uses the authoritative ActivityType catalog and canonical identifiers', () => {
+test('Mandate offer uses the authoritative ActivityType catalog and commercial service identities', () => {
   const page = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'page.tsx'), 'utf8');
+  const editor = fs.readFileSync(path.join(__dirname, '..', 'projects', '[id]', 'mandate', 'MandateServicesEditor.tsx'), 'utf8');
   assert.ok(page.includes("api.get('/activities/catalog')"));
-  assert.ok(page.includes('mandateServicesPayload(selectedServices)'));
-  assert.ok(page.includes('reconstructMandateServices(activitiesRes.data || [])'));
-  assert.ok(page.includes('s.activityTypeId === activity.activityTypeId'));
-  assert.ok(page.includes("api.post(`/projects/${projectId}/activities/from-mandate`"));
+  assert.ok(page.includes('buildSaveMandateServicesPayload'));
+  assert.ok(editor.includes('service.id || service.localDraftId'));
+  assert.ok(editor.includes('crypto.randomUUID()'));
+  assert.doesNotMatch(page, /activities\/from-mandate|selectedServices|reconstructMandateServices/);
   assert.doesNotMatch(page, /const ACTIVITY_CATALOG\s*=\s*\[/);
-});
-
-test('Mandate selection keeps A and B in the payload and reconstructs both after reload', () => {
-  const a = { activityTypeId: 'type-a', type: 'inspection', label: 'Inspection', duration: '1h', mode: 'presentiel' };
-  const b = { activityTypeId: 'type-b', type: 'exercice_table', label: 'Exercice de table', duration: '2h', mode: 'presentiel' };
-  const initial = [{ activityTypeId: a.activityTypeId, type: a.type, isRecurring: false }];
-  const selected = mandateSelection.toggleMandateService(initial, b, true);
-  assert.deepEqual(selected, [initial[0], { activityTypeId: 'type-b', type: 'exercice_table', isRecurring: false }]);
-  assert.deepEqual(mandateSelection.mandateServicesPayload(selected), [
-    { activityTypeId: 'type-a', isRecurring: false },
-    { activityTypeId: 'type-b', isRecurring: false },
-  ]);
-  assert.deepEqual(mandateSelection.reconstructMandateServices([
-    { sourceMandate: true, status: 'a_faire', activityTypeId: 'type-a', type: 'inspection', isRecurring: false },
-    { sourceMandate: true, status: 'a_faire', activityTypeId: 'type-b', type: 'exercice_table', isRecurring: false },
-  ]), selected);
 });
 
 test('Mandate dirty state normalizes null, empty values, numbers, booleans and civil dates', () => {
@@ -731,27 +775,19 @@ test('Mandate dirty state normalizes null, empty values, numbers, booleans and c
   assert.equal(server.dateDebutDelai, '2026-09-26');
 });
 
-test('Mandate service dirty state ignores ordering but includes recurrence and selection', () => {
-  const a = { activityTypeId: 'a', type: 'inspection', isRecurring: false };
-  const b = { activityTypeId: 'b', type: 'formation', isRecurring: true };
-  assert.equal(mandateFormState.serviceSelectionsAreEqual([a, b], [b, a]), true);
-  assert.equal(mandateFormState.serviceSelectionsAreEqual([a], [a, b]), false);
-  assert.equal(mandateFormState.serviceSelectionsAreEqual([a, b], [a, { ...b, isRecurring: false }]), false);
-});
-
-test('Mandate page preserves independent drafts across save, generation and tab changes', () => {
+test('Mandate page preserves independent form and commercial drafts across save and tab changes', () => {
   const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
   assert.ok(page.includes('serverSnapshot'));
-  assert.ok(page.includes('serverServiceSelection'));
+  assert.ok(page.includes('commercialState.snapshot'));
   assert.ok(page.includes('mandateFieldsDirty'));
-  assert.ok(page.includes('serviceSelectionDirty'));
+  assert.ok(page.includes('commercialServicesDirty'));
   assert.ok(page.includes("window.addEventListener('beforeunload'"));
   assert.ok(page.includes("window.confirm('Des modifications ne sont pas enregistrées."));
-  assert.doesNotMatch(page.match(/const handleSave[\s\S]*?const handleGenerateActivities/)?.[0] ?? '', /fetchData\(/);
-  assert.match(page, /const activitiesRes = await api\.get\(`\/projects\/\$\{projectId\}\/activities`\)/);
+  assert.doesNotMatch(page, /handleGenerateActivities|activities\/from-mandate/);
+  assert.ok(page.includes('resetServiceDrafts(current.snapshot)'));
   assert.ok(page.includes("['ADMIN', 'SUPER_ADMIN'].includes"));
   assert.ok(page.includes('Fiche et offre en lecture seule'));
-  assert.ok(page.includes('Activité précédente annulée'));
+  assert.ok(page.includes('<MandateServicesEditor'));
 });
 
 test('Mandate comments and timesheet expose contextual errors and reject failed exports', () => {

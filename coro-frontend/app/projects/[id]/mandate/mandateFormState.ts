@@ -1,5 +1,3 @@
-import type { SelectedService } from './mandateSelection';
-
 export type MandateForm = {
   description: string;
   montantVendu: string;
@@ -50,10 +48,3 @@ export function normalizedMandateForm(value: MandateForm) {
 
 export const mandateFieldsAreEqual = (a: MandateForm, b: MandateForm) =>
   JSON.stringify(normalizedMandateForm(a)) === JSON.stringify(normalizedMandateForm(b));
-
-const normalizedServices = (items: SelectedService[]) => items
-  .map(({ activityTypeId, isRecurring }) => ({ activityTypeId, isRecurring: Boolean(isRecurring) }))
-  .sort((a, b) => a.activityTypeId.localeCompare(b.activityTypeId));
-
-export const serviceSelectionsAreEqual = (a: SelectedService[], b: SelectedService[]) =>
-  JSON.stringify(normalizedServices(a)) === JSON.stringify(normalizedServices(b));

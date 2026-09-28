@@ -8,14 +8,16 @@ import AppLayout from '@/components/layout/AppLayout';
 import MandateWorkTab from './MandateWorkTab';
 import CommentsTab from './CommentsTab';
 import TimesheetTab from './TimesheetTab';
+import MandateServicesEditor from './MandateServicesEditor';
 import { useAuthStore } from '@/stores/auth.store';
-import { ActivityCatalogItem, cancelledMandateActivityTypeIds, mandateServicesPayload, reconstructMandateServices,
-  SelectedService, toggleMandateService } from './mandateSelection';
+import { ActivityCatalogItem } from './mandateSelection';
 import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer,
-  serviceSelectionsAreEqual } from './mandateFormState';
-import { deriveHistoricalCommercialTransition, emptyMandateCommercialState, mandateServicesAreDirty,
-  normalizeMandateApiError, serviceDraftsFromServer } from './mandateCommercialState';
-import { getMandateServices } from './mandateApi';
+  } from './mandateFormState';
+import { buildSaveMandateServicesPayload, deriveHistoricalCommercialTransition, emptyMandateCommercialState,
+  mandateServicesAreDirty, normalizeMandateApiError, resetServiceDrafts, serviceDraftsFromServer,
+  validateMandateServices } from './mandateCommercialState';
+import { getMandateServices, putMandateServices } from './mandateApi';
+import { mandateSavePlan } from './mandateSavePlan';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
@@ -34,16 +36,16 @@ export default function MandatePage() {
   const [mandate, setMandate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [offerSaveError, setOfferSaveError] = useState('');
+  const [serviceValidationErrors, setServiceValidationErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState('fiche');
   const [activityCatalog, setActivityCatalog] = useState<ActivityCatalogItem[]>([]);
-  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
-  const [serverServiceSelection, setServerServiceSelection] = useState<SelectedService[]>([]);
-  const [cancelledActivityTypes, setCancelledActivityTypes] = useState<Set<string>>(new Set());
-  const [generatingActivities, setGeneratingActivities] = useState(false);
-  const [activitiesGenerated, setActivitiesGenerated] = useState(false);
-  const [generationError, setGenerationError] = useState('');
+  const [catalogError, setCatalogError] = useState(false);
+  const [historicalActivityState, setHistoricalActivityState] = useState<{
+    known: boolean; activities: Array<{ sourceMandate?: boolean; activityTypeId?: string | null }>;
+  }>({ known: true, activities: [] });
 
   const [form, setForm] = useState<MandateForm>(emptyMandateForm);
   const [serverSnapshot, setServerSnapshot] = useState<MandateForm>(emptyMandateForm);
@@ -87,15 +89,19 @@ export default function MandatePage() {
       const [projectRes, mandateRes, activitiesRes, teamRes, catalogRes] = await Promise.all([
         api.get(`/projects/${projectId}`),
         api.get(`/projects/${projectId}/mandate`).catch(() => ({ data: null })),
-        api.get(`/projects/${projectId}/activities`).catch(() => ({ data: [] })),
+        api.get(`/projects/${projectId}/activities`).then(response => ({ data: response.data, failed: false }))
+          .catch(() => ({ data: [], failed: true })),
         api.get('/users/organization').catch(() => ({ data: [] })),
-        api.get('/activities/catalog'),
+        api.get('/activities/catalog').then(response => ({ data: response.data, failed: false }))
+          .catch(() => ({ data: [], failed: true })),
       ]);
       setActivityCatalog(catalogRes.data || []);
+      setCatalogError(catalogRes.failed);
       setTeamMembers(teamRes.data || []);
       setProject(projectRes.data);
       const m = mandateRes.data;
       historicalActivities.current = { projectId, activities: activitiesRes.data || [] };
+      setHistoricalActivityState({ known: !activitiesRes.failed, activities: activitiesRes.data || [] });
       setMandate(m);
       setMandateContext({ projectId, exists: Boolean(m) });
       if (!m) setCommercialState(emptyMandateCommercialState());
@@ -106,67 +112,113 @@ export default function MandatePage() {
         // Popup migration si typeMandat pas encore défini
         if (!m.typeMandat || m.typeMandat === '') setShowTypeMandatPopup(true);
       }
-      const services = reconstructMandateServices(activitiesRes.data || []);
-      setServerServiceSelection(services);
-      setSelectedServices(services);
-      setCancelledActivityTypes(cancelledMandateActivityTypeIds(activitiesRes.data || []));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  const handleSave = async () => {
-    setSaveError('');
-    setSaved(false);
-    setSaving(true);
-    try {
-      const response = await api.put(`/projects/${projectId}/mandate`, form);
-      const persisted = mandateFormFromServer(response.data);
-      setMandate((current: any) => ({ ...current, ...response.data }));
-      setServerSnapshot(persisted);
-      setForm(persisted);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err: any) {
-      setSaveError(err?.response?.data?.message || "L'enregistrement du mandat a échoué.");
-    }
-    finally { setSaving(false); }
-  };
-
-  const handleGenerateActivities = async () => {
-    setGeneratingActivities(true);
-    setGenerationError('');
-    try {
-      await api.post(`/projects/${projectId}/activities/from-mandate`, {
-        services: mandateServicesPayload(selectedServices),
-      });
-      const activitiesRes = await api.get(`/projects/${projectId}/activities`);
-      const services = reconstructMandateServices(activitiesRes.data || []);
-      setServerServiceSelection(services);
-      setSelectedServices(services);
-      setCancelledActivityTypes(cancelledMandateActivityTypeIds(activitiesRes.data || []));
-      setActivitiesGenerated(true);
-      setTimeout(() => setActivitiesGenerated(false), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setGenerationError(err?.response?.data?.message || "La génération des activités a échoué.");
-    }
-    finally { setGeneratingActivities(false); }
-  };
-
   const canEditMandate = ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role || '');
   const mandateFieldsDirty = !mandateFieldsAreEqual(form, serverSnapshot);
-  const serviceSelectionDirty = !serviceSelectionsAreEqual(selectedServices, serverServiceSelection);
   const commercialServicesDirty = mandateServicesAreDirty(commercialState.draft, commercialState.snapshot);
-  const isDirty = mandateFieldsDirty || serviceSelectionDirty || commercialServicesDirty;
+  const isDirty = mandateFieldsDirty || commercialServicesDirty;
+
+  const handleSave = async () => {
+    setSaveError(''); setOfferSaveError(''); setSaveSuccess('');
+    const fieldsWereDirty = mandateFieldsDirty;
+    const servicesWereDirty = commercialServicesDirty;
+    const savePlan = mandateSavePlan({ mandateExists: Boolean(mandate), mandateFieldsDirty: fieldsWereDirty,
+      servicesDirty: servicesWereDirty, commercialRevision: commercialState.revision });
+    const validation = validateMandateServices(commercialState.draft, commercialState.snapshot,
+      new Set(activityCatalog.map(item => item.activityTypeId)));
+    setServiceValidationErrors(validation.errors);
+    if (servicesWereDirty && !validation.valid) return;
+    if (!fieldsWereDirty && !servicesWereDirty) return;
+    setSaving(true);
+    let ficheSaved = false;
+    let createdMandate = false;
+    let servicesAttempted = false;
+    try {
+      if (savePlan.saveMandate) {
+        const response = await api.put(`/projects/${projectId}/mandate`, form);
+        const persisted = mandateFormFromServer(response.data);
+        setMandate((current: any) => ({ ...current, ...response.data }));
+        createdMandate = !mandate;
+        setServerSnapshot(persisted); setForm(persisted); ficheSaved = true;
+      }
+      if (savePlan.saveServices) {
+        servicesAttempted = true;
+        let revision = commercialState.revision;
+        if (!revision) revision = (await getMandateServices(projectId)).revision;
+        const response = await putMandateServices(projectId,
+          buildSaveMandateServicesPayload(revision, commercialState.draft));
+        const services = serviceDraftsFromServer(response.services || []);
+        setCommercialState({ modelAvailable: true, loadStatus: 'READY', error: null, revision: response.revision,
+          snapshot: services, draft: services.map(service => ({ ...service })),
+          historicalTransition: deriveHistoricalCommercialTransition(true, services, historicalActivityState.activities) });
+      } else if (createdMandate) {
+        try {
+          const response = await getMandateServices(projectId);
+          const services = serviceDraftsFromServer(response.services || []);
+          setCommercialState({ modelAvailable: true, loadStatus: 'READY', error: null, revision: response.revision,
+            snapshot: services, draft: services.map(service => ({ ...service })),
+            historicalTransition: deriveHistoricalCommercialTransition(true, services, historicalActivityState.activities) });
+        } catch (error) {
+          setCommercialState({ ...emptyMandateCommercialState(), modelAvailable: true, loadStatus: 'ERROR',
+            error: normalizeMandateApiError(error, "L'offre commerciale n'a pas pu être chargée.").message });
+        }
+      }
+      setSaveSuccess(fieldsWereDirty && servicesWereDirty ? 'Mandat et offre enregistrés.'
+        : servicesWereDirty ? 'Offre enregistrée.' : 'Mandat enregistré.');
+    } catch (error: unknown) {
+      const normalized = normalizeMandateApiError(error);
+      if (savePlan.saveMandate && !ficheSaved) {
+        setSaveError(normalized.message || "L'enregistrement du Mandat a échoué.");
+      }
+      else if (ficheSaved && servicesWereDirty) {
+        setSaveSuccess("Les informations du Mandat sont enregistrées. L'offre contient encore des modifications non enregistrées.");
+      }
+      if (servicesAttempted) setOfferSaveError(normalized.kind === 'conflict'
+        ? "L'offre a été modifiée par une autre personne. Votre brouillon est conservé."
+        : normalized.kind === 'network'
+          ? "Le résultat de l'enregistrement de l'offre est incertain. Vérifiez l'état serveur avant de réessayer."
+          : normalized.message || "L'enregistrement de l'offre a échoué.");
+    } finally { setSaving(false); }
+  };
+
   const updateForm = (change: Partial<MandateForm>) => {
     setForm(current => ({ ...current, ...change }));
     setSaveError('');
-    setSaved(false);
+    setSaveSuccess('');
   };
-  const updateServices = (next: SelectedService[]) => {
-    setSelectedServices(next);
-    setGenerationError('');
-    setActivitiesGenerated(false);
+  const updateCommercialServices = (draft: typeof commercialState.draft) => {
+    setCommercialState(current => ({ ...current, draft }));
+    setOfferSaveError(''); setServiceValidationErrors({}); setSaveSuccess('');
+  };
+  const resetChanges = () => {
+    setForm(serverSnapshot);
+    setCommercialState(current => ({ ...current, draft: resetServiceDrafts(current.snapshot) }));
+    setSaveError(''); setOfferSaveError(''); setServiceValidationErrors({}); setSaveSuccess('');
+  };
+  const reloadMandateServices = async () => {
+    if (commercialServicesDirty && !window.confirm("Recharger l'offre remplacera vos modifications non enregistrées. Continuer ?")) return;
+    const request = ++commercialRequest.current;
+    setCommercialState(current => ({ ...current, loadStatus: 'LOADING', error: null }));
+    try {
+      const response = await getMandateServices(projectId);
+      if (request !== commercialRequest.current) return;
+      const services = serviceDraftsFromServer(response.services || []);
+      setCommercialState({ modelAvailable: true, loadStatus: 'READY', error: null, revision: response.revision,
+        snapshot: services, draft: services.map(service => ({ ...service })),
+        historicalTransition: deriveHistoricalCommercialTransition(true, services, historicalActivityState.activities) });
+      setOfferSaveError(''); setServiceValidationErrors({});
+    } catch (error) {
+      if (request !== commercialRequest.current) return;
+      setCommercialState(current => ({ ...current, loadStatus: 'ERROR',
+        error: normalizeMandateApiError(error, "L'offre commerciale n'a pas pu être chargée.").message }));
+    }
+  };
+  const reloadCatalog = async () => {
+    try { const response = await api.get('/activities/catalog'); setActivityCatalog(response.data || []); setCatalogError(false); }
+    catch { setCatalogError(true); }
   };
   const leaveMandate = () => {
     if (!isDirty || window.confirm('Des modifications ne sont pas enregistrées. Quitter le mandat ?')) {
@@ -300,24 +352,21 @@ export default function MandatePage() {
           <div className="h-1 w-16 mt-2" style={{ backgroundColor: '#C0392B' }} />
         </div>
         {activeTab === 'fiche' && (
-          <div className="flex items-center gap-3">
-            {activitiesGenerated && (
-              <span className="text-xs px-3 py-1.5 rounded font-medium"
-                style={{ backgroundColor: '#EAFAF1', color: '#27AE60', border: '1px solid #A9DFBF' }}>
-                ✓ Activités générées
-              </span>
-            )}
-            {canEditMandate && <button onClick={handleSave} disabled={saving || !mandateFieldsDirty}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {canEditMandate && isDirty && <button type="button" onClick={resetChanges} disabled={saving}
+              className="text-sm px-4 py-2 rounded disabled:opacity-50" style={{ border: '1px solid #CED4DA', color: '#6C757D' }}>
+              Annuler les modifications
+            </button>}
+            {canEditMandate && <button type="button" onClick={handleSave} disabled={saving || !isDirty}
+              aria-busy={saving}
               className="text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
-              style={{ backgroundColor: saved ? '#27AE60' : '#C0392B' }}
-              onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = saved ? '#1E8449' : '#A93226'; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = saved ? '#27AE60' : '#C0392B'; }}>
+              style={{ backgroundColor: '#C0392B' }}>
               <Save size={14} />
-              {saving ? 'Sauvegarde...' : saved ? '✓ Sauvegardé' : 'Sauvegarder'}
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
             </button>}
             {isDirty && (
               <p className="text-xs mt-1" style={{ color: '#F39C12' }}>
-                Modifications non enregistrées{serviceSelectionDirty ? ' · appliquez séparément les changements aux activités' : ''}
+                Modifications non enregistrées
               </p>
             )}
           </div>
@@ -325,6 +374,7 @@ export default function MandatePage() {
       </div>
 
       {saveError && <p role="alert" className="text-sm mb-4" style={{ color: '#C0392B' }}>{saveError}</p>}
+      {saveSuccess && <p aria-live="polite" className="text-sm mb-4" style={{ color: '#27864A' }}>{saveSuccess}</p>}
       {!canEditMandate && activeTab === 'fiche' && (
         <p className="text-sm mb-4" style={{ color: '#6C757D' }}>Fiche et offre en lecture seule. Seuls les administrateurs peuvent les modifier.</p>
       )}
@@ -435,86 +485,21 @@ export default function MandatePage() {
                 </select>
               </div>
 
-              {/* Services vendus */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
-                    Services vendus
-                    {selectedServices.length > 0 && (
-                      <span className="ml-2 text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: '#EAFAF1', color: '#27AE60' }}>
-                        {selectedServices.length} sélectionné{selectedServices.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </h3>
-                  <button onClick={handleGenerateActivities}
-                    disabled={generatingActivities || !canEditMandate || !serviceSelectionDirty}
-                    className="text-xs font-medium px-3 py-1.5 rounded flex items-center gap-1.5 disabled:opacity-50"
-                    style={{ backgroundColor: '#C0392B', color: '#FFFFFF' }}
-                    onMouseEnter={e => { if (selectedServices.length > 0) e.currentTarget.style.backgroundColor = '#A93226'; }}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
-                    {generatingActivities ? '⏳ Application...' : '⚡ Appliquer les changements aux activités'}
-                  </button>
-                </div>
-                <p className="text-xs mb-3" style={{ color: '#ADB5BD' }}>
-                  Cochez les services inclus dans l'offre. Choisissez si c'est une fois ou récurrent annuellement.
-                </p>
-                {generationError && <p className="text-xs mb-3" role="alert" style={{ color: '#C0392B' }}>{generationError}</p>}
-                <div className="space-y-2">
-                  {activityCatalog.map(activity => {
-                    const selected = selectedServices.find(s => s.activityTypeId === activity.activityTypeId);
-                    return (
-                      <div key={activity.activityTypeId}
-                        className="flex items-center justify-between p-3 rounded transition-colors"
-                        style={{
-                          backgroundColor: selected ? '#EAFAF1' : '#F8F9FA',
-                          border: `1px solid ${selected ? '#A9DFBF' : '#E9ECEF'}`,
-                        }}>
-                        <label className="flex items-center gap-3 cursor-pointer flex-1">
-                          <input type="checkbox"
-                            checked={!!selected}
-                            disabled={!canEditMandate}
-                            onChange={e => {
-                              updateServices(toggleMandateService(selectedServices, activity, e.target.checked));
-                            }}
-                            style={{ accentColor: '#27AE60', width: '16px', height: '16px', flexShrink: 0 }} />
-                          <div>
-                            <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{activity.label}</p>
-                            {cancelledActivityTypes.has(activity.activityTypeId) && (
-                              <p className="text-xs" style={{ color: '#F39C12' }}>Activité précédente annulée</p>
-                            )}
-                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
-                              ⏱ {activity.duration} · {activity.mode === 'teams' ? '💻 Teams' : '📍 Présentiel'}
-                            </p>
-                          </div>
-                        </label>
-                        {selected && (
-                          <div className="flex gap-2 ml-4 flex-shrink-0">
-                            {[
-                              { key: 'once', label: '1× Une fois', isRecurring: false },
-                              { key: 'recurring', label: '↺ Récurrent', isRecurring: true },
-                            ].map(opt => (
-                              <button key={opt.key}
-                                disabled={!canEditMandate}
-                                onClick={() => updateServices(selectedServices.map(s =>
-                                  s.activityTypeId === activity.activityTypeId ? { ...s, isRecurring: opt.isRecurring } : s
-                                ))}
-                                className="text-xs px-2.5 py-1 rounded font-medium transition-colors"
-                                style={{
-                                  backgroundColor: selected.isRecurring === opt.isRecurring ? '#2980B9' : '#F8F9FA',
-                                  color: selected.isRecurring === opt.isRecurring ? '#FFFFFF' : '#6C757D',
-                                  border: `1px solid ${selected.isRecurring === opt.isRecurring ? '#2980B9' : '#DEE2E6'}`,
-                                }}>
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <MandateServicesEditor
+                state={commercialState}
+                catalog={activityCatalog}
+                catalogError={catalogError}
+                historicalActivities={historicalActivityState.activities}
+                historicalKnown={historicalActivityState.known}
+                canEdit={canEditMandate}
+                disabled={saving}
+                validationErrors={serviceValidationErrors}
+                saveError={offerSaveError}
+                onChange={updateCommercialServices}
+                onRetry={reloadMandateServices}
+                onRetryCatalog={reloadCatalog}
+                onReloadConflict={reloadMandateServices}
+              />
             </div>
           </div>
 
