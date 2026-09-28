@@ -1,0 +1,70 @@
+{
+  "route": "/terms",
+  "capturedFrom": "app/terms/page.tsx (pre-MIG-06, source-derived)",
+  "canonical": { "fr": "https://getcoro.io/terms", "en": "https://getcoro.io/terms?lang=en" },
+  "fr": {
+    "metaTitle": "Conditions d’utilisation CORO | Plateforme SaaS",
+    "metaDescription": "Consultez les conditions d’utilisation de la plateforme SaaS CORO, incluant les règles d’accès, les responsabilités, la propriété intellectuelle, les abonnements et les modalités du service.",
+    "h1": "Conditions d’utilisation",
+    "updated": "Dernière mise à jour : 10 septembre 2026",
+    "introFirstWords": "Les présentes conditions encadrent l’accès et l’utilisation du site Web",
+    "sectionCount": 20,
+    "sectionTitles": [
+      "1. Objet et portée", "2. Nature professionnelle de la plateforme", "3. Création et sécurité du compte",
+      "4. Utilisateurs autorisés et organisation cliente", "5. Utilisation acceptable", "6. Contenu et données du client",
+      "7. Propriété intellectuelle de CORO", "8. Contenu généré, automatisé ou assisté par intelligence artificielle",
+      "9. Abonnements, tarifs et paiement", "10. Essais gratuits et fonctionnalités précommerciales",
+      "11. Disponibilité, maintenance et évolution du service", "12. Sauvegarde, exportation et conservation",
+      "13. Confidentialité et protection des renseignements personnels", "14. Suspension et résiliation",
+      "15. Exclusion de garantie", "16. Limitation de responsabilité", "17. Services et liens de tiers",
+      "18. Modifications des conditions", "19. Droit applicable et juridiction", "20. Contact"
+    ],
+    "sectionsWithBullets": ["5. Utilisation acceptable"],
+    "bulletCounts": { "5. Utilisation acceptable": 7 },
+    "sectionsWithPrivacyLink": ["13. Confidentialité et protection des renseignements personnels"],
+    "contactSection": "20. Contact",
+    "legalIdentity": {
+      "operator": "Mathieu Montaroux, entreprise individuelle immatriculée au Registraire des entreprises du Québec",
+      "neq": "NEQ 2282543935",
+      "tradeName": "CORO",
+      "address": "2879 Boul. Pierre-Bernard, Montréal (QC), H1L 4R2, Canada",
+      "email": "info@getcoro.io",
+      "phone": "+1 (514) 791-7871"
+    },
+    "governingLaw": "lois en vigueur dans la province de Québec et les lois fédérales du Canada applicables au Québec",
+    "jurisdiction": "tribunaux compétents du Québec",
+    "aiClauseSection": "8. Contenu généré, automatisé ou assisté par intelligence artificielle",
+    "liabilitySection": "16. Limitation de responsabilité",
+    "warrantyDisclaimerSection": "15. Exclusion de garantie",
+    "internalLinks": ["/privacy"],
+    "externalLinks": ["mailto:info@getcoro.io"]
+  },
+  "en": {
+    "metaTitle": "CORO Terms of Use | SaaS Platform",
+    "metaDescription": "Read the CORO SaaS platform Terms of Use, including access rules, responsibilities, intellectual property, subscriptions and service terms.",
+    "h1": "Terms of Use",
+    "updated": "Last updated: September 10, 2026",
+    "introFirstWords": "These terms govern access to and use of the CORO website",
+    "sectionCount": 20,
+    "sectionTitles": [
+      "1. Purpose and scope", "2. Professional nature of the platform", "3. Account creation and security",
+      "4. Authorized users and customer organization", "5. Acceptable use", "6. Customer content and data",
+      "7. CORO intellectual property", "8. Generated, automated or AI-assisted content",
+      "9. Subscriptions, pricing and payment", "10. Free trials and pre-release features",
+      "11. Availability, maintenance and evolution of the service", "12. Backups, exports and retention",
+      "13. Privacy and personal information", "14. Suspension and termination", "15. Disclaimer of warranties",
+      "16. Limitation of liability", "17. Third-party services and links", "18. Changes to these terms",
+      "19. Governing law and jurisdiction", "20. Contact"
+    ],
+    "contactSection": "20. Contact",
+    "isRealTranslation": true,
+    "notes": "EN body is a genuine translation, not an FR fallback (distinct wording throughout, distinct LAST_UPDATED_EN string)."
+  },
+  "languageBehavior": { "query": "?lang=en", "defaultLocale": "fr", "switcherPresent": true },
+  "shellBehavior": {
+    "preMigration": "hand-rolled inline-styled header/footer inside page.tsx, own <style> block, legacy root Footer.tsx also renders (route not yet in migratedV2Routes) — 2 footer-like elements expected pre-registry",
+    "hasOwnH1": true, "hasOwnMain": true
+  },
+  "structuredData": "none present",
+  "robots": { "index": true, "follow": true }
+}

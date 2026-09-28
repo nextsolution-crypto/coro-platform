@@ -48,6 +48,7 @@ Aucune page de production n'a été migrée sous le Design System V1.0. L'adopti
 | 03c | MIG-03 Register (famille Résilience & opérations) | `05-migration/MIG-03-REGISTER.md` | Points de mise en ligne MIG-03 |
 | 03d | MIG-04-PRE Security & Pricing Governance Gate (vérité publique sûre pour `/security` et `/pricing`, registre de blockers et décisions) | `05-migration/MIG-04-PRE-SECURITY-PRICING-GATE.md` | Gate de gouvernance, à lire avant MIG-04A et MIG-04B |
 | 03e | MIG-05-PRE / MIG-05A Guides Family Audit & Migration Gate (hub `/guides` implémenté) (inventaire des six guides et du hub, frontière de vérité produit, audit réglementaire, audit des sept images, séquence de migration) | `05-migration/MIG-05-GUIDES-GATE.md` | Gate de pré-migration, à lire avant MIG-05A |
+| 03f | MIG-06-PRE Remaining Legacy Surface Audit & Next-Phase Gate (surface publique restante après MIG-05 : `/`, `/blog`, `/blog/[slug]`, `/privacy`, `/terms` ; phases proposées, phase MIG-06 recommandée = pages légales) | `05-migration/MIG-06-REMAINING-LEGACY-GATE.md` | Gate d'audit, à lire avant MIG-06 |
 | 04 | CORO Visual Language | `02-design/CORO-VISUAL-LANGUAGE.md` | APPROVED, V1.1 (motifs interdits autoritatifs §16) |
 | 05 | CORO Design System | `02-design/CORO-DESIGN-SYSTEM.md` | V1.0 gelé |
 | 06 | CORO Component Library | `02-design/CORO-COMPONENT-LIBRARY.md` | V1.0 gelé (catalogue autoritatif) |
