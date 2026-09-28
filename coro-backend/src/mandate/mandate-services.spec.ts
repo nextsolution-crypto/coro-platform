@@ -4,7 +4,8 @@ import { MandateController } from './mandate.controller';
 describe('Mandate commercial services controller access', () => {
   const commercial: any = { list: jest.fn().mockResolvedValue({ services: [], revision: 'r' }),
     save: jest.fn().mockResolvedValue({ services: [], revision: 'r' }) };
-  const controller = new MandateController({} as any, commercial);
+  const preview: any = { preview: jest.fn().mockResolvedValue({ commercialRevision: 'r', operations: [] }) };
+  const controller = new MandateController({} as any, commercial, preview);
   const request = (role: string) => ({ user: { userId: 'user-a', organizationId: 'org-a', role } });
 
   beforeEach(() => jest.clearAllMocks());
@@ -25,5 +26,13 @@ describe('Mandate commercial services controller access', () => {
     expect(() => controller.getMandateServices('project-a', request('CLIENT'))).toThrow(ForbiddenException);
     expect(commercial.save).not.toHaveBeenCalled();
     expect(commercial.list).not.toHaveBeenCalled();
+  });
+
+  it('allows internal preview and refuses Client preview', async () => {
+    const dto: any = { expectedRevision: 'a'.repeat(64) };
+    await expect(controller.previewMandateServiceOperations('project-a', dto, request('OPERATOR')))
+      .resolves.toMatchObject({ commercialRevision: 'r' });
+    expect(preview.preview).toHaveBeenCalledWith('project-a', request('OPERATOR').user, dto.expectedRevision);
+    expect(() => controller.previewMandateServiceOperations('project-a', dto, request('CLIENT'))).toThrow(ForbiddenException);
   });
 });

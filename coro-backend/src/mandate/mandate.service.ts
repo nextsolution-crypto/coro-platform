@@ -5,6 +5,7 @@ import type { WorkManagementActor } from '../auth/work-management-access';
 import { projectAccessWhere } from '../auth/project-access';
 import { ActivityTypesService } from '../activity-types/activity-types.service';
 import { OPEN_BOOKING_STATUSES } from '../bookings/booking-status';
+import { mandatePlanningStatus } from './activity-planning-status';
 
 @Injectable()
 export class MandateService {
@@ -135,8 +136,7 @@ export class MandateService {
         });
       const booking = activity.bookings[0] ?? null;
       const lead = booking?.assignments[0] ?? null;
-      const planningStatus = !booking ? 'TO_PLAN' : lead?.status === 'PENDING' ? 'LEAD_PENDING'
-        : lead?.status === 'ACCEPTED' && booking.status === 'DEMANDEE' ? 'PLANNED' : 'CONFIRMED';
+      const planningStatus = mandatePlanningStatus(activity);
       return {
         id: activity.id, activityTypeId: activity.activityTypeId,
         label: activity.customLabel || activity.label, duration: activity.duration,

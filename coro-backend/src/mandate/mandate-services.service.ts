@@ -12,7 +12,7 @@ type Db = Prisma.TransactionClient | PrismaService;
 export class MandateServicesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private revision(rows: ProjectMandateService[]) {
+  computeRevision(rows: ProjectMandateService[]) {
     const state = rows.map(row => ({
       id: row.id, activityTypeId: row.activityTypeId, commercialStatus: row.commercialStatus,
       recurrenceMode: row.recurrenceMode, quantity: row.quantity, displayOrder: row.displayOrder,
@@ -40,7 +40,7 @@ export class MandateServicesService {
   }
 
   private response(rows: ProjectMandateService[]) {
-    return { revision: this.revision(rows), services: rows.map(({ createdById, updatedById, removedById, organizationId, projectId, ...row }) => row) };
+    return { revision: this.computeRevision(rows), services: rows.map(({ createdById, updatedById, removedById, organizationId, projectId, ...row }) => row) };
   }
 
   async list(projectId: string, actor: WorkManagementActor) {
@@ -91,7 +91,7 @@ export class MandateServicesService {
         || existing.recurrenceMode !== input.recurrenceMode || existing.quantity !== input.quantity
         || existing.displayOrder !== input.displayOrder) || removals.length > 0;
       if (!changes) return this.response(beforeRows);
-      if (dto.expectedRevision !== this.revision(beforeRows)) {
+      if (dto.expectedRevision !== this.computeRevision(beforeRows)) {
         throw new ConflictException('La configuration commerciale a été modifiée; rechargez le Mandat');
       }
 
