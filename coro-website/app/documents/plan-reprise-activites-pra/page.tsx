@@ -1,198 +1,229 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { CTASection } from '@/components/conversion/CTASection';
+import { Accordion } from '@/components/page/Accordion';
+import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { PageSection } from '@/components/page/PageSection';
+import { V2Shell } from '@/components/site/V2Shell';
+import { Button } from '@/components/ui/Button';
+import { faqJsonLd } from '@/lib/site/json-ld';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
+import { buildPageMetadata } from '@/lib/site/seo';
+import styles from './page.module.css';
 
-const SITE_URL = 'https://getcoro.io';
-const PAGE_URL = `${SITE_URL}/documents/plan-reprise-activites-pra`;
+type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-const DOC = {
-  code: 'PRA',
-  color: '#E67E22',
-  fr: {
-    title: 'Plan de Reprise des Activités (PRA)',
-    seoTitle: 'Plan de Reprise des Activités (PRA) — Guide complet | CORO',
-    seoDesc: 'Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.',
-    hero: 'Plan de Reprise des Activités (PRA)',
-    intro: 'Le Plan de Reprise des Activités définit les procédures permettant à une organisation de restaurer ses activités normales après un sinistre ou une interruption majeure. Il complète le PCA en se concentrant sur le retour à la normale.',
-    sections: [
-      { title: 'Qu\'est-ce qu\'un Plan de Reprise des Activités ?', content: 'Le PRA (aussi appelé DRP — Disaster Recovery Plan en anglais) définit les étapes séquentielles pour restaurer les systèmes, les données, les infrastructures et les opérations après une interruption. Il précise les priorités de reprise, les objectifs de délai de reprise (RTO — Recovery Time Objective) et les objectifs de point de reprise (RPO — Recovery Point Objective). La norme de référence est la série ISO 22301 et pour les aspects informatiques, la norme ISO/IEC 27031.' },
-      { title: 'PRA vs PCA : quelle différence ?', content: 'Le PCA se concentre sur le maintien des activités pendant l\'interruption. Le PRA se concentre sur le retour à la normale après l\'interruption. Dans la pratique, les deux plans fonctionnent en séquence : le PCA prend le relais lors de l\'interruption, le PRA guide le retour à la normale. Ils doivent être développés ensemble pour assurer une couverture complète.' },
-      { title: 'Contenu d\'un PRA complet', content: 'Un PRA comprend : l\'inventaire des systèmes et ressources critiques, les objectifs de reprise (RTO/RPO) par activité, les procédures de restauration par ordre de priorité, les responsabilités de chaque équipe, les ressources alternatives (sites de secours, équipements de remplacement, services infonuagiques), et les procédures de validation avant reprise normale.' },
-      { title: 'PRA informatique et PRA opérationnel', content: 'Le PRA informatique (IT DRP) se concentre sur la restauration des systèmes technologiques, encadré par la norme ISO/IEC 27031. Le PRA opérationnel couvre la reprise des processus métiers. Un PRA complet intègre les deux dimensions et définit leurs interdépendances.' },
-      { title: 'Fréquence de test', content: 'Le PRA doit être testé au moins une fois par année. Les tests peuvent être partiels (restauration d\'un système spécifique) ou complets (simulation d\'une reprise totale). Chaque test doit être documenté et ses enseignements intégrés au plan, conformément aux exigences de la norme ISO 22301.' },
-      { title: 'Comment CORO supporte la production du PRA', content: 'CORO structure la rédaction de votre PRA avec des modèles de procédures de reprise, des matrices de priorités et des fiches de responsabilités. L\'export PDF professionnel facilite la communication du plan à toutes les parties prenantes.' },
-    ],
-    sources: [
-      { label: 'ISO 22301:2019 — Systèmes de management de la continuité des activités', url: 'https://www.iso.org/fr/standard/75106.html' },
-      { label: 'ISO/IEC 27031:2011 — Technologies de l\'information — Continuité des activités', url: 'https://www.iso.org/fr/standard/44374.html' },
-      { label: 'Gouvernement du Canada — Plan de continuité des opérations', url: 'https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html' },
-    ],
-    faq: [
-      { q: 'Quelle est la différence entre RTO et RPO ?', a: 'Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu\'on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données).' },
-      { q: 'Le PRA s\'applique-t-il uniquement à l\'informatique ?', a: 'Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions.' },
-      { q: 'Doit-on avoir un site de secours ?', a: 'Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l\'utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation.' },
-      { q: 'Le PRA doit-il être testé ?', a: 'Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test.' },
-    ],
-    cta: 'Structurer votre PRA avec CORO',
-  },
+/**
+ * /documents/plan-reprise-activites-pra (MIG-05F) — fifth of six document guides migrated to V2. Built to final
+ * editorial and visual quality on this first pass (method confirmed by PGC in MIG-05E — no separate density/character
+ * pass needed). Editorial guide first, CORO roadmap context second.
+ * Authority: docs/website-v2/05-migration/MIG-05-GUIDES-GATE.md (PRA preservation matrix and normative matrix,
+ * MIG-05F section).
+ * LANGUAGE: FR ONLY (englishAvailable={false}) — the V1 page had no searchParams handling at all (?lang=en rendered
+ * the identical French page, confirmed in the baseline); no translation is invented here.
+ * PRODUCT BOUNDARY — CRITICAL: PRA production in CORO is PHASE 2, unlike PMU/PSI/PCA. Never says "disponible dans
+ * CORO", "Générer votre PRA" or "Produire votre PRA" — that exact overclaim existed in V1's hero CTA ("Structurer
+ * votre PRA avec CORO"), directly contradicting V1's own Phase-2 banner one row below it. REMOVED. Only claim: the
+ * GUIDE is available today; CORO production is explicitly "prévue en phase 2". No automatic recovery, dependency
+ * mapping or RTO/RPO calculation is claimed anywhere.
+ * NORMATIVE AUDIT (verified during MIG-05F, see the gate's matrix): ISO 22301:2019 VERIFIED (iso.org blocks scripted
+ * requests with a 403 — bot protection, not a dead standard). ISO/IEC 27031:2011 VERIFIED as a real, still-valid
+ * designation for ICT readiness for business continuity (a newer FDIS 27031:2024 exists but does not invalidate the
+ * 2011 citation). The V1 claim "doit être testé au moins une fois par année" is REMOVED — ISO 22301 clause 8.5
+ * requires a regular exercise programme but does not mandate a fixed annual figure; same family lesson already
+ * applied to PMU/PSI/PCA/PGC. The Government of Canada source link could not be re-verified live during this pass
+ * (transient network failure, 000) but was independently confirmed 200 during MIG-05D for the same URL — kept, with
+ * the limitation recorded in the gate. The V1 FAQ claim that CORO "intègre un module de suivi des exercices" for PRA
+ * specifically is REMOVED — PRA production is Phase 2, so no CORO feature tied to PRA testing is currently promoted.
+ * The hero (four people reviewing a "PRA — Reprise des systèmes" dashboard with fictional live-looking status
+ * indicators — "En ligne", "Complétées", "Prêt", "Planifiés" — and a hand-drawn recovery-flow diagram) is a
+ * MARKETING / EDITORIAL ILLUSTRATION (decorative, alt=""), never product proof; no fact, sequence or category on this
+ * page is derived from what is drawn in it — including the diagram's arrow flow, which is NOT reproduced as this
+ * page's recovery model.
+ * VISUAL SIGNATURE (Guide family rule confirmed by PMU + PSI + PCA + PGC — do not clone any): PRA's own three moments
+ * are (1) a solo "RÉTABLIR" typographic statement with no adjacent ledger — deliberately not a third instance of the
+ * anchor+list pattern already used by PSI and PCA; (2) a 2x2 recovery-domain matrix (Systèmes/Données/Ressources/
+ * Locaux); (3) a navy ASYMMETRIC composition — one dominant territory ("Prioriser") beside two smaller supporting
+ * territories ("Restaurer"/"Valider"), distinct from every prior guide's navy geometry.
+ * RTO/RPO: NOT duplicated from PCA's dedicated glossary moment — referenced here as recovery constraints already
+ * established by the continuity analysis, with a contextual link to the PCA guide's fuller treatment.
+ */
+const copy = {
+  metaTitle: 'Plan de reprise des activités (PRA) : domaines de reprise, PCA vs PRA',
+  description: 'Qu’est-ce qu’un plan de reprise des activités, la différence avec le PCA, les domaines de reprise, les priorités de restauration et les normes ISO 22301 / ISO-IEC 27031.',
+  label: 'Guide', code: 'PRA',
+  lines: ['Plan de reprise', 'des activités (PRA).'],
+  lead: 'Le plan de reprise des activités définit les procédures permettant à une organisation de restaurer ses activités normales après un sinistre ou une interruption majeure. Il complète le PCA en se concentrant sur le retour à la normale.',
+  read: 'Lire le guide', guides: 'Voir tous les guides',
+  s1: { n: '01', label: 'Qu’est-ce qu’un PRA', title: 'Le document qui guide le retour à la normale.',
+    text: 'Le PRA (aussi appelé DRP — Disaster Recovery Plan) définit les étapes pour restaurer les systèmes, les données, les infrastructures et les opérations après une interruption. Il précise les priorités de reprise, les objectifs de délai de reprise (RTO) et les objectifs de point de reprise (RPO). La norme de référence est la série ISO 22301, et pour les aspects informatiques, la norme ISO/IEC 27031.' },
+  s2: { n: '02', label: 'PRA et PCA', title: 'Deux plans complémentaires, deux perspectives.',
+    comparison: [
+      { code: 'PCA', text: 'Maintient les activités critiques pendant l’interruption.', status: 'Disponible dans CORO Documents.' },
+      { code: 'PRA', text: 'Rétablit les systèmes, les ressources et les capacités nécessaires après l’interruption.', status: 'Guide disponible · Production CORO prévue en phase 2.' },
+    ] as const,
+    text: 'Dans la pratique, les deux plans fonctionnent en séquence : le PCA prend le relais lors de l’interruption, le PRA guide le retour à la normale. Ils doivent être développés ensemble pour assurer une couverture complète.',
+    link: 'Consulter le guide du PCA' },
+  s3: { n: '03', label: 'Le retour à la normale', title: 'Ce que le PRA existe pour faire.', statement: 'Rétablir',
+    support: 'Restaurer les systèmes, les données, les infrastructures et les opérations pour revenir à des activités normales après un sinistre.' },
+  s4: { n: '04', label: 'Domaines de reprise', title: 'Ce qu’un PRA complet couvre.',
+    domains: [
+      ['Systèmes', 'L’inventaire des systèmes critiques et les objectifs de reprise (RTO/RPO) propres à chacun.'],
+      ['Données', 'Les sauvegardes et les objectifs de point de reprise associés à chaque système.'],
+      ['Ressources', 'Les équipements de remplacement et les services infonuagiques envisagés comme stratégies de reprise.'],
+      ['Locaux', 'Les sites de secours, lorsque la stratégie de reprise en prévoit un.'],
+    ] as const },
+  s5: { n: '05', label: 'Priorités de reprise', title: 'Restaurer dans le bon ordre, puis valider.',
+    text: 'Un PRA complet précise les procédures de restauration par ordre de priorité, les responsabilités de chaque équipe et les procédures de validation avant un retour à des opérations normales.',
+    priority: { title: 'Prioriser', text: 'Les procédures de restauration sont ordonnées par priorité, propre à chaque organisation — il n’existe pas d’ordre universel.' },
+    support: [
+      ['Restaurer', 'Chaque équipe impliquée connaît ses responsabilités dans la restauration des systèmes, données et ressources qui la concernent.'],
+      ['Valider', 'Le retour à des opérations normales est confirmé par des procédures de validation avant la reprise complète.'],
+    ] as const },
+  s6: { n: '06', label: 'PRA informatique et opérationnel', title: 'Deux dimensions, un seul plan.',
+    blocks: [
+      ['PRA informatique', 'Se concentre sur la restauration des systèmes technologiques, encadré par la norme ISO/IEC 27031.'],
+      ['PRA opérationnel', 'Couvre la reprise des processus métiers ; un PRA complet intègre les deux dimensions et leurs interdépendances.'],
+    ] as const },
+  s7: { n: '07', label: 'RTO et RPO', title: 'Des repères déjà établis par l’analyse de continuité.',
+    text: 'Le RTO (délai maximal acceptable pour reprendre une activité) et le RPO (quantité maximale de données qu’une organisation peut se permettre de perdre) guident les priorités de restauration du PRA ; ils sont établis lors de l’analyse de continuité qui alimente le PCA.',
+    link: 'Voir le repère RTO/RPO du guide PCA' },
+  s8: { n: '08', label: 'Tests et révision', title: 'Un plan non testé est un plan non fiable.',
+    blocks: [
+      ['Tests', 'Les tests peuvent être partiels (restauration d’un système spécifique) ou complets (simulation d’une reprise totale), à intervalle régulier adapté à la criticité.'],
+      ['Révision', 'Chaque test est documenté et ses enseignements sont intégrés au plan.'],
+    ] as const },
+  s9: { n: '09', label: 'PRA dans CORO', title: 'Le PRA dans CORO : une capacité prévue en phase 2.',
+    facts: [
+      { label: 'Guide', text: 'Disponible dès aujourd’hui, sur cette page.' },
+      { label: 'Production dans CORO', text: 'Guide disponible · Production CORO prévue en phase 2.' },
+    ] as const,
+    cta: 'Voir les documents disponibles aujourd’hui' },
+  res: { label: 'Ressources', title: 'Pour approfondir', items: [
+    { slug: 'pca-vs-pra-difference', title: 'PCA vs PRA : quelle est la différence ?', text: 'Comment distinguer les deux documents et savoir lequel est requis.' },
+    { slug: 'bia-rto-rpo-priorites-continuite', title: 'BIA, RTO et RPO : comment définir les priorités de continuité ?', text: 'Comment ces repères guident les priorités de reprise.' },
+  ] as const },
+  faq: 'Questions fréquentes', faqLabel: 'FAQ',
+  faqItems: [
+    { q: 'Quelle est la différence entre RTO et RPO?', a: 'Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu’on peut se permettre de perdre, exprimée en durée (ex. : 4 heures = on accepte de perdre au maximum 4 heures de données).' },
+    { q: 'Le PRA s’applique-t-il uniquement à l’informatique?', a: 'Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel.' },
+    { q: 'Doit-on avoir un site de secours?', a: 'Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l’utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation.' },
+    { q: 'Le PRA doit-il être testé?', a: 'Absolument. Un plan non testé est un plan non fiable ; chaque test doit être documenté et ses enseignements intégrés au plan.' },
+  ],
+  statement: 'Le PRA guide le retour à des activités normales.',
+  support: 'Préparez aujourd’hui les conditions de votre reprise et la place du PRA dans votre stratégie de résilience.',
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: DOC.fr.seoTitle,
-  description: DOC.fr.seoDesc,
-  alternates: {
-    canonical: PAGE_URL,
-    languages: {
-      'fr-CA': PAGE_URL,
-      'x-default': PAGE_URL,
-    },
-  },
-  openGraph: {
-    type: 'article',
-    url: PAGE_URL,
-    siteName: 'CORO',
-    locale: 'fr_CA',
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    images: [{
-      url: '/og-coro.jpg',
-      width: 1200,
-      height: 630,
-      alt: 'CORO — Plan de Reprise des Activités (PRA)',
-    }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    images: ['/og-coro.jpg'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-      'max-video-preview': -1,
-    },
-  },
-};
+export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  return buildPageMetadata({ path: '/documents/plan-reprise-activites-pra', locale: l, hasEnglish: false, title: copy.metaTitle, description: copy.description });
+}
 
-export default function PRAPage() {
-  const data = DOC.fr;
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name: data.title,
-    headline: data.seoTitle,
-    description: data.seoDesc,
-    url: PAGE_URL,
-    inLanguage: 'fr-CA',
-    isPartOf: { '@type': 'WebSite', name: 'CORO', url: SITE_URL },
-    about: [
-      { '@type': 'Thing', name: 'Plan de Reprise des Activités', alternateName: 'PRA' },
-      { '@type': 'Thing', name: 'Disaster Recovery Plan', alternateName: 'DRP' },
-      { '@type': 'Thing', name: 'RTO', alternateName: 'Recovery Time Objective' },
-      { '@type': 'Thing', name: 'RPO', alternateName: 'Recovery Point Objective' },
-      { '@type': 'Thing', name: 'Continuité des activités' },
-    ],
-    publisher: {
-      '@type': 'Organization',
-      name: 'CORO',
-      url: SITE_URL,
-      logo: { '@type': 'ImageObject', url: `${SITE_URL}/coro-logo.png` },
-    },
-  };
+function JsonLd({ value }: { value: object }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(value).replace(/</g, '\\u003c') }} />;
+}
 
+export default async function Page({ searchParams }: P) {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = copy;
+  const demo = localizedHref('/#demo', l);
   const breadcrumbLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Accueil', item: SITE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Documents', item: `${SITE_URL}/gestion-documentaire` },
-      { '@type': 'ListItem', position: 3, name: data.title, item: PAGE_URL },
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' },
+      { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://getcoro.io/guides' },
+      { '@type': 'ListItem', position: 3, name: t.code, item: 'https://getcoro.io/documents/plan-reprise-activites-pra' },
     ],
   };
-
-  const faqLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: data.faq.map((f) => ({
-      '@type': 'Question',
-      name: f.q,
-      acceptedAnswer: { '@type': 'Answer', text: f.a },
-    })),
-  };
-
   return (
-    <div style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c') }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, '\\u003c') }} />
-      <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <a href="/" style={{ textDecoration: 'none' }}><span style={{ fontSize: 24, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px' }}>CO<span style={{ color: '#C0392B' }}>RO</span></span></a>
-          <a href="/" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textDecoration: 'none' }}>← Accueil</a>
+    <V2Shell locale={l} pathname="/documents/plan-reprise-activites-pra" englishAvailable={false}>
+      <JsonLd value={faqJsonLd(t.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
+      <JsonLd value={breadcrumbLd} />
+
+      <EditorialHero id="pra-title" label={`${t.label} · ${t.code}`} title={t.lines} lead={t.lead}
+        photo={{ src: '/website-v2/guides/guide-pra-disaster-recovery.webp', side: 'end', position: '50% 38%', mobilePosition: '50% 32%', coverage: 55, mobileRatio: '16 / 11' }}
+        actions={<><Button href="#s1" surface="dark">{t.read}</Button><Button href={localizedHref('/guides', l)} variant="ghost" surface="dark">{t.guides}</Button></>} />
+
+      <PageSection tone="white" density="compact" id="s1" labelledBy="pra-s1-title">
+        <EditorialBlock id="pra-s1-title" label={`${t.s1.n} — ${t.s1.label}`} heading={t.s1.title}><p>{t.s1.text}</p></EditorialBlock>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pra-s2-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s2-title" label={`${t.s2.n} — ${t.s2.label}`} heading={t.s2.title}><p>{t.s2.text}</p></EditorialBlock>
+          <ul className={styles.comparison}>{t.s2.comparison.map((item) => <li key={item.code}><h3>{item.code}</h3><p>{item.text}</p><p className={styles.comparisonStatus}>{item.status}</p></li>)}</ul>
+          <div className={styles.linkCard}><a className={styles.linkCardLink} href={localizedHref('/documents/plan-continuite-activites-pca', l)}>{t.s2.link}<span aria-hidden="true"> →</span></a></div>
         </div>
-      </nav>
-      <div style={{ backgroundColor: '#FEF3C7', borderBottom: '1px solid #F59E0B', padding: '12px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#92400E', fontWeight: 600, margin: 0 }}>
-          🚧 <strong>Phase 2 — En développement</strong> · La production du PRA dans CORO sera disponible prochainement. <a href="/#demo" style={{ color: '#92400E', fontWeight: 700 }}>Être notifié →</a>
-        </p>
-      </div>
-      <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF', padding: '12px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <p style={{ fontSize: 13, color: '#ADB5BD' }}><a href="/" style={{ color: '#ADB5BD', textDecoration: 'none' }}>getcoro.io</a> / <span style={{ color: '#6C757D' }}>{data.title}</span></p>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pra-s3-title">
+        <EditorialBlock id="pra-s3-title" label={`${t.s3.n} — ${t.s3.label}`} heading={t.s3.title}>
+          <p className={styles.statement}>{t.s3.statement}</p>
+          <p className={styles.statementSupport}>{t.s3.support}</p>
+        </EditorialBlock>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pra-s4-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s4-title" label={`${t.s4.n} — ${t.s4.label}`} heading={t.s4.title} />
+          <ul className={styles.domains}>{t.s4.domains.map(([name, text]) => <li key={name} className={styles.domain}><h3>{name}</h3><p>{text}</p></li>)}</ul>
         </div>
-      </div>
-      <div style={{ background: `linear-gradient(135deg, #2C3E50 0%, ${DOC.color}CC 100%)`, padding: '80px 24px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#FFFFFF', backgroundColor: DOC.color, padding: '4px 14px', borderRadius: 4, letterSpacing: '0.1em', marginBottom: 20 }}>{DOC.code}</span>
-          <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, marginBottom: 24 }}>{data.hero}</h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, maxWidth: 640, margin: '0 auto 32px' }}>{data.intro}</p>
-          <a href="/#demo" style={{ display: 'inline-block', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 16 }}>{data.cta} →</a>
-        </div>
-      </div>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(500px, 100%), 1fr))', gap: 32 }}>
-          {data.sections.map((s, i) => (
-            <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, border: '1px solid #E9ECEF' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50', marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${DOC.color}` }}>{s.title}</h2>
-              <p style={{ fontSize: 15, color: '#495057', lineHeight: 1.8 }}>{s.content}</p>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 48, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, border: '1px solid #E9ECEF' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>📚 Sources et références officielles</h3>
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {data.sources.map((s, i) => (<li key={i}><a href={s.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: DOC.color, textDecoration: 'none' }}>→ {s.label}</a></li>))}
-          </ul>
-          <p style={{ fontSize: 12, color: '#ADB5BD', marginTop: 16 }}>⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d'activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique.</p>
-        </div>
-        <div style={{ marginTop: 64 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#2C3E50', marginBottom: 32, textAlign: 'center' }}>Questions fréquentes</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 800, margin: '0 auto' }}>
-            {data.faq.map((f, i) => (
-              <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 28, border: '1px solid #E9ECEF' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 10 }}>{f.q}</h3>
-                <p style={{ fontSize: 15, color: '#6C757D', lineHeight: 1.7 }}>{f.a}</p>
-              </div>
-            ))}
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="pra-s5-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s5-title" label={`${t.s5.n} — ${t.s5.label}`} heading={t.s5.title}><p>{t.s5.text}</p></EditorialBlock>
+          <div className={styles.priorityWrap}>
+            <div className={styles.priorityMain}><h3>{t.s5.priority.title}</h3><p>{t.s5.priority.text}</p></div>
+            <ul className={styles.supportList}>{t.s5.support.map(([name, text]) => <li key={name} className={styles.supportItem}><h3>{name}</h3><p>{text}</p></li>)}</ul>
           </div>
         </div>
-        <div style={{ marginTop: 64, backgroundColor: '#2C3E50', borderRadius: 16, padding: '48px 40px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', marginBottom: 16 }}>Le {DOC.code} arrive dans CORO — Phase 2</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', marginBottom: 32, maxWidth: 500, margin: '0 auto 32px' }}>Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme.</p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/#demo" style={{ display: 'inline-block', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}>Demander une démo →</a>
-            <a href="/blog" style={{ display: 'inline-block', backgroundColor: 'transparent', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: '2px solid rgba(255,255,255,0.3)' }}>Lire nos guides →</a>
-          </div>
+      </PageSection>
+
+      <PageSection tone="white" density="compact" labelledBy="pra-s6-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s6-title" label={`${t.s6.n} — ${t.s6.label}`} heading={t.s6.title} />
+          <ul className={`${styles.rows} ${styles.pair}`}>{t.s6.blocks.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
         </div>
-      </div>
-      <div style={{ backgroundColor: '#2C3E50', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>© 2026 CORO — <a href="https://getcoro.io" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>getcoro.io</a></p>
-      </div>
-    </div>
+      </PageSection>
+
+      <PageSection tone="soft" density="compact" labelledBy="pra-s7-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s7-title" label={`${t.s7.n} — ${t.s7.label}`} heading={t.s7.title}><p>{t.s7.text}</p></EditorialBlock>
+          <div className={styles.linkCard}><a className={styles.linkCardLink} href={localizedHref('/documents/plan-continuite-activites-pca', l)}>{t.s7.link}<span aria-hidden="true"> →</span></a></div>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" density="compact" labelledBy="pra-s8-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s8-title" label={`${t.s8.n} — ${t.s8.label}`} heading={t.s8.title} />
+          <ul className={`${styles.rows} ${styles.pair}`}>{t.s8.blocks.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" density="compact" labelledBy="pra-s9-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-s9-title" label={`${t.s9.n} — ${t.s9.label}`} heading={t.s9.title} />
+          <ul className={styles.phaseWrap}>{t.s9.facts.map((f) => <li key={f.label}><h3>{f.label}</h3><p>{f.text}</p></li>)}</ul>
+          <div className={styles.linkCard}><a className={styles.linkCardLink} href={localizedHref('/gestion-documentaire', l)}>{t.s9.cta}<span aria-hidden="true"> →</span></a></div>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" density="compact" labelledBy="pra-res-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-res-title" label={t.res.label} heading={t.res.title} />
+          <ul className={styles.rows}>{t.res.items.map((r) => <li key={r.slug}><h3><a className={styles.link} href={localizedHref(`/blog/${r.slug}`, l)}>{r.title}</a></h3><p>{r.text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pra-faq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pra-faq-title" label={t.faqLabel} heading={t.faq} />
+          <Accordion label={t.faq} items={t.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))} />
+        </div>
+      </PageSection>
+
+      <CTASection id="pra-cta-title" tone="dark" label={`${t.label} · ${t.code}`} statement={t.statement} support={t.support} primary={{ label: 'Demander une démonstration', href: demo }} secondary={{ label: t.guides, href: localizedHref('/guides', l) }} />
+    </V2Shell>
   );
 }

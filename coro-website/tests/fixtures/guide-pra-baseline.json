@@ -1,0 +1,960 @@
+{
+  "captured": "2026-09-27 (MIG-05F, before any PRA change)",
+  "fr": {
+    "status": 200,
+    "title": "Plan de Reprise des Activités (PRA) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.",
+    "canonical": "https://getcoro.io/documents/plan-reprise-activites-pra",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Reprise des Activités (PRA)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Reprise des Activités ?"
+      ],
+      [
+        2,
+        "PRA vs PCA : quelle différence ?"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PRA complet"
+      ],
+      [
+        2,
+        "PRA informatique et PRA opérationnel"
+      ],
+      [
+        2,
+        "Fréquence de test"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PRA"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Quelle est la différence entre RTO et RPO ?"
+      ],
+      [
+        3,
+        "Le PRA s&#x27;applique-t-il uniquement à l&#x27;informatique ?"
+      ],
+      [
+        3,
+        "Doit-on avoir un site de secours ?"
+      ],
+      [
+        3,
+        "Le PRA doit-il être testé ?"
+      ],
+      [
+        2,
+        "Le PRA arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PRA avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Systèmes de management de la continuité des activités"
+      ],
+      [
+        "https://www.iso.org/fr/standard/44374.html",
+        "→ ISO/IEC 27031:2011 — Technologies de l&#x27;information — Continuité des activités"
+      ],
+      [
+        "https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html",
+        "→ Gouvernement du Canada — Plan de continuité des opérations"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Reprise des Activités (PRA)",
+        "headline": "Plan de Reprise des Activités (PRA) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.",
+        "url": "https://getcoro.io/documents/plan-reprise-activites-pra",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Reprise des Activités",
+            "alternateName": "PRA"
+          },
+          {
+            "@type": "Thing",
+            "name": "Disaster Recovery Plan",
+            "alternateName": "DRP"
+          },
+          {
+            "@type": "Thing",
+            "name": "RTO",
+            "alternateName": "Recovery Time Objective"
+          },
+          {
+            "@type": "Thing",
+            "name": "RPO",
+            "alternateName": "Recovery Point Objective"
+          },
+          {
+            "@type": "Thing",
+            "name": "Continuité des activités"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Reprise des Activités (PRA)",
+            "item": "https://getcoro.io/documents/plan-reprise-activites-pra"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre RTO et RPO ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu'on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PRA s'applique-t-il uniquement à l'informatique ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Doit-on avoir un site de secours ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l'utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PRA doit-il être testé ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · La production du PRA dans CORO sera disponible prochainement. Être notifié → getcoro.io / Plan de Reprise des Activités (PRA) PRA Plan de Reprise des Activités (PRA) Le Plan de Reprise des Activités définit les procédures permettant à une organisation de restaurer ses activités normales après un sinistre ou une interruption majeure. Il complète le PCA en se concentrant sur le retour à la normale. Structurer votre PRA avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Reprise des Activités ? Le PRA (aussi appelé DRP — Disaster Recovery Plan en anglais) définit les étapes séquentielles pour restaurer les systèmes, les données, les infrastructures et les opérations après une interruption. Il précise les priorités de reprise, les objectifs de délai de reprise (RTO — Recovery Time Objective) et les objectifs de point de reprise (RPO — Recovery Point Objective). La norme de référence est la série ISO 22301 et pour les aspects informatiques, la norme ISO/IEC 27031. PRA vs PCA : quelle différence ? Le PCA se concentre sur le maintien des activités pendant l&#x27;interruption. Le PRA se concentre sur le retour à la normale après l&#x27;interruption. Dans la pratique, les deux plans fonctionnent en séquence : le PCA prend le relais lors de l&#x27;interruption, le PRA guide le retour à la normale. Ils doivent être développés ensemble pour assurer une couverture complète. Contenu d&#x27;un PRA complet Un PRA comprend : l&#x27;inventaire des systèmes et ressources critiques, les objectifs de reprise (RTO/RPO) par activité, les procédures de restauration par ordre de priorité, les responsabilités de chaque équipe, les ressources alternatives (sites de secours, équipements de remplacement, services infonuagiques), et les procédures de validation avant reprise normale. PRA informatique et PRA opérationnel Le PRA informatique (IT DRP) se concentre sur la restauration des systèmes technologiques, encadré par la norme ISO/IEC 27031. Le PRA opérationnel couvre la reprise des processus métiers. Un PRA complet intègre les deux dimensions et définit leurs interdépendances. Fréquence de test Le PRA doit être testé au moins une fois par année. Les tests peuvent être partiels (restauration d&#x27;un système spécifique) ou complets (simulation d&#x27;une reprise totale). Chaque test doit être documenté et ses enseignements intégrés au plan, conformément aux exigences de la norme ISO 22301. Comment CORO supporte la production du PRA CORO structure la rédaction de votre PRA avec des modèles de procédures de reprise, des matrices de priorités et des fiches de responsabilités. L&#x27;export PDF professionnel facilite la communication du plan à toutes les parties prenantes. 📚 Sources et références officielles → ISO 22301:2019 — Systèmes de management de la continuité des activités → ISO/IEC 27031:2011 — Technologies de l&#x27;information — Continuité des activités → Gouvernement du Canada — Plan de continuité des opérations ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Quelle est la différence entre RTO et RPO ? Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu&#x27;on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données). Le PRA s&#x27;applique-t-il uniquement à l&#x27;informatique ? Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions. Doit-on avoir un site de secours ? Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l&#x27;utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation. Le PRA doit-il être testé ? Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test. Le PRA arrive dans CORO — Phase 2 Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "en": {
+    "status": 200,
+    "title": "Plan de Reprise des Activités (PRA) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.",
+    "canonical": "https://getcoro.io/documents/plan-reprise-activites-pra",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Reprise des Activités (PRA)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Reprise des Activités ?"
+      ],
+      [
+        2,
+        "PRA vs PCA : quelle différence ?"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PRA complet"
+      ],
+      [
+        2,
+        "PRA informatique et PRA opérationnel"
+      ],
+      [
+        2,
+        "Fréquence de test"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PRA"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Quelle est la différence entre RTO et RPO ?"
+      ],
+      [
+        3,
+        "Le PRA s&#x27;applique-t-il uniquement à l&#x27;informatique ?"
+      ],
+      [
+        3,
+        "Doit-on avoir un site de secours ?"
+      ],
+      [
+        3,
+        "Le PRA doit-il être testé ?"
+      ],
+      [
+        2,
+        "Le PRA arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PRA avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Systèmes de management de la continuité des activités"
+      ],
+      [
+        "https://www.iso.org/fr/standard/44374.html",
+        "→ ISO/IEC 27031:2011 — Technologies de l&#x27;information — Continuité des activités"
+      ],
+      [
+        "https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html",
+        "→ Gouvernement du Canada — Plan de continuité des opérations"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Reprise des Activités (PRA)",
+        "headline": "Plan de Reprise des Activités (PRA) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.",
+        "url": "https://getcoro.io/documents/plan-reprise-activites-pra",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Reprise des Activités",
+            "alternateName": "PRA"
+          },
+          {
+            "@type": "Thing",
+            "name": "Disaster Recovery Plan",
+            "alternateName": "DRP"
+          },
+          {
+            "@type": "Thing",
+            "name": "RTO",
+            "alternateName": "Recovery Time Objective"
+          },
+          {
+            "@type": "Thing",
+            "name": "RPO",
+            "alternateName": "Recovery Point Objective"
+          },
+          {
+            "@type": "Thing",
+            "name": "Continuité des activités"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Reprise des Activités (PRA)",
+            "item": "https://getcoro.io/documents/plan-reprise-activites-pra"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre RTO et RPO ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu'on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PRA s'applique-t-il uniquement à l'informatique ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Doit-on avoir un site de secours ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l'utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PRA doit-il être testé ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · La production du PRA dans CORO sera disponible prochainement. Être notifié → getcoro.io / Plan de Reprise des Activités (PRA) PRA Plan de Reprise des Activités (PRA) Le Plan de Reprise des Activités définit les procédures permettant à une organisation de restaurer ses activités normales après un sinistre ou une interruption majeure. Il complète le PCA en se concentrant sur le retour à la normale. Structurer votre PRA avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Reprise des Activités ? Le PRA (aussi appelé DRP — Disaster Recovery Plan en anglais) définit les étapes séquentielles pour restaurer les systèmes, les données, les infrastructures et les opérations après une interruption. Il précise les priorités de reprise, les objectifs de délai de reprise (RTO — Recovery Time Objective) et les objectifs de point de reprise (RPO — Recovery Point Objective). La norme de référence est la série ISO 22301 et pour les aspects informatiques, la norme ISO/IEC 27031. PRA vs PCA : quelle différence ? Le PCA se concentre sur le maintien des activités pendant l&#x27;interruption. Le PRA se concentre sur le retour à la normale après l&#x27;interruption. Dans la pratique, les deux plans fonctionnent en séquence : le PCA prend le relais lors de l&#x27;interruption, le PRA guide le retour à la normale. Ils doivent être développés ensemble pour assurer une couverture complète. Contenu d&#x27;un PRA complet Un PRA comprend : l&#x27;inventaire des systèmes et ressources critiques, les objectifs de reprise (RTO/RPO) par activité, les procédures de restauration par ordre de priorité, les responsabilités de chaque équipe, les ressources alternatives (sites de secours, équipements de remplacement, services infonuagiques), et les procédures de validation avant reprise normale. PRA informatique et PRA opérationnel Le PRA informatique (IT DRP) se concentre sur la restauration des systèmes technologiques, encadré par la norme ISO/IEC 27031. Le PRA opérationnel couvre la reprise des processus métiers. Un PRA complet intègre les deux dimensions et définit leurs interdépendances. Fréquence de test Le PRA doit être testé au moins une fois par année. Les tests peuvent être partiels (restauration d&#x27;un système spécifique) ou complets (simulation d&#x27;une reprise totale). Chaque test doit être documenté et ses enseignements intégrés au plan, conformément aux exigences de la norme ISO 22301. Comment CORO supporte la production du PRA CORO structure la rédaction de votre PRA avec des modèles de procédures de reprise, des matrices de priorités et des fiches de responsabilités. L&#x27;export PDF professionnel facilite la communication du plan à toutes les parties prenantes. 📚 Sources et références officielles → ISO 22301:2019 — Systèmes de management de la continuité des activités → ISO/IEC 27031:2011 — Technologies de l&#x27;information — Continuité des activités → Gouvernement du Canada — Plan de continuité des opérations ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Quelle est la différence entre RTO et RPO ? Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu&#x27;on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données). Le PRA s&#x27;applique-t-il uniquement à l&#x27;informatique ? Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions. Doit-on avoir un site de secours ? Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l&#x27;utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation. Le PRA doit-il être testé ? Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test. Le PRA arrive dans CORO — Phase 2 Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "ref": {
+    "status": 200,
+    "title": "Plan de Reprise des Activités (PRA) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.",
+    "canonical": "https://getcoro.io/documents/plan-reprise-activites-pra",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Reprise des Activités (PRA)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Reprise des Activités ?"
+      ],
+      [
+        2,
+        "PRA vs PCA : quelle différence ?"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PRA complet"
+      ],
+      [
+        2,
+        "PRA informatique et PRA opérationnel"
+      ],
+      [
+        2,
+        "Fréquence de test"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PRA"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Quelle est la différence entre RTO et RPO ?"
+      ],
+      [
+        3,
+        "Le PRA s&#x27;applique-t-il uniquement à l&#x27;informatique ?"
+      ],
+      [
+        3,
+        "Doit-on avoir un site de secours ?"
+      ],
+      [
+        3,
+        "Le PRA doit-il être testé ?"
+      ],
+      [
+        2,
+        "Le PRA arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PRA avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Systèmes de management de la continuité des activités"
+      ],
+      [
+        "https://www.iso.org/fr/standard/44374.html",
+        "→ ISO/IEC 27031:2011 — Technologies de l&#x27;information — Continuité des activités"
+      ],
+      [
+        "https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html",
+        "→ Gouvernement du Canada — Plan de continuité des opérations"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Reprise des Activités (PRA)",
+        "headline": "Plan de Reprise des Activités (PRA) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Reprise des Activités : définition, différence avec le PCA, RTO, RPO et comment CORO simplifie sa production.",
+        "url": "https://getcoro.io/documents/plan-reprise-activites-pra",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Reprise des Activités",
+            "alternateName": "PRA"
+          },
+          {
+            "@type": "Thing",
+            "name": "Disaster Recovery Plan",
+            "alternateName": "DRP"
+          },
+          {
+            "@type": "Thing",
+            "name": "RTO",
+            "alternateName": "Recovery Time Objective"
+          },
+          {
+            "@type": "Thing",
+            "name": "RPO",
+            "alternateName": "Recovery Point Objective"
+          },
+          {
+            "@type": "Thing",
+            "name": "Continuité des activités"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Reprise des Activités (PRA)",
+            "item": "https://getcoro.io/documents/plan-reprise-activites-pra"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre RTO et RPO ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu'on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PRA s'applique-t-il uniquement à l'informatique ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Doit-on avoir un site de secours ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l'utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PRA doit-il être testé ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · La production du PRA dans CORO sera disponible prochainement. Être notifié → getcoro.io / Plan de Reprise des Activités (PRA) PRA Plan de Reprise des Activités (PRA) Le Plan de Reprise des Activités définit les procédures permettant à une organisation de restaurer ses activités normales après un sinistre ou une interruption majeure. Il complète le PCA en se concentrant sur le retour à la normale. Structurer votre PRA avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Reprise des Activités ? Le PRA (aussi appelé DRP — Disaster Recovery Plan en anglais) définit les étapes séquentielles pour restaurer les systèmes, les données, les infrastructures et les opérations après une interruption. Il précise les priorités de reprise, les objectifs de délai de reprise (RTO — Recovery Time Objective) et les objectifs de point de reprise (RPO — Recovery Point Objective). La norme de référence est la série ISO 22301 et pour les aspects informatiques, la norme ISO/IEC 27031. PRA vs PCA : quelle différence ? Le PCA se concentre sur le maintien des activités pendant l&#x27;interruption. Le PRA se concentre sur le retour à la normale après l&#x27;interruption. Dans la pratique, les deux plans fonctionnent en séquence : le PCA prend le relais lors de l&#x27;interruption, le PRA guide le retour à la normale. Ils doivent être développés ensemble pour assurer une couverture complète. Contenu d&#x27;un PRA complet Un PRA comprend : l&#x27;inventaire des systèmes et ressources critiques, les objectifs de reprise (RTO/RPO) par activité, les procédures de restauration par ordre de priorité, les responsabilités de chaque équipe, les ressources alternatives (sites de secours, équipements de remplacement, services infonuagiques), et les procédures de validation avant reprise normale. PRA informatique et PRA opérationnel Le PRA informatique (IT DRP) se concentre sur la restauration des systèmes technologiques, encadré par la norme ISO/IEC 27031. Le PRA opérationnel couvre la reprise des processus métiers. Un PRA complet intègre les deux dimensions et définit leurs interdépendances. Fréquence de test Le PRA doit être testé au moins une fois par année. Les tests peuvent être partiels (restauration d&#x27;un système spécifique) ou complets (simulation d&#x27;une reprise totale). Chaque test doit être documenté et ses enseignements intégrés au plan, conformément aux exigences de la norme ISO 22301. Comment CORO supporte la production du PRA CORO structure la rédaction de votre PRA avec des modèles de procédures de reprise, des matrices de priorités et des fiches de responsabilités. L&#x27;export PDF professionnel facilite la communication du plan à toutes les parties prenantes. 📚 Sources et références officielles → ISO 22301:2019 — Systèmes de management de la continuité des activités → ISO/IEC 27031:2011 — Technologies de l&#x27;information — Continuité des activités → Gouvernement du Canada — Plan de continuité des opérations ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Quelle est la différence entre RTO et RPO ? Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité après une interruption. Le RPO (Recovery Point Objective) est la quantité maximale de données qu&#x27;on peut se permettre de perdre, exprimée en durée (ex : 4 heures = on accepte de perdre au maximum 4 heures de données). Le PRA s&#x27;applique-t-il uniquement à l&#x27;informatique ? Non. Le PRA couvre toutes les ressources critiques : systèmes informatiques, équipements, fournisseurs, locaux et personnel. CORO vous aide à couvrir toutes ces dimensions. Doit-on avoir un site de secours ? Pas nécessairement. Les stratégies de reprise peuvent inclure le télétravail, des ententes avec des fournisseurs alternatifs ou l&#x27;utilisation de services infonuagiques. Le PRA définit la stratégie adaptée à votre organisation. Le PRA doit-il être testé ? Absolument. Un plan non testé est un plan non fiable. CORO intègre un module de suivi des exercices pour documenter et archiver chaque test. Le PRA arrive dans CORO — Phase 2 Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  }
+}

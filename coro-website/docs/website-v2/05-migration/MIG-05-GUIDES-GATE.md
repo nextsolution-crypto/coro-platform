@@ -775,3 +775,103 @@ Puppeteer reste indisponible dans cet environnement (limite déjà signalée en 
 ## Revues de mise en ligne
 
 Aucune nouvelle revue bloquante introduite par le PGC. Les décisions PMU, PSI et PCA restent inchangées et ne sont pas rouvertes par cette étape. Lacune éditoriale enregistrée : absence de ressource blog spécifique au PGC/gestion de crise dans l'inventaire actuel — à surveiller si du nouveau contenu est publié.
+
+# MIG-05F — PRA implementation result
+
+Implémenté (2026-09-27), **construit dès le premier passage à la qualité visuelle finale**, méthode confirmée par le PGC (MIG-05E). Registre V2 : `/documents/plan-reprise-activites-pra` ajoutée après le PGC.
+
+## Baseline et contrat de langue
+
+`tests/fixtures/guide-pra-baseline.json` capture FR / `?lang=en` / `?ref=CR-ABCDEF`. Comme PSI/PCA/PGC, le fichier V1 n'avait aucune gestion de `searchParams` : `?lang=en` retournait trivialement la même page française. `bodyText` FR === EN confirmé.
+
+## Frontière produit — CRITIQUE
+
+**La production du PRA dans CORO reste Phase 2**, comme le PGC. Même faille V1 corrigée : le CTA du hero V1 disait « Structurer votre PRA avec CORO », contredisant le bandeau Phase 2 de la V1 lui-même. En V2 : aucune occurrence de « disponible dans CORO », « Générer votre PRA » ou « Produire votre PRA » — seule affirmation : le **guide** est disponible aujourd'hui, la **production CORO** est « prévue en phase 2 » (§09). La comparaison PCA/PRA (§02) garde le PCA explicitement « Disponible dans CORO Documents » — la frontière produit reste vraie dans les deux sens.
+
+## Matrice de préservation — résumé
+
+Les 6 sections V1 (définition PRA/DRP, PRA vs PCA, contenu complet, PRA informatique/opérationnel, fréquence de test, simplification CORO) sont RECOMPOSÉES en 9 sections + ressources + FAQ + CTA. Les 4 questions FAQ préservées dans leur substance (une reformulée, voir décisions normatives). Sources : ISO 22301:2019 conservée, ISO/IEC 27031:2011 conservée, lien Gouvernement du Canada conservé avec une limite de vérification signalée.
+
+## Audit normatif — décisions
+
+- **ISO 22301:2019** : VERIFIED (iso.org bloque les requêtes scriptées avec un 403 — protection anti-bot, pas un lien mort).
+- **ISO/IEC 27031:2011** : VERIFIED — désignation réelle et toujours valide (une nouvelle édition FDIS 27031:2024 existe mais n'invalide pas la citation 2011 du guide).
+- **« Testé au moins une fois par année »** : NOT VERIFIED → REMOVE. La clause 8.5 d'ISO 22301 exige un programme d'exercices régulier mais n'impose pas de fréquence annuelle fixe — même leçon de famille que PMU/PSI/PCA/PGC. Généralisé à « intervalle régulier adapté à la criticité ».
+- **Lien Gouvernement du Canada** : la vérification live a échoué de façon transitoire pendant MIG-05F (erreur réseau 000, connectivité générale confirmée fonctionnelle par ailleurs) ; cette URL exacte avait déjà été confirmée 200 lors de MIG-05D. Conservée, limite de vérification consignée plutôt que de la déclarer morte sans preuve.
+- **FAQ — « module de suivi des exercices »** : la V1 affirmait que CORO « intègre un module de suivi des exercices » pour le PRA. RETIRÉE — la production du PRA étant Phase 2, aucune fonctionnalité CORO spécifique au PRA n'est actuellement promue.
+
+## Distinction PRA vs PCA — perspective inversée
+
+Section 2, RECOMPOSÉE en comparaison compacte à deux colonnes avec statut produit explicite pour chaque plan. Contrairement à la page PCA (qui utilise « Continuer »/« Rétablir » en gros mots), la page PRA garde des titres de taille normale ici — l'intensité typographique majeure est réservée à la section 3 (« Rétablir » seul). Aucune hiérarchie, aucun gagnant.
+
+## Hero — audit
+
+`guide-pra-disaster-recovery.webp` : plus chargé que les heros précédents, avec des indicateurs de statut à l'apparence « en direct » (« Systèmes critiques : En ligne », « Sauvegardes : Complétées », « Site de relève : Prêt », « Tests de reprise : Planifiés ») et un diagramme manuscrit avec un flux fléché (Systèmes critiques → Site principal → Sauvegarde → Site de relève → Rétablissement). Audité spécifiquement pour un risque de confusion avec une vraie UI/architecture CORO : aucun logo CORO, aucune UI produit réelle identifiable, indicateurs et diagramme visiblement stylisés/mis en scène (papier manuscrit, icônes génériques). Conclusion : illustration éditoriale, pas une capture d'écran — classification MARKETING/ÉDITORIAL maintenue, `alt=""`, image non modifiée. **Le flux fléché du diagramme n'est reproduit nulle part sur la page** — le modèle de reprise du texte (domaines, priorisation) provient exclusivement du contenu V1 vérifié, jamais de ce que dessine l'illustration.
+
+## Signature visuelle PRA — distincte des quatre guides précédents
+
+1. **§3 — « Rétablir », affirmation solo** : un seul mot géant, sans ledger adjacent — délibérément PAS une troisième instance du motif ancre+liste déjà utilisé par PSI (« PSI » + ledger 01-07) et PCA (« Continuer » + ledger 6 éléments).
+2. **§4 — Matrice 2×2 des domaines de reprise** (Systèmes/Données/Ressources/Locaux), section structurée distincte.
+3. **§5 — Composition navy ASYMÉTRIQUE** : un territoire dominant (« Prioriser ») à côté de deux territoires plus petits empilés (« Restaurer »/« Valider ») — géométrie 1-grand + 2-empilés, différente des boîtes du PMU, des 4 colonnes égales du PSI, des 5 colonnes égales du PCA et des 3 bandes égales du PGC.
+
+## RTO/RPO — pas de duplication de la PCA
+
+Conformément à la consigne explicite, le PRA ne reconstruit pas la composition glossaire RTO/RPO du PCA. Section 7 : référence courte présentant RTO/RPO comme des repères déjà établis par l'analyse de continuité, avec un lien contextuel vers le glossaire complet du guide PCA.
+
+## PRA informatique et opérationnel
+
+Section 6, RECOMPOSÉE en deux blocs ruled compacts, distinction préservée sans dupliquer aucune autre composition de la famille.
+
+## CORO Phase 2
+
+Section 9 : deux faits juxtaposés (Guide disponible aujourd'hui / Production CORO prévue en phase 2), lien contextuel vers `/gestion-documentaire` avec un intitulé de portée explicite (« Voir les documents disponibles aujourd'hui »), pas de CTA « Découvrir CORO Documents ».
+
+## Ressources
+
+2 ressources retenues et vérifiées (200) : « PCA vs PRA : quelle est la différence ? » et « BIA, RTO et RPO : comment définir les priorités de continuité ? » — toutes deux directement pertinentes au PRA (pas de remplissage forcé). Ces deux articles sont déjà utilisés sur la page PCA, ce qui est légitime ici puisqu'ils traitent explicitement de la distinction PCA/PRA et des repères RTO/RPO, deux sujets centraux du PRA.
+
+## Données structurées
+
+`BreadcrumbList` et `FAQPage` (4 questions, parité avec la FAQ visible). Le `WebPage.about[Thing×5]` (incluant DRP, RTO, RPO comme entités séparées) et le `publisher.logo` orphelin de la V1 sont retirés — aucun schéma `SoftwareApplication`, `Offer` ou `Product`.
+
+## Audit densité / largeur — section par section (§48 de la consigne)
+
+| Section | Classification | Traitement |
+|---|---|---|
+| Hero | STRONG | Photo pleine hauteur |
+| §1 Qu'est-ce qu'un PRA | CALM | `density="compact"` |
+| §2 PRA et PCA | STRUCTURED | Comparaison 2 colonnes + lien contextuel |
+| §3 Rétablir | STRONG | Affirmation typographique solo |
+| §4 Domaines de reprise | STRUCTURED | Matrice 2×2 pleine largeur |
+| §5 Priorités de reprise | STRONG | Navy asymétrique 1+2 |
+| §6 PRA informatique/opérationnel | CALM/STRUCTURED | `density="compact"`, 2 blocs pleine largeur |
+| §7 RTO et RPO | CALM/STRUCTURED | `density="compact"`, référence courte + lien |
+| §8 Tests et révision | CALM/STRUCTURED | `density="compact"`, 2 blocs pleine largeur |
+| §9 PRA dans CORO | CALM/STRUCTURED | `density="compact"`, 2 faits + lien |
+| Ressources | CALM | `density="compact"`, 2 items |
+| FAQ | STRUCTURED | Accordéon standard |
+| CTA | STRONG | Bande finale |
+
+Aucune section « texte étroit à gauche / 55-65 % vide à droite » détectée dès la première passe.
+
+## Preuve responsive
+
+Puppeteer reste indisponible dans cet environnement (limite déjà signalée en MIG-05B-B/MIG-05C/MIG-05C-B/MIG-05D/MIG-05D-B/MIG-05E). Inspection visuelle réelle via navigateur à la largeur de fenêtre disponible (~1036px), défilement complet : hero, comparaison PCA/PRA, « Rétablir », matrice de domaines, navy asymétrique (Prioriser/Restaurer/Valider), PRA informatique/opérationnel, RTO/RPO, tests/révision, Phase 2, ressources, FAQ, CTA — tous rendus sans débordement ni chevauchement. La largeur de fenêtre n'a pas pu être variée avec précision dans cet environnement (limite déjà documentée) ; les points de rupture CSS reprennent les mêmes motifs déjà vérifiés visuellement sur les quatre guides précédents.
+
+## Tests, build
+
+`tests/guide-pra-migration.test.ts` créé (23 tests dédiés : baseline, registre, langue, hero, **frontière Phase 2 critique avec PCA toujours disponible**, absence d'automatisation invoquée, absence de valeurs RTO/RPO/fréquence de sauvegarde/rétention inventées, absence de paliers de reprise ou de séquence technique forcée, absence de langage de garantie, distinction PCA/PRA avec perspective inversée, non-clonage des signatures PMU/PSI/PCA/PGC, « Rétablir » solo sans ledger adjacent, 4 domaines exacts, navy asymétrique exact, RTO/RPO référencé sans duplication du glossaire PCA, absence de rôles de cellule de crise importés du PGC, parité FAQ/JSON-LD, liens internes contextuels, ressources non forcées, CTA sans promesse de production, métadonnées, accessibilité, densité locale). **505 tests passent** (tous verts dès la première exécution). `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : un seul pied de page, un seul `<main>`, un seul `<h1>` post-registre. Contrôle de non-régression : `/`, `/security`, `/pricing`, `/guides`, `/coro-incident`, `/gestion-documentaire`, `/blog`, PMU, PSI, PCA, PGC, PUE répondent tous 200.
+
+## Revue de design de famille — cinq guides (PMU + PSI + PCA + PGC + PRA)
+
+**Commun aux cinq guides** : `V2Shell` + `EditorialHero` + `PageSection`/`EditorialBlock` + `Accordion` (FAQ) + `CTASection` ; rythme éditorial dense ; méthode normative identique (matrice CLAIM/SOURCE/STATUT/DÉCISION, généralisation plutôt qu'invention de précision — les cinq guides ont chacun eu au moins une revendication de fréquence retirée) ; lien `/guides` obligatoire + liens contextuels ; FAQ ; CTA éditorial-d'abord ; protocole de registre identique ; philosophie de densité identique ; méthode d'audit de source (LIVE/BLOCKED-BUT-KNOWN/DEAD/REPLACE, jamais une confusion entre anti-bot 403 et lien réellement mort).
+
+**Propre à chaque sujet** : ancres typographiques (« 08 » / « PSI » / « CONTINUER » / « Décider » / « Rétablir » — cinq mots, cinq géométries différentes) ; compositions structurées (rôles PMU / parties prenantes PSI / aucune carte PCA / fonctions PGC / matrice de domaines PRA) ; géométries navy (cycle PMU / 4 colonnes égales PSI / 5 colonnes égales PCA / 3 bandes égales PGC / 1 dominant + 2 empilés PRA — aucune répétée) ; frontières produit (PMU/PSI/PCA disponibles aujourd'hui vs PGC/PRA Phase 2).
+
+**Conclusion** : toujours **aucune extraction de composant Guide partagé**. Cinq implémentations indépendantes, chacune avec sa propre géométrie de signature, confirment que les primitifs V2 existants (`PageSection`, `EditorialBlock`, `SplitContent`, `FeatureIndex`, `Accordion`, `CTASection`) suffisent et qu'aucune logique dupliquée stable ne justifie une abstraction — au contraire, la variation délibérée de géométrie entre les cinq guides est la preuve que l'identité visuelle par sujet est la valeur, pas un défaut à corriger par une abstraction. À réévaluer après PUE (dernier guide de la famille).
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante introduite par le PRA. Les décisions PMU, PSI, PCA et PGC restent inchangées et ne sont pas rouvertes par cette étape.
+
+**Aucun point de blocage de publication spécifique au PRA ne subsiste après cette migration.** (Les revues déjà consignées au §20 pour PUE — PUBLICATION-BLOCKER — et la dette d'accessibilité `<main>` générale restent entières et concernent PUE, pas le PRA.)

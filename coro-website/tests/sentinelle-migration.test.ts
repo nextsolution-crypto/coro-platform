@@ -15,7 +15,7 @@ const css = read('app/sentinelle/page.module.css');
 const strip = (s: string) => decodeURIComponent(s).replace(new RegExp('^https?://[^/]+'), '');
 
 test('registry ends with /sentinelle after the nine approved routes; Population stays legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra']);
   assert.equal(isLegacyFooterVisible('/sentinelle'), false);
   assert.equal(isLegacyFooterVisible('/sentinelle-population'), false); // migrated in MIG-03C
 });
