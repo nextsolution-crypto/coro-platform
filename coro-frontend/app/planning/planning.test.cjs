@@ -25,6 +25,120 @@ const teamPicker = loadTypescript('teamPickerState.ts');
 const previewCycle = loadTypescript('previewCycle.ts');
 const mandateSelection = loadTypescript('../projects/[id]/mandate/mandateSelection.ts');
 const mandateFormState = loadTypescript('../projects/[id]/mandate/mandateFormState.ts');
+const mandateCommercial = loadTypescript('../projects/[id]/mandate/mandateCommercialState.ts');
+const mandateOperational = loadTypescript('../projects/[id]/mandate/mandateOperationalState.ts');
+
+test('Mandate commercial drafts preserve persisted identity, removed rows and duplicate ActivityTypes', () => {
+  const rows = mandateCommercial.serviceDraftsFromServer([
+    { id: 'second', projectMandateId: 'm', activityTypeId: 'type-a', commercialStatus: 'REMOVED', recurrenceMode: 'ANNUAL', quantity: 2, displayOrder: 1, nameFRSnapshot: 'A', nameENSnapshot: null, removedAt: 'now', createdAt: 'then', updatedAt: 'now' },
+    { id: 'first', projectMandateId: 'm', activityTypeId: 'type-a', commercialStatus: 'ACTIVE', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 0, nameFRSnapshot: 'A', nameENSnapshot: null, removedAt: null, createdAt: 'then', updatedAt: 'then' },
+  ]);
+  assert.deepEqual(rows.map(item => item.id), ['first', 'second']);
+  assert.equal(rows[1].commercialStatus, 'REMOVED');
+  assert.equal(mandateCommercial.mandateServicesAreDirty(rows, mandateCommercial.cloneServiceDrafts(rows)), false);
+  const changed = mandateCommercial.updateServiceDraft(rows, 'first', { quantity: 3 });
+  assert.equal(mandateCommercial.mandateServicesAreDirty(changed, rows), true);
+  assert.deepEqual(mandateCommercial.resetServiceDrafts(rows), rows);
+});
+
+test('Mandate commercial draft mutations use row identity and build the canonical save payload', () => {
+  let rows = mandateCommercial.addServiceDraft([], 'type-a', 'local-1');
+  assert.equal(mandateCommercial.addServiceDraft(rows, 'type-a', 'blocked').length, 1);
+  rows = mandateCommercial.addServiceDraft(rows, 'type-a', 'local-2', true);
+  assert.deepEqual(rows.map(item => item.localDraftId), ['local-1', 'local-2']);
+  rows = mandateCommercial.removeServiceDraft(rows, 'local-1');
+  assert.equal(rows[0].commercialStatus, 'REMOVED');
+  rows = mandateCommercial.restoreServiceDraft(rows, 'local-1');
+  assert.equal(rows[0].commercialStatus, 'ACTIVE');
+  rows = mandateCommercial.removeServiceDraft(rows, 'local-2');
+  assert.deepEqual(mandateCommercial.buildSaveMandateServicesPayload('revision', rows), {
+    expectedRevision: 'revision', services: [{ activityTypeId: 'type-a', recurrenceMode: 'ONCE', quantity: 1, displayOrder: 0 }],
+  });
+});
+
+test('Mandate historical transition detects history without deriving commercial selection', () => {
+  assert.equal(mandateCommercial.deriveHistoricalCommercialTransition(false, [], [{ sourceMandate: true }]), 'NEW_EMPTY');
+  assert.equal(mandateCommercial.deriveHistoricalCommercialTransition(true, [], []), 'NEW_EMPTY');
+  assert.equal(mandateCommercial.deriveHistoricalCommercialTransition(true, [], [{ sourceMandate: true, activityTypeId: null }]),
+    'HISTORICAL_CONFIRMATION_REQUIRED');
+  const suggestions = mandateCommercial.historicalServiceSuggestions([
+    { sourceMandate: true, activityTypeId: 'a' }, { sourceMandate: true, activityTypeId: 'a' },
+  ]);
+  assert.deepEqual(suggestions, [{ activityTypeId: 'a', activityCount: 2, selected: false }]);
+});
+
+test('Mandate operational preview is fail-safe for unknown actions and reasons', () => {
+  const unknownAction = mandateOperational.mapPreviewOperation({ serviceId: 's1', action: 'SURPRISE', reasonCode: 'NO_ACTIVITY_EXISTS' });
+  const unknownReason = mandateOperational.mapPreviewOperation({ serviceId: 's1', action: 'CREATE_ACTIVITY', reasonCode: 'SURPRISE' });
+  assert.equal(unknownAction.label, 'Vérification requise');
+  assert.equal(unknownAction.mutationAllowed, false);
+  assert.equal(unknownReason.label, 'Vérification requise');
+  assert.equal(unknownReason.mutationAllowed, false);
+});
+
+test('Mandate operational preview maps canonical actions and planning statuses', () => {
+  const cases = [
+    ['NO_ACTION', 'ACTIVE_ACTIVITY_EXISTS', 'ACTIVE'],
+    ['NO_ACTION', 'COMPLETED_ACTIVITY_EXISTS', 'COMPLETED'],
+    ['CREATE_ACTIVITY', 'NO_ACTIVITY_EXISTS', 'TO_APPLY'],
+    ['REQUIRES_DECISION', 'LEGACY_ACTIVITY_CANDIDATE', 'ACTION_REQUIRED'],
+    ['REQUIRES_DECISION', 'LEGACY_MULTIPLE_CANDIDATES', 'ACTION_REQUIRED'],
+    ['REQUIRES_DECISION', 'LATEST_ACTIVITY_CANCELLED', 'ACTION_REQUIRED'],
+    ['REQUIRES_DECISION', 'MULTIPLE_ACTIVE_ACTIVITIES', 'ACTION_REQUIRED'],
+    ['BLOCKED', 'ACTIVITY_TYPE_ARCHIVED', 'BLOCKED'],
+  ];
+  for (const [action, reasonCode, status] of cases) {
+    assert.equal(mandateOperational.mapPreviewOperation({ serviceId: 's', action, reasonCode }).status, status);
+  }
+  assert.equal(mandateOperational.planningStatusLabel('TO_PLAN'), 'À planifier');
+  assert.equal(mandateOperational.planningStatusLabel('LEAD_PENDING'), 'Affectation à confirmer');
+  assert.equal(mandateOperational.planningStatusLabel('UNKNOWN'), 'Vérification requise');
+});
+
+test('Mandate permissions and API errors remain tenant-safe and domain-specific', () => {
+  assert.equal(mandateCommercial.canEditMandateServices('ADMIN'), true);
+  assert.equal(mandateCommercial.canEditMandateServices('SUPER_ADMIN'), true);
+  assert.equal(mandateCommercial.canEditMandateServices('OPERATOR'), false);
+  assert.equal(mandateCommercial.canApplyMandateOperations('OPERATOR'), false);
+  assert.equal(mandateCommercial.normalizeMandateApiError({ response: { status: 409, data: { message: 'Conflit' } } }).kind,
+    'conflict');
+  assert.equal(mandateCommercial.normalizeMandateApiError(new Error('offline')).kind, 'network');
+});
+
+test('Mandate apply intent keeps one UUID across retries and changes it for a new intent', () => {
+  const decisions = [{ mandateServiceId: 's1', action: 'CREATE_ACTIVITY' }];
+  const signature = mandateOperational.applyIntentSignature('revision', decisions);
+  const first = mandateOperational.idempotencyKeyForIntent(null, signature, () => 'uuid-1');
+  const retry = mandateOperational.idempotencyKeyForIntent(first, signature, () => 'uuid-2');
+  const next = mandateOperational.idempotencyKeyForIntent(first,
+    mandateOperational.applyIntentSignature('other', decisions), () => 'uuid-2');
+  const adoptX = mandateOperational.applyIntentSignature('revision',
+    [{ mandateServiceId: 's1', action: 'ADOPT_LEGACY_ACTIVITY', activityId: 'x' }]);
+  const adoptY = mandateOperational.applyIntentSignature('revision',
+    [{ mandateServiceId: 's1', action: 'ADOPT_LEGACY_ACTIVITY', activityId: 'y' }]);
+  assert.equal(retry.key, 'uuid-1');
+  assert.equal(next.key, 'uuid-2');
+  assert.notEqual(adoptX, signature);
+  assert.notEqual(adoptX, adoptY);
+  assert.equal(mandateOperational.clearApplyIntent(), null);
+  assert.deepEqual(mandateOperational.buildApplyMandateOperationsPayload(retry.key, 'revision', decisions),
+    { idempotencyKey: 'uuid-1', expectedRevision: 'revision', decisions });
+});
+
+test('Mandate G1 runtime loads commercial services only after Mandate existence and keeps legacy generation isolated', () => {
+  const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
+  const api = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/mandateApi.ts'), 'utf8');
+  assert.ok(page.includes("mandateContext?.projectId !== projectId || !mandateContext.exists"));
+  assert.ok(page.includes('getMandateServices(projectId, controller.signal)'));
+  assert.ok(page.includes('controller.abort()'));
+  assert.ok(page.includes('request !== commercialRequest.current'));
+  assert.ok(page.includes('reconstructMandateServices(activitiesRes.data || [])'));
+  assert.ok(page.includes("api.post(`/projects/${projectId}/activities/from-mandate`"));
+  assert.doesNotMatch(page, /putMandateServices|previewMandateOperations|applyMandateOperations/);
+  for (const wrapper of ['getMandateServices', 'putMandateServices', 'previewMandateOperations', 'applyMandateOperations']) {
+    assert.ok(api.includes(`const ${wrapper}`));
+  }
+});
 
 test('activity type visual mapping is controlled and shared by planner views', () => {
   assert.deepEqual(activityVisual.getActivityTypeVisual({ nameFR: 'Formation', visualToken: 'VIOLET', iconKey: 'TRAINING' }),

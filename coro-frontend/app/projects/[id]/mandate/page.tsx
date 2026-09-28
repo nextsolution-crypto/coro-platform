@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ExternalLink, Save } from 'lucide-react';
 import api from '@/lib/api';
@@ -13,6 +13,9 @@ import { ActivityCatalogItem, cancelledMandateActivityTypeIds, mandateServicesPa
   SelectedService, toggleMandateService } from './mandateSelection';
 import { emptyMandateForm, MandateForm, mandateFieldsAreEqual, mandateFormFromServer,
   serviceSelectionsAreEqual } from './mandateFormState';
+import { deriveHistoricalCommercialTransition, emptyMandateCommercialState, mandateServicesAreDirty,
+  normalizeMandateApiError, serviceDraftsFromServer } from './mandateCommercialState';
+import { getMandateServices } from './mandateApi';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
@@ -46,8 +49,38 @@ export default function MandatePage() {
   const [serverSnapshot, setServerSnapshot] = useState<MandateForm>(emptyMandateForm);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [showTypeMandatPopup, setShowTypeMandatPopup] = useState(false);
+  const [commercialState, setCommercialState] = useState(emptyMandateCommercialState);
+  const [mandateContext, setMandateContext] = useState<{ projectId: string; exists: boolean } | null>(null);
+  const commercialRequest = useRef(0);
+  const historicalActivities = useRef<{ projectId: string; activities: Array<{ sourceMandate?: boolean }> } | null>(null);
 
   useEffect(() => { fetchData(); }, [projectId]);
+
+  useEffect(() => {
+    const request = ++commercialRequest.current;
+    if (mandateContext?.projectId !== projectId || !mandateContext.exists) {
+      return;
+    }
+    const controller = new AbortController();
+    Promise.resolve().then(() => {
+      if (request !== commercialRequest.current || controller.signal.aborted) return null;
+      setCommercialState({ ...emptyMandateCommercialState(), modelAvailable: true, loadStatus: 'LOADING' });
+      return getMandateServices(projectId, controller.signal);
+    }).then(response => {
+      if (!response) return;
+      if (request !== commercialRequest.current || controller.signal.aborted) return;
+      const services = serviceDraftsFromServer(response.services || []);
+      setCommercialState({ modelAvailable: true, loadStatus: 'READY', error: null,
+        revision: response.revision, snapshot: services, draft: services.map(service => ({ ...service })),
+        historicalTransition: deriveHistoricalCommercialTransition(true, services,
+          historicalActivities.current?.projectId === projectId ? historicalActivities.current.activities : []) });
+    }).catch(error => {
+      if (request !== commercialRequest.current || controller.signal.aborted) return;
+      setCommercialState({ ...emptyMandateCommercialState(), modelAvailable: true, loadStatus: 'ERROR',
+        error: normalizeMandateApiError(error, 'Impossible de charger les services vendus.').message });
+    });
+    return () => controller.abort();
+  }, [projectId, mandateContext]);
 
   const fetchData = async () => {
     try {
@@ -62,7 +95,10 @@ export default function MandatePage() {
       setTeamMembers(teamRes.data || []);
       setProject(projectRes.data);
       const m = mandateRes.data;
+      historicalActivities.current = { projectId, activities: activitiesRes.data || [] };
       setMandate(m);
+      setMandateContext({ projectId, exists: Boolean(m) });
+      if (!m) setCommercialState(emptyMandateCommercialState());
       const nextForm = mandateFormFromServer(m);
       setServerSnapshot(nextForm);
       setForm(nextForm);
@@ -120,7 +156,8 @@ export default function MandatePage() {
   const canEditMandate = ['ADMIN', 'SUPER_ADMIN'].includes(authUser?.role || '');
   const mandateFieldsDirty = !mandateFieldsAreEqual(form, serverSnapshot);
   const serviceSelectionDirty = !serviceSelectionsAreEqual(selectedServices, serverServiceSelection);
-  const isDirty = mandateFieldsDirty || serviceSelectionDirty;
+  const commercialServicesDirty = mandateServicesAreDirty(commercialState.draft, commercialState.snapshot);
+  const isDirty = mandateFieldsDirty || serviceSelectionDirty || commercialServicesDirty;
   const updateForm = (change: Partial<MandateForm>) => {
     setForm(current => ({ ...current, ...change }));
     setSaveError('');
