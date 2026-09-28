@@ -14,7 +14,7 @@ const css = read('app/sentinelle-population/page.module.css');
 
 test('registry ends with /sentinelle-population; nothing else is added', () => {
   assert.deepEqual([...migratedV2Routes].slice(9, 21), ['/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue']);
-  assert.equal(migratedV2Routes.length, 23);
+  assert.equal(migratedV2Routes.length, 24);
   assert.equal(isLegacyFooterVisible('/sentinelle-population'), false);
 });
 
