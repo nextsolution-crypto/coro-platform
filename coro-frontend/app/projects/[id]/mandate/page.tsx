@@ -18,6 +18,7 @@ import { buildSaveMandateServicesPayload, deriveHistoricalCommercialTransition, 
   validateMandateServices } from './mandateCommercialState';
 import { getMandateServices, putMandateServices } from './mandateApi';
 import { mandateSavePlan } from './mandateSavePlan';
+import { useMandateOperations } from './useMandateOperations';
 
 const TABS = [
   { id: 'fiche', label: '📋 Fiche & Offre' },
@@ -120,6 +121,10 @@ export default function MandatePage() {
   const mandateFieldsDirty = !mandateFieldsAreEqual(form, serverSnapshot);
   const commercialServicesDirty = mandateServicesAreDirty(commercialState.draft, commercialState.snapshot);
   const isDirty = mandateFieldsDirty || commercialServicesDirty;
+  const operations = useMandateOperations({ projectId, revision: commercialState.revision,
+    servicesDirty: commercialServicesDirty, canApply: canEditMandate,
+    commercialReady: commercialState.loadStatus === 'READY' && mandateContext?.projectId === projectId });
+  const operationalLocked = ['APPLYING', 'UNKNOWN'].includes(operations.applyState.status);
 
   const handleSave = async () => {
     setSaveError(''); setOfferSaveError(''); setSaveSuccess('');
@@ -131,7 +136,7 @@ export default function MandatePage() {
       new Set(activityCatalog.map(item => item.activityTypeId)));
     setServiceValidationErrors(validation.errors);
     if (servicesWereDirty && !validation.valid) return;
-    if (!fieldsWereDirty && !servicesWereDirty) return;
+    if (!fieldsWereDirty && !servicesWereDirty || operationalLocked) return;
     setSaving(true);
     let ficheSaved = false;
     let createdMandate = false;
@@ -221,6 +226,7 @@ export default function MandatePage() {
     catch { setCatalogError(true); }
   };
   const leaveMandate = () => {
+    if (operationalLocked && !window.confirm("Une action opérationnelle est en cours ou son résultat reste à confirmer. Quitter le mandat ?")) return;
     if (!isDirty || window.confirm('Des modifications ne sont pas enregistrées. Quitter le mandat ?')) {
       router.push(`/projects/${projectId}`);
     }
@@ -228,13 +234,13 @@ export default function MandatePage() {
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (!isDirty) return;
+      if (!isDirty && !operationalLocked) return;
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [isDirty]);
+  }, [isDirty, operationalLocked]);
 
   const montant = parseFloat(form.montantVendu) || 0;
   const taux = parseFloat(form.tauxHoraire) || 0;
@@ -353,11 +359,11 @@ export default function MandatePage() {
         </div>
         {activeTab === 'fiche' && (
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {canEditMandate && isDirty && <button type="button" onClick={resetChanges} disabled={saving}
+            {canEditMandate && isDirty && <button type="button" onClick={resetChanges} disabled={saving || operationalLocked}
               className="text-sm px-4 py-2 rounded disabled:opacity-50" style={{ border: '1px solid #CED4DA', color: '#6C757D' }}>
               Annuler les modifications
             </button>}
-            {canEditMandate && <button type="button" onClick={handleSave} disabled={saving || !isDirty}
+            {canEditMandate && <button type="button" onClick={handleSave} disabled={saving || operationalLocked || !isDirty}
               aria-busy={saving}
               className="text-white text-sm font-medium px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: '#C0392B' }}>
@@ -492,13 +498,21 @@ export default function MandatePage() {
                 historicalActivities={historicalActivityState.activities}
                 historicalKnown={historicalActivityState.known}
                 canEdit={canEditMandate}
-                disabled={saving}
+                disabled={saving || operationalLocked}
                 validationErrors={serviceValidationErrors}
                 saveError={offerSaveError}
                 onChange={updateCommercialServices}
                 onRetry={reloadMandateServices}
                 onRetryCatalog={reloadCatalog}
                 onReloadConflict={reloadMandateServices}
+                previewState={operations.previewState}
+                applyState={operations.applyState}
+                successServiceId={operations.successServiceId}
+                operationalView={operations.viewFor}
+                onRetryPreview={operations.retryPreview}
+                onCreateActivity={operations.createActivity}
+                onRetryCreate={operations.retryCreate}
+                onOpenPlanner={() => router.push(`/planning?projectId=${projectId}`)}
               />
             </div>
           </div>

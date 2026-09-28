@@ -7,6 +7,7 @@ import {
   MandateCommercialState, MandateServiceDraft, removeServiceDraft, restoreServiceAtEnd,
   updateServiceDraft,
 } from './mandateCommercialState';
+import type { ApplyRuntimeState, OperationalServiceView, PreviewRuntimeState } from './mandateOperationalState';
 
 type HistoricalActivity = { sourceMandate?: boolean; activityTypeId?: string | null };
 
@@ -24,13 +25,22 @@ type Props = {
   onRetry: () => void;
   onRetryCatalog: () => void;
   onReloadConflict: () => void;
+  previewState: PreviewRuntimeState;
+  applyState: ApplyRuntimeState;
+  successServiceId: string | null;
+  operationalView: (service: MandateServiceDraft, commerciallyClean: boolean) => OperationalServiceView;
+  onRetryPreview: () => void;
+  onCreateActivity: (serviceId: string, serviceName: string) => void;
+  onRetryCreate: (serviceId: string) => void;
+  onOpenPlanner: () => void;
 };
 
 const identity = (service: MandateServiceDraft) => service.id || service.localDraftId || '';
 
 export default function MandateServicesEditor({ state, catalog, catalogError, historicalActivities,
   historicalKnown, canEdit, disabled, validationErrors, saveError, onChange, onRetry, onRetryCatalog,
-  onReloadConflict }: Props) {
+  onReloadConflict, previewState, applyState, successServiceId, operationalView, onRetryPreview, onCreateActivity,
+  onRetryCreate, onOpenPlanner }: Props) {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [search, setSearch] = useState('');
   const snapshotById = useMemo(() => new Map(state.snapshot.flatMap(service => service.id
@@ -99,6 +109,12 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
         {saveError} {(saveError.includes('modifiée') || saveError.includes('incertain'))
           && <button type="button" className="underline ml-1" onClick={onReloadConflict}>Recharger l’offre</button>}
       </div>}
+      {previewState.status === 'LOADING' && <p className="text-xs mb-3" aria-live="polite">Analyse de l’état opérationnel…</p>}
+      {(previewState.status === 'ERROR' || previewState.status === 'CONFLICT') && <div role="alert" className="text-sm mb-3 rounded p-3"
+        style={{ background: '#FEF9E7', color: '#7D6608' }}><p>{previewState.error}</p>
+        <button type="button" className="underline mt-1" onClick={previewState.status === 'CONFLICT' ? onReloadConflict : onRetryPreview}>
+          {previewState.status === 'CONFLICT' ? "Recharger l’offre" : 'Réessayer l’analyse'}
+        </button></div>}
 
       {catalogOpen && canEdit && (
         <div id="mandate-service-catalog" className="rounded p-4 mb-4" style={{ background: '#F8F9FA', border: '1px solid #DEE2E6' }}>
@@ -137,6 +153,7 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
           const key = identity(service); const removing = Boolean(draftRemoved(service)); const restoring = Boolean(draftRestored(service));
           const badge = !service.id ? 'Non enregistré' : removing ? 'Retrait non enregistré'
             : restoring ? 'Réajout non enregistré' : 'Vendu';
+          const operational = operationalView(service, Boolean(service.id && !removing && !restoring));
           return <article key={key} className="rounded p-3" style={{ border: '1px solid #DEE2E6', background: removing ? '#FEF9E7' : '#FFFFFF' }}>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div><p className="text-sm font-semibold">{serviceName(service)}</p>
@@ -152,6 +169,31 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
                       if (window.confirm("Retirer ce service de l'offre ? Les activités et l'historique associés seront conservés."))
                         onChange(removeServiceDraft(state.draft, key));
                     }}>Retirer de l’offre</button>)}
+            </div>
+            <div className="rounded p-3 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+              style={{ background: '#F8F9FA', border: '1px solid #E9ECEF' }}>
+              <div><span className="text-xs font-semibold">{operational.label}</span>
+                <p className="text-xs mt-1" style={{ color: '#6C757D' }}>{operational.description}</p>
+                {applyState.mandateServiceId === service.id && applyState.error && <div role="alert" className="text-xs mt-1" style={{ color: '#C0392B' }}>
+                  <p>{applyState.error}</p>{applyState.status !== 'UNKNOWN' && <button type="button" className="underline mt-1"
+                    onClick={applyState.status === 'CONFLICT' ? onReloadConflict : onRetryPreview}>
+                    {applyState.status === 'CONFLICT' ? "Recharger l’offre" : 'Réessayer l’analyse'}
+                  </button>}
+                </div>}
+                {successServiceId === service.id && <p aria-live="polite" className="text-xs mt-1" style={{ color: '#27864A' }}>
+                  Activité créée. Elle est maintenant prête à être planifiée.
+                </p>}
+              </div>
+              {service.id && operational.primaryAction === 'CREATE' && <button type="button" disabled={disabled || !operational.mutationAllowed}
+                onClick={() => onCreateActivity(service.id!, serviceName(service))} className="text-xs px-3 py-2 rounded text-white disabled:opacity-50"
+                style={{ background: '#C0392B' }}>Créer l’activité</button>}
+              {operational.primaryAction === 'APPLYING' && <button type="button" disabled aria-busy="true"
+                className="text-xs px-3 py-2 rounded text-white opacity-50" style={{ background: '#C0392B' }}>Création…</button>}
+              {service.id && operational.primaryAction === 'RETRY_CREATE' && <button type="button" disabled={disabled}
+                onClick={() => onRetryCreate(service.id!)} className="text-xs px-3 py-2 rounded text-white disabled:opacity-50"
+                style={{ background: '#C0392B' }}>Réessayer</button>}
+              {operational.planningAction && <button type="button" onClick={onOpenPlanner}
+                className="text-xs px-3 py-2 rounded" style={{ border: '1px solid #2980B9', color: '#2980B9' }}>Ouvrir le Planner</button>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-xs">Récurrence

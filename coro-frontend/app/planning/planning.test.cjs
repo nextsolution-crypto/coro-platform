@@ -171,6 +171,58 @@ test('Mandate apply intent keeps one UUID across retries and changes it for a ne
     { idempotencyKey: 'uuid-1', expectedRevision: 'revision', decisions });
 });
 
+test('Mandate G3 operational projection fails closed and only enables canonical CREATE', () => {
+  const operation = (action, reasonCode, extra = {}) => ({ serviceId: 's1', action, reasonCode, ...extra });
+  const base = { serviceId: 's1', commercialStatus: 'ACTIVE', commerciallyClean: true,
+    previewCurrent: true, canApply: true, applyStatus: 'IDLE', applyingServiceId: null };
+  const create = mandateOperational.operationalViewForService({ ...base,
+    operations: [operation('CREATE_ACTIVITY', 'NO_ACTIVITY_EXISTS')] });
+  assert.equal(create.primaryAction, 'CREATE');
+  assert.equal(create.mutationAllowed, true);
+  for (const changed of [
+    { commerciallyClean: false }, { previewCurrent: false }, { canApply: false },
+    { commercialStatus: 'REMOVED' }, { operations: [] },
+    { operations: [operation('CREATE_ACTIVITY', 'NO_ACTIVITY_EXISTS'), operation('CREATE_ACTIVITY', 'NO_ACTIVITY_EXISTS')] },
+    { operations: [operation('CREATE_ACTIVITY', 'SURPRISE')] },
+  ]) {
+    const view = mandateOperational.operationalViewForService({ ...base,
+      operations: [operation('CREATE_ACTIVITY', 'NO_ACTIVITY_EXISTS')], ...changed });
+    assert.equal(view.mutationAllowed, false);
+    assert.equal(view.primaryAction, null);
+  }
+  const unsaved = mandateOperational.operationalViewForService({ ...base, serviceId: undefined, operations: [] });
+  assert.equal(unsaved.status, 'UNSAVED');
+});
+
+test('Mandate G3 projection uses service identity, planning status and one unknown retry', () => {
+  const indexed = mandateOperational.indexPreviewOperations([
+    { serviceId: 's1', action: 'NO_ACTION', reasonCode: 'ACTIVE_ACTIVITY_EXISTS', linkedActivities: [{ id: 'a1', planningStatus: 'TO_PLAN' }] },
+    { serviceId: 's2', action: 'CREATE_ACTIVITY', reasonCode: 'NO_ACTIVITY_EXISTS' },
+  ]);
+  assert.equal(indexed.get('s1')[0].linkedActivities[0].id, 'a1');
+  assert.equal(indexed.get('s2')[0].action, 'CREATE_ACTIVITY');
+  const planned = mandateOperational.operationalViewForService({ serviceId: 's1', commercialStatus: 'ACTIVE',
+    commerciallyClean: true, previewCurrent: true, operations: indexed.get('s1'), canApply: true,
+    applyStatus: 'IDLE', applyingServiceId: null });
+  assert.equal(planned.planningAction, true);
+  const retry = mandateOperational.operationalViewForService({ serviceId: 's2', commercialStatus: 'ACTIVE',
+    commerciallyClean: true, previewCurrent: true, operations: indexed.get('s2'), canApply: true,
+    applyStatus: 'UNKNOWN', applyingServiceId: 's2' });
+  assert.equal(retry.primaryAction, 'RETRY_CREATE');
+});
+
+test('Mandate G3 runtime uses Preview/Apply wrappers and keeps CREATE separate from Save', () => {
+  const runtime = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/useMandateOperations.ts'), 'utf8');
+  const editor = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/MandateServicesEditor.tsx'), 'utf8');
+  assert.match(runtime, /previewMandateOperations\(projectId, revision, signal\)/);
+  assert.match(runtime, /applyMandateOperations\(projectId, next\.payload\)/);
+  assert.match(runtime, /if \(axios\.isAxiosError\(error\) && !error\.response\)/);
+  assert.match(runtime, /void sendApply\(applyState\)/);
+  assert.match(runtime, /setPreviewState\(\{ status: 'READY'.*result\.preview/s);
+  assert.match(editor, /Créer l’activité/);
+  assert.doesNotMatch(runtime, /ADOPT_LEGACY_ACTIVITY|CREATE_REPLACEMENT|localStorage|sessionStorage/);
+});
+
 test('Mandate G2 loads and saves commercial services without legacy generation or operational runtime', () => {
   const page = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/page.tsx'), 'utf8');
   const api = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/mandateApi.ts'), 'utf8');
