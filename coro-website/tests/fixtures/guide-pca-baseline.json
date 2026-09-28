@@ -1,0 +1,903 @@
+{
+  "captured": "2026-09-27 (MIG-05D, before any PCA change)",
+  "fr": {
+    "status": 200,
+    "title": "Plan de Continuité des Activités (PCA) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Continuité des Activités : définition, contenu, secteurs concernés et comment CORO simplifie sa production pour les organisations canadiennes.",
+    "canonical": "https://getcoro.io/documents/plan-continuite-activites-pca",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Continuité des Activités (PCA)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Continuité des Activités ?"
+      ],
+      [
+        2,
+        "Secteurs pour lesquels un PCA est exigé ou recommandé"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PCA complet"
+      ],
+      [
+        2,
+        "PCA et normes internationales"
+      ],
+      [
+        2,
+        "Fréquence de test et de révision"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PCA"
+      ],
+      [
+        2,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Le PCA est-il obligatoire ?"
+      ],
+      [
+        3,
+        "Quelle est la différence entre un PCA et un PRA ?"
+      ],
+      [
+        3,
+        "Qu&#x27;est-ce que le RTO et le RPO ?"
+      ],
+      [
+        3,
+        "Combien de temps faut-il pour développer un PCA ?"
+      ],
+      [
+        2,
+        "Prêt à produire votre PCA ?"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PCA avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Sécurité et résilience — Management de la continuité des activités"
+      ],
+      [
+        "https://www.osfi-bsif.gc.ca/fr/directives-lignes-directrices/lignes-directrices/continuit%C3%A9-activit%C3%A9s",
+        "→ BSIF — Lignes directrices sur la continuité des activités"
+      ],
+      [
+        "https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html",
+        "→ Gouvernement du Canada — Plan de continuité des opérations"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Continuité des Activités (PCA)",
+        "headline": "Plan de Continuité des Activités (PCA) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Continuité des Activités : définition, contenu, secteurs concernés et comment CORO simplifie sa production pour les organisations canadiennes.",
+        "url": "https://getcoro.io/documents/plan-continuite-activites-pca",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Continuité des Activités",
+            "alternateName": "PCA"
+          },
+          {
+            "@type": "Thing",
+            "name": "Continuité des activités"
+          },
+          {
+            "@type": "Thing",
+            "name": "Résilience organisationnelle"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Continuité des Activités (PCA)",
+            "item": "https://getcoro.io/documents/plan-continuite-activites-pca"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Le PCA est-il obligatoire ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Il n'existe pas de loi unique rendant le PCA obligatoire pour toutes les organisations canadiennes. Cependant, certains secteurs l'exigent explicitement (BSIF pour les institutions financières, soins de santé, services essentiels) et il est exigé par la norme ISO 22301 pour les organisations certifiées."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre un PCA et un PRA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PCA vise à maintenir les activités pendant une interruption. Le PRA (Plan de Reprise des Activités) se concentre sur le retour à la normale après l'interruption. Les deux sont complémentaires et fonctionnent en séquence."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce que le RTO et le RPO ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité. Le RPO (Recovery Point Objective) est la quantité maximale de données qu'on peut se permettre de perdre, exprimée en temps."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Combien de temps faut-il pour développer un PCA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Avec CORO, un premier PCA opérationnel peut être produit rapidement. La complexité dépend de la taille de l'organisation et du nombre d'activités critiques à couvrir."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 1,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil getcoro.io / Plan de Continuité des Activités (PCA) PCA Plan de Continuité des Activités (PCA) Le Plan de Continuité des Activités garantit qu&#x27;une organisation peut maintenir ses opérations critiques lors d&#x27;une interruption majeure : sinistre, panne informatique, pandémie, perte d&#x27;accès aux locaux ou défaillance d&#x27;un fournisseur clé. Structurer votre PCA avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Continuité des Activités ? Le PCA est un document stratégique qui identifie les activités critiques d&#x27;une organisation, évalue les risques d&#x27;interruption et définit les mesures pour maintenir ou reprendre rapidement ces activités en cas de sinistre. La norme internationale de référence est l&#x27;ISO 22301 — Sécurité et résilience — Systèmes de management de la continuité des activités. Secteurs pour lesquels un PCA est exigé ou recommandé Bien que le PCA ne soit pas universellement obligatoire par une loi unique au Canada, il est exigé ou fortement recommandé dans plusieurs secteurs : les institutions financières (selon les lignes directrices du Bureau du surintendant des institutions financières — BSIF) ; les organisations de soins de santé ; les services gouvernementaux et fournisseurs de services essentiels ; et les organisations certifiées ISO 22301. Contenu d&#x27;un PCA complet Un PCA comprend : l&#x27;analyse d&#x27;impact sur les activités (Business Impact Analysis — BIA), l&#x27;identification des activités critiques et des délais maximaux d&#x27;interruption tolérables (RTO — Recovery Time Objective, et RPO — Recovery Point Objective), les stratégies de continuité, les procédures de mise en œuvre, les plans de communication de crise, et les programmes de tests et exercices. PCA et normes internationales La norme ISO 22301:2019 — Sécurité et résilience — Systèmes de management de la continuité des activités est la référence internationale. Elle définit les exigences pour planifier, établir, mettre en œuvre, exploiter, surveiller, réviser, maintenir et améliorer continuellement un système de management de la continuité des activités. Fréquence de test et de révision Le PCA doit être testé au moins une fois par année et révisé après chaque test, après tout changement organisationnel significatif ou après l&#x27;activation réelle du plan. La norme ISO 22301 exige que les exercices soient documentés et que leurs résultats soient intégrés aux améliorations continues du plan. Comment CORO supporte la production du PCA CORO structure la rédaction de votre PCA avec des modèles adaptés à votre secteur d&#x27;activité. La plateforme intègre les modules de gestion des ressources critiques, les listes de contacts et les procédures d&#x27;activation, le tout exportable en PDF professionnel. 📚 Sources et références officielles → ISO 22301:2019 — Sécurité et résilience — Management de la continuité des activités → BSIF — Lignes directrices sur la continuité des activités → Gouvernement du Canada — Plan de continuité des opérations ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Le PCA est-il obligatoire ? Il n&#x27;existe pas de loi unique rendant le PCA obligatoire pour toutes les organisations canadiennes. Cependant, certains secteurs l&#x27;exigent explicitement (BSIF pour les institutions financières, soins de santé, services essentiels) et il est exigé par la norme ISO 22301 pour les organisations certifiées. Quelle est la différence entre un PCA et un PRA ? Le PCA vise à maintenir les activités pendant une interruption. Le PRA (Plan de Reprise des Activités) se concentre sur le retour à la normale après l&#x27;interruption. Les deux sont complémentaires et fonctionnent en séquence. Qu&#x27;est-ce que le RTO et le RPO ? Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité. Le RPO (Recovery Point Objective) est la quantité maximale de données qu&#x27;on peut se permettre de perdre, exprimée en temps. Combien de temps faut-il pour développer un PCA ? Avec CORO, un premier PCA opérationnel peut être produit rapidement. La complexité dépend de la taille de l&#x27;organisation et du nombre d&#x27;activités critiques à couvrir. Prêt à produire votre PCA ? CORO génère, structure et gère vos documents de conformité depuis une seule plateforme. Demander une démo → Lire nos guides → CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "en": {
+    "status": 200,
+    "title": "Plan de Continuité des Activités (PCA) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Continuité des Activités : définition, contenu, secteurs concernés et comment CORO simplifie sa production pour les organisations canadiennes.",
+    "canonical": "https://getcoro.io/documents/plan-continuite-activites-pca",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Continuité des Activités (PCA)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Continuité des Activités ?"
+      ],
+      [
+        2,
+        "Secteurs pour lesquels un PCA est exigé ou recommandé"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PCA complet"
+      ],
+      [
+        2,
+        "PCA et normes internationales"
+      ],
+      [
+        2,
+        "Fréquence de test et de révision"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PCA"
+      ],
+      [
+        2,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Le PCA est-il obligatoire ?"
+      ],
+      [
+        3,
+        "Quelle est la différence entre un PCA et un PRA ?"
+      ],
+      [
+        3,
+        "Qu&#x27;est-ce que le RTO et le RPO ?"
+      ],
+      [
+        3,
+        "Combien de temps faut-il pour développer un PCA ?"
+      ],
+      [
+        2,
+        "Prêt à produire votre PCA ?"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PCA avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Sécurité et résilience — Management de la continuité des activités"
+      ],
+      [
+        "https://www.osfi-bsif.gc.ca/fr/directives-lignes-directrices/lignes-directrices/continuit%C3%A9-activit%C3%A9s",
+        "→ BSIF — Lignes directrices sur la continuité des activités"
+      ],
+      [
+        "https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html",
+        "→ Gouvernement du Canada — Plan de continuité des opérations"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Continuité des Activités (PCA)",
+        "headline": "Plan de Continuité des Activités (PCA) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Continuité des Activités : définition, contenu, secteurs concernés et comment CORO simplifie sa production pour les organisations canadiennes.",
+        "url": "https://getcoro.io/documents/plan-continuite-activites-pca",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Continuité des Activités",
+            "alternateName": "PCA"
+          },
+          {
+            "@type": "Thing",
+            "name": "Continuité des activités"
+          },
+          {
+            "@type": "Thing",
+            "name": "Résilience organisationnelle"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Continuité des Activités (PCA)",
+            "item": "https://getcoro.io/documents/plan-continuite-activites-pca"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Le PCA est-il obligatoire ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Il n'existe pas de loi unique rendant le PCA obligatoire pour toutes les organisations canadiennes. Cependant, certains secteurs l'exigent explicitement (BSIF pour les institutions financières, soins de santé, services essentiels) et il est exigé par la norme ISO 22301 pour les organisations certifiées."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre un PCA et un PRA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PCA vise à maintenir les activités pendant une interruption. Le PRA (Plan de Reprise des Activités) se concentre sur le retour à la normale après l'interruption. Les deux sont complémentaires et fonctionnent en séquence."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce que le RTO et le RPO ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité. Le RPO (Recovery Point Objective) est la quantité maximale de données qu'on peut se permettre de perdre, exprimée en temps."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Combien de temps faut-il pour développer un PCA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Avec CORO, un premier PCA opérationnel peut être produit rapidement. La complexité dépend de la taille de l'organisation et du nombre d'activités critiques à couvrir."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 1,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil getcoro.io / Plan de Continuité des Activités (PCA) PCA Plan de Continuité des Activités (PCA) Le Plan de Continuité des Activités garantit qu&#x27;une organisation peut maintenir ses opérations critiques lors d&#x27;une interruption majeure : sinistre, panne informatique, pandémie, perte d&#x27;accès aux locaux ou défaillance d&#x27;un fournisseur clé. Structurer votre PCA avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Continuité des Activités ? Le PCA est un document stratégique qui identifie les activités critiques d&#x27;une organisation, évalue les risques d&#x27;interruption et définit les mesures pour maintenir ou reprendre rapidement ces activités en cas de sinistre. La norme internationale de référence est l&#x27;ISO 22301 — Sécurité et résilience — Systèmes de management de la continuité des activités. Secteurs pour lesquels un PCA est exigé ou recommandé Bien que le PCA ne soit pas universellement obligatoire par une loi unique au Canada, il est exigé ou fortement recommandé dans plusieurs secteurs : les institutions financières (selon les lignes directrices du Bureau du surintendant des institutions financières — BSIF) ; les organisations de soins de santé ; les services gouvernementaux et fournisseurs de services essentiels ; et les organisations certifiées ISO 22301. Contenu d&#x27;un PCA complet Un PCA comprend : l&#x27;analyse d&#x27;impact sur les activités (Business Impact Analysis — BIA), l&#x27;identification des activités critiques et des délais maximaux d&#x27;interruption tolérables (RTO — Recovery Time Objective, et RPO — Recovery Point Objective), les stratégies de continuité, les procédures de mise en œuvre, les plans de communication de crise, et les programmes de tests et exercices. PCA et normes internationales La norme ISO 22301:2019 — Sécurité et résilience — Systèmes de management de la continuité des activités est la référence internationale. Elle définit les exigences pour planifier, établir, mettre en œuvre, exploiter, surveiller, réviser, maintenir et améliorer continuellement un système de management de la continuité des activités. Fréquence de test et de révision Le PCA doit être testé au moins une fois par année et révisé après chaque test, après tout changement organisationnel significatif ou après l&#x27;activation réelle du plan. La norme ISO 22301 exige que les exercices soient documentés et que leurs résultats soient intégrés aux améliorations continues du plan. Comment CORO supporte la production du PCA CORO structure la rédaction de votre PCA avec des modèles adaptés à votre secteur d&#x27;activité. La plateforme intègre les modules de gestion des ressources critiques, les listes de contacts et les procédures d&#x27;activation, le tout exportable en PDF professionnel. 📚 Sources et références officielles → ISO 22301:2019 — Sécurité et résilience — Management de la continuité des activités → BSIF — Lignes directrices sur la continuité des activités → Gouvernement du Canada — Plan de continuité des opérations ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Le PCA est-il obligatoire ? Il n&#x27;existe pas de loi unique rendant le PCA obligatoire pour toutes les organisations canadiennes. Cependant, certains secteurs l&#x27;exigent explicitement (BSIF pour les institutions financières, soins de santé, services essentiels) et il est exigé par la norme ISO 22301 pour les organisations certifiées. Quelle est la différence entre un PCA et un PRA ? Le PCA vise à maintenir les activités pendant une interruption. Le PRA (Plan de Reprise des Activités) se concentre sur le retour à la normale après l&#x27;interruption. Les deux sont complémentaires et fonctionnent en séquence. Qu&#x27;est-ce que le RTO et le RPO ? Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité. Le RPO (Recovery Point Objective) est la quantité maximale de données qu&#x27;on peut se permettre de perdre, exprimée en temps. Combien de temps faut-il pour développer un PCA ? Avec CORO, un premier PCA opérationnel peut être produit rapidement. La complexité dépend de la taille de l&#x27;organisation et du nombre d&#x27;activités critiques à couvrir. Prêt à produire votre PCA ? CORO génère, structure et gère vos documents de conformité depuis une seule plateforme. Demander une démo → Lire nos guides → CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "ref": {
+    "status": 200,
+    "title": "Plan de Continuité des Activités (PCA) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Continuité des Activités : définition, contenu, secteurs concernés et comment CORO simplifie sa production pour les organisations canadiennes.",
+    "canonical": "https://getcoro.io/documents/plan-continuite-activites-pca",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Continuité des Activités (PCA)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Continuité des Activités ?"
+      ],
+      [
+        2,
+        "Secteurs pour lesquels un PCA est exigé ou recommandé"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PCA complet"
+      ],
+      [
+        2,
+        "PCA et normes internationales"
+      ],
+      [
+        2,
+        "Fréquence de test et de révision"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PCA"
+      ],
+      [
+        2,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Le PCA est-il obligatoire ?"
+      ],
+      [
+        3,
+        "Quelle est la différence entre un PCA et un PRA ?"
+      ],
+      [
+        3,
+        "Qu&#x27;est-ce que le RTO et le RPO ?"
+      ],
+      [
+        3,
+        "Combien de temps faut-il pour développer un PCA ?"
+      ],
+      [
+        2,
+        "Prêt à produire votre PCA ?"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PCA avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Sécurité et résilience — Management de la continuité des activités"
+      ],
+      [
+        "https://www.osfi-bsif.gc.ca/fr/directives-lignes-directrices/lignes-directrices/continuit%C3%A9-activit%C3%A9s",
+        "→ BSIF — Lignes directrices sur la continuité des activités"
+      ],
+      [
+        "https://www.canada.ca/fr/gouvernement/systeme/gouvernement-numerique/politiques-normes-lignes-directrices-orientation-gouvernement-numerique/orientation-gouvernement-canada-gestion-continuite-operationnelle.html",
+        "→ Gouvernement du Canada — Plan de continuité des opérations"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Continuité des Activités (PCA)",
+        "headline": "Plan de Continuité des Activités (PCA) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Continuité des Activités : définition, contenu, secteurs concernés et comment CORO simplifie sa production pour les organisations canadiennes.",
+        "url": "https://getcoro.io/documents/plan-continuite-activites-pca",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Continuité des Activités",
+            "alternateName": "PCA"
+          },
+          {
+            "@type": "Thing",
+            "name": "Continuité des activités"
+          },
+          {
+            "@type": "Thing",
+            "name": "Résilience organisationnelle"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Continuité des Activités (PCA)",
+            "item": "https://getcoro.io/documents/plan-continuite-activites-pca"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Le PCA est-il obligatoire ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Il n'existe pas de loi unique rendant le PCA obligatoire pour toutes les organisations canadiennes. Cependant, certains secteurs l'exigent explicitement (BSIF pour les institutions financières, soins de santé, services essentiels) et il est exigé par la norme ISO 22301 pour les organisations certifiées."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre un PCA et un PRA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PCA vise à maintenir les activités pendant une interruption. Le PRA (Plan de Reprise des Activités) se concentre sur le retour à la normale après l'interruption. Les deux sont complémentaires et fonctionnent en séquence."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qu'est-ce que le RTO et le RPO ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité. Le RPO (Recovery Point Objective) est la quantité maximale de données qu'on peut se permettre de perdre, exprimée en temps."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Combien de temps faut-il pour développer un PCA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Avec CORO, un premier PCA opérationnel peut être produit rapidement. La complexité dépend de la taille de l'organisation et du nombre d'activités critiques à couvrir."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 1,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil getcoro.io / Plan de Continuité des Activités (PCA) PCA Plan de Continuité des Activités (PCA) Le Plan de Continuité des Activités garantit qu&#x27;une organisation peut maintenir ses opérations critiques lors d&#x27;une interruption majeure : sinistre, panne informatique, pandémie, perte d&#x27;accès aux locaux ou défaillance d&#x27;un fournisseur clé. Structurer votre PCA avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Continuité des Activités ? Le PCA est un document stratégique qui identifie les activités critiques d&#x27;une organisation, évalue les risques d&#x27;interruption et définit les mesures pour maintenir ou reprendre rapidement ces activités en cas de sinistre. La norme internationale de référence est l&#x27;ISO 22301 — Sécurité et résilience — Systèmes de management de la continuité des activités. Secteurs pour lesquels un PCA est exigé ou recommandé Bien que le PCA ne soit pas universellement obligatoire par une loi unique au Canada, il est exigé ou fortement recommandé dans plusieurs secteurs : les institutions financières (selon les lignes directrices du Bureau du surintendant des institutions financières — BSIF) ; les organisations de soins de santé ; les services gouvernementaux et fournisseurs de services essentiels ; et les organisations certifiées ISO 22301. Contenu d&#x27;un PCA complet Un PCA comprend : l&#x27;analyse d&#x27;impact sur les activités (Business Impact Analysis — BIA), l&#x27;identification des activités critiques et des délais maximaux d&#x27;interruption tolérables (RTO — Recovery Time Objective, et RPO — Recovery Point Objective), les stratégies de continuité, les procédures de mise en œuvre, les plans de communication de crise, et les programmes de tests et exercices. PCA et normes internationales La norme ISO 22301:2019 — Sécurité et résilience — Systèmes de management de la continuité des activités est la référence internationale. Elle définit les exigences pour planifier, établir, mettre en œuvre, exploiter, surveiller, réviser, maintenir et améliorer continuellement un système de management de la continuité des activités. Fréquence de test et de révision Le PCA doit être testé au moins une fois par année et révisé après chaque test, après tout changement organisationnel significatif ou après l&#x27;activation réelle du plan. La norme ISO 22301 exige que les exercices soient documentés et que leurs résultats soient intégrés aux améliorations continues du plan. Comment CORO supporte la production du PCA CORO structure la rédaction de votre PCA avec des modèles adaptés à votre secteur d&#x27;activité. La plateforme intègre les modules de gestion des ressources critiques, les listes de contacts et les procédures d&#x27;activation, le tout exportable en PDF professionnel. 📚 Sources et références officielles → ISO 22301:2019 — Sécurité et résilience — Management de la continuité des activités → BSIF — Lignes directrices sur la continuité des activités → Gouvernement du Canada — Plan de continuité des opérations ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Le PCA est-il obligatoire ? Il n&#x27;existe pas de loi unique rendant le PCA obligatoire pour toutes les organisations canadiennes. Cependant, certains secteurs l&#x27;exigent explicitement (BSIF pour les institutions financières, soins de santé, services essentiels) et il est exigé par la norme ISO 22301 pour les organisations certifiées. Quelle est la différence entre un PCA et un PRA ? Le PCA vise à maintenir les activités pendant une interruption. Le PRA (Plan de Reprise des Activités) se concentre sur le retour à la normale après l&#x27;interruption. Les deux sont complémentaires et fonctionnent en séquence. Qu&#x27;est-ce que le RTO et le RPO ? Le RTO (Recovery Time Objective) est le délai maximal acceptable pour reprendre une activité. Le RPO (Recovery Point Objective) est la quantité maximale de données qu&#x27;on peut se permettre de perdre, exprimée en temps. Combien de temps faut-il pour développer un PCA ? Avec CORO, un premier PCA opérationnel peut être produit rapidement. La complexité dépend de la taille de l&#x27;organisation et du nombre d&#x27;activités critiques à couvrir. Prêt à produire votre PCA ? CORO génère, structure et gère vos documents de conformité depuis une seule plateforme. Demander une démo → Lire nos guides → CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  }
+}

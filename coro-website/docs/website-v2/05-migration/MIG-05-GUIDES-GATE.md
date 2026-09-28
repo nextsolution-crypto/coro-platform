@@ -562,3 +562,116 @@ Puppeteer reste indisponible dans cet environnement (limite déjà signalée en 
 ## Revues de mise en ligne
 
 Aucune nouvelle revue bloquante. Les décisions PMU (MIG-05B/MIG-05B-B) restent inchangées et ne sont pas rouvertes par cette passe.
+
+# MIG-05D — PCA implementation result
+
+Implémenté (2026-09-27). Registre V2 : `/documents/plan-continuite-activites-pca` ajoutée après le PSI. Le PCA reste `historical({ id: 'guide-pca', ... })` dans le registre de routes (déjà `implemented: true` avant cette étape) — seule l'appartenance V2 change.
+
+## Baseline et contrat de langue
+
+`tests/fixtures/guide-pca-baseline.json` capture FR / `?lang=en` / `?ref=CR-ABCDEF`. Comme PSI, le fichier V1 n'avait aucune gestion de `searchParams` : `?lang=en` retournait trivialement la même page française. `bodyText` FR === EN confirmé → `englishAvailable={false}` / `hasEnglish: false`, aucune traduction inventée.
+
+## Matrice de préservation — résumé
+
+Les 6 sections V1 (définition/ISO 22301, secteurs concernés, contenu du PCA, ISO 22301 détaillée, fréquence de test, simplification CORO) sont RECOMPOSÉES dans une architecture éditoriale à 8 sections + ressources + FAQ + CTA. Les 3 sources et les 4 questions FAQ sont préservées dans leur substance (2 des 3 liens sources corrigés, voir ci-dessous). Aucune perte de contenu utile.
+
+## Audit normatif — décisions
+
+- **ISO 22301:2019** : VERIFIED — norme réelle confirmée via sources secondaires multiples (iso.org bloque les requêtes scriptées avec un 403, ce qui n'indique pas un lien mort — juste une protection anti-bot ; l'existence et le contenu de la norme sont indépendamment confirmés). Conservée, y compris la description du cycle planifier/établir/mettre en œuvre/exploiter/surveiller/réviser/maintenir/améliorer.
+- **« Testé au moins une fois par année »** : NOT VERIFIED comme exigence ISO 22301 → REMOVE. La norme exige un programme d'exercices et de tests mais la fréquence est explicitement fondée sur le risque et les activités de l'organisation, pas sur un chiffre annuel fixe (même décision que MIG-05C-B pour le PSI).
+- **Lien source BSIF (V1)** : DEAD (404 vérifié). REFINE : remplacé par la mention nommée de la ligne directrice actuelle, **E-21 — Gestion du risque opérationnel et résilience** (confirmée existante par recherche), avec lien vers le site BSIF (la page française précise n'a pas pu être résolue durant cette passe — la page d'accueil, fonctionnelle, est utilisée plutôt qu'un lien profond deviné).
+- **Lien source Canada.ca (V1)** : DEAD (404 vérifié). REFINE : remplacé par une page fonctionnelle du Bureau du Conseil privé sur la gestion de la continuité des activités (200 confirmé).
+- **FAQ — délai de production** : la V1 affirmait qu'un premier PCA « peut être produit rapidement » (précision de vitesse non vérifiable) → adoucie : CORO structure la production, la durée dépend de la taille de l'organisation et du nombre d'activités critiques (même traitement que la précision de délai retirée du PMU en MIG-05B).
+
+## SEO — décision REWRITE
+
+URL conservée à l'identique. Titre et description réécrits pour intégrer BIA/RTO/RPO et la distinction PCA vs PRA, retirer l'accroche produit du titre V1 (« Guide complet | CORO »).
+
+## Hero
+
+`guide-pca-business-continuity.webp`, audité entièrement : 5 personnes en réunion, écran mural et diagramme papier portant des libellés éditoriaux inventés par l'illustration elle-même (« PRÉPARER → RÉPONDRE → MAINTENIR → RÉTABLIR », etc.). Aucun logo CORO, aucune UI produit réelle, aucun texte réglementaire lisible. Classification : MARKETING / ÉDITORIAL, `alt=""`, image non modifiée. **Important** : les libellés visibles sur l'écran/le diagramme de l'illustration n'ont PAS été utilisés comme source de contenu — toutes les catégories du texte (sources d'interruption, éléments du PCA) proviennent exclusivement du texte V1/ISO vérifié, jamais de ce qui est dessiné dans l'image.
+
+## Signature visuelle PCA — distincte du PMU et du PSI
+
+Conformément à la règle de famille confirmée par PMU + PSI, le PCA ne réutilise aucun de leurs moments (pas de « 08 », pas de cycle, pas de « Agir », pas d'ancre « PSI »/ledger, pas de cartes de parties prenantes, pas de territoires SIGNAL/AVIS/CONSIGNES/ÉVACUATION). Trois moments propres au PCA :
+1. **Sources d'interruption (navy, 5 colonnes)** — Sinistre, Panne informatique, Pandémie, Perte d'accès aux locaux, Défaillance d'un fournisseur clé — repris verbatim du paragraphe d'introduction du guide lui-même (contenu déjà vérifié, jamais inventé), sans classement de gravité.
+2. **Glossaire RTO/RPO** — deux termes techniques en typographie large, empilés avec leur définition, un signature de type « glossaire » inédite dans la famille (ni ancre unique ni ledger numéroté).
+3. **Comparaison PCA vs PRA** — composition à deux colonnes qui garde visible, dans sa propre colonne, le statut Phase 2 de la production PRA dans CORO — empêchant toute confusion entre les deux frontières produit.
+
+## Frontière produit
+
+PCA explicitement disponible dans CORO Documents aujourd'hui (modules de gestion des ressources critiques, listes de contacts, procédures d'activation, export PDF). PRA reste explicitement Phase 2, visible dans la section §07 (comparaison) ET dans le lien contextuel vers le guide PRA. Aucune analyse d'impact automatique, aucun calcul automatique de RTO/RPO, aucune certification ISO de CORO lui-même n'est affirmée.
+
+## Ressources et liens réciproques
+
+4 ressources blog sélectionnées et vérifiées (200 sur `getcoro.io/blog/<slug>`) : contenu PCA, BIA/RTO/RPO, identification des activités critiques, PCA vs PRA. Liens réciproques vers `/guides`, `/gestion-documentaire` et le guide PRA (toujours en V1, lien fonctionnel indépendamment du statut de migration de la cible — même précédent que le lien PMU→PSI en MIG-05B).
+
+## Données structurées
+
+`BreadcrumbList` (Accueil › Guides › PCA, pointe désormais vers `/guides`) et `FAQPage` (4 questions, parité avec la FAQ visible). Le `WebPage` avec `about: [Thing×3]` et le `publisher.logo` `ImageObject` orphelin de la V1 sont retirés — aucun schéma `SoftwareApplication`, `Offer`, `Product` ou de certification.
+
+## Densité locale
+
+Même leçon de famille : `density="compact"` sur §1, §2, §6, §8, ressources ; `standard` conservé pour le hero, les trois moments visuels (§3 navy, §4 ledger, §5 glossaire) et §7 (comparaison PCA/PRA) pour laisser respirer leur composition ; FAQ `standard` pour la transition finale.
+
+## Preuve responsive
+
+Puppeteer reste indisponible dans cet environnement (limite déjà signalée en MIG-05B-B/MIG-05C/MIG-05C-B). Inspection visuelle réelle via navigateur à la largeur de fenêtre disponible (~1036px), défilement complet de la page : hero, secteurs, 5 sources d'interruption (navy), ledger 6 éléments, glossaire RTO/RPO, comparaison PCA/PRA, CORO Documents, ressources — tous rendus sans débordement ni chevauchement.
+
+## Tests, build, QA
+
+`tests/guide-pca-migration.test.ts` créé (17 tests dédiés : baseline, registre, langue, hero, frontière produit PCA/PRA, absence de revendication de test annuelle, absence des liens morts V1, distinction PCA vs PRA, liens réciproques, parité FAQ/JSON-LD, non-clonage des signatures PMU/PSI, exactitude des 5 sources d'interruption, glossaire RTO/RPO, exactitude des 6 éléments de contenu, métadonnées, accessibilité, densité locale). Mise à jour des listes `migratedV2Routes` codées en dur dans 13 fichiers de test existants + `tests/sentinelle-population-migration.test.ts` (slice/longueur) + `tests/page-rhythm.test.ts` (liste d'exclusion). **454 tests passent** (tous verts dès la première exécution). `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : un seul pied de page, un seul `<main>`, un seul `<h1>` sur `/documents/plan-continuite-activites-pca` post-registre. Contrôle de non-régression : `/`, `/security`, `/pricing`, `/guides`, `/coro-incident`, `/gestion-documentaire`, `/blog`, PMU, PSI et les 3 guides encore en V1 (PGC/PRA/PUE) répondent tous 200.
+
+## Revue de design de famille — PMU + PSI + PCA
+
+**Ce qui est vraiment commun aux trois guides** : `V2Shell` + `EditorialHero` + `PageSection`/`EditorialBlock` + `Accordion` (FAQ) + `CTASection` ; le rythme éditorial dense via `density="compact"` par instance ; le traitement réglementaire/normatif (matrice CLAIM/V1/SOURCE/VERSION/STATUS/DÉCISION, généralisation plutôt qu'invention de précision, retrait des revendications de fréquence non vérifiées — PMU/PSI/PCA ont chacun eu au moins une revendication temporelle retirée) ; les liens `/guides` + `/gestion-documentaire` + lien contextuel vers un guide apparenté ; la sélection de 4 ressources blog vérifiées ; le CTA éditorial-d'abord ; la philosophie de densité (compact pour le contenu ordinaire, standard pour les moments visuels).
+
+**Ce qui doit rester propre à chaque sujet** : les ancres visuelles (« 08 » PMU / « PSI » PSI / aucune pour PCA), les compositions de cartes (2 cartes PMU / 4 cartes PSI / 0 carte PCA — remplacée par un glossaire et une comparaison), les concepts en fond marine (cycle PMU / 4 territoires PSI / 5 sources PCA), les mots-clés et nombres du domaine, et les modèles conceptuels propres au sujet (préparation aux urgences / sécurité incendie / continuité des activités).
+
+**Conclusion** : aucun composant Guide partagé n'est extrait. Trois implémentations indépendantes confirment que les primitifs V2 existants (`PageSection`, `EditorialBlock`, `SplitContent`, `FeatureIndex`, `Accordion`, `CTASection`) suffisent largement, et qu'une extraction prématurée figerait des différences de signature qui sont précisément la valeur éditoriale de chaque guide. **Défaut maintenu : pas d'extraction**, à réévaluer après PGC/PRA/PUE si un besoin technique fort (pas seulement une ressemblance visuelle) apparaît.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante introduite par le PCA. Les revues consignées au §20 pour les guides restants (PUBLICATION-BLOCKER PUE, LEGAL REVIEW réglementaires PGC/PRA/PUE, dette d'accessibilité `<main>`) restent entières et ne sont pas résolues par cette étape. Les décisions PMU et PSI restent inchangées.
+
+# MIG-05D-B — PCA visual character, density & claim-precision pass
+
+Implémenté (2026-09-27). **La première composition PCA (MIG-05D) a été REJETÉE en revue visuelle** : espace horizontal inutilisé (sections occupant 35-45 % du canevas), ledger des six éléments trop administratif, RTO/RPO prometteur mais sous-exploité, comparaison PCA/PRA conceptuellement importante mais visuellement trop faible. Contenu, hero, URL, contrat de langue, frontière produit et architecture générale restent approuvés.
+
+## Nouvelle signature visuelle PCA — « CONTINUER »
+
+Le PCA garde son objectif éditorial central : la continuité des activités prioritaires/critiques. Trois moments, toujours sans cloner PMU (« 08 »/cycle/« Agir ») ni PSI (ancre « PSI »/ledger 01-07/cartes de parties prenantes/territoires SIGNAL-AVIS-CONSIGNES-ÉVACUATION) :
+1. **§3 — Sources d'interruption (navy, 5 colonnes)** : CONSERVÉE sans changement — approuvée, retravailler pour la seule nouveauté était explicitement hors scope.
+2. **§4 — « Continuer »** : ancre typographique éditoriale (pas une terminologie ISO) à côté des six composants existants, en ledger dense — aucun septième élément inventé, aucune numérotation copiant le PSI.
+3. **§7 — PCA « Continuer » vs PRA « Rétablir »** : reconstruite en composition majeure à deux territoires, devenue la section la plus forte de la page, avec le statut Phase 2 du PRA toujours visible dans sa propre colonne.
+
+RTO/RPO (§5) renforcé avec une question en langage clair au-dessus de chaque terme technique (« Combien de temps ? » / « Combien de données ? ») sans changer les définitions ni inventer de valeurs. La section ISO (§6) recomposée en split gauche/droite : explication normative + trois concepts déjà présents dans la clause ISO elle-même (Exercer / Réviser / Améliorer) — aucune nouvelle revendication normative, aucune fréquence annuelle réintroduite.
+
+## Revue des revendications sectorielles (§2) — par catégorie
+
+L'ancien titre généralisant « Exigé ou fortement recommandé selon le secteur » est remplacé par « Des exigences qui dépendent du secteur et du contexte », et chaque catégorie a été auditée séparément :
+
+| Catégorie | Source | Statut | Décision |
+|---|---|---|---|
+| Institutions financières | Ligne directrice E-21 (BSIF), confirmée applicable aux institutions financières sous réglementation fédérale | VERIFIED | Reformulée « Institutions financières fédérales » |
+| Gouvernement / services essentiels | Politique sur la sécurité du gouvernement du Canada, confirmée exigeant des mesures de continuité dans les plans de gestion des urgences des institutions fédérales | VERIFIED (institutions fédérales) ; NOT VERIFIED (fournisseurs de services essentiels au sens large) | Rétrécie à « Institutions du gouvernement fédéral » ; la mention générale des « fournisseurs de services essentiels » est retirée faute de source unique |
+| Organisations de soins de santé | Aucune source unique trouvée | NOT VERIFIED / REFINE | Généralisée : « exigences propres à leur secteur et leur province », plus présentée comme une exigence plate |
+| Organisations certifiées ISO 22301 | N/A — statut volontaire, pas un secteur | REFRAME | Présentée explicitement comme une certification volontaire, pas une catégorie de secteur |
+
+La composition visuelle utilise désormais les deux colonnes du canevas (explication à gauche, 4 blocs contextuels sourcés à droite), au lieu d'une liste à puces sur toute la largeur. La FAQ correspondante est mise à jour pour rester cohérente.
+
+## Défaut de composition corrigé pendant la QA
+
+Un chevauchement visuel réel a été détecté et corrigé en cours de passe : l'ancre « Continuer » (§4), à sa taille de police initiale (`clamp(3rem, 1.6rem + 5.5vw, 5.5rem)`) dans une colonne 1fr:2.4fr, débordait sur la première ligne du ledger adjacent à la largeur de fenêtre disponible (~1036px). Corrigé en réduisant le clamp (`clamp(2.25rem, 1rem + 3.6vw, 4rem)`), en élargissant légèrement la colonne (1fr:1.8fr) et en ajoutant `overflow-wrap: anywhere` en filet de sécurité. Reconfirmé sans chevauchement après correction.
+
+## Preuve responsive
+
+Puppeteer reste indisponible dans cet environnement (limite déjà signalée en MIG-05B-B/MIG-05C/MIG-05C-B/MIG-05D). Inspection visuelle réelle via navigateur à la largeur de fenêtre disponible (~1036px), défilement complet de la page après correction du chevauchement : hero, secteurs (2 colonnes), 5 sources d'interruption (navy, inchangée), « Continuer » + ledger, RTO/RPO renforcé, split ISO, duel PCA/PRA majeur, CORO Documents, ressources — tous rendus sans débordement ni chevauchement.
+
+## Tests, build
+
+`tests/guide-pca-migration.test.ts` étendu à 21 tests (4 tests MIG-05D-B ajoutés : ancre « Continuer » éditoriale non clonée de PSI, duel PCA/PRA majeur sans valeur inventée, précision des revendications sectorielles avec reformulation ISO 22301, concepts ISO Exercer/Réviser/Améliorer sans fréquence annuelle). 458 tests passent. `tsc --noEmit`, ESLint et `npm run build` propres. Contrôle de non-régression : toutes les routes déjà vérifiées en MIG-05D répondent toujours 200, un seul pied de page confirmé.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante. Les décisions PMU et PSI restent inchangées et ne sont pas rouvertes par cette passe.
