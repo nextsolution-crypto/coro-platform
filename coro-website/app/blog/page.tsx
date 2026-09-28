@@ -6,6 +6,7 @@ import { serverApiUrl } from '@/lib/site/api';
 import { localeFromSearchParams, type Locale } from '@/lib/site/locale';
 import { paginate, pageNumbers } from '@/lib/site/pagination';
 import { buildPageMetadata } from '@/lib/site/seo';
+import { filterPostsByTaxonomy } from '@/lib/site/blog-taxonomy';
 import styles from './page.module.css';
 
 export const revalidate = 0;
@@ -32,8 +33,10 @@ type Post = {
   excerptEn?: string;
   coverImage?: string;
   category?: string;
+  tags?: string[];
   publishedAt?: string;
 };
+
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Réglementation & Normes': '#2980B9',
@@ -56,6 +59,10 @@ const copy = {
     paginationLabel: 'Pagination du blogue',
     prev: '← Précédente',
     next: 'Suivante →',
+    filteredByTag: (tag: string) => `Articles liés à « ${tag} »`,
+    clearFilter: 'Effacer le filtre',
+    tagEmpty: 'Aucun article associé à ce mot-clé pour l’instant.',
+    showAll: 'Afficher tous les articles',
   },
   en: {
     metaTitle: 'CORO Blog — Emergency Management, Compliance and Fire Safety',
@@ -69,10 +76,14 @@ const copy = {
     paginationLabel: 'Blog pagination',
     prev: '← Previous',
     next: 'Next →',
+    filteredByTag: (tag: string) => `Articles tagged “${tag}”`,
+    clearFilter: 'Clear filter',
+    tagEmpty: 'No articles associated with this tag yet.',
+    showAll: 'Show all articles',
   },
 } as const;
 
-type PageProps = { searchParams?: Promise<{ lang?: string; category?: string; page?: string }> };
+type PageProps = { searchParams?: Promise<{ lang?: string; category?: string; tag?: string; page?: string }> };
 
 async function getPosts(): Promise<Post[]> {
   try {
@@ -85,9 +96,14 @@ async function getPosts(): Promise<Post[]> {
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  const locale = localeFromSearchParams((await searchParams) ?? {});
+  const params = (await searchParams) ?? {};
+  const locale = localeFromSearchParams(params);
   const t = copy[locale];
-  return buildPageMetadata({ path: '/blog', locale, title: t.metaTitle, description: t.metaDescription, absoluteTitle: true });
+  // Filtered discovery states (?category=, ?tag=) are navigation views, not independent SEO
+  // landing pages: canonical already excludes query (see lib/site/seo.ts), and we noindex,follow
+  // them explicitly so the crawl doesn't treat every category/tag combination as its own page.
+  const isFiltered = Boolean(params.category || params.tag);
+  return buildPageMetadata({ path: '/blog', locale, title: t.metaTitle, description: t.metaDescription, absoluteTitle: true, indexable: !isFiltered });
 }
 
 function articleHref(slug: string, locale: Locale): string {
@@ -102,9 +118,15 @@ function categoryHref(category: string | null, locale: Locale): string {
   return qs ? `/blog?${qs}` : '/blog';
 }
 
-function pageHref(page: number, category: string, locale: Locale): string {
+/** Clears the tag filter (single-tag discovery, MIG-07C) while preserving category/locale. */
+function clearTagHref(category: string, locale: Locale): string {
+  return categoryHref(category || null, locale);
+}
+
+function pageHref(page: number, category: string, tag: string, locale: Locale): string {
   const params = new URLSearchParams();
   if (category) params.set('category', category);
+  if (tag) params.set('tag', tag);
   if (locale === 'en') params.set('lang', 'en');
   if (page > 1) params.set('page', String(page));
   const qs = params.toString();
@@ -123,14 +145,20 @@ function formatDate(publishedAt: string | undefined, locale: Locale): string {
 }
 
 export default async function BlogPage({ searchParams }: PageProps) {
-  const { lang: langParam, category: categoryParam, page: pageParam } = (await searchParams) ?? {};
+  const { lang: langParam, category: categoryParam, tag: tagParam, page: pageParam } = (await searchParams) ?? {};
   const locale: Locale = langParam === 'en' ? 'en' : 'fr';
   const t = copy[locale];
   const posts = await getPosts();
   const activeCategory = categoryParam || '';
-  const filteredPosts = activeCategory ? posts.filter((p) => p.category === activeCategory) : posts;
+  const activeTag = tagParam || '';
+
+  // Filter BEFORE paginating (category, then tag) so pages are never sparse/empty from
+  // slicing-before-filtering. Single active tag at a time — no multi-select faceting.
+  const filteredPosts = filterPostsByTaxonomy(posts, activeCategory, activeTag);
+
   const categories = Array.from(new Set(posts.map((p) => p.category).filter((c): c is string => Boolean(c))));
 
+  // Changing the filter always resets to page 1 (no page param carried in tagHref/categoryHref).
   const requestedPage = Number.parseInt(pageParam ?? '1', 10);
   const { pageItems, currentPage, totalPages } = paginate(filteredPosts, requestedPage);
   const isFirstPage = currentPage === 1;
@@ -162,9 +190,30 @@ export default async function BlogPage({ searchParams }: PageProps) {
         </PageSection>
       )}
 
+      {activeTag && (
+        <PageSection tone="white" density="compact">
+          <div className={styles.activeFilter}>
+            <p className={styles.activeFilterLabel}>{t.filteredByTag(activeTag)}</p>
+            <a href={clearTagHref(activeCategory, locale)} className={styles.clearFilter}>
+              {t.clearFilter}
+            </a>
+          </div>
+        </PageSection>
+      )}
+
       <PageSection tone={categories.length > 0 ? 'soft' : 'white'}>
-        {filteredPosts.length === 0 ? (
+        {posts.length === 0 ? (
           <p className={styles.empty}>{t.empty}</p>
+        ) : filteredPosts.length === 0 ? (
+          // Distinct from the global empty-Blog state above (posts.length === 0) and from the
+          // fail-soft/API-down state, which also collapses to posts.length === 0 — a valid tag
+          // with zero matches is neither "no articles" nor "API failure".
+          <div className={styles.tagEmpty}>
+            <p>{t.tagEmpty}</p>
+            <a href={categoryHref(activeCategory || null, locale)} className={styles.clearFilter}>
+              {t.showAll}
+            </a>
+          </div>
         ) : (
           <div className={styles.stack}>
             {featured && (
@@ -234,7 +283,7 @@ export default async function BlogPage({ searchParams }: PageProps) {
             {totalPages > 1 && (
               <nav className={styles.pagination} aria-label={t.paginationLabel}>
                 {currentPage > 1 && (
-                  <a href={pageHref(currentPage - 1, activeCategory, locale)} className={styles.pageLink}>
+                  <a href={pageHref(currentPage - 1, activeCategory, activeTag, locale)} className={styles.pageLink}>
                     {t.prev}
                   </a>
                 )}
@@ -244,7 +293,7 @@ export default async function BlogPage({ searchParams }: PageProps) {
                   ) : (
                     <a
                       key={p}
-                      href={pageHref(p, activeCategory, locale)}
+                      href={pageHref(p, activeCategory, activeTag, locale)}
                       className={styles.pageLink}
                       data-active={p === currentPage}
                       aria-current={p === currentPage ? 'page' : undefined}
@@ -254,7 +303,7 @@ export default async function BlogPage({ searchParams }: PageProps) {
                   )
                 )}
                 {currentPage < totalPages && (
-                  <a href={pageHref(currentPage + 1, activeCategory, locale)} className={styles.pageLink}>
+                  <a href={pageHref(currentPage + 1, activeCategory, activeTag, locale)} className={styles.pageLink}>
                     {t.next}
                   </a>
                 )}

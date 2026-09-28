@@ -1,0 +1,36 @@
+{
+  "capturedFrom": "https://api.getcoro.io/api/blog/public/:slug (live production, read-only, MIG-07B session)",
+  "note": "Protects the CONTRACT (shape, required fields, structural facts), not today's live catalog. Do not assert on total post count, ordering, or full HTML bodies verbatim.",
+  "routePattern": "/blog/[slug]",
+  "apiEndpoint": "GET /api/blog/public/:slug",
+  "publicationGateField": "isPublished",
+  "languageContract": "strict — both titleEn AND contentEn must be non-empty for hasEnglish=true; no soft per-field fallback (unlike the index)",
+  "qaArticles": [
+    {
+      "slug": "conformite-resilience-operationnelle-pmu",
+      "isPublished": true,
+      "hasEnglish": true,
+      "category": "Guides pratiques",
+      "hasCoverImage": true,
+      "tagCount": 13,
+      "bodyShape": { "hasTable": true, "h2Count": 14, "h3Count": 0, "inBodyImgCount": 0, "inBodyLinkCount": 0 },
+      "characteristics": "substantial long-form, table present"
+    },
+    {
+      "slug": "indicateurs-resilience-kpi-preparation-organisation",
+      "isPublished": true,
+      "hasEnglish": true,
+      "category": "Guides pratiques",
+      "hasCoverImage": true,
+      "tagCount": 14,
+      "bodyShape": { "hasTable": true, "h2Count": 19, "h3Count": 0, "inBodyImgCount": 0, "inBodyLinkCount": 0, "ulCount": 12 },
+      "characteristics": "long-form, table + multiple lists, structurally distinct from the first sample"
+    }
+  ],
+  "requiredResponseFields": [
+    "titleFr", "titleEn", "contentFr", "contentEn",
+    "coverImage", "category", "tags", "authorName", "authorTitle",
+    "seoTitleFr", "seoTitleEn", "seoDescFr", "seoDescEn",
+    "isPublished", "publishedAt", "updatedAt"
+  ]
+}

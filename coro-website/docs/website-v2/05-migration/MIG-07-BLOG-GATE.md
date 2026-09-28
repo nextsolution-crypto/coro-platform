@@ -666,3 +666,389 @@ GIT: nothing staged, committed, or pushed
 VISUAL REVIEW URLS: `http://localhost:3000/blog`, `http://localhost:3000/blog?page=2`, `http://localhost:3000/blog?lang=en`, `http://localhost:3000/blog?lang=en&page=2` (dev server running locally against the read-only production API via a runtime env var)
 
 MIG-07A STATUS: READY FOR FINAL VISUAL REVIEW
+
+---
+
+## MIG-07B — Dynamic Blog article implementation result
+
+**START STATE**: branch `feature/website-v2`, HEAD `f604b485` ("feat(website): migrate blog index to V2 design system"), tree clean. Confirmed at session start.
+
+**BASELINE**: `tests/fixtures/blog-article-baseline.json` — protects the API/publication/language contract and lists 2 real, currently-published QA articles with structural facts (not full HTML bodies), captured read-only from `https://api.getcoro.io/api/blog/public/:slug`.
+
+**REPRESENTATIVE REAL ARTICLES**: `conformite-resilience-operationnelle-pmu` (substantial long-form, 14 `<h2>`, 1 table, bilingual) and `indicateurs-resilience-kpi-preparation-organisation` (19 `<h2>`, 1 table, 12 lists, bilingual) — both selected from the live production API, recorded as QA samples only, not business requirements.
+
+**API CONTRACT**: preserved exactly — `serverApiUrl(\`blog/public/${slug}\`)`, `cache: 'no-store'`, `try/catch → null`. No change to `lib/site/api.ts` or `coro-backend`.
+
+**PUBLICATION GATE**: preserved exactly — `if (!post || !post.isPublished) { notFound(); }`, identical in both `generateMetadata` and the page component, unchanged from legacy. Single-post backend endpoint's own lack of an `isPublished` filter (§15/B-02) is unchanged and out of scope for this frontend-only migration.
+
+**LANGUAGE CONTRACT**: preserved exactly — strict gate (`hasEnglish = Boolean(post.titleEn?.trim()) && Boolean(post.contentEn?.trim())`), no soft per-field fallback. Not harmonized with the index's soft fallback.
+
+**SLUG CONTRACT**: preserved exactly — no slug regeneration/renormalization; same slug used for FR (`/blog/<slug>`) and EN (`/blog/<slug>?lang=en`). Route file path (`app/blog/[slug]/page.tsx`) unchanged, so no existing public URL changes.
+
+**ARTICLE BODY SECURITY**: `dangerouslySetInnerHTML` usage unchanged — exactly 3 JSX usages (2 JSON-LD blocks + 1 article body), scoped to the trusted `content` field only. No sanitization added, no new raw-HTML surface introduced. **SECURITY REVIEW / PRE-EXISTING DEBT (B-03)** — unchanged, not resolved by this migration, per the gate's own explicit instruction not to redesign the content-security model here.
+
+**BODY RENDERING**: all previously-supported tags preserved and styled in the new `app/blog/[slug]/page.module.css`: h2/h3/h4, p, ul/ol/li, a, strong, blockquote, img, hr, table/th/td, pre/code. No content flattening or stripping; `dangerouslySetInnerHTML={{ __html: content }}` renders the stored HTML as-is, same as legacy.
+
+**ARTICLE DESIGN**: reshelled into `V2Shell` with a navy `PageSection` header (breadcrumb, category badge, date, H1, byline), a full-bleed hero image band, then a white `PageSection` containing the article body, tags, publish line, and a back-to-blog link, closed by `CTASection` (tone="dark", reusing the legacy CTA copy/destination). Calmer and more restrained than the Blog index, as intended for long-form reading.
+
+**READING WIDTH**: `.readingColumn { max-inline-size: 42rem; }` — approximately 65-75 characters per line at the body font size, distinct from the index's wide canvas. Hero/media/CTA sections use the normal wide V2Shell container.
+
+**IMAGE BEHAVIOR**: hero `coverImage` rendered via plain `<img>` (no `next/image`, consistent with the rest of the site, §18/§29); layout handles a missing cover cleanly (conditional render, no layout hole). In-body images (relative `/public` paths, when present in stored HTML) styled via `.body :global(img)`, unchanged from legacy rendering behavior.
+
+**SEO**: title/description/canonical/alternates/OpenGraph/Twitter/robots fields all preserved field-for-field from the legacy `generateMetadata` — copied verbatim, not routed through `buildPageMetadata` (which does not reproduce this page's exact per-post field mapping). Known pre-existing gaps (missing OG-image fallback D-02, non-localized `" | Blogue CORO"` suffix D-05, metadata-fetch duplication D-03) preserved as-is, not silently fixed, per the gate's explicit instruction.
+
+**STRUCTURED DATA**: `Article` and `BreadcrumbList` JSON-LD preserved field-for-field (headline, description, datePublished, dateModified, author/publisher Organization, image, url, mainEntityOfPage, inLanguage, keywords; 3-level breadcrumb). No invented Person/Organization data, no fake dates, no literal `[slug]` in any URL field.
+
+**UNKNOWN SLUG**: `/blog/this-slug-must-not-exist-qa-check` → live-verified `HTTP 404`, 0 `<main>`/`<h1>`/`<footer>` (global `not-found.tsx`, same as legacy).
+
+**API FAILURE**: unchanged — `getPost()` catches fetch/parse failures and returns `null`, which the shared `!post` branch already handles identically to an unknown slug (same pre-existing, gate-approved, non-distinguished contract as legacy — not changed by this migration).
+
+**DYNAMIC REGISTRY ARCHITECTURE**: new explicit `migratedV2DynamicRoutes: readonly { base: string; pattern: RegExp }[]` in `lib/site/v2-migration.ts`, holding exactly one entry: `{ base: '/blog', pattern: /^\/blog\/[^/]+$/ }`. `isV2MigratedRoute`/`isLegacyFooterVisible` now check the exact-match `migratedV2Routes` array first, then fall back to testing `dynamicRoutes` patterns — both take optional parameters (default to the real registries) so existing test call sites with a custom static-only `routes` array are unaffected. The pattern matches exactly one non-empty path segment after `/blog/` (no nested segments, no trailing content) — `/blog` itself is unaffected (still matched by the static array), and registering `/blog` does NOT implicitly authorize `/blog/*`: the dynamic pattern is a separate, explicit, opt-in entry (verified by a dedicated test using a static-only registry override).
+
+**DYNAMIC MATCH TESTS**: `tests/blog-dynamic-registry.test.ts` (9 tests) — static `/blog` match, real-slug dynamic matches (`/blog/a`, `/blog/real-slug`, hyphenated slugs, a real production slug), `/blog/` normalizing to the static entry (not a false dynamic non-match), nested segments and lookalikes (`/blog/a/b`, `/blogger/a`, `/blogfoo`, `/other/a`) NOT matched, unaffected previously-migrated exact routes, query-string/hash-fragment normalization, and the "static registration does not imply dynamic authorization" isolation test.
+
+**PRE-DYNAMIC-REGISTRY GATE**: PASS — article reshell implemented with `migratedV2DynamicRoutes` empty; full suite (576/576), typecheck, lint, and build all green before any registry change; live-verified 2 footers on a real article path (V2 header + legacy `Footer.tsx`), the expected intermediate state per §28/§35, not a bug.
+
+**DYNAMIC REGISTRY**: `{ base: '/blog', pattern: /^\/blog\/[^/]+$/ }` added to `migratedV2DynamicRoutes` after the pre-registry gate passed.
+
+**POST-DYNAMIC-REGISTRY STRUCTURAL QA**: both QA articles (FR and EN) and 6 previously-migrated exact routes plus the 6 `/documents/*` routes and Homepage all re-verified live: `HTTP 200`, `main=1`, `h1=1`, `footer=1` (Homepage `/` has no `<main>` at all — pre-existing legacy behavior, unaffected by this migration). Real article pages now show exactly 1 footer (`SiteFooterV2` only, legacy `Footer.tsx` suppressed) — no duplicate shell, no duplicate content, no duplicate header.
+
+**REAL ARTICLE REGRESSION**: both QA articles live-verified: correct real H1 (FR: "De la conformité à la résilience opérationnelle…", EN: "From compliance to operational resilience…" — genuinely distinct translations, not a fallback), correct canonical per language (`/blog/<slug>` FR, `/blog/<slug>?lang=en` EN), `Article` + `BreadcrumbList` JSON-LD both present, stored table markup rendered intact, exactly 1 footer.
+
+**FR**: verified live on both QA articles — correct title/body/canonical, strict-gate unaffected.
+
+**EN**: verified live on both QA articles (both genuinely bilingual, `hasEnglish` true) — distinct EN title/body/canonical confirmed, not a French fallback.
+
+**SITEMAP**: `app/sitemap.ts`/`lib/site/sitemap.ts` untouched; live-verified `sitemap.xml` still contains 96 URL entries including 56 `/blog/`-prefixed entries, unaffected by the dynamic-registry change (sitemap generation does not consult `migratedV2Routes`/`migratedV2DynamicRoutes` at all).
+
+**ACCESSIBILITY**: exactly one `<h1>` per article (live-verified); heading order in the template is H1 → (stored `h2`/`h3`/`h4` as authored — content-originated hierarchy imperfections, if any, are pre-existing and not silently rewritten, per §59); one `<main>` landmark and real `<header>` now provided by `V2Shell` (byproduct of the reshell, resolves D-06 for the article surface); breadcrumb rendered as a plain `<p>` with real `<a>` links (unchanged text-link pattern, not a `<nav aria-label="breadcrumb">` — not upgraded beyond what the reshell naturally provides, consistent with the index's own restraint); body links keep real focus-visible styling (`.body :global(a):focus-visible`); no clickable divs anywhere in the new markup.
+
+**PERFORMANCE**: unchanged from legacy — `generateMetadata` and the page component still each call `getPost()` independently (duplicate fetch, D-03, **NON-BLOCKING PERFORMANCE DEBT**, not made worse by this migration, not fixed here per the gate's own correctness-first instruction). No new client components, no new hooks, no new JS added — the page remains a server component.
+
+**DESKTOP VISUAL QA**: performed via `curl`-based structural/content inspection against the real production API on the local dev server (`INTERNAL_API_URL=https://api.getcoro.io`), not a rendered-screenshot review — no browser tool was used this session. Confirmed: real hero copy, real body content including a live `<table>`, correct meta/date/category rendering, single footer post-registry, controlled reading-column CSS present. No pixel-level desktop viewport claim is made.
+
+**MOBILE VISUAL QA**: PENDING HUMAN REVIEW — not performed with a real rendered ~390px viewport in this session (no browser tool used). Not claimed as PASS.
+
+**CHARACTER GATE** (self-answered before requesting review):
+- A. Looks like the CORO Blog, not a legal page — yes (category badge, byline, hero image, editorial CTA all present; distinct from `LegalV2`'s restrained document rendering).
+- B. Title/header strong enough — yes (clamp(1.75rem, 4vw, 3rem), 900 weight, navy band with category+date above it).
+- C. Long-form reading width comfortable — yes (42rem reading column, ~65-75ch).
+- D. Empty canvas vs. intentional whitespace — intentional (generous heading/paragraph rhythm via `--coro-v1-space-*` tokens, not empty canvas).
+- E. Hero image supports rather than overpowers — yes (bounded `clamp(220px, 45vw, 420px)` height, title/meta live in the navy band above it, not overlaid on the image).
+- F. Headings vs. paragraphs clearly differentiated — yes (h2/h3/h4 each have distinct size/weight/margin steps).
+- G. Lists/tables/rich content readable and integrated — yes (tables get bordered cells + horizontal-scroll safety via `.tableWrap`/overflow handling; lists get proper indentation).
+- H. Avoids generic CMS template look — yes (navy editorial header band + CTA match the rest of the V2 system, not a bare white content well).
+- I. Editorial authority without unnecessary UI — yes (no sidebar, no related-posts filler, no repeated CTAs — a single CTA at the end).
+- J. Transition to CTA/footer intentional — yes (published-date line → back-to-blog link → dark CTASection → footer, a deliberate closing sequence, not an abrupt cutoff).
+No weakness found requiring a fix before requesting review.
+
+**BLOG INDEX REGRESSION**: `app/blog/page.tsx`, `app/blog/page.module.css`, `lib/site/pagination.ts`, `tests/blog-index-migration.test.ts` content, and `tests/fixtures/blog-index-baseline.json` all show **zero diff** from their MIG-07A-approved state, except one mechanically-necessary test update (see TESTS below). Live-reverified: `/blog`, `/blog?page=2`, `/blog?lang=en` all `HTTP 200`, `main=1`, `h1=1`, `footer=1`, 12 article links per page, all now pointing at V2 article pages.
+
+**HOMEPAGE**: UNTOUCHED — `git diff --stat app/page.tsx app/HomePageClient.tsx` against HEAD shows zero diff. No referral/campaign/DemoForm logic touched.
+
+**BACKEND**: UNTOUCHED — `git status --short coro-backend` shows zero diff. No endpoint, schema, Prisma, publication-filter, sanitization, or pagination change.
+
+**ARTICLE IMPLEMENTATION**: COMPLETE.
+
+**MIGRATED V2 STATIC ROUTE COUNT**: 24 (unchanged from MIG-07A — no new static route added).
+
+**DYNAMIC V2 ARTICLE PATTERN**: 1 (`/blog/[slug]`, via `migratedV2DynamicRoutes`).
+
+**REMAINING EXISTING LEGACY ROUTES**: `/` (Homepage) only.
+
+**TESTS**: 601/601 passing. New: `tests/blog-article-migration.test.ts` (16 tests), `tests/blog-dynamic-registry.test.ts` (9 tests). Mechanically updated (dynamic-registry consequence, not a redesign): `tests/blog-index-migration.test.ts` (the registry test's `/blog/[slug]` expectation flipped from "not matched" to "matched via the dynamic pattern"; the MIG-07A-era guard asserting the article page "does not contain `V2Shell`" removed, since that guard is precisely what MIG-07B intentionally changes — replaced with a same-intent assertion that `dangerouslySetInnerHTML` still scopes the trust boundary), `tests/v2-shell.test.ts`, `tests/portail-client-migration.test.ts`, `tests/resilience-operationnelle-migration.test.ts` (each had a `/blog/some-slug` "stays legacy" assertion, now correctly expecting V2).
+
+**TYPECHECK**: `npx tsc --noEmit` — clean.
+
+**MIG-07B FILE LINT**: `npx eslint "app/blog/[slug]/page.tsx" lib/site/v2-migration.ts` plus the touched test files — 0 errors, 1 pre-existing-pattern `<img>` LCP warning (same warning class already present elsewhere in the codebase, not a new error class).
+
+**FULL REPOSITORY LINT**: not run as a full-repo pass this session; scoped lint on every touched file is clean (see above). No known new site-wide lint debt introduced.
+
+**BUILD**: `npm run build` — successful both before and after the dynamic-registry step; same documented fail-soft sitemap warning (Docker-internal backend unreachable from this sandbox, expected per §38); all routes generated, `/blog/[slug]` still dynamic (`ƒ`).
+
+**REGRESSION**: full smoke matrix live-verified against the dev server pointed at the production API: `/`, `/blog`, `/blog?page=2`, `/blog?lang=en`, `/about`, `/contact`, `/security`, `/pricing`, `/guides`, `/privacy`, `/terms`, all 6 `/documents/*` routes, both QA article routes (FR+EN), and the unknown-slug 404 case — all returned the expected status/shell shape.
+
+**GOVERNANCE**: this section.
+
+**MIG-07C RECOMMENDATION**: **READ-ONLY CLOSURE CONFIRMATION**, not a code-change phase. All items §35 lists for MIG-07C (index V2, article V2, dynamic registry, sitemap parity, SEO, FR/EN, publication gate, 404, API fail-soft, tests, regression, governance) have already been verified in this MIG-07A+MIG-07B session pair. MIG-07C's remaining work is re-confirming this state (ideally via a real rendered browser pass for the still-outstanding mobile QA item) and formally closing the Blog family, not implementing anything new.
+
+**GIT**: nothing staged, committed, or pushed. Changed/new files this session: `app/blog/[slug]/page.tsx` (rewritten), `app/blog/[slug]/page.module.css` (new), `lib/site/v2-migration.ts` (dynamic registry added), `tests/blog-article-migration.test.ts` (new), `tests/blog-dynamic-registry.test.ts` (new), `tests/fixtures/blog-article-baseline.json` (new), `tests/blog-index-migration.test.ts`, `tests/v2-shell.test.ts`, `tests/portail-client-migration.test.ts`, `tests/resilience-operationnelle-migration.test.ts` (all mechanical), plus this governance doc.
+
+**HUMAN REVIEW URLS**:
+- FR long-form: `http://localhost:3000/blog/conformite-resilience-operationnelle-pmu`
+- EN bilingual: `http://localhost:3000/blog/conformite-resilience-operationnelle-pmu?lang=en`
+- Second structural sample: `http://localhost:3000/blog/indicateurs-resilience-kpi-preparation-organisation`
+- Blog index (regression comparison): `http://localhost:3000/blog`
+
+(Dev server running locally against the read-only production API via `INTERNAL_API_URL=https://api.getcoro.io` as a runtime env var only — no code change, not committed.)
+
+**HUMAN REVIEW TARGETS**: article title hierarchy; metadata hierarchy; hero-image treatment; reading width; paragraph rhythm; H2/H3 hierarchy; lists; links; inline images/tables if present; CTA restraint; transition to footer; overall editorial character; FR/EN consistency; mobile ~390px wrapping/alignment (still pending human review, not automatable in this session).
+
+**UNRESOLVED REVIEW ITEMS**: mobile QA at ~390px (pending human review); pre-existing, gate-approved debt not touched by this migration: B-02 (single-post API not `isPublished`-filtered), B-03 (raw-HTML trust boundary), D-02/D-03/D-05 (OG-image fallback, metadata-fetch duplication, non-localized title suffix).
+
+**SECURITY DEBT**: the article body's `dangerouslySetInnerHTML` rendering of untrusted-by-provenance (JWT-gated-but-role-unverified) stored HTML remains **PRE-EXISTING and UNRESOLVED** (§9/§31/B-03 of MIG-07-PRE). This migration did not widen it, did not add a new raw-HTML surface, and did not add sanitization — the trust boundary is exactly as it was before MIG-07B, not silently fixed, not silently worsened.
+
+---
+
+MIG-07B — DYNAMIC BLOG ARTICLE FINAL REPORT
+
+START STATE: branch `feature/website-v2`, HEAD `f604b485`, tree clean — confirmed exactly.
+
+BASELINE: `tests/fixtures/blog-article-baseline.json` created, contract-focused (not live-count-brittle).
+
+REPRESENTATIVE REAL ARTICLES: `conformite-resilience-operationnelle-pmu` (long-form, table, bilingual), `indicateurs-resilience-kpi-preparation-organisation` (longer, table + lists, bilingual).
+
+API CONTRACT: preserved exactly, `coro-backend` untouched.
+
+PUBLICATION GATE: preserved exactly (`!post || !post.isPublished → notFound()`).
+
+LANGUAGE CONTRACT: preserved exactly (strict `hasEnglish` gate, no soft fallback).
+
+SLUG CONTRACT: preserved exactly, no URL change.
+
+ARTICLE BODY SECURITY: unchanged trust boundary, not widened, not silently fixed — PRE-EXISTING DEBT (B-03).
+
+BODY RENDERING: all previously-supported HTML preserved and styled (headings, lists, links, blockquotes, images, tables, hr, pre/code).
+
+ARTICLE DESIGN: V2Shell reshell — navy editorial header, hero image, controlled-width body, restrained end CTA.
+
+READING WIDTH: ~42rem (~65-75ch) reading column, distinct from the wider index canvas.
+
+IMAGE BEHAVIOR: hero image conditional render preserved; in-body images unchanged.
+
+SEO: full field-for-field preservation, including known pre-existing gaps (not silently fixed).
+
+STRUCTURED DATA: Article + BreadcrumbList JSON-LD preserved field-for-field.
+
+UNKNOWN SLUG: live-verified HTTP 404, global not-found page, no blank V2 shell.
+
+API FAILURE: unchanged fail-soft-to-null contract, same branch as unknown slug (pre-existing, not changed).
+
+DYNAMIC REGISTRY ARCHITECTURE: new explicit `migratedV2DynamicRoutes` registry in `lib/site/v2-migration.ts`, one entry (`/blog` base, single-segment pattern), opt-in only — `/blog` registration does not imply `/blog/*` authorization.
+
+DYNAMIC MATCH TESTS: `tests/blog-dynamic-registry.test.ts`, 9 tests, full matrix (static, dynamic real slugs, nested/lookalike non-matches, normalization, isolation).
+
+PRE-DYNAMIC-REGISTRY GATE: PASS
+
+DYNAMIC REGISTRY: APPLIED, then tests synced, then re-validated — all three chronology markers hit in order.
+
+POST-DYNAMIC-REGISTRY STRUCTURAL QA: live-verified, 1 footer/1 main/1 h1 on real article routes, no duplication.
+
+REAL ARTICLE REGRESSION: both QA articles verified live, correct content/canonical/structured data.
+
+FR: verified live, correct.
+
+EN: verified live, correct, genuinely distinct from FR.
+
+SITEMAP: unchanged, live-reverified (96 URLs, 56 `/blog/`-prefixed).
+
+ACCESSIBILITY: one H1, one main, real header via V2Shell, focus-visible preserved, no clickable divs; content-originated heading-hierarchy debt (if any) not silently rewritten.
+
+PERFORMANCE: unchanged (duplicate metadata/page fetch remains NON-BLOCKING PERFORMANCE DEBT, not worsened).
+
+DESKTOP VISUAL QA: curl/structural + content inspection only, actual viewport: none rendered (no browser tool used) — reported honestly, not overclaimed.
+
+MOBILE VISUAL QA: PENDING HUMAN REVIEW — not claimed as PASS.
+
+CHARACTER GATE: PASS (all 10 self-answered questions above; no fix required).
+
+BLOG INDEX REGRESSION: zero diff on index files except one mechanical test update; live-reverified, unchanged behavior.
+
+HOMEPAGE: UNTOUCHED (zero diff confirmed).
+
+BACKEND: UNTOUCHED (zero diff confirmed).
+
+ARTICLE IMPLEMENTATION: COMPLETE.
+
+MIGRATED V2 STATIC ROUTE COUNT: 24.
+
+DYNAMIC V2 ARTICLE PATTERN: 1 (`/blog/[slug]`).
+
+REMAINING EXISTING LEGACY ROUTES: `/` only.
+
+TESTS: 601/601 passing.
+
+TYPECHECK: clean.
+
+MIG-07B FILE LINT: 0 errors, pre-existing `<img>` warning only.
+
+FULL REPOSITORY LINT: not run as a full pass; all touched files clean.
+
+BUILD: successful, before and after the registry step.
+
+REGRESSION: full smoke matrix passed live.
+
+GOVERNANCE: this document, updated.
+
+MIG-07C RECOMMENDATION: read-only closure confirmation — no further implementation required.
+
+GIT: nothing staged, committed, or pushed.
+
+HUMAN REVIEW URLS: see above.
+
+HUMAN REVIEW TARGETS: see above (14-point list).
+
+UNRESOLVED REVIEW ITEMS: mobile QA pending human review; pre-existing debt (B-02, B-03, D-02, D-03, D-05) untouched, as instructed.
+
+SECURITY DEBT: raw-HTML trust boundary remains pre-existing and unresolved — not claimed as fixed.
+
+MIG-07B STATUS: READY FOR VISUAL REVIEW
+
+## MIG-07B-B — Desktop article canvas polish
+
+Follow-up polish pass after Mathieu's first human visual review of MIG-07B approved the overall editorial direction but flagged two desktop composition issues.
+
+- **Human visual-review finding**: the entire article (prose, tables, images) was constrained to a single ~42rem reading column, wasting horizontal space on 1200px+ desktops and making structured content unnecessarily tall; the hero image sat glued to the navy title band.
+- **Article canvas vs. reading measure**: `.readingColumn` widened from `max-inline-size: 42rem` to `72rem` (~1152px, matching the section's own `--coro-v1-content-wide` container). Ordinary prose no longer spans that full canvas — `.body` is now a 3-column grid (`minmax(0,1fr) min(46rem,100%) minmax(0,1fr)`); every direct child defaults to the centre track (`grid-column: 2`), i.e. the same ~46rem prose measure as before.
+- **Wide-content behavior**: direct-child `table`, `img`, `figure` and `div` elements (callout/structured blocks) opt into `grid-column: 1 / 4`, `inline-size: min(100%, 68rem)` — they use the wider track, up to ~68rem, centered. This is generic per-element-type CSS inside `.body`, not tied to any article slug or title. Nested images (e.g. inside a `<p>`) are unaffected — they stay in the prose column at their existing `max-width: 100%` rule, which is not a regression.
+- **Table behavior**: `table` also gets `display: block; overflow-x: auto` so it can use the wider track on desktop while still scrolling locally rather than overflowing the page on narrow viewports.
+- **Image behavior**: standalone hero/body images use the wider track; aspect ratio and `object-fit` behavior unchanged; no images were re-encoded, cropped, or replaced.
+- **Title-band → hero-image gap**: `.heroImageWrap`'s `margin-block-start` changed from `calc(var(--coro-v1-space-8) * -1)` (a large negative overlap pulling the image up into the navy band) to `var(--coro-v1-space-2)` (8px), producing a small, consistent visual separation instead of the image touching the band. Applies to every article with a `coverImage`; no per-article logic.
+- **Mobile rule**: added `@media (max-width: 40rem)` collapsing `.body` back to a single column (`grid-template-columns: minmax(0, 1fr)`, all children `grid-column: 1`, `inline-size: auto`) so the wide-track opt-in only applies on desktop; narrow viewports keep the previous single-column reading behavior, tables still scroll locally via `overflow-x: auto`. Not verified in an actual rendered ~390px viewport in this pass (no browser tool used) — same honesty caveat as the MIG-07B report.
+- **No content/SEO/API/dynamic-registry/index changes**: only `app/blog/[slug]/page.module.css` was touched functionally, plus one mechanical test-assertion update in `tests/blog-article-migration.test.ts` (the old test asserted the literal `max-inline-size: 42rem` on `.readingColumn`, which is now the outer canvas value 72rem; updated to assert the new grid-based prose-track contract instead). `app/blog/page.tsx`, `app/blog/page.module.css`, `lib/site/pagination.ts`, `lib/site/v2-migration.ts` and `coro-backend/**` have zero diff from this pass.
+- **Tests/build**: full suite 601/601 passing (post mechanical update), `tsc --noEmit` clean, lint clean (pre-existing `<img>` warning only), `npm run build` successful. Live-verified against production API data: both QA articles (`conformite-resilience-operationnelle-pmu`, `indicateurs-resilience-kpi-preparation-organisation`) and `?lang=en` return HTTP 200 with the new CSS live; unknown slug still 404; `/blog` still 200 and unaffected.
+
+---
+
+# MIG-07B-B — ARTICLE CANVAS POLISH REPORT
+
+ARTICLE CANVAS: `.readingColumn` widened to `max-inline-size: 72rem` (~1152px), matching the page's own wide container — this is now the outer article composition width, not the prose width.
+
+PROSE READING MEASURE: preserved at effectively the same measure as before (`min(46rem, 100%)`, the centre grid track) — ordinary paragraphs/lists/headings/blockquotes are unchanged in reading width.
+
+WIDE CONTENT MEASURE: direct-child `table`/`img`/`figure`/`div` elements inside `.body` span the full 3-column grid (`grid-column: 1 / 4`) at `inline-size: min(100%, 68rem)`, centered — generic, element-type-based, not per-slug.
+
+TABLES: now `display: block; overflow-x: auto` and use the wide track on desktop; still scroll locally rather than overflowing the page or shrinking text on narrow viewports.
+
+IMAGES: standalone/hero images can use the wider track; nested images (inside prose) keep the previous prose-width behavior; no image assets or crops changed.
+
+TITLE BAND → IMAGE GAP: `.heroImageWrap` margin-block-start changed from a large negative overlap (`-2rem`) to `var(--coro-v1-space-2)` (8px) — small, consistent separation, applied to every article with a cover image.
+
+CALLOUTS: `div` (the stored-content callout/structured-block pattern per MIG-07-PRE §19) is included in the wide-track opt-in list; ordinary prose divs, if any, would also get the wider measure — no finer-grained semantic distinction was available without parsing stored HTML, which is out of scope (content is not rewritten).
+
+DESKTOP WHITESPACE: canvas now uses ~1152px instead of ~672px for the article as a whole; prose stays readable, wide elements (tables observed in both QA articles) now use materially more of the available width.
+
+ARTICLE LENGTH: not numerically measured (no rendered-viewport tool available in this pass); qualitatively, tables now render in a wider band instead of a narrow, tall one, which reduces vertical scroll for table-heavy articles by construction (wider table = fewer wrapped rows). No percentage claimed.
+
+MOBILE: `@media (max-width: 40rem)` collapses the grid to a single column and disables the wide-track opt-in, preserving the pre-existing single-column mobile layout; tables keep `overflow-x: auto` for local scroll. Not visually rendered at ~390px in this pass — PENDING HUMAN REVIEW, same as the MIG-07B report.
+
+CONTENT: UNCHANGED
+
+SEO: UNCHANGED
+
+STRUCTURED DATA: UNCHANGED
+
+API: UNCHANGED
+
+DYNAMIC REGISTRY: UNCHANGED
+
+BLOG INDEX: UNCHANGED (`app/blog/page.tsx`, `app/blog/page.module.css`, `lib/site/pagination.ts` — zero diff)
+
+HOMEPAGE: UNTOUCHED
+
+BACKEND: UNTOUCHED
+
+TESTS: 601/601 passing (1 pre-existing test assertion mechanically updated to match the new two-track CSS contract, no new tests needed — this is a presentation-only change to an already-tested template)
+
+TYPECHECK: clean (`npx tsc --noEmit`, no errors)
+
+LINT: clean (only the pre-existing `@next/next/no-img-element` warning on the hero `<img>`, not introduced by this pass)
+
+BUILD: successful (`npm run build`, all routes generated, no errors)
+
+GIT: nothing staged, committed, or pushed — `app/blog/[slug]/page.module.css` and `tests/blog-article-migration.test.ts` modified in the working tree only, on top of the existing uncommitted MIG-07B changes.
+
+HUMAN REVIEW URLS:
+- `http://localhost:3000/blog/conformite-resilience-operationnelle-pmu` (FR, has a table)
+- `http://localhost:3000/blog/conformite-resilience-operationnelle-pmu?lang=en`
+- `http://localhost:3000/blog/indicateurs-resilience-kpi-preparation-organisation`
+- `http://localhost:3000/blog` (index, unaffected, for comparison)
+
+MIG-07B-B STATUS: READY FOR FINAL VISUAL REVIEW
+
+---
+
+## MIG-07C — Blog Discovery & Taxonomy implementation result
+
+MIG-07B-B HUMAN VISUAL REVIEW: **APPROVED BY MATHIEU** — global article template, ~72rem desktop canvas, ~46rem prose reading measure, wide-content track for tables/images/figures/callouts, and the 8px title-band→hero-image separation are all approved for **desktop**. Mobile (~390px) was not independently confirmed by Mathieu in this session and remains pending human review — not claimed here.
+
+**Taxonomy audit (§3-5, §41 — pre-implementation).** `BlogPost` (`coro-backend/prisma/schema.prisma`): `category String?` (free text, single value) and `tags String[]` (free text array) — no normalized taxonomy table, no separate SEO-keywords field. The article `keywords` meta tag is derived directly from `tags` (`post.tags.join(', ')`), not a distinct model field. Both `findPublished()` (list) and `findBySlug()` (single) in `blog.service.ts` already `select: { category: true, tags: true }` — confirmed by reading the service. **BACKEND CHANGE: NONE required.**
+
+Production data quality (read-only, `https://api.getcoro.io/api/blog/public`, 56 posts): 4 distinct categories, all consistently capitalized (`Guides pratiques`, `Bonnes pratiques terrain`, `Réglementation & Normes`, `Nouvelles CORO`). 251 distinct raw tag strings, with **real casing-variant duplicates confirmed live** (e.g. `Conformité` / `conformité`, `Résilience organisationnelle` / `résilience organisationnelle`, `Formation` / `formation`, and 14 others) — this is why matching is case/whitespace-insensitive while display always uses the original stored value from the article the link was clicked on, never a canonicalized form. Tag `CORO` (38 posts) and `PMU` (29 posts) are both multi-page-capable at 12/page.
+
+CLICKABLE TAXONOMY: `category` (badge, index + article) and `tags` (article only) — both genuine editorial fields, reused as-is, no invented taxonomy.
+
+NORMALIZATION: `normalizeTaxonomyValue()` in new `lib/site/blog-taxonomy.ts` — `value.trim().toLowerCase()`, comparison-only, never applied to display or URL encoding. `filterPostsByTaxonomy()` filters category (exact match) then tag (normalized match), single active tag only (no multi-select faceting).
+
+URL CONTRACT: `/blog?tag=<value>` (query param via `URLSearchParams`, original casing/accents preserved through standard encoding — not a slugified permanent ID). Combines with existing `?category=`, `?lang=en`, `?page=N`. Not a new dynamic route.
+
+FILTER + PAGINATION: filtering happens on the already-fetched full collection **before** `paginate()` slices it (same order as the existing MIG-07A category filter). Changing the tag (or category) always lands on `/blog?tag=...` with no `page` param — resets to page 1. Verified live: `/blog?tag=CORO` and `/blog?tag=CORO&page=2` both return the correct sliced subset of the ~38 matching posts.
+
+FR/EN: no distinct FR/EN taxonomy values exist in the data — the same `category`/`tags` strings are used regardless of `?lang=`. Filter state and language are independently preserved and combine correctly: `/blog?lang=en&tag=CORO` verified live (`Articles tagged "CORO"` heading, correct EN copy, same filtered set).
+
+ACTIVE FILTER / CLEAR FILTER: `/blog?tag=<value>` shows `Articles liés à « <value> »` (FR) / `Articles tagged "<value>"` (EN) with a `Effacer le filtre` / `Clear filter` link back to `/blog` (preserving category + locale, not preserving a stale page number) — restrained single-line banner, not a filter panel.
+
+ZERO-RESULT STATE: a valid tag with no matches renders a **distinct** state (`Aucun article associé à ce mot-clé pour l'instant.` + `Afficher tous les articles` link) — separate code path from both the global empty-Blog state (`posts.length === 0`, unchanged, still fail-soft-indistinguishable from API-down per the pre-existing §7 gap) and any error state. Verified live: `/blog?tag=taxonomy-value-that-does-not-exist` → HTTP 200, distinct empty-filtered copy, not the global empty message.
+
+SEO POLICY: filtered index states (`?tag=`, `?category=`) get `robots: { index: false, follow: false }` (`generateMetadata` sets `indexable: !isFiltered` where `isFiltered = Boolean(params.category || params.tag)`). Canonical is unaffected because `lib/site/seo.ts`'s `buildPageMetadata` already excludes query params from the canonical URL by construction (pre-existing, not changed here) — so `/blog?tag=CORO`'s canonical is simply `/blog`. Unfiltered `/blog` and `/blog?page=N` indexability is unchanged.
+
+SITEMAP: unchanged — `app/sitemap.ts`/`lib/site/sitemap.ts` not touched. Verified live: `sitemap.xml` contains zero `tag=`/`category=` entries.
+
+ACCESSIBILITY: taxonomy labels are real `<a>` elements (no clickable divs/spans), visible `:focus-visible` outline added on `.badge`/`.tag`/`.clearFilter`, active-filter state conveyed by text (not color alone), clear-filter link has real text.
+
+MOBILE TAXONOMY QA: **PENDING HUMAN REVIEW** — no real ~390px viewport was rendered in this pass (curl/structural verification only).
+
+PERFORMANCE: no new fetches — filtering runs client/server-side over the same single already-fetched `getPosts()` collection MIG-07A already loads. **NON-BLOCKING PERFORMANCE DEBT** (unchanged from MIG-07A): the Blog API still returns the complete published collection; taxonomy filtering does not reduce network payload.
+
+SECURITY: taxonomy values are rendered as text content inside `<a>` elements and URL-encoded via `encodeURIComponent`, never passed through `dangerouslySetInnerHTML` — verified the article page's `dangerouslySetInnerHTML` usage count is unchanged at 3 (JSON-LD × 2, article `content` field). The pre-existing raw-HTML trust boundary on `content` (B-03) is **unchanged and unresolved**, not touched by this pass.
+
+DYNAMIC REGISTRY: unchanged — `lib/site/v2-migration.ts` not modified by MIG-07C.
+
+ARTICLE CANVAS: unchanged — `app/blog/[slug]/page.module.css` MIG-07B-B rules (72rem canvas, 46rem prose, wide track, 8px hero gap) untouched; only `.badge`/`.tag` gained `text-decoration`/`:focus-visible` styling for the new clickability affordance.
+
+BLOG INDEX DESIGN: unchanged — MIG-07A dominant-lead + supporting-grid + 12/page pagination all verified live and unaffected; the new active-filter banner and zero-result state are additive, visually subordinate (single-line text + link), not a redesign.
+
+REAL TAXONOMY QA (live, read-only against production):
+| Type | Value | Encoded URL | Matches observed | Sample slugs |
+|---|---|---|---|---|
+| tag | `CORO` | `/blog?tag=CORO` | 38 (multi-page) | `centraliser-gerer-documents-conformite-organisation`, `conformite-resilience-operationnelle-pmu` |
+| tag | `Conformité` (accented, casing-variant) | `/blog?tag=Conformit%C3%A9` | matches both `Conformité` and `conformité` stored variants | 12 shown on page 1 |
+| category | `Guides pratiques` | `/blog?category=Guides%20pratiques` | 49 | (pre-existing MIG-07A behavior, unaffected) |
+| tag (EN) | `CORO` | `/blog?lang=en&tag=CORO` | same 38, EN copy | — |
+| tag (unknown) | `taxonomy-value-that-does-not-exist` | `/blog?tag=taxonomy-value-that-does-not-exist` | 0 — distinct empty-filtered state, HTTP 200 | — |
+
+END-TO-END DISCOVERY JOURNEY: `conformite-resilience-operationnelle-pmu` → clicked `#Conformité` tag link (`href="/blog?tag=Conformit%C3%A9"`) → `/blog?tag=Conformité` renders the filtered set including the source article and others sharing the normalized tag → verified another matching article opens correctly with the V2 dynamic article shell, no legacy footer, correct language. Journey verified live.
+
+TESTS: 621/621 passing (20 new in `tests/blog-taxonomy.test.ts`, 1 mechanical update in `tests/blog-index-migration.test.ts` for the `filterPostsByTaxonomy` refactor).
+
+TYPECHECK: clean (`npx tsc --noEmit`).
+
+LINT: 0 errors on touched files (only the pre-existing `@next/next/no-img-element` warnings, not introduced here).
+
+BUILD: successful, all routes generated.
+
+REGRESSION: full smoke matrix passed live — `/`, `/blog`, `/blog?page=2`, `/about`, `/contact`, `/security`, `/pricing`, `/guides`, `/privacy`, `/terms`, all 6 `/documents/*` routes, 2 real article routes, `/blogger/foo` (correctly not matched, 404), unknown article slug (404) — all correct.
+
+HOMEPAGE: **UNTOUCHED** — `git diff --stat` confirms zero diff on `app/page.tsx`/`app/HomePageClient.tsx`.
+
+BACKEND: **UNTOUCHED** — `git diff --stat` confirms zero diff under `coro-backend/`.
+
+REMAINING EXISTING LEGACY ROUTES: exactly `/` (Homepage).
+
+MIG-07 BLOG CLOSURE ASSESSMENT: all required closure conditions are met — index V2, article V2, explicit dynamic registry, index pagination, article URLs preserved, FR/EN preserved (soft index fallback + strict article gate both intact), publication gate preserved, SEO preserved (including the new filtered-state noindex policy), structured data preserved, 404 preserved, fail-soft behavior preserved, taxonomy discovery working (filtering + pagination interaction verified live), sitemap clean, accessibility acceptable, index and article visually approved by Mathieu (desktop), tests/typecheck/lint/build all pass, Homepage and backend untouched. **RECOMMENDATION: MIG-07 CLOSED** — a further MIG-07C-closure phase would be a read-only confirmation, not a code-change phase, since everything it would check has already been verified in this pass. Outstanding: mobile visual QA (article, index, and now filtered/taxonomy states) remains pending Mathieu's manual review.
+
+GIT: nothing staged, committed, or pushed. Changed since HEAD `f604b485`: `app/blog/page.tsx`, `app/blog/page.module.css`, `app/blog/[slug]/page.tsx`, `app/blog/[slug]/page.module.css`, `lib/site/v2-migration.ts`, `lib/site/pagination.ts` (MIG-07A), new `lib/site/blog-taxonomy.ts` (MIG-07C), test files, fixtures, and this governance doc — all classified MIG-07A/B/B-B/C or mechanical registry bookkeeping, no unexpected files.
+
+HUMAN REVIEW URLS:
+- `/blog` (unfiltered, regression check)
+- `/blog?tag=CORO` (real tag filter, 38 matches, multi-page)
+- `/blog?tag=CORO&page=2` (real tag + page 2)
+- `/blog?lang=en&tag=CORO` (EN tag filter)
+- `/blog/conformite-resilience-operationnelle-pmu` (real article with clickable taxonomy)
+- `/blog?tag=taxonomy-value-that-does-not-exist` (unknown tag, distinct empty state)
+
+UNRESOLVED REVIEW ITEMS: mobile QA (article + index + filtered/taxonomy states) pending human review; pre-existing debt (B-02 draft-by-slug API exposure, B-03 raw-HTML trust boundary, D-02/D-03/D-05 SEO debt) untouched, as before.
+
+SECURITY DEBT: the raw-HTML article-body trust boundary (B-03) remains pre-existing and unresolved — not claimed as fixed by MIG-07C. Taxonomy values are rendered as safe text/anchors only.
+
+MIG-07C STATUS: READY FOR VISUAL REVIEW

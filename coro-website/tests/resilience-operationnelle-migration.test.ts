@@ -33,7 +33,8 @@ const omitted: [string, string][] = [
 test('the registry ends with /resilience-operationnelle after the eight approved routes; nothing else is migrated', () => {
   assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog']);
   assert.equal(isLegacyFooterVisible('/resilience-operationnelle'), false);
-  for (const legacy of ['/', '/blog/some-slug']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
+  assert.equal(isLegacyFooterVisible('/'), true);
+  assert.equal(isLegacyFooterVisible('/blog/some-slug'), false); // MIG-07B: dynamic article route now V2
 });
 
 test('V2Shell owns the chrome: no page-owned header, main, footer, legacy shell or inline stylesheet; V1 tokens only', () => {

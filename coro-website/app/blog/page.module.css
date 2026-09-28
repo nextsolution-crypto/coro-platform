@@ -7,6 +7,13 @@
 .filterChip[data-active="true"] { background: var(--ink); color: var(--coro-v1-surface-1); border-color: transparent; }
 .filterChip:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
 
+.activeFilter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--coro-v1-space-3); }
+.activeFilterLabel { margin: 0; font-size: var(--coro-v1-text-small); font-weight: 650; color: var(--ink); }
+.clearFilter { color: var(--coro-v1-red-600); font-size: var(--coro-v1-text-small); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.clearFilter:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.tagEmpty { display: flex; flex-direction: column; align-items: center; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-10) 0; text-align: center; color: var(--muted); }
+.tagEmpty p { margin: 0; font-size: var(--coro-v1-text-h3); }
+
 /* Featured story: the dominant editorial moment, full-width, large media, never mistaken for a grid tile. */
 .featured { display: grid; gap: var(--coro-v1-space-6); text-decoration: none; color: inherit; border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-6); }
 @media (min-width: 56rem) { .featured { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; } }

@@ -34,7 +34,7 @@ test('API contract preserved: no-store fetch to blog/public, fail-soft to []', (
 
 test('category filter query param preserved', () => {
   assert.match(page, /params\.set\('category', category\)/);
-  assert.match(code, /activeCategory \? posts\.filter/);
+  assert.match(code, /filterPostsByTaxonomy\(posts, activeCategory, activeTag\)/);
 });
 
 test('FR/EN soft per-field fallback preserved on the index (title falls to FR, excerpt falls to FR)', () => {
@@ -70,10 +70,9 @@ test('design: one featured story distinct from the supporting grid, category fil
   assert.match(css, /\.filterChip/);
 });
 
-test('/blog/[slug] (article page) is untouched by MIG-07A', () => {
+test('/blog/[slug] (article page) still renders its content via dangerouslySetInnerHTML (MIG-07B trust boundary preserved)', () => {
   const article = read('app/blog/[slug]/page.tsx');
   assert.match(article, /dangerouslySetInnerHTML/);
-  assert.doesNotMatch(article, /V2Shell/);
 });
 
 test('Homepage untouched by MIG-07A', () => {
@@ -161,11 +160,12 @@ test('pagination: page 2+ does not repeat the dominant featured treatment (no fa
   assert.match(code, /isFirstPage \? pageItems\[0\] : undefined/);
 });
 
-test('registry: /blog is registered V2, /blog/[slug] is not', () => {
+test('registry: /blog is registered V2; /blog/[slug] is registered V2 via the MIG-07B dynamic pattern', () => {
   assert.equal(migratedV2Routes.includes('/blog'), true);
   assert.equal(isLegacyFooterVisible('/blog'), false);
-  assert.equal(isV2MigratedRoute('/blog/some-real-slug'), false);
-  assert.equal(isLegacyFooterVisible('/blog/some-real-slug'), true);
+  // MIG-07B: dynamic article route recognition — see tests/blog-dynamic-registry.test.ts for the full matrix.
+  assert.equal(isV2MigratedRoute('/blog/some-real-slug'), true);
+  assert.equal(isLegacyFooterVisible('/blog/some-real-slug'), false);
   const r = getRoute('blog');
   assert.equal(r?.path, '/blog');
   assert.equal(r?.publication, 'LEGACY-PRESERVE');
