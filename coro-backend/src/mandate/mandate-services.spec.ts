@@ -5,7 +5,8 @@ describe('Mandate commercial services controller access', () => {
   const commercial: any = { list: jest.fn().mockResolvedValue({ services: [], revision: 'r' }),
     save: jest.fn().mockResolvedValue({ services: [], revision: 'r' }) };
   const preview: any = { preview: jest.fn().mockResolvedValue({ commercialRevision: 'r', operations: [] }) };
-  const controller = new MandateController({} as any, commercial, preview);
+  const apply: any = { apply: jest.fn().mockResolvedValue({ commercialRevision: 'r', applied: [] }) };
+  const controller = new MandateController({} as any, commercial, preview, apply);
   const request = (role: string) => ({ user: { userId: 'user-a', organizationId: 'org-a', role } });
 
   beforeEach(() => jest.clearAllMocks());
@@ -34,5 +35,16 @@ describe('Mandate commercial services controller access', () => {
       .resolves.toMatchObject({ commercialRevision: 'r' });
     expect(preview.preview).toHaveBeenCalledWith('project-a', request('OPERATOR').user, dto.expectedRevision);
     expect(() => controller.previewMandateServiceOperations('project-a', dto, request('CLIENT'))).toThrow(ForbiddenException);
+  });
+
+  it('allows only tenant administrators to apply operational decisions', async () => {
+    const dto: any = { idempotencyKey: 'key', expectedRevision: 'a'.repeat(64), decisions: [] };
+    await expect(controller.applyMandateServiceOperations('project-a', dto, request('ADMIN')))
+      .resolves.toMatchObject({ commercialRevision: 'r' });
+    expect(apply.apply).toHaveBeenCalledWith('project-a', request('ADMIN').user, dto);
+    expect(() => controller.applyMandateServiceOperations('project-a', dto, request('OPERATOR')))
+      .toThrow(ForbiddenException);
+    expect(() => controller.applyMandateServiceOperations('project-a', dto, request('CLIENT')))
+      .toThrow(ForbiddenException);
   });
 });

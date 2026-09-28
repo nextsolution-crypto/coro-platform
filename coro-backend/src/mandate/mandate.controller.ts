@@ -7,12 +7,15 @@ import { MandateServicesService } from './mandate-services.service';
 import { SaveMandateServicesDto } from './mandate-services.dto';
 import { MandateOperationsPreviewService } from './mandate-operations-preview.service';
 import { MandateOperationsPreviewDto } from './mandate-operations-preview.dto';
+import { ApplyMandateOperationsDto } from './mandate-operations-apply.dto';
+import { MandateOperationsApplyService } from './mandate-operations-apply.service';
 
 @Controller('projects/:projectId')
 @UseGuards(AuthGuard('jwt'))
 export class MandateController {
   constructor(private readonly service: MandateService, private readonly mandateServices: MandateServicesService,
-    private readonly operationsPreview: MandateOperationsPreviewService) {}
+    private readonly operationsPreview: MandateOperationsPreviewService,
+    private readonly operationsApply: MandateOperationsApplyService) {}
 
   @Get('mandate/services')
   getMandateServices(@Param('projectId') projectId: string, @Request() req: any) {
@@ -31,6 +34,13 @@ export class MandateController {
     @Request() req: any) {
     requireInternal(req.user);
     return this.operationsPreview.preview(projectId, req.user, dto.expectedRevision);
+  }
+
+  @Post('mandate/services/operations/apply')
+  applyMandateServiceOperations(@Param('projectId') projectId: string, @Body() dto: ApplyMandateOperationsDto,
+    @Request() req: any) {
+    requireTenantAdmin(req.user);
+    return this.operationsApply.apply(projectId, req.user, dto);
   }
 
   // Mandat

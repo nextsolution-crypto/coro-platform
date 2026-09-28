@@ -12,7 +12,12 @@ export class MandateOperationsPreviewService {
   constructor(private readonly prisma: PrismaService, private readonly mandateServices: MandateServicesService) {}
 
   async preview(projectId: string, actor: WorkManagementActor, expectedRevision: string) {
-    return this.prisma.$transaction(async tx => {
+    return this.prisma.$transaction(tx => this.previewInTransaction(tx, projectId, actor, expectedRevision),
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  }
+
+  async previewInTransaction(tx: Prisma.TransactionClient, projectId: string, actor: WorkManagementActor,
+    expectedRevision: string) {
       const project = await tx.project.findFirst({ where: { id: projectId, ...projectAccessWhere(actor) }, select: {
         id: true, organizationId: true, mandate: { select: { services: {
           orderBy: [{ displayOrder: 'asc' }, { id: 'asc' }], include: { activityType: {
@@ -51,6 +56,5 @@ export class MandateOperationsPreviewService {
         requiresDecision: operations.filter(item => item.action === 'REQUIRES_DECISION').length,
         blocked: operations.filter(item => item.action === 'BLOCKED').length,
       }, operations };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   }
 }

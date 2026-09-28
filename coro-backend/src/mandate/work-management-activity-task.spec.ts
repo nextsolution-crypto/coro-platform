@@ -92,7 +92,7 @@ describe('ProjectTask activity provenance', () => {
 
   it('rejects client roles at the mutation boundary', async () => {
     const service = { setTaskActivity: jest.fn(), createTask: jest.fn() };
-    const controller = new MandateController(service as any, {} as any, {} as any);
+    const controller = new MandateController(service as any, {} as any, {} as any, {} as any);
     expect(() => controller.setTaskActivity('project-a', 'task-a', { activityId: 'activity-a' }, {
       user: { userId: 'client-a', organizationId: 'org-a', role: 'CLIENT' },
     })).toThrow(ForbiddenException);

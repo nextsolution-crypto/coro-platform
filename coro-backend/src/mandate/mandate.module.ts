@@ -9,11 +9,14 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ActivityTypesModule } from '../activity-types/activity-types.module';
 import { MandateServicesService } from './mandate-services.service';
 import { MandateOperationsPreviewService } from './mandate-operations-preview.service';
+import { MandateOperationsApplyService } from './mandate-operations-apply.service';
+import { ActivitiesModule } from '../activities/activities.module';
 
 @Module({
-  imports: [PrismaModule, ActivityTypesModule],
+  imports: [PrismaModule, ActivityTypesModule, ActivitiesModule],
   controllers: [MandateController, RendementController, PortfolioController, CapacityController],
-  providers: [MandateService, MandateServicesService, MandateOperationsPreviewService, CapacityService],
+  providers: [MandateService, MandateServicesService, MandateOperationsPreviewService,
+    MandateOperationsApplyService, CapacityService],
   exports: [MandateService, CapacityService],
 })
 export class MandateModule {}
