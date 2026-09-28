@@ -375,3 +375,85 @@ Aucune nouvelle revue introduite par le hub lui-même. Les revues déjà consign
 ## Tests, build
 
 395 tests passent (`tests/guides-migration.test.ts`, 10 tests dédiés + mises à jour de `tests/sitemap.test.ts`, `tests/foundation.test.ts`, `tests/page-rhythm.test.ts`, `tests/pricing-migration.test.ts` et les listes de registre des autres pages V2). `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : un seul pied de page sur `/guides` et sur les sept autres routes contrôlées, aucun débordement horizontal aux six largeurs, `/guides` répond 200 et figure dans le sitemap.
+
+# MIG-05B — PMU implementation result
+
+Implémenté (2026-09-27). Registre V2 : `/documents/plan-mesures-urgence-pmu` ajoutée après `/guides`. Le PMU reste `historical({ id: 'guide-pmu', ... })` dans le registre de routes (déjà `implemented: true` avant cette étape) — seule l'appartenance V2 change.
+
+## Baseline et contrat de langue
+
+`tests/fixtures/guide-pmu-baseline.json` capture FR / `?lang=en` / `?ref=CR-ABCDEF`. Confirmation octet pour octet : `?lang=en` rendait le même texte français (`bodyText` FR === EN). Aucune traduction anglaise n'existait à préserver → `englishAvailable={false}` / `hasEnglish: false` conservés, pas de traduction inventée.
+
+## Matrice de préservation — résumé
+
+Les six sections V1 (définition, cadre légal, PMU vs PSI, contenu, fréquence de mise à jour, simplification CORO) sont RECOMPOSÉES dans une architecture éditoriale à 10 sections + cycle de préparation + ressources + FAQ + CTA. Aucun contenu utile n'est perdu : chaque affirmation V1 est reprise (RECOMPOSE) ou corrigée (REWRITE) avec sa source. Aucun visuel V1 n'existait (`grep` confirmé : 0 `<img>`/`<Image>` dans le fichier V1) — rien à KEEP/REPLACE/DEFER/REJECT ; l'illustration `guide-pmu-emergency-measures.webp` est une nouvelle addition éditoriale, décorative (`alt=""`), déjà auditée conforme (aucun logo CORO, aucune UI produit, aucun texte réglementaire lisible).
+
+## Corrections réglementaires (vérifiées contre sources primaires)
+
+- **RSST, section IV, art. 34-36** : conservé tel quel (texte vérifié : évacuation, exercices annuels, extincteurs).
+- **LSST, article 51** : la V1 citait des sous-paragraphes précis (51.1/51.5/51.6/51.8). Recherche confirmant que l'article 51 a été modernisé en 2021 (16 paragraphes numérotés) sans pouvoir vérifier le contenu exact des sous-paragraphes cités par la V1 → généralisé à « LSST, article 51 » sans numéro de sous-paragraphe, conformément à la consigne « généraliser plutôt qu'inventer de la précision ».
+- **Norme CSA** : la V1 citait « CSA Z731-14 », édition inexistante. Corrigé en « CSA Z731-03 (révisée en 2014) », désignation confirmée (3e édition publiée en 2003, révisée en 2014).
+- **Précision de délai de production** : la V1 affirmait « quelques heures... plusieurs jours » (précision invérifiable) — retirée. « CORO génère automatiquement » adouci en « CORO Documents structure » pour ne pas surestimer l'automatisation.
+
+## SEO — décision REWRITE
+
+URL conservée à l'identique (`/documents/plan-mesures-urgence-pmu`). Titre et description réécrits (REWRITE, pas KEEP) pour retirer la précision de délai invérifiable et refléter le nouveau cadre éditorial, en gardant les mots-clés porteurs (« plan de mesures d'urgence », « PMU », « cadre légal », « Québec »).
+
+## Frontière de vérité produit
+
+Le PMU est explicitement disponible dans CORO Documents aujourd'hui (section 10) : procédures présélectionnées, éditeur intégré, export PDF bilingue FR/EN. Aucune conformité automatique, certification ou vérification réglementaire par IA n'est affirmée. PGC/PRA/PUE sont mentionnés (section 09) comme familles complémentaires avec leur propre guide, sans affirmer leur disponibilité dans CORO (production Phase 2 inchangée).
+
+## Signature éditoriale — cycle de préparation
+
+Modèle en 7 étapes (Connaître, Planifier, Organiser, Préparer, Intervenir, Exercer, Réviser) sur fond marine, explicitement présenté comme « un repère éditorial, pas une séquence réglementaire ». Blocs numérotés 01-07 sans ligne ni flèche de connexion (nuance par rapport au hub, qui a retiré toute numérotation) — jugé acceptable ici car le texte lui-même désamorce la lecture séquentielle et la numérotation sert le repérage visuel, pas une chronologie d'incident.
+
+## Ressources et liens réciproques
+
+4 ressources blog sélectionnées (slugs vérifiés dans la matrice MIG-05-PRE). Liens réciproques vers `/guides` et `/gestion-documentaire` (silo devient réciproque : Documents ↔ Hub ↔ PMU). Lien contextuel vers le guide PSI (section 03), sans hiérarchie universelle obligatoire.
+
+## Données structurées
+
+`BreadcrumbList` (Accueil › Guides › PMU, pointe désormais vers `/guides` et non `/gestion-documentaire` comme en V1) et `FAQPage` (4 questions, parité avec la FAQ visible). Le `WebPage` avec `about: [Thing×4]` et le `publisher.logo` `ImageObject` orphelin de la V1 sont retirés — aucun schéma `SoftwareApplication`, `Offer` ou `Product`.
+
+## Tests, build, QA
+
+`tests/guide-pmu-migration.test.ts` créé (15 tests dédiés : baseline, registre, langue, hero, frontière produit, corrections réglementaires, absence de précision de délai inventée, liens réciproques, relation PSI/PGC/PRA/PUE, absence de module futur, parité FAQ/JSON-LD, cycle de préparation, métadonnées, accessibilité). Mise à jour des listes `migratedV2Routes` codées en dur dans 14 fichiers de test existants + `tests/page-rhythm.test.ts` (liste d'exclusion des primitives de composition). 411 tests passent. `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : un seul pied de page, un seul `<main>`, un seul `<h1>` sur `/documents/plan-mesures-urgence-pmu` post-registre ; aucun débordement horizontal aux six largeurs (320/390/768/1024/1440/1920) ; inspection visuelle complète à 1440 et 390 sans défaut (rangées réglementaires, liste des 8 éléments, cycle de préparation, cartes de lien, ressources, FAQ, CTA). Contrôle de non-régression : `/`, `/security`, `/pricing`, `/guides`, `/coro-incident`, `/gestion-documentaire`, `/blog` et les cinq guides encore en V1 répondent tous 200.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante introduite par le PMU. Les revues déjà consignées au §20 pour les guides restants (PUBLICATION-BLOCKER PUE, LEGAL REVIEW réglementaires PSI/PCA/PGC/PRA/PUE, dette d'accessibilité `<main>`) restent entières et ne sont pas résolues par cette étape.
+
+# MIG-05B-B — PMU editorial density & visual character pass
+
+Implémenté (2026-09-27), sur approbation visuelle du contenu, de la frontière produit, du traitement réglementaire, du SEO, du hero et du cycle de préparation. Aucun de ces éléments n'est modifié dans cette passe ; seule la densité éditoriale et le caractère visuel changent.
+
+## Règle de famille candidate — densité et signature visuelle des Guides
+
+**Un Guide long-form peut utiliser un rythme de section plus dense qu'une page produit/commerciale, et doit porter 2-3 moments visuels mémorables dérivés de son propre sujet.** Ces moments ne sont jamais globaux (`PageSection`/`page.module.css` partagé inchangés) : ils vivent en CSS local à la page du guide. Pour PMU, les trois moments retenus sont : (1) l'ancre typographique « 08 » + la grille 2×4 des éléments attendus, (2) le cycle de préparation marine (contenu inchangé), (3) les cartes de rôles de l'organisation d'urgence. **Les futurs guides (PSI, PCA, PGC, PRA, PUE) ne doivent PAS copier ces mêmes moments** — chacun doit dériver sa propre signature de son sujet (ex. PSI : sécurité incendie ; PCA : continuité). Cette règle reste candidate et doit être revalidée sur PSI avant toute extraction d'un composant Guide partagé — aucun composant partagé n'est créé à cette étape.
+
+## Densité — locale, jamais globale
+
+`density="compact"` appliqué par instance de `PageSection` (§1, §3, §8, §9, §10, ressources) ; conservé à `standard` pour le hero, le cadre légal (§2), le cycle de préparation (§5, navy), les deux moments visuels enrichis (§4, §6, §7 — l'espace sert la composition, pas seulement le texte) et la FAQ (transition finale vers le CTA). Gap du `.stack` local resserré de `--coro-v1-space-8` à `--coro-v1-space-6`. Aucune modification de `components/page/PageSection.tsx` ni de `components/page/page.module.css`.
+
+## Cartes — gouvernance appliquée
+
+Cartes autorisées et utilisées à un seul endroit : les 2 cartes de rôles en §6 (bordure fine, rayon de panneau V1, aucune ombre). Aucune carte pour le cadre légal, les ressources, le FAQ, ou les documents liés — ces sections restent des listes à filets ou des cartes de lien restreintes, conformément à la gouvernance « pas de mur de cartes ».
+
+## Contenu préservé — aucune invention
+
+- **§4 (08 éléments)** : les 8 éléments existants sont repris à l'identique ; le nombre « 08 » est calculé depuis `t.s4.items.length`, jamais codé en dur.
+- **§6 (organisation d'urgence)** : seuls les deux rôles explicitement nommés dans le contenu source (personnel de surveillance, équipe de première intervention) sont présentés comme cartes — aucun rôle ni hiérarchie inventés. Le texte descriptif est une reformulation directe de la phrase source existante, pas un nouveau fait.
+- **§7 (procédures)** : aucun nombre de procédures n'existe/n'est vérifié — utilisation d'un mot éditorial en gros caractères (« Agir ») au lieu d'inventer un chiffre. Les six catégories listées sont exactement celles déjà nommées dans le paragraphe source (incendie, matières dangereuses, explosion, alerte à la bombe, sauvetage, risques naturels ou technologiques).
+- **§8 (utilisabilité)** : le paragraphe unique existant est réparti en deux blocs (Révision / Exercices) qui reprennent ses phrases sans les modifier.
+
+## Tests, build, QA
+
+`tests/guide-pmu-migration.test.ts` étendu à 21 tests (6 tests MIG-05B-B ajoutés : nombre exact d'éléments préservés, absence de nombre de procédures inventé, rôles limités aux deux nommés dans la source, contenu du cycle inchangé, primitives partagées non modifiées). 416 tests passent au total. `tsc --noEmit`, ESLint et `npm run build` propres. QA : registre inchangé (1 pied de page, 1 `<main>`, 1 `<h1>` post-registre) ; inspection visuelle via navigateur (Puppeteer indisponible dans cet environnement — aucune dépendance `puppeteer` installée) confirmant un rendu propre des trois moments visuels et de toutes les sections retravaillées, sans débordement, à la largeur de fenêtre disponible (~1139px, au-dessus du point de rupture desktop de 68rem) ; le comportement en dessous de 68rem/64rem/48rem/40rem repose sur les mêmes motifs de media query déjà vérifiés visuellement pour PMU en MIG-05B (`.rows`, `.cycle`) et réutilisés à l'identique pour les nouvelles grilles (`.elementsGrid`, `.rolesWrap`, `.procWrap`).
+
+## Hauteur de page
+
+≈ 8 736px à ~1139px de largeur (viewport réel obtenu dans cet environnement), contre ≈ 10 100-10 163px mesurés en MIG-05B à largeur desktop comparable (1024-1920px) — réduction d'environ 14 %. En dessous de la cible de 20-30 % demandée, car les trois moments visuels (§4, §6, §7) ont délibérément gardé une densité `standard` plutôt que `compact` pour laisser respirer leur composition, conformément à la consigne de ne pas poursuivre la hauteur minimale comme objectif en soi.
+
+## Limite de vérification signalée
+
+Puppeteer n'est pas installé dans `coro-website` ni ailleurs dans ce monorepo/environnement pendant cette session ; la vérification responsive fine (320/390/768/1024/1920 exacts) n'a pas pu être automatisée par capture d'écran à ces largeurs précises. La vérification s'est appuyée sur (1) l'inspection visuelle réelle à la largeur de fenêtre disponible et (2) la relecture du CSS confirmant que les nouveaux points de rupture (40rem, 64rem, 68rem) suivent exactement les mêmes motifs que les sections déjà QA financées en MIG-05B.

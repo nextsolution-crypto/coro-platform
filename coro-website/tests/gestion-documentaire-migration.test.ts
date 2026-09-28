@@ -14,7 +14,7 @@ const page = read('app/gestion-documentaire/page.tsx');
 const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 test('the registry holds the four MIG-01 routes plus /gestion-documentaire and nothing else; no legacy footer on it', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu']);
   assert.equal(isLegacyFooterVisible('/gestion-documentaire'), false);
   for (const legacy of ['/']) assert.equal(isLegacyFooterVisible(legacy), true, legacy);
 });
