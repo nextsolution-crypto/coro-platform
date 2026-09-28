@@ -457,3 +457,108 @@ Cartes autorisées et utilisées à un seul endroit : les 2 cartes de rôles en 
 ## Limite de vérification signalée
 
 Puppeteer n'est pas installé dans `coro-website` ni ailleurs dans ce monorepo/environnement pendant cette session ; la vérification responsive fine (320/390/768/1024/1920 exacts) n'a pas pu être automatisée par capture d'écran à ces largeurs précises. La vérification s'est appuyée sur (1) l'inspection visuelle réelle à la largeur de fenêtre disponible et (2) la relecture du CSS confirmant que les nouveaux points de rupture (40rem, 64rem, 68rem) suivent exactement les mêmes motifs que les sections déjà QA financées en MIG-05B.
+
+# MIG-05C — PSI implementation result
+
+Implémenté (2026-09-27). Registre V2 : `/documents/plan-securite-incendie-psi` ajoutée après le PMU. Le PSI reste `historical({ id: 'guide-psi', ... })` dans le registre de routes (déjà `implemented: true` avant cette étape) — seule l'appartenance V2 change.
+
+## Baseline et contrat de langue
+
+`tests/fixtures/guide-psi-baseline.json` capture FR / `?lang=en` / `?ref=CR-ABCDEF`. Le fichier V1 n'avait AUCUNE gestion de `searchParams` : `?lang=en` retournait donc trivialement la même page française. `bodyText` FR === EN confirmé octet pour octet → `englishAvailable={false}` / `hasEnglish: false`, aucune traduction inventée.
+
+## Matrice de préservation — résumé
+
+Les 6 sections V1 (définition, bâtiments visés, contenu, cadre légal, fréquence de mise à jour, simplification CORO) sont RECOMPOSÉES dans une architecture éditoriale à 8 sections + relation PMU + CORO Documents + ressources + FAQ + CTA. Les 4 sources officielles et les 4 questions FAQ sont PRESERVED intégralement. La seule suppression volontaire : l'affirmation V1 « le PSI est le document de base de tout bâtiment — toute organisation doit en avoir un », en tension directe avec la propre liste V1 des bâtiments visés — retirée (REVIEW → REMOVE) plutôt que de trancher une question réglementaire non vérifiée.
+
+## Audit réglementaire — décisions
+
+- **Entrée en vigueur CNPI 2020 modifié (17 avril 2025)** : VERIFIED (RBQ, CNRC). Conservé.
+- **Période de transition** : AJOUTÉE — non présente en V1. VERIFIED : une période transitoire de 18 mois est prévue à partir du 17 avril 2025 (3 ans pour l'art. 2.1.3.7 uniquement) ; les dispositions antérieures du chapitre VIII peuvent encore s'appliquer jusqu'au jour précédant le 17 octobre 2026. Le PRE gate avait relevé cette omission potentielle — confirmée et corrigée.
+- **Art. 2.8.1.2 / 2.8.2.7 / 2.8.3 (formation, plan d'évacuation affiché, exercices)** : la section 2.8 (mesures d'urgence) du CNPI est VERIFIED comme couvrant ces sujets, mais le contenu exact des sous-paragraphes cités n'a pas pu être confirmé avec une confiance suffisante → GÉNÉRALISÉ, aucun numéro d'article précis n'est reproduit en V2.
+- **Fréquence de mise à jour (« annuellement » en V1)** : NOT VERIFIED comme figure légale précise → REFINE : présentée comme pratique usuelle recommandée plutôt que comme obligation citée avec précision.
+- **Bâtiments visés (établissements de réunion/soins/détention, RPA/RI, services de garde PSI-MU, habitations)** : VERIFIED via les 4 sources officielles déjà citées en V1 (RBQ, CNRC, guide PSI-MU) — conservé tel quel.
+
+## SEO — décision REWRITE
+
+URL conservée à l'identique. Titre et description réécrits pour refléter le nouveau cadre éditorial et retirer l'accroche produit du titre V1 (« Guide complet | CORO »), en gardant les mots-clés porteurs (« plan de sécurité incendie », « PSI », « bâtiments visés », « cadre légal », « Québec »).
+
+## Hero
+
+`guide-psi-fire-safety.webp`, ré-audité entièrement : trois personnes consultant des plans de bâtiment/évacuation, pompiers et camion en arrière-plan (génériques, aucun logo/service identifiable), panneau d'alarme incendie, extincteur, livre « Sécurité incendie ». Aucun logo CORO, aucune UI produit, aucun texte réglementaire lisible, aucune adresse. Classification : MARKETING / ÉDITORIAL, `alt=""`, image non modifiée, aucun fait dérivé de l'illustration.
+
+## Signature visuelle PSI — distincte du PMU
+
+Conformément à la règle de famille (MIG-05B-B), le PSI ne réutilise AUCUN des moments PMU (pas de « 08 » oversized, pas de cycle de préparation, pas de composition « Agir »). Trois moments propres au PSI :
+1. **Contenu du PSI** — matrice à 7 éléments via le primitive partagé `FeatureIndex` (`layout="rows"`), un ledger numéroté distinct de la grille PMU.
+2. **Organisation de la sécurité incendie** — 4 cartes de parties prenantes (personnel de surveillance, occupants, service de sécurité incendie, personnes nécessitant une assistance), restreintes aux rôles explicitement nommés par la source.
+3. **De l'alerte à l'action** — séquence signal→action via `FeatureIndex` (`layout="steps"`, rail vertical à badges circulaires), explicitement qualifiée : « la configuration exacte de l'alarme et les protocoles précis varient selon le bâtiment » — aucune affirmation universelle à un ou deux étages.
+
+`FeatureIndex` est un primitif V2 partagé déjà utilisé sur 5 autres pages (About, Programme de recommandation, Gestion documentaire...) — sa réutilisation ici n'est pas une extraction de composant Guide, juste l'usage normal d'un primitif de composition déjà approuvé.
+
+## Ressources et liens réciproques
+
+4 ressources blog sélectionnées et vérifiées (200 sur `getcoro.io/blog/<slug>`) : contenu PSI, obligations propriétaire/gestionnaire, CNPI 2020, PMU vs PSI. Liens réciproques vers le guide PMU migré, `/guides` et `/gestion-documentaire`.
+
+## Données structurées
+
+`BreadcrumbList` (Accueil › Guides › PSI, pointe désormais vers `/guides`) et `FAQPage` (4 questions, parité avec la FAQ visible). Le `WebPage` avec `about: [Thing×5]` et le `publisher.logo` `ImageObject` orphelin de la V1 sont retirés — aucun schéma `SoftwareApplication`, `Offer`, `Product` ou de conformité.
+
+## Densité locale
+
+Même leçon de famille que PMU : `density="compact"` sur les sections ordinaires (§1, §6, §7, §8, ressources), `standard` conservé pour le hero, §2 (cadre légal/transition), les trois moments visuels (§3, §4, §5) et la FAQ. CSS local à la page uniquement, `PageSection`/`page.module.css` partagés inchangés.
+
+## Tests, build, QA
+
+`tests/guide-psi-migration.test.ts` créé (17 tests dédiés : baseline, registre, langue, hero, frontière produit, période de transition, absence de précision d'article inventée, absence d'affirmation universelle sur l'alarme, absence de la revendication généralisée « toute organisation doit en avoir un », liens réciproques PMU/guides/documentaire, absence de module futur, parité FAQ/JSON-LD, non-clonage de la signature PMU, structure des 7 éléments, structure des 4 rôles, séquence à 5 étapes, métadonnées, accessibilité, densité locale). Mise à jour des listes `migratedV2Routes` codées en dur dans 13 fichiers de test existants + `tests/sentinelle-population-migration.test.ts` (slice/longueur) + `tests/page-rhythm.test.ts` (liste d'exclusion). 433 tests passent. `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : un seul pied de page, un seul `<main>`, un seul `<h1>` sur `/documents/plan-securite-incendie-psi` post-registre ; inspection visuelle par navigateur (Puppeteer toujours indisponible dans cet environnement) confirmant un rendu propre du hero, du ledger à 7 éléments, des 4 cartes d'organisation, du rail signal→action, et de toutes les sections restantes, sans débordement à la largeur de fenêtre disponible. Contrôle de non-régression : `/`, `/security`, `/pricing`, `/guides`, `/coro-incident`, `/gestion-documentaire`, `/blog`, le PMU migré et les quatre guides encore en V1 (PCA/PGC/PRA/PUE) répondent tous 200.
+
+## Conclusion sur les patterns partagés
+
+PMU et PSI fournissent maintenant deux implémentations comparables. Aucun composant Guide partagé n'est extrait à cette étape (par défaut, conformément à la consigne) : la principale ressemblance structurelle (V2Shell + EditorialHero + PageSection + EditorialBlock + FAQ + CTASection + liens réciproques) est déjà entièrement couverte par les primitifs V2 existants, sans duplication de logique propre à un Guide. Le seul pattern réellement récurrent est le protocole de registre et la méthode de densité locale — déjà documentés comme règle de famille, pas comme code. À réévaluer après PCA.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante introduite par le PSI. Les revues consignées au §20 pour les guides restants (PUBLICATION-BLOCKER PUE, LEGAL REVIEW réglementaires PCA/PGC/PRA/PUE, dette d'accessibilité `<main>`) restent entières et ne sont pas résolues par cette étape.
+
+# MIG-05C-B — PSI visual character, density & claim clarification pass
+
+Implémenté (2026-09-27). **La première composition PSI (MIG-05C) a été REJETÉE en revue visuelle** : espace horizontal/vertical inutilisé excessif, ledger des 7 éléments trop plat, cartes de parties prenantes sans présence visuelle, section navy sous-utilisant le canevas, et le rail vertical `FeatureIndex` "steps" faisait à tort ressembler « Exercices réguliers » à une cinquième étape opérationnelle après l'évacuation. Contenu, hero, SEO, frontière produit et architecture générale restent approuvés.
+
+## Nouvelle signature visuelle PSI
+
+Toujours sans cloner le PMU ("08"/cycle/"Agir") :
+1. **§2 — Bâtiments visés** : matrice 2×2 des 4 catégories vérifiées, à côté de l'explication légale et de la note de transition (au lieu d'une liste à puces sur toute la largeur).
+2. **§3 — Contenu du PSI** : ancre typographique « PSI » (l'acronyme lui-même comme objet visuel, concept « ce que le document structure », pas un décompte) à côté du ledger 01-07 (toujours `FeatureIndex` "rows", primitif partagé inchangé).
+3. **§4 — Organisation** : les 4 cartes de parties prenantes renforcées en véritable composition 2×2 (padding généreux, filet d'accent supérieur, hiérarchie de titre renforcée h2).
+4. **§5 — Navy, reconstruite** : le rail `FeatureIndex` "steps" est RETIRÉ. Remplacé par QUATRE territoires de réponse liés (SIGNAL / AVIS / CONSIGNES / ÉVACUATION) en 4 colonnes sur toute la largeur du canevas navy, sans flèche ni ligne de connexion — la qualification « ne forment pas une séquence obligatoire […] varie selon le bâtiment » reste visible.
+
+## Exercices — retirés du groupe opérationnel
+
+« Exercices réguliers » n'est plus présenté comme la 5e étape de la séquence signal→action. Contenu préservé, relocalisé en §6 (mise à jour) comme second territoire (« Révision » / « Exercices »), aux côtés des déclencheurs de changement au bâtiment.
+
+## Revue de la revendication — révision annuelle
+
+**REMOVE.** Aucune source primaire fiable confirmant une exigence ou une recommandation de révision annuelle du PSI n'a été trouvée lors de cette passe (recherche RBQ/CNRC). La formulation « la pratique usuelle recommande une révision au moins annuelle » (déjà un affaiblissement de l'affirmation légale V1 lors de MIG-05C) est retirée à son tour. Le PSI est désormais présenté comme devant être tenu à jour uniquement lors d'un changement significatif — la seule base explicitement supportée par le contenu source V1 lui-même.
+
+## Revue de la revendication — pouvoir du service de sécurité incendie
+
+**REFINE.** Recherche confirmant que les inspecteurs municipaux/services de sécurité incendie disposent d'un pouvoir général, en vertu de la Loi sur la sécurité incendie et de la Loi sur les compétences municipales, d'exiger des renseignements et documents liés à la sécurité incendie et de vérifier la conformité par inspection. La formulation V1 « peut exiger un exemplaire du PSI pour vérifier sa conformité » est conservée quant au fond mais reformulée pour citer les deux lois habilitantes et éviter l'expression non qualifiée « vérifier sa conformité » : « en vertu de la Loi sur la sécurité incendie et de la Loi sur les compétences municipales, peut demander des renseignements ou des documents relatifs à la sécurité incendie du bâtiment ». Appliqué de façon cohérente à la carte d'organisation et à la FAQ.
+
+## Densité
+
+Réaudité section par section : §1/§6 restent `compact` ; §2/§3/§4/§5 (les moments visuels renforcés + le cadre légal) restent `standard` pour laisser respirer leur composition élargie ; §7/§8/ressources restent `compact`. CSS local à la page uniquement.
+
+## PMU, CORO Documents, ressources, FAQ
+
+Inchangés dans leur contenu et leur frontière produit ; la section PMU reste volontairement calme après la section navy renforcée. Parité FAQ/JSON-LD revérifiée après les changements de formulation (révision, autorité du service incendie).
+
+## Preuve responsive
+
+Puppeteer reste indisponible dans cet environnement (limite déjà signalée en MIG-05B-B/MIG-05C). Vérification par inspection visuelle réelle via navigateur à la largeur de fenêtre disponible (~1036-1139px), en faisant défiler l'intégralité de la page : matrice bâtiments, ancre PSI + ledger 01-07, cartes 2×2, quatre territoires navy, blocs révision/exercices, ressources, FAQ — tous rendus sans débordement ni chevauchement. Aucune capture automatisée à 320/390/768/1024/1920 exacts n'a pu être produite ; cette limite est déclarée explicitement plutôt que de prétendre à une vérification responsive complète.
+
+## Tests, build
+
+`tests/guide-psi-migration.test.ts` étendu à 21 tests (6 tests MIG-05C-B ajoutés : absence de revendication annuelle, autorité du service incendie basée sur les lois nommées, "exercices" retiré du groupe opérationnel avec contenu relocalisé, 4 territoires navy exacts sans rail "steps", primitives locales non partagées). 437 tests passent. `tsc --noEmit`, ESLint et `npm run build` propres. Contrôle de non-régression : toutes les routes déjà vérifiées en MIG-05C répondent toujours 200.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante. Les décisions PMU (MIG-05B/MIG-05B-B) restent inchangées et ne sont pas rouvertes par cette passe.

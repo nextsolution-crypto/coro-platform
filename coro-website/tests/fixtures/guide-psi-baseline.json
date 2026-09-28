@@ -1,0 +1,954 @@
+{
+  "captured": "2026-09-27 (MIG-05C, before any PSI change)",
+  "fr": {
+    "status": 200,
+    "title": "Plan de Sécurité Incendie (PSI) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Sécurité Incendie au Québec : bâtiments visés, contenu requis, obligations légales selon le CNPI 2020 et comment CORO accélère sa production.",
+    "canonical": "https://getcoro.io/documents/plan-securite-incendie-psi",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Sécurité Incendie (PSI)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Sécurité Incendie ?"
+      ],
+      [
+        2,
+        "Bâtiments visés par le PSI au Québec"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PSI complet"
+      ],
+      [
+        2,
+        "Cadre légal — CNPI 2020 au Québec"
+      ],
+      [
+        2,
+        "Fréquence de mise à jour"
+      ],
+      [
+        2,
+        "Comment CORO simplifie la production du PSI"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Quelle est la différence entre un PSI et un PMU ?"
+      ],
+      [
+        3,
+        "Mon bâtiment a-t-il besoin d&#x27;un PSI ?"
+      ],
+      [
+        3,
+        "À quelle fréquence doit-on mettre à jour le PSI ?"
+      ],
+      [
+        3,
+        "Le PSI doit-il être soumis aux autorités ?"
+      ],
+      [
+        2,
+        "Prêt à produire votre PSI ?"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Générer votre PSI avec CORO →"
+      ],
+      [
+        "https://nrc.canada.ca/fr/certifications-evaluations-normes/codes-canada/publications-codes-canada/code-national-prevention-incendies-canada-2020",
+        "→ Code national de prévention des incendies — Canada 2020 (CNPI) — CNRC"
+      ],
+      [
+        "https://www.rbq.gouv.qc.ca/domaines-dintervention/batiment/interpretation-directives-techniques-et-administratives/chapitre-batiment-du-code-de-securite/exigences-du-code-national-de-prevention-des-incendies/",
+        "→ RBQ — Exigences du Code national de prévention des incendies"
+      ],
+      [
+        "https://www.rbq.gouv.qc.ca/domaines-dintervention/batiment/la-formation/code-national-de-securite-incendie-2020-modifie-quebec/",
+        "→ RBQ — CNPI 2020 modifié Québec : principaux changements (en vigueur 17 avril 2025)"
+      ],
+      [
+        "https://cdn-contenu.quebec.ca/cdn-contenu/adm/min/securite-publique/publications-adm/publications-secteurs/securite-incendie/services-securite-incendie/materiel-prevention/Guide_PSIMU_Habitations_VF.pdf",
+        "→ Guide PSI-MU pour habitations — Gouvernement du Québec"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Sécurité Incendie (PSI)",
+        "headline": "Plan de Sécurité Incendie (PSI) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Sécurité Incendie au Québec : bâtiments visés, contenu requis, obligations légales selon le CNPI 2020 et comment CORO accélère sa production.",
+        "url": "https://getcoro.io/documents/plan-securite-incendie-psi",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Sécurité Incendie",
+            "alternateName": "PSI"
+          },
+          {
+            "@type": "Thing",
+            "name": "Sécurité incendie"
+          },
+          {
+            "@type": "Thing",
+            "name": "Code national de prévention des incendies — Canada 2020",
+            "alternateName": "CNPI 2020"
+          },
+          {
+            "@type": "Thing",
+            "name": "Plan d'évacuation"
+          },
+          {
+            "@type": "Thing",
+            "name": "Prévention des incendies"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Sécurité Incendie (PSI)",
+            "item": "https://getcoro.io/documents/plan-securite-incendie-psi"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre un PSI et un PMU ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PSI est spécifique aux situations d'incendie. Le PMU est plus large et couvre tous les types d'urgence. Toute organisation doit avoir un PSI ; lorsqu'un PMU est requis, il agit comme plan maître et contient le PSI."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Mon bâtiment a-t-il besoin d'un PSI ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Selon le CNPI, tous les établissements de réunion, de soins, de traitement ou de détention doivent avoir un PSI. Les résidences pour aînés, les services de garde et les bâtiments d'habitation sont également visés. Consultez votre service de sécurité incendie local pour les exigences spécifiques à votre territoire."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "À quelle fréquence doit-on mettre à jour le PSI ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PSI doit être mis à jour annuellement, notamment la liste des membres de l'équipe d'urgence. Une mise à jour est également requise lors de tout changement significatif au bâtiment."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PSI doit-il être soumis aux autorités ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Renseignez-vous auprès de votre municipalité pour connaître les exigences spécifiques à votre territoire."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil getcoro.io / Plan de Sécurité Incendie (PSI) PSI Plan de Sécurité Incendie (PSI) Le Plan de Sécurité Incendie est un document réglementaire qui définit les mesures de prévention et d&#x27;intervention en cas d&#x27;incendie. Au Québec, il est encadré par le Code national de prévention des incendies — Canada 2020 (CNPI), entré en vigueur le 17 avril 2025 via le Code de sécurité du Québec, Chapitre VIII — Bâtiment. Générer votre PSI avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Sécurité Incendie ? Le PSI est un document détaillé traitant de tous les aspects de la sécurité incendie relativement à un bâtiment ou à un établissement donné. Il précise les mesures de prévention, les procédures d&#x27;évacuation, les rôles du personnel désigné, les équipements de protection incendie disponibles et les protocoles d&#x27;intervention. Le PSI est le document de base de tout bâtiment — toute organisation doit en avoir un. Bâtiments visés par le PSI au Québec Selon le Code national de prévention des incendies (CNPI) et le Code de sécurité du Québec, le PSI est obligatoire pour : les établissements de réunion, de soins, de traitement ou de détention ; les résidences privées pour aînés (RPA) et les ressources intermédiaires (RI) ; les services de garde (selon les exigences du ministère de la Famille, sous forme de PSI-MU) ; les bâtiments d&#x27;habitation (selon les guides du gouvernement du Québec). Contenu d&#x27;un PSI complet Un PSI complet comprend les éléments requis par le CNPI : la désignation et la préparation du personnel de surveillance, l&#x27;inspection et l&#x27;entretien des installations de sécurité, les procédures d&#x27;évacuation incluant les personnes nécessitant une assistance, l&#x27;avis au service d&#x27;incendie, les instructions aux occupants lors du déclenchement de l&#x27;alarme, et le programme d&#x27;exercices d&#x27;évacuation (obligatoire selon l&#x27;art. 2.8.3 du CNPI). Un plan d&#x27;évacuation affiché par aire de plancher est également obligatoire (art. 2.8.2.7 du CNPI). Cadre légal — CNPI 2020 au Québec Le Code de sécurité du Québec, Chapitre VIII — Bâtiment, intègre le Code national de prévention des incendies — Canada 2020 (CNPI 2020), avec les modifications spécifiques au Québec, entrées en vigueur le 17 avril 2025. Le CNPI est publié par la Commission canadienne des codes du bâtiment et de prévention des incendies du Conseil national de recherches du Canada (CNRC). Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Fréquence de mise à jour Le propriétaire ou l&#x27;exploitant d&#x27;un bâtiment doit mettre à jour son PSI annuellement, notamment la liste des membres de l&#x27;équipe d&#x27;urgence. Une mise à jour est également requise dès qu&#x27;un changement affecte le bâtiment : travaux de rénovation, modification des systèmes d&#x27;alarme ou de gicleurs, changement d&#x27;occupation ou de personnel désigné. La formation du personnel de surveillance est obligatoire lors de l&#x27;implantation ou de la mise à jour du PSI selon le CNPI (art. 2.8.1.2). Comment CORO simplifie la production du PSI CORO intègre toutes les procédures incendie standardisées selon le CNPI et les adapte automatiquement à votre type de bâtiment et d&#x27;occupation. Les listes du personnel désigné, les plans d&#x27;évacuation par aire de plancher et les équipements sont gérés directement dans la plateforme. L&#x27;export PDF professionnel inclut toutes les sections requises par la réglementation, avec mise à jour annuelle simplifiée. 📚 Sources et références officielles → Code national de prévention des incendies — Canada 2020 (CNPI) — CNRC → RBQ — Exigences du Code national de prévention des incendies → RBQ — CNPI 2020 modifié Québec : principaux changements (en vigueur 17 avril 2025) → Guide PSI-MU pour habitations — Gouvernement du Québec ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Quelle est la différence entre un PSI et un PMU ? Le PSI est spécifique aux situations d&#x27;incendie. Le PMU est plus large et couvre tous les types d&#x27;urgence. Toute organisation doit avoir un PSI ; lorsqu&#x27;un PMU est requis, il agit comme plan maître et contient le PSI. Mon bâtiment a-t-il besoin d&#x27;un PSI ? Selon le CNPI, tous les établissements de réunion, de soins, de traitement ou de détention doivent avoir un PSI. Les résidences pour aînés, les services de garde et les bâtiments d&#x27;habitation sont également visés. Consultez votre service de sécurité incendie local pour les exigences spécifiques à votre territoire. À quelle fréquence doit-on mettre à jour le PSI ? Le PSI doit être mis à jour annuellement, notamment la liste des membres de l&#x27;équipe d&#x27;urgence. Une mise à jour est également requise lors de tout changement significatif au bâtiment. Le PSI doit-il être soumis aux autorités ? Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Renseignez-vous auprès de votre municipalité pour connaître les exigences spécifiques à votre territoire. Prêt à produire votre PSI ? CORO génère, structure et gère vos documents de conformité depuis une seule plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "en": {
+    "status": 200,
+    "title": "Plan de Sécurité Incendie (PSI) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Sécurité Incendie au Québec : bâtiments visés, contenu requis, obligations légales selon le CNPI 2020 et comment CORO accélère sa production.",
+    "canonical": "https://getcoro.io/documents/plan-securite-incendie-psi",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Sécurité Incendie (PSI)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Sécurité Incendie ?"
+      ],
+      [
+        2,
+        "Bâtiments visés par le PSI au Québec"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PSI complet"
+      ],
+      [
+        2,
+        "Cadre légal — CNPI 2020 au Québec"
+      ],
+      [
+        2,
+        "Fréquence de mise à jour"
+      ],
+      [
+        2,
+        "Comment CORO simplifie la production du PSI"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Quelle est la différence entre un PSI et un PMU ?"
+      ],
+      [
+        3,
+        "Mon bâtiment a-t-il besoin d&#x27;un PSI ?"
+      ],
+      [
+        3,
+        "À quelle fréquence doit-on mettre à jour le PSI ?"
+      ],
+      [
+        3,
+        "Le PSI doit-il être soumis aux autorités ?"
+      ],
+      [
+        2,
+        "Prêt à produire votre PSI ?"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Générer votre PSI avec CORO →"
+      ],
+      [
+        "https://nrc.canada.ca/fr/certifications-evaluations-normes/codes-canada/publications-codes-canada/code-national-prevention-incendies-canada-2020",
+        "→ Code national de prévention des incendies — Canada 2020 (CNPI) — CNRC"
+      ],
+      [
+        "https://www.rbq.gouv.qc.ca/domaines-dintervention/batiment/interpretation-directives-techniques-et-administratives/chapitre-batiment-du-code-de-securite/exigences-du-code-national-de-prevention-des-incendies/",
+        "→ RBQ — Exigences du Code national de prévention des incendies"
+      ],
+      [
+        "https://www.rbq.gouv.qc.ca/domaines-dintervention/batiment/la-formation/code-national-de-securite-incendie-2020-modifie-quebec/",
+        "→ RBQ — CNPI 2020 modifié Québec : principaux changements (en vigueur 17 avril 2025)"
+      ],
+      [
+        "https://cdn-contenu.quebec.ca/cdn-contenu/adm/min/securite-publique/publications-adm/publications-secteurs/securite-incendie/services-securite-incendie/materiel-prevention/Guide_PSIMU_Habitations_VF.pdf",
+        "→ Guide PSI-MU pour habitations — Gouvernement du Québec"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Sécurité Incendie (PSI)",
+        "headline": "Plan de Sécurité Incendie (PSI) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Sécurité Incendie au Québec : bâtiments visés, contenu requis, obligations légales selon le CNPI 2020 et comment CORO accélère sa production.",
+        "url": "https://getcoro.io/documents/plan-securite-incendie-psi",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Sécurité Incendie",
+            "alternateName": "PSI"
+          },
+          {
+            "@type": "Thing",
+            "name": "Sécurité incendie"
+          },
+          {
+            "@type": "Thing",
+            "name": "Code national de prévention des incendies — Canada 2020",
+            "alternateName": "CNPI 2020"
+          },
+          {
+            "@type": "Thing",
+            "name": "Plan d'évacuation"
+          },
+          {
+            "@type": "Thing",
+            "name": "Prévention des incendies"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Sécurité Incendie (PSI)",
+            "item": "https://getcoro.io/documents/plan-securite-incendie-psi"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre un PSI et un PMU ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PSI est spécifique aux situations d'incendie. Le PMU est plus large et couvre tous les types d'urgence. Toute organisation doit avoir un PSI ; lorsqu'un PMU est requis, il agit comme plan maître et contient le PSI."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Mon bâtiment a-t-il besoin d'un PSI ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Selon le CNPI, tous les établissements de réunion, de soins, de traitement ou de détention doivent avoir un PSI. Les résidences pour aînés, les services de garde et les bâtiments d'habitation sont également visés. Consultez votre service de sécurité incendie local pour les exigences spécifiques à votre territoire."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "À quelle fréquence doit-on mettre à jour le PSI ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PSI doit être mis à jour annuellement, notamment la liste des membres de l'équipe d'urgence. Une mise à jour est également requise lors de tout changement significatif au bâtiment."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PSI doit-il être soumis aux autorités ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Renseignez-vous auprès de votre municipalité pour connaître les exigences spécifiques à votre territoire."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil getcoro.io / Plan de Sécurité Incendie (PSI) PSI Plan de Sécurité Incendie (PSI) Le Plan de Sécurité Incendie est un document réglementaire qui définit les mesures de prévention et d&#x27;intervention en cas d&#x27;incendie. Au Québec, il est encadré par le Code national de prévention des incendies — Canada 2020 (CNPI), entré en vigueur le 17 avril 2025 via le Code de sécurité du Québec, Chapitre VIII — Bâtiment. Générer votre PSI avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Sécurité Incendie ? Le PSI est un document détaillé traitant de tous les aspects de la sécurité incendie relativement à un bâtiment ou à un établissement donné. Il précise les mesures de prévention, les procédures d&#x27;évacuation, les rôles du personnel désigné, les équipements de protection incendie disponibles et les protocoles d&#x27;intervention. Le PSI est le document de base de tout bâtiment — toute organisation doit en avoir un. Bâtiments visés par le PSI au Québec Selon le Code national de prévention des incendies (CNPI) et le Code de sécurité du Québec, le PSI est obligatoire pour : les établissements de réunion, de soins, de traitement ou de détention ; les résidences privées pour aînés (RPA) et les ressources intermédiaires (RI) ; les services de garde (selon les exigences du ministère de la Famille, sous forme de PSI-MU) ; les bâtiments d&#x27;habitation (selon les guides du gouvernement du Québec). Contenu d&#x27;un PSI complet Un PSI complet comprend les éléments requis par le CNPI : la désignation et la préparation du personnel de surveillance, l&#x27;inspection et l&#x27;entretien des installations de sécurité, les procédures d&#x27;évacuation incluant les personnes nécessitant une assistance, l&#x27;avis au service d&#x27;incendie, les instructions aux occupants lors du déclenchement de l&#x27;alarme, et le programme d&#x27;exercices d&#x27;évacuation (obligatoire selon l&#x27;art. 2.8.3 du CNPI). Un plan d&#x27;évacuation affiché par aire de plancher est également obligatoire (art. 2.8.2.7 du CNPI). Cadre légal — CNPI 2020 au Québec Le Code de sécurité du Québec, Chapitre VIII — Bâtiment, intègre le Code national de prévention des incendies — Canada 2020 (CNPI 2020), avec les modifications spécifiques au Québec, entrées en vigueur le 17 avril 2025. Le CNPI est publié par la Commission canadienne des codes du bâtiment et de prévention des incendies du Conseil national de recherches du Canada (CNRC). Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Fréquence de mise à jour Le propriétaire ou l&#x27;exploitant d&#x27;un bâtiment doit mettre à jour son PSI annuellement, notamment la liste des membres de l&#x27;équipe d&#x27;urgence. Une mise à jour est également requise dès qu&#x27;un changement affecte le bâtiment : travaux de rénovation, modification des systèmes d&#x27;alarme ou de gicleurs, changement d&#x27;occupation ou de personnel désigné. La formation du personnel de surveillance est obligatoire lors de l&#x27;implantation ou de la mise à jour du PSI selon le CNPI (art. 2.8.1.2). Comment CORO simplifie la production du PSI CORO intègre toutes les procédures incendie standardisées selon le CNPI et les adapte automatiquement à votre type de bâtiment et d&#x27;occupation. Les listes du personnel désigné, les plans d&#x27;évacuation par aire de plancher et les équipements sont gérés directement dans la plateforme. L&#x27;export PDF professionnel inclut toutes les sections requises par la réglementation, avec mise à jour annuelle simplifiée. 📚 Sources et références officielles → Code national de prévention des incendies — Canada 2020 (CNPI) — CNRC → RBQ — Exigences du Code national de prévention des incendies → RBQ — CNPI 2020 modifié Québec : principaux changements (en vigueur 17 avril 2025) → Guide PSI-MU pour habitations — Gouvernement du Québec ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Quelle est la différence entre un PSI et un PMU ? Le PSI est spécifique aux situations d&#x27;incendie. Le PMU est plus large et couvre tous les types d&#x27;urgence. Toute organisation doit avoir un PSI ; lorsqu&#x27;un PMU est requis, il agit comme plan maître et contient le PSI. Mon bâtiment a-t-il besoin d&#x27;un PSI ? Selon le CNPI, tous les établissements de réunion, de soins, de traitement ou de détention doivent avoir un PSI. Les résidences pour aînés, les services de garde et les bâtiments d&#x27;habitation sont également visés. Consultez votre service de sécurité incendie local pour les exigences spécifiques à votre territoire. À quelle fréquence doit-on mettre à jour le PSI ? Le PSI doit être mis à jour annuellement, notamment la liste des membres de l&#x27;équipe d&#x27;urgence. Une mise à jour est également requise lors de tout changement significatif au bâtiment. Le PSI doit-il être soumis aux autorités ? Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Renseignez-vous auprès de votre municipalité pour connaître les exigences spécifiques à votre territoire. Prêt à produire votre PSI ? CORO génère, structure et gère vos documents de conformité depuis une seule plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "ref": {
+    "status": 200,
+    "title": "Plan de Sécurité Incendie (PSI) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Sécurité Incendie au Québec : bâtiments visés, contenu requis, obligations légales selon le CNPI 2020 et comment CORO accélère sa production.",
+    "canonical": "https://getcoro.io/documents/plan-securite-incendie-psi",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Sécurité Incendie (PSI)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Sécurité Incendie ?"
+      ],
+      [
+        2,
+        "Bâtiments visés par le PSI au Québec"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PSI complet"
+      ],
+      [
+        2,
+        "Cadre légal — CNPI 2020 au Québec"
+      ],
+      [
+        2,
+        "Fréquence de mise à jour"
+      ],
+      [
+        2,
+        "Comment CORO simplifie la production du PSI"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Quelle est la différence entre un PSI et un PMU ?"
+      ],
+      [
+        3,
+        "Mon bâtiment a-t-il besoin d&#x27;un PSI ?"
+      ],
+      [
+        3,
+        "À quelle fréquence doit-on mettre à jour le PSI ?"
+      ],
+      [
+        3,
+        "Le PSI doit-il être soumis aux autorités ?"
+      ],
+      [
+        2,
+        "Prêt à produire votre PSI ?"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Générer votre PSI avec CORO →"
+      ],
+      [
+        "https://nrc.canada.ca/fr/certifications-evaluations-normes/codes-canada/publications-codes-canada/code-national-prevention-incendies-canada-2020",
+        "→ Code national de prévention des incendies — Canada 2020 (CNPI) — CNRC"
+      ],
+      [
+        "https://www.rbq.gouv.qc.ca/domaines-dintervention/batiment/interpretation-directives-techniques-et-administratives/chapitre-batiment-du-code-de-securite/exigences-du-code-national-de-prevention-des-incendies/",
+        "→ RBQ — Exigences du Code national de prévention des incendies"
+      ],
+      [
+        "https://www.rbq.gouv.qc.ca/domaines-dintervention/batiment/la-formation/code-national-de-securite-incendie-2020-modifie-quebec/",
+        "→ RBQ — CNPI 2020 modifié Québec : principaux changements (en vigueur 17 avril 2025)"
+      ],
+      [
+        "https://cdn-contenu.quebec.ca/cdn-contenu/adm/min/securite-publique/publications-adm/publications-secteurs/securite-incendie/services-securite-incendie/materiel-prevention/Guide_PSIMU_Habitations_VF.pdf",
+        "→ Guide PSI-MU pour habitations — Gouvernement du Québec"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Sécurité Incendie (PSI)",
+        "headline": "Plan de Sécurité Incendie (PSI) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Sécurité Incendie au Québec : bâtiments visés, contenu requis, obligations légales selon le CNPI 2020 et comment CORO accélère sa production.",
+        "url": "https://getcoro.io/documents/plan-securite-incendie-psi",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Sécurité Incendie",
+            "alternateName": "PSI"
+          },
+          {
+            "@type": "Thing",
+            "name": "Sécurité incendie"
+          },
+          {
+            "@type": "Thing",
+            "name": "Code national de prévention des incendies — Canada 2020",
+            "alternateName": "CNPI 2020"
+          },
+          {
+            "@type": "Thing",
+            "name": "Plan d'évacuation"
+          },
+          {
+            "@type": "Thing",
+            "name": "Prévention des incendies"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Sécurité Incendie (PSI)",
+            "item": "https://getcoro.io/documents/plan-securite-incendie-psi"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre un PSI et un PMU ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PSI est spécifique aux situations d'incendie. Le PMU est plus large et couvre tous les types d'urgence. Toute organisation doit avoir un PSI ; lorsqu'un PMU est requis, il agit comme plan maître et contient le PSI."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Mon bâtiment a-t-il besoin d'un PSI ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Selon le CNPI, tous les établissements de réunion, de soins, de traitement ou de détention doivent avoir un PSI. Les résidences pour aînés, les services de garde et les bâtiments d'habitation sont également visés. Consultez votre service de sécurité incendie local pour les exigences spécifiques à votre territoire."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "À quelle fréquence doit-on mettre à jour le PSI ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le PSI doit être mis à jour annuellement, notamment la liste des membres de l'équipe d'urgence. Une mise à jour est également requise lors de tout changement significatif au bâtiment."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PSI doit-il être soumis aux autorités ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Renseignez-vous auprès de votre municipalité pour connaître les exigences spécifiques à votre territoire."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil getcoro.io / Plan de Sécurité Incendie (PSI) PSI Plan de Sécurité Incendie (PSI) Le Plan de Sécurité Incendie est un document réglementaire qui définit les mesures de prévention et d&#x27;intervention en cas d&#x27;incendie. Au Québec, il est encadré par le Code national de prévention des incendies — Canada 2020 (CNPI), entré en vigueur le 17 avril 2025 via le Code de sécurité du Québec, Chapitre VIII — Bâtiment. Générer votre PSI avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Sécurité Incendie ? Le PSI est un document détaillé traitant de tous les aspects de la sécurité incendie relativement à un bâtiment ou à un établissement donné. Il précise les mesures de prévention, les procédures d&#x27;évacuation, les rôles du personnel désigné, les équipements de protection incendie disponibles et les protocoles d&#x27;intervention. Le PSI est le document de base de tout bâtiment — toute organisation doit en avoir un. Bâtiments visés par le PSI au Québec Selon le Code national de prévention des incendies (CNPI) et le Code de sécurité du Québec, le PSI est obligatoire pour : les établissements de réunion, de soins, de traitement ou de détention ; les résidences privées pour aînés (RPA) et les ressources intermédiaires (RI) ; les services de garde (selon les exigences du ministère de la Famille, sous forme de PSI-MU) ; les bâtiments d&#x27;habitation (selon les guides du gouvernement du Québec). Contenu d&#x27;un PSI complet Un PSI complet comprend les éléments requis par le CNPI : la désignation et la préparation du personnel de surveillance, l&#x27;inspection et l&#x27;entretien des installations de sécurité, les procédures d&#x27;évacuation incluant les personnes nécessitant une assistance, l&#x27;avis au service d&#x27;incendie, les instructions aux occupants lors du déclenchement de l&#x27;alarme, et le programme d&#x27;exercices d&#x27;évacuation (obligatoire selon l&#x27;art. 2.8.3 du CNPI). Un plan d&#x27;évacuation affiché par aire de plancher est également obligatoire (art. 2.8.2.7 du CNPI). Cadre légal — CNPI 2020 au Québec Le Code de sécurité du Québec, Chapitre VIII — Bâtiment, intègre le Code national de prévention des incendies — Canada 2020 (CNPI 2020), avec les modifications spécifiques au Québec, entrées en vigueur le 17 avril 2025. Le CNPI est publié par la Commission canadienne des codes du bâtiment et de prévention des incendies du Conseil national de recherches du Canada (CNRC). Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Fréquence de mise à jour Le propriétaire ou l&#x27;exploitant d&#x27;un bâtiment doit mettre à jour son PSI annuellement, notamment la liste des membres de l&#x27;équipe d&#x27;urgence. Une mise à jour est également requise dès qu&#x27;un changement affecte le bâtiment : travaux de rénovation, modification des systèmes d&#x27;alarme ou de gicleurs, changement d&#x27;occupation ou de personnel désigné. La formation du personnel de surveillance est obligatoire lors de l&#x27;implantation ou de la mise à jour du PSI selon le CNPI (art. 2.8.1.2). Comment CORO simplifie la production du PSI CORO intègre toutes les procédures incendie standardisées selon le CNPI et les adapte automatiquement à votre type de bâtiment et d&#x27;occupation. Les listes du personnel désigné, les plans d&#x27;évacuation par aire de plancher et les équipements sont gérés directement dans la plateforme. L&#x27;export PDF professionnel inclut toutes les sections requises par la réglementation, avec mise à jour annuelle simplifiée. 📚 Sources et références officielles → Code national de prévention des incendies — Canada 2020 (CNPI) — CNRC → RBQ — Exigences du Code national de prévention des incendies → RBQ — CNPI 2020 modifié Québec : principaux changements (en vigueur 17 avril 2025) → Guide PSI-MU pour habitations — Gouvernement du Québec ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Quelle est la différence entre un PSI et un PMU ? Le PSI est spécifique aux situations d&#x27;incendie. Le PMU est plus large et couvre tous les types d&#x27;urgence. Toute organisation doit avoir un PSI ; lorsqu&#x27;un PMU est requis, il agit comme plan maître et contient le PSI. Mon bâtiment a-t-il besoin d&#x27;un PSI ? Selon le CNPI, tous les établissements de réunion, de soins, de traitement ou de détention doivent avoir un PSI. Les résidences pour aînés, les services de garde et les bâtiments d&#x27;habitation sont également visés. Consultez votre service de sécurité incendie local pour les exigences spécifiques à votre territoire. À quelle fréquence doit-on mettre à jour le PSI ? Le PSI doit être mis à jour annuellement, notamment la liste des membres de l&#x27;équipe d&#x27;urgence. Une mise à jour est également requise lors de tout changement significatif au bâtiment. Le PSI doit-il être soumis aux autorités ? Le service de sécurité incendie local peut exiger un exemplaire du PSI pour vérifier sa conformité. Renseignez-vous auprès de votre municipalité pour connaître les exigences spécifiques à votre territoire. Prêt à produire votre PSI ? CORO génère, structure et gère vos documents de conformité depuis une seule plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  }
+}
