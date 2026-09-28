@@ -675,3 +675,103 @@ Puppeteer reste indisponible dans cet environnement (limite déjà signalée en 
 ## Revues de mise en ligne
 
 Aucune nouvelle revue bloquante. Les décisions PMU et PSI restent inchangées et ne sont pas rouvertes par cette passe.
+
+# MIG-05E — PGC implementation result
+
+Implémenté (2026-09-27), **construit dès le premier passage à la qualité visuelle finale** — contrairement à PMU/PSI/PCA, qui ont chacun nécessité une passe de densité/caractère séparée (MIG-05B-B/MIG-05C-B/MIG-05D-B). Registre V2 : `/documents/plan-gestion-crise-pgc` ajoutée après le PCA.
+
+## Baseline et contrat de langue
+
+`tests/fixtures/guide-pgc-baseline.json` capture FR / `?lang=en` / `?ref=CR-ABCDEF`. Comme PSI et PCA, le fichier V1 n'avait aucune gestion de `searchParams` : `?lang=en` retournait trivialement la même page française. `bodyText` FR === EN confirmé → `englishAvailable={false}` / `hasEnglish: false`.
+
+## Frontière produit — CRITIQUE
+
+**La production du PGC dans CORO reste Phase 2**, à la différence du PMU/PSI/PCA. Faille V1 corrigée : le CTA du hero V1 disait « Structurer votre PGC avec CORO », contredisant directement le bandeau Phase 2 de la V1 lui-même une ligne plus bas. En V2 : aucune occurrence de « disponible dans CORO », « Générer votre PGC » ou « Produire votre PGC » — seule affirmation : le **guide** est disponible aujourd'hui, la **production CORO** est « prévue en phase 2 » (§09, deux faits juxtaposés explicitement). Aucun CTA « Découvrir CORO Documents » (aurait laissé croire à une production actuelle) — remplacé par un lien contextuel vers `/gestion-documentaire`, intitulé « Voir les documents disponibles aujourd'hui ».
+
+## Matrice de préservation — résumé
+
+Les 6 sections V1 (définition/ISO 22361, urgence vs crise, contenu du PGC, communication de crise, fréquence de révision/exercices, simplification CORO) sont RECOMPOSÉES dans une architecture éditoriale à 9 sections + FAQ + CTA (pas de section ressources — voir plus bas). Les 4 questions FAQ préservées dans leur substance. Sources : ISO 22361:2022 conservée, ISO 22301:2019 retirée (voir décision normative), lien Gouvernement du Canada conservé.
+
+## Audit normatif — décisions
+
+- **ISO 22361:2022** : VERIFIED — norme de lignes directrices (pas une loi), destinée aux dirigeants responsables de la capacité de gestion de crise, couvrant contexte/principes/leadership de crise/défis décisionnels (confirmé via sources secondaires institutionnelles ; iso.org bloque les requêtes scriptées avec un 403 — signalé comme une protection anti-bot, pas un lien mort). Conservée, présentée explicitement comme « lignes directrices ».
+- **ISO 22301:2019** : RETIRÉE des sources PGC. C'est la norme du PCA (déjà couverte sur le guide PCA) ; la V1 la listait en source PGC sans jamais la citer dans le corps du texte — un cross-listing confus plutôt qu'une référence normative réelle pour le PGC.
+- **« Révisé annuellement »** et **« exercices tous les 12 à 18 mois »** : NOT VERIFIED → REMOVE. Aucune source primaire, y compris la portée d'ISO 22361 elle-même, ne confirme une fréquence fixe — même leçon de famille que PMU/PSI/PCA. Généralisé à « révisé après chaque activation réelle et chaque changement significatif » et « exercices recommandés » sans fréquence chiffrée.
+- **Lien Gouvernement du Canada (Cadre de gestion des urgences)** : VERIFIED (200), conservé.
+
+## Distinction urgence vs crise
+
+Section 2, RECOMPOSÉE en comparaison compacte à deux colonnes (texte normal, pas de mot géant — cette intensité visuelle est réservée à « Décider »). Urgence = sécurité physique des personnes (PMU/PSI) ; Crise = réputation/viabilité/confiance (PGC). Aucune affirmation que « toute urgence devient une crise ».
+
+## Hero — audit renforcé
+
+`guide-pgc-crisis-management.webp` est sensiblement plus chargé que les heros PMU/PSI/PCA : tableau de bord multi-panneaux avec radar météo, statuts de sites, organigramme de cellule de crise, tableau blanc manuscrit. Audité spécifiquement pour un risque de confusion avec une vraie UI CORO : aucun logo CORO, aucune UI produit réelle identifiable, codes de sites fictifs génériques, tableau blanc visiblement manuscrit/mis en scène. Conclusion : illustration éditoriale stylisée, pas une capture d'écran — classification MARKETING/ÉDITORIAL maintenue, `alt=""`, image non modifiée. **Aucun fait n'est dérivé de l'image**, y compris là où elle affiche coïncidemment des mots repris dans le texte de la page (« DÉCIDER », « COORDONNER ») — ces mots proviennent du texte V1 vérifié et de la portée ISO 22361 confirmée indépendamment, jamais de l'image.
+
+## Signature visuelle PGC — distincte de PMU, PSI et PCA
+
+1. **§3 — « Décider »** : ancre typographique avec trois qualificatifs repris verbatim de la phrase de définition du guide (rapidement / de façon coordonnée / en limitant l'impact opérations-réputation). Composition distincte du « 08 » PMU, de l'ancre « PSI » et du « CONTINUER » PCA.
+2. **§4 — Cellule de crise** : matrice de 5 fonctions (Direction, Communications, Juridique, RH, Opérations) — aucune ligne de connexion, aucune hiérarchie inventée, explicitement cadrée « typiquement... la composition exacte varie ».
+3. **§5 — Composition stratégique navy** : trois bandes pleine largeur (Décision / Communication / Coordination), une forme horizontale délibérément différente des colonnes du PSI et de la grille à 5 colonnes du PCA — concepts liés, explicitement « pas séquentiels ».
+
+## Cellule de crise — pas d'organigramme fictif
+
+Conformément à la consigne, aucune hiérarchie de commandement n'est représentée : 5 fonctions en matrice sans lignes de connexion, aucun rôle ICS/SCI inventé (pas de « incident commander », « liaison officer », etc.), aucune structure universelle affirmée.
+
+## Communication de crise
+
+RECOMPOSÉE en matrice de 4 audiences sourcées du texte V1 (autorités, médias, employés, parties prenantes) — aucune implication de notification de masse, de diffusion automatique, ou de confusion avec Sentinelle Population (module distinct).
+
+## Relation avec PMU et PCA
+
+Trois taglines contextuelles compactes, reprenant la formulation déjà établie sur les guides PMU et PCA eux-mêmes (cohérence réciproque, pas une nouvelle affirmation) : PMU « Agir face à l'urgence », PGC « Gouverner la crise », PCA « Maintenir les activités critiques ». Aucune hiérarchie obligatoire PMU→PGC→PCA→PRA affirmée.
+
+## Ressources — lacune éditoriale enregistrée
+
+Aucun article de blogue fortement spécifique à la gestion de crise/PGC n'existe dans l'inventaire publié actuel (recherché durant MIG-05E — seuls des articles PCA/résilience/tabletop tangentiels existent, aucun sur la cellule de crise ou la communication de crise). Conformément à la consigne explicite de ne pas réutiliser des articles PMU/PCA uniquement pour remplir l'espace, la **section ressources est omise** sur cette page. Lacune éditoriale enregistrée pour suivi futur, pas une omission silencieuse.
+
+## SEO — décision REWRITE
+
+URL conservée à l'identique. Titre et description réécrits pour refléter cellule de crise/communication/ISO 22361, retirer l'accroche produit du titre V1.
+
+## Données structurées
+
+`BreadcrumbList` (Accueil › Guides › PGC) et `FAQPage` (4 questions, parité avec la FAQ visible). Le `WebPage.about[Thing×4]` et le `publisher.logo` orphelin de la V1 sont retirés — aucun schéma `SoftwareApplication`, `Offer` ou `Product`.
+
+## Densité / usage de la largeur — audit section par section (§35 de la consigne)
+
+| Section | Classification | Traitement |
+|---|---|---|
+| Hero | STRONG | Photo pleine hauteur |
+| §1 Qu'est-ce qu'un PGC | CALM | `density="compact"`, section courte et intentionnellement calme |
+| §2 Urgence et crise | STRUCTURED | Comparaison 2 colonnes pleine largeur |
+| §3 Décider | STRONG | Ancre typographique + qualificatifs, moment majeur |
+| §4 Cellule de crise | STRUCTURED | Matrice de 5 fonctions, pleine largeur |
+| §5 Trois volets stratégiques | STRONG | Navy, 3 bandes pleine largeur |
+| §6 Communication de crise | STRUCTURED | Matrice de 4 audiences |
+| §7 Exercices et révision | CALM/STRUCTURED | `density="compact"`, 2 blocs ruled pleine largeur |
+| §8 PGC/PMU/PCA | CALM/STRUCTURED | `density="compact"`, 3 taglines pleine largeur |
+| §9 PGC dans CORO | CALM/STRUCTURED | `density="compact"`, 2 faits pleine largeur + lien |
+| FAQ | STRUCTURED | Accordéon standard |
+| CTA | STRONG | Bande finale |
+
+Aucune section « texte étroit à gauche / 55-65 % vide à droite » détectée — le défaut corrigé après coup sur PMU/PSI/PCA n'apparaît pas ici dès la première passe.
+
+## Preuve responsive
+
+Puppeteer reste indisponible dans cet environnement (limite déjà signalée en MIG-05B-B/MIG-05C/MIG-05C-B/MIG-05D/MIG-05D-B). Inspection visuelle réelle via navigateur à la largeur de fenêtre disponible (~1036px), défilement complet : hero, comparaison urgence/crise, « Décider », matrice de fonctions, bandes navy, audiences de communication, exercices/révision, relations, Phase 2, FAQ, CTA — tous rendus sans débordement ni chevauchement. La largeur de fenêtre n'a pas pu être variée avec précision dans cet environnement (limite déjà documentée) ; les points de rupture CSS (40rem/48rem/56rem/64rem/68rem) reprennent exactement les mêmes motifs déjà vérifiés visuellement sur PMU/PSI/PCA.
+
+## Tests, build
+
+`tests/guide-pgc-migration.test.ts` créé (23 tests dédiés : baseline, registre, langue, hero, **frontière Phase 2 critique**, absence d'automatisation invoquée, absence de niveaux de crise/seuils/délais inventés, ISO 22361 comme lignes directrices, absence de numéro de clause inventé, absence de fréquence fixe, 5 fonctions de la cellule de crise exactes sans hiérarchie fictive, non-clonage des signatures PMU/PSI/PCA, qualificatifs de « Décider » exacts, 3 bandes navy exactes, distinction urgence/crise sourcée, relations PMU/PGC/PCA sans séquence forcée, audiences de communication sourcées, parité FAQ/JSON-LD, liens internes contextuels, absence de section ressources justifiée, CTA sans promesse de production, métadonnées, accessibilité, densité locale). **482 tests passent** (tous verts dès la première exécution — aucun correctif de composition nécessaire après la première implémentation). `tsc --noEmit`, ESLint et `npm run build` propres. QA finale : un seul pied de page, un seul `<main>`, un seul `<h1>` post-registre. Contrôle de non-régression : `/`, `/security`, `/pricing`, `/guides`, `/coro-incident`, `/gestion-documentaire`, `/blog`, PMU, PSI, PCA, PRA, PUE répondent tous 200.
+
+## Revue de design de famille — PMU + PSI + PCA + PGC
+
+**Commun aux quatre guides** : `V2Shell` + `EditorialHero` + `PageSection`/`EditorialBlock` + `Accordion` (FAQ) + `CTASection` ; rythme éditorial dense (`density="compact"` par instance) ; méthode normative identique (matrice CLAIM/SOURCE/STATUT/DÉCISION, généralisation plutôt qu'invention de précision, retrait systématique des revendications de fréquence non vérifiées — les quatre guides ont chacun eu au moins une revendication temporelle retirée) ; lien `/guides` obligatoire + liens contextuels vers les guides apparentés ; FAQ ; CTA éditorial-d'abord ; protocole de registre identique ; philosophie de densité (compact pour l'ordinaire, standard pour les moments visuels).
+
+**Propre à chaque sujet** : ancres typographiques (« 08 » / « PSI » / « CONTINUER » / « Décider »), compositions de cartes (rôles PMU / parties prenantes PSI / aucune carte PCA / fonctions de cellule PGC), concepts navy (cycle PMU / territoires-colonnes PSI / grille 5-colonnes PCA / bandes pleine largeur PGC), et les frontières produit elles-mêmes (PMU/PSI/PCA disponibles aujourd'hui vs PGC Phase 2 — la différence la plus structurante entre PGC et les trois guides précédents).
+
+**Conclusion** : toujours **aucune extraction de composant Guide partagé**. Quatre implémentations indépendantes, chacune avec sa propre signature, confirment que les primitifs V2 existants suffisent et qu'aucune logique dupliquée stable ne justifie une abstraction. PGC démontre en plus que la frontière produit elle-même (Phase 2 vs disponible) est un axe de variation suffisamment important pour qu'un composant Guide partagé devrait de toute façon exposer cette différence explicitement — argument supplémentaire contre une extraction prématurée. À réévaluer après PRA/PUE.
+
+## Revues de mise en ligne
+
+Aucune nouvelle revue bloquante introduite par le PGC. Les décisions PMU, PSI et PCA restent inchangées et ne sont pas rouvertes par cette étape. Lacune éditoriale enregistrée : absence de ressource blog spécifique au PGC/gestion de crise dans l'inventaire actuel — à surveiller si du nouveau contenu est publié.

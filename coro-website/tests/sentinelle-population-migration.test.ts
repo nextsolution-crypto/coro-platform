@@ -13,8 +13,8 @@ const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 const css = read('app/sentinelle-population/page.module.css');
 
 test('registry ends with /sentinelle-population; nothing else is added', () => {
-  assert.deepEqual([...migratedV2Routes].slice(-9), ['/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca']);
-  assert.equal(migratedV2Routes.length, 18);
+  assert.deepEqual([...migratedV2Routes].slice(-10), ['/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc']);
+  assert.equal(migratedV2Routes.length, 19);
   assert.equal(isLegacyFooterVisible('/sentinelle-population'), false);
 });
 

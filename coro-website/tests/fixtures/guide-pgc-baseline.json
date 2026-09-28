@@ -1,0 +1,939 @@
+{
+  "captured": "2026-09-27 (MIG-05E, before any PGC change)",
+  "fr": {
+    "status": 200,
+    "title": "Plan de Gestion de Crise (PGC) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.",
+    "canonical": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Gestion de Crise (PGC)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Gestion de Crise ?"
+      ],
+      [
+        2,
+        "Différence entre urgence et crise"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PGC complet"
+      ],
+      [
+        2,
+        "La communication de crise"
+      ],
+      [
+        2,
+        "Fréquence de révision et d&#x27;exercices"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PGC"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Toutes les organisations ont-elles besoin d&#x27;un PGC ?"
+      ],
+      [
+        3,
+        "Qui fait partie de la cellule de crise ?"
+      ],
+      [
+        3,
+        "Le PGC est-il relié au PCA ?"
+      ],
+      [
+        3,
+        "Comment tester un PGC ?"
+      ],
+      [
+        2,
+        "Le PGC arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PGC avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/77720.html",
+        "→ ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Systèmes de management de la continuité des activités"
+      ],
+      [
+        "https://www.securitepublique.gc.ca/cnt/rsrcs/pblctns/mrgnc-mngmnt-frmwrk/index-fr.aspx",
+        "→ Gouvernement du Canada — Cadre de gestion des urgences"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Gestion de Crise (PGC)",
+        "headline": "Plan de Gestion de Crise (PGC) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.",
+        "url": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Gestion de Crise",
+            "alternateName": "PGC"
+          },
+          {
+            "@type": "Thing",
+            "name": "Gestion de crise"
+          },
+          {
+            "@type": "Thing",
+            "name": "Communication de crise"
+          },
+          {
+            "@type": "Thing",
+            "name": "Résilience organisationnelle"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Gestion de Crise (PGC)",
+            "item": "https://getcoro.io/documents/plan-gestion-crise-pgc"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Toutes les organisations ont-elles besoin d'un PGC ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n'est pas le critère principal — c'est l'exposition au risque."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qui fait partie de la cellule de crise ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PGC est-il relié au PCA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d'une crise majeure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment tester un PGC ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Par des exercices tabletop : simulation d'un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · La production du PGC dans CORO sera disponible prochainement. Être notifié → getcoro.io / Plan de Gestion de Crise (PGC) PGC Plan de Gestion de Crise (PGC) Le Plan de Gestion de Crise définit les protocoles de décision, de communication et d&#x27;intervention lors de situations affectant gravement l&#x27;organisation : crise médiatique, cyberattaque, incident majeur sur les lieux de travail, ou toute situation à fort impact réputationnel ou opérationnel. Structurer votre PGC avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Gestion de Crise ? Le PGC est un cadre décisionnel qui permet à une organisation de réagir rapidement et de façon coordonnée lors d&#x27;une crise. Il définit qui décide quoi, comment communiquer en interne et en externe, et comment minimiser l&#x27;impact sur les opérations et la réputation. La norme ISO 22361:2022 — Gestion de crise fournit des lignes directrices sur les principes et le cadre de la gestion de crise. Différence entre urgence et crise Une urgence affecte principalement la sécurité physique des personnes (incendie, accident) et nécessite un PMU ou un PSI. Une crise affecte la réputation, la viabilité ou la confiance envers l&#x27;organisation. Les deux peuvent survenir simultanément et nécessitent des plans distincts mais complémentaires. Contenu d&#x27;un PGC complet Un PGC comprend : la cellule de crise et ses membres, les déclencheurs d&#x27;activation du plan, les protocoles de communication interne et externe, la gestion des médias et des réseaux sociaux, les procédures d&#x27;escalade décisionnelle, et les scénarios préétablis pour les types de crises les plus probables selon l&#x27;analyse de risque de l&#x27;organisation. La communication de crise La communication est au cœur de la gestion de crise. Le PGC définit les porte-paroles autorisés, les messages clés pour chaque scénario, les canaux de communication prioritaires et les protocoles de validation des communications avant diffusion. Une mauvaise communication de crise peut aggraver significativement l&#x27;impact d&#x27;un incident. Fréquence de révision et d&#x27;exercices Le PGC doit être révisé annuellement et après chaque activation réelle. Des exercices de simulation (tabletop exercises) sont recommandés tous les 12 à 18 mois pour tester la réactivité de la cellule de crise et identifier les lacunes du plan. Comment CORO supporte la production du PGC CORO structure votre PGC avec des modèles de scénarios, des fiches rôles pour la cellule de crise et des procédures de communication. La plateforme centralise tous vos documents de conformité et de gestion des risques. 📚 Sources et références officielles → ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices → ISO 22301:2019 — Systèmes de management de la continuité des activités → Gouvernement du Canada — Cadre de gestion des urgences ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Toutes les organisations ont-elles besoin d&#x27;un PGC ? Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n&#x27;est pas le critère principal — c&#x27;est l&#x27;exposition au risque. Qui fait partie de la cellule de crise ? Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise. Le PGC est-il relié au PCA ? Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d&#x27;une crise majeure. Comment tester un PGC ? Par des exercices tabletop : simulation d&#x27;un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés. Le PGC arrive dans CORO — Phase 2 Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "en": {
+    "status": 200,
+    "title": "Plan de Gestion de Crise (PGC) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.",
+    "canonical": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Gestion de Crise (PGC)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Gestion de Crise ?"
+      ],
+      [
+        2,
+        "Différence entre urgence et crise"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PGC complet"
+      ],
+      [
+        2,
+        "La communication de crise"
+      ],
+      [
+        2,
+        "Fréquence de révision et d&#x27;exercices"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PGC"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Toutes les organisations ont-elles besoin d&#x27;un PGC ?"
+      ],
+      [
+        3,
+        "Qui fait partie de la cellule de crise ?"
+      ],
+      [
+        3,
+        "Le PGC est-il relié au PCA ?"
+      ],
+      [
+        3,
+        "Comment tester un PGC ?"
+      ],
+      [
+        2,
+        "Le PGC arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PGC avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/77720.html",
+        "→ ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Systèmes de management de la continuité des activités"
+      ],
+      [
+        "https://www.securitepublique.gc.ca/cnt/rsrcs/pblctns/mrgnc-mngmnt-frmwrk/index-fr.aspx",
+        "→ Gouvernement du Canada — Cadre de gestion des urgences"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Gestion de Crise (PGC)",
+        "headline": "Plan de Gestion de Crise (PGC) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.",
+        "url": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Gestion de Crise",
+            "alternateName": "PGC"
+          },
+          {
+            "@type": "Thing",
+            "name": "Gestion de crise"
+          },
+          {
+            "@type": "Thing",
+            "name": "Communication de crise"
+          },
+          {
+            "@type": "Thing",
+            "name": "Résilience organisationnelle"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Gestion de Crise (PGC)",
+            "item": "https://getcoro.io/documents/plan-gestion-crise-pgc"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Toutes les organisations ont-elles besoin d'un PGC ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n'est pas le critère principal — c'est l'exposition au risque."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qui fait partie de la cellule de crise ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PGC est-il relié au PCA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d'une crise majeure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment tester un PGC ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Par des exercices tabletop : simulation d'un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · La production du PGC dans CORO sera disponible prochainement. Être notifié → getcoro.io / Plan de Gestion de Crise (PGC) PGC Plan de Gestion de Crise (PGC) Le Plan de Gestion de Crise définit les protocoles de décision, de communication et d&#x27;intervention lors de situations affectant gravement l&#x27;organisation : crise médiatique, cyberattaque, incident majeur sur les lieux de travail, ou toute situation à fort impact réputationnel ou opérationnel. Structurer votre PGC avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Gestion de Crise ? Le PGC est un cadre décisionnel qui permet à une organisation de réagir rapidement et de façon coordonnée lors d&#x27;une crise. Il définit qui décide quoi, comment communiquer en interne et en externe, et comment minimiser l&#x27;impact sur les opérations et la réputation. La norme ISO 22361:2022 — Gestion de crise fournit des lignes directrices sur les principes et le cadre de la gestion de crise. Différence entre urgence et crise Une urgence affecte principalement la sécurité physique des personnes (incendie, accident) et nécessite un PMU ou un PSI. Une crise affecte la réputation, la viabilité ou la confiance envers l&#x27;organisation. Les deux peuvent survenir simultanément et nécessitent des plans distincts mais complémentaires. Contenu d&#x27;un PGC complet Un PGC comprend : la cellule de crise et ses membres, les déclencheurs d&#x27;activation du plan, les protocoles de communication interne et externe, la gestion des médias et des réseaux sociaux, les procédures d&#x27;escalade décisionnelle, et les scénarios préétablis pour les types de crises les plus probables selon l&#x27;analyse de risque de l&#x27;organisation. La communication de crise La communication est au cœur de la gestion de crise. Le PGC définit les porte-paroles autorisés, les messages clés pour chaque scénario, les canaux de communication prioritaires et les protocoles de validation des communications avant diffusion. Une mauvaise communication de crise peut aggraver significativement l&#x27;impact d&#x27;un incident. Fréquence de révision et d&#x27;exercices Le PGC doit être révisé annuellement et après chaque activation réelle. Des exercices de simulation (tabletop exercises) sont recommandés tous les 12 à 18 mois pour tester la réactivité de la cellule de crise et identifier les lacunes du plan. Comment CORO supporte la production du PGC CORO structure votre PGC avec des modèles de scénarios, des fiches rôles pour la cellule de crise et des procédures de communication. La plateforme centralise tous vos documents de conformité et de gestion des risques. 📚 Sources et références officielles → ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices → ISO 22301:2019 — Systèmes de management de la continuité des activités → Gouvernement du Canada — Cadre de gestion des urgences ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Toutes les organisations ont-elles besoin d&#x27;un PGC ? Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n&#x27;est pas le critère principal — c&#x27;est l&#x27;exposition au risque. Qui fait partie de la cellule de crise ? Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise. Le PGC est-il relié au PCA ? Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d&#x27;une crise majeure. Comment tester un PGC ? Par des exercices tabletop : simulation d&#x27;un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés. Le PGC arrive dans CORO — Phase 2 Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  },
+  "ref": {
+    "status": 200,
+    "title": "Plan de Gestion de Crise (PGC) — Guide complet | CORO | CORO",
+    "description": "Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.",
+    "canonical": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Plan de Gestion de Crise (PGC)"
+      ],
+      [
+        2,
+        "Qu&#x27;est-ce qu&#x27;un Plan de Gestion de Crise ?"
+      ],
+      [
+        2,
+        "Différence entre urgence et crise"
+      ],
+      [
+        2,
+        "Contenu d&#x27;un PGC complet"
+      ],
+      [
+        2,
+        "La communication de crise"
+      ],
+      [
+        2,
+        "Fréquence de révision et d&#x27;exercices"
+      ],
+      [
+        2,
+        "Comment CORO supporte la production du PGC"
+      ],
+      [
+        3,
+        "📚 Sources et références officielles"
+      ],
+      [
+        2,
+        "Questions fréquentes"
+      ],
+      [
+        3,
+        "Toutes les organisations ont-elles besoin d&#x27;un PGC ?"
+      ],
+      [
+        3,
+        "Qui fait partie de la cellule de crise ?"
+      ],
+      [
+        3,
+        "Le PGC est-il relié au PCA ?"
+      ],
+      [
+        3,
+        "Comment tester un PGC ?"
+      ],
+      [
+        2,
+        "Le PGC arrive dans CORO — Phase 2"
+      ],
+      [
+        4,
+        "🇨🇦 Canada"
+      ],
+      [
+        4,
+        "Produit"
+      ],
+      [
+        4,
+        "Compagnie"
+      ],
+      [
+        4,
+        "Légal"
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CORO"
+      ],
+      [
+        "/",
+        "← Accueil"
+      ],
+      [
+        "/#demo",
+        "Être notifié →"
+      ],
+      [
+        "/",
+        "getcoro.io"
+      ],
+      [
+        "/#demo",
+        "Structurer votre PGC avec CORO →"
+      ],
+      [
+        "https://www.iso.org/fr/standard/77720.html",
+        "→ ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices"
+      ],
+      [
+        "https://www.iso.org/fr/standard/75106.html",
+        "→ ISO 22301:2019 — Systèmes de management de la continuité des activités"
+      ],
+      [
+        "https://www.securitepublique.gc.ca/cnt/rsrcs/pblctns/mrgnc-mngmnt-frmwrk/index-fr.aspx",
+        "→ Gouvernement du Canada — Cadre de gestion des urgences"
+      ],
+      [
+        "/#demo",
+        "Demander une démo →"
+      ],
+      [
+        "/blog",
+        "Lire nos guides →"
+      ],
+      [
+        "https://getcoro.io",
+        "getcoro.io"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d&#x27;utilisation"
+      ]
+    ],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Plan de Gestion de Crise (PGC)",
+        "headline": "Plan de Gestion de Crise (PGC) — Guide complet | CORO",
+        "description": "Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.",
+        "url": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": [
+          {
+            "@type": "Thing",
+            "name": "Plan de Gestion de Crise",
+            "alternateName": "PGC"
+          },
+          {
+            "@type": "Thing",
+            "name": "Gestion de crise"
+          },
+          {
+            "@type": "Thing",
+            "name": "Communication de crise"
+          },
+          {
+            "@type": "Thing",
+            "name": "Résilience organisationnelle"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://getcoro.io/coro-logo.png"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://getcoro.io"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Documents",
+            "item": "https://getcoro.io/gestion-documentaire"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Plan de Gestion de Crise (PGC)",
+            "item": "https://getcoro.io/documents/plan-gestion-crise-pgc"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Toutes les organisations ont-elles besoin d'un PGC ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n'est pas le critère principal — c'est l'exposition au risque."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Qui fait partie de la cellule de crise ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Le PGC est-il relié au PCA ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d'une crise majeure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment tester un PGC ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Par des exercices tabletop : simulation d'un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés."
+            }
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "header": 0,
+      "main": 0,
+      "footer": 1,
+      "nav": 1
+    },
+    "bodyText": "CO RO ← Accueil 🚧 Phase 2 — En développement · La production du PGC dans CORO sera disponible prochainement. Être notifié → getcoro.io / Plan de Gestion de Crise (PGC) PGC Plan de Gestion de Crise (PGC) Le Plan de Gestion de Crise définit les protocoles de décision, de communication et d&#x27;intervention lors de situations affectant gravement l&#x27;organisation : crise médiatique, cyberattaque, incident majeur sur les lieux de travail, ou toute situation à fort impact réputationnel ou opérationnel. Structurer votre PGC avec CORO → Qu&#x27;est-ce qu&#x27;un Plan de Gestion de Crise ? Le PGC est un cadre décisionnel qui permet à une organisation de réagir rapidement et de façon coordonnée lors d&#x27;une crise. Il définit qui décide quoi, comment communiquer en interne et en externe, et comment minimiser l&#x27;impact sur les opérations et la réputation. La norme ISO 22361:2022 — Gestion de crise fournit des lignes directrices sur les principes et le cadre de la gestion de crise. Différence entre urgence et crise Une urgence affecte principalement la sécurité physique des personnes (incendie, accident) et nécessite un PMU ou un PSI. Une crise affecte la réputation, la viabilité ou la confiance envers l&#x27;organisation. Les deux peuvent survenir simultanément et nécessitent des plans distincts mais complémentaires. Contenu d&#x27;un PGC complet Un PGC comprend : la cellule de crise et ses membres, les déclencheurs d&#x27;activation du plan, les protocoles de communication interne et externe, la gestion des médias et des réseaux sociaux, les procédures d&#x27;escalade décisionnelle, et les scénarios préétablis pour les types de crises les plus probables selon l&#x27;analyse de risque de l&#x27;organisation. La communication de crise La communication est au cœur de la gestion de crise. Le PGC définit les porte-paroles autorisés, les messages clés pour chaque scénario, les canaux de communication prioritaires et les protocoles de validation des communications avant diffusion. Une mauvaise communication de crise peut aggraver significativement l&#x27;impact d&#x27;un incident. Fréquence de révision et d&#x27;exercices Le PGC doit être révisé annuellement et après chaque activation réelle. Des exercices de simulation (tabletop exercises) sont recommandés tous les 12 à 18 mois pour tester la réactivité de la cellule de crise et identifier les lacunes du plan. Comment CORO supporte la production du PGC CORO structure votre PGC avec des modèles de scénarios, des fiches rôles pour la cellule de crise et des procédures de communication. La plateforme centralise tous vos documents de conformité et de gestion des risques. 📚 Sources et références officielles → ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices → ISO 22301:2019 — Systèmes de management de la continuité des activités → Gouvernement du Canada — Cadre de gestion des urgences ⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d&#x27;activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique. Questions fréquentes Toutes les organisations ont-elles besoin d&#x27;un PGC ? Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n&#x27;est pas le critère principal — c&#x27;est l&#x27;exposition au risque. Qui fait partie de la cellule de crise ? Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise. Le PGC est-il relié au PCA ? Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d&#x27;une crise majeure. Comment tester un PGC ? Par des exercices tabletop : simulation d&#x27;un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés. Le PGC arrive dans CORO — Phase 2 Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme. Demander une démo → Lire nos guides → © 2026 CORO — getcoro.io CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d&#x27;utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d&#x27;utilisation Hébergé au Canada 🇨🇦 🌐 English 💬 @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }"
+  }
+}
