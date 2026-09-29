@@ -896,6 +896,20 @@ test('Mandate offer uses the authoritative ActivityType catalog and commercial s
   assert.doesNotMatch(page, /const ACTIVITY_CATALOG\s*=\s*\[/);
 });
 
+test('Mandate service catalog stays compact and filters its loaded ActivityTypes locally', () => {
+  const editor = fs.readFileSync(path.join(__dirname, '../projects/[id]/mandate/MandateServicesEditor.tsx'), 'utf8');
+  assert.ok(editor.includes('placeholder="Rechercher un service..."'));
+  assert.ok(editor.includes("item.label.toLocaleLowerCase('fr-CA')"));
+  assert.ok(editor.includes("search.trim().toLocaleLowerCase('fr-CA')"));
+  assert.ok(editor.includes('max-h-96 overflow-y-auto'));
+  assert.ok(editor.includes('Aucun service ne correspond à votre recherche.'));
+  assert.ok(editor.includes("setSearch(''); setCatalogOpen"));
+  assert.ok(editor.includes('min-w-0 flex-1'));
+  assert.ok(editor.includes('shrink-0'));
+  assert.doesNotMatch(editor, /onChange=.*api\.|search.*api\./s);
+  assert.ok(editor.includes('classifyCatalogService(item.activityTypeId, state.draft)'));
+});
+
 test('Mandate dirty state normalizes null, empty values, numbers, booleans and civil dates', () => {
   const server = mandateFormState.mandateFormFromServer({ montantVendu: 1200, tauxHoraire: null,
     heuresBudgetees: 10, dateDebutDelai: '2026-09-26T00:00:00.000Z', alerteActive: false });

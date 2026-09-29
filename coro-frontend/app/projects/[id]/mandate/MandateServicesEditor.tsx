@@ -93,7 +93,7 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
           <p className="text-xs" style={{ color: '#6C757D' }}>Enregistrer l’offre ne crée ni ne modifie automatiquement les activités.</p>
         </div>
         {canEdit && <button type="button" aria-expanded={catalogOpen} aria-controls="mandate-service-catalog"
-          disabled={disabled || catalogError} onClick={() => setCatalogOpen(value => !value)}
+          disabled={disabled || catalogError} onClick={() => { setSearch(''); setCatalogOpen(value => !value); }}
           className="text-xs font-medium px-3 py-2 rounded disabled:opacity-50"
           style={{ background: '#2C3E50', color: '#FFFFFF' }}>+ Ajouter un service</button>}
       </div>
@@ -126,23 +126,27 @@ export default function MandateServicesEditor({ state, catalog, catalogError, hi
         <div id="mandate-service-catalog" className="rounded p-4 mb-4" style={{ background: '#F8F9FA', border: '1px solid #DEE2E6' }}>
           <label htmlFor="mandate-service-search" className="block text-xs font-semibold mb-1">Rechercher dans le catalogue</label>
           <input id="mandate-service-search" value={search} onChange={event => setSearch(event.target.value)}
+            placeholder="Rechercher un service..." autoComplete="off"
             className="w-full px-3 py-2 rounded text-sm mb-3" style={{ border: '1px solid #CED4DA' }} />
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-96 overflow-y-auto overscroll-contain pr-1">
+            {filteredCatalog.length === 0 && <p className="text-sm p-3 text-center" style={{ color: '#6C757D' }}>
+              Aucun service ne correspond à votre recherche.
+            </p>}
             {filteredCatalog.map(item => {
               const classification = classifyCatalogService(item.activityTypeId, state.draft);
               const count = suggestionByType.get(item.activityTypeId);
               const restorable = classification.restorableId
                 ? canRestoreService(state.draft, classification.restorableId, activeCatalogIds) : false;
               return <div key={item.activityTypeId} className="flex flex-wrap items-center justify-between gap-2 p-2 rounded bg-white">
-                <div><p className="text-sm font-medium">{item.label}</p>
+                <div className="min-w-0 flex-1"><p className="text-sm font-medium break-words">{item.label}</p>
                   {count && <p className="text-xs" style={{ color: '#B9770E' }}>Historique détecté · {count} activité{count > 1 ? 's' : ''}</p>}
                 </div>
                 {classification.state === 'AVAILABLE' && <button type="button" disabled={disabled}
                   onClick={() => onChange(addServiceDraft(state.draft, item.activityTypeId, crypto.randomUUID()))}
-                  className="text-xs underline">Ajouter</button>}
+                  className="text-xs underline shrink-0">Ajouter</button>}
                 {classification.state === 'REMOVED_RESTORABLE' && <button type="button" disabled={disabled || !restorable}
                   onClick={() => { const service = state.draft.find(row => row.id === classification.restorableId); if (service) restore(service); }}
-                  className="text-xs underline">Réajouter</button>}
+                  className="text-xs underline shrink-0">Réajouter</button>}
                 {classification.state === 'ALREADY_ACTIVE' && <span className="text-xs" style={{ color: '#6C757D' }}>Déjà dans l’offre</span>}
                 {classification.state === 'MULTIPLE_EXISTING' && <span className="text-xs" style={{ color: '#6C757D' }}>Déjà utilisé dans plusieurs lignes de l’offre</span>}
               </div>;
