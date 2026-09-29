@@ -56,12 +56,14 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AdminAuditModule } from './admin-audit/admin-audit.module';
 import { PlatformAuthorizationModule } from './auth/platform-authorization.module';
+import { Organization360Module } from './organization-360/organization-360.module';
 
 @Module({
   imports: [
   PrismaModule,
   AdminAuditModule,
   PlatformAuthorizationModule,
+  Organization360Module,
   AuthModule,
   UsersModule,
   ClientsModule,

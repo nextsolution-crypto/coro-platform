@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:planning": "node app/planning/planning.test.cjs"
+    "test:planning": "node app/planning/planning.test.cjs",
+    "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
