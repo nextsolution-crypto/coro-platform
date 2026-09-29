@@ -32,7 +32,9 @@ describe('Phase 2B PostgreSQL invariants', () => {
         organizationId: org,
       },
     });
-    const cap = await prisma.commercialCapability.findFirstOrThrow();
+    const cap = await prisma.commercialCapability.findUniqueOrThrow({
+      where: { code: 'COMPLIANCE_OPERATIONS' },
+    });
     const book = await prisma.priceBook.create({
       data: {
         code: `P2B_${s.replace(/-/g, '').slice(0, 12).toUpperCase()}`,
@@ -111,7 +113,9 @@ describe('Phase 2B PostgreSQL invariants', () => {
       },
     });
     adjustment = a.id;
-    const cap = await prisma.commercialCapability.findFirstOrThrow();
+    const cap = await prisma.commercialCapability.findUniqueOrThrow({
+      where: { code: 'COMPLIANCE_OPERATIONS' },
+    });
     const line = await prisma.contractPriceSnapshotLine.create({
       data: {
         contractRevisionId: r.id,

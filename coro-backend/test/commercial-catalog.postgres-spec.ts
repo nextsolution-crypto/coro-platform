@@ -11,6 +11,7 @@ describe('Phase 2A PostgreSQL invariants', () => {
   const service = new CommercialCatalogService(prisma as never, new AdminAuditService());
   const suffix = randomUUID();
   const actor = { userId: `phase2a-actor-${suffix}` };
+  const bookCode = `PHASE2A_${suffix.replace(/-/g, '').slice(0, 12).toUpperCase()}`;
   let bookId = '';
   let versionId = '';
   let componentId = '';
@@ -26,14 +27,28 @@ describe('Phase 2A PostgreSQL invariants', () => {
   it('seed exactement 9 capabilities, 27 scopes et aucun prix', async () => {
     await expect(prisma.commercialCapability.count()).resolves.toBe(9);
     await expect(prisma.capabilityScopePolicy.count()).resolves.toBe(27);
-    await expect(prisma.priceBook.count()).resolves.toBe(0);
+    const migrations = await prisma.$queryRaw<Array<{ finishedAt: Date }>>`
+      SELECT "finished_at" AS "finishedAt"
+      FROM "_prisma_migrations"
+      WHERE "migration_name" = '20260929150000_super_admin_v2_phase_2a_commercial_catalog'
+        AND "finished_at" IS NOT NULL
+    `;
+    expect(migrations).toHaveLength(1);
+    await expect(
+      prisma.priceBook.count({
+        where: { createdAt: { lte: migrations[0].finishedAt } },
+      }),
+    ).resolves.toBe(0);
+    await expect(
+      prisma.priceBook.count({ where: { code: bookCode } }),
+    ).resolves.toBe(0);
     const campus = await prisma.commercialCapability.findUniqueOrThrow({ where: { code: 'CAMPUS' }, include: { scopePolicies: true } });
     expect(campus).toMatchObject({ lifecycle: 'FUTURE', isAvailable: false });
     expect(campus.scopePolicies.find(item => item.scope === 'CLIENT')?.status).toBe('UNDECIDED');
   });
 
   it('publie dans le futur en SCHEDULED et audite atomiquement', async () => {
-    const book = await service.createPriceBook({ code: `PHASE2A_${suffix.replace(/-/g, '').slice(0, 12).toUpperCase()}`, name: 'Test PriceBook', audience: 'DIRECT', currency: 'CAD' }, actor);
+    const book = await service.createPriceBook({ code: bookCode, name: 'Test PriceBook', audience: 'DIRECT', currency: 'CAD' }, actor);
     bookId = book.id;
     const version = await service.createVersion(book.id, {}, actor);
     versionId = version.id;
