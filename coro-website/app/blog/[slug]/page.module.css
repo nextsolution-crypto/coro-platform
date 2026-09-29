@@ -1,0 +1,82 @@
+/* /blog/[slug] — V1 tokens only. Calmer than the index by design: a controlled long-form reading measure
+   (~65-75ch) for the article body, while the hero/media/CTA sections use the normal wide V2Shell container. */
+
+.breadcrumb { margin: 0; font-size: var(--coro-v1-text-small); color: var(--muted); }
+.breadcrumbLink { color: var(--muted); text-decoration: none; }
+.breadcrumbLink:hover, .breadcrumbLink:focus-visible { color: var(--ink); }
+.breadcrumbCurrent { color: var(--ink); }
+
+.meta { display: flex; align-items: center; gap: var(--coro-v1-space-2); flex-wrap: wrap; margin-block-end: var(--coro-v1-space-4); }
+.badge { font-size: var(--coro-v1-label-size); font-weight: 700; color: #FFFFFF; padding: .15em .6em; border-radius: var(--coro-v1-radius-control); text-decoration: none; }
+.badge:hover, .badge:focus-visible { text-decoration: underline; }
+.badge:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.date { color: rgba(255, 255, 255, 0.6); font-size: var(--coro-v1-text-small); }
+
+.title { margin: 0 0 var(--coro-v1-space-4); font-size: clamp(1.75rem, 4vw, 3rem); font-weight: 900; line-height: 1.15; max-inline-size: 32ch; }
+
+.byline { display: flex; align-items: center; gap: var(--coro-v1-space-4); flex-wrap: wrap; margin: 0; }
+.author { color: rgba(255, 255, 255, 0.7); font-size: var(--coro-v1-text-small); }
+.updated { color: rgba(255, 255, 255, 0.4); font-size: var(--coro-v1-label-size); }
+
+.heroImageWrap { max-inline-size: 68rem; margin: var(--coro-v1-space-2) auto 0; padding-inline: var(--coro-v1-space-6); }
+.heroImage { display: block; width: 100%; height: clamp(220px, 45vw, 420px); object-fit: cover; border-radius: var(--coro-v1-radius-control); box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15); }
+
+/* Article canvas (~1150px, matches the section's own container) — the outer composition may use the full
+   desktop width; ordinary prose stays inside a narrower reading column nested via the grid below. */
+.readingColumn { max-inline-size: 72rem; margin-inline: auto; }
+
+/* Two widths, one grid: a centered ~46rem prose column (min() collapses to 100% on narrow viewports) with a
+   wider outer track either side. Direct-child structural elements (tables, standalone images, callout blocks)
+   opt into the wider track; ordinary prose (p/ul/ol/headings/blockquote) stays in the narrow column by default. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(46rem, 100%) minmax(0, 1fr);
+  column-gap: var(--coro-v1-space-6);
+  font-size: var(--coro-v1-text-body-l);
+  line-height: 1.8;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.body > * { grid-column: 2; }
+.body > :global(table), .body > :global(img), .body > :global(figure), .body > :global(div) {
+  grid-column: 1 / 4;
+  justify-self: center;
+  inline-size: min(100%, 68rem);
+}
+.body :global(h2) { margin: var(--coro-v1-space-12) 0 var(--coro-v1-space-3); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.25; }
+.body :global(h3) { margin: var(--coro-v1-space-8) 0 var(--coro-v1-space-2); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.3; }
+.body :global(h4) { margin: var(--coro-v1-space-6) 0 var(--coro-v1-space-2); font-size: var(--coro-v1-text-body-l); font-weight: 700; }
+.body :global(p) { margin: 0 0 var(--coro-v1-space-4); }
+.body :global(ul), .body :global(ol) { margin: 0 0 var(--coro-v1-space-4); padding-inline-start: 1.4em; }
+.body :global(li) { margin-block-end: var(--coro-v1-space-1); }
+.body :global(a) { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.body :global(a):focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.body :global(strong) { font-weight: 750; }
+.body :global(blockquote) { margin: var(--coro-v1-space-6) 0; padding-inline-start: var(--coro-v1-space-4); border-inline-start: 3px solid var(--line); color: var(--muted); font-style: italic; }
+.body :global(img) { max-width: 100%; height: auto; border-radius: var(--coro-v1-radius-control); margin: var(--coro-v1-space-4) 0; }
+.body :global(hr) { border: none; border-block-start: 1px solid var(--line); margin: var(--coro-v1-space-8) 0; }
+.body :global(pre), .body :global(code) { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.body :global(pre) { overflow-x: auto; padding: var(--coro-v1-space-4); background: var(--coro-v1-surface-2); border-radius: var(--coro-v1-radius-control); }
+
+/* Tables can be intrinsically wide; the wider grid track (above) gives them room, and this still allows
+   controlled horizontal scroll rather than shrinking text unreadably on narrow viewports. */
+.body :global(table) { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
+.body :global(th), .body :global(td) { border: 1px solid var(--line); padding: var(--coro-v1-space-2) var(--coro-v1-space-3); text-align: left; }
+
+@media (max-width: 40rem) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .body > *, .body > :global(table), .body > :global(img), .body > :global(figure), .body > :global(div) {
+    grid-column: 1;
+    inline-size: auto;
+  }
+}
+
+.tags { display: flex; gap: var(--coro-v1-space-2); flex-wrap: wrap; margin-block-start: var(--coro-v1-space-8); padding-block-start: var(--coro-v1-space-6); border-block-start: 1px solid var(--line); }
+.tag { font-size: var(--coro-v1-label-size); font-weight: 650; color: var(--muted); background: var(--coro-v1-surface-2); border: 1px solid var(--line); padding: .25em .7em; border-radius: 999px; text-decoration: none; }
+.tag:hover, .tag:focus-visible { color: var(--ink); border-color: var(--ink); }
+.tag:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+
+.published { margin-block-start: var(--coro-v1-space-4); font-size: var(--coro-v1-label-size); color: var(--muted); }
+
+.backLink { color: var(--accent); font-weight: 650; text-decoration: none; }
+.backLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }

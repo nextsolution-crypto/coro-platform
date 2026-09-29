@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') {
@@ -31,6 +31,7 @@ export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
     message: '',
   });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const uid = useId();
 
   const t = {
     fr: {
@@ -44,7 +45,7 @@ export default function DemoForm({ lang }: { lang: 'fr' | 'en' }) {
       message: 'Décrivez votre besoin (optionnel)',
       submit: 'Envoyer la demande',
       sending: 'Envoi en cours...',
-      success: '✅ Demande envoyée ! Nous vous contacterons dans les 24 heures.',
+      success: '✅ Merci. Votre demande a bien été transmise. Notre équipe communiquera avec vous pour discuter de vos besoins.',
       error: '❌ Une erreur est survenue. Veuillez réessayer ou écrire à info@getcoro.io',
 privacy:
   'Vos informations sont utilisées uniquement pour traiter votre demande.',
@@ -61,7 +62,7 @@ privacyLink: 'Politique de confidentialité',
       message: 'Describe your needs (optional)',
       submit: 'Send request',
       sending: 'Sending...',
-      success: '✅ Request sent! We\'ll contact you within 24 hours.',
+      success: '✅ Thank you. Your request has been submitted. Our team will contact you to discuss your needs.',
       error: '❌ An error occurred. Please try again or email info@getcoro.io',
 privacy:
   'Your information is used only to process your request.',
@@ -140,7 +141,7 @@ privacyLink: 'Privacy Policy',
 
   if (status === 'success') {
     return (
-      <div className="coro-demo-form-success">
+      <div className="coro-demo-form-success" role="status">
         <p style={{ fontSize: 48, marginBottom: 16 }}>🎉</p>
         <p style={{ fontSize: 20, fontWeight: 700, color: '#27AE60', marginBottom: 8 }}>
           {t.success}
@@ -153,10 +154,11 @@ privacyLink: 'Privacy Policy',
     <form className="coro-demo-form-body" onSubmit={handleSubmit}>
       <div className="coro-demo-form-row">
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+          <label htmlFor={`${uid}-0`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.firstName} *
           </label>
           <input
+            id={`${uid}-0`}
             type="text" required value={form.firstName}
             onChange={e => setForm({ ...form, firstName: e.target.value })}
             placeholder="Jean"
@@ -166,10 +168,11 @@ privacyLink: 'Privacy Policy',
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+          <label htmlFor={`${uid}-1`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.lastName} *
           </label>
           <input
+            id={`${uid}-1`}
             type="text" required value={form.lastName}
             onChange={e => setForm({ ...form, lastName: e.target.value })}
             placeholder="Tremblay"
@@ -181,10 +184,11 @@ privacyLink: 'Privacy Policy',
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+        <label htmlFor={`${uid}-2`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
           {t.email} *
         </label>
         <input
+            id={`${uid}-2`}
           type="email" required value={form.email}
           onChange={e => setForm({ ...form, email: e.target.value })}
           placeholder="jean@votrefirme.com"
@@ -196,10 +200,11 @@ privacyLink: 'Privacy Policy',
 
       <div className="coro-demo-form-row">
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+          <label htmlFor={`${uid}-3`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.organization} *
           </label>
           <input
+            id={`${uid}-3`}
             type="text" required value={form.organization}
             onChange={e => setForm({ ...form, organization: e.target.value })}
             placeholder="Sécurité Conseil inc."
@@ -209,10 +214,11 @@ privacyLink: 'Privacy Policy',
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+          <label htmlFor={`${uid}-4`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
             {t.phone}
           </label>
           <input
+            id={`${uid}-4`}
             type="tel" value={form.phone}
             onChange={e => setForm({ ...form, phone: e.target.value })}
             placeholder="(514) 555-0100"
@@ -224,10 +230,11 @@ privacyLink: 'Privacy Policy',
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+        <label htmlFor={`${uid}-5`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
           {t.buildingType}
         </label>
         <select
+            id={`${uid}-5`}
           value={form.buildingType}
           onChange={e => setForm({ ...form, buildingType: e.target.value })}
           style={{ ...inputStyle, color: form.buildingType ? '#2C3E50' : '#ADB5BD' }}>
@@ -240,10 +247,11 @@ privacyLink: 'Privacy Policy',
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
+        <label htmlFor={`${uid}-6`} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#495057', marginBottom: 6 }}>
           {t.message}
         </label>
         <textarea
+            id={`${uid}-6`}
           value={form.message}
           onChange={e => setForm({ ...form, message: e.target.value })}
           placeholder={lang === 'fr' ? 'Ex: Nous avons 3 bâtiments commerciaux à Montréal...' : 'Ex: We have 3 commercial buildings in Montreal...'}
@@ -255,7 +263,7 @@ privacyLink: 'Privacy Policy',
       </div>
 
       {status === 'error' && (
-        <div style={{
+        <div role="alert" style={{
           backgroundColor: '#FDEDEC', border: '1px solid #F1948A',
           borderRadius: 8, padding: '12px 16px', marginBottom: 16,
         }}>

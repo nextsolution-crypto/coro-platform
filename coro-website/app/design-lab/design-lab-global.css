@@ -1,0 +1,5 @@
+/* Design Lab only. The root layout (read-only in LAB-01) mounts the legacy footer, cookie notice,
+   chat widget and scroll-to-top after every page. Inside the Lab they would sit on top of the
+   material being validated, so they are hidden, and only when a Lab root is a direct child of body.
+   The :has() guard makes this rule inert on every other route. */
+body:has(> [data-design-lab]) > *:not([data-design-lab]):not(script):not(next-route-announcer):not(nextjs-portal) { display: none !important; }

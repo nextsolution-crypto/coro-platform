@@ -1,1650 +1,230 @@
 import type { Metadata } from 'next';
-import {
-  ArrowRight,
-  Building2,
-  CheckCircle2,
-  Database,
-  FileCheck2,
-  Globe2,
-  KeyRound,
-  LockKeyhole,
-  Server,
-  ShieldCheck,
-  UserRoundCheck,
-  Activity,
-  HardDriveDownload,
-  Network,
-} from 'lucide-react';
+import { CTASection } from '@/components/conversion/CTASection';
+import { Accordion } from '@/components/page/Accordion';
+import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { PageSection } from '@/components/page/PageSection';
+import { SplitContent } from '@/components/page/SplitContent';
+import { V2Shell } from '@/components/site/V2Shell';
+import { Button } from '@/components/ui/Button';
+import { faqJsonLd } from '@/lib/site/json-ld';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
+import { buildPageMetadata } from '@/lib/site/seo';
+import styles from './page.module.css';
 
-type Lang = 'fr' | 'en';
+type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-type PageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-};
-
-const SITE_URL = 'https://getcoro.io';
-
-const CONTENT = {
+/**
+ * /security (MIG-04A) — security and hosting, explained without exaggeration. NOT a compliance-certification page.
+ * Authority: docs/website-v2/05-migration/MIG-04-PRE-SECURITY-PRICING-GATE.md (claim matrix §2, human decisions D1-D14). LANGUAGE: TRUE FR / EN.
+ * PUBLISHED (verified in code, deployed headers or the public legal texts): primary application infrastructure hosted in Canada (Toronto region,
+ * DigitalOcean); HTTPS/TLS; hashed passwords; roles and permissions; logical separation of organisations; rate-limited sign-in attempts and requests;
+ * action logging; backup and continuity mechanisms in the general terms already used by the Terms of Use; availability monitoring of the main services.
+ * NOT published (MIG-04-PRE): "all data stays in Canada"; Loi 25 compliance or PIPEDA certification; CORO SOC 2 / ISO 27001 (a provider attestation is not
+ * CORO's and is not a central claim); end-to-end encryption; 24/7 monitoring; a backup retention period; daily snapshots; a firewall; HTTP security headers;
+ * penetration tests; disaster-recovery claims; a provider SLA figure; MFA as a selling point (SECURITY-HARDENING — MFA); a certification badge; a vendor list.
+ * Third-party processing (Cloudflare, Brevo, Anthropic, Formspree, Mapbox) is acknowledged in cautious wording; the definitive disclosure belongs to the Privacy
+ * legal review (Go-Live item). The hero is a MARKETING ILLUSTRATION (decorative, alt=""): the interface, map and server aisle are illustrative, never proof.
+ */
+const copy = {
   fr: {
-    metadata: {
-  title: 'Sécurité CORO | Protection des données et hébergement au Canada',
-  description:
-    'Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.',
-},
-    nav: {
-      features: 'Fonctionnalités',
-      documents: 'Documents',
-      howItWorks: 'Comment ça fonctionne',
-      pricing: 'Tarifs',
-      login: 'Connexion',
-      demo: 'Demander une démo',
-    },
-    hero: {
-      tag: 'Sécurité & protection des données',
-      title: 'La sécurité fait partie de l’architecture.',
-      subtitle:
-        'CORO est conçue pour les organisations qui doivent protéger des documents sensibles, contrôler les accès et maintenir leurs données au Canada. Notre approche combine hébergement canadien, chiffrement des communications, contrôle d’accès, sauvegardes et surveillance.',
-      primary: 'Parler à notre équipe',
-      secondary: 'Voir les fonctionnalités',
-    },
-    trust: {
-      title: 'Une approche conçue pour les environnements professionnels',
-      subtitle:
-        'La sécurité de CORO repose sur plusieurs couches complémentaires, de l’infrastructure à la gestion des accès.',
-      items: [
-        {
-          icon: 'canada',
-          title: 'Données hébergées au Canada',
-          desc:
-            'Les données et documents de la plateforme sont hébergés sur une infrastructure située à Toronto, Ontario, afin de soutenir les exigences de souveraineté des données des organisations canadiennes.',
-        },
-        {
-          icon: 'lock',
-          title: 'Communications chiffrées',
-          desc:
-            'Les échanges entre les utilisateurs et la plateforme sont protégés par HTTPS/TLS. Les mots de passe sont stockés sous forme hachée et ne sont pas conservés en clair.',
-        },
-        {
-          icon: 'access',
-          title: 'Contrôle d’accès',
-          desc:
-            'Les droits sont attribués selon les rôles utilisateurs. Les environnements clients sont isolés afin de limiter l’accès aux données aux seules personnes autorisées.',
-        },
-        {
-          icon: 'monitor',
-          title: 'Surveillance et traçabilité',
-          desc:
-            'La plateforme intègre des mécanismes de surveillance de disponibilité et de journalisation des actions afin de faciliter le suivi, l’analyse et la détection d’événements inhabituels.',
-        },
+    metaTitle: 'Sécurité et hébergement des données au Canada',
+    description: 'Où l’infrastructure principale de CORO est hébergée, comment les accès sont contrôlés, ce qui protège les données et ce qui relève de votre organisation.',
+    label: 'Sécurité et hébergement',
+    lines: ['La sécurité fait partie', 'de l’architecture.'],
+    lead: 'CORO est conçue pour des organisations qui manipulent des documents et des renseignements sensibles. Cette page décrit les mesures en place, ce que CORO contrôle, ce que des fournisseurs soutiennent et ce qui relève de votre organisation.',
+    detail: 'Infrastructure principale au Canada · Accès contrôlés · Communications chiffrées',
+    demo: 'Demander une démonstration', ask: 'Poser une question de sécurité',
+    mailSubject: 'Question de sécurité CORO',
+    s1: { n: '01', label: 'Infrastructure principale au Canada', title: 'Ce que cela signifie, et ce que cela ne signifie pas.',
+      text: [
+        'L’infrastructure applicative principale de CORO est hébergée au Canada, dans la région de Toronto, chez un fournisseur d’infrastructure infonuagique (DigitalOcean). C’est là que fonctionnent l’application, sa base de données et le stockage des fichiers de la plateforme.',
+        'Cela ne veut pas dire que tout traitement lié au service se fait au Canada. Certains services de soutien (envoi de courriels et de messages texte, fonctions assistées par IA, formulaires du site, acheminement du trafic Web) font appel à des fournisseurs spécialisés, qui peuvent traiter certaines données à l’extérieur du Canada.',
+        'Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Vos équipes TI peuvent nous écrire pour obtenir des précisions sur l’architecture et l’hébergement.',
       ],
-    },
-    hosting: {
-      tag: 'Hébergement & souveraineté',
-      title: 'Une infrastructure canadienne pour vos données.',
-      text:
-        'CORO utilise une infrastructure d’hébergement située au Canada. Cette approche vise à réduire les enjeux de transfert transfrontalier et à répondre aux attentes des organisations canadiennes en matière de localisation et de contrôle des données.',
-      cards: [
-        {
-          icon: 'server',
-          title: 'Infrastructure',
-          value: 'Toronto, Canada',
-          desc: 'Hébergement principal des données et de la plateforme.',
-        },
-        {
-          icon: 'provider',
-          title: 'Fournisseur',
-          value: 'DigitalOcean',
-          desc: 'Infrastructure infonuagique utilisée pour l’exploitation de CORO.',
-        },
-        {
-  icon: 'compliance',
-  title: 'Cadre fournisseur',
-  value: 'SOC 2 Type II',
-  desc: 'Attestation SOC 2 Type II du fournisseur d’infrastructure, distincte de CORO elle-même.',
-},
-      ],
-      note:
-        'Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Les détails techniques à jour peuvent être fournis aux équipes TI dans le cadre d’une évaluation de sécurité.',
-    },
-    access: {
-      tag: 'Accès & authentification',
-      title: 'Limiter l’accès au strict nécessaire.',
-      text:
-        'La protection des données commence par une gestion rigoureuse des identités et des permissions. CORO structure les accès selon les responsabilités de chaque utilisateur.',
-      bullets: [
-        'Rôles et permissions différenciés selon les responsabilités.',
-        'Isolation des organisations clientes.',
-        'Protection contre les tentatives d’authentification abusives.',
-        'Journalisation des actions utilisateurs.',
-        'MFA prévu pour les environnements et offres nécessitant un niveau de sécurité renforcé.',
-      ],
-    },
-    continuity: {
-      tag: 'Sauvegarde & continuité',
-      title: 'Préserver l’intégrité et la disponibilité des données.',
-      intro:
-        'L’infrastructure de CORO intègre des mécanismes de sauvegarde et de récupération destinés à réduire l’impact d’une défaillance technique ou d’un incident.',
-      items: [
-        {
-          icon: 'backup',
-          title: 'Sauvegardes automatisées',
-          value: 'Toutes les 6 heures',
-          desc: 'Sauvegardes régulières de la base de données.',
-        },
-        {
-          icon: 'retention',
-          title: 'Rétention',
-          value: '30 jours',
-          desc: 'Conservation des sauvegardes selon la configuration actuelle.',
-        },
-        {
-          icon: 'snapshot',
-          title: 'Snapshots',
-          value: 'Quotidiens',
-          desc: 'Snapshots de l’infrastructure pour soutenir les scénarios de récupération.',
-        },
-        {
-  icon: 'availability',
-  title: 'SLA infrastructure',
-  value: '99,9 %',
-  desc: 'SLA publié par le fournisseur pour les services d’infrastructure concernés. Ce taux ne constitue pas un SLA propre à CORO.',
-},
-      ],
-    },
-    perimeter: {
-      tag: 'Protection de l’environnement',
-      title: 'Réduire la surface d’exposition.',
-      bullets: [
-        {
-          title: 'Pare-feu réseau',
-          desc:
-            'Les accès réseau sont limités aux services nécessaires au fonctionnement de la plateforme.',
-        },
-        {
-          title: 'Protection de l’authentification',
-          desc:
-            'Des mécanismes de protection contre les tentatives répétées et abusives sont appliqués.',
-        },
-        {
-          title: 'En-têtes HTTP de sécurité',
-          desc:
-            'La configuration Web intègre des en-têtes de sécurité visant à réduire plusieurs classes de risques courants.',
-        },
-        {
-          title: 'Surveillance de disponibilité',
-          desc:
-            'La disponibilité du service est surveillée afin de détecter rapidement les interruptions.',
-        },
-      ],
-    },
-    privacy: {
-      tag: 'Vie privée & conformité',
-      title: 'Une approche alignée sur les obligations canadiennes.',
-      text:
-        'CORO traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents adaptées à ses activités.',
-      badges: [
-        {
-  title: 'Québec — Loi 25',
-  desc: 'Pratiques de protection des renseignements personnels tenant compte du cadre législatif québécois',
-},
-        {
-          title: 'LPRPDE / PIPEDA',
-          desc: 'Cadre fédéral canadien lorsqu’applicable',
-        },
-        {
-          title: 'Hébergement Canada',
-          desc: 'Localisation canadienne des données de la plateforme',
-        },
-      ],
-      linkPrivacy: 'Consulter la politique de confidentialité',
-      linkTerms: 'Consulter les conditions d’utilisation',
-    },
-    enterprise: {
-      tag: 'Pour les équipes TI',
-      title: 'Besoin d’aller plus loin dans l’évaluation?',
-      text:
-        'Les organisations qui évaluent CORO peuvent demander des renseignements techniques complémentaires concernant l’architecture, l’hébergement, les sauvegardes, les accès et les contrôles de sécurité disponibles.',
-      points: [
-        'Architecture et environnement d’hébergement',
-        'Gestion des identités et des accès',
-        'Sauvegardes et continuité',
-        'Mesures de protection réseau',
-        'Journalisation et suivi',
-        'Questionnaire de sécurité fournisseur',
-      ],
-      cta: 'Demander la documentation technique',
-    },
-    cta: {
-      title: 'La sécurité doit être vérifiable, pas seulement déclarée.',
-      text:
-        'Parlez-nous de vos exigences TI, de protection des données ou de conformité. Nous vous présenterons l’environnement CORO et les contrôles applicables à votre organisation.',
-      primary: 'Demander une démo',
-      secondary: 'Nous contacter',
-    },
-    footer: {
-      tagline: 'La conformité, pensée par des experts du terrain.',
-      product: 'Produit',
-      company: 'Compagnie',
-      legal: 'Légal',
-      features: 'Fonctionnalités',
-      pricing: 'Tarifs',
-      login: 'Connexion',
-      about: 'À propos',
-      security: 'Sécurité',
-      blog: 'Blogue',
-      partners: 'Partenaires',
-      contact: 'Nous contacter',
-      soon: 'Bientôt',
-      privacy: 'Politique de confidentialité',
-      terms: 'Conditions d’utilisation',
-      rights: '© 2026 CORO. Tous droits réservés.',
-      hosting: 'Hébergé au Canada 🇨🇦',
-      language: '🌐 English',
-    },
+      factsLabel: 'En résumé',
+      facts: [['Infrastructure applicative principale', 'Région de Toronto (Canada)'], ['Fournisseur d’infrastructure', 'DigitalOcean'], ['Services de soutien', 'Fournisseurs spécialisés, selon leur rôle']] as const },
+    s2: { n: '02', label: 'Contrôler qui accède à quoi', title: 'Des accès attribués selon les responsabilités.',
+      text: 'La protection des données commence par une gestion rigoureuse des identités et des permissions. CORO structure les accès autour du rôle de chaque utilisateur.',
+      rows: [
+        ['Accès authentifié', 'Chaque utilisateur accède à la plateforme avec son propre compte.'],
+        ['Rôles et permissions', 'Les droits sont attribués selon les responsabilités de chaque utilisateur.'],
+        ['Cloisonnement des organisations', 'Les données de chaque organisation sont séparées logiquement de celles des autres organisations, au niveau de l’application.'],
+        ['Tentatives de connexion', 'Le nombre de tentatives de connexion répétées est limité.'],
+        ['Journal des actions', 'Les actions des utilisateurs sont journalisées afin de faciliter le suivi et l’analyse.'],
+      ] as const },
+    s3: { n: '03', label: 'Protéger les données', title: 'Des mesures décrites avec précision.',
+      text: 'Les mesures ci-dessous sont décrites telles quelles, sans superlatifs ni promesse de résultat.',
+      rows: [
+        ['Communications chiffrées', 'Les échanges entre les utilisateurs et la plateforme sont protégés par HTTPS/TLS.'],
+        ['Mots de passe hachés', 'Les mots de passe sont stockés sous forme hachée et ne sont pas conservés en clair.'],
+        ['Limites de débit', 'Les requêtes adressées à la plateforme sont soumises à des limites de débit qui réduisent les usages abusifs.'],
+      ] as const },
+    s4: { n: '04', label: 'Sauvegarder et rétablir', title: 'Un service conçu pour limiter l’impact d’une défaillance.',
+      columns: [
+        ['Sauvegarde et récupération', 'CORO met en œuvre des mécanismes de sauvegarde et de continuité adaptés à son infrastructure, destinés à réduire l’impact d’une défaillance technique.'],
+        ['Disponibilité', 'La disponibilité des principaux services est surveillée afin de détecter les interruptions. Aucun service ne peut promettre une disponibilité sans interruption.'],
+      ] as const,
+      note: 'Conservez de votre côté les copies des livrables dont votre organisation a besoin : les conditions d’utilisation précisent les responsabilités de chacun.', termsLink: 'Consulter les conditions d’utilisation' },
+    s5: { n: '05', label: 'Une responsabilité partagée', title: 'Qui fait quoi.',
+      text: 'La sécurité d’un service en ligne repose sur trois parties. Cette répartition est pédagogique : les engagements contractuels se trouvent dans les conditions d’utilisation.',
+      cols: [
+        { name: 'Ce que CORO contrôle', items: ['La configuration de la plateforme et de son infrastructure applicative', 'Les contrôles d’accès et la journalisation de l’application', 'Le traitement des questions de sécurité qui lui sont adressées'] },
+        { name: 'Ce que soutiennent des fournisseurs', items: ['L’infrastructure d’hébergement et de réseau', 'Des services spécialisés (courriel et messages texte, assistance par IA, formulaires, acheminement du trafic Web)', 'Leurs propres mesures et attestations, qui leur appartiennent et non à CORO'] },
+        { name: 'Ce qui relève de votre organisation', items: ['La gestion de vos utilisateurs et des accès que vous attribuez', 'La protection de vos identifiants et de vos appareils', 'Le caractère licite des renseignements que vous saisissez', 'La conservation de vos propres copies de livrables'] },
+      ] as const },
+    s6: { n: '06', label: 'Confidentialité et transparence', title: 'Une information claire, sans promesse de certification.',
+      text: [
+        'CORO est conçue pour aider les organisations à gérer l’information de façon responsable. La Politique de confidentialité décrit comment CORO traite les renseignements personnels ; les conditions d’utilisation en précisent le cadre.',
+        'CORO tient compte du cadre législatif québécois (Loi 25) et du cadre fédéral (LPRPDE / PIPEDA) lorsqu’il s’applique. Cette page décrit des mesures de sécurité : elle ne constitue ni une déclaration de conformité, ni une certification, ni un engagement de niveau de service. CORO n’affiche pas de certification de sécurité, et les attestations d’un fournisseur d’infrastructure ne sont pas celles de CORO.',
+      ], privacy: 'Consulter la politique de confidentialité', terms: 'Consulter les conditions d’utilisation' },
+    faq: 'Questions fréquentes', faqLabel: 'FAQ',
+    faqItems: [
+      { q: 'Où est hébergée la plateforme CORO?', a: 'L’infrastructure applicative principale de CORO est hébergée au Canada, dans la région de Toronto, chez DigitalOcean. Certains services de soutien font appel à des fournisseurs spécialisés qui peuvent traiter certaines données à l’extérieur du Canada.' },
+      { q: 'Toutes les données restent-elles au Canada?', a: 'Pas nécessairement. L’infrastructure principale est au Canada, mais des services de soutien (courriel et messages texte, fonctions assistées par IA, formulaires, acheminement du trafic Web) peuvent faire appel à des fournisseurs qui traitent certaines données ailleurs. La Politique de confidentialité décrit le traitement des renseignements personnels.' },
+      { q: 'CORO est-elle certifiée ISO 27001 ou SOC 2?', a: 'CORO n’affiche pas de certification de sécurité. Un fournisseur d’infrastructure peut détenir ses propres attestations, qui ne sont pas celles de CORO.' },
+      { q: 'CORO est-elle conforme à la Loi 25?', a: 'Cette page ne déclare pas de conformité. CORO tient compte du cadre législatif québécois et du cadre fédéral dans la conception de ses pratiques ; chaque organisation demeure responsable de ses propres obligations à l’égard des renseignements qu’elle saisit.' },
+      { q: 'Que doit faire mon organisation de son côté?', a: 'Gérer ses utilisateurs et les accès qu’elle attribue, protéger ses identifiants et ses appareils, saisir des renseignements de façon licite et conserver ses propres copies de livrables. Le détail se trouve dans les conditions d’utilisation.' },
+      { q: 'Comment poser une question de sécurité à l’équipe?', a: 'Écrivez à info@getcoro.io ou demandez une démonstration. Vos équipes TI peuvent poser leurs questions sur l’architecture, l’hébergement et les contrôles en place.' },
+    ],
+    statement: 'La sécurité se juge sur des faits.',
+    support: 'Parlez-nous de vos exigences en matière de sécurité et de protection des données. Nous vous présenterons l’environnement CORO.',
   },
   en: {
-    metadata: {
-  title: 'CORO Security | Data Protection and Canadian Hosting',
-  description:
-  'Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and security monitoring.',
-},
-    nav: {
-      features: 'Features',
-      documents: 'Documents',
-      howItWorks: 'How it works',
-      pricing: 'Pricing',
-      login: 'Login',
-      demo: 'Request a demo',
-    },
-    hero: {
-      tag: 'Security & data protection',
-      title: 'Security is part of the architecture.',
-      subtitle:
-        'CORO is designed for organizations that need to protect sensitive documents, control access and keep their data in Canada. Our approach combines Canadian hosting, encrypted communications, access control, backups and monitoring.',
-      primary: 'Talk to our team',
-      secondary: 'View features',
-    },
-    trust: {
-      title: 'An approach designed for professional environments',
-      subtitle:
-        'CORO security relies on complementary layers, from infrastructure to access management.',
-      items: [
-        {
-          icon: 'canada',
-          title: 'Data hosted in Canada',
-          desc:
-            'Platform data and documents are hosted on infrastructure located in Toronto, Ontario, supporting Canadian organizations’ data-sovereignty requirements.',
-        },
-        {
-          icon: 'lock',
-          title: 'Encrypted communications',
-          desc:
-            'Traffic between users and the platform is protected with HTTPS/TLS. Passwords are stored in hashed form and are not kept in plain text.',
-        },
-        {
-          icon: 'access',
-          title: 'Access control',
-          desc:
-            'Permissions are assigned according to user roles. Customer environments are isolated to restrict data access to authorized users.',
-        },
-        {
-          icon: 'monitor',
-          title: 'Monitoring and traceability',
-          desc:
-            'The platform includes availability monitoring and activity logging mechanisms to support tracking, analysis and detection of unusual events.',
-        },
+    metaTitle: 'Security and data hosting in Canada',
+    description: 'Where CORO’s primary infrastructure is hosted, how access is controlled, what protects data and what remains your organization’s responsibility.',
+    label: 'Security and hosting',
+    lines: ['Security is part', 'of the architecture.'],
+    lead: 'CORO is designed for organizations that handle sensitive documents and information. This page describes the measures in place, what CORO controls, what providers support and what remains your organization’s responsibility.',
+    detail: 'Primary infrastructure in Canada · Controlled access · Encrypted communications',
+    demo: 'Request a demo', ask: 'Ask a security question',
+    mailSubject: 'CORO security question',
+    s1: { n: '01', label: 'Primary infrastructure in Canada', title: 'What this means, and what it does not mean.',
+      text: [
+        'CORO’s primary application infrastructure is hosted in Canada, in the Toronto region, with a cloud infrastructure provider (DigitalOcean). This is where the application, its database and the platform’s file storage run.',
+        'This does not mean that all processing related to the service takes place in Canada. Some supporting services (sending emails and text messages, AI-assisted features, website forms, web traffic delivery) rely on specialized providers, which may process certain data outside Canada.',
+        'Infrastructure characteristics may evolve with the platform. Your IT teams can write to us for details about the architecture and hosting.',
       ],
-    },
-    hosting: {
-      tag: 'Hosting & sovereignty',
-      title: 'Canadian infrastructure for your data.',
-      text:
-        'CORO uses hosting infrastructure located in Canada. This approach is intended to reduce cross-border transfer concerns and support Canadian organizations’ expectations regarding data location and control.',
-      cards: [
-        {
-          icon: 'server',
-          title: 'Infrastructure',
-          value: 'Toronto, Canada',
-          desc: 'Primary hosting location for platform data and services.',
-        },
-        {
-          icon: 'provider',
-          title: 'Provider',
-          value: 'DigitalOcean',
-          desc: 'Cloud infrastructure provider used to operate CORO.',
-        },
-        {
-  icon: 'compliance',
-  title: 'Provider framework',
-  value: 'SOC 2 Type II',
-  desc: 'SOC 2 Type II attestation of the infrastructure provider; this is distinct from CORO itself.',
-},
-      ],
-      note:
-        'Infrastructure characteristics may evolve with the platform. Current technical details can be provided to IT teams as part of a security assessment.',
-    },
-    access: {
-      tag: 'Access & authentication',
-      title: 'Restrict access to what is necessary.',
-      text:
-        'Data protection starts with disciplined identity and permission management. CORO structures access according to each user’s responsibilities.',
-      bullets: [
-        'Differentiated roles and permissions based on responsibilities.',
-        'Isolation between customer organizations.',
-        'Protection against abusive authentication attempts.',
-        'Logging of user actions.',
-        'MFA planned for environments and plans requiring enhanced security.',
-      ],
-    },
-    continuity: {
-      tag: 'Backup & continuity',
-      title: 'Preserve data integrity and availability.',
-      intro:
-        'CORO infrastructure includes backup and recovery mechanisms designed to reduce the impact of a technical failure or incident.',
-      items: [
-        {
-          icon: 'backup',
-          title: 'Automated backups',
-          value: 'Every 6 hours',
-          desc: 'Regular database backups.',
-        },
-        {
-          icon: 'retention',
-          title: 'Retention',
-          value: '30 days',
-          desc: 'Backup retention under the current configuration.',
-        },
-        {
-          icon: 'snapshot',
-          title: 'Snapshots',
-          value: 'Daily',
-          desc: 'Infrastructure snapshots supporting recovery scenarios.',
-        },
-        {
-  icon: 'availability',
-  title: 'Infrastructure SLA',
-  value: '99.9%',
-  desc: 'Published provider SLA for applicable infrastructure services. This figure does not constitute a CORO service-level commitment.',
-},
-      ],
-    },
-    perimeter: {
-      tag: 'Environment protection',
-      title: 'Reduce the exposed surface.',
-      bullets: [
-        {
-          title: 'Network firewall',
-          desc:
-            'Network access is limited to the services required to operate the platform.',
-        },
-        {
-          title: 'Authentication protection',
-          desc:
-            'Mechanisms are applied to protect against repeated and abusive login attempts.',
-        },
-        {
-          title: 'HTTP security headers',
-          desc:
-            'Web configuration includes security headers intended to reduce several common classes of risk.',
-        },
-        {
-          title: 'Availability monitoring',
-          desc:
-            'Service availability is monitored to help detect interruptions quickly.',
-        },
-      ],
-    },
-    privacy: {
-      tag: 'Privacy & compliance',
-      title: 'An approach aligned with Canadian obligations.',
-      text:
-        'CORO processes personal information under applicable legislation and maintains protection, retention and incident-management practices appropriate to its activities.',
-      badges: [
-        {
-  title: 'Quebec — Law 25',
-  desc: 'Privacy practices designed with Quebec’s legislative framework in mind',
-},
-        {
-          title: 'PIPEDA',
-          desc: 'Canadian federal framework where applicable',
-        },
-        {
-          title: 'Canada hosting',
-          desc: 'Canadian location of platform data',
-        },
-      ],
-      linkPrivacy: 'Read the Privacy Policy',
-      linkTerms: 'Read the Terms of Use',
-    },
-    enterprise: {
-      tag: 'For IT teams',
-      title: 'Need to go deeper in your assessment?',
-      text:
-        'Organizations evaluating CORO can request additional technical information regarding architecture, hosting, backups, access and available security controls.',
-      points: [
-        'Architecture and hosting environment',
-        'Identity and access management',
-        'Backups and continuity',
-        'Network protection measures',
-        'Logging and monitoring',
-        'Vendor security questionnaire',
-      ],
-      cta: 'Request technical documentation',
-    },
-    cta: {
-      title: 'Security should be verifiable, not merely claimed.',
-      text:
-        'Tell us about your IT, data-protection or compliance requirements. We will walk you through the CORO environment and the controls relevant to your organization.',
-      primary: 'Request a demo',
-      secondary: 'Contact us',
-    },
-    footer: {
-      tagline: 'Compliance, designed by field experts.',
-      product: 'Product',
-      company: 'Company',
-      legal: 'Legal',
-      features: 'Features',
-      pricing: 'Pricing',
-      login: 'Login',
-      about: 'About us',
-      security: 'Security',
-      blog: 'Blog',
-      partners: 'Partners',
-      contact: 'Contact us',
-      soon: 'Soon',
-      privacy: 'Privacy Policy',
-      terms: 'Terms of Use',
-      rights: '© 2026 CORO. All rights reserved.',
-      hosting: 'Hosted in Canada 🇨🇦',
-      language: '🌐 Français',
-    },
+      factsLabel: 'In brief',
+      facts: [['Primary application infrastructure', 'Toronto region (Canada)'], ['Infrastructure provider', 'DigitalOcean'], ['Supporting services', 'Specialized providers, depending on their role']] as const },
+    s2: { n: '02', label: 'Control who accesses what', title: 'Access assigned according to responsibilities.',
+      text: 'Data protection starts with disciplined identity and permission management. CORO structures access around each user’s role.',
+      rows: [
+        ['Authenticated access', 'Each user accesses the platform with their own account.'],
+        ['Roles and permissions', 'Rights are assigned according to each user’s responsibilities.'],
+        ['Separation of organizations', 'Each organization’s data is logically separated from other organizations’ data, at the application level.'],
+        ['Sign-in attempts', 'Repeated sign-in attempts are limited.'],
+        ['Action log', 'User actions are logged to support tracking and analysis.'],
+      ] as const },
+    s3: { n: '03', label: 'Protect data', title: 'Measures described precisely.',
+      text: 'The measures below are described as they are, without superlatives or promises of outcome.',
+      rows: [
+        ['Encrypted communications', 'Exchanges between users and the platform are protected with HTTPS/TLS.'],
+        ['Hashed passwords', 'Passwords are stored in hashed form and are not kept in plain text.'],
+        ['Rate limits', 'Requests to the platform are subject to rate limits that reduce abusive use.'],
+      ] as const },
+    s4: { n: '04', label: 'Back up and recover', title: 'A service designed to limit the impact of a failure.',
+      columns: [
+        ['Backup and recovery', 'CORO implements backup and continuity mechanisms suited to its infrastructure, intended to reduce the impact of a technical failure.'],
+        ['Availability', 'The availability of the main services is monitored to detect interruptions. No service can promise uninterrupted availability.'],
+      ] as const,
+      note: 'Keep your own copies of the deliverables your organization needs: the terms of use set out each party’s responsibilities.', termsLink: 'Read the terms of use' },
+    s5: { n: '05', label: 'Shared responsibility', title: 'Who does what.',
+      text: 'The security of an online service rests on three parties. This breakdown is educational: contractual commitments are found in the terms of use.',
+      cols: [
+        { name: 'What CORO controls', items: ['The configuration of the platform and its application infrastructure', 'The application’s access controls and logging', 'Handling the security questions addressed to it'] },
+        { name: 'What providers support', items: ['Hosting and network infrastructure', 'Specialized services (email and text messages, AI assistance, forms, web traffic delivery)', 'Their own measures and attestations, which belong to them and not to CORO'] },
+        { name: 'What rests with your organization', items: ['Managing your users and the access you assign', 'Protecting your credentials and your devices', 'The lawfulness of the information you enter', 'Keeping your own copies of deliverables'] },
+      ] as const },
+    s6: { n: '06', label: 'Privacy and transparency', title: 'Clear information, without a promise of certification.',
+      text: [
+        'CORO is designed to help organizations manage information responsibly. The Privacy Policy describes how CORO handles personal information; the terms of use set out the framework.',
+        'CORO takes into account the Québec legislative framework (Law 25) and the federal framework (PIPEDA) where it applies. This page describes security measures: it is not a statement of compliance, a certification or a service-level commitment. CORO does not display any security certification, and an infrastructure provider’s attestations are not CORO’s.',
+      ], privacy: 'Read the privacy policy', terms: 'Read the terms of use' },
+    faq: 'Frequently asked questions', faqLabel: 'FAQ',
+    faqItems: [
+      { q: 'Where is the CORO platform hosted?', a: 'CORO’s primary application infrastructure is hosted in Canada, in the Toronto region, with DigitalOcean. Some supporting services rely on specialized providers that may process certain data outside Canada.' },
+      { q: 'Does all data stay in Canada?', a: 'Not necessarily. The primary infrastructure is in Canada, but supporting services (email and text messages, AI-assisted features, forms, web traffic delivery) may rely on providers that process certain data elsewhere. The Privacy Policy describes how personal information is handled.' },
+      { q: 'Is CORO ISO 27001 or SOC 2 certified?', a: 'CORO does not display any security certification. An infrastructure provider may hold its own attestations, which are not CORO’s.' },
+      { q: 'Is CORO compliant with Law 25?', a: 'This page does not declare compliance. CORO takes into account the Québec and federal frameworks in designing its practices; each organization remains responsible for its own obligations regarding the information it enters.' },
+      { q: 'What does my organization have to do on its side?', a: 'Manage its users and the access it assigns, protect its credentials and devices, enter information lawfully and keep its own copies of deliverables. Details are in the terms of use.' },
+      { q: 'How do I ask the team a security question?', a: 'Write to info@getcoro.io or request a demo. Your IT teams can ask about the architecture, hosting and the controls in place.' },
+    ],
+    statement: 'Security is judged on facts.',
+    support: 'Tell us about your security and data-protection requirements. We will walk you through the CORO environment.',
   },
 };
 
-function getLang(raw: string | string[] | undefined): Lang {
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  return value === 'en' ? 'en' : 'fr';
+export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  return buildPageMetadata({ path: '/security', locale: l, title: copy[l].metaTitle, description: copy[l].description });
 }
 
-function IconFor({ name, size = 26 }: { name: string; size?: number }) {
-  const props = { size, strokeWidth: 1.8, color: '#C0392B' };
-
-  switch (name) {
-    case 'canada':
-      return <Globe2 {...props} />;
-    case 'lock':
-      return <LockKeyhole {...props} />;
-    case 'access':
-      return <UserRoundCheck {...props} />;
-    case 'monitor':
-      return <Activity {...props} />;
-    case 'server':
-      return <Server {...props} />;
-    case 'provider':
-      return <Building2 {...props} />;
-    case 'compliance':
-      return <FileCheck2 {...props} />;
-    case 'backup':
-      return <Database {...props} />;
-    case 'retention':
-      return <HardDriveDownload {...props} />;
-    case 'snapshot':
-      return <Server {...props} />;
-    case 'availability':
-      return <Activity {...props} />;
-    default:
-      return <ShieldCheck {...props} />;
-  }
+function JsonLd({ value }: { value: object }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(value).replace(/</g, '\\u003c') }} />;
 }
 
-function SectionTag({ children }: { children: React.ReactNode }) {
+export default async function Page({ searchParams }: P) {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = copy[l];
+  const demo = localizedHref('/#demo', l);
+  const mail = `mailto:info@getcoro.io?subject=${encodeURIComponent(t.mailSubject)}`;
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        backgroundColor: '#FDEDEC',
-        color: '#C0392B',
-        borderRadius: 20,
-        padding: '6px 14px',
-        marginBottom: 16,
-        fontSize: 13,
-        fontWeight: 700,
-        letterSpacing: '0.05em',
-      }}
-    >
-      {children}
-    </span>
-  );
-}
+    <V2Shell locale={l} pathname="/security">
+      <JsonLd value={faqJsonLd(t.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
 
-function Logo() {
-  return (
-    <span
-      style={{
-        fontSize: 28,
-        fontWeight: 900,
-        color: '#FFFFFF',
-        letterSpacing: '-1px',
-      }}
-    >
-      CO<span style={{ color: '#C0392B' }}>RO</span>
-    </span>
-  );
-}
+      <EditorialHero id="security-title" label={t.label} title={t.lines} lead={t.lead} detail={t.detail}
+        photo={{ src: '/website-v2/security/security-canadian-hosting.webp', side: 'end', position: '100% 50%', mobilePosition: '100% 50%', coverage: 52, mobileRatio: '1 / 1' }}
+        actions={<><Button href={demo} surface="dark">{t.demo}</Button><Button href={mail} variant="ghost" surface="dark" external>{t.ask}</Button></>} />
 
-export async function generateMetadata({
-  searchParams,
-}: PageProps): Promise<Metadata> {
-  const params = (await searchParams) ?? {};
-  const lang = getLang(params.lang);
-  const t = CONTENT[lang];
+      <PageSection tone="white" labelledBy="security-s1-title">
+        <SplitContent ratio="7-5" align="start"
+          text={<EditorialBlock id="security-s1-title" label={`${t.s1.n} — ${t.s1.label}`} heading={t.s1.title}>{t.s1.text.map((p) => <p key={p}>{p}</p>)}</EditorialBlock>}
+          media={<div className={styles.stack}><p className={styles.kicker}>{t.s1.factsLabel}</p><dl className={styles.facts}>{t.s1.facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>} />
+      </PageSection>
 
-  const frUrl = `${SITE_URL}/security`;
-  const enUrl = `${SITE_URL}/security?lang=en`;
-
-  const currentUrl =
-    lang === 'en'
-      ? enUrl
-      : frUrl;
-
-  return {
-    metadataBase: new URL(SITE_URL),
-
-    title: t.metadata.title,
-
-    description: t.metadata.description,
-
-    alternates: {
-      canonical: currentUrl,
-
-      languages: {
-        'fr-CA': frUrl,
-        'en-CA': enUrl,
-        'x-default': frUrl,
-      },
-    },
-
-    openGraph: {
-      type: 'website',
-
-      url: currentUrl,
-
-      siteName: 'CORO',
-
-      locale:
-        lang === 'fr'
-          ? 'fr_CA'
-          : 'en_CA',
-
-      alternateLocale: [
-        lang === 'fr'
-          ? 'en_CA'
-          : 'fr_CA',
-      ],
-
-      title: t.metadata.title,
-
-      description: t.metadata.description,
-
-      images: [
-        {
-          url: '/og-coro.jpg',
-          width: 1200,
-          height: 630,
-          alt:
-            lang === 'fr'
-              ? 'CORO — Sécurité et protection des données'
-              : 'CORO — Security and data protection',
-        },
-      ],
-    },
-
-    twitter: {
-      card: 'summary_large_image',
-
-      title: t.metadata.title,
-
-      description: t.metadata.description,
-
-      images: [
-        '/og-coro.jpg',
-      ],
-    },
-
-    robots: {
-      index: true,
-      follow: true,
-
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-        'max-video-preview': -1,
-      },
-    },
-  };
-}
-
-export default async function SecurityPage({ searchParams }: PageProps) {
-  const params = (await searchParams) ?? {};
-  const lang = getLang(params.lang);
-  const t = CONTENT[lang];
-
-  const langSuffix = lang === 'en' ? '?lang=en' : '';
-  const otherLangHref = lang === 'fr' ? '/security?lang=en' : '/security';
-  const homeLink = (anchor = '') => `/${langSuffix}${anchor}`;
-
-  const currentUrl =
-    lang === 'en'
-      ? `${SITE_URL}/security?lang=en`
-      : `${SITE_URL}/security`;
-
-  const securityPageJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-
-    name: t.metadata.title,
-
-    description: t.metadata.description,
-
-    url: currentUrl,
-
-    inLanguage:
-      lang === 'fr'
-        ? 'fr-CA'
-        : 'en-CA',
-
-    isPartOf: {
-      '@type': 'WebSite',
-      name: 'CORO',
-      url: SITE_URL,
-    },
-
-    about: {
-  '@type': 'SoftwareApplication',
-  name: 'CORO',
-  url: SITE_URL,
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-},
-  };
-
-  return (
-    <div
-      style={{
-        fontFamily:
-          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        color: '#2C3E50',
-        backgroundColor: '#FFFFFF',
-      }}
-    >
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(securityPageJsonLd).replace(/</g, '\\u003c'),
-        }}
-      />
-
-      {/* NAV */}
-      <header
-        style={{
-          backgroundColor: '#1A252F',
-          padding: '0 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: '0 auto',
-            minHeight: 72,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 20,
-          }}
-        >
-          <a
-            href={homeLink()}
-            aria-label={lang === 'fr' ? 'Accueil CORO' : 'CORO home'}
-            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
-          >
-            <Logo />
-          </a>
-
-          <nav className="security-desktop-nav">
-            <a href={homeLink('#features')} className="security-nav-link">
-              {t.nav.features}
-            </a>
-            <a href={homeLink('#documents')} className="security-nav-link">
-              {t.nav.documents}
-            </a>
-            <a href={homeLink('#how-it-works')} className="security-nav-link">
-              {t.nav.howItWorks}
-            </a>
-            <a
-              href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}
-              className="security-nav-link"
-            >
-              {t.nav.pricing}
-            </a>
-          </nav>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <a href={otherLangHref} className="security-lang">
-              {lang === 'fr' ? 'EN' : 'FR'}
-            </a>
-
-            <a
-              href="https://app.getcoro.io/login"
-              className="security-login security-hide-small"
-            >
-              {t.nav.login}
-            </a>
-
-            <a
-              href={homeLink('#demo')}
-              className="security-demo security-hide-small"
-            >
-              {t.nav.demo}
-            </a>
-
-            <details className="security-mobile-menu">
-              <summary aria-label={lang === 'fr' ? 'Ouvrir le menu' : 'Open menu'}>
-                ☰
-              </summary>
-              <div className="security-mobile-panel">
-                <a href={homeLink('#features')}>{t.nav.features}</a>
-                <a href={homeLink('#documents')}>{t.nav.documents}</a>
-                <a href={homeLink('#how-it-works')}>{t.nav.howItWorks}</a>
-                <a href={lang === 'fr' ? '/pricing' : '/pricing?lang=en'}>{t.nav.pricing}</a>
-                <a href={lang === 'fr' ? '/about' : '/about?lang=en'}>
-                  {lang === 'fr' ? 'À propos' : 'About'}
-                </a>
-                <a href="https://app.getcoro.io/login">{t.nav.login}</a>
-                <a href={homeLink('#demo')}>{t.nav.demo}</a>
-              </div>
-            </details>
-          </div>
+      <PageSection tone="soft" labelledBy="security-s2-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="security-s2-title" label={`${t.s2.n} — ${t.s2.label}`} heading={t.s2.title}><p>{t.s2.text}</p></EditorialBlock>
+          <ul className={styles.rows}>{t.s2.rows.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
         </div>
-      </header>
-
-      <main>
-        {/* HERO */}
-        <section
-          style={{
-            background:
-              'radial-gradient(circle at 80% 20%, rgba(192,57,43,0.18), transparent 32%), linear-gradient(135deg, #1A252F 0%, #2C3E50 100%)',
-            padding: '112px 24px 104px',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 1200,
-              margin: '0 auto',
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.05fr) minmax(320px, 0.75fr)',
-              gap: 70,
-              alignItems: 'center',
-            }}
-            className="security-hero-grid"
-          >
-            <div>
-              <span
-                style={{
-                  display: 'inline-block',
-                  color: '#F1948A',
-                  border: '1px solid rgba(231,76,60,0.32)',
-                  backgroundColor: 'rgba(192,57,43,0.14)',
-                  borderRadius: 999,
-                  padding: '7px 15px',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  marginBottom: 24,
-                }}
-              >
-                {t.hero.tag}
-              </span>
-
-              <h1
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 'clamp(42px, 6vw, 68px)',
-                  lineHeight: 1.05,
-                  letterSpacing: '-2px',
-                  fontWeight: 900,
-                  margin: '0 0 26px',
-                  maxWidth: 800,
-                }}
-              >
-                {t.hero.title}
-              </h1>
-
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.70)',
-                  fontSize: 18,
-                  lineHeight: 1.8,
-                  maxWidth: 760,
-                  margin: 0,
-                }}
-              >
-                {t.hero.subtitle}
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 14,
-                  flexWrap: 'wrap',
-                  marginTop: 36,
-                }}
-              >
-                <a href={homeLink('#demo')} className="security-primary-btn">
-                  {t.hero.primary} <ArrowRight size={17} />
-                </a>
-                <a href={homeLink('#features')} className="security-secondary-btn">
-                  {t.hero.secondary}
-                </a>
-              </div>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                borderRadius: 22,
-                padding: 'clamp(28px, 5vw, 46px)',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <ShieldCheck
-                size={62}
-                color="#F1948A"
-                strokeWidth={1.5}
-                style={{ marginBottom: 24 }}
-              />
-              <p
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 22,
-                  lineHeight: 1.45,
-                  fontWeight: 800,
-                  margin: 0,
-                }}
-              >
-                {lang === 'fr'
-                  ? 'Hébergement canadien. Accès contrôlés. Communications chiffrées. Sauvegardes automatisées.'
-                  : 'Canadian hosting. Controlled access. Encrypted communications. Automated backups.'}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* TRUST CARDS */}
-        <section style={{ padding: '104px 24px', backgroundColor: '#F8F9FA' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ maxWidth: 780, margin: '0 auto 58px', textAlign: 'center' }}>
-              <h2 className="security-h2">{t.trust.title}</h2>
-              <p className="security-body" style={{ margin: '0 auto' }}>
-                {t.trust.subtitle}
-              </p>
-            </div>
-
-            <div className="security-card-grid">
-              {t.trust.items.map((item) => (
-                <article className="security-card" key={item.title}>
-                  <div className="security-icon-box">
-                    <IconFor name={item.icon} />
-                  </div>
-                  <h3 className="security-h3">{item.title}</h3>
-                  <p className="security-card-text">{item.desc}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* HOSTING */}
-        <section style={{ padding: '108px 24px', backgroundColor: '#FFFFFF' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div className="security-two-col">
-              <div>
-                <SectionTag>{t.hosting.tag}</SectionTag>
-                <h2 className="security-h2">{t.hosting.title}</h2>
-                <p className="security-body">{t.hosting.text}</p>
-
-                <p
-                  style={{
-                    marginTop: 28,
-                    padding: '18px 20px',
-                    backgroundColor: '#F8F9FA',
-                    borderLeft: '4px solid #C0392B',
-                    borderRadius: 8,
-                    color: '#6C757D',
-                    lineHeight: 1.7,
-                    fontSize: 14,
-                  }}
-                >
-                  {t.hosting.note}
-                </p>
-              </div>
-
-              <div className="security-host-grid">
-                {t.hosting.cards.map((card) => (
-                  <div className="security-host-card" key={card.title}>
-                    <IconFor name={card.icon} size={28} />
-                    <p className="security-small-label">{card.title}</p>
-                    <p className="security-value">{card.value}</p>
-                    <p className="security-card-text">{card.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ACCESS */}
-        <section style={{ padding: '108px 24px', backgroundColor: '#2C3E50' }}>
-          <div className="security-two-col" style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div>
-              <span className="security-dark-tag">{t.access.tag}</span>
-              <h2 className="security-h2 security-h2-dark">{t.access.title}</h2>
-              <p className="security-body security-body-dark">{t.access.text}</p>
-            </div>
-
-            <div>
-              <ul className="security-dark-list">
-                {t.access.bullets.map((item) => (
-                  <li key={item}>
-                    <CheckCircle2 size={19} color="#F1948A" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* CONTINUITY */}
-        <section style={{ padding: '108px 24px', backgroundColor: '#F8F9FA' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ maxWidth: 780, marginBottom: 54 }}>
-              <SectionTag>{t.continuity.tag}</SectionTag>
-              <h2 className="security-h2">{t.continuity.title}</h2>
-              <p className="security-body">{t.continuity.intro}</p>
-            </div>
-
-            <div className="security-card-grid">
-              {t.continuity.items.map((item) => (
-                <article className="security-card security-card-flat" key={item.title}>
-                  <div className="security-icon-box">
-                    <IconFor name={item.icon} />
-                  </div>
-                  <p className="security-small-label">{item.title}</p>
-                  <p
-                    style={{
-                      color: '#2C3E50',
-                      fontSize: 28,
-                      fontWeight: 900,
-                      margin: '0 0 10px',
-                    }}
-                  >
-                    {item.value}
-                  </p>
-                  <p className="security-card-text">{item.desc}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* PERIMETER */}
-        <section style={{ padding: '108px 24px', backgroundColor: '#FFFFFF' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ maxWidth: 780, marginBottom: 52 }}>
-              <SectionTag>{t.perimeter.tag}</SectionTag>
-              <h2 className="security-h2">{t.perimeter.title}</h2>
-            </div>
-
-            <div className="security-perimeter-grid">
-              {t.perimeter.bullets.map((item, index) => {
-                const icons = [
-                  <Network key="network" size={26} color="#C0392B" />,
-                  <KeyRound key="key" size={26} color="#C0392B" />,
-                  <ShieldCheck key="shield" size={26} color="#C0392B" />,
-                  <Activity key="activity" size={26} color="#C0392B" />,
-                ];
-
-                return (
-                  <div className="security-perimeter-item" key={item.title}>
-                    <div className="security-icon-box" style={{ marginBottom: 0 }}>
-                      {icons[index]}
-                    </div>
-                    <div>
-                      <h3 className="security-h3">{item.title}</h3>
-                      <p className="security-card-text">{item.desc}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* PRIVACY */}
-        <section style={{ padding: '108px 24px', backgroundColor: '#F8F9FA' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div className="security-two-col">
-              <div>
-                <SectionTag>{t.privacy.tag}</SectionTag>
-                <h2 className="security-h2">{t.privacy.title}</h2>
-                <p className="security-body">{t.privacy.text}</p>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 14,
-                    marginTop: 30,
-                  }}
-                >
-                  <a
-                    href={lang === 'fr' ? '/privacy' : '/privacy?lang=en'}
-                    className="security-inline-link"
-                  >
-                    {t.privacy.linkPrivacy} <ArrowRight size={16} />
-                  </a>
-                  <a
-                    href={lang === 'fr' ? '/terms' : '/terms?lang=en'}
-                    className="security-inline-link"
-                  >
-                    {t.privacy.linkTerms} <ArrowRight size={16} />
-                  </a>
-                </div>
-              </div>
-
-              <div className="security-badge-grid">
-                {t.privacy.badges.map((badge) => (
-                  <div className="security-badge-card" key={badge.title}>
-                    <ShieldCheck size={27} color="#C0392B" />
-                    <p className="security-value" style={{ fontSize: 22 }}>
-                      {badge.title}
-                    </p>
-                    <p className="security-card-text">{badge.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ENTERPRISE / IT */}
-        <section style={{ padding: '108px 24px', backgroundColor: '#FFFFFF' }}>
-          <div
-            style={{
-              maxWidth: 1200,
-              margin: '0 auto',
-              border: '1px solid #E9ECEF',
-              borderRadius: 20,
-              padding: 'clamp(30px, 6vw, 58px)',
-              boxShadow: '0 18px 50px rgba(44,62,80,0.06)',
-            }}
-          >
-            <div className="security-two-col">
-              <div>
-                <SectionTag>{t.enterprise.tag}</SectionTag>
-                <h2 className="security-h2">{t.enterprise.title}</h2>
-                <p className="security-body">{t.enterprise.text}</p>
-
-                <a
-                  href="mailto:info@getcoro.io?subject=Documentation%20technique%20CORO"
-                  className="security-primary-btn"
-                  style={{ marginTop: 30 }}
-                >
-                  {t.enterprise.cta} <ArrowRight size={17} />
-                </a>
-              </div>
-
-              <ul className="security-light-list">
-                {t.enterprise.points.map((item) => (
-                  <li key={item}>
-                    <CheckCircle2 size={18} color="#C0392B" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section
-          style={{
-            background: 'linear-gradient(135deg, #C0392B 0%, #922B21 100%)',
-            padding: '96px 24px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            <h2
-              style={{
-                color: '#FFFFFF',
-                fontSize: 'clamp(30px, 5vw, 46px)',
-                lineHeight: 1.18,
-                fontWeight: 900,
-                margin: '0 0 20px',
-              }}
-            >
-              {t.cta.title}
-            </h2>
-
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.82)',
-                fontSize: 18,
-                lineHeight: 1.75,
-                margin: '0 auto 36px',
-                maxWidth: 720,
-              }}
-            >
-              {t.cta.text}
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 14,
-                flexWrap: 'wrap',
-              }}
-            >
-              <a href={homeLink('#demo')} className="security-cta-white">
-                {t.cta.primary} <ArrowRight size={17} />
-              </a>
-              <a
-                href="mailto:info@getcoro.io"
-                className="security-cta-outline"
-              >
-                {t.cta.secondary}
-              </a>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
-
-        .security-desktop-nav {
-          display: flex;
-          align-items: center;
-          gap: 30px;
-        }
-
-        .security-nav-link {
-          color: rgba(255,255,255,0.86);
-          font-size: 15px;
-          font-weight: 500;
-          text-decoration: none;
-        }
-
-        .security-nav-link:hover {
-          color: #FFFFFF;
-        }
-
-        .security-lang,
-        .security-login {
-          padding: 7px 12px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          border: 1px solid rgba(255,255,255,0.28);
-          color: #FFFFFF;
-          text-decoration: none;
-        }
-
-        .security-login {
-          padding: 8px 17px;
-          font-size: 14px;
-          font-weight: 500;
-        }
-
-        .security-lang:hover,
-        .security-login:hover {
-          background-color: rgba(255,255,255,0.08);
-        }
-
-        .security-demo {
-          padding: 9px 18px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 700;
-          color: #FFFFFF;
-          background-color: #C0392B;
-          text-decoration: none;
-        }
-
-        .security-demo:hover {
-          background-color: #A93226;
-        }
-
-        .security-mobile-menu {
-          display: none;
-          position: relative;
-        }
-
-        .security-mobile-menu summary {
-          list-style: none;
-          cursor: pointer;
-          color: #FFFFFF;
-          font-size: 24px;
-          padding: 5px;
-        }
-
-        .security-mobile-menu summary::-webkit-details-marker {
-          display: none;
-        }
-
-        .security-mobile-panel {
-          position: absolute;
-          right: 0;
-          top: 42px;
-          min-width: 240px;
-          background: #FFFFFF;
-          border: 1px solid #E9ECEF;
-          border-radius: 12px;
-          padding: 12px;
-          box-shadow: 0 16px 42px rgba(0,0,0,0.18);
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          z-index: 1000;
-        }
-
-        .security-mobile-panel a {
-          color: #2C3E50;
-          font-size: 15px;
-          font-weight: 600;
-          text-decoration: none;
-          padding: 10px 12px;
-          border-radius: 7px;
-        }
-
-        .security-mobile-panel a:hover {
-          background: #F8F9FA;
-          color: #C0392B;
-        }
-
-        .security-primary-btn,
-        .security-secondary-btn,
-        .security-cta-white,
-        .security-cta-outline {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          min-height: 46px;
-          padding: 12px 20px;
-          border-radius: 8px;
-          font-size: 15px;
-          font-weight: 700;
-          text-decoration: none;
-        }
-
-        .security-primary-btn {
-          color: #FFFFFF;
-          background-color: #C0392B;
-          border: 2px solid #C0392B;
-        }
-
-        .security-primary-btn:hover {
-          background-color: #A93226;
-          border-color: #A93226;
-        }
-
-        .security-secondary-btn {
-          color: #FFFFFF;
-          background: rgba(255,255,255,0.06);
-          border: 2px solid rgba(255,255,255,0.28);
-        }
-
-        .security-secondary-btn:hover {
-          background: rgba(255,255,255,0.10);
-        }
-
-        .security-h2 {
-          color: #2C3E50;
-          font-size: clamp(30px, 4vw, 44px);
-          font-weight: 900;
-          line-height: 1.18;
-          letter-spacing: -1px;
-          margin: 0 0 20px;
-        }
-
-        .security-h2-dark {
-          color: #FFFFFF;
-        }
-
-        .security-h3 {
-          color: #2C3E50;
-          font-size: 19px;
-          font-weight: 800;
-          line-height: 1.3;
-          margin: 0 0 10px;
-        }
-
-        .security-body {
-          color: #6C757D;
-          font-size: 17px;
-          line-height: 1.8;
-          margin: 0;
-          max-width: 740px;
-        }
-
-        .security-body-dark {
-          color: rgba(255,255,255,0.68);
-        }
-
-        .security-card-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 22px;
-        }
-
-        .security-card {
-          background: #FFFFFF;
-          border: 1px solid #E9ECEF;
-          border-radius: 16px;
-          padding: 30px;
-          box-shadow: 0 8px 28px rgba(44,62,80,0.04);
-        }
-
-        .security-card-flat {
-          box-shadow: none;
-        }
-
-        .security-icon-box {
-          width: 54px;
-          height: 54px;
-          border-radius: 13px;
-          background: #FDEDEC;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 22px;
-          flex-shrink: 0;
-        }
-
-        .security-card-text {
-          color: #6C757D;
-          font-size: 15px;
-          line-height: 1.7;
-          margin: 0;
-        }
-
-        .security-two-col {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-          gap: 70px;
-          align-items: center;
-        }
-
-        .security-host-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-        .security-host-card,
-        .security-badge-card {
-          background: #F8F9FA;
-          border: 1px solid #E9ECEF;
-          border-radius: 14px;
-          padding: 24px;
-        }
-
-        .security-host-card svg,
-        .security-badge-card svg {
-          margin-bottom: 18px;
-        }
-
-        .security-small-label {
-          margin: 0 0 6px;
-          color: #ADB5BD;
-          font-size: 12px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.07em;
-        }
-
-        .security-value {
-          color: #2C3E50;
-          font-size: 20px;
-          font-weight: 900;
-          margin: 0 0 8px;
-        }
-
-        .security-dark-tag {
-          display: inline-block;
-          color: #F1948A;
-          font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 18px;
-        }
-
-        .security-dark-list,
-        .security-light-list {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 17px;
-        }
-
-        .security-dark-list li,
-        .security-light-list li {
-          display: flex;
-          gap: 11px;
-          align-items: flex-start;
-          font-size: 16px;
-          line-height: 1.6;
-        }
-
-        .security-dark-list li {
-          color: rgba(255,255,255,0.74);
-        }
-
-        .security-light-list li {
-          color: #495057;
-        }
-
-        .security-dark-list svg,
-        .security-light-list svg {
-          flex-shrink: 0;
-          margin-top: 3px;
-        }
-
-        .security-perimeter-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 22px;
-        }
-
-        .security-perimeter-item {
-          display: flex;
-          gap: 20px;
-          align-items: flex-start;
-          padding: 28px;
-          border: 1px solid #E9ECEF;
-          border-radius: 14px;
-        }
-
-        .security-badge-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-        .security-inline-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          color: #C0392B;
-          font-size: 15px;
-          font-weight: 700;
-          text-decoration: none;
-        }
-
-        .security-inline-link:hover {
-          text-decoration: underline;
-        }
-
-        .security-cta-white {
-          background: #FFFFFF;
-          color: #C0392B;
-          border: 2px solid #FFFFFF;
-        }
-
-        .security-cta-outline {
-          color: #FFFFFF;
-          border: 2px solid rgba(255,255,255,0.45);
-          background: transparent;
-        }
-
-        .security-footer-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 48px;
-          margin-bottom: 72px;
-          align-items: start;
-        }
-
-        .security-footer-heading {
-          color: #FFFFFF;
-          font-size: 13px;
-          font-weight: 700;
-          margin: 0 0 20px;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-        }
-
-        .security-footer-text {
-          color: rgba(255,255,255,0.5);
-          font-size: 13px;
-          line-height: 1.75;
-          margin: 0;
-        }
-
-        .security-footer-links {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .security-footer-link {
-          color: rgba(255,255,255,0.5);
-          font-size: 14px;
-          text-decoration: none;
-        }
-
-        .security-footer-link:hover {
-          color: #FFFFFF;
-        }
-
-        .security-soon {
-          font-size: 10px;
-          font-weight: 700;
-          color: #F39C12;
-          background-color: rgba(243,156,18,0.15);
-          border: 1px solid rgba(243,156,18,0.3);
-          padding: 1px 6px;
-          border-radius: 4px;
-        }
-
-        .security-footer-bottom {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 20px;
-        }
-
-        .security-footer-bottom-right {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .security-footer-muted {
-          color: rgba(255,255,255,0.3);
-          font-size: 13px;
-          margin: 0;
-        }
-
-        .security-footer-language {
-          padding: 7px 14px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 600;
-          border: 1px solid rgba(255,255,255,0.15);
-          color: rgba(255,255,255,0.5);
-          text-decoration: none;
-        }
-
-        @media (max-width: 1000px) {
-          .security-desktop-nav {
-            display: none;
-          }
-
-          .security-mobile-menu {
-            display: block;
-          }
-
-          .security-card-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .security-two-col,
-          .security-hero-grid {
-            grid-template-columns: 1fr !important;
-            gap: 44px !important;
-          }
-
-          .security-host-grid,
-          .security-badge-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 700px) {
-          .security-hide-small {
-            display: none;
-          }
-
-          .security-card-grid,
-          .security-perimeter-grid,
-          .security-host-grid,
-          .security-badge-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .security-footer-bottom,
-          .security-footer-bottom-right {
-            align-items: flex-start;
-          }
-        }
-      `}</style>
-    </div>
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="security-s3-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="security-s3-title" label={`${t.s3.n} — ${t.s3.label}`} heading={t.s3.title}><p>{t.s3.text}</p></EditorialBlock>}
+          media={<ul className={`${styles.rows} ${styles.rowsCompact}`}>{t.s3.rows.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>} />
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="security-s4-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="security-s4-title" label={`${t.s4.n} — ${t.s4.label}`} heading={t.s4.title} />
+          <div className={styles.columns}>{t.s4.columns.map(([name, text]) => <section key={name}><h3>{name}</h3><p>{text}</p></section>)}</div>
+          <p className={styles.note}>{t.s4.note} <a className={styles.link} href={localizedHref('/terms', l)}>{t.s4.termsLink}<span aria-hidden="true"> →</span></a></p>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="security-s5-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="security-s5-title" label={`${t.s5.n} — ${t.s5.label}`} heading={t.s5.title}><p>{t.s5.text}</p></EditorialBlock>
+          <div className={styles.cols}>{t.s5.cols.map((c) => <section key={c.name}><h3>{c.name}</h3><ul>{c.items.map((item) => <li key={item}>{item}</li>)}</ul></section>)}</div>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="security-s6-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="security-s6-title" label={`${t.s6.n} — ${t.s6.label}`} heading={t.s6.title} />}
+          media={<div className={styles.stack}>{t.s6.text.map((p) => <p key={p} className={styles.body}>{p}</p>)}<p className={styles.links}><a className={styles.link} href={localizedHref('/privacy', l)}>{t.s6.privacy}<span aria-hidden="true"> →</span></a><a className={styles.link} href={localizedHref('/terms', l)}>{t.s6.terms}<span aria-hidden="true"> →</span></a></p></div>} />
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="security-faq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="security-faq-title" label={t.faqLabel} heading={t.faq} />
+          <Accordion label={t.faq} items={t.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))} />
+        </div>
+      </PageSection>
+
+      <CTASection id="security-cta-title" tone="dark" label={t.label} statement={t.statement} support={t.support} primary={{ label: t.demo, href: demo }} secondary={{ label: t.ask, href: mail }} />
+    </V2Shell>
   );
 }

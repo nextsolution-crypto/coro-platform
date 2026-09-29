@@ -1,0 +1,77 @@
+/* /resilience-operationnelle — V1 tokens only. Opening (EditorialHero photographic mode), sections, media frame, accordion and CTA come from the component library. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+
+/* Bridge: the two sides of resilience, documentation and preparation on one side, operations and learning on the other. */
+.bridge { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-block-start: 2px solid var(--ink); }
+.bridge li { padding-block: var(--coro-v1-space-6); border-block-end: 1px solid var(--line); color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.15; }
+.bridge li:last-child { color: var(--accent); }
+
+/* The loop: seven steps in three moments (before, during, after), numbered across the moments. */
+.loop { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.loop section { border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-4); align-content: start; }
+.loop section:nth-child(2) { border-block-start-color: var(--accent); }
+.loop h3 { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.loop ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.loop li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: var(--coro-v1-space-3); align-items: baseline; padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 700; }
+.loop li::before { content: attr(data-n); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+
+/* The four capabilities: the page's single card cluster (1px border, V1 surface and radius, accent rule, no shadow, no icon). */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); counter-reset: card; }
+.cards li { counter-increment: card; display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-8) var(--coro-v1-space-6); min-block-size: 11rem; background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-block-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); }
+.cards li::before { content: counter(card, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-small); font-weight: 750; letter-spacing: .08em; }
+.cards h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; overflow-wrap: break-word; }
+.cards p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* Three operational dimensions: plain typographic columns separated by rules (not cards). */
+.dims { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+.dims section { border-inline-start: 1px solid var(--line); padding-inline-start: var(--coro-v1-space-6); display: grid; gap: var(--coro-v1-space-3); align-content: start; }
+.dims section:first-child { border-inline-start: 0; padding-inline-start: 0; }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.dims h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.dims p { margin: 0; color: var(--muted); line-height: 1.6; }
+.dims ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.dims li { padding-block: var(--coro-v1-space-2); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 600; font-size: var(--coro-v1-text-small); }
+.dims a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+@media (max-width: 48rem) { .dims section { border-inline-start: 0; padding-inline-start: 0; border-block-start: 1px solid var(--line); padding-block-start: var(--coro-v1-space-6); } .dims section:first-child { border-block-start: 0; padding-block-start: 0; } }
+
+/* Index weights on the navy section: the weight is the largest element of each row. */
+.dimLabel { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.weights { margin: 0; display: grid; gap: 0; border-block-start: 1px solid var(--line); }
+.weights > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name weight" "desc desc"; gap: var(--coro-v1-space-1) var(--coro-v1-space-4); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); align-items: baseline; }
+.weights dt { grid-area: name; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.weights dd { margin: 0; grid-area: desc; color: var(--muted); line-height: 1.5; }
+.weights .weight { grid-area: weight; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 850; }
+
+/* Plain lists. */
+.plain { list-style: none; margin: 0; padding: 0; display: grid; }
+.plain li { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 600; }
+.plain li:first-child { border-block-start: 1px solid var(--line); }
+
+/* Real screens stay readable on narrow screens: a minimum width inside a keyboard-focusable, horizontally scrollable region, with the visible labels repeated as text. */
+.pan { overflow-x: auto; }
+.pan:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+@media (max-width: 48rem) { .pan > * { min-inline-size: 32rem; } }
+.legendBlock { display: grid; gap: var(--coro-v1-space-2); }
+.dimLabelInk { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-2); }
+.legend li { color: var(--ink); font-weight: 650; }
+.legend li::before { content: "— "; color: var(--accent); }
+
+/* Report: two short notes (lessons learned, compliance responsibility). */
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+.notes li { border-block-start: 1px solid var(--line); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.notes h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.notes p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* Recommendations: the level is written, never colour alone. */
+.recs { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 1px solid var(--line); }
+.recs li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: var(--coro-v1-space-4); align-items: baseline; padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.recs span { color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+@media (max-width: 30rem) { .recs li { grid-template-columns: 1fr; gap: var(--coro-v1-space-1); } }
+
+/* Connected product pages. */
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }

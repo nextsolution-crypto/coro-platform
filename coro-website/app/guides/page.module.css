@@ -1,0 +1,35 @@
+/* /guides — V1 tokens only. Editorial hub: two ruled tile groups (available / Phase 2), a navy relationship flow, a decision list. Status is conveyed in text, never colour alone. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.link { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.link:focus-visible, .decisionCode:focus-visible, .docsLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+
+/* Document tiles: an image, a code, a name, a need, a status line and a link. Two groups of three, never a six-tile wall on one row. */
+.tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-8); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 56rem) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.tile { display: grid; gap: var(--coro-v1-space-3); align-content: start; }
+.tileBody { display: grid; gap: var(--coro-v1-space-1); border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-3); }
+.tileCode { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: 800; letter-spacing: .08em; }
+.tile h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.2; }
+.tileNeed { margin: 0; color: var(--muted); line-height: 1.55; min-block-size: 2.8em; }
+.tileStatus { margin: var(--coro-v1-space-1) 0 0; font-size: var(--coro-v1-text-small); font-weight: 650; }
+.tileStatus[data-status="available"] { color: var(--coro-v1-success); }
+.tileStatus[data-status="phase2"] { color: var(--muted); }
+.tileStatus span { font-size: .7em; }
+
+/* Six complementary document purposes on navy: an unordered grid, no numbering, no connecting line — these are territories, not stages. */
+.purposes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--coro-v1-space-6); }
+.purposes li { display: grid; gap: var(--coro-v1-space-1); align-content: start; padding: var(--coro-v1-space-4); border: 1px solid var(--coro-v1-border-on-dark); border-radius: var(--coro-v1-radius-control); }
+.purposeCode { margin: 0; color: var(--coro-v1-focus-on-dark); font-size: var(--coro-v1-label-size); font-weight: 800; letter-spacing: .08em; }
+.purposes h3 { margin: 0; color: var(--coro-v1-on-dark-900); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.15; }
+.purposes p { margin: 0; color: var(--coro-v1-on-dark-900); line-height: 1.5; font-size: var(--coro-v1-text-small); }
+
+/* Decision aid: a plain need → code list, not a quiz. */
+.decision { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.decision li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--coro-v1-space-4); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.decisionNeed { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 650; line-height: 1.35; max-inline-size: 36rem; }
+.decisionCode { color: var(--accent); font-weight: 800; letter-spacing: .06em; white-space: nowrap; }
+
+/* CORO Documents connector: one restrained panel, not a pricing card. */
+.docsCard { padding: clamp(1.25rem, 3vw, 2rem); background: var(--coro-v1-surface-2); border-block-start: 3px solid var(--accent); display: grid; align-content: center; min-block-size: 8rem; }
+.docsLink { color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; text-decoration-color: var(--accent); text-underline-offset: .2em; }

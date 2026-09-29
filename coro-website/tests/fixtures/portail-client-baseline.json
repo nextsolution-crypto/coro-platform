@@ -1,0 +1,1061 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Portail client pour la gestion de la conformité — CORO | CORO",
+  "description": "Offrez à vos clients un portail sécurisé pour suivre leurs bâtiments, documents de conformité, approbations, signatures électroniques, activités, historiques et obligations à venir avec CORO.",
+  "canonical": "https://getcoro.io/portail-client",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/portail-client"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/portail-client?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/portail-client"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/portail-client",
+  "ogTitle": "Portail client pour la gestion de la conformité — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Une vision claire de vos bâtiments, documents et activités."
+   ],
+   [
+    "h2",
+    "Votre organisation. Vos bâtiments. Votre information."
+   ],
+   [
+    "h2",
+    "Vue portefeuille"
+   ],
+   [
+    "h2",
+    "Comprendre les bâtiments"
+   ],
+   [
+    "h2",
+    "Situer le portefeuille"
+   ],
+   [
+    "h2",
+    "Suivre l’activité"
+   ],
+   [
+    "h2",
+    "Gérer le cycle documentaire"
+   ],
+   [
+    "h2",
+    "Relier conseiller et client"
+   ],
+   [
+    "h2",
+    "Client et Network restent distincts"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Le client voit-il tous les bâtiments?"
+   ],
+   [
+    "h3",
+    "Les versions restent-elles accessibles?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/portail-client?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Client"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/portail-client?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-tableau-de-bord.webp&w=1080&q=75",
+    "Tableau de bord du portail client CORO"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-batiments.webp&w=3840&q=75",
+    "Portefeuille de bâtiments dans CORO Client"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-carte.webp&w=3840&q=75",
+    "Vue cartographique des bâtiments CORO"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-activites.webp&w=3840&q=75",
+    "Activités visibles dans CORO Client"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-cycle-documentaire.webp&w=3840&q=75",
+    "Cycle documentaire, approbation et historique CORO"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-espace-conseiller.webp&w=3840&q=75",
+    "Espace conseiller relié au portail client CORO"
+   ]
+  ],
+  "jsonLd": [],
+  "counts": {
+   "main": 1,
+   "header": 7,
+   "footer": 2,
+   "h1": 1
+  },
+  "mainText": "PORTAIL CLIENT\n\nUne vision claire de vos bâtiments, documents et activités.\n\nCORO Client donne au client autorisé la bonne information, sur le bon bâtiment, dans un espace sécurisé.\n\nDécouvrir CORO Client\n\nVISITE GUIDÉE\n\nVotre organisation. Vos bâtiments. Votre information.\n\nCORO Client donne au client autorisé la bonne information, sur le bon bâtiment, dans un espace sécurisé.\n\nPortefeuille\nBâtiment\nInformation\nAction\n01\nVue portefeuille\nTableau de bord du portail client CORO\n\nLe tableau de bord et la vue bâtiments structurent l’accès au portefeuille autorisé.\n\n02\nComprendre les bâtiments\nPortefeuille de bâtiments dans CORO Client\n03\nSituer le portefeuille\nVue cartographique des bâtiments CORO\n04\nSuivre l’activité\nActivités visibles dans CORO Client\n\nLes activités visibles et échanges associés maintiennent le client informé.\n\n05\nGérer le cycle documentaire\nCycle documentaire, approbation et historique CORO\n\nDocuments, approbations, signatures, commentaires et versions sont regroupés par dossier.\n\n06\nRelier conseiller et client\nEspace conseiller relié au portail client CORO\n\nLes modules activés, dont incidents ou Sentinelle, restent accessibles selon les droits accordés.\n\nClient et Network restent distincts\n\nCORO Client est l’interface du client pour ses informations et capacités autorisées. CORO Network représente une vision transversale et une intelligence organisationnelle multi-sites; les deux concepts ne sont pas interchangeables.\n\nCETTE PARTIE DE LA PLATEFORME\n\nUn socle produit relié\nDocuments\n\nStructure les données et les livrables.\n\nExplorer\nProjects\n\nOrganise les mandats et le travail.\n\nExplorer\nPerformance\n\nMesure activité, objectifs et capacité.\n\nExplorer\nClient\n\nRend l’information accessible au client.\n\nExplorer\n\nFAQ\n\nQuestions fréquentes\nLe client voit-il tous les bâtiments?\n\nIl voit les bâtiments et informations auxquels son compte est autorisé.\n\nLes versions restent-elles accessibles?\n\nLe portail actuel expose les documents et leur historique selon les droits du client."
+ },
+ "en": {
+  "status": 200,
+  "title": "Client Portal for Compliance Management — CORO | CORO",
+  "description": "Give your clients a secure portal to manage buildings, compliance documents, approvals, electronic signatures, activities, document history and upcoming obligations with CORO.",
+  "canonical": "https://getcoro.io/portail-client?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/portail-client"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/portail-client?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/portail-client"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/portail-client?lang=en",
+  "ogTitle": "Client Portal for Compliance Management — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "A clear view of your buildings, documents and activities."
+   ],
+   [
+    "h2",
+    "Your organization. Your buildings. Your information."
+   ],
+   [
+    "h2",
+    "Portfolio view"
+   ],
+   [
+    "h2",
+    "Understand buildings"
+   ],
+   [
+    "h2",
+    "Locate the portfolio"
+   ],
+   [
+    "h2",
+    "Track activity"
+   ],
+   [
+    "h2",
+    "Manage the document lifecycle"
+   ],
+   [
+    "h2",
+    "Connect advisor and client"
+   ],
+   [
+    "h2",
+    "Client and Network remain distinct"
+   ],
+   [
+    "h2",
+    "A connected product foundation"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Frequently asked questions"
+   ],
+   [
+    "h3",
+    "Can clients see every building?"
+   ],
+   [
+    "h3",
+    "Are versions accessible?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Product"
+   ],
+   [
+    "h4",
+    "Company"
+   ],
+   [
+    "h4",
+    "Legal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CORO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/portail-client",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/?lang=en#demo",
+    "Discover CORO Client"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Explore"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Explore"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Explore"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Explore"
+   ],
+   [
+    "/?lang=en",
+    "CORO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/portail-client",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Features"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Advisor login"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Client portal"
+   ],
+   [
+    "/about?lang=en",
+    "About us"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral Program"
+   ],
+   [
+    "/blog",
+    "Blog"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact us"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy Policy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms of Service"
+   ],
+   [
+    "/privacy?lang=en",
+    "Learn more"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-tableau-de-bord.webp&w=1080&q=75",
+    "CORO client portal dashboard"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-batiments.webp&w=3840&q=75",
+    "Building portfolio in CORO Client"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-carte.webp&w=3840&q=75",
+    "CORO building map view"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-activites.webp&w=3840&q=75",
+    "Activities shown in CORO Client"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-cycle-documentaire.webp&w=3840&q=75",
+    "CORO document lifecycle, approval and history"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-espace-conseiller.webp&w=3840&q=75",
+    "CORO advisor workspace connected to the client portal"
+   ]
+  ],
+  "jsonLd": [],
+  "counts": {
+   "main": 1,
+   "header": 7,
+   "footer": 2,
+   "h1": 1
+  },
+  "mainText": "CLIENT PORTAL\n\nA clear view of your buildings, documents and activities.\n\nCORO Client gives authorized clients the right information for the right building in a secure space.\n\nDiscover CORO Client\n\nGUIDED TOUR\n\nYour organization. Your buildings. Your information.\n\nCORO Client gives authorized clients the right information for the right building in a secure space.\n\nPortfolio\nBuilding\nInformation\nAction\n01\nPortfolio view\nCORO client portal dashboard\n\nThe dashboard and building view structure access to the authorized portfolio.\n\n02\nUnderstand buildings\nBuilding portfolio in CORO Client\n03\nLocate the portfolio\nCORO building map view\n04\nTrack activity\nActivities shown in CORO Client\n\nVisible activities and related exchanges keep clients informed.\n\n05\nManage the document lifecycle\nCORO document lifecycle, approval and history\n\nDocuments, approvals, signatures, comments and versions are grouped by file.\n\n06\nConnect advisor and client\nCORO advisor workspace connected to the client portal\n\nEnabled modules, including incidents or Sentinelle, remain available according to granted access.\n\nClient and Network remain distinct\n\nCORO Client is the client interface for authorized information and capabilities. CORO Network represents cross-site organizational intelligence; the concepts are not interchangeable.\n\nTHIS PART OF THE PLATFORM\n\nA connected product foundation\nDocuments\n\nStructures data and deliverables.\n\nExplore\nProjects\n\nOrganizes mandates and work.\n\nExplore\nPerformance\n\nMeasures activity, goals and capacity.\n\nExplore\nClient\n\nMakes information accessible to clients.\n\nExplore\n\nFAQ\n\nFrequently asked questions\nCan clients see every building?\n\nThey see the buildings and information their account is authorized to access.\n\nAre versions accessible?\n\nThe current portal exposes documents and their history according to client permissions."
+ },
+ "ref": {
+  "status": 200,
+  "title": "Portail client pour la gestion de la conformité — CORO | CORO",
+  "description": "Offrez à vos clients un portail sécurisé pour suivre leurs bâtiments, documents de conformité, approbations, signatures électroniques, activités, historiques et obligations à venir avec CORO.",
+  "canonical": "https://getcoro.io/portail-client",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/portail-client"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/portail-client?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/portail-client"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/portail-client",
+  "ogTitle": "Portail client pour la gestion de la conformité — CORO",
+  "ogImage": "https://getcoro.io/og-coro.jpg",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "htmlLang": "fr",
+  "headings": [
+   [
+    "h1",
+    "Une vision claire de vos bâtiments, documents et activités."
+   ],
+   [
+    "h2",
+    "Votre organisation. Vos bâtiments. Votre information."
+   ],
+   [
+    "h2",
+    "Vue portefeuille"
+   ],
+   [
+    "h2",
+    "Comprendre les bâtiments"
+   ],
+   [
+    "h2",
+    "Situer le portefeuille"
+   ],
+   [
+    "h2",
+    "Suivre l’activité"
+   ],
+   [
+    "h2",
+    "Gérer le cycle documentaire"
+   ],
+   [
+    "h2",
+    "Relier conseiller et client"
+   ],
+   [
+    "h2",
+    "Client et Network restent distincts"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "Le client voit-il tous les bâtiments?"
+   ],
+   [
+    "h3",
+    "Les versions restent-elles accessibles?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/portail-client?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Client"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CORO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/portail-client?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "En savoir plus"
+   ]
+  ],
+  "images": [
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-tableau-de-bord.webp&w=1080&q=75",
+    "Tableau de bord du portail client CORO"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-batiments.webp&w=3840&q=75",
+    "Portefeuille de bâtiments dans CORO Client"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-carte.webp&w=3840&q=75",
+    "Vue cartographique des bâtiments CORO"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-activites.webp&w=3840&q=75",
+    "Activités visibles dans CORO Client"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-cycle-documentaire.webp&w=3840&q=75",
+    "Cycle documentaire, approbation et historique CORO"
+   ],
+   [
+    "http://localhost:3232/_next/image?url=%2Fimages%2Fsolutions%2Fportail-client%2Fcoro-portail-client-espace-conseiller.webp&w=3840&q=75",
+    "Espace conseiller relié au portail client CORO"
+   ]
+  ],
+  "jsonLd": [],
+  "counts": {
+   "main": 1,
+   "header": 7,
+   "footer": 2,
+   "h1": 1
+  },
+  "mainText": "PORTAIL CLIENT\n\nUne vision claire de vos bâtiments, documents et activités.\n\nCORO Client donne au client autorisé la bonne information, sur le bon bâtiment, dans un espace sécurisé.\n\nDécouvrir CORO Client\n\nVISITE GUIDÉE\n\nVotre organisation. Vos bâtiments. Votre information.\n\nCORO Client donne au client autorisé la bonne information, sur le bon bâtiment, dans un espace sécurisé.\n\nPortefeuille\nBâtiment\nInformation\nAction\n01\nVue portefeuille\nTableau de bord du portail client CORO\n\nLe tableau de bord et la vue bâtiments structurent l’accès au portefeuille autorisé.\n\n02\nComprendre les bâtiments\nPortefeuille de bâtiments dans CORO Client\n03\nSituer le portefeuille\nVue cartographique des bâtiments CORO\n04\nSuivre l’activité\nActivités visibles dans CORO Client\n\nLes activités visibles et échanges associés maintiennent le client informé.\n\n05\nGérer le cycle documentaire\nCycle documentaire, approbation et historique CORO\n\nDocuments, approbations, signatures, commentaires et versions sont regroupés par dossier.\n\n06\nRelier conseiller et client\nEspace conseiller relié au portail client CORO\n\nLes modules activés, dont incidents ou Sentinelle, restent accessibles selon les droits accordés.\n\nClient et Network restent distincts\n\nCORO Client est l’interface du client pour ses informations et capacités autorisées. CORO Network représente une vision transversale et une intelligence organisationnelle multi-sites; les deux concepts ne sont pas interchangeables.\n\nCETTE PARTIE DE LA PLATEFORME\n\nUn socle produit relié\nDocuments\n\nStructure les données et les livrables.\n\nExplorer\nProjects\n\nOrganise les mandats et le travail.\n\nExplorer\nPerformance\n\nMesure activité, objectifs et capacité.\n\nExplorer\nClient\n\nRend l’information accessible au client.\n\nExplorer\n\nFAQ\n\nQuestions fréquentes\nLe client voit-il tous les bâtiments?\n\nIl voit les bâtiments et informations auxquels son compte est autorisé.\n\nLes versions restent-elles accessibles?\n\nLe portail actuel expose les documents et leur historique selon les droits du client."
+ }
+}

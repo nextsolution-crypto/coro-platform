@@ -1,252 +1,239 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { CTASection } from '@/components/conversion/CTASection';
+import { Accordion } from '@/components/page/Accordion';
+import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { PageSection } from '@/components/page/PageSection';
+import { V2Shell } from '@/components/site/V2Shell';
+import { Button } from '@/components/ui/Button';
+import { faqJsonLd } from '@/lib/site/json-ld';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
+import { buildPageMetadata } from '@/lib/site/seo';
+import styles from './page.module.css';
 
-const SITE_URL = 'https://getcoro.io';
-const PAGE_URL = `${SITE_URL}/documents/plan-urgence-environnementale-pue`;
+type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-const DOC = {
-  code: 'PUE',
-  color: '#16A085',
-  fr: {
-    title: 'Plan d\'Urgence Environnementale (PUE)',
-    seoTitle: 'Plan d\'Urgence Environnementale (PUE) — Guide complet | CORO',
-    seoDesc: 'Tout sur le Plan d\'Urgence Environnementale au Canada : Règlement sur les urgences environnementales (2019), 249 substances réglementées, obligations et comment CORO simplifie sa production.',
-    hero: 'Plan d\'Urgence Environnementale (PUE)',
-    intro: 'Le Plan d\'Urgence Environnementale définit les mesures de prévention et d\'intervention en cas d\'incident environnemental impliquant des substances dangereuses. Au Canada, il est encadré par le Règlement sur les urgences environnementales (2019) (DORS/2019-51), pris en vertu de la Loi canadienne sur la protection de l\'environnement (1999) (LCPE), entré en vigueur le 24 août 2019.',
-    sections: [
-      { title: 'Cadre réglementaire : le Règlement sur les urgences environnementales (2019)', content: 'Le Règlement sur les urgences environnementales (2019) (DORS/2019-51) règlemente 249 substances dangereuses pour lesquelles il y a des exigences en matière de déclaration et de planification d\'urgence environnementale pour les installations à risque élevé. Il s\'applique à toute personne propriétaire d\'une substance figurant à l\'annexe 1 du Règlement, à des concentrations et quantités égales ou supérieures aux seuils définis. Six catégories de danger sont visées : toxicité en milieu aquatique, combustible, danger d\'explosion, danger de feu en nappe, danger en cas d\'inhalation, et oxydant pouvant exploser.' },
-      { title: 'Êtes-vous assujetti au Règlement ?', content: 'Le Règlement s\'applique si votre installation possède ou a autorité sur une substance figurant à l\'annexe 1 du Règlement UE (2019), à des concentrations et quantités égales ou supérieures aux seuils définis. Les obligations varient selon que vous êtes en situation de déclaration uniquement ou en situation de planification complète. Pour vérifier si votre installation est assujettie, consultez la liste des 249 substances réglementées sur le site d\'Environnement et Changement climatique Canada.' },
-      { title: 'Contenu d\'un PUE complet', content: 'Un PUE comprend : l\'inventaire des substances dangereuses présentes sur le site (fiches de données de sécurité — FDS), l\'identification des risques et des scénarios d\'accidents potentiels, les mesures de prévention et de confinement, les procédures de notification aux autorités (avis immédiat à Environnement et Changement climatique Canada en cas de rejet), les responsabilités en cas d\'intervention, les équipements de réponse disponibles, et les mesures de décontamination et de remédiation.' },
-      { title: 'Obligations de notification', content: 'En vertu de la LCPE (1999), le gouvernement fédéral doit être avisé immédiatement du rejet ou du rejet probable d\'une substance réglementée. Pour signaler une urgence environnementale, contactez la Division des urgences environnementales d\'Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca.' },
-      { title: 'Matières dangereuses, SIMDUT et REPTOX', content: 'La réglementation sur le Système d\'information sur les matières dangereuses utilisées au travail (SIMDUT) exige des fiches de données de sécurité (FDS) pour toutes les matières dangereuses utilisées au travail. Au Québec, le répertoire REPTOX, géré par l\'IRSST, fournit les informations toxicologiques essentielles pour la gestion sécuritaire des substances.' },
-      { title: 'Comment CORO supporte la production du PUE', content: 'CORO intègre un module de gestion des matières dangereuses qui permet de documenter l\'inventaire des substances, les fiches de données de sécurité et les procédures d\'intervention par scénario. La plateforme génère les sections réglementaires du PUE et permet l\'export d\'un document structuré conforme aux exigences réglementaires.' },
-    ],
-    sources: [
-      { label: 'Règlement sur les urgences environnementales (2019) — DORS/2019-51', url: 'https://pollution-dechets.canada.ca/registre-protection-environnementale/reglements/visualiser?id=139' },
-      { label: 'Environnement et Changement climatique Canada — Programme des urgences environnementales', url: 'https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/reglementation.html' },
-      { label: 'Loi canadienne sur la protection de l\'environnement (1999) (LCPE)', url: 'https://laws-lois.justice.gc.ca/fra/lois/C-15.31/' },
-      { label: 'IRSST — Répertoire REPTOX', url: 'https://reptox.cnesst.gouv.qc.ca/' },
-      { label: 'Signaler une urgence environnementale — Canada.ca', url: 'https://www.canada.ca/fr/environnement-changement-climatique/services/programme-urgences-environnementales/signaler-urgence.html' },
-    ],
-    faq: [
-      { q: 'Mon installation est-elle assujettie au Règlement ?', a: 'Si votre installation possède ou a autorité sur une substance figurant à l\'annexe 1 du Règlement UE (2019) en quantité égale ou supérieure aux seuils définis, vous êtes assujetti. Consultez la liste des 249 substances sur le site d\'Environnement et Changement climatique Canada.' },
-      { q: 'Que dois-je faire en cas de rejet accidentel ?', a: 'En vertu de la LCPE, vous devez aviser immédiatement le gouvernement fédéral. Contactez la Division des urgences environnementales d\'Environnement et Changement climatique Canada : ec.ue-e2.ec@canada.ca.' },
-      { q: 'Qu\'est-ce qu\'une fiche de données de sécurité (FDS) ?', a: 'La FDS est un document standardisé décrivant les propriétés d\'une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour toutes les matières dangereuses utilisées au travail.' },
-      { q: 'Le PUE est-il relié au PMU ?', a: 'Oui. Le PUE est souvent intégré au PMU comme procédure spécifique pour les incidents environnementaux. Dans les sites industriels, il peut constituer un document distinct en raison des exigences réglementaires fédérales.' },
-    ],
-    cta: 'Générer votre PUE avec CORO',
-  },
+/**
+ * /documents/plan-urgence-environnementale-pue (MIG-05G) — sixth and final document guide migrated to V2. Built to
+ * final editorial and visual quality on this first pass (method confirmed by PGC/PRA). Editorial guide first, CORO
+ * roadmap context second. Authority: docs/website-v2/05-migration/MIG-05-GUIDES-GATE.md (MIG-05G section — full
+ * preservation matrix, RUE/E2 regulatory claim table, hero audit, publication-blocker closure).
+ * LANGUAGE: FR ONLY (englishAvailable={false}) — the V1 page had no searchParams handling at all (?lang=en rendered
+ * the identical French page, confirmed in the baseline); no translation is invented here.
+ * PUBLICATION-BLOCKER PUE-01 (identified MIG-05-PRE) — RESOLVED BY REMOVAL: V1's hero CTA "Générer votre PUE avec
+ * CORO" and body claim "CORO... génère les sections réglementaires du PUE" directly contradicted V1's own Phase-2
+ * banner. Both REMOVED. PUE production in CORO is Phase 2 — stated explicitly in §09, never implied elsewhere.
+ * REGULATORY AUDIT (verified against current official sources during MIG-05G, see the gate's claim table):
+ * Règlement sur les urgences environnementales (2019), DORS/2019-51, VERIFIED — published in the Canada Gazette
+ * March 6 2019, in force August 24 2019 (Justice Laws Website, consolidated text, 200 confirmed — replaces V1's dead
+ * pollution-dechets.canada.ca link). Schedule 1 = 249 substances across six hazard categories, VERIFIED (ECCC
+ * regulatory overview). Applicability is CONDITIONAL (substance + quantity/threshold + other regulatory conditions)
+ * — never simplified to "listed substance = regulated"; V1's own phrasing already avoided this but is further
+ * refined here. LCPE Part 8 notification: VERIFIED as conditional on the release having/could-have a harmful
+ * effect, not an unqualified "any release" — V1's "avisé immédiatement" is REFINED to remove the unverified
+ * "immédiatement" adverb. Exercise requirement VERIFIED and PRESERVED ACCURATELY (unlike PMU/PSI/PCA/PRA, this is a
+ * real regulatory frequency, not an unsupported number): an annual administrative simulation, plus one full-scale
+ * simulation within a five-year cycle (ECCC publications). canada.ca (ECCC E2 program page) could not be re-verified
+ * live during this pass — general domain-level connectivity failure in this environment (homepage itself timed
+ * out), not a 404; recorded as BLOCKED-BUT-KNOWN rather than removed.
+ * PRODUCT/CLIENT SAFETY: no client-specific values (no Sobeys/Lassonde/Rougemont/Prémont, no NH3 quantities, no
+ * 2.6 km, no ERPG/AEGL) appear anywhere on this page — verified by review. No fake impact-zone map, plume, radius or
+ * population count is created; §04's "Protéger" navy composition is a conceptual territory field, never a map.
+ * HERO: the prepared illustration is the most visually elaborate in the family — it includes a fictional on-screen
+ * "Scénario" map with qualitative colour-coded zone rings and a visible "AMMONIAC" tank placard. This was audited
+ * specifically for misleading-technical-content risk (per the gate's heightened hero-risk note): no CORO branding,
+ * no numeric distance/concentration/population values, no real facility identification, no CORO UI. Classified
+ * EDITORIAL / MARKETING ILLUSTRATION, decorative (alt=""), image not modified. NO fact, zone, category, quantity or
+ * substance identity on this page is derived from what is drawn in it — including the pictured "AMMONIAC" label and
+ * the pictured zone legend, neither of which appears anywhere in this page's copy.
+ * VISUAL SIGNATURE (Guide family rule confirmed by PMU + PSI + PCA + PGC + PRA — do not clone any): PUE's own three
+ * moments are (1) a "Protéger" typographic moment beside a Substance/Scénario/Conséquence three-territory
+ * composition (conceptual relationship, no arrows, no numeric values); (2) a navy composition with one dominant
+ * central field ("Protéger") surrounded by four source-supported protected interests in a perimeter arrangement —
+ * no map, no rings, no distance; (3) a two-band exercise section distinguishing the verified annual vs five-year
+ * full-scale simulation requirement.
+ * RESOURCES: OMITTED. No strong PUE-specific blog article exists in the current published inventory (searched
+ * during MIG-05G) — recorded as an editorial gap, not a silent omission.
+ */
+const copy = {
+  metaTitle: 'Plan d’urgence environnementale (PUE) : RUE/E2, applicabilité, contenu',
+  description: 'Qu’est-ce qu’un plan d’urgence environnementale, le Règlement sur les urgences environnementales (RUE/E2), l’applicabilité conditionnelle, le contenu du plan et les exercices requis.',
+  label: 'Guide', code: 'PUE',
+  lines: ['Plan d’urgence', 'environnementale (PUE).'],
+  lead: 'Le plan d’urgence environnementale définit les mesures de prévention et d’intervention en cas d’incident environnemental impliquant des substances dangereuses. Au Canada, le cadre de référence est le Règlement sur les urgences environnementales (2019).',
+  read: 'Lire le guide', guides: 'Voir tous les guides',
+  s1: { n: '01', label: 'Qu’est-ce qu’un PUE', title: 'Le document qui prépare l’organisation à un incident environnemental.',
+    text: 'Le PUE définit les mesures de prévention, de préparation, d’intervention et de rétablissement applicables en cas d’incident environnemental impliquant des substances dangereuses. Au Canada, le Règlement sur les urgences environnementales (2019) — DORS/2019-51, pris en vertu de la Loi canadienne sur la protection de l’environnement (1999), en vigueur depuis le 24 août 2019, encadre les installations visées.' },
+  s2: { n: '02', label: 'Applicabilité', title: 'Une évaluation conditionnelle, pas un critère unique.',
+    text: 'Une installation peut être assujettie au Règlement lorsqu’elle possède une substance figurant à l’annexe 1, ou en a l’autorité, à des concentrations et quantités égales ou supérieures aux seuils prévus, et que les autres conditions réglementaires applicables sont remplies. L’évaluation doit se faire à partir de l’inventaire réel de l’installation, pas d’une catégorie d’industrie.',
+    conditions: [
+      ['Substance listée', 'La substance figure à l’annexe 1 du Règlement, qui comprend 249 substances réparties en six catégories de danger (toxicité en milieu aquatique, combustible, danger d’explosion, danger de feu en nappe, danger en cas d’inhalation, oxydant pouvant exploser).'],
+      ['Quantité et seuil', 'La concentration et la quantité présentes sont égales ou supérieures au seuil défini pour cette substance.'],
+      ['Situation réglementaire', 'Les obligations varient selon que l’installation est en situation de déclaration seulement ou de planification complète.'],
+    ] as const },
+  s3: { n: '03', label: 'Substance, scénario, conséquence', statement: 'Protéger',
+    support: 'Le PUE existe pour préparer l’organisation à protéger les personnes, l’environnement et les activités face à un incident environnemental.',
+    triad: [
+      { title: 'Substance', text: 'Quelle matière dangereuse présente sur le site est visée par le Règlement.' },
+      { title: 'Scénario', text: 'Quel événement environnemental est envisagé pour cette substance.' },
+      { title: 'Conséquence', text: 'Quelles personnes, quels milieux ou quelles infrastructures pourraient être touchés.' },
+    ] as const },
+  s4: { n: '04', label: 'Ce que le PUE protège', title: 'Une organisation, pas une zone calculée.',
+    text: 'Le PUE structure la préparation autour de plusieurs intérêts à protéger, sans prétendre calculer une zone d’impact précise — cette évaluation relève de l’analyse propre à chaque installation.',
+    interests: [
+      ['Population', 'Les personnes susceptibles d’être touchées, selon le scénario envisagé.'],
+      ['Environnement', 'Les milieux naturels pouvant subir un effet nocif en cas de rejet.'],
+      ['Installation', 'Le site, ses systèmes et son personnel.'],
+      ['Intervenants', 'Les autorités et services d’intervention concernés.'],
+    ] as const },
+  s5: { n: '05', label: 'Contenu d’un PUE complet', title: 'Ce qu’un plan structure.',
+    items: [
+      ['Inventaire des substances', 'Les substances dangereuses présentes sur le site et leurs fiches de données de sécurité (FDS).'],
+      ['Scénarios d’incident', 'L’identification des risques et des scénarios d’accidents potentiels.'],
+      ['Prévention et confinement', 'Les mesures prévues pour prévenir un rejet ou en limiter la portée.'],
+      ['Notification aux autorités', 'Les procédures pour aviser les autorités désignées.'],
+      ['Responsabilités', 'Les rôles en cas d’intervention.'],
+      ['Équipements de réponse', 'Les équipements disponibles pour intervenir.'],
+      ['Décontamination et remédiation', 'Les mesures prévues pour restaurer le site et l’environnement affecté.'],
+    ] as const },
+  s6: { n: '06', label: 'Notification et matières dangereuses', title: 'Aviser les autorités, documenter les substances.',
+    blocks: [
+      ['Notification', 'En vertu de la LCPE, un rejet ayant ou pouvant avoir un effet nocif sur l’environnement doit faire l’objet d’un avis transmis aux autorités désignées, dont la Division des urgences environnementales d’Environnement et Changement climatique Canada.'],
+      ['SIMDUT et REPTOX', 'Le SIMDUT exige des fiches de données de sécurité (FDS) pour les matières dangereuses utilisées au travail. Au Québec, le répertoire REPTOX de l’IRSST fournit les informations toxicologiques correspondantes.'],
+    ] as const },
+  s7: { n: '07', label: 'Exercices', title: 'Deux types d’exercices, deux fréquences.',
+    exercises: [
+      { name: 'Simulation annuelle', freq: 'Chaque année', text: 'Un exercice de nature administrative, tenu chaque année.' },
+      { name: 'Simulation à grande échelle', freq: 'Cycle de cinq ans', text: 'Un exercice basé sur l’action, avec déploiement de personnel, de ressources et d’équipement, requis au moins une fois par cycle de cinq ans.' },
+    ] as const },
+  s8: { n: '08', label: 'PUE et PMU', title: 'Lié à l’urgence, pas toujours distinct.',
+    text: 'Le PUE peut être intégré au PMU comme procédure propre aux incidents environnementaux, ou constituer un document distinct selon le contexte réglementaire et organisationnel de l’installation.',
+    link: 'Consulter le guide du PMU' },
+  s9: { n: '09', label: 'PUE dans CORO', title: 'Le PUE dans CORO : une capacité prévue en phase 2.',
+    facts: [
+      { label: 'Guide', text: 'Disponible dès aujourd’hui, sur cette page.' },
+      { label: 'Production dans CORO', text: 'Guide disponible · Production CORO prévue en phase 2. CORO Documents prend actuellement en charge le PMU, le PSI et le PCA.' },
+    ] as const,
+    cta: 'Voir les documents disponibles aujourd’hui' },
+  faq: 'Questions fréquentes', faqLabel: 'FAQ',
+  faqItems: [
+    { q: 'Mon installation est-elle assujettie au Règlement?', a: 'Une installation peut être assujettie lorsqu’elle possède une substance figurant à l’annexe 1 à des concentrations et quantités égales ou supérieures aux seuils définis, et que les autres critères réglementaires sont remplis. L’assujettissement doit être évalué à partir de l’inventaire réel de l’installation.' },
+    { q: 'Que faire en cas de rejet accidentel?', a: 'En vertu de la LCPE, un rejet ayant ou pouvant avoir un effet nocif doit faire l’objet d’un avis aux autorités désignées, dont la Division des urgences environnementales d’Environnement et Changement climatique Canada.' },
+    { q: 'Qu’est-ce qu’une fiche de données de sécurité (FDS)?', a: 'La FDS est un document standardisé décrivant les propriétés d’une substance chimique, ses risques et les mesures de sécurité. Le SIMDUT exige des FDS pour les matières dangereuses utilisées au travail.' },
+    { q: 'Le PUE est-il relié au PMU?', a: 'Oui. Le PUE peut être intégré au PMU comme procédure propre aux incidents environnementaux, ou constituer un document distinct selon le contexte réglementaire et organisationnel de l’installation.' },
+  ],
+  statement: 'Le PUE prépare l’organisation à protéger, pas à improviser.',
+  support: 'Parlons de votre contexte d’urgence environnementale et de la place du PUE dans votre stratégie de préparation.',
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: DOC.fr.seoTitle,
-  description: DOC.fr.seoDesc,
+export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  return buildPageMetadata({ path: '/documents/plan-urgence-environnementale-pue', locale: l, hasEnglish: false, title: copy.metaTitle, description: copy.description });
+}
 
-  alternates: {
-    canonical: PAGE_URL,
-    languages: {
-      'fr-CA': PAGE_URL,
-      'x-default': PAGE_URL,
-    },
-  },
+function JsonLd({ value }: { value: object }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(value).replace(/</g, '\\u003c') }} />;
+}
 
-  openGraph: {
-    type: 'article',
-    url: PAGE_URL,
-    siteName: 'CORO',
-    locale: 'fr_CA',
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    images: [
-      {
-        url: '/og-coro.jpg',
-        width: 1200,
-        height: 630,
-        alt: "CORO — Plan d'Urgence Environnementale (PUE)",
-      },
-    ],
-  },
-
-  twitter: {
-    card: 'summary_large_image',
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    images: ['/og-coro.jpg'],
-  },
-
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-      'max-video-preview': -1,
-    },
-  },
-};
-
-export default function PUEPage() {
-  const data = DOC.fr;
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name: data.title,
-    headline: data.seoTitle,
-    description: data.seoDesc,
-    url: PAGE_URL,
-    inLanguage: 'fr-CA',
-    isPartOf: {
-      '@type': 'WebSite',
-      name: 'CORO',
-      url: SITE_URL,
-    },
-    about: [
-      {
-        '@type': 'Thing',
-        name: "Plan d'Urgence Environnementale",
-        alternateName: 'PUE',
-      },
-      {
-        '@type': 'Thing',
-        name: 'Urgences environnementales',
-      },
-      {
-        '@type': 'Thing',
-        name: 'Règlement sur les urgences environnementales (2019)',
-      },
-      {
-        '@type': 'Thing',
-        name: 'Matières dangereuses',
-      },
-      {
-        '@type': 'Thing',
-        name: 'SIMDUT',
-      },
-      {
-        '@type': 'Thing',
-        name: 'Fiche de données de sécurité',
-        alternateName: 'FDS',
-      },
-    ],
-    publisher: {
-      '@type': 'Organization',
-      name: 'CORO',
-      url: SITE_URL,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE_URL}/coro-logo.png`,
-      },
-    },
-  };
-
+export default async function Page({ searchParams }: P) {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = copy;
+  const demo = localizedHref('/#demo', l);
   const breadcrumbLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Accueil',
-        item: SITE_URL,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Documents',
-        item: `${SITE_URL}/gestion-documentaire`,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: data.title,
-        item: PAGE_URL,
-      },
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' },
+      { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://getcoro.io/guides' },
+      { '@type': 'ListItem', position: 3, name: t.code, item: 'https://getcoro.io/documents/plan-urgence-environnementale-pue' },
     ],
   };
-
-  const faqLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: data.faq.map((f) => ({
-      '@type': 'Question',
-      name: f.q,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: f.a,
-      },
-    })),
-  };
-
   return (
-    <div style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c') }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, '\\u003c') }} />
-      <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <a href="/" style={{ textDecoration: 'none' }}><span style={{ fontSize: 24, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px' }}>CO<span style={{ color: '#C0392B' }}>RO</span></span></a>
-          <a href="/" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textDecoration: 'none' }}>← Accueil</a>
+    <V2Shell locale={l} pathname="/documents/plan-urgence-environnementale-pue" englishAvailable={false}>
+      <JsonLd value={faqJsonLd(t.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
+      <JsonLd value={breadcrumbLd} />
+
+      <EditorialHero id="pue-title" label={`${t.label} · ${t.code}`} title={t.lines} lead={t.lead}
+        photo={{ src: '/website-v2/guides/guide-pue-environmental-emergency.webp', side: 'end', position: '50% 40%', mobilePosition: '50% 32%', coverage: 55, mobileRatio: '16 / 11' }}
+        actions={<><Button href="#s1" surface="dark">{t.read}</Button><Button href={localizedHref('/guides', l)} variant="ghost" surface="dark">{t.guides}</Button></>} />
+
+      <PageSection tone="white" density="compact" id="s1" labelledBy="pue-s1-title">
+        <EditorialBlock id="pue-s1-title" label={`${t.s1.n} — ${t.s1.label}`} heading={t.s1.title}><p>{t.s1.text}</p></EditorialBlock>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pue-s2-title">
+        <div className={styles.conditionsWrap}>
+          <EditorialBlock id="pue-s2-title" label={`${t.s2.n} — ${t.s2.label}`} heading={t.s2.title}><p>{t.s2.text}</p></EditorialBlock>
+          <ul className={styles.conditions} aria-label={t.s2.title}>{t.s2.conditions.map(([name, text]) => <li key={name} className={styles.condition}><h3>{name}</h3><p>{text}</p></li>)}</ul>
         </div>
-      </nav>
-      <div style={{ backgroundColor: '#FEF3C7', borderBottom: '1px solid #F59E0B', padding: '12px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#92400E', fontWeight: 600, margin: 0 }}>
-          🚧 <strong>Phase 2 — En développement</strong> · Ce type de document sera disponible dans CORO prochainement. <a href="/#demo" style={{ color: '#92400E', fontWeight: 700 }}>Être notifié →</a>
-        </p>
-      </div>
-      <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF', padding: '12px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <p style={{ fontSize: 13, color: '#ADB5BD' }}><a href="/" style={{ color: '#ADB5BD', textDecoration: 'none' }}>getcoro.io</a> / <span style={{ color: '#6C757D' }}>{data.title}</span></p>
-        </div>
-      </div>
-      <div style={{ background: `linear-gradient(135deg, #2C3E50 0%, ${DOC.color}CC 100%)`, padding: '80px 24px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#FFFFFF', backgroundColor: DOC.color, padding: '4px 14px', borderRadius: 4, letterSpacing: '0.1em', marginBottom: 20 }}>{DOC.code}</span>
-          <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, marginBottom: 24 }}>{data.hero}</h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, maxWidth: 640, margin: '0 auto 32px' }}>{data.intro}</p>
-          <a href="/#demo" style={{ display: 'inline-block', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 16 }}>{data.cta} →</a>
-        </div>
-      </div>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(500px, 100%), 1fr))', gap: 32 }}>
-          {data.sections.map((s, i) => (
-            <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, border: '1px solid #E9ECEF' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50', marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${DOC.color}` }}>{s.title}</h2>
-              <p style={{ fontSize: 15, color: '#495057', lineHeight: 1.8 }}>{s.content}</p>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pue-s3-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s3-title" label={`${t.s3.n} — ${t.s3.label}`} heading="Substance, scénario, conséquence." />
+          <div className={styles.protectWrap}>
+            <div>
+              <p className={styles.protectWord}>{t.s3.statement}</p>
+              <p className={styles.protectSupport}>{t.s3.support}</p>
             </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 48, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, border: '1px solid #E9ECEF' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>📚 Sources et références officielles</h3>
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {data.sources.map((s, i) => (<li key={i}><a href={s.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: DOC.color, textDecoration: 'none' }}>→ {s.label}</a></li>))}
-          </ul>
-          <p style={{ fontSize: 12, color: '#ADB5BD', marginTop: 16 }}>⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d'activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique.</p>
-        </div>
-        <div style={{ marginTop: 64 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#2C3E50', marginBottom: 32, textAlign: 'center' }}>Questions fréquentes</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 800, margin: '0 auto' }}>
-            {data.faq.map((f, i) => (
-              <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 28, border: '1px solid #E9ECEF' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 10 }}>{f.q}</h3>
-                <p style={{ fontSize: 15, color: '#6C757D', lineHeight: 1.7 }}>{f.a}</p>
-              </div>
-            ))}
+            <ul className={styles.triad}>{t.s3.triad.map((item) => <li key={item.title} className={styles.triadItem}><h3>{item.title}</h3><p>{item.text}</p></li>)}</ul>
           </div>
         </div>
-        <div style={{ marginTop: 64, backgroundColor: '#2C3E50', borderRadius: 16, padding: '48px 40px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', marginBottom: 16 }}>Le {DOC.code} arrive dans CORO — Phase 2</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', marginBottom: 32, maxWidth: 500, margin: '0 auto 32px' }}>Laissez-nous vos coordonnées et nous vous contacterons dès que ce type de document sera disponible dans la plateforme.</p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/#demo" style={{ display: 'inline-block', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}>Demander une démo →</a>
-            <a href="/blog" style={{ display: 'inline-block', backgroundColor: 'transparent', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: '2px solid rgba(255,255,255,0.3)' }}>Lire nos guides →</a>
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="pue-s4-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s4-title" label={`${t.s4.n} — ${t.s4.label}`} heading={t.s4.title}><p>{t.s4.text}</p></EditorialBlock>
+          <div className={styles.territoryField}>
+            <div className={styles.territoryCentral}><p>Protéger</p><p>Intérêt central de la préparation aux urgences environnementales.</p></div>
+            <ul className={styles.perimeter} aria-label={t.s4.title}>{t.s4.interests.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
           </div>
         </div>
-      </div>
-      <div style={{ backgroundColor: '#2C3E50', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>© 2026 CORO — <a href="https://getcoro.io" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>getcoro.io</a></p>
-      </div>
-    </div>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pue-s5-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s5-title" label={`${t.s5.n} — ${t.s5.label}`} heading={t.s5.title} />
+          <ul className={styles.rows}>{t.s5.items.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" density="compact" labelledBy="pue-s6-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s6-title" label={`${t.s6.n} — ${t.s6.label}`} heading={t.s6.title} />
+          <ul className={`${styles.rows} ${styles.pair}`}>{t.s6.blocks.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pue-s7-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s7-title" label={`${t.s7.n} — ${t.s7.label}`} heading={t.s7.title} />
+          <ul className={styles.exerciseBands}>{t.s7.exercises.map((ex) => <li key={ex.name} className={styles.exerciseBand}><p className={styles.exerciseFreq}>{ex.freq}</p><h3>{ex.name}</h3><p>{ex.text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" density="compact" labelledBy="pue-s8-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s8-title" label={`${t.s8.n} — ${t.s8.label}`} heading={t.s8.title}><p>{t.s8.text}</p></EditorialBlock>
+          <div className={styles.linkCard}><a className={styles.linkCardLink} href={localizedHref('/documents/plan-mesures-urgence-pmu', l)}>{t.s8.link}<span aria-hidden="true"> →</span></a></div>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" density="compact" labelledBy="pue-s9-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-s9-title" label={`${t.s9.n} — ${t.s9.label}`} heading={t.s9.title} />
+          <ul className={styles.phaseWrap}>{t.s9.facts.map((f) => <li key={f.label}><h3>{f.label}</h3><p>{f.text}</p></li>)}</ul>
+          <div className={styles.linkCard}><a className={styles.linkCardLink} href={localizedHref('/gestion-documentaire', l)}>{t.s9.cta}<span aria-hidden="true"> →</span></a></div>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pue-faq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pue-faq-title" label={t.faqLabel} heading={t.faq} />
+          <Accordion label={t.faq} items={t.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))} />
+        </div>
+      </PageSection>
+
+      <CTASection id="pue-cta-title" tone="dark" label={`${t.label} · ${t.code}`} statement={t.statement} support={t.support} primary={{ label: 'Demander une démonstration', href: demo }} secondary={{ label: t.guides, href: localizedHref('/guides', l) }} />
+    </V2Shell>
   );
 }

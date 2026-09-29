@@ -1,0 +1,44 @@
+/* /contact — V1 tokens only (the opening is the shared EditorialHero).
+   DemoForm is the production form and keeps its own inline styling; only the layout around it is defined here. */
+
+/* The form is the primary action: an open panel with a hairline, not a floating card. */
+.formPanel { display: grid; gap: var(--coro-v1-space-6); padding: clamp(1rem, 3vw, 2rem); background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); min-inline-size: 0; }
+.formPanel :global(.coro-demo-form-row) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+.formPanel :global(.coro-demo-form-row > div) { min-width: 0; }
+.formPanel :global(.coro-demo-form-success) { padding: 40px 24px; border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); background: var(--coro-v1-surface-1); text-align: center; }
+.formPanel input, .formPanel select, .formPanel textarea { min-block-size: 44px; }
+@media (min-width: 48rem) {
+  .formPanel :global(.coro-demo-form-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Direct contact details: a plain definition list. */
+.reach { display: grid; gap: var(--coro-v1-space-6); }
+.details { display: grid; gap: var(--coro-v1-space-4); margin: 0; padding: 0; border-block-start: 1px solid var(--line); }
+.details > div { display: grid; gap: .25rem; padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.details dt { color: var(--muted); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.details dd { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-body-l); font-weight: 650; }
+.details a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.address { display: grid; font-style: normal; }
+.nowrap { white-space: nowrap; }
+
+/* MIG-01B-B — V1 harmonisation of the shared DemoForm, scoped to this panel only (the homepage and /pricing keep their own look).
+   DemoForm styles its controls INLINE (borders, radius, colours, and JS focus/hover colour swaps), and an inline declaration beats any
+   non-important stylesheet rule. !important is therefore technically required here; it is confined to .formPanel and to visual properties only. */
+.formPanel label { color: var(--coro-v1-text-900) !important; }
+.formPanel input, .formPanel select, .formPanel textarea { color: var(--coro-v1-text-900) !important; background-color: var(--coro-v1-surface-0) !important; border: 1px solid var(--coro-v1-border-200) !important; border-radius: var(--coro-v1-radius-control) !important; }
+.formPanel select:has(option[value=""]:checked) { color: var(--coro-v1-text-600) !important; }
+.formPanel input::placeholder, .formPanel textarea::placeholder { color: var(--coro-v1-text-600); opacity: 1; }
+.formPanel input:focus, .formPanel select:focus, .formPanel textarea:focus { border-color: var(--coro-v1-focus) !important; }
+.formPanel input:focus-visible, .formPanel select:focus-visible, .formPanel textarea:focus-visible, .formPanel button:focus-visible { outline: 3px solid var(--coro-v1-focus) !important; outline-offset: 2px !important; }
+.formPanel button[type="submit"] { background-color: var(--coro-v1-red-600) !important; border-radius: var(--coro-v1-radius-control) !important; color: var(--coro-v1-on-dark-900) !important; }
+.formPanel button[type="submit"]:hover:not(:disabled) { background-color: var(--coro-v1-red-700) !important; }
+.formPanel button[type="submit"]:active:not(:disabled) { filter: brightness(.94); }
+.formPanel button[type="submit"]:disabled { background-color: var(--coro-v1-text-600) !important; }
+.formPanel [role="alert"] { background-color: var(--coro-v1-red-100) !important; border-color: var(--coro-v1-red-300) !important; border-radius: var(--coro-v1-radius-panel) !important; }
+.formPanel [role="alert"] p { color: var(--coro-v1-critical) !important; }
+.formPanel :global(.coro-demo-form-success) p { color: var(--coro-v1-success) !important; }
+.formPanel form p, .formPanel form p a { color: var(--coro-v1-text-600) !important; }
+.formPanel form p a { color: var(--coro-v1-text-900) !important; }
+
+/* Contact methods: one restrained card (1px border, V1 surface and radius, no shadow). */
+.reach { padding: clamp(1rem, 3vw, 2rem); background: var(--coro-v1-surface-0); border: 1px solid var(--coro-v1-border-200); border-radius: var(--coro-v1-radius-panel); }

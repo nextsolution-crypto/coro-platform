@@ -1,0 +1,968 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Production &amp; Conformité Documentaire — CORO | CORO",
+  "description": "Générez, structurez et gérez vos PMU, PSI et PCA avec CORO. PGC, PRA et PUE en Phase 2. Procédures intégrées, workflow d approbation et export PDF professionnel.",
+  "canonical": "https://getcoro.io/gestion-documentaire",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/gestion-documentaire"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/gestion-documentaire?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/gestion-documentaire"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/gestion-documentaire",
+  "ogTitle": "Production & Conformité Documentaire — CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "De l’information structurée aux plans approuvés."
+   ],
+   [
+    "h2",
+    "Tout commence par la connaissance du bâtiment."
+   ],
+   [
+    "h2",
+    "Un cycle documentaire structuré"
+   ],
+   [
+    "h3",
+    "Données et génération"
+   ],
+   [
+    "h3",
+    "Édition et contrôle qualité"
+   ],
+   [
+    "h3",
+    "Approbation et versions"
+   ],
+   [
+    "h3",
+    "Exports professionnels"
+   ],
+   [
+    "h2",
+    "Des plans, sans promesse automatique de conformité"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "CORO remplace-t-il la validation professionnelle?"
+   ],
+   [
+    "h3",
+    "Les documents sont-ils bilingues?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Documents"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [
+   "Interface CORO Documents pour la gestion documentaire"
+  ],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Gestion documentaire De l’information structurée aux plans approuvés. CORO Documents relie les données du bâtiment à la génération, à l’édition, à la révision et à l’export de documents professionnels. Découvrir CORO Documents La fondation Tout commence par la connaissance du bâtiment. CORO Documents relie les données du bâtiment à la génération, à l’édition, à la révision et à l’export de documents professionnels. Une donnée saisie une fois, réutilisée là où elle est pertinente 01 Données bâtiment 02 Génération 03 Édition 04 Validation 05 Approbation 06 Version 07 Export 08 Mise à jour Interface CORO Documents pour la gestion documentaire Du cycle à la preuve Un cycle documentaire structuré Données et génération Les caractéristiques du bâtiment fondent la structure du document et réduisent la ressaisie. Édition et contrôle qualité L’éditeur modulaire, les procédures bilingues et les contrôles soutiennent une révision rigoureuse. Approbation et versions Révision, observations, approbation et historique maintiennent la traçabilité du dossier. Exports professionnels Les documents produits peuvent être exportés en PDF, en français ou en anglais lorsque la version est préparée. Une donnée saisie une fois. Plusieurs usages. PMU PSI PCA PGC statut à valider PRA statut à valider PUE statut à valider Des plans, sans promesse automatique de conformité PMU, PSI et PCA sont confirmés dans les générateurs actuels. PGC, PRA et PUE demeurent présentés comme familles documentaires du catalogue historique; leur niveau complet de production doit être validé avant une promesse commerciale. CORO soutient le travail professionnel sans garantir à lui seul la conformité. Cette partie de la plateforme Un socle produit relié Documents Structure les données et les livrables. Explorer Projects Organise les mandats et le travail. Explorer Performance Mesure activité, objectifs et capacité. Explorer Client Rend l’information accessible au client. Explorer FAQ Questions fréquentes CORO remplace-t-il la validation professionnelle? Non. La plateforme structure le travail, mais la validation demeure sous la responsabilité des professionnels concernés. Les documents sont-ils bilingues? Les contenus et exports peuvent être produits en français et en anglais lorsque les données et versions correspondantes sont préparées."
+ },
+ "en": {
+  "status": 200,
+  "title": "Document Production &amp; Compliance — CORO | CORO",
+  "description": "Create, structure and manage ERP, FSP and BCP documents with CORO. CMP, DRP and EEP coming in Phase 2. Integrated procedures, approval workflows and professional PDF exports.",
+  "canonical": "https://getcoro.io/gestion-documentaire?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/gestion-documentaire"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/gestion-documentaire?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/gestion-documentaire"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/gestion-documentaire?lang=en",
+  "ogTitle": "Document Production & Compliance — CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "From structured information to approved plans."
+   ],
+   [
+    "h2",
+    "It starts with knowledge of the building."
+   ],
+   [
+    "h2",
+    "A structured document lifecycle"
+   ],
+   [
+    "h3",
+    "Data and generation"
+   ],
+   [
+    "h3",
+    "Editing and quality control"
+   ],
+   [
+    "h3",
+    "Approval and versions"
+   ],
+   [
+    "h3",
+    "Professional exports"
+   ],
+   [
+    "h2",
+    "Plans without automatic compliance claims"
+   ],
+   [
+    "h2",
+    "A connected product foundation"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Frequently asked questions"
+   ],
+   [
+    "h3",
+    "Does CORO replace professional validation?"
+   ],
+   [
+    "h3",
+    "Are documents bilingual?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/gestion-documentaire",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/?lang=en#demo",
+    "Discover CORO Documents"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Explore"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Explore"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Explore"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Explore"
+   ],
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/gestion-documentaire",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [
+   "CORO Documents document management interface"
+  ],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Document management From structured information to approved plans. CORO Documents connects building data to the generation, editing, review and export of professional documents. Discover CORO Documents The foundation It starts with knowledge of the building. CORO Documents connects building data to the generation, editing, review and export of professional documents. Enter data once and reuse it where relevant 01 Building data 02 Generation 03 Editing 04 Validation 05 Approval 06 Version 07 Export 08 Update CORO Documents document management interface From lifecycle to evidence A structured document lifecycle Data and generation Building characteristics provide the foundation for document structure and reduce duplicate entry. Editing and quality control The modular editor, bilingual procedures and checks support rigorous review. Approval and versions Review, observations, approval and history preserve traceability. Professional exports Prepared documents can be exported as professional PDFs in French or English. Enter data once. Use it many ways. PMU PSI PCA PGC status to validate PRA status to validate PUE status to validate Plans without automatic compliance claims ERP, FSP and BCP are confirmed in current generators. CMP, DRP and EEP remain historical document families whose complete production status must be validated before any commercial promise. CORO supports professional work but does not itself guarantee compliance. This part of the platform A connected product foundation Documents Structures data and deliverables. Explore Projects Organizes mandates and work. Explore Performance Measures activity, goals and capacity. Explore Client Makes information accessible to clients. Explore FAQ Frequently asked questions Does CORO replace professional validation? No. The platform structures the work, while validation remains the responsibility of the relevant professionals. Are documents bilingual? Content and exports can be produced in French and English when corresponding data and versions are prepared."
+ },
+ "fr-ref": {
+  "status": 200,
+  "title": "Production &amp; Conformité Documentaire — CORO | CORO",
+  "description": "Générez, structurez et gérez vos PMU, PSI et PCA avec CORO. PGC, PRA et PUE en Phase 2. Procédures intégrées, workflow d approbation et export PDF professionnel.",
+  "canonical": "https://getcoro.io/gestion-documentaire",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/gestion-documentaire"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/gestion-documentaire?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/gestion-documentaire"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/gestion-documentaire",
+  "ogTitle": "Production & Conformité Documentaire — CORO",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "De l’information structurée aux plans approuvés."
+   ],
+   [
+    "h2",
+    "Tout commence par la connaissance du bâtiment."
+   ],
+   [
+    "h2",
+    "Un cycle documentaire structuré"
+   ],
+   [
+    "h3",
+    "Données et génération"
+   ],
+   [
+    "h3",
+    "Édition et contrôle qualité"
+   ],
+   [
+    "h3",
+    "Approbation et versions"
+   ],
+   [
+    "h3",
+    "Exports professionnels"
+   ],
+   [
+    "h2",
+    "Des plans, sans promesse automatique de conformité"
+   ],
+   [
+    "h2",
+    "Un socle produit relié"
+   ],
+   [
+    "h3",
+    "Documents"
+   ],
+   [
+    "h3",
+    "Projects"
+   ],
+   [
+    "h3",
+    "Performance"
+   ],
+   [
+    "h3",
+    "Client"
+   ],
+   [
+    "h2",
+    "Questions fréquentes"
+   ],
+   [
+    "h3",
+    "CORO remplace-t-il la validation professionnelle?"
+   ],
+   [
+    "h3",
+    "Les documents sont-ils bilingues?"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Découvrir CORO Documents"
+   ],
+   [
+    "/gestion-documentaire",
+    "Explorer"
+   ],
+   [
+    "/gestion-de-projets",
+    "Explorer"
+   ],
+   [
+    "/performance-objectifs",
+    "Explorer"
+   ],
+   [
+    "/portail-client",
+    "Explorer"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [
+   "Interface CORO Documents pour la gestion documentaire"
+  ],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Gestion documentaire De l’information structurée aux plans approuvés. CORO Documents relie les données du bâtiment à la génération, à l’édition, à la révision et à l’export de documents professionnels. Découvrir CORO Documents La fondation Tout commence par la connaissance du bâtiment. CORO Documents relie les données du bâtiment à la génération, à l’édition, à la révision et à l’export de documents professionnels. Une donnée saisie une fois, réutilisée là où elle est pertinente 01 Données bâtiment 02 Génération 03 Édition 04 Validation 05 Approbation 06 Version 07 Export 08 Mise à jour Interface CORO Documents pour la gestion documentaire Du cycle à la preuve Un cycle documentaire structuré Données et génération Les caractéristiques du bâtiment fondent la structure du document et réduisent la ressaisie. Édition et contrôle qualité L’éditeur modulaire, les procédures bilingues et les contrôles soutiennent une révision rigoureuse. Approbation et versions Révision, observations, approbation et historique maintiennent la traçabilité du dossier. Exports professionnels Les documents produits peuvent être exportés en PDF, en français ou en anglais lorsque la version est préparée. Une donnée saisie une fois. Plusieurs usages. PMU PSI PCA PGC statut à valider PRA statut à valider PUE statut à valider Des plans, sans promesse automatique de conformité PMU, PSI et PCA sont confirmés dans les générateurs actuels. PGC, PRA et PUE demeurent présentés comme familles documentaires du catalogue historique; leur niveau complet de production doit être validé avant une promesse commerciale. CORO soutient le travail professionnel sans garantir à lui seul la conformité. Cette partie de la plateforme Un socle produit relié Documents Structure les données et les livrables. Explorer Projects Organise les mandats et le travail. Explorer Performance Mesure activité, objectifs et capacité. Explorer Client Rend l’information accessible au client. Explorer FAQ Questions fréquentes CORO remplace-t-il la validation professionnelle? Non. La plateforme structure le travail, mais la validation demeure sous la responsabilité des professionnels concernés. Les documents sont-ils bilingues? Les contenus et exports peuvent être produits en français et en anglais lorsque les données et versions correspondantes sont préparées."
+ }
+}

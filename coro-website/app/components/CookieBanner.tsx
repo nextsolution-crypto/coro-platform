@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
   const [lang, setLang] = useState<'fr' | 'en'>('fr');
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -31,10 +32,23 @@ export default function CookieBanner() {
     setVisible(false);
   };
 
+  // Publishes the banner height so fixed bottom widgets (ChatWidget) sit above it. Cleared when hidden.
+  useEffect(() => {
+    const root = document.documentElement;
+    const node = bannerRef.current;
+    if (!visible || !node) { root.style.removeProperty('--coro-cookie-offset'); return; }
+    const publish = () => root.style.setProperty('--coro-cookie-offset', `${Math.ceil(node.getBoundingClientRect().height)}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => { observer.disconnect(); root.style.removeProperty('--coro-cookie-offset'); };
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <div
+      ref={bannerRef}
       role="dialog"
       aria-label={
         lang === 'fr'

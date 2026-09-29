@@ -1,0 +1,52 @@
+/* /documents/plan-securite-incendie-psi — V1 tokens only. LOCAL page density (family lesson from PMU, MIG-05B-B): denser
+   editorial rhythm than product pages via per-section `density="compact"` and a tighter `.stack` gap — PageSection and the
+   shared page.module.css are untouched. PSI's OWN visual signature (MIG-05C-B rebuild, distinct from PMU's oversized "08"/
+   lifecycle/"Agir"): (1) a 2x2 building-category matrix beside the legal explanation; (2) a "PSI" typographic anchor beside
+   the 01-07 content ledger (FeatureIndex, shared primitive) — the concept is "what lives inside a PSI", not a step count;
+   (3) four strong 2x2 stakeholder cards; (4) a navy four-territory response composition (SIGNAL / AVIS / CONSIGNES /
+   ÉVACUATION), explicitly not a connected timeline. No card wall, no shadows, no gradients. */
+.stack { display: grid; gap: var(--coro-v1-space-6); }
+.link { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.link:focus-visible, .linkCardLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.note { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 42rem; }
+
+/* Ruled rows: further resources — a title and one sentence per row (same pattern as the other migrated guides). */
+.rows { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.rows li { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.rows h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.3; }
+.rows p { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+@media (min-width: 48rem) { .rows li { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: var(--coro-v1-space-6); align-items: baseline; } }
+@media (min-width: 68rem) { .rows.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); border-block-start: 0; gap: 0 var(--coro-v1-space-8); } .rows.pair li { grid-template-columns: minmax(0, 1fr); border-inline-start: 2px solid var(--ink); padding-inline-start: var(--coro-v1-space-4); } }
+
+/* §2 — Building categories: a 2x2 technical matrix beside the legal explanation, using the exact verified categories. */
+.buildingWrap { display: grid; gap: var(--coro-v1-space-8); }
+@media (min-width: 64rem) { .buildingWrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: var(--coro-v1-space-12); } }
+.matrix { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); }
+@media (min-width: 40rem) { .matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.matrixCell { border-block-start: 3px solid var(--accent); padding-block-start: var(--coro-v1-space-3); color: var(--ink); font-weight: 650; line-height: 1.45; }
+
+/* §3 — PSI typographic anchor: the acronym itself as the visual object, beside the 01-07 ledger (FeatureIndex, shared). */
+.anchorWrap { display: grid; gap: var(--coro-v1-space-8); }
+@media (min-width: 64rem) { .anchorWrap { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); align-items: start; gap: var(--coro-v1-space-12); } }
+.psiAnchor { margin: 0; font-size: clamp(4.5rem, 2.5rem + 8vw, 8.5rem); font-weight: 850; line-height: .82; letter-spacing: -.03em; color: var(--ink); }
+.psiAnchor span { display: block; margin-block-start: var(--coro-v1-space-2); font-size: var(--coro-v1-text-h3); font-weight: 800; letter-spacing: -.01em; line-height: 1.2; text-transform: uppercase; max-inline-size: 14ch; }
+
+/* §4 — Fire-safety organization: four strong 2x2 stakeholder cards, restricted to the roles the source names. */
+.orgCards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-5); }
+@media (min-width: 40rem) { .orgCards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.orgCard { border: 1px solid var(--line); border-block-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); padding: var(--coro-v1-space-6); display: grid; gap: var(--coro-v1-space-3); align-content: start; }
+.orgNum { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: 800; letter-spacing: .08em; }
+.orgCard h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; line-height: 1.15; }
+.orgCard p { margin: 0; color: var(--muted); line-height: 1.6; font-size: var(--coro-v1-text-body); }
+
+/* §5 — Navy: four response territories (SIGNAL / AVIS / CONSIGNES / ÉVACUATION), never connected by an arrow or timeline —
+   related concepts, not a mandatory sequence. Uses the full navy canvas as four columns on desktop. */
+.territories { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-8); grid-template-columns: minmax(0, 1fr); border-block-start: 1px solid var(--coro-v1-border-on-dark); padding-block-start: var(--coro-v1-space-8); }
+@media (min-width: 56rem) { .territories { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.territory { display: grid; gap: var(--coro-v1-space-2); align-content: start; padding-inline-end: var(--coro-v1-space-4); border-inline-start: 2px solid var(--coro-v1-border-on-dark); padding-inline-start: var(--coro-v1-space-4); }
+.territory h3 { margin: 0; color: var(--coro-v1-on-dark-900); font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); font-weight: 850; letter-spacing: -.02em; line-height: 1; text-transform: uppercase; }
+.territory p { margin: 0; color: var(--coro-v1-on-dark-600); line-height: 1.55; font-size: var(--coro-v1-text-small); }
+
+/* Link card: one restrained panel toward a related page (PMU, the guides hub, CORO Documents). */
+.linkCard { padding: clamp(1.25rem, 3vw, 2rem); background: var(--coro-v1-surface-2); border-block-start: 3px solid var(--accent); display: grid; align-content: center; min-block-size: 8rem; }
+.linkCardLink { color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; text-decoration-color: var(--accent); text-underline-offset: .2em; }

@@ -1,0 +1,71 @@
+{
+  "route": "/privacy",
+  "capturedFrom": "app/privacy/page.tsx (pre-MIG-06, source-derived)",
+  "canonical": { "fr": "https://getcoro.io/privacy", "en": "https://getcoro.io/privacy?lang=en" },
+  "fr": {
+    "metaTitle": "Politique de confidentialité CORO | Protection des données",
+    "metaDescription": "Consultez la politique de confidentialité de CORO et découvrez comment la plateforme protège, utilise, conserve et gère les renseignements personnels.",
+    "h1": "Politique de confidentialité",
+    "updated": "Dernière mise à jour : 10 septembre 2026",
+    "introFirstWords": "CORO accorde une grande importance à la protection des renseignements personnels.",
+    "sectionCount": 15,
+    "sectionTitles": [
+      "1. Portée de la politique", "2. Renseignements que nous pouvons recueillir", "3. Pourquoi nous utilisons ces renseignements",
+      "4. Consentement", "5. Renseignements professionnels contenus dans les projets", "6. Communication à des tiers et fournisseurs",
+      "7. Hébergement et localisation des données", "8. Mesures de sécurité", "9. Conservation et destruction",
+      "10. Témoins de connexion et technologies similaires", "11. Vos droits", "12. Incidents de confidentialité",
+      "13. Responsable de la protection des renseignements personnels", "14. Modifications de la politique", "15. Lois applicables"
+    ],
+    "sectionsWithBullets": ["2. Renseignements que nous pouvons recueillir", "3. Pourquoi nous utilisons ces renseignements"],
+    "bulletCounts": { "2. Renseignements que nous pouvons recueillir": 6, "3. Pourquoi nous utilisons ces renseignements": 7 },
+    "contactSection": "13. Responsable de la protection des renseignements personnels",
+    "legalIdentity": {
+      "operator": "Mathieu Montaroux, entreprise individuelle immatriculée au Registraire des entreprises du Québec",
+      "neq": "NEQ 2282543935",
+      "tradeName": "CORO",
+      "address": "2879 Boul. Pierre-Bernard, Montréal (QC), H1L 4R2, Canada",
+      "email": "info@getcoro.io",
+      "phone": "+1 (514) 791-7871"
+    },
+    "governingLawRefs": [
+      "Loi sur la protection des renseignements personnels dans le secteur privé du Québec",
+      "Loi sur la protection des renseignements personnels et les documents électroniques du Canada"
+    ],
+    "hostingClaim": "CORO héberge les données de la plateforme au Canada.",
+    "internalLinks": [],
+    "externalLinks": ["mailto:info@getcoro.io"]
+  },
+  "en": {
+    "metaTitle": "CORO Privacy Policy | Data Protection",
+    "metaDescription": "Read CORO’s privacy policy and learn how the platform protects, uses, retains and manages personal information.",
+    "h1": "Privacy Policy",
+    "updated": "Last updated: September 10, 2026",
+    "introFirstWords": "CORO places great importance on protecting personal information.",
+    "sectionCount": 15,
+    "sectionTitles": [
+      "1. Scope of this policy", "2. Information we may collect", "3. Why we use this information",
+      "4. Consent", "5. Professional information contained in projects", "6. Disclosure to third parties and service providers",
+      "7. Hosting and data location", "8. Security safeguards", "9. Retention and destruction",
+      "10. Cookies and similar technologies", "11. Your rights", "12. Privacy incidents",
+      "13. Privacy Officer", "14. Changes to this policy", "15. Applicable privacy laws"
+    ],
+    "contactSection": "13. Privacy Officer",
+    "legalIdentity": {
+      "operator": "Mathieu Montaroux, a sole proprietorship registered with the Québec Enterprise Register",
+      "neq": "NEQ 2282543935",
+      "tradeName": "CORO",
+      "address": "2879 Boul. Pierre-Bernard, Montréal (QC), H1L 4R2, Canada",
+      "email": "info@getcoro.io",
+      "phone": "+1 (514) 791-7871"
+    },
+    "isRealTranslation": true,
+    "notes": "EN body is a genuine translation, not an FR fallback (distinct wording throughout, distinct LAST_UPDATED_EN string)."
+  },
+  "languageBehavior": { "query": "?lang=en", "defaultLocale": "fr", "switcherPresent": true },
+  "shellBehavior": {
+    "preMigration": "hand-rolled inline-styled header/footer inside page.tsx, own <style> block, legacy root Footer.tsx also renders (route not yet in migratedV2Routes) — 2 footer-like elements expected pre-registry",
+    "hasOwnH1": true, "hasOwnMain": true
+  },
+  "structuredData": "none present",
+  "robots": { "index": true, "follow": true }
+}

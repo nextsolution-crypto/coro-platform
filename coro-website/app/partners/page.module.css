@@ -1,0 +1,14 @@
+/* /partners — V1 tokens only; the opening is the shared EditorialHero. */
+.list { list-style: none; margin: 0; padding: 0; counter-reset: item; border-block-start: 1px solid var(--line); max-inline-size: 46ch; }
+.list li { counter-increment: item; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: baseline; gap: var(--coro-v1-space-3); padding-block: .9rem; border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.list li::before { content: counter(item, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+.list h3 { margin: 0; font: inherit; }
+.stack { display: grid; gap: var(--coro-v1-space-6); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
+@media (max-width: 30rem) { .actions > * { inline-size: 100%; justify-content: center; text-align: center; } }
+
+/* Partner categories: four distinct objects, as restrained numbered cards (1px border, V1 surface and radius, no shadow, no icon). */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); counter-reset: card; }
+.cards li { counter-increment: card; display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-8) var(--coro-v1-space-6); min-block-size: 9rem; background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-block-start: 3px solid var(--accent); border-radius: var(--coro-v1-radius-panel); }
+.cards li::before { content: counter(card, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-small); font-weight: 750; letter-spacing: .08em; }
+.cards h3 { overflow-wrap: break-word; margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }

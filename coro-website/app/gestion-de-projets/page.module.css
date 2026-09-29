@@ -1,0 +1,33 @@
+/* /gestion-de-projets — V1 tokens only. Opening (EditorialHero), sections, media frame, index, accordion and CTA come from the component library. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+
+/* The mandate journey: eight short titled steps in order. */
+.sequence { list-style: none; margin: 0; padding: 0; counter-reset: seq; border-block-start: 1px solid var(--line); max-inline-size: 46ch; }
+.sequence li { counter-increment: seq; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: baseline; gap: var(--coro-v1-space-3); padding-block: .7rem; border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.sequence li::before { content: counter(seq, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+
+/* Connected product pages. */
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+
+/* Dense real UI stays readable on narrow screens: the screenshot keeps a readable width inside a keyboard-focusable, horizontally scrollable region. */
+.pan { overflow-x: auto; }
+.pan:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+@media (max-width: 48rem) { .pan > * { min-inline-size: 52rem; } }
+
+/* What the screen shows, duplicated as text (labels visible in the screenshot). */
+.legendBlock { display: grid; gap: var(--coro-v1-space-2); }
+.legendLabel { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-2) var(--coro-v1-space-6); }
+.legend li { color: var(--ink); font-weight: 650; }
+.legend li::before { content: "— "; color: var(--accent); }
+
+/* Capabilities: four distinct objects as restrained numbered cards (1px border, V1 surface and radius, no shadow, no icon). */
+.capCards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); counter-reset: cap; }
+.capCards li { counter-increment: cap; display: grid; align-content: start; gap: var(--coro-v1-space-3); padding: var(--coro-v1-space-6); background: var(--coro-v1-surface-0); border: 1px solid var(--line); border-radius: var(--coro-v1-radius-panel); }
+.capCards li::before { content: counter(cap, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-small); font-weight: 750; letter-spacing: .08em; }
+.capCards h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }
+.capCards p { margin: 0; color: var(--muted); line-height: 1.6; }

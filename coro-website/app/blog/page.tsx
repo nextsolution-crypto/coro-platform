@@ -1,196 +1,42 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { PageSection } from '@/components/page/PageSection';
+import { V2Shell } from '@/components/site/V2Shell';
+import { serverApiUrl } from '@/lib/site/api';
+import { localeFromSearchParams, type Locale } from '@/lib/site/locale';
+import { paginate, pageNumbers } from '@/lib/site/pagination';
+import { buildPageMetadata } from '@/lib/site/seo';
+import { filterPostsByTaxonomy } from '@/lib/site/blog-taxonomy';
+import styles from './page.module.css';
 
 export const revalidate = 0;
 
-const API_URL = 'http://coro_backend:3002/api';
+/**
+ * /blog (MIG-07A) — editorial index reshell into V2Shell. IN SCOPE: this file only.
+ * /blog/[slug] (article page) stays legacy (MIG-07B). API contract, FR/EN soft-fallback behavior,
+ * empty/error fail-soft behavior and SEO contract are preserved exactly; see
+ * docs/website-v2/05-migration/MIG-07-BLOG-GATE.md §33 for the full contract.
+ *
+ * Pagination (MIG-07A polish): `GET /api/blog/public` has no page/limit/cursor params
+ * (findPublished() in coro-backend/src/blog/blog.service.ts returns the full published
+ * collection). This is FRONTEND/CLIENT-SIDE slicing of the already-fetched list, not
+ * server-side pagination — see NON-BLOCKING PERFORMANCE DEBT in the gate doc.
+ * Pure pagination logic lives in lib/site/pagination.ts (PAGE_SIZE, paginate, pageNumbers).
+ */
 
-const SITE_URL = 'https://getcoro.io';
+type Post = {
+  id: string;
+  slug: string;
+  titleFr: string;
+  titleEn?: string;
+  excerptFr?: string;
+  excerptEn?: string;
+  coverImage?: string;
+  category?: string;
+  tags?: string[];
+  publishedAt?: string;
+};
 
-
-/* ═══════════════════════════════════════════
-   SEO / METADATA
-═══════════════════════════════════════════ */
-
-export async function generateMetadata({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string }>;
-}): Promise<Metadata> {
-  const { lang: langParam } = await searchParams;
-
-  const isEnglish = langParam === 'en';
-
-  const frUrl = `${SITE_URL}/blog`;
-  const enUrl = `${SITE_URL}/blog?lang=en`;
-
-  const currentUrl = isEnglish
-    ? enUrl
-    : frUrl;
-
-
-  if (isEnglish) {
-    const title =
-      'CORO Blog — Emergency Management, Compliance and Fire Safety';
-
-    const description =
-      'Practical articles and guides on emergency response plans, fire safety, document compliance, business continuity and organizational resilience in Canada.';
-
-    return {
-      title,
-      description,
-
-      alternates: {
-        canonical: currentUrl,
-
-        languages: {
-          'fr-CA': frUrl,
-          'en-CA': enUrl,
-          'x-default': frUrl,
-        },
-      },
-
-      openGraph: {
-        title,
-        description:
-          'Practical guides on emergency management, fire safety, compliance and organizational resilience in Canada.',
-
-        url: currentUrl,
-        siteName: 'CORO',
-
-        locale: 'en_CA',
-        alternateLocale: ['fr_CA'],
-
-        type: 'website',
-
-        images: [
-          {
-            url: '/og-coro.jpg',
-            width: 1200,
-            height: 630,
-            alt: 'CORO — Emergency management, compliance and resilience resources',
-          },
-        ],
-      },
-
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description:
-          'Practical guides on emergency management, fire safety, compliance and organizational resilience in Canada.',
-        images: ['/og-coro.jpg'],
-      },
-
-      robots: {
-        index: true,
-        follow: true,
-
-        googleBot: {
-          index: true,
-          follow: true,
-          'max-video-preview': -1,
-          'max-image-preview': 'large',
-          'max-snippet': -1,
-        },
-      },
-    };
-  }
-
-
-  const title =
-    'Blogue CORO — Conformité, sécurité et mesures d’urgence';
-
-  const description =
-    'Articles et guides pratiques sur la conformité documentaire, les plans de mesures d’urgence, la sécurité incendie et la réglementation au Québec et au Canada.';
-
-  return {
-    title,
-    description,
-
-    alternates: {
-      canonical: currentUrl,
-
-      languages: {
-        'fr-CA': frUrl,
-        'en-CA': enUrl,
-        'x-default': frUrl,
-      },
-    },
-
-    openGraph: {
-      title,
-      description:
-        'Guides pratiques sur la conformité, les mesures d’urgence, la sécurité incendie et la résilience organisationnelle au Canada.',
-
-      url: currentUrl,
-      siteName: 'CORO',
-
-      locale: 'fr_CA',
-      alternateLocale: ['en_CA'],
-
-      type: 'website',
-
-      images: [
-        {
-          url: '/og-coro.jpg',
-          width: 1200,
-          height: 630,
-          alt: 'CORO — Ressources sur les mesures d’urgence, la conformité et la résilience',
-        },
-      ],
-    },
-
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description:
-        'Guides pratiques sur la conformité, les mesures d’urgence, la sécurité incendie et la résilience organisationnelle au Canada.',
-      images: ['/og-coro.jpg'],
-    },
-
-    robots: {
-      index: true,
-      follow: true,
-
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-video-preview': -1,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-      },
-    },
-  };
-}
-
-
-/* ═══════════════════════════════════════════
-   BLOG POSTS
-═══════════════════════════════════════════ */
-
-async function getPosts() {
-  try {
-    const res = await fetch(
-      `${API_URL}/blog/public`,
-      {
-        cache: 'no-store',
-      }
-    );
-
-    if (!res.ok) {
-      return [];
-    }
-
-    return res.json();
-
-  } catch {
-    return [];
-  }
-}
-
-
-/* ═══════════════════════════════════════════
-   CATEGORIES
-═══════════════════════════════════════════ */
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Réglementation & Normes': '#2980B9',
@@ -200,729 +46,272 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Études de cas': '#E67E22',
 };
 
+const copy = {
+  fr: {
+    metaTitle: 'Blogue CORO — Conformité, sécurité et mesures d’urgence',
+    metaDescription: 'Articles et guides pratiques sur la conformité documentaire, les plans de mesures d’urgence, la sécurité incendie et la réglementation au Québec et au Canada.',
+    label: 'Blogue',
+    title: 'Ressources & Guides',
+    lead: 'Tout ce que vous devez savoir sur la conformité documentaire, les plans d’urgence et la réglementation au Canada.',
+    empty: 'Aucun article pour l’instant. Revenez bientôt !',
+    read: 'Lire l’article',
+    all: 'Tous les articles',
+    paginationLabel: 'Pagination du blogue',
+    prev: '← Précédente',
+    next: 'Suivante →',
+    filteredByTag: (tag: string) => `Articles liés à « ${tag} »`,
+    clearFilter: 'Effacer le filtre',
+    tagEmpty: 'Aucun article associé à ce mot-clé pour l’instant.',
+    showAll: 'Afficher tous les articles',
+  },
+  en: {
+    metaTitle: 'CORO Blog — Emergency Management, Compliance and Fire Safety',
+    metaDescription: 'Practical articles and guides on emergency response plans, fire safety, document compliance, business continuity and organizational resilience in Canada.',
+    label: 'Blog',
+    title: 'Resources & Guides',
+    lead: 'Everything you need to know about document compliance, emergency plans and regulations in Canada.',
+    empty: 'No articles yet. Check back soon!',
+    read: 'Read article',
+    all: 'All articles',
+    paginationLabel: 'Blog pagination',
+    prev: '← Previous',
+    next: 'Next →',
+    filteredByTag: (tag: string) => `Articles tagged “${tag}”`,
+    clearFilter: 'Clear filter',
+    tagEmpty: 'No articles associated with this tag yet.',
+    showAll: 'Show all articles',
+  },
+} as const;
 
-/* ═══════════════════════════════════════════
-   PAGE
-═══════════════════════════════════════════ */
+type PageProps = { searchParams?: Promise<{ lang?: string; category?: string; tag?: string; page?: string }> };
 
-export default async function BlogPage({
-  searchParams,
-}: {
-    searchParams: Promise<{ lang?: string; category?: string }>;
-}) {
+async function getPosts(): Promise<Post[]> {
+  try {
+    const res = await fetch(serverApiUrl('blog/public'), { cache: 'no-store' });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const locale = localeFromSearchParams(params);
+  const t = copy[locale];
+  // Filtered discovery states (?category=, ?tag=) are navigation views, not independent SEO
+  // landing pages: canonical already excludes query (see lib/site/seo.ts), and we noindex,follow
+  // them explicitly so the crawl doesn't treat every category/tag combination as its own page.
+  const isFiltered = Boolean(params.category || params.tag);
+  return buildPageMetadata({ path: '/blog', locale, title: t.metaTitle, description: t.metaDescription, absoluteTitle: true, indexable: !isFiltered });
+}
+
+function articleHref(slug: string, locale: Locale): string {
+  return `/blog/${slug}${locale === 'en' ? '?lang=en' : ''}`;
+}
+
+function categoryHref(category: string | null, locale: Locale): string {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (locale === 'en') params.set('lang', 'en');
+  const qs = params.toString();
+  return qs ? `/blog?${qs}` : '/blog';
+}
+
+/** Clears the tag filter (single-tag discovery, MIG-07C) while preserving category/locale. */
+function clearTagHref(category: string, locale: Locale): string {
+  return categoryHref(category || null, locale);
+}
+
+function pageHref(page: number, category: string, tag: string, locale: Locale): string {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (tag) params.set('tag', tag);
+  if (locale === 'en') params.set('lang', 'en');
+  if (page > 1) params.set('page', String(page));
+  const qs = params.toString();
+  return qs ? `/blog?${qs}` : '/blog';
+}
+
+function postText(post: Post, locale: Locale): { title: string; excerpt: string } {
+  const title = locale === 'fr' ? post.titleFr : post.titleEn || post.titleFr;
+  const excerpt = (locale === 'fr' ? post.excerptFr : post.excerptEn || post.excerptFr) ?? '';
+  return { title, excerpt };
+}
+
+function formatDate(publishedAt: string | undefined, locale: Locale): string {
+  if (!publishedAt) return '';
+  return new Date(publishedAt).toLocaleDateString(locale === 'fr' ? 'fr-CA' : 'en-CA', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+export default async function BlogPage({ searchParams }: PageProps) {
+  const { lang: langParam, category: categoryParam, tag: tagParam, page: pageParam } = (await searchParams) ?? {};
+  const locale: Locale = langParam === 'en' ? 'en' : 'fr';
+  const t = copy[locale];
   const posts = await getPosts();
-  const { lang: langParam, category: categoryParam } =
-    await searchParams;
-  const lang =
-    langParam === 'en'
-      ? 'en'
-      : 'fr';
   const activeCategory = categoryParam || '';
-  const filteredPosts = activeCategory
-    ? posts.filter((p: any) => p.category === activeCategory)
-    : posts;
+  const activeTag = tagParam || '';
 
+  // Filter BEFORE paginating (category, then tag) so pages are never sparse/empty from
+  // slicing-before-filtering. Single active tag at a time — no multi-select faceting.
+  const filteredPosts = filterPostsByTaxonomy(posts, activeCategory, activeTag);
+
+  const categories = Array.from(new Set(posts.map((p) => p.category).filter((c): c is string => Boolean(c))));
+
+  // Changing the filter always resets to page 1 (no page param carried in tagHref/categoryHref).
+  const requestedPage = Number.parseInt(pageParam ?? '1', 10);
+  const { pageItems, currentPage, totalPages } = paginate(filteredPosts, requestedPage);
+  const isFirstPage = currentPage === 1;
+  const featured: Post | undefined = isFirstPage ? pageItems[0] : undefined;
+  const rest: Post[] = isFirstPage ? pageItems.slice(1) : pageItems;
 
   return (
-    <div
-      style={{
-        fontFamily:
-          'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    <V2Shell locale={locale} pathname="/blog">
+      <EditorialHero id="blog-title" label={t.label} title={t.title} lead={t.lead} density="compact" />
 
-        backgroundColor:
-          '#F8F9FA',
-
-        minHeight:
-          '100vh',
-      }}
-    >
-
-      {/* ═══════════════════════════════════
-          NAVIGATION
-      ═══════════════════════════════════ */}
-
-      <nav
-        style={{
-          backgroundColor:
-            '#2C3E50',
-
-          padding:
-            '0 24px',
-        }}
-      >
-
-        <div
-          style={{
-            maxWidth:
-              1200,
-
-            margin:
-              '0 auto',
-
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
-            justifyContent:
-              'space-between',
-
-            height:
-              64,
-
-            gap:
-              16,
-          }}
-        >
-
-          <a
-            href={
-              lang === 'en'
-                ? '/?lang=en'
-                : '/'
-            }
-
-            style={{
-              textDecoration:
-                'none',
-            }}
-          >
-
-            <span
-              style={{
-                fontSize:
-                  24,
-
-                fontWeight:
-                  900,
-
-                color:
-                  '#FFFFFF',
-
-                letterSpacing:
-                  '-1px',
-              }}
-            >
-              CO
-              <span
-                style={{
-                  color:
-                    '#C0392B',
-                }}
+      {categories.length > 0 && (
+        <PageSection tone="white" density="compact">
+          <nav className={styles.filters} aria-label={t.all}>
+            <a href={categoryHref(null, locale)} className={styles.filterChip} data-active={!activeCategory}>
+              {t.all}
+            </a>
+            {categories.map((category) => (
+              <a
+                key={category}
+                href={categoryHref(category, locale)}
+                className={styles.filterChip}
+                data-active={activeCategory === category}
+                style={activeCategory === category ? { backgroundColor: CATEGORY_COLORS[category] || '#6C757D', color: '#FFFFFF', borderColor: 'transparent' } : undefined}
               >
-                RO
-              </span>
-            </span>
+                {category}
+              </a>
+            ))}
+          </nav>
+        </PageSection>
+      )}
 
-          </a>
-
-
-          <div
-            style={{
-              display:
-                'flex',
-
-              gap:
-                16,
-
-              alignItems:
-                'center',
-
-              flexWrap:
-                'wrap',
-
-              justifyContent:
-                'flex-end',
-            }}
-          >
-
-            <a
-              href={
-                lang === 'en'
-                  ? '/?lang=en'
-                  : '/'
-              }
-
-              style={{
-                color:
-                  'rgba(255,255,255,0.7)',
-
-                fontSize:
-                  14,
-
-                textDecoration:
-                  'none',
-              }}
-            >
-              {lang === 'fr'
-                ? '← Accueil'
-                : '← Home'}
+      {activeTag && (
+        <PageSection tone="white" density="compact">
+          <div className={styles.activeFilter}>
+            <p className={styles.activeFilterLabel}>{t.filteredByTag(activeTag)}</p>
+            <a href={clearTagHref(activeCategory, locale)} className={styles.clearFilter}>
+              {t.clearFilter}
             </a>
-
-
-            <a
-              href={
-                lang === 'fr'
-                  ? '/blog?lang=en'
-                  : '/blog'
-              }
-
-              hrefLang={
-                lang === 'fr'
-                  ? 'en-CA'
-                  : 'fr-CA'
-              }
-
-              style={{
-                color:
-                  'rgba(255,255,255,0.7)',
-
-                fontSize:
-                  13,
-
-                textDecoration:
-                  'none',
-
-                border:
-                  '1px solid rgba(255,255,255,0.2)',
-
-                padding:
-                  '4px 10px',
-
-                borderRadius:
-                  4,
-              }}
-            >
-              {lang === 'fr'
-                ? 'EN'
-                : 'FR'}
-            </a>
-
           </div>
+        </PageSection>
+      )}
 
-        </div>
-
-      </nav>
-
-
-      {/* ═══════════════════════════════════
-          HEADER
-      ═══════════════════════════════════ */}
-
-      <div
-        style={{
-          backgroundColor:
-            '#2C3E50',
-
-          padding:
-            '60px 24px 80px',
-        }}
-      >
-
-        <div
-          style={{
-            maxWidth:
-              800,
-
-            margin:
-              '0 auto',
-
-            textAlign:
-              'center',
-          }}
-        >
-
-          <p
-            style={{
-              fontSize:
-                12,
-
-              fontWeight:
-                700,
-
-              color:
-                '#C0392B',
-
-              textTransform:
-                'uppercase',
-
-              letterSpacing:
-                '0.15em',
-
-              marginBottom:
-                16,
-            }}
-          >
-            {lang === 'fr'
-              ? 'Blogue'
-              : 'Blog'}
-          </p>
-
-
-          <h1
-            style={{
-              fontSize:
-                'clamp(32px, 5vw, 56px)',
-
-              fontWeight:
-                900,
-
-              color:
-                '#FFFFFF',
-
-              lineHeight:
-                1.1,
-
-              marginBottom:
-                20,
-            }}
-          >
-            {lang === 'fr'
-              ? 'Ressources & Guides'
-              : 'Resources & Guides'}
-          </h1>
-
-
-          <p
-            style={{
-              fontSize:
-                18,
-
-              color:
-                'rgba(255,255,255,0.7)',
-
-              lineHeight:
-                1.7,
-
-              maxWidth:
-                600,
-
-              margin:
-                '0 auto',
-            }}
-          >
-            {lang === 'fr'
-              ? 'Tout ce que vous devez savoir sur la conformité documentaire, les plans d’urgence et la réglementation au Canada.'
-              : 'Everything you need to know about document compliance, emergency plans and regulations in Canada.'}
-          </p>
-
-        </div>
-
-      </div>
-
-
-      {/* ═══════════════════════════════════
-          CONTENU
-      ═══════════════════════════════════ */}
-
-      <main
-        style={{
-          maxWidth:
-            1200,
-
-          margin:
-            '0 auto',
-
-          padding:
-            '60px 24px',
-        }}
-      >
-
+      <PageSection tone={categories.length > 0 ? 'soft' : 'white'}>
         {posts.length === 0 ? (
-
-          /* ───────────────────────────────
-             AUCUN ARTICLE
-          ─────────────────────────────── */
-
-          <div
-            style={{
-              textAlign:
-                'center',
-
-              padding:
-                '80px 0',
-            }}
-          >
-
-            <p
-              style={{
-                fontSize:
-                  18,
-
-                color:
-                  '#ADB5BD',
-              }}
-            >
-              {lang === 'fr'
-                ? 'Aucun article pour l’instant. Revenez bientôt !'
-                : 'No articles yet. Check back soon!'}
-            </p>
-
+          <p className={styles.empty}>{t.empty}</p>
+        ) : filteredPosts.length === 0 ? (
+          // Distinct from the global empty-Blog state above (posts.length === 0) and from the
+          // fail-soft/API-down state, which also collapses to posts.length === 0 — a valid tag
+          // with zero matches is neither "no articles" nor "API failure".
+          <div className={styles.tagEmpty}>
+            <p>{t.tagEmpty}</p>
+            <a href={categoryHref(activeCategory || null, locale)} className={styles.clearFilter}>
+              {t.showAll}
+            </a>
           </div>
-
         ) : (
-
-          /* ───────────────────────────────
-             GRILLE ARTICLES
-          ─────────────────────────────── */
-
-          <div
-            style={{
-              display:
-                'grid',
-
-              gridTemplateColumns:
-                'repeat(auto-fill, minmax(min(340px, 100%), 1fr))',
-
-              gap:
-                32,
-            }}
-          >
-
-            {filteredPosts.map(
-              (post: any) => {
-
-                const title =
-                  lang === 'fr'
-                    ? post.titleFr
-                    : (
-                        post.titleEn ||
-                        post.titleFr
-                      );
-
-
-                const excerpt =
-                  lang === 'fr'
-                    ? post.excerptFr
-                    : (
-                        post.excerptEn ||
-                        post.excerptFr
-                      );
-
-
-                const categoryColor =
-                  CATEGORY_COLORS[
-                    post.category
-                  ] ||
-                  '#6C757D';
-
-
-                const date =
-                  post.publishedAt
-                    ? new Date(
-                        post.publishedAt
-                      ).toLocaleDateString(
-                        lang === 'fr'
-                          ? 'fr-CA'
-                          : 'en-CA',
-
-                        {
-                          day:
-                            'numeric',
-
-                          month:
-                            'long',
-
-                          year:
-                            'numeric',
-                        }
-                      )
-
-                    : '';
-
-
-                const articleUrl =
-                  `/blog/${post.slug}${
-                    lang === 'en'
-                      ? '?lang=en'
-                      : ''
-                  }`;
-
-
-                return (
-
-                  <a
-                    key={post.id}
-
-                    href={
-                      articleUrl
-                    }
-
-                    hrefLang={
-                      lang === 'en'
-                        ? 'en-CA'
-                        : 'fr-CA'
-                    }
-
-                    style={{
-                      textDecoration:
-                        'none',
-
-                      display:
-                        'flex',
-
-                      flexDirection:
-                        'column',
-
-                      borderRadius:
-                        12,
-
-                      overflow:
-                        'hidden',
-
-                      backgroundColor:
-                        '#FFFFFF',
-
-                      border:
-                        '1px solid #E9ECEF',
-
-                      transition:
-                        'transform 0.2s, box-shadow 0.2s',
-                    }}
-                  >
-
-                    {/* IMAGE */}
-
-                    {post.coverImage ? (
-
-                      <div
-                        style={{
-                          height:
-                            200,
-
-                          overflow:
-                            'hidden',
-                        }}
-                      >
-
-                        <img
-                          src={
-                            post.coverImage
-                          }
-
-                          alt={
-                            title ||
-                            'Article CORO'
-                          }
-
-                          loading="lazy"
-
-                          style={{
-                            width:
-                              '100%',
-
-                            height:
-                              '100%',
-
-                            objectFit:
-                              'cover',
-
-                            display:
-                              'block',
-                          }}
-                        />
-
-                      </div>
-
-                    ) : (
-
-                      <div
-                        style={{
-                          height:
-                            200,
-
-                          backgroundColor:
-                            '#F8F9FA',
-
-                          display:
-                            'flex',
-
-                          alignItems:
-                            'center',
-
-                          justifyContent:
-                            'center',
-                        }}
-                      >
-
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            fontSize:
-                              48,
-                          }}
-                        >
-                          📄
-                        </span>
-
-                      </div>
-
+          <div className={styles.stack}>
+            {featured && (
+              <a href={articleHref(featured.slug, locale)} hrefLang={locale === 'en' ? 'en-CA' : 'fr-CA'} className={styles.featured}>
+                <div className={styles.featuredMedia}>
+                  {featured.coverImage ? (
+                    <img src={featured.coverImage} alt={postText(featured, locale).title} loading="lazy" className={styles.featuredImg} />
+                  ) : (
+                    <span aria-hidden="true" className={styles.placeholder}>📄</span>
+                  )}
+                </div>
+                <div className={styles.featuredBody}>
+                  <div className={styles.meta}>
+                    {featured.category && (
+                      <span className={styles.badge} style={{ backgroundColor: CATEGORY_COLORS[featured.category] || '#6C757D' }}>
+                        {featured.category}
+                      </span>
                     )}
-
-
-                    {/* CONTENU CARTE */}
-
-                    <div
-                      style={{
-                        padding:
-                          28,
-
-                        flex:
-                          1,
-
-                        display:
-                          'flex',
-
-                        flexDirection:
-                          'column',
-
-                        gap:
-                          12,
-                      }}
-                    >
-
-                      <div
-                        style={{
-                          display:
-                            'flex',
-
-                          alignItems:
-                            'center',
-
-                          gap:
-                            8,
-
-                          flexWrap:
-                            'wrap',
-                        }}
-                      >
-
-                          {post.category && (
-  <a
-    href={`/blog?category=${encodeURIComponent(post.category)}${lang === 'en' ? '&lang=en' : ''}`}
-    style={{
-      fontSize: 11,
-      fontWeight: 700,
-      color: '#FFFFFF',
-      backgroundColor: categoryColor,
-      padding: '2px 8px',
-      borderRadius: 4,
-      textDecoration: 'none',
-      cursor: 'pointer',
-    }}
-  >
-    {post.category}
-  </a>
-)}
-
-
-                        {date && (
-
-                          <span
-                            style={{
-                              fontSize:
-                                12,
-
-                              color:
-                                '#ADB5BD',
-                            }}
-                          >
-                            {date}
-                          </span>
-
-                        )}
-
-                      </div>
-
-
-                      <h2
-                        style={{
-                          fontSize:
-                            18,
-
-                          fontWeight:
-                            800,
-
-                          color:
-                            '#2C3E50',
-
-                          lineHeight:
-                            1.3,
-
-                          margin:
-                            0,
-                        }}
-                      >
-                        {title}
-                      </h2>
-
-
-                      {excerpt && (
-
-                        <p
-                          style={{
-                            fontSize:
-                              14,
-
-                            color:
-                              '#6C757D',
-
-                            lineHeight:
-                              1.6,
-
-                            margin:
-                              0,
-                          }}
-                        >
-                          {excerpt}
-                        </p>
-
-                      )}
-
-
-                      <div
-                        style={{
-                          marginTop:
-                            'auto',
-
-                          paddingTop:
-                            8,
-                        }}
-                      >
-
-                        <span
-                          style={{
-                            fontSize:
-                              13,
-
-                            fontWeight:
-                              600,
-
-                            color:
-                              '#C0392B',
-                          }}
-                        >
-                          {lang === 'fr'
-                            ? 'Lire l’article →'
-                            : 'Read article →'}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </a>
-
-                );
-              }
+                    {formatDate(featured.publishedAt, locale) && <span className={styles.date}>{formatDate(featured.publishedAt, locale)}</span>}
+                  </div>
+                  <h2 className={styles.featuredTitle}>{postText(featured, locale).title}</h2>
+                  {postText(featured, locale).excerpt && <p className={styles.featuredExcerpt}>{postText(featured, locale).excerpt}</p>}
+                  <span className={styles.readLink}>
+                    {t.read}
+                    <span aria-hidden="true"> →</span>
+                  </span>
+                </div>
+              </a>
             )}
 
+            {rest.length > 0 && (
+              <div className={styles.grid}>
+                {rest.map((post) => {
+                  const { title, excerpt } = postText(post, locale);
+                  const date = formatDate(post.publishedAt, locale);
+                  return (
+                    <a key={post.id} href={articleHref(post.slug, locale)} hrefLang={locale === 'en' ? 'en-CA' : 'fr-CA'} className={styles.card}>
+                      <div className={styles.cardMedia}>
+                        {post.coverImage ? (
+                          <img src={post.coverImage} alt={title || 'Article CORO'} loading="lazy" className={styles.cardImg} />
+                        ) : (
+                          <span aria-hidden="true" className={styles.placeholder}>📄</span>
+                        )}
+                      </div>
+                      <div className={styles.cardBody}>
+                        <div className={styles.meta}>
+                          {post.category && (
+                            <span className={styles.badge} style={{ backgroundColor: CATEGORY_COLORS[post.category] || '#6C757D' }}>
+                              {post.category}
+                            </span>
+                          )}
+                          {date && <span className={styles.date}>{date}</span>}
+                        </div>
+                        <h3 className={styles.cardTitle}>{title}</h3>
+                        {excerpt && <p className={styles.cardExcerpt}>{excerpt}</p>}
+                        <span className={styles.readLink}>
+                          {t.read}
+                          <span aria-hidden="true"> →</span>
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <nav className={styles.pagination} aria-label={t.paginationLabel}>
+                {currentPage > 1 && (
+                  <a href={pageHref(currentPage - 1, activeCategory, activeTag, locale)} className={styles.pageLink}>
+                    {t.prev}
+                  </a>
+                )}
+                {pageNumbers(currentPage, totalPages).map((p, i) =>
+                  p === 'ellipsis' ? (
+                    <span key={`ellipsis-${i}`} className={styles.pageEllipsis} aria-hidden="true">…</span>
+                  ) : (
+                    <a
+                      key={p}
+                      href={pageHref(p, activeCategory, activeTag, locale)}
+                      className={styles.pageLink}
+                      data-active={p === currentPage}
+                      aria-current={p === currentPage ? 'page' : undefined}
+                    >
+                      {p}
+                    </a>
+                  )
+                )}
+                {currentPage < totalPages && (
+                  <a href={pageHref(currentPage + 1, activeCategory, activeTag, locale)} className={styles.pageLink}>
+                    {t.next}
+                  </a>
+                )}
+              </nav>
+            )}
           </div>
-
         )}
-
-      </main>
-    </div>
+      </PageSection>
+    </V2Shell>
   );
 }

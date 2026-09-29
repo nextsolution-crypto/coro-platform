@@ -1,0 +1,13 @@
+{
+  "source": "MIG-03D audit (coro-backend/prisma/schema.prisma, src/occupancy/incident.service.ts)",
+  "incidentTypeCount": 15,
+  "incidentStatuses": ["PRE_ALERT", "ACTIVE", "CONTAINED", "RESOLVED", "CANCELLED"],
+  "channelsImplemented": ["email", "sms"],
+  "channelsNotImplemented": ["voice", "app-push"],
+  "smsRequiresConsent": true,
+  "exerciseMode": { "prefix": "[EXERCICE]", "occupantsNotified": false, "teamNotified": true },
+  "simultaneousIncidents": true,
+  "rexFields": ["rexWentWell", "rexToImprove", "rexRecommendations", "rexCorrectiveActions"],
+  "publicAccessLink": { "account": false, "validWhileActive": true, "maxDuration": null, "manualRevocation": false },
+  "fireAlarmBridge": { "status": "PARTIAL", "publicClaim": false }
+}

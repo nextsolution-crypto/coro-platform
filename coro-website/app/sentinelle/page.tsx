@@ -1,827 +1,226 @@
-import { Metadata } from 'next';
-import { CheckCircle } from 'lucide-react';
+import type { Metadata } from 'next';
+import { CTASection } from '@/components/conversion/CTASection';
+import { Accordion } from '@/components/page/Accordion';
+import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { MediaFrame } from '@/components/page/MediaFrame';
+import { PageSection } from '@/components/page/PageSection';
+import { SplitContent } from '@/components/page/SplitContent';
+import { V2Shell } from '@/components/site/V2Shell';
+import { Button } from '@/components/ui/Button';
+import { faqJsonLd } from '@/lib/site/json-ld';
+import { localeFromSearchParams, localizedHref, resolveAvailableLocale } from '@/lib/site/locale';
+import { buildPageMetadata } from '@/lib/site/seo';
+import styles from './page.module.css';
 
-const SITE_URL = 'https://getcoro.io';
+type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: 'Registre de présence numérique et évacuation | CORO Sentinelle',
-  description: 'CORO Sentinelle est un registre numérique de présence conçu pour savoir qui est présent dans un bâtiment et faciliter le décompte des occupants lors d\'une évacuation.',
-  keywords: 'registre de présence numérique, registre d\'évacuation, décompte évacuation, registre visiteurs, présence employés, point de rassemblement, QR code bâtiment, mesures d\'urgence, CORO Sentinelle',
-  robots: 'index, follow',
-  alternates: {
-    canonical: `${SITE_URL}/sentinelle`,
-  },
-  openGraph: {
-    type: 'website',
-    title: 'CORO Sentinelle | Registre de présence et gestion d\'évacuation',
-    description: 'Sachez qui est présent dans votre bâtiment et facilitez le décompte lors d\'une situation d\'urgence.',
-    url: `${SITE_URL}/sentinelle`,
-    images: [{ url: `${SITE_URL}/images/sentinelle/coro-sentinelle-registre-presence.webp` }],
-  },
-};
+/**
+ * /sentinelle (MIG-03B) — CORO Sentinelle: who is in the building, and who is not yet confirmed after an evacuation.
+ * LANGUAGE: FR ONLY. The V1 page was French; ?lang=en only translated the nav link and the pricing block (a partial translation).
+ * The page therefore always renders French: canonical FR even with ?lang=en, hreflang fr-CA + x-default only, og:locale fr_CA, lang="fr".
+ * PRODUCT TRUTH (audited in coro-backend/src/occupancy and coro-client-portal): check-in / check-out with timestamps (employees, visitors, contractors),
+ * personal 4-digit PIN for employees on the kiosk QR page, a short form for visitors and contractors, visitor invitations, the occupancy register
+ * with counts by type, evacuation events with an accounted-for / not-yet-confirmed status per person, an evacuation history and PDF report,
+ * and "trigger an incident" from the register. NO geolocation code exists in the presence, kiosk, registry or evacuation pages.
+ * NOT claimed: registry search and filtering (only the kiosk exit lookup exists), "other occupant categories" (the type is a fixed enum),
+ * multi-site occupancy view, real-time wording, ISO / CNPI / CNESST / NFPA / CCOHS compliance, Loi 25 compliance, a retention period,
+ * alarm-panel automation, the intervention QR, population alerting (Sentinelle Population is a separate product, MIG-03C), pricing.
+ * The V1 pricing block (three plans with prices and unverified claims) is removed and recorded, not migrated.
+ * NO PRODUCT SCREENSHOT: every V1 Sentinelle image is a generated marketing scene with invented interfaces, and the only real registry
+ * capture is outdated and shows a kiosk token. Body photographs are approved V2 MARKETING ILLUSTRATIONS (decorative). RECAPTURE REQUIRED BEFORE GO-LIVE.
+ */
+const copy = {
+  metaTitle: 'Registre d’occupation et décompte des occupants en évacuation',
+  description: 'CORO Sentinelle tient un registre numérique des occupants d’un bâtiment et soutient le décompte lors d’une évacuation, du pointage à l’entrée jusqu’au point de rassemblement.',
+  label: 'CORO Sentinelle',
+  lines: ['Sachez qui est présent.', 'Sachez qui manque.'],
+  lead: 'CORO Sentinelle est un registre numérique de présence conçu pour les bâtiments et les organisations. Employés, visiteurs et contracteurs s’enregistrent à leur arrivée afin de fournir aux responsables une information utile lorsque chaque minute compte.',
+  demo: 'Demander une démonstration', how: 'Voir comment ça fonctionne', access: 'Accéder à CORO Client',
+  problemLabel: 'Présence et sécurité', problemTitle: 'Un registre de présence pensé pour les situations réelles.',
+  problemText: 'Dans de nombreux bâtiments, savoir qui est entré ne suffit pas. Lorsqu’une alarme survient, la véritable question devient : qui était présent et qui n’est pas encore confirmé?',
+  statement: 'Le registre quotidien devient une information opérationnelle en situation d’urgence.',
+  principlesLabel: 'Une logique simple', principlesTitle: 'De l’arrivée à l’évacuation.',
+  principlesLead: 'Sentinelle relie le contrôle quotidien des présences aux besoins opérationnels d’une organisation lorsqu’une situation d’urgence survient.',
+  principles: [
+    { title: 'S’enregistrer', text: 'La personne scanne le QR code de l’établissement, s’identifie depuis son téléphone et confirme sa présence.' },
+    { title: 'Connaître les présences', text: 'Les personnes actuellement enregistrées peuvent être consultées dans une interface centralisée par les utilisateurs autorisés.' },
+    { title: 'Faciliter le décompte', text: 'Lors d’une évacuation, cette information contribue au recensement des occupants et au suivi des personnes qui n’ont pas encore été confirmées.' },
+  ],
+  entryLabel: 'Entrée', entryTitle: 'Un QR code à l’entrée. Un PIN pour s’identifier.',
+  entrySteps: [
+    { n: 'Étape 01', title: 'Un QR code à l’entrée du bâtiment', text: 'Une borne ou une signalisation Sentinelle permet à l’utilisateur de démarrer son enregistrement depuis son propre téléphone.', items: ['Aucune application à installer pour l’utilisateur', 'Accès rapide depuis un téléphone intelligent'] },
+    { n: 'Étape 02', title: 'Identification rapide', text: 'Après avoir scanné le QR code, l’employé saisit son PIN personnel à 4 chiffres; les visiteurs et contracteurs s’enregistrent au moyen d’un court formulaire.', items: ['Interface mobile simplifiée', 'Arrivée et départ enregistrés avec l’heure'] },
+  ],
+  registerLabel: 'Registre d’occupation', registerTitle: 'Une vision actualisée des personnes présentes.',
+  registerText: 'Les responsables autorisés peuvent consulter les informations nécessaires pour connaître les personnes actuellement enregistrées dans l’établissement.',
+  registerTypes: [{ name: 'Employés', text: 'Personnel régulier et utilisateurs du bâtiment.' }, { name: 'Visiteurs', text: 'Clients, invités et visiteurs ponctuels.' }, { name: 'Contracteurs', text: 'Travailleurs externes et fournisseurs.' }],
+  registerNote: 'Présences consultables depuis une interface centralisée.',
+  evacLabel: 'Lorsqu’une urgence survient', evacTitle: 'Le registre prend une nouvelle valeur.',
+  evacText: 'Pendant une évacuation, il ne suffit plus de savoir combien de personnes se trouvaient dans le bâtiment. Les responsables doivent pouvoir déterminer quelles personnes ont été recensées et lesquelles nécessitent encore une vérification.',
+  evacItems: ['Appuyer le décompte des occupants', 'Faciliter le travail des responsables d’évacuation', 'Identifier les personnes non encore confirmées', 'Centraliser l’information disponible'],
+  seqLabel: 'Du bâtiment au point de rassemblement', seqTitle: 'Une continuité de l’information.',
+  seq: [
+    { k: '01 — Avant', title: 'Présence', text: 'L’organisation dispose d’une liste des personnes enregistrées comme présentes.' },
+    { k: '02 — Alarme', title: 'Évacuation', text: 'Les occupants quittent le bâtiment conformément aux procédures de l’établissement.' },
+    { k: '03 — Extérieur', title: 'Décompte', text: 'Les responsables effectuent le recensement au point de rassemblement.' },
+    { k: '04 — Analyse', title: 'Vérification', text: 'Les informations recueillies permettent de déterminer quelles personnes n’ont pas encore été confirmées.' },
+  ],
+  assemblyLabel: 'Point de rassemblement', assemblyTitle: 'Passer de « combien? » à « qui? ».',
+  assemblyText: ['Le point de rassemblement constitue l’un des moments les plus importants du processus d’évacuation. CORO Sentinelle permet de soutenir les responsables qui doivent établir une situation aussi claire que possible après la sortie des occupants.', 'Sentinelle contribue à établir une information nominative permettant de comparer les personnes enregistrées comme présentes avec celles qui ont effectivement été recensées.', 'Une personne non confirmée est une personne dont la présence n’a pas encore été confirmée lors du recensement. Sentinelle enregistre les entrées, les sorties et les statuts opérationnels déclarés; le registre d’occupation n’assure pas la géolocalisation continue des personnes.'],
+  boundaryLabel: 'Ce que Sentinelle est, et n’est pas', boundaryTitle: 'Un registre d’occupation, pas un système de suivi.',
+  boundaryItems: ['Enregistre l’arrivée et le départ déclarés à l’entrée', 'N’assure pas la géolocalisation continue des personnes', 'N’est ni un contrôle d’accès physique ni un outil de surveillance des employés', 'Registre consultable par les utilisateurs autorisés'],
+  usesLabel: 'Cas d’utilisation', usesTitle: 'Une solution adaptée à différents environnements.',
+  uses: [
+    { kicker: 'Immeubles', name: 'Tours de bureaux', text: 'Gestion quotidienne des présences et soutien aux procédures d’évacuation du bâtiment.' },
+    { kicker: 'Industrie', name: 'Sites industriels', text: 'Identification des employés, contracteurs et fournisseurs présents sur le site.' },
+    { kicker: 'Institutions', name: 'Organisations multi-usagers', text: 'Une approche structurée de la présence adaptée aux réalités opérationnelles de l’organisation.' },
+    { kicker: 'Portefeuilles', name: 'Portefeuilles immobiliers', text: 'Une logique commune pour plusieurs bâtiments ou établissements.' },
+  ],
+  ecoLabel: 'Plus qu’un registre', ecoTitle: 'Sentinelle s’inscrit dans l’écosystème CORO.',
+  ecoLead: 'CORO est conçu pour aider les organisations et les professionnels à structurer leur préparation, leur documentation et leurs outils liés aux mesures d’urgence et à la continuité des activités.',
+  ecoStatement: 'Sentinelle ajoute une dimension essentielle : connecter la planification à la réalité du terrain.',
+  platform: 'Cette partie de la plateforme', explore: 'Explorer',
+  products: [
+    { name: 'Résilience opérationnelle', text: 'La présence alimente l’indice de résilience et l’organisation d’urgence. Depuis le registre, un incident peut être déclenché.', href: '/resilience-operationnelle' },
+    { name: 'Documents', text: 'Structure les données et les livrables.', href: '/gestion-documentaire' },
+    { name: 'Client', text: 'Rend l’information accessible au client.', href: '/portail-client' },
+  ],
+  resLabel: 'Ressources', resTitle: 'Approfondir la gestion des présences et de l’évacuation.', read: 'Lire l’article',
+  articles: [
+    { slug: 'comment-faire-decompte-occupants-evacuation', title: 'Décompte des occupants lors d’une évacuation' },
+    { slug: 'registre-occupation-batiment-situation-urgence', title: 'Registre d’occupation d’un bâtiment : pourquoi est-il essentiel ?' },
+    { slug: 'registre-papier-ou-numerique', title: 'Registre papier ou numérique pour vos occupants' },
+    { slug: 'gerer-visiteurs-contracteurs-evacuation', title: 'Visiteurs et contracteurs en évacuation' },
+    { slug: 'savoir-si-tout-le-monde-a-evacue-batiment', title: 'Comment vérifier qu’un bâtiment est évacué' },
+    { slug: 'registre-occupation-evacuation-informations-a-recueillir', title: 'Registre d’occupation : quelles données recueillir ?' },
+    { slug: 'qr-code-registre-visiteurs-enregistrement-batiment', title: 'Registre visiteurs par QR code : comment ça fonctionne ?' },
+    { slug: 'controle-acces-vs-registre-occupation-difference', title: 'Contrôle d’accès vs registre d’occupation' },
+  ],
+  faq: 'FAQ', faqTitle: 'CORO Sentinelle en quelques réponses.',
+  faqItems: [
+    { q: 'Qu’est-ce qu’un registre numérique de présence?', a: 'Un registre numérique de présence permet d’enregistrer et de consulter les personnes présentes dans un bâtiment ou un établissement. Il peut notamment concerner les employés, visiteurs et contracteurs.' },
+    { q: 'Comment CORO Sentinelle fonctionne-t-il?', a: 'L’utilisateur peut accéder à Sentinelle à partir d’un QR code placé à l’entrée du bâtiment. Il s’identifie ensuite au moyen de l’interface prévue par l’organisation afin d’enregistrer sa présence.' },
+    { q: 'CORO Sentinelle peut-il être utilisé pendant une évacuation?', a: 'Oui. Le registre de présence peut soutenir le processus de recensement en permettant aux responsables de comparer les personnes enregistrées comme présentes avec celles qui ont été confirmées après l’évacuation.' },
+    { q: 'Sentinelle remplace-t-il le plan de mesures d’urgence?', a: 'Non. Sentinelle est un outil opérationnel complémentaire. Il ne remplace ni le plan de mesures d’urgence ni les procédures d’évacuation de l’organisation.' },
+    { q: 'Peut-on utiliser Sentinelle pour les visiteurs?', a: 'Oui. Sentinelle peut être utilisé pour différentes catégories d’occupants : employés, visiteurs et contracteurs.' },
+    { q: 'Pourquoi connaître les personnes présentes lors d’une urgence?', a: 'Une liste de présence peut soutenir les responsables dans leurs opérations de recensement et contribuer à identifier les personnes dont la situation doit encore être vérifiée après une évacuation.' },
+    { q: 'Sentinelle peut-il être utilisé dans plusieurs bâtiments?', a: 'L’approche Sentinelle est conçue pour pouvoir s’intégrer à des organisations possédant un ou plusieurs établissements selon leur configuration.' },
+    { q: 'Une application doit-elle être installée sur le téléphone?', a: 'L’expérience d’enregistrement peut être accessible depuis le téléphone de l’utilisateur à partir du QR code, sans imposer une installation traditionnelle avant son arrivée.' },
+  ],
+  ctaStatement: 'Votre organisation sait-elle réellement qui est présent lorsqu’une urgence survient?',
+  ctaSupport: 'Découvrez comment CORO Sentinelle peut intégrer la gestion des présences à votre organisation et soutenir vos procédures d’évacuation.',
+} as const;
 
-export default async function SentinellePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string }>;
-}) {
-  const { lang: langParam } = await searchParams;
-  const isEnglish = langParam === 'en';
+const LOGIN = 'https://client.getcoro.io/login';
 
-  const pricingPlans = isEnglish
-    ? [
-        {
-          name: 'Essential',
-          price: '$149',
-          period: '/month',
-          badge: 'Available now',
-          color: '#2C3E50',
-          highlight: false,
-          features: [
-            'Real-time occupancy registry',
-            'QR code + PIN check-in',
-            'Instant evacuation mode',
-            'Visitor invitations',
-            '12-month history',
-            'ISO 22301 evacuation PDF report',
-            'Progressive web app (PWA)',
-          ],
-          cta: 'Request a demo',
-        },
-        {
-          name: 'Resilience',
-          price: 'From $249',
-          period: '/month',
-          badge: 'Most popular',
-          color: '#C0392B',
-          highlight: true,
-          features: [
-            'Everything in Essential, plus:',
-            'CORO resilience index (4 components)',
-            'Real-time emergency roles',
-            'Automatic role substitution',
-            'Multi-building organizational intelligence',
-            'Corrective actions with tracking',
-            '90-day trend chart',
-          ],
-          cta: 'Request a quote',
-        },
-        {
-          name: 'Intervention',
-          price: 'Custom',
-          period: '',
-          badge: 'Full resilience',
-          color: '#2C3E50',
-          highlight: false,
-          features: [
-            'Everything in Resilience, plus:',
-            'Incident Module (15 incident types)',
-            'Bilingual FR/EN panic button',
-            'SMS + email to coordinators and occupants',
-            'Checkable coordinator checklist',
-            'ISO 22301 post-incident REX report',
-            'NFPA 2020 / CCOHS compliance',
-          ],
-          cta: 'Talk to our team',
-        },
-      ]
-    : [
-        {
-          name: 'Essentiel',
-          price: '149 $',
-          period: '/mois',
-          badge: 'Disponible maintenant',
-          color: '#2C3E50',
-          highlight: false,
-          features: [
-            'Registre d\'occupation temps réel',
-            'Pointage QR code + PIN',
-            'Mode évacuation instantané',
-            'Invitations visiteurs',
-            'Historique 12 mois',
-            'Rapport PDF évacuation ISO 22301',
-            'Application web progressive (PWA)',
-          ],
-          cta: 'Demander une démo',
-        },
-        {
-          name: 'Résilience',
-          price: 'À partir de 249 $',
-          period: '/mois',
-          badge: 'Le plus populaire',
-          color: '#C0392B',
-          highlight: true,
-          features: [
-            'Tout Essentiel, plus :',
-            'Indice CORO de résilience (4 composantes)',
-            'Rôles d\'urgence en temps réel',
-            'Substitution automatique des rôles',
-            'Intelligence organisationnelle multi-bâtiments',
-            'Actions correctives avec suivi',
-            'Graphique tendance 90 jours',
-          ],
-          cta: 'Demander une soumission',
-        },
-        {
-          name: 'Intervention',
-          price: 'Sur mesure',
-          period: '',
-          badge: 'Résilience complète',
-          color: '#2C3E50',
-          highlight: false,
-          features: [
-            'Tout Résilience, plus :',
-            'Module Incident (15 types de sinistres)',
-            'Bouton panique bilingue FR/EN',
-            'SMS + courriel coordonnateurs et occupants',
-            'Checklist coordonnateur cochable',
-            'Rapport REX post-incident ISO 22301',
-            'Conformité CNPI 2020 / CNESST',
-          ],
-          cta: 'Parler à notre équipe',
-        },
-      ];
+export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
+  const requested = localeFromSearchParams((await searchParams) ?? {});
+  return buildPageMetadata({ path: '/sentinelle', locale: requested, hasEnglish: false, title: copy.metaTitle, description: copy.description, image: '/images/sentinelle/coro-sentinelle-registre-presence.webp' });
+}
 
+function JsonLd({ value }: { value: object }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(value).replace(/</g, '\\u003c') }} />;
+}
+
+export default async function Page({ searchParams }: P) {
+  const l = resolveAvailableLocale(localeFromSearchParams((await searchParams) ?? {}), false);
+  const demo = localizedHref('/#demo', l);
   return (
-    <>
-      <style>{`
-        .cs-page {
-          --cs-bg: #07111f;
-          --cs-bg-soft: #0c1828;
-          --cs-card: #101e30;
-          --cs-card-light: #16273b;
-          --cs-text: #f7f9fc;
-          --cs-muted: #aebdce;
-          --cs-border: rgba(255,255,255,.10);
-          --cs-accent: #22a7f0;
-          --cs-accent-2: #39d2c0;
-          --cs-success: #58d68d;
-          --cs-warning: #f6c85f;
-          --cs-white: #ffffff;
-          margin: 0;
-          padding: 0;
-          background: var(--cs-bg);
-          color: var(--cs-text);
-          font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
-          line-height: 1.65;
-          overflow-x: hidden;
-        }
-        .cs-page *, .cs-page *::before, .cs-page *::after { box-sizing: border-box; }
-        .cs-container { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
-        .cs-nav { background: #2c3e50; padding: 0 24px; }
-        .cs-nav-inner { max-width: 1200px; height: 64px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
-        .cs-logo { color: white; font-weight: 900; font-size: 24px; letter-spacing: -1px; text-decoration: none; }
-        .cs-logo span { color: #c0392b; }
-        .cs-nav-links { display: flex; gap: 16px; align-items: center; }
-        .cs-nav-link { color: rgba(255,255,255,.72); font-size: 14px; text-decoration: none; }
-        .cs-lang { border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
-        .cs-section { padding: 100px 0; }
-        .cs-section--soft { background: var(--cs-bg-soft); }
-        .cs-eyebrow {
-          display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px;
-          font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-          color: var(--cs-accent-2);
-        }
-        .cs-eyebrow::before { content: ""; width: 28px; height: 2px; background: var(--cs-accent-2); }
-        .cs-title { margin: 0 0 22px; font-size: clamp(38px, 5.5vw, 68px); line-height: 1.04; letter-spacing: -.035em; max-width: 980px; }
-        .cs-h2 { margin: 0 0 20px; font-size: clamp(30px, 4vw, 48px); line-height: 1.12; letter-spacing: -.025em; }
-        .cs-h3 { margin: 0 0 12px; font-size: 22px; line-height: 1.25; }
-        .cs-lead { max-width: 760px; margin: 0 0 30px; color: var(--cs-muted); font-size: clamp(18px, 2vw, 21px); }
-        .cs-text { color: var(--cs-muted); font-size: 16px; }
-        .cs-gradient-text {
-          background: linear-gradient(90deg, var(--cs-accent), var(--cs-accent-2));
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-        }
-        .cs-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
-        .cs-btn {
-          display: inline-flex; justify-content: center; align-items: center;
-          min-height: 52px; padding: 0 24px; border-radius: 10px;
-          text-decoration: none; font-weight: 700; transition: transform .2s ease, opacity .2s ease;
-        }
-        .cs-btn:hover { transform: translateY(-2px); }
-        .cs-btn--primary { color: #04101c; background: linear-gradient(135deg, var(--cs-accent), var(--cs-accent-2)); }
-        .cs-btn--secondary { color: var(--cs-white); border: 1px solid var(--cs-border); background: rgba(255,255,255,.04); }
-        .cs-hero {
-          position: relative; min-height: 720px; display: flex; align-items: center;
-          padding: 110px 0 80px;
-          background: radial-gradient(circle at 80% 20%, rgba(34,167,240,.18), transparent 36%),
-            radial-gradient(circle at 20% 70%, rgba(57,210,192,.10), transparent 30%), var(--cs-bg);
-        }
-        .cs-hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: 62px; }
-        .cs-hero-image { position: relative; }
-        .cs-hero-image::before {
-          content: ""; position: absolute; inset: 8% -8% -8% 8%; border-radius: 30px;
-          background: linear-gradient(135deg, rgba(34,167,240,.20), rgba(57,210,192,.08)); filter: blur(30px);
-        }
-        .cs-hero-image img { position: relative; width: 100%; display: block; border-radius: 24px; border: 1px solid var(--cs-border); box-shadow: 0 30px 80px rgba(0,0,0,.38); }
-        .cs-proofbar {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 42px;
-          overflow: hidden; border: 1px solid var(--cs-border); border-radius: 14px; background: var(--cs-border);
-        }
-        .cs-proof { padding: 18px; background: rgba(7,17,31,.92); }
-        .cs-proof strong { display: block; margin-bottom: 4px; color: var(--cs-white); font-size: 16px; }
-        .cs-proof span { color: var(--cs-muted); font-size: 13px; }
-        .cs-intro { text-align: center; }
-        .cs-intro .cs-lead { margin-left: auto; margin-right: auto; max-width: 850px; }
-        .cs-big-statement {
-          max-width: 920px; margin: 45px auto 0; padding: 34px; border: 1px solid var(--cs-border);
-          border-radius: 20px;
-          background: linear-gradient(135deg, rgba(34,167,240,.12), rgba(57,210,192,.05));
-          font-size: clamp(22px, 3vw, 31px); font-weight: 700; line-height: 1.35;
-        }
-        .cs-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 50px; }
-        .cs-card { padding: 30px; border: 1px solid var(--cs-border); border-radius: 18px; background: var(--cs-card); }
-        .cs-card-number {
-          display: inline-flex; align-items: center; justify-content: center;
-          width: 42px; height: 42px; margin-bottom: 22px; border-radius: 11px; color: #04101c;
-          background: linear-gradient(135deg, var(--cs-accent), var(--cs-accent-2));
-          font-size: 18px; font-weight: 800;
-        }
-        .cs-split { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
-        .cs-split + .cs-split { margin-top: 110px; }
-        .cs-split--reverse .cs-content { order: 2; }
-        .cs-split--reverse .cs-visual { order: 1; }
-        .cs-visual img { display: block; width: 100%; border-radius: 22px; border: 1px solid var(--cs-border); box-shadow: 0 24px 65px rgba(0,0,0,.28); }
-        .cs-checklist { display: grid; gap: 14px; margin: 26px 0 0; padding: 0; list-style: none; }
-        .cs-checklist li { position: relative; padding-left: 30px; color: var(--cs-muted); }
-        .cs-checklist li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--cs-accent-2); font-weight: 800; }
-        .cs-sequence { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 48px; }
-        .cs-step { position: relative; padding: 26px; border: 1px solid var(--cs-border); border-radius: 16px; background: var(--cs-card); }
-        .cs-step-label { margin-bottom: 10px; color: var(--cs-accent-2); font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-        .cs-persona-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 46px; }
-        .cs-persona { padding: 26px; border: 1px solid var(--cs-border); border-radius: 16px; background: rgba(255,255,255,.025); }
-        .cs-persona strong { display: block; margin-bottom: 8px; font-size: 18px; }
-        .cs-usecases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 46px; }
-        .cs-usecase { padding: 30px; border-radius: 18px; border: 1px solid var(--cs-border); background: var(--cs-card); }
-        .cs-usecase small { display: block; margin-bottom: 8px; color: var(--cs-accent-2); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
-        .cs-table-wrap { margin-top: 42px; overflow-x: auto; border: 1px solid var(--cs-border); border-radius: 18px; }
-        .cs-table { width: 100%; min-width: 720px; border-collapse: collapse; background: var(--cs-card); }
-        .cs-table th, .cs-table td { padding: 20px; border-bottom: 1px solid var(--cs-border); text-align: left; }
-        .cs-table th { color: var(--cs-white); background: rgba(255,255,255,.035); }
-        .cs-table td { color: var(--cs-muted); }
-        .cs-table tr:last-child td { border-bottom: 0; }
-        .cs-cta {
-          padding: 70px 50px; border: 1px solid rgba(57,210,192,.25); border-radius: 28px; text-align: center;
-          background: radial-gradient(circle at 50% 0%, rgba(34,167,240,.22), transparent 55%), var(--cs-card);
-        }
-        .cs-cta .cs-lead { margin-left: auto; margin-right: auto; }
-        .cs-cta .cs-actions { justify-content: center; }
-        .cs-faq { max-width: 900px; margin: 45px auto 0; }
-        .cs-faq details { border-bottom: 1px solid var(--cs-border); }
-        .cs-faq summary { padding: 24px 0; cursor: pointer; color: var(--cs-white); font-size: 18px; font-weight: 700; }
-        .cs-faq details p { margin: 0; padding: 0 0 24px; color: var(--cs-muted); }
-        .cs-related { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 42px; }
-        .cs-related a {
-          display: flex; flex-direction: column; min-height: 190px; padding: 24px;
-          border: 1px solid var(--cs-border); border-radius: 16px;
-          color: var(--cs-white); text-decoration: none; background: var(--cs-card);
-        }
-        .cs-related span { margin-top: auto; padding-top: 20px; color: var(--cs-accent-2); font-weight: 700; }
-        @media (max-width: 980px) {
-          .cs-section { padding: 78px 0; }
-          .cs-hero { min-height: auto; }
-          .cs-hero-grid, .cs-split { grid-template-columns: 1fr; gap: 42px; }
-          .cs-split--reverse .cs-content, .cs-split--reverse .cs-visual { order: initial; }
-          .cs-grid-3, .cs-sequence, .cs-persona-grid, .cs-related { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 640px) {
-          .cs-container { width: min(100% - 28px, 1180px); }
-          .cs-section { padding: 62px 0; }
-          .cs-hero { padding-top: 72px; }
-          .cs-actions { flex-direction: column; }
-          .cs-btn { width: 100%; }
-          .cs-proofbar, .cs-grid-3, .cs-sequence, .cs-persona-grid, .cs-usecases, .cs-related { grid-template-columns: 1fr; }
-          .cs-big-statement { padding: 24px; }
-          .cs-card, .cs-usecase { padding: 24px; }
-          .cs-cta { padding: 45px 22px; }
-        }
-      `}</style>
+    <V2Shell locale={l} pathname="/sentinelle" englishAvailable={false}>
+      <JsonLd value={faqJsonLd(copy.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
 
-      <main className="cs-page">
+      <EditorialHero id="sentinelle-title" label={copy.label} title={copy.lines} lead={copy.lead}
+        photo={{ src: '/website-v2/sentinel/sentinelle-occupancy-security.webp', side: 'start', position: '4% 50%', mobilePosition: '10% 50%', coverage: 52, mobileRatio: '5 / 4' }}
+        actions={<><Button href={demo} surface="dark">{copy.demo}</Button><Button href="#fonctionnement" variant="ghost" surface="dark">{copy.how}</Button></>} />
 
-        {/* NAV */}
-        <nav className="cs-nav">
-          <div className="cs-nav-inner">
-            <a href={isEnglish ? '/?lang=en' : '/'} className="cs-logo">CO<span>RO</span></a>
-            <div className="cs-nav-links">
-              <a href={isEnglish ? '/?lang=en' : '/'} className="cs-nav-link">{isEnglish ? '← Home' : '← Accueil'}</a>
-              <a href={isEnglish ? '/sentinelle' : '/sentinelle?lang=en'} className="cs-nav-link cs-lang">{isEnglish ? 'FR' : 'EN'}</a>
-            </div>
-          </div>
-        </nav>
+      <PageSection tone="white" labelledBy="sentinelle-problem-title">
+        <SplitContent ratio="7-5" align="center"
+          text={<EditorialBlock id="sentinelle-problem-title" label={copy.problemLabel} heading={copy.problemTitle}><p>{copy.problemText}</p></EditorialBlock>}
+          media={<p className={styles.statement}>{copy.statement}</p>} />
+      </PageSection>
 
-        {/* HERO */}
-        <section className="cs-hero">
-          <div className="cs-container cs-hero-grid">
-            <div>
-              <div className="cs-eyebrow">CORO Sentinelle</div>
-              <h1 className="cs-title">
-                Sachez qui est présent.{' '}
-                <span className="cs-gradient-text">Sachez qui manque.</span>
-              </h1>
-              <p className="cs-lead">
-                CORO Sentinelle est un registre numérique de présence conçu pour les bâtiments et les organisations.
-                Employés, visiteurs, entrepreneurs et autres occupants peuvent s&apos;enregistrer simplement à leur arrivée
-                afin de fournir aux responsables une information utile lorsque chaque minute compte.
-              </p>
-              <div className="cs-actions">
-                <a href="/contact" className="cs-btn cs-btn--primary">Demander une démonstration</a>
-                <a href="#fonctionnement" className="cs-btn cs-btn--secondary">Voir comment ça fonctionne</a>
-              </div>
-              <div className="cs-proofbar">
-                <div className="cs-proof"><strong>Enregistrement simple</strong><span>QR code et code PIN</span></div>
-                <div className="cs-proof"><strong>Présence actualisée</strong><span>Vue opérationnelle du bâtiment</span></div>
-                <div className="cs-proof"><strong>Utilisable en urgence</strong><span>Décompte et suivi d&apos;évacuation</span></div>
-              </div>
-            </div>
-            <div className="cs-hero-image">
-              <img src="/images/sentinelle/coro-sentinelle-registre-presence.webp"
-                alt="CORO Sentinelle, registre numérique de présence et gestion d'évacuation"
-                width={1600} height={1000} fetchPriority="high" />
-            </div>
-          </div>
-        </section>
+      <PageSection tone="soft" labelledBy="sentinelle-principles-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="sentinelle-principles-title" label={copy.principlesLabel} heading={copy.principlesTitle}><p>{copy.principlesLead}</p></EditorialBlock>
+          <ol className={styles.principles} aria-label={copy.principlesTitle}>{copy.principles.map((p) => <li key={p.title}><h3>{p.title}</h3><p>{p.text}</p></li>)}</ol>
+        </div>
+      </PageSection>
 
-        {/* INTRODUCTION */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container cs-intro">
-            <div className="cs-eyebrow">Présence et sécurité</div>
-            <h2 className="cs-h2">Un registre de présence pensé pour les situations réelles.</h2>
-            <p className="cs-lead">
-              Dans de nombreux bâtiments, savoir qui est entré ne suffit pas. Lorsqu&apos;une alarme survient,
-              la véritable question devient : <strong>qui était présent et qui doit maintenant être localisé?</strong>
-            </p>
-            <div className="cs-big-statement">
-              Le registre quotidien devient une{' '}
-              <span className="cs-gradient-text">information opérationnelle en situation d&apos;urgence.</span>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="white" id="fonctionnement" labelledBy="sentinelle-entry-title">
+        <SplitContent order="media-text" ratio="4-8" align="start"
+          media={<MediaFrame src="/website-v2/sentinel/building-lobby.webp" alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 720px, 100vw" />}
+          text={<div className={styles.stack}>
+            <EditorialBlock id="sentinelle-entry-title" label={copy.entryLabel} heading={copy.entryTitle} />
+            <ol className={styles.steps}>{copy.entrySteps.map((s) => <li key={s.n}><p className={styles.kicker}>{s.n}</p><h3>{s.title}</h3><p>{s.text}</p><ul>{s.items.map((item) => <li key={item}>{item}</li>)}</ul></li>)}</ol>
+          </div>} />
+      </PageSection>
 
-        {/* 3 PRINCIPES */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-eyebrow">Une logique simple</div>
-            <h2 className="cs-h2">De l&apos;arrivée à l&apos;évacuation.</h2>
-            <p className="cs-lead">Sentinelle relie le contrôle quotidien des présences aux besoins opérationnels d&apos;une organisation lorsqu&apos;une situation d&apos;urgence survient.</p>
-            <div className="cs-grid-3">
-              <article className="cs-card">
-                <div className="cs-card-number">01</div>
-                <h3 className="cs-h3">S&apos;enregistrer</h3>
-                <p className="cs-text">La personne scanne le QR code de l&apos;établissement, s&apos;identifie depuis son téléphone et confirme sa présence.</p>
-              </article>
-              <article className="cs-card">
-                <div className="cs-card-number">02</div>
-                <h3 className="cs-h3">Connaître les présences</h3>
-                <p className="cs-text">Les personnes actuellement enregistrées peuvent être consultées dans une interface centralisée par les utilisateurs autorisés.</p>
-              </article>
-              <article className="cs-card">
-                <div className="cs-card-number">03</div>
-                <h3 className="cs-h3">Faciliter le décompte</h3>
-                <p className="cs-text">Lors d&apos;une évacuation, cette information contribue au recensement des occupants et au suivi des personnes qui n&apos;ont pas encore été confirmées.</p>
-              </article>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="soft" labelledBy="sentinelle-register-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="sentinelle-register-title" label={copy.registerLabel} heading={copy.registerTitle}><p>{copy.registerText}</p></EditorialBlock>}
+          media={<div className={styles.stack}><dl className={styles.types}>{copy.registerTypes.map((t) => <div key={t.name}><dt>{t.name}</dt><dd>{t.text}</dd></div>)}</dl><p className={styles.note}>{copy.registerNote}</p></div>} />
+      </PageSection>
 
-        {/* FONCTIONNEMENT */}
-        <section id="fonctionnement" className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-split">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Étape 01</div>
-                <h2 className="cs-h2">Un QR code à l&apos;entrée du bâtiment.</h2>
-                <p className="cs-text">Une borne ou une signalisation Sentinelle permet à l&apos;utilisateur de démarrer son enregistrement depuis son propre téléphone.</p>
-                <ul className="cs-checklist">
-                  <li>Aucune application à installer pour l&apos;utilisateur</li>
-                  <li>Accès rapide depuis un téléphone intelligent</li>
-                  <li>Expérience adaptée aux employés et visiteurs</li>
-                  <li>Processus utilisable sur plusieurs points d&apos;accès</li>
-                </ul>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-qr-code-entree.webp"
-                  alt="Utilisateur scannant le QR code CORO Sentinelle à l'entrée d'un bâtiment"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-            <div className="cs-split cs-split--reverse">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Étape 02</div>
-                <h2 className="cs-h2">Identification rapide par code PIN.</h2>
-                <p className="cs-text">Après avoir scanné le code QR, l&apos;utilisateur accède directement à l&apos;interface Sentinelle et peut s&apos;identifier selon la configuration établie par l&apos;organisation.</p>
-                <ul className="cs-checklist">
-                  <li>Interface mobile simplifiée</li>
-                  <li>Identification rapide</li>
-                  <li>Processus adapté aux environnements professionnels</li>
-                  <li>Réduction des manipulations à l&apos;accueil</li>
-                </ul>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-code-pin.webp"
-                  alt="Interface mobile CORO Sentinelle permettant la saisie d'un code PIN"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-            <div className="cs-split">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Étape 03</div>
-                <h2 className="cs-h2">Une vision actualisée des personnes présentes.</h2>
-                <p className="cs-text">Les responsables autorisés peuvent consulter les informations nécessaires pour connaître les personnes actuellement enregistrées dans l&apos;établissement.</p>
-                <ul className="cs-checklist">
-                  <li>Employés présents</li>
-                  <li>Visiteurs enregistrés</li>
-                  <li>Entrepreneurs et fournisseurs</li>
-                  <li>Présences consultables depuis une interface centralisée</li>
-                </ul>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-registre-temps-reel.webp"
-                  alt="Tableau de bord CORO Sentinelle affichant le registre de présence"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="white" labelledBy="sentinelle-evac-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<div className={styles.stack}><EditorialBlock id="sentinelle-evac-title" label={copy.evacLabel} heading={copy.evacTitle}><p>{copy.evacText}</p></EditorialBlock><ul className={styles.plain}>{copy.evacItems.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+          media={<MediaFrame src="/website-v2/sentinel/evacuation-stairs.webp" alt="" ratio={1513 / 1039} sizes="(min-width: 68rem) 720px, 100vw" />} />
+      </PageSection>
 
-        {/* URGENCE */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-split">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Lorsqu&apos;une urgence survient</div>
-                <h2 className="cs-h2">Le registre prend une nouvelle valeur.</h2>
-                <p className="cs-text">Pendant une évacuation, il ne suffit plus de savoir combien de personnes se trouvaient dans le bâtiment. Les responsables doivent pouvoir déterminer quelles personnes ont été recensées et lesquelles nécessitent encore une vérification.</p>
-                <ul className="cs-checklist">
-                  <li>Appuyer le décompte des occupants</li>
-                  <li>Faciliter le travail des responsables d&apos;évacuation</li>
-                  <li>Identifier les personnes non encore confirmées</li>
-                  <li>Centraliser l&apos;information disponible</li>
-                </ul>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-evacuation.webp"
-                  alt="Évacuation d'un bâtiment avec utilisation du registre de présence CORO Sentinelle"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="navy" labelledBy="sentinelle-seq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="sentinelle-seq-title" label={copy.seqLabel} heading={copy.seqTitle} />
+          <ol className={styles.seq}>{copy.seq.map((s) => <li key={s.title}><p className={styles.kicker}>{s.k}</p><h3>{s.title}</h3><p>{s.text}</p></li>)}</ol>
+        </div>
+      </PageSection>
 
-        {/* SÉQUENCE D'URGENCE */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-eyebrow">Du bâtiment au point de rassemblement</div>
-            <h2 className="cs-h2">Une continuité de l&apos;information.</h2>
-            <div className="cs-sequence">
-              <div className="cs-step"><div className="cs-step-label">01 — Avant</div><h3 className="cs-h3">Présence</h3><p className="cs-text">L&apos;organisation dispose d&apos;une liste des personnes enregistrées comme présentes.</p></div>
-              <div className="cs-step"><div className="cs-step-label">02 — Alarme</div><h3 className="cs-h3">Évacuation</h3><p className="cs-text">Les occupants quittent le bâtiment conformément aux procédures de l&apos;établissement.</p></div>
-              <div className="cs-step"><div className="cs-step-label">03 — Extérieur</div><h3 className="cs-h3">Décompte</h3><p className="cs-text">Les responsables effectuent le recensement au point de rassemblement.</p></div>
-              <div className="cs-step"><div className="cs-step-label">04 — Analyse</div><h3 className="cs-h3">Vérification</h3><p className="cs-text">Les informations recueillies permettent de déterminer quelles personnes n&apos;ont pas encore été confirmées.</p></div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="soft" labelledBy="sentinelle-assembly-title">
+        <SplitContent order="media-text" ratio="4-8" align="start"
+          media={<MediaFrame src="/website-v2/sentinel/assembly-point.webp" alt="" ratio={1536 / 1024} sizes="(min-width: 68rem) 720px, 100vw" />}
+          text={<EditorialBlock id="sentinelle-assembly-title" label={copy.assemblyLabel} heading={copy.assemblyTitle}>{copy.assemblyText.map((t) => <p key={t}>{t}</p>)}</EditorialBlock>} />
+      </PageSection>
 
-        {/* POINT DE RASSEMBLEMENT */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-split cs-split--reverse">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Point de rassemblement</div>
-                <h2 className="cs-h2">Faciliter le recensement après l&apos;évacuation.</h2>
-                <p className="cs-text">Le point de rassemblement constitue l&apos;un des moments les plus importants du processus d&apos;évacuation. CORO Sentinelle permet de soutenir les responsables qui doivent établir une situation aussi claire que possible après la sortie des occupants.</p>
-                <p className="cs-text" style={{marginTop: '16px'}}>L&apos;objectif n&apos;est pas simplement d&apos;obtenir un nombre, mais de transformer le registre de présence en information utile à la gestion de l&apos;événement.</p>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-point-rassemblement.webp"
-                  alt="Décompte des occupants au point de rassemblement avec CORO Sentinelle"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="white" labelledBy="sentinelle-boundary-title">
+        <SplitContent ratio="5-7" align="start"
+          text={<EditorialBlock id="sentinelle-boundary-title" label={copy.boundaryLabel} heading={copy.boundaryTitle} />}
+          media={<ul className={styles.plain}>{copy.boundaryItems.map((item) => <li key={item}>{item}</li>)}</ul>} />
+      </PageSection>
 
-        {/* PERSONNES NON CONFIRMÉES */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-split">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Information opérationnelle</div>
-                <h2 className="cs-h2">Passer de &laquo;&nbsp;combien?&nbsp;&raquo; à &laquo;&nbsp;qui?&nbsp;&raquo;.</h2>
-                <p className="cs-text">Dans une situation d&apos;urgence, connaître le nombre approximatif d&apos;occupants ne répond pas toujours aux besoins de l&apos;équipe responsable.</p>
-                <p className="cs-text" style={{marginTop: '16px'}}>Sentinelle contribue à établir une information nominative permettant de comparer les personnes enregistrées comme présentes avec celles qui ont effectivement été recensées.</p>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-personnes-manquantes.webp"
-                  alt="Interface CORO Sentinelle permettant d'identifier les personnes non encore recensées"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="soft" labelledBy="sentinelle-uses-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="sentinelle-uses-title" label={copy.usesLabel} heading={copy.usesTitle} />
+          <ul className={styles.uses}>{copy.uses.map((u) => <li key={u.name}><p className={styles.kicker}>{u.kicker}</p><h3>{u.name}</h3><p>{u.text}</p></li>)}</ul>
+        </div>
+      </PageSection>
 
-        {/* TYPES D'OCCUPANTS */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-eyebrow">Une seule logique</div>
-            <h2 className="cs-h2">Plusieurs types d&apos;occupants.</h2>
-            <p className="cs-lead">Un bâtiment ne contient pas uniquement des employés. Sentinelle permet de penser la présence de manière plus globale.</p>
-            <div className="cs-persona-grid">
-              <div className="cs-persona"><strong>Employés</strong><span className="cs-text">Personnel régulier et utilisateurs du bâtiment.</span></div>
-              <div className="cs-persona"><strong>Visiteurs</strong><span className="cs-text">Clients, invités et visiteurs ponctuels.</span></div>
-              <div className="cs-persona"><strong>Entrepreneurs</strong><span className="cs-text">Travailleurs externes et fournisseurs.</span></div>
-              <div className="cs-persona"><strong>Autres occupants</strong><span className="cs-text">Toute catégorie définie selon les besoins de l&apos;organisation.</span></div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="white" labelledBy="sentinelle-eco-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="sentinelle-eco-title" label={copy.ecoLabel} heading={copy.ecoTitle}><p>{copy.ecoLead}</p><p className={styles.lead}>{copy.ecoStatement}</p></EditorialBlock>
+          <p className={styles.kicker}>{copy.platform}</p>
+          <ul className={styles.connect}>
+            {copy.products.map((c) => (
+              <li key={c.name}><h3>{c.name}</h3><p>{c.text}</p><a href={localizedHref(c.href, l)} aria-label={`${copy.explore} ${c.name}`}>{copy.explore}<span aria-hidden="true"> →</span></a></li>
+            ))}
+          </ul>
+        </div>
+      </PageSection>
 
-        {/* CAS D'USAGE */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-eyebrow">Cas d&apos;utilisation</div>
-            <h2 className="cs-h2">Une solution adaptée à différents environnements.</h2>
-            <div className="cs-usecases">
-              <article className="cs-usecase"><small>Immeubles</small><h3 className="cs-h3">Tours de bureaux</h3><p className="cs-text">Gestion quotidienne des présences et soutien aux procédures d&apos;évacuation du bâtiment.</p></article>
-              <article className="cs-usecase"><small>Industrie</small><h3 className="cs-h3">Sites industriels</h3><p className="cs-text">Identification des employés, entrepreneurs et fournisseurs présents sur le site.</p></article>
-              <article className="cs-usecase"><small>Institutions</small><h3 className="cs-h3">Organisations multi-usagers</h3><p className="cs-text">Une approche structurée de la présence adaptée aux réalités opérationnelles de l&apos;organisation.</p></article>
-              <article className="cs-usecase"><small>Multi-sites</small><h3 className="cs-h3">Portefeuilles immobiliers</h3><p className="cs-text">Déploiement d&apos;une logique commune dans plusieurs bâtiments ou établissements.</p></article>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="soft" labelledBy="sentinelle-res-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="sentinelle-res-title" label={copy.resLabel} heading={copy.resTitle} />
+          <ul className={styles.articles}>{copy.articles.map((a) => <li key={a.slug}><a href={`/blog/${a.slug}`}>{a.title}<span aria-hidden="true"> →</span></a></li>)}</ul>
+        </div>
+      </PageSection>
 
-        {/* MULTI-SITES */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-split">
-              <div className="cs-content">
-                <div className="cs-eyebrow">Évolutif</div>
-                <h2 className="cs-h2">Un bâtiment aujourd&apos;hui. Plusieurs sites demain.</h2>
-                <p className="cs-text">La logique Sentinelle peut accompagner les organisations qui disposent de plusieurs établissements et qui souhaitent uniformiser leur approche de gestion des présences.</p>
-              </div>
-              <div className="cs-visual">
-                <img src="/images/sentinelle/coro-sentinelle-multi-sites.webp"
-                  alt="Gestion de plusieurs bâtiments et établissements avec CORO Sentinelle"
-                  width={1600} height={1000} loading="lazy" />
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageSection tone="white" labelledBy="sentinelle-faq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="sentinelle-faq-title" label={copy.faq} heading={copy.faqTitle} />
+          <Accordion label={copy.faqTitle} items={copy.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))} />
+        </div>
+      </PageSection>
 
-        {/* PAPIER VS SENTINELLE */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-eyebrow">Moderniser le registre</div>
-            <h2 className="cs-h2">Registre papier ou registre numérique?</h2>
-            <p className="cs-lead">Le registre papier peut fonctionner dans certains contextes. Sentinelle vise toutefois à réduire plusieurs limites associées aux processus manuels.</p>
-            <div className="cs-table-wrap">
-              <table className="cs-table">
-                <thead>
-                  <tr><th>Critère</th><th>Registre papier</th><th>CORO Sentinelle</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td>Consultation</td><td>À l&apos;endroit où se trouve le registre</td><td>Depuis l&apos;interface autorisée</td></tr>
-                  <tr><td>Lisibilité</td><td>Variable</td><td>Information structurée</td></tr>
-                  <tr><td>Mise à jour</td><td>Manuelle</td><td>Liée aux enregistrements utilisateurs</td></tr>
-                  <tr><td>Utilisation en évacuation</td><td>Nécessite de récupérer le registre</td><td>Information disponible numériquement</td></tr>
-                  <tr><td>Recherche d&apos;une personne</td><td>Lecture manuelle</td><td>Consultation structurée</td></tr>
-                  <tr><td>Multi-sites</td><td>Registres distincts</td><td>Approche centralisable</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        {/* ÉCOSYSTÈME CORO */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-intro">
-              <div className="cs-eyebrow">Plus qu&apos;un registre</div>
-              <h2 className="cs-h2">Sentinelle s&apos;inscrit dans l&apos;écosystème CORO.</h2>
-              <p className="cs-lead">CORO est conçu pour aider les organisations et les professionnels à structurer leur préparation, leur documentation et leurs outils liés aux mesures d&apos;urgence et à la continuité des activités.</p>
-              <div className="cs-big-statement">
-                Sentinelle ajoute une dimension essentielle :{' '}
-                <span className="cs-gradient-text">connecter la planification à la réalité du terrain.</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* TARIFICATION */}
-        <section
-          style={{
-            backgroundColor: '#FFFFFF',
-            padding: '100px 24px',
-          }}
-        >
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: 64 }}>
-              <h2
-                style={{
-                  fontSize: 'clamp(28px, 4vw, 42px)',
-                  fontWeight: 800,
-                  color: '#2C3E50',
-                  lineHeight: 1.2,
-                  marginBottom: 16,
-                }}
-              >
-                {isEnglish ? 'Sentinel Pricing' : 'Tarifs Sentinelle'}
-              </h2>
-              <p style={{ fontSize: 18, color: '#6C757D' }}>
-                {isEnglish
-                  ? 'Per building, per month. No long-term contract.'
-                  : 'Par bâtiment, par mois. Aucun contrat à long terme.'}
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: 24,
-                alignItems: 'start',
-              }}
-            >
-              {pricingPlans.map((plan, i) => (
-                <div
-                  key={i}
-                  style={{
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                    border: plan.highlight ? `2px solid ${plan.color}` : '1px solid #E9ECEF',
-                    boxShadow: plan.highlight ? '0 16px 48px rgba(192,57,43,0.15)' : 'none',
-                    transform: plan.highlight ? 'scale(1.02)' : 'scale(1)',
-                    position: 'relative',
-                    backgroundColor: '#FFFFFF',
-                  }}
-                >
-                  {plan.highlight && (
-                    <div
-                      style={{
-                        backgroundColor: plan.color,
-                        padding: '8px 16px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}>
-                        ⭐ {plan.badge}
-                      </span>
-                    </div>
-                  )}
-
-                  {!plan.highlight && (
-                    <div
-                      style={{
-                        backgroundColor: '#F8F9FA',
-                        padding: '8px 16px',
-                        textAlign: 'center',
-                        borderBottom: '1px solid #E9ECEF',
-                      }}
-                    >
-                      <span style={{ color: '#6C757D', fontSize: 13, fontWeight: 700 }}>
-                        {plan.badge}
-                      </span>
-                    </div>
-                  )}
-
-                  <div style={{ padding: 40 }}>
-                    <h3 style={{ fontSize: 28, fontWeight: 800, color: '#2C3E50', marginBottom: 8 }}>
-                      {plan.name}
-                    </h3>
-
-                    <div style={{ marginBottom: 32 }}>
-                      <span style={{ fontSize: 42, fontWeight: 900, color: plan.color }}>
-                        {plan.price}
-                      </span>
-                      {plan.period && (
-                        <span style={{ fontSize: 16, color: '#6C757D', marginLeft: 4 }}>
-                          {plan.period}
-                        </span>
-                      )}
-                    </div>
-
-                    <ul
-                      style={{
-                        listStyle: 'none',
-                        marginBottom: 32,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 12,
-                        padding: 0,
-                      }}
-                    >
-                      {plan.features.map((feature, fi) => (
-                        <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                          <CheckCircle
-                            size={18}
-                            color={plan.color}
-                            style={{ flexShrink: 0, marginTop: 1 }}
-                          />
-                          <span style={{ fontSize: 15, color: '#495057' }}>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <a
-                      href="#demo"
-                      style={{
-                        display: 'block',
-                        textAlign: 'center',
-                        padding: '14px 24px',
-                        borderRadius: 8,
-                        fontSize: 15,
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                        backgroundColor: plan.highlight ? plan.color : 'transparent',
-                        color: plan.highlight ? '#FFFFFF' : plan.color,
-                        border: `2px solid ${plan.color}`,
-                      }}
-                    >
-                      {plan.cta}
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-cta">
-              <div className="cs-eyebrow">Découvrir CORO Sentinelle</div>
-              <h2 className="cs-h2">Votre organisation sait-elle réellement qui est présent lorsqu&apos;une urgence survient?</h2>
-              <p className="cs-lead">Découvrez comment CORO Sentinelle peut intégrer la gestion des présences à votre organisation et soutenir vos procédures d&apos;évacuation.</p>
-              <div className="cs-actions">
-                <a href="/contact" className="cs-btn cs-btn--primary">Demander une démonstration</a>
-                <a href="/" className="cs-btn cs-btn--secondary">Découvrir la plateforme CORO</a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="cs-section">
-          <div className="cs-container">
-            <div className="cs-intro">
-              <div className="cs-eyebrow">Questions fréquentes</div>
-              <h2 className="cs-h2">CORO Sentinelle en quelques réponses.</h2>
-            </div>
-            <div className="cs-faq">
-              <details><summary>Qu&apos;est-ce qu&apos;un registre numérique de présence?</summary><p>Un registre numérique de présence permet d&apos;enregistrer et de consulter les personnes présentes dans un bâtiment ou un établissement. Il peut notamment concerner les employés, visiteurs, entrepreneurs et fournisseurs.</p></details>
-              <details><summary>Comment CORO Sentinelle fonctionne-t-il?</summary><p>L&apos;utilisateur peut accéder à Sentinelle à partir d&apos;un QR code placé à l&apos;entrée du bâtiment. Il s&apos;identifie ensuite au moyen de l&apos;interface prévue par l&apos;organisation afin d&apos;enregistrer sa présence.</p></details>
-              <details><summary>CORO Sentinelle peut-il être utilisé pendant une évacuation?</summary><p>Oui. Le registre de présence peut soutenir le processus de recensement en permettant aux responsables de comparer les personnes enregistrées comme présentes avec celles qui ont été confirmées après l&apos;évacuation.</p></details>
-              <details><summary>Sentinelle remplace-t-il le plan de mesures d&apos;urgence?</summary><p>Non. Sentinelle est un outil opérationnel complémentaire. Il ne remplace ni le plan de mesures d&apos;urgence ni les procédures d&apos;évacuation de l&apos;organisation.</p></details>
-              <details><summary>Peut-on utiliser Sentinelle pour les visiteurs?</summary><p>Oui. Sentinelle peut être utilisé pour différentes catégories d&apos;occupants, notamment les employés, visiteurs, entrepreneurs et fournisseurs.</p></details>
-              <details><summary>Pourquoi connaître les personnes présentes lors d&apos;une urgence?</summary><p>Une liste de présence peut soutenir les responsables dans leurs opérations de recensement et contribuer à identifier les personnes dont la situation doit encore être vérifiée après une évacuation.</p></details>
-              <details><summary>Sentinelle peut-il être utilisé dans plusieurs bâtiments?</summary><p>L&apos;approche Sentinelle est conçue pour pouvoir s&apos;intégrer à des organisations possédant un ou plusieurs établissements selon leur configuration.</p></details>
-              <details><summary>Une application doit-elle être installée sur le téléphone?</summary><p>L&apos;expérience d&apos;enregistrement peut être accessible depuis le téléphone de l&apos;utilisateur à partir du QR code, sans imposer une installation traditionnelle avant son arrivée.</p></details>
-            </div>
-          </div>
-        </section>
-
-        {/* ARTICLES SATELLITES */}
-        <section className="cs-section cs-section--soft">
-          <div className="cs-container">
-            <div className="cs-eyebrow">Ressources</div>
-            <h2 className="cs-h2">Approfondir la gestion des présences et de l&apos;évacuation.</h2>
-            <div className="cs-related">
-              <a href="/blog/decompte-occupants-evacuation"><strong>Comment faire le décompte des occupants lors d&apos;une évacuation?</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/registre-presence-situation-urgence"><strong>Pourquoi le registre de présence est essentiel en situation d&apos;urgence</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/registre-papier-ou-numerique"><strong>Registre papier ou numérique : lequel choisir?</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/visiteurs-evacuation"><strong>Comment gérer les visiteurs lors d&apos;une évacuation?</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/point-rassemblement-decompte"><strong>Point de rassemblement : comment organiser le décompte?</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/qui-recencer-evacuation"><strong>Employés, visiteurs et entrepreneurs : qui doit être recensé?</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/qr-code-registre-presence"><strong>QR code et registre de présence : comment ça fonctionne?</strong><span>Lire l&apos;article {'→'}</span></a>
-              <a href="/blog/pmu-registre-presence"><strong>Comment intégrer un registre de présence à un plan de mesures d&apos;urgence?</strong><span>Lire l&apos;article {'→'}</span></a>
-            </div>
-          </div>
-        </section>
-
-      </main>
-
-      {/* DONNÉES STRUCTURÉES */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'CORO Sentinelle',
-        applicationCategory: 'BusinessApplication',
-        operatingSystem: 'Web',
-        description: 'Registre numérique de présence destiné aux bâtiments et organisations permettant de soutenir la gestion des présences et le décompte des occupants lors d\'une évacuation.',
-        url: 'https://getcoro.io/sentinelle',
-        publisher: { '@type': 'Organization', name: 'CORO', url: 'https://getcoro.io' },
-      })}} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: [
-          { '@type': 'Question', name: 'Qu\'est-ce qu\'un registre numérique de présence?', acceptedAnswer: { '@type': 'Answer', text: 'Un registre numérique de présence permet d\'enregistrer et de consulter les personnes présentes dans un bâtiment ou un établissement, notamment les employés, visiteurs, entrepreneurs et fournisseurs.' } },
-          { '@type': 'Question', name: 'Comment CORO Sentinelle fonctionne-t-il?', acceptedAnswer: { '@type': 'Answer', text: 'L\'utilisateur peut accéder à Sentinelle à partir d\'un QR code placé à l\'entrée du bâtiment puis s\'identifier au moyen de l\'interface prévue par l\'organisation.' } },
-          { '@type': 'Question', name: 'CORO Sentinelle peut-il être utilisé pendant une évacuation?', acceptedAnswer: { '@type': 'Answer', text: 'Oui. Le registre de présence peut soutenir le processus de recensement en permettant de comparer les personnes enregistrées comme présentes avec celles qui ont été confirmées après l\'évacuation.' } },
-          { '@type': 'Question', name: 'Sentinelle remplace-t-il le plan de mesures d\'urgence?', acceptedAnswer: { '@type': 'Answer', text: 'Non. Sentinelle est un outil opérationnel complémentaire et ne remplace ni le plan de mesures d\'urgence ni les procédures d\'évacuation de l\'organisation.' } },
-        ],
-      })}} />
-    </>
+      <CTASection id="sentinelle-cta-title" tone="dark" label={copy.label} statement={copy.ctaStatement} support={copy.ctaSupport} primary={{ label: copy.demo, href: demo }} secondary={{ label: copy.access, href: LOGIN }} />
+    </V2Shell>
   );
 }

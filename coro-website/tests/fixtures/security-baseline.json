@@ -1,0 +1,833 @@
+{
+  "captured": "2026-09-26 (MIG-04-PRE, before any change)",
+  "fr": {
+    "status": 200,
+    "title": "Sécurité CORO | Protection des données et hébergement au Canada | CORO",
+    "description": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+    "canonical": "https://getcoro.io/security",
+    "hreflang": [
+      [
+        "fr-CA",
+        "https://getcoro.io/security"
+      ],
+      [
+        "en-CA",
+        "https://getcoro.io/security?lang=en"
+      ],
+      [
+        "x-default",
+        "https://getcoro.io/security"
+      ]
+    ],
+    "ogLocale": "fr_CA",
+    "ogUrl": "https://getcoro.io/security",
+    "ogTitle": "Sécurité CORO | Protection des données et hébergement au Canada",
+    "ogDescription": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+    "ogType": "website",
+    "ogImage": "https://getcoro.io/og-coro.jpg",
+    "twitterCard": "summary_large_image",
+    "twitterTitle": "Sécurité CORO | Protection des données et hébergement au Canada",
+    "twitterDescription": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+    "twitterImage": "https://getcoro.io/og-coro.jpg",
+    "robots": "index, follow",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "La sécurité fait partie de l’architecture."
+      ],
+      [
+        2,
+        "Une approche conçue pour les environnements professionnels"
+      ],
+      [
+        3,
+        "Données hébergées au Canada"
+      ],
+      [
+        3,
+        "Communications chiffrées"
+      ],
+      [
+        3,
+        "Contrôle d’accès"
+      ],
+      [
+        3,
+        "Surveillance et traçabilité"
+      ],
+      [
+        2,
+        "Une infrastructure canadienne pour vos données."
+      ],
+      [
+        2,
+        "Limiter l’accès au strict nécessaire."
+      ],
+      [
+        2,
+        "Préserver l’intégrité et la disponibilité des données."
+      ],
+      [
+        2,
+        "Réduire la surface d’exposition."
+      ],
+      [
+        3,
+        "Pare-feu réseau"
+      ],
+      [
+        3,
+        "Protection de l’authentification"
+      ],
+      [
+        3,
+        "En-têtes HTTP de sécurité"
+      ],
+      [
+        3,
+        "Surveillance de disponibilité"
+      ],
+      [
+        2,
+        "Une approche alignée sur les obligations canadiennes."
+      ],
+      [
+        2,
+        "Besoin d’aller plus loin dans l’évaluation?"
+      ],
+      [
+        2,
+        "La sécurité doit être vérifiable, pas seulement déclarée."
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CO RO"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/#documents",
+        "Documents"
+      ],
+      [
+        "/#how-it-works",
+        "Comment ça fonctionne"
+      ],
+      [
+        "/pricing",
+        "Tarifs"
+      ],
+      [
+        "/security?lang=en",
+        "EN"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion"
+      ],
+      [
+        "/#demo",
+        "Demander une démo"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/#demo",
+        "Parler à notre équipe"
+      ],
+      [
+        "/#features",
+        "Voir les fonctionnalités"
+      ],
+      [
+        "/privacy",
+        "Consulter la politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Consulter les conditions d’utilisation"
+      ],
+      [
+        "mailto:info@getcoro.io?subject=Documentation%20technique%20CORO",
+        "Demander la documentation technique"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "Nous contacter"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d’utilisation"
+      ]
+    ],
+    "ctas": [
+      [
+        "https://app.getcoro.io/login",
+        "Connexion"
+      ],
+      [
+        "/#demo",
+        "Demander une démo"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "Nous contacter"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ]
+    ],
+    "images": [],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Sécurité CORO | Protection des données et hébergement au Canada",
+        "description": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+        "url": "https://getcoro.io/security",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web"
+        }
+      }
+    ],
+    "counts": {
+      "header": 1,
+      "main": 1,
+      "footer": 1,
+      "nav": 1,
+      "v1tokens": false
+    },
+    "mainText": "Sécurité & protection des données La sécurité fait partie de l’architecture. CORO est conçue pour les organisations qui doivent protéger des documents sensibles, contrôler les accès et maintenir leurs données au Canada. Notre approche combine hébergement canadien, chiffrement des communications, contrôle d’accès, sauvegardes et surveillance. Parler à notre équipe Voir les fonctionnalités Hébergement canadien. Accès contrôlés. Communications chiffrées. Sauvegardes automatisées. Une approche conçue pour les environnements professionnels La sécurité de CORO repose sur plusieurs couches complémentaires, de l’infrastructure à la gestion des accès. Données hébergées au Canada Les données et documents de la plateforme sont hébergés sur une infrastructure située à Toronto, Ontario, afin de soutenir les exigences de souveraineté des données des organisations canadiennes. Communications chiffrées Les échanges entre les utilisateurs et la plateforme sont protégés par HTTPS/TLS. Les mots de passe sont stockés sous forme hachée et ne sont pas conservés en clair. Contrôle d’accès Les droits sont attribués selon les rôles utilisateurs. Les environnements clients sont isolés afin de limiter l’accès aux données aux seules personnes autorisées. Surveillance et traçabilité La plateforme intègre des mécanismes de surveillance de disponibilité et de journalisation des actions afin de faciliter le suivi, l’analyse et la détection d’événements inhabituels. Hébergement & souveraineté Une infrastructure canadienne pour vos données. CORO utilise une infrastructure d’hébergement située au Canada. Cette approche vise à réduire les enjeux de transfert transfrontalier et à répondre aux attentes des organisations canadiennes en matière de localisation et de contrôle des données. Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Les détails techniques à jour peuvent être fournis aux équipes TI dans le cadre d’une évaluation de sécurité. Infrastructure Toronto, Canada Hébergement principal des données et de la plateforme. Fournisseur DigitalOcean Infrastructure infonuagique utilisée pour l’exploitation de CORO. Cadre fournisseur SOC 2 Type II Attestation SOC 2 Type II du fournisseur d’infrastructure, distincte de CORO elle-même. Accès & authentification Limiter l’accès au strict nécessaire. La protection des données commence par une gestion rigoureuse des identités et des permissions. CORO structure les accès selon les responsabilités de chaque utilisateur. Rôles et permissions différenciés selon les responsabilités. Isolation des organisations clientes. Protection contre les tentatives d’authentification abusives. Journalisation des actions utilisateurs. MFA prévu pour les environnements et offres nécessitant un niveau de sécurité renforcé. Sauvegarde & continuité Préserver l’intégrité et la disponibilité des données. L’infrastructure de CORO intègre des mécanismes de sauvegarde et de récupération destinés à réduire l’impact d’une défaillance technique ou d’un incident. Sauvegardes automatisées Toutes les 6 heures Sauvegardes régulières de la base de données. Rétention 30 jours Conservation des sauvegardes selon la configuration actuelle. Snapshots Quotidiens Snapshots de l’infrastructure pour soutenir les scénarios de récupération. SLA infrastructure 99,9 % SLA publié par le fournisseur pour les services d’infrastructure concernés. Ce taux ne constitue pas un SLA propre à CORO. Protection de l’environnement Réduire la surface d’exposition. Pare-feu réseau Les accès réseau sont limités aux services nécessaires au fonctionnement de la plateforme. Protection de l’authentification Des mécanismes de protection contre les tentatives répétées et abusives sont appliqués. En-têtes HTTP de sécurité La configuration Web intègre des en-têtes de sécurité visant à réduire plusieurs classes de risques courants. Surveillance de disponibilité La disponibilité du service est surveillée afin de détecter rapidement les interruptions. Vie privée & conformité Une approche alignée sur les obligations canadiennes. CORO traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents adaptées à ses activités. Consulter la politique de confidentialité Consulter les conditions d’utilisation Québec — Loi 25 Pratiques de protection des renseignements personnels tenant compte du cadre législatif québécois LPRPDE / PIPEDA Cadre fédéral canadien lorsqu’applicable Hébergement Canada Localisation canadienne des données de la plateforme Pour les équipes TI Besoin d’aller plus loin dans l’évaluation? Les organisations qui évaluent CORO peuvent demander des renseignements techniques complémentaires concernant l’architecture, l’hébergement, les sauvegardes, les accès et les contrôles de sécurité disponibles. Demander la documentation technique Architecture et environnement d’hébergement Gestion des identités et des accès Sauvegardes et continuité Mesures de protection réseau Journalisation et suivi Questionnaire de sécurité fournisseur La sécurité doit être vérifiable, pas seulement déclarée. Parlez-nous de vos exigences TI, de protection des données ou de conformité. Nous vous présenterons l’environnement CORO et les contrôles applicables à votre organisation. Demander une démo Nous contacter",
+    "bodyText": "CO RO Fonctionnalités Documents Comment ça fonctionne Tarifs EN Connexion Demander une démo ☰ Fonctionnalités Documents Comment ça fonctionne Tarifs À propos Connexion Demander une démo Sécurité & protection des données La sécurité fait partie de l’architecture. CORO est conçue pour les organisations qui doivent protéger des documents sensibles, contrôler les accès et maintenir leurs données au Canada. Notre approche combine hébergement canadien, chiffrement des communications, contrôle d’accès, sauvegardes et surveillance. Parler à notre équipe Voir les fonctionnalités Hébergement canadien. Accès contrôlés. Communications chiffrées. Sauvegardes automatisées. Une approche conçue pour les environnements professionnels La sécurité de CORO repose sur plusieurs couches complémentaires, de l’infrastructure à la gestion des accès. Données hébergées au Canada Les données et documents de la plateforme sont hébergés sur une infrastructure située à Toronto, Ontario, afin de soutenir les exigences de souveraineté des données des organisations canadiennes. Communications chiffrées Les échanges entre les utilisateurs et la plateforme sont protégés par HTTPS/TLS. Les mots de passe sont stockés sous forme hachée et ne sont pas conservés en clair. Contrôle d’accès Les droits sont attribués selon les rôles utilisateurs. Les environnements clients sont isolés afin de limiter l’accès aux données aux seules personnes autorisées. Surveillance et traçabilité La plateforme intègre des mécanismes de surveillance de disponibilité et de journalisation des actions afin de faciliter le suivi, l’analyse et la détection d’événements inhabituels. Hébergement & souveraineté Une infrastructure canadienne pour vos données. CORO utilise une infrastructure d’hébergement située au Canada. Cette approche vise à réduire les enjeux de transfert transfrontalier et à répondre aux attentes des organisations canadiennes en matière de localisation et de contrôle des données. Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Les détails techniques à jour peuvent être fournis aux équipes TI dans le cadre d’une évaluation de sécurité. Infrastructure Toronto, Canada Hébergement principal des données et de la plateforme. Fournisseur DigitalOcean Infrastructure infonuagique utilisée pour l’exploitation de CORO. Cadre fournisseur SOC 2 Type II Attestation SOC 2 Type II du fournisseur d’infrastructure, distincte de CORO elle-même. Accès & authentification Limiter l’accès au strict nécessaire. La protection des données commence par une gestion rigoureuse des identités et des permissions. CORO structure les accès selon les responsabilités de chaque utilisateur. Rôles et permissions différenciés selon les responsabilités. Isolation des organisations clientes. Protection contre les tentatives d’authentification abusives. Journalisation des actions utilisateurs. MFA prévu pour les environnements et offres nécessitant un niveau de sécurité renforcé. Sauvegarde & continuité Préserver l’intégrité et la disponibilité des données. L’infrastructure de CORO intègre des mécanismes de sauvegarde et de récupération destinés à réduire l’impact d’une défaillance technique ou d’un incident. Sauvegardes automatisées Toutes les 6 heures Sauvegardes régulières de la base de données. Rétention 30 jours Conservation des sauvegardes selon la configuration actuelle. Snapshots Quotidiens Snapshots de l’infrastructure pour soutenir les scénarios de récupération. SLA infrastructure 99,9 % SLA publié par le fournisseur pour les services d’infrastructure concernés. Ce taux ne constitue pas un SLA propre à CORO. Protection de l’environnement Réduire la surface d’exposition. Pare-feu réseau Les accès réseau sont limités aux services nécessaires au fonctionnement de la plateforme. Protection de l’authentification Des mécanismes de protection contre les tentatives répétées et abusives sont appliqués. En-têtes HTTP de sécurité La configuration Web intègre des en-têtes de sécurité visant à réduire plusieurs classes de risques courants. Surveillance de disponibilité La disponibilité du service est surveillée afin de détecter rapidement les interruptions. Vie privée & conformité Une approche alignée sur les obligations canadiennes. CORO traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents adaptées à ses activités. Consulter la politique de confidentialité Consulter les conditions d’utilisation Québec — Loi 25 Pratiques de protection des renseignements personnels tenant compte du cadre législatif québécois LPRPDE / PIPEDA Cadre fédéral canadien lorsqu’applicable Hébergement Canada Localisation canadienne des données de la plateforme Pour les équipes TI Besoin d’aller plus loin dans l’évaluation? Les organisations qui évaluent CORO peuvent demander des renseignements techniques complémentaires concernant l’architecture, l’hébergement, les sauvegardes, les accès et les contrôles de sécurité disponibles. Demander la documentation technique Architecture et environnement d’hébergement Gestion des identités et des accès Sauvegardes et continuité Mesures de protection réseau Journalisation et suivi Questionnaire de sécurité fournisseur La sécurité doit être vérifiable, pas seulement déclarée. Parlez-nous de vos exigences TI, de protection des données ou de conformité. Nous vous présenterons l’environnement CORO et les contrôles applicables à votre organisation. Demander une démo Nous contacter CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d’utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d’utilisation Hébergé au Canada 🇨🇦 🌐 English 💬"
+  },
+  "en": {
+    "status": 200,
+    "title": "CORO Security | Data Protection and Canadian Hosting | CORO",
+    "description": "Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and security monitoring.",
+    "canonical": "https://getcoro.io/security?lang=en",
+    "hreflang": [
+      [
+        "fr-CA",
+        "https://getcoro.io/security"
+      ],
+      [
+        "en-CA",
+        "https://getcoro.io/security?lang=en"
+      ],
+      [
+        "x-default",
+        "https://getcoro.io/security"
+      ]
+    ],
+    "ogLocale": "en_CA",
+    "ogUrl": "https://getcoro.io/security?lang=en",
+    "ogTitle": "CORO Security | Data Protection and Canadian Hosting",
+    "ogDescription": "Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and security monitoring.",
+    "ogType": "website",
+    "ogImage": "https://getcoro.io/og-coro.jpg",
+    "twitterCard": "summary_large_image",
+    "twitterTitle": "CORO Security | Data Protection and Canadian Hosting",
+    "twitterDescription": "Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and security monitoring.",
+    "twitterImage": "https://getcoro.io/og-coro.jpg",
+    "robots": "index, follow",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "Security is part of the architecture."
+      ],
+      [
+        2,
+        "An approach designed for professional environments"
+      ],
+      [
+        3,
+        "Data hosted in Canada"
+      ],
+      [
+        3,
+        "Encrypted communications"
+      ],
+      [
+        3,
+        "Access control"
+      ],
+      [
+        3,
+        "Monitoring and traceability"
+      ],
+      [
+        2,
+        "Canadian infrastructure for your data."
+      ],
+      [
+        2,
+        "Restrict access to what is necessary."
+      ],
+      [
+        2,
+        "Preserve data integrity and availability."
+      ],
+      [
+        2,
+        "Reduce the exposed surface."
+      ],
+      [
+        3,
+        "Network firewall"
+      ],
+      [
+        3,
+        "Authentication protection"
+      ],
+      [
+        3,
+        "HTTP security headers"
+      ],
+      [
+        3,
+        "Availability monitoring"
+      ],
+      [
+        2,
+        "An approach aligned with Canadian obligations."
+      ],
+      [
+        2,
+        "Need to go deeper in your assessment?"
+      ],
+      [
+        2,
+        "Security should be verifiable, not merely claimed."
+      ]
+    ],
+    "links": [
+      [
+        "/?lang=en",
+        "CO RO"
+      ],
+      [
+        "/?lang=en#features",
+        "Features"
+      ],
+      [
+        "/?lang=en#documents",
+        "Documents"
+      ],
+      [
+        "/?lang=en#how-it-works",
+        "How it works"
+      ],
+      [
+        "/pricing?lang=en",
+        "Pricing"
+      ],
+      [
+        "/security",
+        "FR"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Login"
+      ],
+      [
+        "/?lang=en#demo",
+        "Request a demo"
+      ],
+      [
+        "/about?lang=en",
+        "About"
+      ],
+      [
+        "/?lang=en#demo",
+        "Talk to our team"
+      ],
+      [
+        "/?lang=en#features",
+        "View features"
+      ],
+      [
+        "/privacy?lang=en",
+        "Read the Privacy Policy"
+      ],
+      [
+        "/terms?lang=en",
+        "Read the Terms of Use"
+      ],
+      [
+        "mailto:info@getcoro.io?subject=Documentation%20technique%20CORO",
+        "Request technical documentation"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "Contact us"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d’utilisation"
+      ]
+    ],
+    "ctas": [
+      [
+        "https://app.getcoro.io/login",
+        "Login"
+      ],
+      [
+        "/?lang=en#demo",
+        "Request a demo"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "Contact us"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ]
+    ],
+    "images": [],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "CORO Security | Data Protection and Canadian Hosting",
+        "description": "Learn how CORO protects your data with Canadian hosting, HTTPS/TLS encryption, access controls, backups and security monitoring.",
+        "url": "https://getcoro.io/security?lang=en",
+        "inLanguage": "en-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web"
+        }
+      }
+    ],
+    "counts": {
+      "header": 1,
+      "main": 1,
+      "footer": 1,
+      "nav": 1,
+      "v1tokens": false
+    },
+    "mainText": "Security & data protection Security is part of the architecture. CORO is designed for organizations that need to protect sensitive documents, control access and keep their data in Canada. Our approach combines Canadian hosting, encrypted communications, access control, backups and monitoring. Talk to our team View features Canadian hosting. Controlled access. Encrypted communications. Automated backups. An approach designed for professional environments CORO security relies on complementary layers, from infrastructure to access management. Data hosted in Canada Platform data and documents are hosted on infrastructure located in Toronto, Ontario, supporting Canadian organizations’ data-sovereignty requirements. Encrypted communications Traffic between users and the platform is protected with HTTPS/TLS. Passwords are stored in hashed form and are not kept in plain text. Access control Permissions are assigned according to user roles. Customer environments are isolated to restrict data access to authorized users. Monitoring and traceability The platform includes availability monitoring and activity logging mechanisms to support tracking, analysis and detection of unusual events. Hosting & sovereignty Canadian infrastructure for your data. CORO uses hosting infrastructure located in Canada. This approach is intended to reduce cross-border transfer concerns and support Canadian organizations’ expectations regarding data location and control. Infrastructure characteristics may evolve with the platform. Current technical details can be provided to IT teams as part of a security assessment. Infrastructure Toronto, Canada Primary hosting location for platform data and services. Provider DigitalOcean Cloud infrastructure provider used to operate CORO. Provider framework SOC 2 Type II SOC 2 Type II attestation of the infrastructure provider; this is distinct from CORO itself. Access & authentication Restrict access to what is necessary. Data protection starts with disciplined identity and permission management. CORO structures access according to each user’s responsibilities. Differentiated roles and permissions based on responsibilities. Isolation between customer organizations. Protection against abusive authentication attempts. Logging of user actions. MFA planned for environments and plans requiring enhanced security. Backup & continuity Preserve data integrity and availability. CORO infrastructure includes backup and recovery mechanisms designed to reduce the impact of a technical failure or incident. Automated backups Every 6 hours Regular database backups. Retention 30 days Backup retention under the current configuration. Snapshots Daily Infrastructure snapshots supporting recovery scenarios. Infrastructure SLA 99.9% Published provider SLA for applicable infrastructure services. This figure does not constitute a CORO service-level commitment. Environment protection Reduce the exposed surface. Network firewall Network access is limited to the services required to operate the platform. Authentication protection Mechanisms are applied to protect against repeated and abusive login attempts. HTTP security headers Web configuration includes security headers intended to reduce several common classes of risk. Availability monitoring Service availability is monitored to help detect interruptions quickly. Privacy & compliance An approach aligned with Canadian obligations. CORO processes personal information under applicable legislation and maintains protection, retention and incident-management practices appropriate to its activities. Read the Privacy Policy Read the Terms of Use Quebec — Law 25 Privacy practices designed with Quebec’s legislative framework in mind PIPEDA Canadian federal framework where applicable Canada hosting Canadian location of platform data For IT teams Need to go deeper in your assessment? Organizations evaluating CORO can request additional technical information regarding architecture, hosting, backups, access and available security controls. Request technical documentation Architecture and hosting environment Identity and access management Backups and continuity Network protection measures Logging and monitoring Vendor security questionnaire Security should be verifiable, not merely claimed. Tell us about your IT, data-protection or compliance requirements. We will walk you through the CORO environment and the controls relevant to your organization. Request a demo Contact us",
+    "bodyText": "CO RO Features Documents How it works Pricing FR Login Request a demo ☰ Features Documents How it works Pricing About Login Request a demo Security & data protection Security is part of the architecture. CORO is designed for organizations that need to protect sensitive documents, control access and keep their data in Canada. Our approach combines Canadian hosting, encrypted communications, access control, backups and monitoring. Talk to our team View features Canadian hosting. Controlled access. Encrypted communications. Automated backups. An approach designed for professional environments CORO security relies on complementary layers, from infrastructure to access management. Data hosted in Canada Platform data and documents are hosted on infrastructure located in Toronto, Ontario, supporting Canadian organizations’ data-sovereignty requirements. Encrypted communications Traffic between users and the platform is protected with HTTPS/TLS. Passwords are stored in hashed form and are not kept in plain text. Access control Permissions are assigned according to user roles. Customer environments are isolated to restrict data access to authorized users. Monitoring and traceability The platform includes availability monitoring and activity logging mechanisms to support tracking, analysis and detection of unusual events. Hosting & sovereignty Canadian infrastructure for your data. CORO uses hosting infrastructure located in Canada. This approach is intended to reduce cross-border transfer concerns and support Canadian organizations’ expectations regarding data location and control. Infrastructure characteristics may evolve with the platform. Current technical details can be provided to IT teams as part of a security assessment. Infrastructure Toronto, Canada Primary hosting location for platform data and services. Provider DigitalOcean Cloud infrastructure provider used to operate CORO. Provider framework SOC 2 Type II SOC 2 Type II attestation of the infrastructure provider; this is distinct from CORO itself. Access & authentication Restrict access to what is necessary. Data protection starts with disciplined identity and permission management. CORO structures access according to each user’s responsibilities. Differentiated roles and permissions based on responsibilities. Isolation between customer organizations. Protection against abusive authentication attempts. Logging of user actions. MFA planned for environments and plans requiring enhanced security. Backup & continuity Preserve data integrity and availability. CORO infrastructure includes backup and recovery mechanisms designed to reduce the impact of a technical failure or incident. Automated backups Every 6 hours Regular database backups. Retention 30 days Backup retention under the current configuration. Snapshots Daily Infrastructure snapshots supporting recovery scenarios. Infrastructure SLA 99.9% Published provider SLA for applicable infrastructure services. This figure does not constitute a CORO service-level commitment. Environment protection Reduce the exposed surface. Network firewall Network access is limited to the services required to operate the platform. Authentication protection Mechanisms are applied to protect against repeated and abusive login attempts. HTTP security headers Web configuration includes security headers intended to reduce several common classes of risk. Availability monitoring Service availability is monitored to help detect interruptions quickly. Privacy & compliance An approach aligned with Canadian obligations. CORO processes personal information under applicable legislation and maintains protection, retention and incident-management practices appropriate to its activities. Read the Privacy Policy Read the Terms of Use Quebec — Law 25 Privacy practices designed with Quebec’s legislative framework in mind PIPEDA Canadian federal framework where applicable Canada hosting Canadian location of platform data For IT teams Need to go deeper in your assessment? Organizations evaluating CORO can request additional technical information regarding architecture, hosting, backups, access and available security controls. Request technical documentation Architecture and hosting environment Identity and access management Backups and continuity Network protection measures Logging and monitoring Vendor security questionnaire Security should be verifiable, not merely claimed. Tell us about your IT, data-protection or compliance requirements. We will walk you through the CORO environment and the controls relevant to your organization. Request a demo Contact us CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d’utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d’utilisation Hébergé au Canada 🇨🇦 🌐 English 💬"
+  },
+  "ref": {
+    "status": 200,
+    "title": "Sécurité CORO | Protection des données et hébergement au Canada | CORO",
+    "description": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+    "canonical": "https://getcoro.io/security",
+    "hreflang": [
+      [
+        "fr-CA",
+        "https://getcoro.io/security"
+      ],
+      [
+        "en-CA",
+        "https://getcoro.io/security?lang=en"
+      ],
+      [
+        "x-default",
+        "https://getcoro.io/security"
+      ]
+    ],
+    "ogLocale": "fr_CA",
+    "ogUrl": "https://getcoro.io/security",
+    "ogTitle": "Sécurité CORO | Protection des données et hébergement au Canada",
+    "ogDescription": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+    "ogType": "website",
+    "ogImage": "https://getcoro.io/og-coro.jpg",
+    "twitterCard": "summary_large_image",
+    "twitterTitle": "Sécurité CORO | Protection des données et hébergement au Canada",
+    "twitterDescription": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+    "twitterImage": "https://getcoro.io/og-coro.jpg",
+    "robots": "index, follow",
+    "htmlLang": "fr",
+    "headings": [
+      [
+        1,
+        "La sécurité fait partie de l’architecture."
+      ],
+      [
+        2,
+        "Une approche conçue pour les environnements professionnels"
+      ],
+      [
+        3,
+        "Données hébergées au Canada"
+      ],
+      [
+        3,
+        "Communications chiffrées"
+      ],
+      [
+        3,
+        "Contrôle d’accès"
+      ],
+      [
+        3,
+        "Surveillance et traçabilité"
+      ],
+      [
+        2,
+        "Une infrastructure canadienne pour vos données."
+      ],
+      [
+        2,
+        "Limiter l’accès au strict nécessaire."
+      ],
+      [
+        2,
+        "Préserver l’intégrité et la disponibilité des données."
+      ],
+      [
+        2,
+        "Réduire la surface d’exposition."
+      ],
+      [
+        3,
+        "Pare-feu réseau"
+      ],
+      [
+        3,
+        "Protection de l’authentification"
+      ],
+      [
+        3,
+        "En-têtes HTTP de sécurité"
+      ],
+      [
+        3,
+        "Surveillance de disponibilité"
+      ],
+      [
+        2,
+        "Une approche alignée sur les obligations canadiennes."
+      ],
+      [
+        2,
+        "Besoin d’aller plus loin dans l’évaluation?"
+      ],
+      [
+        2,
+        "La sécurité doit être vérifiable, pas seulement déclarée."
+      ]
+    ],
+    "links": [
+      [
+        "/",
+        "CO RO"
+      ],
+      [
+        "/#features",
+        "Fonctionnalités"
+      ],
+      [
+        "/#documents",
+        "Documents"
+      ],
+      [
+        "/#how-it-works",
+        "Comment ça fonctionne"
+      ],
+      [
+        "/pricing",
+        "Tarifs"
+      ],
+      [
+        "/security?lang=en",
+        "EN"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion"
+      ],
+      [
+        "/#demo",
+        "Demander une démo"
+      ],
+      [
+        "/about",
+        "À propos"
+      ],
+      [
+        "/#demo",
+        "Parler à notre équipe"
+      ],
+      [
+        "/#features",
+        "Voir les fonctionnalités"
+      ],
+      [
+        "/privacy",
+        "Consulter la politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Consulter les conditions d’utilisation"
+      ],
+      [
+        "mailto:info@getcoro.io?subject=Documentation%20technique%20CORO",
+        "Demander la documentation technique"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "Nous contacter"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "info@getcoro.io"
+      ],
+      [
+        "tel:+15147917871",
+        "+1 (514) 791-7871"
+      ],
+      [
+        "/pricing",
+        "Tarification"
+      ],
+      [
+        "/sentinelle-population",
+        "Sentinelle Population"
+      ],
+      [
+        "https://getcoro.io/#documents",
+        "Documents"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "https://client.getcoro.io/login",
+        "Portail client"
+      ],
+      [
+        "/security",
+        "Sécurité"
+      ],
+      [
+        "/programme-recommandation",
+        "Programme de recommandation"
+      ],
+      [
+        "/blog",
+        "Blogue"
+      ],
+      [
+        "/partners",
+        "Partenaires"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ],
+      [
+        "/privacy",
+        "Politique de confidentialité"
+      ],
+      [
+        "/terms",
+        "Conditions d’utilisation"
+      ]
+    ],
+    "ctas": [
+      [
+        "https://app.getcoro.io/login",
+        "Connexion"
+      ],
+      [
+        "/#demo",
+        "Demander une démo"
+      ],
+      [
+        "mailto:info@getcoro.io",
+        "Nous contacter"
+      ],
+      [
+        "https://app.getcoro.io/login",
+        "Connexion conseiller"
+      ],
+      [
+        "/contact",
+        "Nous contacter"
+      ]
+    ],
+    "images": [],
+    "jsonLd": [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Sécurité CORO | Protection des données et hébergement au Canada",
+        "description": "Découvrez comment CORO protège vos données grâce à un hébergement au Canada, au chiffrement HTTPS/TLS, au contrôle des accès, aux sauvegardes et à la surveillance.",
+        "url": "https://getcoro.io/security",
+        "inLanguage": "fr-CA",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "CORO",
+          "url": "https://getcoro.io"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "CORO",
+          "url": "https://getcoro.io",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web"
+        }
+      }
+    ],
+    "counts": {
+      "header": 1,
+      "main": 1,
+      "footer": 1,
+      "nav": 1,
+      "v1tokens": false
+    },
+    "mainText": "Sécurité & protection des données La sécurité fait partie de l’architecture. CORO est conçue pour les organisations qui doivent protéger des documents sensibles, contrôler les accès et maintenir leurs données au Canada. Notre approche combine hébergement canadien, chiffrement des communications, contrôle d’accès, sauvegardes et surveillance. Parler à notre équipe Voir les fonctionnalités Hébergement canadien. Accès contrôlés. Communications chiffrées. Sauvegardes automatisées. Une approche conçue pour les environnements professionnels La sécurité de CORO repose sur plusieurs couches complémentaires, de l’infrastructure à la gestion des accès. Données hébergées au Canada Les données et documents de la plateforme sont hébergés sur une infrastructure située à Toronto, Ontario, afin de soutenir les exigences de souveraineté des données des organisations canadiennes. Communications chiffrées Les échanges entre les utilisateurs et la plateforme sont protégés par HTTPS/TLS. Les mots de passe sont stockés sous forme hachée et ne sont pas conservés en clair. Contrôle d’accès Les droits sont attribués selon les rôles utilisateurs. Les environnements clients sont isolés afin de limiter l’accès aux données aux seules personnes autorisées. Surveillance et traçabilité La plateforme intègre des mécanismes de surveillance de disponibilité et de journalisation des actions afin de faciliter le suivi, l’analyse et la détection d’événements inhabituels. Hébergement & souveraineté Une infrastructure canadienne pour vos données. CORO utilise une infrastructure d’hébergement située au Canada. Cette approche vise à réduire les enjeux de transfert transfrontalier et à répondre aux attentes des organisations canadiennes en matière de localisation et de contrôle des données. Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Les détails techniques à jour peuvent être fournis aux équipes TI dans le cadre d’une évaluation de sécurité. Infrastructure Toronto, Canada Hébergement principal des données et de la plateforme. Fournisseur DigitalOcean Infrastructure infonuagique utilisée pour l’exploitation de CORO. Cadre fournisseur SOC 2 Type II Attestation SOC 2 Type II du fournisseur d’infrastructure, distincte de CORO elle-même. Accès & authentification Limiter l’accès au strict nécessaire. La protection des données commence par une gestion rigoureuse des identités et des permissions. CORO structure les accès selon les responsabilités de chaque utilisateur. Rôles et permissions différenciés selon les responsabilités. Isolation des organisations clientes. Protection contre les tentatives d’authentification abusives. Journalisation des actions utilisateurs. MFA prévu pour les environnements et offres nécessitant un niveau de sécurité renforcé. Sauvegarde & continuité Préserver l’intégrité et la disponibilité des données. L’infrastructure de CORO intègre des mécanismes de sauvegarde et de récupération destinés à réduire l’impact d’une défaillance technique ou d’un incident. Sauvegardes automatisées Toutes les 6 heures Sauvegardes régulières de la base de données. Rétention 30 jours Conservation des sauvegardes selon la configuration actuelle. Snapshots Quotidiens Snapshots de l’infrastructure pour soutenir les scénarios de récupération. SLA infrastructure 99,9 % SLA publié par le fournisseur pour les services d’infrastructure concernés. Ce taux ne constitue pas un SLA propre à CORO. Protection de l’environnement Réduire la surface d’exposition. Pare-feu réseau Les accès réseau sont limités aux services nécessaires au fonctionnement de la plateforme. Protection de l’authentification Des mécanismes de protection contre les tentatives répétées et abusives sont appliqués. En-têtes HTTP de sécurité La configuration Web intègre des en-têtes de sécurité visant à réduire plusieurs classes de risques courants. Surveillance de disponibilité La disponibilité du service est surveillée afin de détecter rapidement les interruptions. Vie privée & conformité Une approche alignée sur les obligations canadiennes. CORO traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents adaptées à ses activités. Consulter la politique de confidentialité Consulter les conditions d’utilisation Québec — Loi 25 Pratiques de protection des renseignements personnels tenant compte du cadre législatif québécois LPRPDE / PIPEDA Cadre fédéral canadien lorsqu’applicable Hébergement Canada Localisation canadienne des données de la plateforme Pour les équipes TI Besoin d’aller plus loin dans l’évaluation? Les organisations qui évaluent CORO peuvent demander des renseignements techniques complémentaires concernant l’architecture, l’hébergement, les sauvegardes, les accès et les contrôles de sécurité disponibles. Demander la documentation technique Architecture et environnement d’hébergement Gestion des identités et des accès Sauvegardes et continuité Mesures de protection réseau Journalisation et suivi Questionnaire de sécurité fournisseur La sécurité doit être vérifiable, pas seulement déclarée. Parlez-nous de vos exigences TI, de protection des données ou de conformité. Nous vous présenterons l’environnement CORO et les contrôles applicables à votre organisation. Demander une démo Nous contacter",
+    "bodyText": "CO RO Fonctionnalités Documents Comment ça fonctionne Tarifs EN Connexion Demander une démo ☰ Fonctionnalités Documents Comment ça fonctionne Tarifs À propos Connexion Demander une démo Sécurité & protection des données La sécurité fait partie de l’architecture. CORO est conçue pour les organisations qui doivent protéger des documents sensibles, contrôler les accès et maintenir leurs données au Canada. Notre approche combine hébergement canadien, chiffrement des communications, contrôle d’accès, sauvegardes et surveillance. Parler à notre équipe Voir les fonctionnalités Hébergement canadien. Accès contrôlés. Communications chiffrées. Sauvegardes automatisées. Une approche conçue pour les environnements professionnels La sécurité de CORO repose sur plusieurs couches complémentaires, de l’infrastructure à la gestion des accès. Données hébergées au Canada Les données et documents de la plateforme sont hébergés sur une infrastructure située à Toronto, Ontario, afin de soutenir les exigences de souveraineté des données des organisations canadiennes. Communications chiffrées Les échanges entre les utilisateurs et la plateforme sont protégés par HTTPS/TLS. Les mots de passe sont stockés sous forme hachée et ne sont pas conservés en clair. Contrôle d’accès Les droits sont attribués selon les rôles utilisateurs. Les environnements clients sont isolés afin de limiter l’accès aux données aux seules personnes autorisées. Surveillance et traçabilité La plateforme intègre des mécanismes de surveillance de disponibilité et de journalisation des actions afin de faciliter le suivi, l’analyse et la détection d’événements inhabituels. Hébergement & souveraineté Une infrastructure canadienne pour vos données. CORO utilise une infrastructure d’hébergement située au Canada. Cette approche vise à réduire les enjeux de transfert transfrontalier et à répondre aux attentes des organisations canadiennes en matière de localisation et de contrôle des données. Les caractéristiques de l’infrastructure peuvent évoluer avec la plateforme. Les détails techniques à jour peuvent être fournis aux équipes TI dans le cadre d’une évaluation de sécurité. Infrastructure Toronto, Canada Hébergement principal des données et de la plateforme. Fournisseur DigitalOcean Infrastructure infonuagique utilisée pour l’exploitation de CORO. Cadre fournisseur SOC 2 Type II Attestation SOC 2 Type II du fournisseur d’infrastructure, distincte de CORO elle-même. Accès & authentification Limiter l’accès au strict nécessaire. La protection des données commence par une gestion rigoureuse des identités et des permissions. CORO structure les accès selon les responsabilités de chaque utilisateur. Rôles et permissions différenciés selon les responsabilités. Isolation des organisations clientes. Protection contre les tentatives d’authentification abusives. Journalisation des actions utilisateurs. MFA prévu pour les environnements et offres nécessitant un niveau de sécurité renforcé. Sauvegarde & continuité Préserver l’intégrité et la disponibilité des données. L’infrastructure de CORO intègre des mécanismes de sauvegarde et de récupération destinés à réduire l’impact d’une défaillance technique ou d’un incident. Sauvegardes automatisées Toutes les 6 heures Sauvegardes régulières de la base de données. Rétention 30 jours Conservation des sauvegardes selon la configuration actuelle. Snapshots Quotidiens Snapshots de l’infrastructure pour soutenir les scénarios de récupération. SLA infrastructure 99,9 % SLA publié par le fournisseur pour les services d’infrastructure concernés. Ce taux ne constitue pas un SLA propre à CORO. Protection de l’environnement Réduire la surface d’exposition. Pare-feu réseau Les accès réseau sont limités aux services nécessaires au fonctionnement de la plateforme. Protection de l’authentification Des mécanismes de protection contre les tentatives répétées et abusives sont appliqués. En-têtes HTTP de sécurité La configuration Web intègre des en-têtes de sécurité visant à réduire plusieurs classes de risques courants. Surveillance de disponibilité La disponibilité du service est surveillée afin de détecter rapidement les interruptions. Vie privée & conformité Une approche alignée sur les obligations canadiennes. CORO traite les renseignements personnels dans le cadre de la législation applicable et maintient des pratiques de protection, de conservation et de gestion des incidents adaptées à ses activités. Consulter la politique de confidentialité Consulter les conditions d’utilisation Québec — Loi 25 Pratiques de protection des renseignements personnels tenant compte du cadre législatif québécois LPRPDE / PIPEDA Cadre fédéral canadien lorsqu’applicable Hébergement Canada Localisation canadienne des données de la plateforme Pour les équipes TI Besoin d’aller plus loin dans l’évaluation? Les organisations qui évaluent CORO peuvent demander des renseignements techniques complémentaires concernant l’architecture, l’hébergement, les sauvegardes, les accès et les contrôles de sécurité disponibles. Demander la documentation technique Architecture et environnement d’hébergement Gestion des identités et des accès Sauvegardes et continuité Mesures de protection réseau Journalisation et suivi Questionnaire de sécurité fournisseur La sécurité doit être vérifiable, pas seulement déclarée. Parlez-nous de vos exigences TI, de protection des données ou de conformité. Nous vous présenterons l’environnement CORO et les contrôles applicables à votre organisation. Demander une démo Nous contacter CO RO Plateforme SaaS canadienne pour la conformité opérationnelle et la résilience organisationnelle. 🇨🇦 Canada 2879 Boul. Pierre-Bernard Montréal (QC), H1L 4R2 Canada info@getcoro.io +1 (514) 791-7871 Produit Fonctionnalités Tarification Sentinelle Population Documents Connexion conseiller Portail client Compagnie À propos Sécurité Programme de recommandation Blogue Partenaires Nous contacter Légal Politique de confidentialité Conditions d’utilisation © 2026 CORO. Tous droits réservés. · NEQ 2282543935 | Politique de confidentialité | Conditions d’utilisation Hébergé au Canada 🇨🇦 🌐 English 💬"
+  }
+}

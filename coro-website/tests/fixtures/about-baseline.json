@@ -1,0 +1,1040 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "CORO · Conformité opérationnelle et résilience organisationnelle | CORO",
+  "description": "Découvrez CORO, la plateforme canadienne qui relie conformité opérationnelle, résilience organisationnelle et mesures d’urgence dans un même écosystème.",
+  "canonical": "https://getcoro.io/about",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/about"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/about?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/about"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/about",
+  "ogTitle": "CORO · Conformité opérationnelle et résilience organisationnelle",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Conçue par le terrain. Pensée pour les professionnels."
+   ],
+   [
+    "h2",
+    "Une plateforme née d’un besoin concret"
+   ],
+   [
+    "h2",
+    "Du document à la résilience opérationnelle"
+   ],
+   [
+    "h2",
+    "Conformité Opérationnelle + Résilience Organisationnelle"
+   ],
+   [
+    "h3",
+    "Conformité Opérationnelle"
+   ],
+   [
+    "h3",
+    "Résilience Organisationnelle"
+   ],
+   [
+    "h2",
+    "Le système d’exploitation de la résilience organisationnelle"
+   ],
+   [
+    "h2",
+    "Une continuité avant, pendant et après l’événement"
+   ],
+   [
+    "h2",
+    "Même donnée. Plusieurs usages. Une continuité opérationnelle."
+   ],
+   [
+    "h2",
+    "Un écosystème pensé dans le temps"
+   ],
+   [
+    "h3",
+    "Préparer et comprendre"
+   ],
+   [
+    "h3",
+    "Comprendre et agir"
+   ],
+   [
+    "h3",
+    "Prouver et améliorer"
+   ],
+   [
+    "h2",
+    "L’intelligence augmente la capacité. Elle ne remplace pas la responsabilité."
+   ],
+   [
+    "h2",
+    "Bâtiment → Portefeuille → Organisation"
+   ],
+   [
+    "h2",
+    "Conçue au Canada. Pensée pour les réalités du terrain."
+   ],
+   [
+    "h2",
+    "Construisons une résilience qui fonctionne dans la réalité."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/about?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "#about-vision",
+    "Découvrir la vision"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#features",
+    "Découvrir la plateforme"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/about?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "CORO",
+    "url": "https://getcoro.io",
+    "logo": "https://getcoro.io/coro-logo.png"
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "CORO · Conformité opérationnelle et résilience organisationnelle",
+    "description": "Découvrez CORO, la plateforme canadienne qui relie conformité opérationnelle, résilience organisationnelle et mesures d’urgence dans un même écosystème.",
+    "url": "https://getcoro.io/about",
+    "inLanguage": "fr-CA",
+    "mainEntity": {
+     "@type": "Organization",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    },
+    "isPartOf": {
+     "@type": "WebSite",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    }
+   }
+  ],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "À propos de CORO Conçue par le terrain. Pensée pour les professionnels. CORO — Conformité Opérationnelle et Résilience Organisationnelle — est une plateforme canadienne conçue pour relier, dans un même environnement numérique, les bâtiments, les personnes, les plans, les procédures, les systèmes et les incidents. Son objectif est de créer une continuité entre la préparation, la connaissance de l’environnement, la décision, l’intervention, la preuve et l’amélioration continue — tout en maintenant l’expertise humaine au centre des décisions. Résilience · Conformité · Action Découvrir la vision Demander une démo Pourquoi CORO Une plateforme née d’un besoin concret Dans les mesures d’urgence, la sécurité incendie, la continuité et la résilience organisationnelle, l’information existe souvent, mais demeure fragmentée entre les plans, les procédures, les plans techniques, les contacts, l’occupation, les exercices, les incidents, les actions correctives, les données du bâtiment et les systèmes. Lorsqu’un événement survient, posséder un document n’est pas suffisant. L’information doit soutenir une action coordonnée au moment où elle compte. Retrouver Comprendre Mobiliser Appliquer Coordonner Prouver Apprendre CORO est née de cette réalité. Notre évolution Du document à la résilience opérationnelle CORO a d’abord été conçue pour structurer et moderniser la production documentaire. Sa trajectoire s’étend progressivement vers un environnement capable d’accompagner une organisation avant, pendant et après un événement. 01 Documents 02 Bâtiments 03 Personnes 04 Occupation 05 Exercices 06 Incidents 07 Connaissance 08 Opérations 09 Amélioration Cette trajectoire réunit des capacités actuelles, en développement et envisagées; elle ne signifie pas que chaque capacité est déjà disponible. Pourquoi le nom CORO Conformité Opérationnelle + Résilience Organisationnelle CO Conformité Opérationnelle Plans, exigences, procédures, responsabilités, qualifications, preuves, traçabilité, maintien à jour et actions correctives. La conformité ne consiste pas uniquement à posséder un document : l’information nécessaire doit pouvoir soutenir les opérations. RO Résilience Organisationnelle La capacité de connaître son environnement, anticiper, préparer, détecter, décider, agir, protéger, apprendre et améliorer lorsque les conditions changent. CORO relie les deux. Une organisation réellement résiliente ne se limite pas à démontrer sa conformité; une conformité réellement opérationnelle doit soutenir l’action lorsque la situation l’exige. Notre vision Le système d’exploitation de la résilience organisationnelle Cette expression décrit la vision cible de CORO, et non une affirmation que toutes les capacités sont entièrement réalisées aujourd’hui. CORO vise à devenir un environnement connecté où les mêmes informations servent à préparer, comprendre, décider, intervenir, prouver et améliorer — plutôt qu’une collection d’outils indépendants. Continuum CORO Une continuité avant, pendant et après l’événement 01 Connaître 02 Anticiper 03 Détecter 04 Décider 05 Agir 06 Protéger 07 Prouver 08 Apprendre 09 Améliorer Notre principe Même donnée. Plusieurs usages. Une continuité opérationnelle. CORO vise progressivement à permettre qu’une information structurée serve à plusieurs moments du cycle opérationnel, sans promettre une automatisation complète de chaque relation. Bâtiment Document Procédure Intervention Occupation Évacuation Incident REX REX Action corrective Action corrective Amélioration Avant · Pendant · Après Un écosystème pensé dans le temps Ces ensembles représentent l’écosystème et sa trajectoire. Ils regroupent des capacités existantes, en développement et futures, sans constituer une annonce de disponibilité. 01 Avant Préparer et comprendre Structurer la connaissance et la préparation. Documents Knowledge Projects Résilience Exercices Sentinelle 02 Pendant Comprendre et agir Mettre le contexte utile au service de la décision et de l’intervention. Sentinelle Incident Ops AI Building Bridge QR Intervention 03 Après Prouver et améliorer Conserver la trace, apprendre et suivre l’amélioration. Journal Rapports REX Actions correctives Performance Indice CORO Network L’humain au centre L’intelligence augmente la capacité. Elle ne remplace pas la responsabilité. CORO peut progressivement aider à structurer, rechercher et contextualiser l’information, soutenir une recommandation et orchestrer certaines tâches. Les décisions sensibles demeurent sous contrôle humain. La plateforme soutient les coordonnateurs, conseillers, gestionnaires, équipes d’urgence et intervenants sans se substituer à leur jugement. Du bâtiment au réseau Bâtiment → Portefeuille → Organisation CORO est conçue pour comprendre un bâtiment dans son contexte, puis permettre progressivement une vue consolidée de l’état documentaire, de la préparation, de l’occupation, des incidents, des actions ouvertes, des indicateurs et des tendances. Bâtiment Portefeuille Organisation Dans cette vision, CORO Network représente un pilotage transversal entre bâtiments, portefeuilles et organisations — pas simplement une carte multi-sites. Une plateforme canadienne Conçue au Canada. Pensée pour les réalités du terrain. CORO est développée au Canada à partir d’une expérience concrète en mesures d’urgence, sécurité incendie, continuité et résilience organisationnelle. Elle vise à soutenir les réalités opérationnelles et l’intégration progressive des exigences applicables. CORO ne rend pas une organisation automatiquement conforme. Construisons une résilience qui fonctionne dans la réalité. Découvrez comment CORO peut relier la préparation, l’information et l’action dans votre organisation. Demander une démo Découvrir la plateforme"
+ },
+ "en": {
+  "status": 200,
+  "title": "CORO · Operational Compliance and Organizational Resilience | CORO",
+  "description": "Discover CORO, the Canadian platform connecting operational compliance, organizational resilience and emergency management in one ecosystem.",
+  "canonical": "https://getcoro.io/about?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/about"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/about?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/about"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/about?lang=en",
+  "ogTitle": "CORO · Operational Compliance and Organizational Resilience",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Built from the field. Designed for professionals."
+   ],
+   [
+    "h2",
+    "A platform born from a concrete need"
+   ],
+   [
+    "h2",
+    "From documents to operational resilience"
+   ],
+   [
+    "h2",
+    "Operational Compliance + Organizational Resilience"
+   ],
+   [
+    "h3",
+    "Operational Compliance"
+   ],
+   [
+    "h3",
+    "Organizational Resilience"
+   ],
+   [
+    "h2",
+    "The operating system for organizational resilience"
+   ],
+   [
+    "h2",
+    "Continuity before, during and after an event"
+   ],
+   [
+    "h2",
+    "One source of data. Multiple uses. Operational continuity."
+   ],
+   [
+    "h2",
+    "An ecosystem designed across time"
+   ],
+   [
+    "h3",
+    "Prepare and understand"
+   ],
+   [
+    "h3",
+    "Understand and act"
+   ],
+   [
+    "h3",
+    "Prove and improve"
+   ],
+   [
+    "h2",
+    "Intelligence expands capability. It does not replace accountability."
+   ],
+   [
+    "h2",
+    "Building → Portfolio → Organization"
+   ],
+   [
+    "h2",
+    "Built in Canada. Designed for field realities."
+   ],
+   [
+    "h2",
+    "Build resilience that works in the real world."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/about",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "#about-vision",
+    "Explore the vision"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "/?lang=en#features",
+    "Explore the platform"
+   ],
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/about",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "CORO",
+    "url": "https://getcoro.io",
+    "logo": "https://getcoro.io/coro-logo.png"
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "CORO · Operational Compliance and Organizational Resilience",
+    "description": "Discover CORO, the Canadian platform connecting operational compliance, organizational resilience and emergency management in one ecosystem.",
+    "url": "https://getcoro.io/about?lang=en",
+    "inLanguage": "en-CA",
+    "mainEntity": {
+     "@type": "Organization",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    },
+    "isPartOf": {
+     "@type": "WebSite",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    }
+   }
+  ],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "About CORO Built from the field. Designed for professionals. CORO takes its name from the French concepts “Conformité Opérationnelle” and “Résilience Organisationnelle” — Operational Compliance and Organizational Resilience. It connects buildings, people, plans, procedures, systems and incidents in one Canadian digital environment. Its purpose is to create continuity between preparedness, situational knowledge, decision-making, response, evidence and continuous improvement — while keeping human expertise at the center of every decision. Resilience · Compliance · Action Explore the vision Request a demo Why CORO A platform born from a concrete need Across emergency management, fire safety, continuity and organizational resilience, information often exists but remains fragmented across plans, procedures, technical drawings, contacts, occupancy, exercises, incidents, corrective actions, building data and operational systems. When an event occurs, having a document is not enough. Information must support coordinated action when it matters. Find Understand Mobilize Apply Coordinate Prove Learn CORO was born from this reality. Our evolution From documents to operational resilience CORO was first designed to structure and modernize document production. Its trajectory is progressively expanding into an environment that can support an organization before, during and after an event. 01 Documents 02 Buildings 03 People 04 Occupancy 05 Exercises 06 Incidents 07 Knowledge 08 Operations 09 Improvement This trajectory combines current, in-development and envisioned capabilities; it does not mean every capability is already available. Why the name CORO Operational Compliance + Organizational Resilience CO Operational Compliance Plans, requirements, procedures, responsibilities, qualifications, evidence, traceability, maintenance and corrective actions. Compliance is not merely about having a document: the required information must support operations. RO Organizational Resilience The ability to understand the environment, anticipate, prepare, detect, decide, act, protect, learn and improve as conditions change. CORO connects both. A truly resilient organization does more than demonstrate compliance; truly operational compliance must support action when the situation demands it. Our vision The operating system for organizational resilience This expression describes CORO’s target vision, not a claim that every capability is fully realized today. CORO aims to become a connected environment where the same information supports preparation, understanding, decisions, response, evidence and improvement — rather than a collection of independent tools. The CORO continuum Continuity before, during and after an event 01 Know 02 Anticipate 03 Detect 04 Decide 05 Act 06 Protect 07 Prove 08 Learn 09 Improve Our principle One source of data. Multiple uses. Operational continuity. CORO progressively aims to make structured information useful at several points in the operational cycle, without promising complete automation for every relationship. Building Document Procedure Response Occupancy Evacuation Incident After-action review After-action review Corrective action Corrective action Improvement Before · During · After An ecosystem designed across time These groups represent the ecosystem and its trajectory. They combine existing, in-development and future capabilities and are not a statement of availability. 01 Before Prepare and understand Structure knowledge and preparedness. Documents Knowledge Projects Resilience Exercises Sentinelle 02 During Understand and act Put useful context at the service of decisions and response. Sentinelle Incident Ops AI Building Bridge QR Intervention 03 After Prove and improve Preserve the record, learn and track improvement. Operational log Reports After-action reviews Corrective actions Performance CORO Index Network People at the center Intelligence expands capability. It does not replace accountability. CORO can progressively help structure, retrieve and contextualize information, support recommendations and orchestrate selected tasks. Sensitive decisions remain under human control. The platform supports coordinators, advisors, managers, emergency teams and responders without replacing their judgment. From building to network Building → Portfolio → Organization CORO is designed to understand a building in context, then progressively enable a consolidated view of document status, preparedness, occupancy, incidents, open actions, indicators and trends. Building Portfolio Organization In this vision, CORO Network represents cross-organizational management across buildings, portfolios and organizations — not simply a multi-site map. A Canadian platform Built in Canada. Designed for field realities. CORO is developed in Canada from hands-on experience in emergency management, fire safety, business continuity and organizational resilience. It aims to support operational realities and the progressive integration of applicable requirements. CORO does not make an organization automatically compliant. Build resilience that works in the real world. See how CORO can connect preparedness, information and action across your organization. Request a demo Explore the platform"
+ },
+ "fr-ref": {
+  "status": 200,
+  "title": "CORO · Conformité opérationnelle et résilience organisationnelle | CORO",
+  "description": "Découvrez CORO, la plateforme canadienne qui relie conformité opérationnelle, résilience organisationnelle et mesures d’urgence dans un même écosystème.",
+  "canonical": "https://getcoro.io/about",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/about"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/about?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/about"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/about",
+  "ogTitle": "CORO · Conformité opérationnelle et résilience organisationnelle",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Conçue par le terrain. Pensée pour les professionnels."
+   ],
+   [
+    "h2",
+    "Une plateforme née d’un besoin concret"
+   ],
+   [
+    "h2",
+    "Du document à la résilience opérationnelle"
+   ],
+   [
+    "h2",
+    "Conformité Opérationnelle + Résilience Organisationnelle"
+   ],
+   [
+    "h3",
+    "Conformité Opérationnelle"
+   ],
+   [
+    "h3",
+    "Résilience Organisationnelle"
+   ],
+   [
+    "h2",
+    "Le système d’exploitation de la résilience organisationnelle"
+   ],
+   [
+    "h2",
+    "Une continuité avant, pendant et après l’événement"
+   ],
+   [
+    "h2",
+    "Même donnée. Plusieurs usages. Une continuité opérationnelle."
+   ],
+   [
+    "h2",
+    "Un écosystème pensé dans le temps"
+   ],
+   [
+    "h3",
+    "Préparer et comprendre"
+   ],
+   [
+    "h3",
+    "Comprendre et agir"
+   ],
+   [
+    "h3",
+    "Prouver et améliorer"
+   ],
+   [
+    "h2",
+    "L’intelligence augmente la capacité. Elle ne remplace pas la responsabilité."
+   ],
+   [
+    "h2",
+    "Bâtiment → Portefeuille → Organisation"
+   ],
+   [
+    "h2",
+    "Conçue au Canada. Pensée pour les réalités du terrain."
+   ],
+   [
+    "h2",
+    "Construisons une résilience qui fonctionne dans la réalité."
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/about?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "#about-vision",
+    "Découvrir la vision"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "/#features",
+    "Découvrir la plateforme"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/about?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [
+   {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "CORO",
+    "url": "https://getcoro.io",
+    "logo": "https://getcoro.io/coro-logo.png"
+   },
+   {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "CORO · Conformité opérationnelle et résilience organisationnelle",
+    "description": "Découvrez CORO, la plateforme canadienne qui relie conformité opérationnelle, résilience organisationnelle et mesures d’urgence dans un même écosystème.",
+    "url": "https://getcoro.io/about",
+    "inLanguage": "fr-CA",
+    "mainEntity": {
+     "@type": "Organization",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    },
+    "isPartOf": {
+     "@type": "WebSite",
+     "name": "CORO",
+     "url": "https://getcoro.io"
+    }
+   }
+  ],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "À propos de CORO Conçue par le terrain. Pensée pour les professionnels. CORO — Conformité Opérationnelle et Résilience Organisationnelle — est une plateforme canadienne conçue pour relier, dans un même environnement numérique, les bâtiments, les personnes, les plans, les procédures, les systèmes et les incidents. Son objectif est de créer une continuité entre la préparation, la connaissance de l’environnement, la décision, l’intervention, la preuve et l’amélioration continue — tout en maintenant l’expertise humaine au centre des décisions. Résilience · Conformité · Action Découvrir la vision Demander une démo Pourquoi CORO Une plateforme née d’un besoin concret Dans les mesures d’urgence, la sécurité incendie, la continuité et la résilience organisationnelle, l’information existe souvent, mais demeure fragmentée entre les plans, les procédures, les plans techniques, les contacts, l’occupation, les exercices, les incidents, les actions correctives, les données du bâtiment et les systèmes. Lorsqu’un événement survient, posséder un document n’est pas suffisant. L’information doit soutenir une action coordonnée au moment où elle compte. Retrouver Comprendre Mobiliser Appliquer Coordonner Prouver Apprendre CORO est née de cette réalité. Notre évolution Du document à la résilience opérationnelle CORO a d’abord été conçue pour structurer et moderniser la production documentaire. Sa trajectoire s’étend progressivement vers un environnement capable d’accompagner une organisation avant, pendant et après un événement. 01 Documents 02 Bâtiments 03 Personnes 04 Occupation 05 Exercices 06 Incidents 07 Connaissance 08 Opérations 09 Amélioration Cette trajectoire réunit des capacités actuelles, en développement et envisagées; elle ne signifie pas que chaque capacité est déjà disponible. Pourquoi le nom CORO Conformité Opérationnelle + Résilience Organisationnelle CO Conformité Opérationnelle Plans, exigences, procédures, responsabilités, qualifications, preuves, traçabilité, maintien à jour et actions correctives. La conformité ne consiste pas uniquement à posséder un document : l’information nécessaire doit pouvoir soutenir les opérations. RO Résilience Organisationnelle La capacité de connaître son environnement, anticiper, préparer, détecter, décider, agir, protéger, apprendre et améliorer lorsque les conditions changent. CORO relie les deux. Une organisation réellement résiliente ne se limite pas à démontrer sa conformité; une conformité réellement opérationnelle doit soutenir l’action lorsque la situation l’exige. Notre vision Le système d’exploitation de la résilience organisationnelle Cette expression décrit la vision cible de CORO, et non une affirmation que toutes les capacités sont entièrement réalisées aujourd’hui. CORO vise à devenir un environnement connecté où les mêmes informations servent à préparer, comprendre, décider, intervenir, prouver et améliorer — plutôt qu’une collection d’outils indépendants. Continuum CORO Une continuité avant, pendant et après l’événement 01 Connaître 02 Anticiper 03 Détecter 04 Décider 05 Agir 06 Protéger 07 Prouver 08 Apprendre 09 Améliorer Notre principe Même donnée. Plusieurs usages. Une continuité opérationnelle. CORO vise progressivement à permettre qu’une information structurée serve à plusieurs moments du cycle opérationnel, sans promettre une automatisation complète de chaque relation. Bâtiment Document Procédure Intervention Occupation Évacuation Incident REX REX Action corrective Action corrective Amélioration Avant · Pendant · Après Un écosystème pensé dans le temps Ces ensembles représentent l’écosystème et sa trajectoire. Ils regroupent des capacités existantes, en développement et futures, sans constituer une annonce de disponibilité. 01 Avant Préparer et comprendre Structurer la connaissance et la préparation. Documents Knowledge Projects Résilience Exercices Sentinelle 02 Pendant Comprendre et agir Mettre le contexte utile au service de la décision et de l’intervention. Sentinelle Incident Ops AI Building Bridge QR Intervention 03 Après Prouver et améliorer Conserver la trace, apprendre et suivre l’amélioration. Journal Rapports REX Actions correctives Performance Indice CORO Network L’humain au centre L’intelligence augmente la capacité. Elle ne remplace pas la responsabilité. CORO peut progressivement aider à structurer, rechercher et contextualiser l’information, soutenir une recommandation et orchestrer certaines tâches. Les décisions sensibles demeurent sous contrôle humain. La plateforme soutient les coordonnateurs, conseillers, gestionnaires, équipes d’urgence et intervenants sans se substituer à leur jugement. Du bâtiment au réseau Bâtiment → Portefeuille → Organisation CORO est conçue pour comprendre un bâtiment dans son contexte, puis permettre progressivement une vue consolidée de l’état documentaire, de la préparation, de l’occupation, des incidents, des actions ouvertes, des indicateurs et des tendances. Bâtiment Portefeuille Organisation Dans cette vision, CORO Network représente un pilotage transversal entre bâtiments, portefeuilles et organisations — pas simplement une carte multi-sites. Une plateforme canadienne Conçue au Canada. Pensée pour les réalités du terrain. CORO est développée au Canada à partir d’une expérience concrète en mesures d’urgence, sécurité incendie, continuité et résilience organisationnelle. Elle vise à soutenir les réalités opérationnelles et l’intégration progressive des exigences applicables. CORO ne rend pas une organisation automatiquement conforme. Construisons une résilience qui fonctionne dans la réalité. Découvrez comment CORO peut relier la préparation, l’information et l’action dans votre organisation. Demander une démo Découvrir la plateforme"
+ }
+}

@@ -1,0 +1,37 @@
+/* /security — V1 tokens only. Calm, precise and technical without theatre: editorial rows, ruled columns and one definition list. No cards, no status colours, no badges. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.link { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.link:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.body { margin: 0; color: var(--muted); font-size: var(--coro-v1-text-body-l); line-height: 1.65; max-inline-size: 46rem; }
+.links { margin: 0; display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3) var(--coro-v1-space-6); }
+.note { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+
+/* Facts: what the hosting statement covers, as a plain definition list. */
+.facts { margin: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.facts > div { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.facts dt { color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.facts dd { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }
+
+/* Rows: one control per row, a title and one sentence. */
+.rows { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.rows li { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.rows h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.25; }
+.rows p { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+@media (min-width: 48rem) { .rows li { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: var(--coro-v1-space-6); align-items: baseline; } .rowsCompact li { grid-template-columns: 1fr; gap: var(--coro-v1-space-1); } }
+/* Section 03 sits in the narrower media column: side-by-side only when the column can hold the longest title (Communications) beside its sentence. */
+@media (min-width: 68rem) { .rowsCompact li { grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: var(--coro-v1-space-6); } }
+
+/* Two ruled columns (backup, availability). */
+.columns { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.columns section { border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.columns h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; }
+.columns p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+/* Shared responsibility: three ruled columns, the only multi-column group of the page. */
+.cols { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
+.cols section { border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-3); align-content: start; }
+.cols section:nth-child(2) { border-block-start-color: var(--accent); }
+.cols h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.2; }
+.cols ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.cols li { padding-block: var(--coro-v1-space-2); border-block-end: 1px solid var(--line); color: var(--muted); line-height: 1.55; }

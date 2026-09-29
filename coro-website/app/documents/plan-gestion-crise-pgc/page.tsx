@@ -1,235 +1,233 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import { CTASection } from '@/components/conversion/CTASection';
+import { Accordion } from '@/components/page/Accordion';
+import { EditorialBlock } from '@/components/page/EditorialBlock';
+import { EditorialHero } from '@/components/page/EditorialHero';
+import { PageSection } from '@/components/page/PageSection';
+import { V2Shell } from '@/components/site/V2Shell';
+import { Button } from '@/components/ui/Button';
+import { faqJsonLd } from '@/lib/site/json-ld';
+import { localeFromSearchParams, localizedHref } from '@/lib/site/locale';
+import { buildPageMetadata } from '@/lib/site/seo';
+import styles from './page.module.css';
 
-const SITE_URL = 'https://getcoro.io';
-const PAGE_URL = `${SITE_URL}/documents/plan-gestion-crise-pgc`;
+type P = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
-const DOC = {
-  code: 'PGC',
-  color: '#8E44AD',
-  fr: {
-    title: 'Plan de Gestion de Crise (PGC)',
-    seoTitle: 'Plan de Gestion de Crise (PGC) — Guide complet | CORO',
-    seoDesc: 'Tout sur le Plan de Gestion de Crise : définition, structure, rôles de la cellule de crise et comment CORO aide les organisations à se préparer.',
-    hero: 'Plan de Gestion de Crise (PGC)',
-    intro: 'Le Plan de Gestion de Crise définit les protocoles de décision, de communication et d\'intervention lors de situations affectant gravement l\'organisation : crise médiatique, cyberattaque, incident majeur sur les lieux de travail, ou toute situation à fort impact réputationnel ou opérationnel.',
-    sections: [
-      { title: 'Qu\'est-ce qu\'un Plan de Gestion de Crise ?', content: 'Le PGC est un cadre décisionnel qui permet à une organisation de réagir rapidement et de façon coordonnée lors d\'une crise. Il définit qui décide quoi, comment communiquer en interne et en externe, et comment minimiser l\'impact sur les opérations et la réputation. La norme ISO 22361:2022 — Gestion de crise fournit des lignes directrices sur les principes et le cadre de la gestion de crise.' },
-      { title: 'Différence entre urgence et crise', content: 'Une urgence affecte principalement la sécurité physique des personnes (incendie, accident) et nécessite un PMU ou un PSI. Une crise affecte la réputation, la viabilité ou la confiance envers l\'organisation. Les deux peuvent survenir simultanément et nécessitent des plans distincts mais complémentaires.' },
-      { title: 'Contenu d\'un PGC complet', content: 'Un PGC comprend : la cellule de crise et ses membres, les déclencheurs d\'activation du plan, les protocoles de communication interne et externe, la gestion des médias et des réseaux sociaux, les procédures d\'escalade décisionnelle, et les scénarios préétablis pour les types de crises les plus probables selon l\'analyse de risque de l\'organisation.' },
-      { title: 'La communication de crise', content: 'La communication est au cœur de la gestion de crise. Le PGC définit les porte-paroles autorisés, les messages clés pour chaque scénario, les canaux de communication prioritaires et les protocoles de validation des communications avant diffusion. Une mauvaise communication de crise peut aggraver significativement l\'impact d\'un incident.' },
-      { title: 'Fréquence de révision et d\'exercices', content: 'Le PGC doit être révisé annuellement et après chaque activation réelle. Des exercices de simulation (tabletop exercises) sont recommandés tous les 12 à 18 mois pour tester la réactivité de la cellule de crise et identifier les lacunes du plan.' },
-      { title: 'Comment CORO supporte la production du PGC', content: 'CORO structure votre PGC avec des modèles de scénarios, des fiches rôles pour la cellule de crise et des procédures de communication. La plateforme centralise tous vos documents de conformité et de gestion des risques.' },
-    ],
-    sources: [
-      { label: 'ISO 22361:2022 — Sécurité et résilience — Gestion de crise — Lignes directrices', url: 'https://www.iso.org/fr/standard/77720.html' },
-      { label: 'ISO 22301:2019 — Systèmes de management de la continuité des activités', url: 'https://www.iso.org/fr/standard/75106.html' },
-      { label: 'Gouvernement du Canada — Cadre de gestion des urgences', url: 'https://www.securitepublique.gc.ca/cnt/rsrcs/pblctns/mrgnc-mngmnt-frmwrk/index-fr.aspx' },
-    ],
-    faq: [
-      { q: 'Toutes les organisations ont-elles besoin d\'un PGC ?', a: 'Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n\'est pas le critère principal — c\'est l\'exposition au risque.' },
-      { q: 'Qui fait partie de la cellule de crise ?', a: 'Typiquement : le PDG ou directeur général, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise.' },
-      { q: 'Le PGC est-il relié au PCA ?', a: 'Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d\'une crise majeure.' },
-      { q: 'Comment tester un PGC ?', a: 'Par des exercices tabletop : simulation d\'un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés.' },
-    ],
-    cta: 'Structurer votre PGC avec CORO',
-  },
+/**
+ * /documents/plan-gestion-crise-pgc (MIG-05E) — fourth of six document guides migrated to V2. Built to final editorial
+ * and visual quality on this first pass (family lesson from PMU/PSI/PCA, each of which needed a later density/character
+ * pass — see MIG-05B-B/MIG-05C-B/MIG-05D-B in the gate). Editorial guide first, CORO roadmap context second.
+ * Authority: docs/website-v2/05-migration/MIG-05-GUIDES-GATE.md (PGC preservation matrix and normative matrix,
+ * MIG-05E section).
+ * LANGUAGE: FR ONLY (englishAvailable={false}) — the V1 page had no searchParams handling at all (?lang=en rendered the
+ * identical French page, confirmed in the baseline); no translation is invented here.
+ * PRODUCT BOUNDARY — CRITICAL: PGC production in CORO is PHASE 2, unlike PMU/PSI/PCA. This page never says "disponible
+ * dans CORO", "Générer votre PGC" or "Produire votre PGC dans CORO" — that exact overclaim existed in V1's hero CTA
+ * ("Structurer votre PGC avec CORO"), directly contradicting V1's own Phase-2 banner one row below it. REMOVED. The
+ * only current claim is that the GUIDE is available today; CORO production is explicitly "prévue en phase 2".
+ * NORMATIVE AUDIT (verified during MIG-05E, see the gate's matrix): ISO 22361:2022 (Sécurité et résilience — Gestion de
+ * crise — Lignes directrices) VERIFIED as guidance for top management on strategic crisis-management capability,
+ * decision-making and crisis leadership (iso.org blocks scripted link checks with a 403 — not a dead link, a bot
+ * protection; the standard's existence and scope are independently confirmed via secondary institutional sources).
+ * ISO 22301:2019 is REMOVED from this page's sources — it is PCA's standard (already covered on the PCA guide) and V1
+ * never actually referenced it in body text, only in the source list, which was confusing cross-listing. The
+ * Government of Canada Emergency Management Framework link is VERIFIED (200) and kept. The V1 claims "révisé
+ * annuellement" and "exercices... tous les 12 à 18 mois" are REMOVED — no primary source (including the ISO 22361 scope
+ * itself) confirms a fixed review/exercise frequency; same family lesson already applied to PMU/PSI/PCA. No crisis
+ * level/tier, no escalation threshold, no response time, and no ICS/SCI-style command-chain role is invented anywhere
+ * on this page — the crisis-cell composition (§4) is presented as typical FUNCTIONS, not an organizational hierarchy.
+ * HERO: the prepared illustration is busier than PMU/PSI/PCA's heroes (a multi-panel "crisis-room" dashboard with
+ * weather radar, site-status indicators and a hand-lettered whiteboard action plan). Audited specifically for whether
+ * it could be mistaken for live CORO software: no CORO logo, no real product UI, generic fictional site codes and a
+ * visibly staged whiteboard — read as stylized editorial illustration, not a screenshot. Classified EDITORIAL /
+ * MARKETING ILLUSTRATION, decorative (alt=""), image not modified. No fact, category or label on this page is derived
+ * from what is drawn in it — including where the illustration coincidentally displays words ("DÉCIDER", "COORDONNER")
+ * that also appear in this page's own copy: those words come from the verified V1 text and the independently-confirmed
+ * ISO 22361 scope, never from the image.
+ * VISUAL SIGNATURE (Guide family rule confirmed by PMU + PSI + PCA — do not clone any): PGC's own three moments are
+ * (1) a "DÉCIDER" typographic anchor with three qualifiers drawn verbatim from the guide's own definition sentence;
+ * (2) a five-function crisis-cell matrix (no connecting lines, no invented hierarchy, framed as typical/example only);
+ * (3) a navy strategic composition as three full-width ruled bands (Décision / Communication / Coordination) — a
+ * horizontal-band shape, deliberately distinct from PSI's columns and PCA's five-column grid.
+ * RESOURCES: OMITTED. No strong PGC/crisis-management-specific blog article exists in the current published inventory
+ * (searched during MIG-05E) — reusing PMU/PCA articles merely to fill the section was explicitly out of scope. This is
+ * a recorded editorial gap, not a silent omission (see the gate's MIG-05E section).
+ */
+const copy = {
+  metaTitle: 'Plan de gestion de crise (PGC) : cellule de crise, communication, ISO 22361',
+  description: 'Qu’est-ce qu’un plan de gestion de crise, la différence avec une urgence, la cellule de crise, la communication de crise et les lignes directrices ISO 22361.',
+  label: 'Guide', code: 'PGC',
+  lines: ['Plan de gestion', 'de crise (PGC).'],
+  lead: 'Le plan de gestion de crise définit les protocoles de décision, de communication et d’intervention lors de situations affectant gravement l’organisation : crise médiatique, cyberattaque, incident majeur, ou toute situation à fort impact réputationnel ou opérationnel.',
+  read: 'Lire le guide', guides: 'Voir tous les guides',
+  s1: { n: '01', label: 'Qu’est-ce qu’un PGC', title: 'Le cadre décisionnel d’une organisation en crise.',
+    text: 'Le PGC est un cadre décisionnel qui permet à une organisation de réagir rapidement et de façon coordonnée lors d’une crise. Il définit qui décide quoi, comment communiquer en interne et en externe, et comment minimiser l’impact sur les opérations et la réputation. La norme ISO 22361:2022 — Gestion de crise fournit des lignes directrices sur les principes et le cadre de la gestion de crise, destinées aux dirigeants responsables de cette capacité.' },
+  s2: { n: '02', label: 'Urgence et crise', title: 'Deux notions liées, pas identiques.',
+    text: 'Ces deux situations peuvent survenir simultanément et nécessitent des plans distincts mais complémentaires.',
+    comparison: [
+      { code: 'Urgence', text: 'Affecte principalement la sécurité physique des personnes (incendie, accident) et nécessite un PMU ou un PSI.' },
+      { code: 'Crise', text: 'Affecte la réputation, la viabilité ou la confiance envers l’organisation, et nécessite un PGC.' },
+    ] as const },
+  s3: { n: '03', label: 'Décider en situation de crise', title: 'Le PGC existe pour une chose : décider.',
+    qualifiers: [
+      'Rapidement',
+      'De façon coordonnée',
+      'En limitant l’impact sur les opérations et la réputation',
+    ] as const },
+  s4: { n: '04', label: 'La cellule de crise', title: 'Des fonctions désignées, pas une improvisation.',
+    text: 'Typiquement, la cellule de crise réunit ces fonctions — la composition exacte varie selon l’organisation et le type de crise.',
+    functions: [
+      ['Direction', 'La direction générale ou la présidence, responsable des décisions finales.'],
+      ['Communications', 'Le responsable des communications, porte-parole et gestion des messages.'],
+      ['Juridique', 'Le conseiller juridique, pour évaluer les implications légales des décisions.'],
+      ['Ressources humaines', 'Le directeur des ressources humaines, pour les enjeux touchant le personnel.'],
+      ['Opérations', 'Les responsables opérationnels concernés selon le type de crise.'],
+    ] as const },
+  s5: { n: '05', label: 'Trois volets stratégiques', title: 'Ce que le PGC structure.',
+    text: 'Ces volets sont liés, pas séquentiels : une crise peut exiger de décider, communiquer et coordonner en parallèle.',
+    bands: [
+      { title: 'Décision', text: 'Qui décide quoi : les procédures d’escalade décisionnelle et les scénarios préétablis pour les types de crise les plus probables selon l’analyse de risque de l’organisation.' },
+      { title: 'Communication', text: 'Les porte-paroles autorisés, les messages clés par scénario, les canaux prioritaires et les protocoles de validation avant diffusion, en interne comme en externe.' },
+      { title: 'Coordination', text: 'Les déclencheurs d’activation du plan et la mobilisation de la cellule de crise pour agir de façon coordonnée.' },
+    ] as const },
+  s6: { n: '06', label: 'Communication de crise', title: 'Au cœur de la gestion de crise.',
+    text: 'Une mauvaise communication de crise peut aggraver significativement l’impact d’un incident. Le PGC définit les audiences à considérer selon le scénario :',
+    audiences: [
+      ['Autorités', 'Les autorités compétentes selon la nature de la crise.'],
+      ['Médias', 'Les médias, via les porte-paroles autorisés et les messages validés.'],
+      ['Employés', 'La communication interne, souvent prioritaire pour maintenir la cohésion.'],
+      ['Parties prenantes', 'Clients, partenaires et autres parties prenantes selon le scénario.'],
+    ] as const },
+  s7: { n: '07', label: 'Exercices et révision', title: 'Un plan qui reste utilisable.',
+    blocks: [
+      ['Exercices', 'Des exercices de simulation (tabletop exercises) sont recommandés pour tester la réactivité de la cellule de crise et identifier les lacunes du plan.'],
+      ['Révision', 'Le PGC est révisé après chaque activation réelle et chaque fois qu’un changement significatif affecte l’organisation.'],
+    ] as const },
+  s8: { n: '08', label: 'PGC, PMU et PCA', title: 'Trois plans complémentaires, pas une hiérarchie unique.',
+    relations: [
+      { code: 'PMU', text: 'Agir face à l’urgence.' },
+      { code: 'PGC', text: 'Gouverner la crise.' },
+      { code: 'PCA', text: 'Maintenir les activités critiques.' },
+    ] as const },
+  s9: { n: '09', label: 'PGC dans CORO', title: 'Le PGC dans CORO : une capacité prévue en phase 2.',
+    facts: [
+      { label: 'Guide', text: 'Disponible dès aujourd’hui, sur cette page.' },
+      { label: 'Production dans CORO', text: 'Guide disponible · Production CORO prévue en phase 2.' },
+    ] as const,
+    cta: 'Voir les documents disponibles aujourd’hui' },
+  faq: 'Questions fréquentes', faqLabel: 'FAQ',
+  faqItems: [
+    { q: 'Toutes les organisations ont-elles besoin d’un PGC?', a: 'Toute organisation exposée à des risques réputationnels, médiatiques, cybernétiques ou opérationnels majeurs devrait avoir un PGC. La taille n’est pas le critère principal — c’est l’exposition au risque.' },
+    { q: 'Qui fait partie de la cellule de crise?', a: 'Typiquement : la direction générale, le responsable des communications, le conseiller juridique, le directeur des ressources humaines et les responsables opérationnels concernés selon le type de crise.' },
+    { q: 'Le PGC est-il relié au PCA?', a: 'Oui. Le PGC gère la dimension décisionnelle et communicationnelle, tandis que le PCA assure la continuité opérationnelle. Les deux fonctionnent en parallèle lors d’une crise majeure.' },
+    { q: 'Comment tester un PGC?', a: 'Par des exercices tabletop : simulation d’un scénario de crise avec la cellule de crise pour tester les réflexes, les outils et les communications. Ces exercices doivent être documentés.' },
+  ],
+  statement: 'Le PGC relie la décision, la communication et la coordination.',
+  support: 'Parlons de votre environnement de gestion de crise et de la place du PGC dans votre stratégie de résilience.',
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+export async function generateMetadata({ searchParams }: P): Promise<Metadata> {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  return buildPageMetadata({ path: '/documents/plan-gestion-crise-pgc', locale: l, hasEnglish: false, title: copy.metaTitle, description: copy.description });
+}
 
-  title: DOC.fr.seoTitle,
-  description: DOC.fr.seoDesc,
+function JsonLd({ value }: { value: object }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(value).replace(/</g, '\\u003c') }} />;
+}
 
-  alternates: {
-    canonical: PAGE_URL,
-    languages: {
-      'fr-CA': PAGE_URL,
-      'x-default': PAGE_URL,
-    },
-  },
-
-  openGraph: {
-    type: 'article',
-    url: PAGE_URL,
-    siteName: 'CORO',
-    locale: 'fr_CA',
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    images: [
-      {
-        url: '/og-coro.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'CORO — Plan de Gestion de Crise (PGC)',
-      },
-    ],
-  },
-
-  twitter: {
-    card: 'summary_large_image',
-    title: DOC.fr.seoTitle,
-    description: DOC.fr.seoDesc,
-    images: ['/og-coro.jpg'],
-  },
-
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-      'max-video-preview': -1,
-    },
-  },
-};
-
-export default function PGCPage() {
-  const data = DOC.fr;
-
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name: data.title,
-    headline: data.seoTitle,
-    description: data.seoDesc,
-    url: PAGE_URL,
-    inLanguage: 'fr-CA',
-    isPartOf: {
-      '@type': 'WebSite',
-      name: 'CORO',
-      url: SITE_URL,
-    },
-    about: [
-      { '@type': 'Thing', name: 'Plan de Gestion de Crise', alternateName: 'PGC' },
-      { '@type': 'Thing', name: 'Gestion de crise' },
-      { '@type': 'Thing', name: 'Communication de crise' },
-      { '@type': 'Thing', name: 'Résilience organisationnelle' },
-    ],
-    publisher: {
-      '@type': 'Organization',
-      name: 'CORO',
-      url: SITE_URL,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE_URL}/coro-logo.png`,
-      },
-    },
-  };
-
+export default async function Page({ searchParams }: P) {
+  const l = localeFromSearchParams((await searchParams) ?? {});
+  const t = copy;
+  const demo = localizedHref('/#demo', l);
   const breadcrumbLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Accueil', item: SITE_URL },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Documents',
-        item: `${SITE_URL}/gestion-documentaire`,
-      },
-      { '@type': 'ListItem', position: 3, name: data.title, item: PAGE_URL },
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://getcoro.io' },
+      { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://getcoro.io/guides' },
+      { '@type': 'ListItem', position: 3, name: t.code, item: 'https://getcoro.io/documents/plan-gestion-crise-pgc' },
     ],
   };
-
-  const faqLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: data.faq.map((f) => ({
-      '@type': 'Question',
-      name: f.q,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: f.a,
-      },
-    })),
-  };
-
   return (
-    <div style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F8F9FA', minHeight: '100vh' }}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbLd).replace(/</g, '\\u003c'),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqLd).replace(/</g, '\\u003c'),
-        }}
-      />
-      <nav style={{ backgroundColor: '#2C3E50', padding: '0 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <a href="/" style={{ textDecoration: 'none' }}><span style={{ fontSize: 24, fontWeight: 900, color: '#FFFFFF', letterSpacing: '-1px' }}>CO<span style={{ color: '#C0392B' }}>RO</span></span></a>
-          <a href="/" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, textDecoration: 'none' }}>← Accueil</a>
+    <V2Shell locale={l} pathname="/documents/plan-gestion-crise-pgc" englishAvailable={false}>
+      <JsonLd value={faqJsonLd(t.faqItems.map((item) => ({ question: item.q, answer: item.a })))} />
+      <JsonLd value={breadcrumbLd} />
+
+      <EditorialHero id="pgc-title" label={`${t.label} · ${t.code}`} title={t.lines} lead={t.lead}
+        photo={{ src: '/website-v2/guides/guide-pgc-crisis-management.webp', side: 'end', position: '50% 35%', mobilePosition: '50% 30%', coverage: 55, mobileRatio: '16 / 11' }}
+        actions={<><Button href="#s1" surface="dark">{t.read}</Button><Button href={localizedHref('/guides', l)} variant="ghost" surface="dark">{t.guides}</Button></>} />
+
+      <PageSection tone="white" density="compact" id="s1" labelledBy="pgc-s1-title">
+        <EditorialBlock id="pgc-s1-title" label={`${t.s1.n} — ${t.s1.label}`} heading={t.s1.title}><p>{t.s1.text}</p></EditorialBlock>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pgc-s2-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s2-title" label={`${t.s2.n} — ${t.s2.label}`} heading={t.s2.title}><p>{t.s2.text}</p></EditorialBlock>
+          <ul className={styles.comparison}>{t.s2.comparison.map((item) => <li key={item.code}><h3>{item.code}</h3><p>{item.text}</p></li>)}</ul>
         </div>
-      </nav>
-      <div style={{ backgroundColor: '#FEF3C7', borderBottom: '1px solid #F59E0B', padding: '12px 24px', textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#92400E', fontWeight: 600, margin: 0 }}>
-          🚧 <strong>Phase 2 — En développement</strong> · La production du PGC dans CORO sera disponible prochainement. <a href="/#demo" style={{ color: '#92400E', fontWeight: 700 }}>Être notifié →</a>
-        </p>
-      </div>
-      <div style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E9ECEF', padding: '12px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <p style={{ fontSize: 13, color: '#ADB5BD' }}><a href="/" style={{ color: '#ADB5BD', textDecoration: 'none' }}>getcoro.io</a> / <span style={{ color: '#6C757D' }}>{data.title}</span></p>
-        </div>
-      </div>
-      <div style={{ background: `linear-gradient(135deg, #2C3E50 0%, ${DOC.color}CC 100%)`, padding: '80px 24px' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ display: 'inline-block', fontSize: 13, fontWeight: 800, color: '#FFFFFF', backgroundColor: DOC.color, padding: '4px 14px', borderRadius: 4, letterSpacing: '0.1em', marginBottom: 20 }}>{DOC.code}</span>
-          <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, marginBottom: 24 }}>{data.hero}</h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.8)', lineHeight: 1.7, maxWidth: 640, margin: '0 auto 32px' }}>{data.intro}</p>
-          <a href="/#demo" style={{ display: 'inline-block', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 16 }}>{data.cta} →</a>
-        </div>
-      </div>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(500px, 100%), 1fr))', gap: 32 }}>
-          {data.sections.map((s, i) => (
-            <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, border: '1px solid #E9ECEF' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#2C3E50', marginBottom: 16, paddingBottom: 12, borderBottom: `2px solid ${DOC.color}` }}>{s.title}</h2>
-              <p style={{ fontSize: 15, color: '#495057', lineHeight: 1.8 }}>{s.content}</p>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 48, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 32, border: '1px solid #E9ECEF' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 16 }}>📚 Sources et références officielles</h3>
-          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {data.sources.map((s, i) => (<li key={i}><a href={s.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: DOC.color, textDecoration: 'none' }}>→ {s.label}</a></li>))}
-          </ul>
-          <p style={{ fontSize: 12, color: '#ADB5BD', marginTop: 16 }}>⚠️ Ce contenu est fourni à titre informatif. Les exigences réglementaires varient selon le type de bâtiment, le secteur d'activité et la municipalité. Consultez les autorités compétentes pour votre situation spécifique.</p>
-        </div>
-        <div style={{ marginTop: 64 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#2C3E50', marginBottom: 32, textAlign: 'center' }}>Questions fréquentes</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 800, margin: '0 auto' }}>
-            {data.faq.map((f, i) => (
-              <div key={i} style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 28, border: '1px solid #E9ECEF' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2C3E50', marginBottom: 10 }}>{f.q}</h3>
-                <p style={{ fontSize: 15, color: '#6C757D', lineHeight: 1.7 }}>{f.a}</p>
-              </div>
-            ))}
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pgc-s3-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s3-title" label={`${t.s3.n} — ${t.s3.label}`} heading={t.s3.title} />
+          <div className={styles.decideWrap}>
+            <p className={styles.decideWord}>Décider</p>
+            <ul className={styles.qualifiers}>{t.s3.qualifiers.map((q) => <li key={q}>{q}</li>)}</ul>
           </div>
         </div>
-        <div style={{ marginTop: 64, backgroundColor: '#2C3E50', borderRadius: 16, padding: '48px 40px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', marginBottom: 16 }}>Le {DOC.code} arrive dans CORO — Phase 2</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', marginBottom: 32, maxWidth: 500, margin: '0 auto 32px' }}>Laissez-nous votre courriel et nous vous contacterons dès que ce type de document sera disponible dans la plateforme.</p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/#demo" style={{ display: 'inline-block', backgroundColor: '#C0392B', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 15 }}>Demander une démo →</a>
-            <a href="/blog" style={{ display: 'inline-block', backgroundColor: 'transparent', color: '#FFFFFF', padding: '14px 32px', borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: '2px solid rgba(255,255,255,0.3)' }}>Lire nos guides →</a>
-          </div>
+      </PageSection>
+
+      <PageSection tone="soft" labelledBy="pgc-s4-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s4-title" label={`${t.s4.n} — ${t.s4.label}`} heading={t.s4.title}><p>{t.s4.text}</p></EditorialBlock>
+          <ul className={styles.functions}>{t.s4.functions.map(([name, text]) => <li key={name} className={styles.functionCell}><h3>{name}</h3><p>{text}</p></li>)}</ul>
         </div>
-      </div>
-      <div style={{ backgroundColor: '#2C3E50', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>© 2026 CORO — <a href="https://getcoro.io" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>getcoro.io</a></p>
-      </div>
-    </div>
+      </PageSection>
+
+      <PageSection tone="navy" labelledBy="pgc-s5-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s5-title" label={`${t.s5.n} — ${t.s5.label}`} heading={t.s5.title}><p>{t.s5.text}</p></EditorialBlock>
+          <ul className={styles.bands} aria-label={t.s5.title}>{t.s5.bands.map((item) => <li key={item.title} className={styles.band}><h3>{item.title}</h3><p>{item.text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pgc-s6-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s6-title" label={`${t.s6.n} — ${t.s6.label}`} heading={t.s6.title}><p>{t.s6.text}</p></EditorialBlock>
+          <ul className={styles.audiences}>{t.s6.audiences.map(([name, text]) => <li key={name} className={styles.audience}><h3>{name}</h3><p>{text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" density="compact" labelledBy="pgc-s7-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s7-title" label={`${t.s7.n} — ${t.s7.label}`} heading={t.s7.title} />
+          <ul className={`${styles.rows} ${styles.pair}`}>{t.s7.blocks.map(([name, text]) => <li key={name}><h3>{name}</h3><p>{text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" density="compact" labelledBy="pgc-s8-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s8-title" label={`${t.s8.n} — ${t.s8.label}`} heading={t.s8.title} />
+          <ul className={styles.relations}>{t.s8.relations.map((r) => <li key={r.code} className={styles.relation}><h3>{r.code}</h3><p>{r.text}</p></li>)}</ul>
+        </div>
+      </PageSection>
+
+      <PageSection tone="soft" density="compact" labelledBy="pgc-s9-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-s9-title" label={`${t.s9.n} — ${t.s9.label}`} heading={t.s9.title} />
+          <ul className={styles.phaseWrap}>{t.s9.facts.map((f) => <li key={f.label}><h3>{f.label}</h3><p>{f.text}</p></li>)}</ul>
+          <div className={styles.linkCard}><a className={styles.linkCardLink} href={localizedHref('/gestion-documentaire', l)}>{t.s9.cta}<span aria-hidden="true"> →</span></a></div>
+        </div>
+      </PageSection>
+
+      <PageSection tone="white" labelledBy="pgc-faq-title">
+        <div className={styles.stack}>
+          <EditorialBlock id="pgc-faq-title" label={t.faqLabel} heading={t.faq} />
+          <Accordion label={t.faq} items={t.faqItems.map((item, i) => ({ id: `faq-${i}`, question: item.q, answer: item.a }))} />
+        </div>
+      </PageSection>
+
+      <CTASection id="pgc-cta-title" tone="dark" label={`${t.label} · ${t.code}`} statement={t.statement} support={t.support} primary={{ label: 'Demander une démonstration', href: demo }} secondary={{ label: t.guides, href: localizedHref('/guides', l) }} />
+    </V2Shell>
   );
 }

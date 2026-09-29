@@ -1,0 +1,387 @@
+{
+ "capturedFrom": "HEAD dc49d7e1 production build, /sitemap.xml, backend unavailable (static entries only)",
+ "urls": [
+  {
+   "url": "https://getcoro.io",
+   "alternates": {
+    "fr-CA": "https://getcoro.io",
+    "en-CA": "https://getcoro.io?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "weekly",
+   "priority": 1
+  },
+  {
+   "url": "https://getcoro.io?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io",
+    "en-CA": "https://getcoro.io?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "weekly",
+   "priority": 1
+  },
+  {
+   "url": "https://getcoro.io/about",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/about",
+    "en-CA": "https://getcoro.io/about?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/about?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/about",
+    "en-CA": "https://getcoro.io/about?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/security",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/security",
+    "en-CA": "https://getcoro.io/security?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.7
+  },
+  {
+   "url": "https://getcoro.io/security?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/security",
+    "en-CA": "https://getcoro.io/security?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.7
+  },
+  {
+   "url": "https://getcoro.io/privacy",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/privacy",
+    "en-CA": "https://getcoro.io/privacy?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "yearly",
+   "priority": 0.3
+  },
+  {
+   "url": "https://getcoro.io/privacy?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/privacy",
+    "en-CA": "https://getcoro.io/privacy?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "yearly",
+   "priority": 0.3
+  },
+  {
+   "url": "https://getcoro.io/terms",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/terms",
+    "en-CA": "https://getcoro.io/terms?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "yearly",
+   "priority": 0.3
+  },
+  {
+   "url": "https://getcoro.io/terms?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/terms",
+    "en-CA": "https://getcoro.io/terms?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "yearly",
+   "priority": 0.3
+  },
+  {
+   "url": "https://getcoro.io/pricing",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/pricing",
+    "en-CA": "https://getcoro.io/pricing?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/pricing?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/pricing",
+    "en-CA": "https://getcoro.io/pricing?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/sentinelle",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/sentinelle",
+    "en-CA": "https://getcoro.io/sentinelle?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/sentinelle?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/sentinelle",
+    "en-CA": "https://getcoro.io/sentinelle?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/sentinelle-population",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/sentinelle-population",
+    "en-CA": "https://getcoro.io/sentinelle-population?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/sentinelle-population?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/sentinelle-population",
+    "en-CA": "https://getcoro.io/sentinelle-population?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/gestion-documentaire",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/gestion-documentaire",
+    "en-CA": "https://getcoro.io/gestion-documentaire?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/gestion-documentaire?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/gestion-documentaire",
+    "en-CA": "https://getcoro.io/gestion-documentaire?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/gestion-de-projets",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/gestion-de-projets",
+    "en-CA": "https://getcoro.io/gestion-de-projets?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/gestion-de-projets?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/gestion-de-projets",
+    "en-CA": "https://getcoro.io/gestion-de-projets?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/resilience-operationnelle",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/resilience-operationnelle",
+    "en-CA": "https://getcoro.io/resilience-operationnelle?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/resilience-operationnelle?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/resilience-operationnelle",
+    "en-CA": "https://getcoro.io/resilience-operationnelle?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/performance-objectifs",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/performance-objectifs",
+    "en-CA": "https://getcoro.io/performance-objectifs?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/performance-objectifs?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/performance-objectifs",
+    "en-CA": "https://getcoro.io/performance-objectifs?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/portail-client",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/portail-client",
+    "en-CA": "https://getcoro.io/portail-client?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/portail-client?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/portail-client",
+    "en-CA": "https://getcoro.io/portail-client?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/programme-recommandation",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/programme-recommandation",
+    "en-CA": "https://getcoro.io/programme-recommandation?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.6
+  },
+  {
+   "url": "https://getcoro.io/programme-recommandation?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/programme-recommandation",
+    "en-CA": "https://getcoro.io/programme-recommandation?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.6
+  },
+  {
+   "url": "https://getcoro.io/contact",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/contact",
+    "en-CA": "https://getcoro.io/contact?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.6
+  },
+  {
+   "url": "https://getcoro.io/contact?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/contact",
+    "en-CA": "https://getcoro.io/contact?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.6
+  },
+  {
+   "url": "https://getcoro.io/partners",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/partners",
+    "en-CA": "https://getcoro.io/partners?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.7
+  },
+  {
+   "url": "https://getcoro.io/partners?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/partners",
+    "en-CA": "https://getcoro.io/partners?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.7
+  },
+  {
+   "url": "https://getcoro.io/documents/plan-mesures-urgence-pmu",
+   "alternates": {},
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/documents/plan-securite-incendie-psi",
+   "alternates": {},
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/documents/plan-continuite-activites-pca",
+   "alternates": {},
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.9
+  },
+  {
+   "url": "https://getcoro.io/documents/plan-gestion-crise-pgc",
+   "alternates": {},
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/documents/plan-reprise-activites-pra",
+   "alternates": {},
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/documents/plan-urgence-environnementale-pue",
+   "alternates": {},
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "monthly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/blog",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/blog",
+    "en-CA": "https://getcoro.io/blog?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "weekly",
+   "priority": 0.8
+  },
+  {
+   "url": "https://getcoro.io/blog?lang=en",
+   "alternates": {
+    "fr-CA": "https://getcoro.io/blog",
+    "en-CA": "https://getcoro.io/blog?lang=en"
+   },
+   "lastModified": "2026-08-18T00:00:00.000Z",
+   "changeFrequency": "weekly",
+   "priority": 0.8
+  }
+ ]
+}

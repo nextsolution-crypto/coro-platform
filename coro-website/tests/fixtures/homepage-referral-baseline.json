@@ -1,0 +1,11 @@
+{
+  "cookieNameCode": "coro_referral_code",
+  "cookieNameFirstTouch": "coro_referral_first_touch",
+  "maxAgeSeconds": 7776000,
+  "formatRegex": "^CR-[A-HJ-NP-Z2-9]{6}$",
+  "firstTouchWins": true,
+  "domainScopedTo": ".getcoro.io",
+  "sameSite": "Lax",
+  "captureSide": "client",
+  "captureTiming": "mount"
+}

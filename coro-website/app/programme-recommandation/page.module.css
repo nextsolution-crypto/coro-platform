@@ -1,0 +1,20 @@
+/* /programme-recommandation — V1 tokens only; the opening is the shared EditorialHero. The amount is typography and hierarchy, not decoration. */
+.reward { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--coro-v1-space-8); }
+.amount { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-display-l); font-weight: 850; line-height: 1; letter-spacing: -.035em; white-space: nowrap; }
+.rewardText { padding-inline-start: var(--coro-v1-space-8); border-inline-start: 1px solid var(--line); }
+.rewardLabel { margin: 0 0 var(--coro-v1-space-2); color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.rewardTitle { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.2; }
+@media (max-width: 40rem) {
+  .reward { grid-template-columns: minmax(0, 1fr); gap: var(--coro-v1-space-4); }
+  .rewardText { padding-inline-start: 0; padding-block-start: var(--coro-v1-space-4); border-inline-start: 0; border-block-start: 1px solid var(--line); }
+}
+
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+
+/* Program conditions: an ordered list of statements (body text, unlike the short titles of About and Partners). */
+.conditions { list-style: none; margin: 0; padding: 0; counter-reset: cond; border-block-start: 1px solid var(--line); max-inline-size: 54ch; }
+.conditions li { counter-increment: cond; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: baseline; gap: var(--coro-v1-space-3); padding-block: .9rem; border-block-end: 1px solid var(--line); color: var(--ink); }
+.conditions li::before { content: counter(cond, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+.conditions p { margin: 0; line-height: 1.6; }
+
+.note { margin: 0; max-inline-size: 54ch; color: var(--muted); font-size: var(--coro-v1-text-small); line-height: 1.6; }

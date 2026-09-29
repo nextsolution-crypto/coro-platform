@@ -1,0 +1,23 @@
+/* HeroArchitectural — light. Narrative on surface-0; building plate flush to the viewport edge. */
+.hero { background: var(--coro-v1-surface-0); color: var(--coro-v1-text-900); border-block-end: 1px solid var(--coro-v1-border-200); }
+.inner { display: grid; gap: var(--coro-v1-space-8); padding-block: var(--coro-v1-space-8) 0; }
+.text { display: grid; gap: var(--coro-v1-space-4); align-content: center; padding-inline: 1rem; }
+.label { color: var(--coro-v1-blue-700); display: inline-flex; align-items: center; gap: .6rem; }
+.label::before { content: ""; inline-size: 1.5rem; block-size: 2px; background: var(--coro-v1-red-600); }
+.lead { color: var(--coro-v1-text-600); }
+.stage { position: relative; padding-block-end: var(--coro-v1-space-8); }
+.caption { position: absolute; z-index: 3; inset: 0 auto auto 0; margin: 0; padding: .4rem .7rem; background: var(--coro-v1-navy-950); color: #fff; font-size: .625rem; }
+
+@media (min-width: 48rem) {
+  .text { padding-inline: 1.5rem; max-inline-size: 36rem; }
+  .inner { padding-block-start: var(--coro-v1-space-12); }
+}
+@media (min-width: 68rem) {
+  .inner {
+    grid-template-columns: minmax(0, 27rem) minmax(0, 1fr); align-items: center; gap: var(--coro-v1-space-12);
+    padding-block: var(--coro-v1-space-16);
+    padding-inline-start: max(1.5rem, calc((100vw - var(--coro-v1-content-wide)) / 2));
+  }
+  .text { padding-inline: 0; max-inline-size: none; }
+  .stage { inline-size: 100%; max-inline-size: 84rem; justify-self: end; padding-block-end: 0; }
+}

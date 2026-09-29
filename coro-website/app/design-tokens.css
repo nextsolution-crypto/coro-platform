@@ -1,0 +1,97 @@
+:root {
+  --coro-red-700: #a93226; --coro-red-600: #c0392b; --coro-red-500: #d64b3f;
+  --coro-navy-950: #07111f; --coro-navy-900: #102434; --coro-navy-800: #1a2d3d; --coro-slate-700: #2c3e50;
+  --coro-white: #fff; --coro-surface: #f6f8f9; --coro-border: #dce3e7; --coro-muted: #637381;
+  --coro-success: #18864b; --coro-warning: #a96300; --coro-info: #176b9c;
+  --coro-font-sans: var(--font-inter), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --coro-text-xs: .75rem; --coro-text-sm: .875rem; --coro-text-md: 1rem; --coro-text-lg: 1.125rem;
+  --coro-text-xl: clamp(1.5rem, 2vw, 2rem); --coro-text-display: clamp(2.25rem, 6vw, 4.75rem);
+  --coro-space-1: .25rem; --coro-space-2: .5rem; --coro-space-3: .75rem; --coro-space-4: 1rem;
+  --coro-space-6: 1.5rem; --coro-space-8: 2rem; --coro-space-12: 3rem; --coro-space-16: 4rem;
+  --coro-radius-sm: .375rem; --coro-radius-md: .625rem; --coro-radius-lg: 1rem; --coro-radius-pill: 999px;
+  --coro-shadow-sm: 0 4px 16px rgb(16 36 52 / 8%); --coro-shadow-lg: 0 22px 60px rgb(7 17 31 / 16%);
+  --coro-content: 75rem; --coro-reading: 48rem; --coro-focus: #1689cf;
+  --coro-duration-fast: 160ms; --coro-duration-medium: 260ms;
+  --coro-z-header: 100; --coro-z-menu: 110; --coro-z-modal: 200;
+}
+
+:where(a, button, input, select, textarea):focus-visible { outline: 3px solid var(--coro-focus); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Website V2 — target token direction (LAB-01, DRAFT)
+   Additive only. The legacy --coro-* values above are untouched, so every
+   production page renders exactly as before. The --coro-v1-* family is the
+   candidate target; it is only *applied* inside an element that opts in with
+   data-coro-system="v1" (the internal Design Lab). Nothing here is LOCKED.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Colour — navy, structural blue, signal red */
+  --coro-v1-navy-950: #061d35; --coro-v1-navy-900: #082b52; --coro-v1-navy-800: #0f3a68;
+  --coro-v1-blue-700: #0d4f8b; --coro-v1-blue-500: #1a6fb8; --coro-v1-blue-100: #e6eef6;
+  --coro-v1-red-600: #c0392b; --coro-v1-red-700: #a93226; --coro-v1-red-300: #d67e75; --coro-v1-red-100: #fdecee;
+  /* Surfaces, text, borders */
+  --coro-v1-surface-0: #ffffff; --coro-v1-surface-1: #f6f8fa; --coro-v1-surface-2: #eef3f7;
+  --coro-v1-text-900: #162b3e; --coro-v1-text-600: #5d6e7f;
+  --coro-v1-on-dark-900: #ffffff; --coro-v1-on-dark-600: #b8c9d8;
+  --coro-v1-border-200: #dce4ea; --coro-v1-border-on-dark: rgb(255 255 255 / 16%);
+  /* Semantic states — never rely on colour alone (pair with icon + label) */
+  --coro-v1-success: #107c47; --coro-v1-warning: #a15c00; --coro-v1-critical: #bf1522; --coro-v1-info: #0d4f8b;
+  /* LAB-05B: on-dark counterparts for the two semantic hues that need them (contrast >= 4.5:1 on navy-900). Info reuses --coro-v1-focus-on-dark, critical reuses --coro-v1-red-300. */
+  --coro-v1-success-on-dark: #4cc38a; --coro-v1-warning-on-dark: #f0b34a;
+  /* Typography (family stays Inter; sizes are fluid, desktop → mobile targets) */
+  --coro-v1-text-display-xl: clamp(2.625rem, 1.6rem + 4vw, 4.75rem);
+  --coro-v1-text-display-l: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  --coro-v1-text-h1: clamp(2.125rem, 1.6rem + 2vw, 3.25rem);
+  --coro-v1-text-h2: clamp(1.75rem, 1.4rem + 1.4vw, 2.625rem);
+  --coro-v1-text-h3: clamp(1.375rem, 1.2rem + .7vw, 1.875rem);
+  --coro-v1-text-body-l: clamp(1.0625rem, 1rem + .3vw, 1.25rem);
+  --coro-v1-text-body: 1rem; --coro-v1-text-small: .875rem; --coro-v1-text-micro: .75rem;
+  /* Spacing — discrete scale (4 … 160 px) */
+  --coro-v1-space-1: .25rem; --coro-v1-space-2: .5rem; --coro-v1-space-3: .75rem; --coro-v1-space-4: 1rem;
+  --coro-v1-space-6: 1.5rem; --coro-v1-space-8: 2rem; --coro-v1-space-12: 3rem; --coro-v1-space-16: 4rem;
+  --coro-v1-space-24: 6rem; --coro-v1-space-32: 8rem; --coro-v1-space-40: 10rem;
+  /* Widths, radii, elevation */
+  --coro-v1-content: 75rem; --coro-v1-content-wide: 82.5rem; --coro-v1-reading: 44rem;
+  --coro-v1-radius-sm: .5rem; --coro-v1-radius-md: .75rem; --coro-v1-radius-lg: 1rem; --coro-v1-radius-xl: 1.5rem; --coro-v1-radius-pill: 999px;
+  --coro-v1-shadow-1: 0 1px 2px rgb(6 29 53 / 8%);
+  --coro-v1-shadow-2: 0 6px 18px rgb(6 29 53 / 10%);
+  /* shadow-3 / shadow-4 are EXCEPTIONAL (justified floating UI, signal). Depth comes from surface, border, media, overlay and light first. */
+  --coro-v1-shadow-3: 0 18px 48px rgb(6 29 53 / 16%);
+  --coro-v1-shadow-4: 0 0 0 1px rgb(192 57 43 / 35%), 0 12px 32px rgb(192 57 43 / 22%);
+  /* Motion — durations final-candidate, easings PROVISIONAL until motion is tested in the Lab */
+  --coro-v1-motion-instant: 80ms; --coro-v1-motion-fast: 140ms; --coro-v1-motion-base: 220ms;
+  --coro-v1-motion-slow: 420ms; --coro-v1-motion-narrative: 650ms;
+  --coro-v1-ease-enter: cubic-bezier(.16, .84, .3, 1); --coro-v1-ease-exit: cubic-bezier(.4, 0, 1, 1); --coro-v1-ease-standard: cubic-bezier(.4, 0, .2, 1);
+  /* Focus + layering */
+  --coro-v1-focus: #1a6fb8; --coro-v1-focus-on-dark: #8cc8ff;
+  --coro-v1-z-skip: 300;
+}
+
+/* Opt-in scope: remaps the legacy token names used by the shared shell and UI
+   primitives to the target values, so Design Lab renders them in the V1 direction. */
+/* LAB-01B — refinement. Additive tokens: controlled radii hierarchy, drafting-surface details, technical label. */
+:root {
+  /* Radii by role: frame 2 · panel 4 (default for content surfaces) · control 8 · md/lg/xl are EXCEPTIONAL · pill for status/tags only */
+  /* Photographic / architectural media: 10px on VISIBLE, contained corners only (never where the image bleeds off-canvas). */
+  --coro-v1-radius-image: .625rem;
+  --coro-v1-radius-frame: .125rem; --coro-v1-radius-panel: .25rem; --coro-v1-radius-control: .5rem;
+  /* Architectural soft surface ("drafting paper"): surface-2 tone + hairline structure, never a gradient */
+  --coro-v1-paper: var(--coro-v1-surface-2); --coro-v1-paper-line: rgb(13 79 139 / 9%); --coro-v1-paper-line-strong: rgb(13 79 139 / 22%); --coro-v1-paper-grid: 32px;
+  /* Technical label: small, precise, slightly spaced */
+  --coro-v1-label-size: var(--coro-v1-text-micro); --coro-v1-label-tracking: .12em; --coro-v1-label-weight: 750;
+}
+
+[data-coro-system='v1'] {
+  --coro-red-700: var(--coro-v1-red-700); --coro-red-600: var(--coro-v1-red-600); --coro-red-500: var(--coro-v1-red-300);
+  --coro-navy-950: var(--coro-v1-navy-950); --coro-navy-900: var(--coro-v1-navy-900); --coro-navy-800: var(--coro-v1-navy-800);
+  --coro-slate-700: var(--coro-v1-text-900); --coro-white: var(--coro-v1-surface-0);
+  --coro-surface: var(--coro-v1-surface-1); --coro-border: var(--coro-v1-border-200); --coro-muted: var(--coro-v1-text-600);
+  --coro-success: var(--coro-v1-success); --coro-warning: var(--coro-v1-warning); --coro-info: var(--coro-v1-info);
+  --coro-radius-sm: var(--coro-v1-radius-control); --coro-radius-md: var(--coro-v1-radius-control); --coro-radius-lg: var(--coro-v1-radius-panel);
+  --coro-shadow-sm: var(--coro-v1-shadow-1); --coro-shadow-lg: var(--coro-v1-shadow-2);
+  --coro-content: var(--coro-v1-content); --coro-reading: var(--coro-v1-reading);
+  --coro-duration-fast: var(--coro-v1-motion-fast); --coro-duration-medium: var(--coro-v1-motion-base);
+  --coro-focus: var(--coro-v1-focus);
+}
+[data-coro-system='v1'] [data-surface='dark'] { --coro-focus: var(--coro-v1-focus-on-dark); }

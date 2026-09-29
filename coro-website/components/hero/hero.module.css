@@ -1,0 +1,62 @@
+/* Hero primitives — shared by the three LAB-02 compositions. Compositions own their layout; this file owns
+   only what is genuinely common: technical label, headline, actions, media plate, pins, callouts, motion.
+   Breakpoints: 48rem / 68rem (LAB candidates). Tokens: --coro-v1-* (declared in app/design-tokens.css). */
+
+.label { font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; line-height: 1.4; }
+.headline { margin: 0; font-size: var(--coro-v1-text-h1); line-height: 1.02; letter-spacing: -.038em; font-weight: 850; text-wrap: balance; }
+.headline > span { display: block; }
+.lead { margin: 0; font-size: var(--coro-v1-text-body-l); line-height: 1.6; font-weight: 400; max-inline-size: 40ch; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
+
+/* ── Motion: restrained, CSS only, compositor properties, disabled under reduced motion ───────────── */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes drawY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.rise { animation: rise var(--coro-v1-motion-slow) var(--coro-v1-ease-enter) both; animation-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) { .rise, .callout, .callout::before, .tag, .dot { animation: none !important; } }
+
+/* ── Media plate: an image-ratio box, so percentage coordinates always land on the same picture point ─
+   Below 48rem the box is cropped (--mobile-ratio) and the plate is shifted (--plate-left), not scaled. */
+.mediaBox { position: relative; overflow: hidden; aspect-ratio: var(--mobile-ratio, 4 / 3); background: var(--coro-v1-navy-950); }
+.plate { position: absolute; inset-block: 0; inset-inline-start: var(--plate-left, 0); block-size: 100%; aspect-ratio: var(--ratio); }
+.plate img { object-fit: cover; }
+@media (min-width: 48rem) {
+  .mediaBox { aspect-ratio: var(--ratio); }
+  .plate { inset: 0; inset-inline-start: 0; block-size: auto; aspect-ratio: auto; }
+}
+.cover { position: relative; inline-size: 100%; block-size: 100%; }
+.cover img { object-fit: cover; }
+
+/* Numbered pins: annotate the media itself; the text they refer to always exists as real list content. */
+.pin { position: absolute; z-index: 2; inset-inline-start: var(--x); inset-block-start: var(--y); transform: translate(-50%, -50%); inline-size: 1.5rem; block-size: 1.5rem; display: grid; place-items: center; border-radius: var(--coro-v1-radius-pill); background: var(--coro-v1-navy-950); color: #fff; border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(6 29 53 / 45%); font-size: .6875rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.pin[data-show="mobile"] { display: grid; }
+@media (min-width: 68rem) { .pin[data-show="mobile"] { display: none; } }
+
+/* ── Callouts: cards on a leader line over the media (desktop) → a plain numbered list (mobile) ───── */
+.callouts { list-style: none; margin: 0; padding: var(--coro-v1-space-4) 1rem 0; display: grid; gap: var(--coro-v1-space-2); }
+.callout { position: relative; }
+.dot { display: none; }
+.tag { display: grid; grid-template-columns: auto 1fr; column-gap: .75rem; align-items: baseline; padding: .65rem .8rem; background: var(--coro-v1-navy-950); color: #fff; border: 1px solid var(--coro-v1-border-on-dark); border-radius: var(--coro-v1-radius-panel); }
+.tag b { font-size: var(--coro-v1-text-small); font-weight: 750; letter-spacing: -.005em; }
+.tag small { grid-column: 2; color: var(--coro-v1-on-dark-600); font-size: var(--coro-v1-text-micro); letter-spacing: .04em; line-height: 1.4; }
+.tagN { grid-row: span 2; align-self: center; inline-size: 1.25rem; block-size: 1.25rem; display: grid; place-items: center; border-radius: var(--coro-v1-radius-pill); border: 1px solid #fff; font-size: .625rem; font-weight: 800; }
+
+@media (min-width: 48rem) { .callouts { padding-inline: 1.5rem; } }
+@media (min-width: 68rem) {
+  .callouts { position: absolute; inset: 0; display: block; padding: 0; pointer-events: none; }
+  .callout { position: absolute; inset-inline-start: var(--x); inset-block-start: var(--y); inline-size: 0; block-size: 0; }
+  .dot { display: block; position: absolute; inset: 0; inline-size: .875rem; block-size: .875rem; transform: translate(-50%, -50%); border-radius: var(--coro-v1-radius-pill); background: var(--coro-v1-navy-950); border: 2px solid #fff; box-shadow: 0 0 0 1px rgb(6 29 53 / 45%); animation: fade var(--coro-v1-motion-base) var(--coro-v1-ease-enter) both; animation-delay: var(--d, 0ms); }
+  .callout::before { content: ""; position: absolute; background: #fff; box-shadow: 0 0 0 .5px rgb(6 29 53 / 45%); animation-duration: var(--coro-v1-motion-slow); animation-timing-function: var(--coro-v1-ease-enter); animation-fill-mode: both; animation-delay: calc(var(--d, 0ms) + 120ms); }
+  .callout[data-side="right"]::before, .callout[data-side="left"]::before { block-size: 1px; inline-size: calc(var(--lead, 3) * 1rem); inset-block-start: 0; animation-name: drawX; }
+  .callout[data-side="right"]::before { inset-inline-start: 0; transform-origin: 0 50%; }
+  .callout[data-side="left"]::before { inset-inline-end: 0; transform-origin: 100% 50%; }
+  .callout[data-side="up"]::before, .callout[data-side="down"]::before { inline-size: 1px; block-size: calc(var(--lead, 3) * 1rem); inset-inline-start: 0; animation-name: drawY; }
+  .callout[data-side="up"]::before { inset-block-end: 0; transform-origin: 50% 100%; }
+  .callout[data-side="down"]::before { inset-block-start: 0; transform-origin: 50% 0; }
+  .tag { position: absolute; inline-size: max-content; max-inline-size: 13rem; pointer-events: auto; animation: fade var(--coro-v1-motion-base) var(--coro-v1-ease-enter) both; animation-delay: calc(var(--d, 0ms) + 260ms); }
+  .callout[data-side="right"] .tag { inset-inline-start: calc(var(--lead, 3) * 1rem); inset-block-start: 0; transform: translateY(-50%); }
+  .callout[data-side="left"] .tag { inset-inline-end: calc(var(--lead, 3) * 1rem); inset-block-start: 0; transform: translateY(-50%); }
+  .callout[data-side="up"] .tag { inset-block-end: calc(var(--lead, 3) * 1rem); inset-inline-start: 0; transform: translateX(-50%); }
+  .callout[data-side="down"] .tag { inset-block-start: calc(var(--lead, 3) * 1rem); inset-inline-start: 0; transform: translateX(-50%); }
+}

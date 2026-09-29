@@ -1,0 +1,8 @@
+{
+  "validInternalTargets": [
+    "/gestion-documentaire", "/gestion-de-projets", "/performance-objectifs", "/portail-client",
+    "/resilience-operationnelle", "/sentinelle", "/sentinelle-population", "/coro-incident", "/security", "/pricing",
+    "/guides", "/blog", "/contact",
+    "/documents/plan-mesures-urgence-pmu", "/documents/plan-securite-incendie-psi", "/documents/plan-continuite-activites-pca"
+  ]
+}

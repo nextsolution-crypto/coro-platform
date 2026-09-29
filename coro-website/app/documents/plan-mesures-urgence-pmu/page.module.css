@@ -1,0 +1,60 @@
+/* /documents/plan-mesures-urgence-pmu — V1 tokens only. LOCAL page density: this guide runs a denser rhythm than product/commercial
+   pages (MIG-05B-B) via per-section `density="compact"` and a tighter .stack gap — PageSection and the shared page.module.css are
+   untouched. Three memorable visual moments carry the PMU signature: the "08 éléments attendus" typographic anchor + 2x4 grid, the
+   navy preparedness cycle, and the emergency-organization role cards. Everything else stays restrained ruled rows/link cards — no
+   card wall, no SaaS feature-card styling. */
+.stack { display: grid; gap: var(--coro-v1-space-6); }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.link { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.link:focus-visible, .linkCardLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.note { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+
+/* Ruled rows: legal framework (§2), usability/review (§8) and further resources — a title and one sentence per row. */
+.rows { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.rows li { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.rows h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.3; }
+.rows p { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 46rem; }
+@media (min-width: 48rem) { .rows li { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); gap: var(--coro-v1-space-6); align-items: baseline; } }
+@media (min-width: 68rem) { .rows.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); border-block-start: 0; gap: 0 var(--coro-v1-space-8); } .rows.pair li { grid-template-columns: minmax(0, 1fr); border-inline-start: 2px solid var(--ink); padding-inline-start: var(--coro-v1-space-4); } }
+
+/* §4 — "08 éléments attendus": the first PMU visual signature. A large typographic anchor beside a 2-column x 4-row ruled grid,
+   column-major (01-04 left, 05-08 right) so the reading order matches the source list exactly. */
+.elementsWrap { display: grid; gap: var(--coro-v1-space-8); }
+@media (min-width: 64rem) { .elementsWrap { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); align-items: start; gap: var(--coro-v1-space-12); } }
+.bigAnchor { display: grid; gap: var(--coro-v1-space-1); align-content: start; }
+.bigAnchor b { font-size: clamp(5rem, 3rem + 9vw, 9rem); font-weight: 850; line-height: .82; letter-spacing: -.05em; color: var(--ink); }
+.bigAnchor span { font-size: var(--coro-v1-text-h3); font-weight: 800; letter-spacing: -.01em; line-height: 1.15; color: var(--ink); text-transform: uppercase; max-inline-size: 12ch; }
+.elementsGrid { list-style: decimal; margin: 0; padding-inline-start: 1.4rem; display: grid; gap: 0; border-block-start: 2px solid var(--ink); }
+.elementsGrid li { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; line-height: 1.4; }
+@media (min-width: 40rem) { .elementsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; grid-template-rows: repeat(4, auto); column-gap: var(--coro-v1-space-8); } }
+
+/* Preparedness cycle on navy: seven compact blocks, no connecting line or arrow — a conceptual grouping, not a regulated timeline. */
+.cycle { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--coro-v1-space-6); }
+.cycle li { display: grid; gap: var(--coro-v1-space-1); align-content: start; padding: var(--coro-v1-space-4); border: 1px solid var(--coro-v1-border-on-dark); border-radius: var(--coro-v1-radius-control); }
+.cycleNum { margin: 0; color: var(--coro-v1-focus-on-dark); font-size: var(--coro-v1-label-size); font-weight: 800; letter-spacing: .08em; }
+.cycle h3 { margin: 0; color: var(--coro-v1-on-dark-900); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.15; }
+.cycle p { margin: 0; color: var(--coro-v1-on-dark-900); line-height: 1.5; font-size: var(--coro-v1-text-small); }
+
+/* §6 — Emergency organization: the second visual moment. Left keeps the explanatory copy; right holds the roles the source
+   content actually names (personnel de surveillance, équipe de première intervention) as restrained, technical cards — never a
+   generic SaaS feature-card wall (1px border, V1 panel radius, no shadow). */
+.rolesWrap { display: grid; gap: var(--coro-v1-space-8); }
+@media (min-width: 64rem) { .rolesWrap { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: var(--coro-v1-space-12); } }
+.roleCards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-4); }
+@media (min-width: 40rem) { .roleCards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.roleCard { border: 1px solid var(--line); border-radius: var(--coro-v1-radius-panel); padding: var(--coro-v1-space-5); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.roleNum { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: 800; letter-spacing: .08em; }
+.roleCard h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.2; }
+.roleCard p { margin: 0; color: var(--muted); line-height: 1.6; font-size: var(--coro-v1-text-small); }
+
+/* §7 — Procedures: the third visual moment. No verified procedure count exists, so the left side uses an oversized editorial
+   word ("Agir") instead of an invented number; the right side lists the emergency categories already named in the source text. */
+.procWrap { display: grid; gap: var(--coro-v1-space-8); }
+@media (min-width: 64rem) { .procWrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: var(--coro-v1-space-12); align-items: start; } }
+.agir { margin: 0; font-size: clamp(3.5rem, 2rem + 7vw, 7rem); font-weight: 850; line-height: .85; letter-spacing: -.04em; color: var(--ink); }
+.procList { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.procList li { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); font-weight: 650; color: var(--ink); }
+
+/* Link card: one restrained panel toward a related page (PSI, the guides hub, CORO Documents). */
+.linkCard { padding: clamp(1.25rem, 3vw, 2rem); background: var(--coro-v1-surface-2); border-block-start: 3px solid var(--accent); display: grid; align-content: center; min-block-size: 8rem; }
+.linkCardLink { color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 800; text-decoration-color: var(--accent); text-underline-offset: .2em; }

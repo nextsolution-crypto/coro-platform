@@ -1,0 +1,63 @@
+/* /coro-incident — V1 tokens only. Chronology is the visual signature: a semantic ordered list, vertical on narrow screens. */
+.stack { display: grid; gap: var(--coro-v1-space-8); }
+.kicker { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.link { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+
+.types { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); border-block-start: 2px solid var(--ink); }
+.types li { padding-block: var(--coro-v1-space-3); padding-inline-end: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+
+.snap { margin: 0; display: grid; gap: 0; border-block-start: 2px solid var(--ink); }
+.snap > div { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.snap dt { color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.snap dd { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+
+.plain { list-style: none; margin: 0; padding: 0; display: grid; }
+.plain li { padding-block: var(--coro-v1-space-3); border-block-end: 1px solid var(--line); color: var(--ink); font-weight: 650; }
+.plain li:first-child { border-block-start: 1px solid var(--line); }
+
+/* Chronology on the navy section: seven steps in reading order joined by a line. */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--coro-v1-space-8) var(--coro-v1-space-6); }
+.timeline li { position: relative; display: grid; gap: var(--coro-v1-space-2); align-content: start; padding-block-start: var(--coro-v1-space-8); border-block-start: 2px solid var(--coro-v1-border-on-dark); }
+.timeline li:last-child { border-block-start-color: var(--coro-v1-focus-on-dark); }
+.dot { position: absolute; inset-block-start: -1.1rem; inset-inline-start: 0; display: grid; place-items: center; inline-size: 2.2rem; block-size: 2.2rem; border-radius: 50%; background: var(--coro-v1-focus-on-dark); color: var(--coro-v1-navy-950); font-size: var(--coro-v1-text-small); font-weight: 850; }
+.timeline h3 { margin: 0; color: var(--coro-v1-on-dark-900); font-size: var(--coro-v1-text-h3); font-weight: 800; line-height: 1.15; }
+.timeline p { margin: 0; color: var(--coro-v1-on-dark-900); line-height: 1.55; }
+@media (max-width: 40rem) {
+  .timeline { grid-template-columns: 1fr; gap: 0; border-inline-start: 2px solid var(--coro-v1-border-on-dark); margin-inline-start: 1.1rem; }
+  .timeline li { border-block-start: 0; padding: 0 0 var(--coro-v1-space-8) var(--coro-v1-space-8); }
+  .dot { inset-block-start: 0; inset-inline-start: -1.2rem; }
+}
+
+.pan { overflow-x: auto; }
+.pan:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+@media (max-width: 48rem) { .pan > * { min-inline-size: 30rem; } }
+.legendBlock { display: grid; gap: var(--coro-v1-space-2); }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--coro-v1-space-2); }
+.legend li { color: var(--ink); font-weight: 650; }
+.legend li::before { content: "— "; color: var(--accent); }
+
+.statement { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 700; line-height: 1.4; border-inline-start: 3px solid var(--accent); padding-inline-start: var(--coro-v1-space-6); }
+
+.rex { list-style: none; margin: 0; padding: 0; counter-reset: r; display: grid; border-block-start: 2px solid var(--ink); }
+.rex li { counter-increment: r; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: baseline; padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.rex li::before { content: counter(r, decimal-leading-zero); color: var(--accent); font-size: var(--coro-v1-text-micro); font-weight: 750; letter-spacing: .08em; }
+
+.columns { display: grid; gap: var(--coro-v1-space-8); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.columns section { border-block-start: 2px solid var(--ink); padding-block-start: var(--coro-v1-space-4); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.columns section:last-child { border-block-start-color: var(--accent); }
+.columns h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h2); font-weight: 800; }
+.columns p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+.connect { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); border-block-start: 1px solid var(--line); }
+.connect li { padding: var(--coro-v1-space-4) var(--coro-v1-space-4) var(--coro-v1-space-6) 0; border-block-end: 1px solid var(--line); display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.connect h3 { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-h3); font-weight: 750; }
+.connect p { margin: 0; color: var(--muted); line-height: 1.6; }
+.connect a { color: var(--ink); font-weight: 650; text-decoration-color: var(--accent); text-underline-offset: .2em; }
+
+/* Editorial resources: a restrained ruled list of existing articles, not cards. */
+.resources { list-style: none; margin: 0; padding: 0; display: grid; border-block-start: 2px solid var(--ink); }
+.resources li { display: grid; gap: var(--coro-v1-space-1); padding-block: var(--coro-v1-space-4); border-block-end: 1px solid var(--line); }
+.resources h3 { margin: 0; font-size: var(--coro-v1-text-h3); font-weight: 750; line-height: 1.3; max-inline-size: 48rem; }
+.resources a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: .2em; }
+.resources a:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+.resources p { margin: 0; color: var(--muted); line-height: 1.6; max-inline-size: 48rem; }

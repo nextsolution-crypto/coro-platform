@@ -1,0 +1,73 @@
+/* EditorialHero — V1 tokens only. Colours come from the surrounding PageSection (--ink, --muted, --accent, --line). */
+.hero { display: grid; gap: var(--coro-v1-space-6); max-inline-size: 60rem; }
+.hero[data-narrow="true"] { max-inline-size: 52rem; }
+.label { margin: 0; color: var(--accent); font-size: var(--coro-v1-label-size); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; }
+.title { margin: 0; color: var(--ink); font-size: var(--coro-v1-text-display-l); font-weight: 850; line-height: 1.04; letter-spacing: -.035em; text-wrap: balance; }
+.title span { display: block; }
+.lead { margin: 0; max-inline-size: 54ch; color: var(--ink); font-size: var(--coro-v1-text-body-l); line-height: 1.6; }
+.detail { margin: 0; max-inline-size: 54ch; color: var(--muted); line-height: 1.7; }
+.signature { margin: 0; padding-block-start: var(--coro-v1-space-4); border-block-start: 1px solid var(--line); color: var(--muted); font-size: var(--coro-v1-text-small); font-weight: 650; letter-spacing: .04em; max-inline-size: 30rem; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
+
+/* Narrow screens: the section's generous top padding is desktop composition, so a compact opening starts sooner. */
+@media (max-width: 40rem) {
+  .hero[data-compact="true"] { margin-block-start: calc(-1 * var(--coro-v1-space-12)); }
+}
+/* Two actions that no longer fit comfortably side by side stack, full width. */
+@media (max-width: 30rem) {
+  .actions { flex-direction: column; align-items: stretch; }
+  .actions > * { inline-size: 100%; justify-content: center; text-align: center; }
+}
+
+/* ── Photographic mode (VISUAL-01) ─────────────────────────────────────────────────────────────────────────────
+   Solid navy carries the text; the photograph fills about two thirds and dissolves into the navy through a gradient that is
+   confined to the edge next to the text. Tokens only. No shadow, glow, blur or motion. */
+.photoHero { --ink: var(--coro-v1-on-dark-900); --muted: var(--coro-v1-on-dark-600); --accent: var(--coro-v1-focus-on-dark); --line: var(--coro-v1-border-on-dark); position: relative; isolation: isolate; overflow: hidden; background: var(--coro-v1-navy-950); color: var(--ink); display: flex; flex-direction: column; }
+.photoField { position: relative; aspect-ratio: var(--ratio); }
+.photoImage { object-fit: cover; object-position: var(--pos-m); }
+.scrim { position: absolute; inset: 0; background: linear-gradient(to top, var(--coro-v1-navy-950) 0%, color-mix(in srgb, var(--coro-v1-navy-950) 55%, transparent) 30%, transparent 62%); }
+.photoInner { inline-size: min(100% - 2rem, var(--coro-v1-content-wide)); margin-inline: auto; padding-block: var(--coro-v1-space-8) var(--coro-v1-space-12); }
+.photoCopy { display: grid; gap: var(--coro-v1-space-6); max-inline-size: 38rem; }
+.photoHero .title { font-size: var(--coro-v1-text-h1); }
+.photoHero .detail { color: var(--muted); }
+
+@media (min-width: 48rem) {
+  .photoHero { min-block-size: clamp(27rem, 44vw, 38rem); justify-content: center; }
+  .photoField { position: absolute; inset-block: 0; inline-size: var(--cov); aspect-ratio: auto; }
+  .photoHero[data-side="end"] .photoField { inset-inline-end: 0; }
+  .photoHero[data-side="start"] .photoField { inset-inline-start: 0; }
+  .photoImage { object-position: var(--pos); }
+  .photoHero[data-side="end"] .scrim { background: linear-gradient(to right, var(--coro-v1-navy-950) 0%, color-mix(in srgb, var(--coro-v1-navy-950) 88%, transparent) 14%, color-mix(in srgb, var(--coro-v1-navy-950) 38%, transparent) 28%, transparent 44%); }
+  .photoHero[data-side="start"] .scrim { background: linear-gradient(to left, var(--coro-v1-navy-950) 0%, color-mix(in srgb, var(--coro-v1-navy-950) 88%, transparent) 14%, color-mix(in srgb, var(--coro-v1-navy-950) 38%, transparent) 28%, transparent 44%); }
+  .photoInner { position: relative; z-index: 1; padding-block: var(--coro-v1-space-16); }
+  .photoHero[data-side="start"] .photoCopy { margin-inline-start: auto; }
+  .photoCopy { max-inline-size: min(36rem, 38%); }
+}
+@media (min-width: 48rem) and (max-width: 68rem) { .photoCopy { max-inline-size: 42%; } }
+@media (max-width: 30rem) { .photoHero .actions { flex-direction: column; align-items: stretch; } .photoHero .actions > * { inline-size: 100%; justify-content: center; text-align: center; } }
+
+/* ── Photo overlays: restrained editorial capability context, desktop only. Not live data, not product UI. ── */
+.overlays { display: none; }
+@media (min-width: 62rem) {
+  .overlays { display: contents; }
+  .overlay {
+    position: absolute;
+    display: grid;
+    gap: .6rem;
+    inline-size: clamp(16.25rem, 19vw, 18.75rem);
+    padding: 1.25rem 1.375rem;
+    border: 1px solid color-mix(in srgb, var(--coro-v1-on-dark-900) 30%, transparent);
+    border-radius: var(--coro-v1-radius-sm, 8px);
+    background: color-mix(in srgb, var(--coro-v1-navy-950) 80%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .overlayLabel { font-size: var(--coro-v1-text-small); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; color: var(--coro-v1-focus-on-dark); }
+  .overlayText { font-size: var(--coro-v1-text-body, 1rem); line-height: 1.5; color: var(--coro-v1-on-dark-900); white-space: pre-line; }
+  /* Architectural vertical narrative: knowledge (upper floors) → people (occupied floors) → action (entrance/ground level).
+     A responsive right safe-margin (clamp, ~80-120px at normal desktop widths) keeps Connaître/Agir off the viewport edge;
+     Personnes stays clear of the text column's reserved ~45% and clear of the right-edge overlays' vertical band. */
+  .overlay:nth-of-type(1) { inset-block-start: 11%; inset-inline-end: clamp(5rem, 9vw, 7.5rem); }
+  .overlay:nth-of-type(2) { inset-block-start: 41%; inset-inline-start: 21%; }
+  .overlay:nth-of-type(3) { inset-block-end: 12%; inset-inline-end: clamp(5rem, 9vw, 7.5rem); }
+}

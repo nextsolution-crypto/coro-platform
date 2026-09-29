@@ -1,0 +1,2 @@
+import type { ReactNode } from 'react'; import { Button } from './Button'; import styles from './primitives.module.css';
+export function ProductCard({ title, description, href, action, eyebrow, children }: { title: string; description: string; href: string; action: string; eyebrow?: string; children?: ReactNode }) { return <article className={styles.card}>{eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}<h3>{title}</h3><p>{description}</p>{children}<Button href={href} variant="ghost">{action}</Button></article>; }

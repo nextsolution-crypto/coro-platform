@@ -1,0 +1,818 @@
+{
+ "fr": {
+  "status": 200,
+  "title": "Programme de recommandation CORO — Recevez 250 $ de crédit | CORO",
+  "description": "Recommandez CORO à une organisation et recevez un crédit CORO de 250 $ lorsqu’elle devient un client admissible.",
+  "canonical": "https://getcoro.io/programme-recommandation",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/programme-recommandation"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/programme-recommandation?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/programme-recommandation"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/programme-recommandation",
+  "ogTitle": "Programme de recommandation CORO — Recevez 250 $ de crédit",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Recommandez CORO. Recevez 250 $ de crédit."
+   ],
+   [
+    "h2",
+    "de crédit CORO par recommandation admissible"
+   ],
+   [
+    "h2",
+    "Recommander → Attribution → Crédit"
+   ],
+   [
+    "h3",
+    "Partagez"
+   ],
+   [
+    "h3",
+    "Découverte de CORO"
+   ],
+   [
+    "h3",
+    "Validation et crédit"
+   ],
+   [
+    "h2",
+    "Suivez tout dans CORO"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Accéder à mon espace CORO"
+   ],
+   [
+    "/#demo",
+    "Demander une démonstration"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Programme de recommandation Recommandez CORO. Recevez 250 $ de crédit. Partagez votre lien personnel. Lorsqu’une organisation devient un client admissible, votre organisation peut recevoir un crédit CORO de 250 $. Accéder à mon espace CORO Demander une démonstration 250 $ Crédit de recommandation de crédit CORO par recommandation admissible Le parcours Recommander → Attribution → Crédit 01 Partagez Depuis Administration → Recommandations, partagez votre lien personnel ou votre code. 02 Découverte de CORO L’organisation utilise votre lien pour découvrir CORO ou demander une démonstration. 03 Validation et crédit Après conversion et validation de l’admissibilité, un crédit de 250 $ est approuvé. Suivi et admissibilité Suivez tout dans CORO Votre espace CORO centralise le lien, le code, le statut, les crédits approuvés et appliqués, ainsi que l’historique. 01 Nouveau prospect qui n’est ni client ni engagé dans une démarche commerciale active. 02 Une seule organisation référente par organisation recommandée. 03 Aucune auto-recommandation ou contournement de la tarification. 04 Admissibilité et conversion validées par CORO. 05 Crédit sans valeur monétaire, applicable uniquement aux services CORO admissibles. 06 CORO peut modifier, suspendre ou mettre fin au programme. Le crédit de 250 $ est soumis aux conditions du programme et à la validation de CORO."
+ },
+ "en": {
+  "status": 200,
+  "title": "CORO Referral Program — Receive $250 in CORO credit | CORO",
+  "description": "Refer CORO to an organization and receive $250 in CORO credit when it becomes an eligible customer.",
+  "canonical": "https://getcoro.io/programme-recommandation?lang=en",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/programme-recommandation"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/programme-recommandation?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/programme-recommandation"
+   ]
+  ],
+  "ogLocale": "en_CA",
+  "ogUrl": "https://getcoro.io/programme-recommandation?lang=en",
+  "ogTitle": "CORO Referral Program — Receive $250 in CORO credit",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Refer CORO. Receive $250 in credit."
+   ],
+   [
+    "h2",
+    "in CORO credit per eligible referral"
+   ],
+   [
+    "h2",
+    "Refer → Attribution → Credit"
+   ],
+   [
+    "h3",
+    "Share"
+   ],
+   [
+    "h3",
+    "Discover CORO"
+   ],
+   [
+    "h3",
+    "Validation and credit"
+   ],
+   [
+    "h2",
+    "Track everything in CORO"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire?lang=en",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets?lang=en",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs?lang=en",
+    "Performance"
+   ],
+   [
+    "/portail-client?lang=en",
+    "Client"
+   ],
+   [
+    "/security?lang=en",
+    "Security & hosting"
+   ],
+   [
+    "/resilience-operationnelle?lang=en",
+    "Resilience / CORO Index"
+   ],
+   [
+    "/sentinelle?lang=en",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population?lang=en",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/pricing?lang=en",
+    "Pricing"
+   ],
+   [
+    "/programme-recommandation",
+    "FR"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Login"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demo"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Access my CORO account"
+   ],
+   [
+    "/?lang=en#demo",
+    "Request a demonstration"
+   ],
+   [
+    "/?lang=en",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about?lang=en",
+    "About"
+   ],
+   [
+    "/security?lang=en",
+    "Security"
+   ],
+   [
+    "/partners?lang=en",
+    "Partners"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "Referral program"
+   ],
+   [
+    "/blog?lang=en",
+    "Blog"
+   ],
+   [
+    "/contact?lang=en",
+    "Contact"
+   ],
+   [
+    "/privacy?lang=en",
+    "Privacy"
+   ],
+   [
+    "/terms?lang=en",
+    "Terms"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/programme-recommandation",
+    "FR"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Referral program Refer CORO. Receive $250 in credit. Share your personal link. When an organization becomes an eligible customer, your organization may receive $250 in CORO credit. Access my CORO account Request a demonstration $250 Referral credit in CORO credit per eligible referral The journey Refer → Attribution → Credit 01 Share From Administration → Referrals, share your personal link or code. 02 Discover CORO The organization uses your link to discover CORO or request a demonstration. 03 Validation and credit After conversion and eligibility validation, a $250 credit is approved. Tracking and eligibility Track everything in CORO Your CORO account centralizes your link, code, status, approved and applied credits, and referral history. 01 A new prospect that is neither a customer nor in an active sales process. 02 Only one referring organization per referred organization. 03 No self-referral or circumvention of pricing. 04 Eligibility and conversion validated by CORO. 05 No cash value; applies only to eligible CORO services. 06 CORO may modify, suspend or end the program. The $250 credit is subject to program conditions and CORO validation."
+ },
+ "fr-ref": {
+  "status": 200,
+  "title": "Programme de recommandation CORO — Recevez 250 $ de crédit | CORO",
+  "description": "Recommandez CORO à une organisation et recevez un crédit CORO de 250 $ lorsqu’elle devient un client admissible.",
+  "canonical": "https://getcoro.io/programme-recommandation",
+  "hreflang": [
+   [
+    "fr-CA",
+    "https://getcoro.io/programme-recommandation"
+   ],
+   [
+    "en-CA",
+    "https://getcoro.io/programme-recommandation?lang=en"
+   ],
+   [
+    "x-default",
+    "https://getcoro.io/programme-recommandation"
+   ]
+  ],
+  "ogLocale": "fr_CA",
+  "ogUrl": "https://getcoro.io/programme-recommandation",
+  "ogTitle": "Programme de recommandation CORO — Recevez 250 $ de crédit",
+  "twitterCard": "summary_large_image",
+  "robots": "index, follow",
+  "headings": [
+   [
+    "h1",
+    "Recommandez CORO. Recevez 250 $ de crédit."
+   ],
+   [
+    "h2",
+    "de crédit CORO par recommandation admissible"
+   ],
+   [
+    "h2",
+    "Recommander → Attribution → Crédit"
+   ],
+   [
+    "h3",
+    "Partagez"
+   ],
+   [
+    "h3",
+    "Découverte de CORO"
+   ],
+   [
+    "h3",
+    "Validation et crédit"
+   ],
+   [
+    "h2",
+    "Suivez tout dans CORO"
+   ],
+   [
+    "h4",
+    "🇨🇦 Canada"
+   ],
+   [
+    "h4",
+    "Produit"
+   ],
+   [
+    "h4",
+    "Compagnie"
+   ],
+   [
+    "h4",
+    "Légal"
+   ]
+  ],
+  "links": [
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "/gestion-documentaire",
+    "Documents"
+   ],
+   [
+    "/gestion-de-projets",
+    "Projects"
+   ],
+   [
+    "/performance-objectifs",
+    "Performance"
+   ],
+   [
+    "/portail-client",
+    "Client"
+   ],
+   [
+    "/security",
+    "Sécurité & hébergement"
+   ],
+   [
+    "/resilience-operationnelle",
+    "Résilience / Indice CORO"
+   ],
+   [
+    "/sentinelle",
+    "Sentinelle"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "EN"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion"
+   ],
+   [
+    "/#demo",
+    "Demander une démo"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Accéder à mon espace CORO"
+   ],
+   [
+    "/#demo",
+    "Demander une démonstration"
+   ],
+   [
+    "/",
+    "CO RO"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/contact",
+    "Contact"
+   ],
+   [
+    "/privacy",
+    "Confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "CORO Client"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "CORO Platform"
+   ],
+   [
+    "/programme-recommandation?lang=en",
+    "EN"
+   ],
+   [
+    "mailto:info@getcoro.io",
+    "info@getcoro.io"
+   ],
+   [
+    "tel:+15147917871",
+    "+1 (514) 791-7871"
+   ],
+   [
+    "/#features",
+    "Fonctionnalités"
+   ],
+   [
+    "/pricing",
+    "Tarification"
+   ],
+   [
+    "/sentinelle-population",
+    "Sentinelle Population"
+   ],
+   [
+    "https://getcoro.io/#documents",
+    "Documents"
+   ],
+   [
+    "https://app.getcoro.io/login",
+    "Connexion conseiller"
+   ],
+   [
+    "https://client.getcoro.io/login",
+    "Portail client"
+   ],
+   [
+    "/about",
+    "À propos"
+   ],
+   [
+    "/security",
+    "Sécurité"
+   ],
+   [
+    "/programme-recommandation",
+    "Programme de recommandation"
+   ],
+   [
+    "/blog",
+    "Blogue"
+   ],
+   [
+    "/partners",
+    "Partenaires"
+   ],
+   [
+    "/contact",
+    "Nous contacter"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ],
+   [
+    "/privacy",
+    "Politique de confidentialité"
+   ],
+   [
+    "/terms",
+    "Conditions d'utilisation"
+   ]
+  ],
+  "images": [],
+  "jsonLd": [],
+  "counts": {
+   "h1": 1,
+   "main": 1,
+   "header": 1,
+   "footer": 2,
+   "v1Scope": 0,
+   "htmlLang": "fr"
+  },
+  "mainText": "Programme de recommandation Recommandez CORO. Recevez 250 $ de crédit. Partagez votre lien personnel. Lorsqu’une organisation devient un client admissible, votre organisation peut recevoir un crédit CORO de 250 $. Accéder à mon espace CORO Demander une démonstration 250 $ Crédit de recommandation de crédit CORO par recommandation admissible Le parcours Recommander → Attribution → Crédit 01 Partagez Depuis Administration → Recommandations, partagez votre lien personnel ou votre code. 02 Découverte de CORO L’organisation utilise votre lien pour découvrir CORO ou demander une démonstration. 03 Validation et crédit Après conversion et validation de l’admissibilité, un crédit de 250 $ est approuvé. Suivi et admissibilité Suivez tout dans CORO Votre espace CORO centralise le lien, le code, le statut, les crédits approuvés et appliqués, ainsi que l’historique. 01 Nouveau prospect qui n’est ni client ni engagé dans une démarche commerciale active. 02 Une seule organisation référente par organisation recommandée. 03 Aucune auto-recommandation ou contournement de la tarification. 04 Admissibilité et conversion validées par CORO. 05 Crédit sans valeur monétaire, applicable uniquement aux services CORO admissibles. 06 CORO peut modifier, suspendre ou mettre fin au programme. Le crédit de 250 $ est soumis aux conditions du programme et à la validation de CORO."
+ }
+}
