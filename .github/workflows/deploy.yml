@@ -169,9 +169,15 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 10m
           script: |
+            set -eu
             cd /opt/coro-platform
-            git pull
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            test "$(git branch --show-current)" = "main"
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "Deployment aborted: production working tree is not clean." >&2
+              exit 1
+            fi
+            git pull --ff-only origin main
+            printf '%s' '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
             docker compose pull
             docker compose up -d
             docker compose exec -T backend node -e "const{execSync}=require('child_process');execSync('npx prisma@6.19.3 migrate deploy --schema=/app/prisma/schema.prisma',{stdio:'inherit',env:{...process.env,npm_config_yes:'true'}})"
