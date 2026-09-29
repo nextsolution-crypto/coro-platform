@@ -58,7 +58,7 @@ const fr: LegalContent = {
       'Des renseignements peuvent également être communiqués lorsque la loi l’exige, pour répondre à une ordonnance valide, protéger nos droits, prévenir une fraude ou un incident de sécurité, ou dans le cadre d’une opération commerciale autorisée par la loi.',
     ] },
     { title: '7. Hébergement et localisation des données', paragraphs: [
-      'CORO héberge les données de la plateforme au Canada. Notre architecture est conçue afin de favoriser la souveraineté des données et de répondre aux attentes des organisations canadiennes en matière de protection de l’information.',
+      'L’infrastructure applicative principale de CORO est hébergée au Canada. Certains services de soutien nécessaires au fonctionnement de la plateforme — notamment selon les fonctionnalités utilisées — peuvent toutefois entraîner le traitement de certains renseignements à l’extérieur du Canada. Notre architecture est conçue afin de favoriser la souveraineté des données et de répondre aux attentes des organisations canadiennes en matière de protection de l’information.',
       'Lorsque des renseignements personnels doivent être communiqués ou traités à l’extérieur du Québec, CORO effectue les évaluations requises et met en place les mesures de protection appropriées conformément à la législation applicable.',
     ] },
     { title: '8. Mesures de sécurité', paragraphs: [
@@ -135,7 +135,7 @@ const en: LegalContent = {
       'Information may also be disclosed when required by law, to respond to a valid order, protect our rights, prevent fraud or a security incident, or as part of a business transaction permitted by law.',
     ] },
     { title: '7. Hosting and data location', paragraphs: [
-      'CORO hosts platform data in Canada. Our architecture is designed to support data sovereignty and the expectations of Canadian organizations regarding information protection.',
+      'CORO’s primary application infrastructure is hosted in Canada. However, certain supporting services required to operate the platform — depending on the features used — may process certain information outside Canada. Our architecture is designed to support data sovereignty and the expectations of Canadian organizations regarding information protection.',
       'Where personal information must be disclosed or processed outside Quebec, CORO conducts the required assessments and implements appropriate safeguards in accordance with applicable legislation.',
     ] },
     { title: '8. Security safeguards', paragraphs: [
