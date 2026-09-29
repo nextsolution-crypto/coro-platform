@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { requirePlatformMfaSecret } from './auth-security.config';
+import { PLATFORM_MFA_EMAIL_SENDER, renderPlatformMfaEmail } from './platform-mfa-email';
 
 const MFA_TTL_MS = 10 * 60 * 1000;
 export const PLATFORM_MFA_MAX_ATTEMPTS = 5;
@@ -46,7 +47,12 @@ export class AuthService {
       create: { id: challengeId, userId: user.id, verifier: this.verifier(challengeId, code), expiresAt: new Date(Date.now() + MFA_TTL_MS) },
       update: { id: challengeId, verifier: this.verifier(challengeId, code), expiresAt: new Date(Date.now() + MFA_TTL_MS), attemptCount: 0, consumedAt: null, createdAt: new Date() },
     });
-    await this.sendEmail(user.email, `${code} — Votre code de connexion CORO`, `<p>Votre code de connexion CORO est <strong>${code}</strong>. Il expire dans 10 minutes.</p>`);
+    await this.sendEmail(
+      user.email,
+      `${code} — Votre code de connexion CORO`,
+      renderPlatformMfaEmail(code),
+      `${user.firstName} ${user.lastName}`.trim(),
+    );
     return { mfaRequired: true, email: user.email };
   }
 
@@ -126,9 +132,18 @@ export class AuthService {
     if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) throw new BadRequestException('Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.');
   }
 
-  private async sendEmail(to: string, subject: string, htmlContent: string) {
+  private async sendEmail(to: string, subject: string, htmlContent: string, recipientName?: string) {
     try {
-      await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' }, body: JSON.stringify({ sender: { name: 'CORO', email: 'info@getcoro.io' }, to: [{ email: to }], subject, htmlContent }) });
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'api-key': process.env.BREVO_API_KEY || '' },
+        body: JSON.stringify({
+          sender: PLATFORM_MFA_EMAIL_SENDER,
+          to: [{ email: to, ...(recipientName ? { name: recipientName } : {}) }],
+          subject,
+          htmlContent,
+        }),
+      });
     } catch { this.logger.error('[AUTH] Email delivery failed.'); }
   }
 }
