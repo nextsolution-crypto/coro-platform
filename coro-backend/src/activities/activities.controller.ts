@@ -9,25 +9,40 @@ import {
   UseGuards,
   Request,
   Res,
+  Logger,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ActivitiesService } from './activities.service';
 import { ActivityTaskListsService } from './activity-task-lists.service';
 import type { Response } from 'express';
+import type { ProjectActivity } from '@prisma/client';
 import { AdviserActor } from '../auth/project-access';
+import { requireTenantAdmin } from '../auth/work-management-access';
 
 interface AuthenticatedRequest {
   user: AdviserActor;
 }
 
+interface LegacyMandateGenerationDto {
+  services: { activityTypeId: string; isRecurring: boolean }[];
+}
+
 @Controller()
 @UseGuards(AuthGuard('jwt'))
 export class ActivitiesController {
-  constructor(private readonly service: ActivitiesService, private readonly taskLists: ActivityTaskListsService) {}
+  private readonly logger = new Logger(ActivitiesController.name);
+
+  constructor(
+    private readonly service: ActivitiesService,
+    private readonly taskLists: ActivityTaskListsService,
+  ) {}
 
   @Post('projects/:projectId/activities/:activityId/task-lists/instantiate')
-  instantiateTaskLists(@Param('projectId') projectId: string, @Param('activityId') activityId: string,
-    @Request() req: AuthenticatedRequest) {
+  instantiateTaskLists(
+    @Param('projectId') projectId: string,
+    @Param('activityId') activityId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.taskLists.instantiateForActor(projectId, activityId, req.user);
   }
 
@@ -66,7 +81,7 @@ export class ActivitiesController {
   createActivity(
     @Param('projectId') projectId: string,
     @Body() dto: any,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.service.createActivity(projectId, req.user, dto);
   }
@@ -75,7 +90,7 @@ export class ActivitiesController {
   updateActivity(
     @Param('activityId') activityId: string,
     @Body() dto: any,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.service.updateActivity(
       activityId,
@@ -85,27 +100,55 @@ export class ActivitiesController {
   }
 
   @Delete('activities/:activityId')
-  deleteActivity(@Param('activityId') activityId: string, @Request() req: any) {
+  deleteActivity(
+    @Param('activityId') activityId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.service.deleteActivity(activityId, req.user.organizationId);
   }
 
+  /**
+   * @deprecated Legacy mandate activity generation. Use ProjectMandateService Preview/Apply.
+   */
   @Post('projects/:projectId/activities/from-mandate')
-  generateFromMandate(
+  async generateFromMandate(
     @Param('projectId') projectId: string,
-    @Body() dto: any,
-    @Request() req: any,
-  ) {
-    return this.service.generateFromMandate(
+    @Body() dto: LegacyMandateGenerationDto,
+    @Request() req: AuthenticatedRequest,
+  ): Promise<unknown> {
+    requireTenantAdmin(req.user);
+    const context = {
       projectId,
-      req.user,
-      dto.services,
-    );
+      role: req.user.role,
+      organizationId: req.user.organizationId,
+    };
+    this.logger.warn({ event: 'LEGACY_MANDATE_GENERATION_CALLED', ...context });
+    try {
+      const result: unknown = await this.service.generateFromMandate(
+        projectId,
+        req.user,
+        dto.services,
+      );
+      this.logger.warn({
+        event: 'LEGACY_MANDATE_GENERATION_SUCCEEDED',
+        ...context,
+      });
+      return result;
+    } catch (error) {
+      this.logger.warn({
+        event: 'LEGACY_MANDATE_GENERATION_FAILED',
+        ...context,
+        errorType:
+          error instanceof Error ? error.constructor.name : 'UnknownError',
+      });
+      throw error;
+    }
   }
 
   @Post('projects/:projectId/activities/duplicate')
   duplicateActivities(
     @Param('projectId') projectId: string,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.service.duplicateActivities(projectId, req.user.organizationId);
   }
@@ -113,10 +156,12 @@ export class ActivitiesController {
   @Get('activities/:activityId/ics')
   async downloadIcs(
     @Param('activityId') activityId: string,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Res() res: Response,
   ) {
-    const activity = await this.service['prisma'].projectActivity.findFirst({
+    const activity: ProjectActivity | null = await this.service[
+      'prisma'
+    ].projectActivity.findFirst({
       where: { id: activityId, organizationId: req.user.organizationId },
     });
     if (!activity)
@@ -130,17 +175,20 @@ export class ActivitiesController {
   }
 
   @Get('clients/:clientId/activities/portfolio')
-  getClientPortfolio(@Param('clientId') clientId: string, @Request() req: any) {
+  getClientPortfolio(
+    @Param('clientId') clientId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     return this.service.getClientPortfolio(clientId, req.user.organizationId);
   }
 
   @Get('activities/recurring-to-renew')
-  getRecurringToRenew(@Request() req: any) {
+  getRecurringToRenew(@Request() req: AuthenticatedRequest) {
     return this.service.getRecurringToRenew(req.user.organizationId);
   }
 
   @Get('activities/upcoming')
-  getUpcoming(@Request() req: any) {
+  getUpcoming(@Request() req: AuthenticatedRequest) {
     return this.service.getUpcoming(req.user.organizationId);
   }
 }
