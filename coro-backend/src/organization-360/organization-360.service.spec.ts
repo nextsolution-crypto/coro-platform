@@ -74,6 +74,19 @@ describe('Organization360Service observation boundaries', () => {
       populationProgram: { count },
       populationSubscriber: { count },
       populationAlertDelivery: { count },
+      commercialCapability: {
+        findUniqueOrThrow: jest.fn(({ where }) =>
+          Promise.resolve({
+            id: `cap-${where.code}`,
+            code: where.code,
+            lifecycle: ['NETWORK', 'CAMPUS'].includes(where.code)
+              ? 'FUTURE'
+              : 'CURRENT',
+            isAvailable: !['NETWORK', 'CAMPUS'].includes(where.code),
+          }),
+        ),
+      },
+      capabilityEntitlement: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(async (operations: Promise<unknown>[]) =>
         Promise.all(operations),
       ),

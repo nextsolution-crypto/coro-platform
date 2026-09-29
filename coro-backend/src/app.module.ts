@@ -59,6 +59,7 @@ import { PlatformAuthorizationModule } from './auth/platform-authorization.modul
 import { Organization360Module } from './organization-360/organization-360.module';
 import { CommercialCatalogModule } from './commercial-catalog/commercial-catalog.module';
 import { OrganizationContractsModule } from './organization-contracts/organization-contracts.module';
+import { CapabilityEntitlementsModule } from './capability-entitlements/capability-entitlements.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { OrganizationContractsModule } from './organization-contracts/organizati
   Organization360Module,
   CommercialCatalogModule,
   OrganizationContractsModule,
+  CapabilityEntitlementsModule,
   AuthModule,
   UsersModule,
   ClientsModule,

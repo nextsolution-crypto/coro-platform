@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { EntitlementResolver } from '../capability-entitlements/entitlement-resolver.service';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CAPABILITY_REGISTRY } from './capability-registry';
@@ -391,12 +392,38 @@ export class Organization360Service {
         },
       ],
     };
-    return CAPABILITY_REGISTRY.map((definition) => ({
-      ...definition,
-      commercialEntitlement: 'NOT_CONFIGURED',
-      observedSignals: signals[definition.code],
-      observationOnly: true,
-    }));
+    const resolver = new EntitlementResolver(this.prisma);
+    return Promise.all(
+      CAPABILITY_REGISTRY.map(async (definition) => {
+        const observedSignals = signals[definition.code];
+        const measurable = observedSignals.filter(
+          (signal) =>
+            'value' in signal &&
+            typeof (signal as { value?: unknown }).value === 'number',
+        );
+        const observed = measurable.length
+          ? measurable.some(
+              (signal) => ((signal as { value: number }).value ?? 0) > 0,
+            )
+          : null;
+        const entitlement = await resolver.resolve({
+          capabilityCode: definition.code,
+          organizationId,
+          observed,
+        });
+        return {
+          ...definition,
+          commercialEntitlement: entitlement.licensed
+            ? 'CONFIGURED_OBSERVATION_ONLY'
+            : 'NOT_CONFIGURED',
+          entitlement,
+          observedSignals,
+          mismatch: entitlement.mismatch,
+          observationOnly: true,
+          enforcement: 'NONE',
+        };
+      }),
+    );
   }
 
   async commercial(organizationId: string) {

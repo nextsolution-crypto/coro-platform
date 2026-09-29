@@ -56,6 +56,7 @@ model Organization {
   referralReceived             Referral?                    @relation("ReferralReferred")
   referralCredits              ReferralCredit[]             @relation("ReferralCreditOrganization")
   contracts                    OrganizationContract[]
+  capabilityEntitlements       CapabilityEntitlement[]
 }
 
 model User {
@@ -87,6 +88,8 @@ model User {
   updatedAt           DateTime            @updatedAt
   observationsCreated ReviewObservation[] @relation("observationCreator")
   observationsTreated ReviewObservation[] @relation("observationTreater")
+  capabilityEntitlementsCreated CapabilityEntitlement[] @relation("CapabilityEntitlementCreator")
+  capabilityEntitlementRevisionsCreated CapabilityEntitlementRevision[] @relation("CapabilityEntitlementRevisionActor")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -375,6 +378,27 @@ enum ContractDocumentType {
   SUPPORTING_DOCUMENT
 }
 
+enum EntitlementSource {
+  CONTRACT
+  DISTRIBUTION
+  MANUAL_OVERRIDE
+  TRIAL
+  INTERNAL
+}
+
+enum EntitlementLifecycle {
+  GRANTED
+  SUSPENDED
+  REVOKED
+}
+
+enum EntitlementLimitType {
+  SEATS
+  CLIENTS
+  SITES
+  USAGE
+}
+
 model CommercialCapability {
   id              String                  @id @default(uuid())
   code            CapabilityCode          @unique
@@ -392,6 +416,7 @@ model CommercialCapability {
   contractAdjustments ContractPricingAdjustment[]
   contractPriceSnapshots ContractPriceSnapshotLine[]
   contractExclusivityCapabilities ContractExclusivityCapability[]
+  entitlements CapabilityEntitlement[]
 
   @@index([displayOrder])
   @@index([lifecycle, isAvailable])
@@ -518,6 +543,8 @@ model OrganizationContract {
   createdBy User? @relation("OrganizationContractCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   revisions OrganizationContractRevision[]
   documents OrganizationContractDocument[]
+  entitlementSources CapabilityEntitlement[]
+  @@unique([id, organizationId])
   @@index([organizationId, status])
   @@index([organizationId, isPrimary, status])
   @@index([createdByUserId])
@@ -562,6 +589,8 @@ model OrganizationContractRevision {
   exclusivities ContractExclusivity[]
   commitments ContractMinimumCommitment[]
   documents OrganizationContractDocument[]
+  entitlementSources CapabilityEntitlement[]
+  @@unique([id, contractId])
   @@unique([contractId, revisionNumber])
   @@index([contractId, status, effectiveFrom, effectiveUntil])
   @@index([priceBookVersionId])
@@ -618,6 +647,8 @@ model ContractPriceSnapshotLine {
   capability CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
   tiers ContractPriceSnapshotTier[]
   exclusivityFeeFor ContractExclusivity? @relation("ContractExclusivityEconomicLine")
+  entitlementSources CapabilityEntitlement[]
+  @@unique([id, contractRevisionId])
   @@unique([contractRevisionId, componentCode])
   @@index([contractRevisionId, displayOrder])
   @@index([contractRevisionId, source])
@@ -716,6 +747,83 @@ model OrganizationContractDocument {
   @@index([contractRevisionId])
 }
 
+model CapabilityEntitlement {
+  id String @id @default(uuid())
+  organizationId String
+  capabilityId String
+  scope CommercialScope
+  clientId String?
+  buildingId String?
+  source EntitlementSource
+  parentEntitlementId String?
+  sourceContractId String?
+  sourceContractRevisionId String?
+  sourceSnapshotLineId String?
+  provenanceReason String?
+  lockVersion Int @default(0)
+  createdByUserId String?
+  createdByDisplayName String?
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  capability CommercialCapability @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  client Client? @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  building Building? @relation(fields: [buildingId, clientId, organizationId], references: [id, clientId, organizationId], onDelete: Restrict)
+  parentEntitlement CapabilityEntitlement? @relation("CapabilityEntitlementDistribution", fields: [parentEntitlementId, organizationId, capabilityId], references: [id, organizationId, capabilityId], onDelete: Restrict)
+  distributedEntitlements CapabilityEntitlement[] @relation("CapabilityEntitlementDistribution")
+  sourceContract OrganizationContract? @relation(fields: [sourceContractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  sourceContractRevision OrganizationContractRevision? @relation(fields: [sourceContractRevisionId, sourceContractId], references: [id, contractId], onDelete: Restrict)
+  sourceSnapshotLine ContractPriceSnapshotLine? @relation(fields: [sourceSnapshotLineId, sourceContractRevisionId], references: [id, contractRevisionId], onDelete: Restrict)
+  createdBy User? @relation("CapabilityEntitlementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revisions CapabilityEntitlementRevision[]
+  @@unique([id, organizationId, capabilityId])
+  @@index([organizationId, capabilityId, scope])
+  @@index([clientId, capabilityId])
+  @@index([buildingId, capabilityId])
+  @@index([parentEntitlementId])
+  @@index([sourceContractId])
+  @@index([sourceContractRevisionId])
+  @@index([sourceSnapshotLineId])
+  @@index([source, createdAt])
+}
+
+model CapabilityEntitlementRevision {
+  id String @id @default(uuid())
+  entitlementId String
+  versionNumber Int
+  lifecycle EntitlementLifecycle
+  enabled Boolean
+  distributable Boolean
+  decisionAt DateTime
+  effectiveFrom DateTime
+  effectiveUntil DateTime?
+  reason String
+  createdByUserId String?
+  createdByDisplayName String?
+  recordedAt DateTime @default(now())
+  entitlement CapabilityEntitlement @relation(fields: [entitlementId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("CapabilityEntitlementRevisionActor", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  limits CapabilityEntitlementLimit[]
+  @@unique([entitlementId, versionNumber])
+  @@index([entitlementId, effectiveFrom, versionNumber])
+  @@index([entitlementId, recordedAt])
+  @@index([lifecycle, effectiveFrom, effectiveUntil])
+}
+
+model CapabilityEntitlementLimit {
+  id String @id @default(uuid())
+  entitlementRevisionId String
+  type EntitlementLimitType
+  metricCode String @default("DEFAULT")
+  quantity Decimal? @db.Decimal(20, 6)
+  unlimited Boolean @default(false)
+  periodStart DateTime?
+  periodEnd DateTime?
+  createdAt DateTime @default(now())
+  entitlementRevision CapabilityEntitlementRevision @relation(fields: [entitlementRevisionId], references: [id], onDelete: Restrict)
+  @@unique([entitlementRevisionId, type, metricCode])
+  @@index([type, metricCode])
+}
+
 model Client {
   id                     String   @id @default(uuid())
   name                   String
@@ -746,6 +854,8 @@ model Client {
   projects        Project[]
   clientUsers     ClientUser[]
   exerciseReports ExerciseReport[]
+  capabilityEntitlements CapabilityEntitlement[]
+  @@unique([id, organizationId])
 }
 
 enum BookingAssignmentRole {
@@ -828,6 +938,9 @@ model Building {
   buildingRequirements BuildingRequirement[]
   complianceEvidence   ComplianceEvidence[]
   correctiveActions    CorrectiveAction[]
+  capabilityEntitlements CapabilityEntitlement[]
+
+  @@unique([id, clientId, organizationId])
 
   // CORO RUE / PUE / Sentinelle Population
   // Profil réglementaire et opérationnel de l'installation.
