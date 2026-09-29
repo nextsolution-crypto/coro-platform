@@ -1,0 +1,29 @@
+name: Website Docker Check
+
+on:
+  pull_request:
+    paths:
+      - "coro-website/**"
+      - ".github/workflows/website-docker-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  website-docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build website image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./coro-website
+          push: false
+          tags: coro-website:ci-validation
