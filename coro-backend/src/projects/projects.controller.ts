@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProjectsService } from './projects.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { AuditService } from '../audit/audit.service';
 import { ClientPortalService } from '../client-portal/client-portal.service';
 
 @Controller('projects')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ProjectsController {
   constructor(
     private projectsService: ProjectsService,

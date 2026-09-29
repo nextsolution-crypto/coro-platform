@@ -1,10 +1,11 @@
 import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfiguratorService } from './configurator.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { ImportService } from './import.service';
 
 @Controller('configurator')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ConfiguratorController {
   constructor(
     private configuratorService: ConfiguratorService,

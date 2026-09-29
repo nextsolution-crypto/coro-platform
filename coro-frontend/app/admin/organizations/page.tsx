@@ -91,12 +91,18 @@ const [adminForm, setAdminForm] = useState({
   };
 
   const handleChangeLicense = async (orgId: string, licenseType: string) => {
-    try { await api.put(`/organizations/${orgId}/license`, { licenseType }); fetchData(); }
+    if (!window.confirm(`Confirmer le changement de licence vers ${licenseType} ?`)) return;
+    const reason = window.prompt('Raison du changement de licence :')?.trim();
+    if (!reason) return;
+    try { await api.put(`/organizations/${orgId}/license`, { licenseType, reason }); fetchData(); }
     catch (err) { console.error(err); }
   };
 
   const handleToggleActive = async (orgId: string, isActive: boolean) => {
-    try { await api.put(`/organizations/${orgId}/active`, { isActive }); fetchData(); }
+    if (!isActive && !window.confirm('Confirmer la désactivation de cette organisation ?')) return;
+    const reason = !isActive ? window.prompt('Raison de la désactivation :')?.trim() : undefined;
+    if (!isActive && !reason) return;
+    try { await api.put(`/organizations/${orgId}/active`, { isActive, reason }); fetchData(); }
     catch (err) { console.error(err); }
   };
 

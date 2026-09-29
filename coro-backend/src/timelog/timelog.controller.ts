@@ -2,9 +2,10 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Requ
 import { AuthGuard } from '@nestjs/passport';
 import { TimelogService } from './timelog.service';
 import { requireInternal, requireTenantAdmin } from '../auth/work-management-access';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('timelog')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class TimelogController {
   constructor(private readonly service: TimelogService) {}
 

@@ -18,6 +18,7 @@ import type { Response } from 'express';
 import type { ProjectActivity } from '@prisma/client';
 import { AdviserActor } from '../auth/project-access';
 import { requireTenantAdmin } from '../auth/work-management-access';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 interface AuthenticatedRequest {
   user: AdviserActor;
@@ -28,7 +29,7 @@ interface LegacyMandateGenerationDto {
 }
 
 @Controller()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ActivitiesController {
   private readonly logger = new Logger(ActivitiesController.name);
 

@@ -14,13 +14,15 @@ import { UpdateExerciseReportDto } from './dto/update-exercise-report.dto';
 import { ExerciseReportsService } from './exercise-reports.service';
 import { AdviserActor } from '../auth/project-access';
 import { CompatibleExerciseSourcesDto } from './dto/compatible-exercise-sources.dto';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { EvidenceReadAccess } from '../auth/organization-access.decorator';
 
 interface AuthenticatedRequest {
   user: AdviserActor;
 }
 
 @Controller()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ExerciseReportsController {
   constructor(private readonly service: ExerciseReportsService) {}
 
@@ -34,6 +36,7 @@ export class ExerciseReportsController {
   }
 
   @Get('exercise-reports/:id')
+  @EvidenceReadAccess()
   get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     return this.service.getDraft(id, req.user);
   }

@@ -4,11 +4,13 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { OccupancyService } from './occupancy.service';
 import { IncidentService } from './incident.service';
+import { OperationalContinuityAccess } from '../auth/organization-access.decorator';
 import {
   CheckInDto, CheckOutDto, TriggerEvacuationDto, AccountForOccupantDto
 } from './occupancy.dto';
 
 @Controller('occupancy')
+@OperationalContinuityAccess()
 export class OccupancyController {
   constructor(
     private readonly occupancyService: OccupancyService,

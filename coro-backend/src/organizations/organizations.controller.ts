@@ -1,52 +1,46 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OrganizationsService } from './organizations.service';
+import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { SuperAdminOnly } from '../auth/platform-roles.decorator';
+import { UpdateOrganizationLicenseDto } from './dto/update-organization-license.dto';
+import { UpdateOrganizationActiveDto } from './dto/update-organization-active.dto';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
 
 @Controller('organizations')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard, PlatformRolesGuard)
 export class OrganizationsController {
   constructor(private organizationsService: OrganizationsService) {}
 
-  private assertSuperAdmin(req: any) {
-    if (req.user.role !== 'SUPER_ADMIN') {
-      throw new ForbiddenException('Accès réservé au super-administrateur.');
-    }
-  }
-
   @Get()
-  findAll(@Request() req: any) {
-    this.assertSuperAdmin(req);
+  @SuperAdminOnly()
+  findAll() {
     return this.organizationsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string, @Request() req: any) {
-    this.assertSuperAdmin(req);
-    return this.organizationsService.findOne(id);
-  }
-
   @Post()
-  create(@Body() body: any, @Request() req: any) {
-    this.assertSuperAdmin(req);
-    return this.organizationsService.createWithAdmin(body);
+  @SuperAdminOnly()
+  create(@Body() body: CreateOrganizationDto, @Request() req: any) {
+    return this.organizationsService.createWithAdmin(body, req.user);
   }
 
   @Put(':id/license')
-  updateLicense(@Param('id') id: string, @Body() body: { licenseType: string }, @Request() req: any) {
-    this.assertSuperAdmin(req);
-    return this.organizationsService.updateLicense(id, body.licenseType);
+  @SuperAdminOnly()
+  updateLicense(@Param('id') id: string, @Body() body: UpdateOrganizationLicenseDto, @Request() req: any) {
+    return this.organizationsService.updateLicense(id, body.licenseType, req.user, body.reason);
   }
 
   @Get('map/overview')
-  async getMapOverview(@Request() req: any) {
-    this.assertSuperAdmin(req);
+  @SuperAdminOnly()
+  async getMapOverview() {
     return this.organizationsService.getMapOverview();
   }
 
   @Put(':id/active')
-  toggleActive(@Param('id') id: string, @Body() body: { isActive: boolean }, @Request() req: any) {
-    this.assertSuperAdmin(req);
-    return this.organizationsService.toggleActive(id, body.isActive);
+  @SuperAdminOnly()
+  toggleActive(@Param('id') id: string, @Body() body: UpdateOrganizationActiveDto, @Request() req: any) {
+    return this.organizationsService.toggleActive(id, body.isActive, req.user, body.reason);
   }
 
   // Accessible à tout utilisateur connecté — uniquement sa propre organisation
@@ -56,14 +50,21 @@ export class OrganizationsController {
   }
 
   @Get('admin/all-projects')
-  getAllProjectsGlobal(@Request() req: any) {
-    this.assertSuperAdmin(req);
+  @SuperAdminOnly()
+  getAllProjectsGlobal() {
     return this.organizationsService.findAllProjectsGlobal();
   }
 
   @Get('admin/health-scores')
-  getHealthScores(@Request() req: any) {
-    this.assertSuperAdmin(req);
+  @SuperAdminOnly()
+  getHealthScores() {
     return this.organizationsService.getHealthScores();
+  }
+
+  // Garder la route paramétrée après toutes les routes statiques.
+  @Get(':id')
+  @SuperAdminOnly()
+  findOne(@Param('id') id: string) {
+    return this.organizationsService.findOne(id);
   }
 }

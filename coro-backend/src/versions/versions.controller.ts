@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { VersionsService } from './versions.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('projects/:projectId/versions')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class VersionsController {
   constructor(private versionsService: VersionsService) {}
 

@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { OccupancyEmployeesService } from './occupancy-employees.service';
+import { OperationalContinuityAccess } from '../auth/organization-access.decorator';
 
 @Controller('occupancy')
+@OperationalContinuityAccess()
 export class OccupancyEmployeesController {
   constructor(private readonly service: OccupancyEmployeesService) {}
 

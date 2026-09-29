@@ -2,6 +2,8 @@ import { Controller, Get, Post, Put, Param, Body, UseGuards, Request, ForbiddenE
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import type { UpdateMeDto } from './users.service';
+import { CreateOrganizationUserDto } from './dto/create-organization-user.dto';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('users')
 export class UsersController {
@@ -14,20 +16,20 @@ export class UsersController {
   }
 
   @Get('organization')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async getOrganizationUsers(@Request() req: any) {
     return this.usersService.findByOrganization(req.user.organizationId);
   }
 
   @Post('organization')
-  @UseGuards(AuthGuard('jwt'))
-  async createOrganizationUser(@Body() body: any, @Request() req: any) {
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
+  async createOrganizationUser(@Body() body: CreateOrganizationUserDto, @Request() req: any) {
     this.assertAdmin(req);
-    return this.usersService.createInOrganization(req.user.organizationId, body);
+    return this.usersService.createInOrganization(req.user.organizationId, body, req.user);
   }
 
   @Post('organization/:userId/resend-invite')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async resendInvite(
     @Param('userId') userId: string,
     @Body() body: { password: string },
@@ -38,14 +40,14 @@ export class UsersController {
   }
 
   @Put('organization/:id/active')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
   async toggleOrganizationUserActive(
     @Param('id') id: string,
-    @Body() body: { isActive: boolean },
+    @Body() body: { isActive: boolean; reason?: string },
     @Request() req: any,
   ) {
     this.assertAdmin(req);
-    return this.usersService.toggleActiveInOrganization(id, req.user.organizationId, body.isActive);
+    return this.usersService.toggleActiveInOrganization(id, req.user.organizationId, body.isActive, req.user, body.reason);
   }
 
   @Get('me')

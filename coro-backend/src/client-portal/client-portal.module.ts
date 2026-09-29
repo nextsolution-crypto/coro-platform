@@ -14,6 +14,7 @@ import { CorrectiveActionsService } from '../occupancy/corrective-actions.servic
 import { CorrectiveActionEvidenceService } from '../occupancy/corrective-action-evidence.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PopulationModule } from '../population/population.module';
+import { requireJwtSecret } from '../auth/auth-security.config';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { PopulationModule } from '../population/population.module';
     NotificationsModule,
     PopulationModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'coro-secret',
+      secret: requireJwtSecret(),
       signOptions: { expiresIn: '7d' },
     }),
   ],

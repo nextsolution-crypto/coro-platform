@@ -11,12 +11,13 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { ExportService } from './export.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import type { ExportOptions } from './export.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('projects/:projectId/export')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ExportController {
   constructor(
     private readonly exportService: ExportService,

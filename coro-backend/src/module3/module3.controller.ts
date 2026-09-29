@@ -3,9 +3,10 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module3Service } from './module3.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('projects/:projectId/module3')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class Module3Controller {
 
   constructor(private readonly module3Service: Module3Service) {}

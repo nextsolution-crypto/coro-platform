@@ -2,13 +2,16 @@ import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, Us
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProjectFilesService } from './project-files.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { EvidenceReadAccess } from '../auth/organization-access.decorator';
 
 @Controller('project-files')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ProjectFilesController {
   constructor(private projectFilesService: ProjectFilesService) {}
 
   @Get('project/:projectId')
+  @EvidenceReadAccess()
   getFiles(
     @Param('projectId') projectId: string,
     @Query('visibility') visibility?: string,
@@ -49,6 +52,7 @@ export class ProjectFilesController {
   }
 
   @Get(':id/download')
+  @EvidenceReadAccess()
   getDownloadUrl(@Param('id') id: string) {
     return this.projectFilesService.getSignedUrl(id);
   }

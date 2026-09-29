@@ -2,9 +2,10 @@ import { Controller, Get, Put, Post, Param, Body, UseGuards, Request, Res } from
 import { Module8Service } from './module8.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('projects/:projectId/module8')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class Module8Controller {
   constructor(private readonly service: Module8Service) {}
 

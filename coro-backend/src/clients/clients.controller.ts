@@ -2,9 +2,10 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } f
 import { AuthGuard } from '@nestjs/passport';
 import { ClientsService } from './clients.service';
 import { UpdateClientUserOperationalPermissionsDto } from './dto/update-client-user-operational-permissions.dto';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('clients')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ClientsController {
   constructor(private clientsService: ClientsService) {}
 
@@ -73,7 +74,7 @@ export class ClientsController {
 }
 
 @Controller('admin/organizations')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class PlatformClientAdministrationController {
   constructor(private clientsService: ClientsService) {}
 

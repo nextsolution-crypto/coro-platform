@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { IncidentService } from './incident.service';
+import { OperationalContinuityAccess } from '../auth/organization-access.decorator';
 
 @Controller('incidents')
+@OperationalContinuityAccess()
 export class IncidentController {
   constructor(private readonly service: IncidentService) {}
 

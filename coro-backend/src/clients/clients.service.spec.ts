@@ -18,7 +18,8 @@ describe('ClientsService operational permissions', () => {
     auditLog: { create: jest.fn() },
     $transaction: jest.fn(async (callback: any) => callback(prisma)),
   };
-  const service = new ClientsService(prisma, {} as any);
+  const adminAudit = { record: jest.fn().mockResolvedValue({ id: 'admin-audit-1' }) };
+  const service = new ClientsService(prisma, {} as any, adminAudit as any);
 
   beforeEach(() => {
     jest.clearAllMocks();

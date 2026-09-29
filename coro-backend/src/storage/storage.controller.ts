@@ -2,9 +2,10 @@ import { Controller, Post, UploadedFile, UseInterceptors, UseGuards, BadRequestE
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { StorageService } from './storage.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('storage')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 

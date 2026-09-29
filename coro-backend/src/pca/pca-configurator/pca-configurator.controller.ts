@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PcaConfiguratorService } from './pca-configurator.service';
+import { OrganizationStatusGuard } from '../../auth/organization-status.guard';
 
 @Controller('pca/configurator')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class PcaConfiguratorController {
   constructor(private readonly pcaConfiguratorService: PcaConfiguratorService) {}
 

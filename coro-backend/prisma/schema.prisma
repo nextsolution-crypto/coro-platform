@@ -111,11 +111,14 @@ model User {
   customProcedures          CustomProcedure[]
   refreshTokens             RefreshToken[]
   trustedDevices            TrustedDevice[]
+  mfaChallenge              PlatformMfaChallenge?
+  adminAuditEvents          AdminAuditEvent[]
 
   resetToken       String?
   resetTokenExpiry DateTime?
   mfaCode          String?
   mfaCodeExpiry    DateTime?
+  authVersion      Int       @default(1)
 
   bookings                         Booking[]
   bookingAssignments               BookingAssignment[]       @relation("BookingAssignee")
@@ -1117,6 +1120,31 @@ model ClientUser {
   sessionVersion               Int                           @default(0)
 }
 
+model AdminAuditEvent {
+  id               String   @id @default(uuid())
+  actorUserId      String
+  actorDisplayName String
+  actorRole        String
+  action           String
+  targetType       String
+  targetId         String
+  targetLabel      String?
+  organizationId   String?
+  reason           String?
+  requestId        String?
+  beforeData       Json?
+  afterData        Json?
+  schemaVersion    Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([requestId])
+}
+
 model ClientPasswordResetToken {
   id           String     @id @default(uuid())
   clientUserId String
@@ -1373,13 +1401,14 @@ model ProjectFile {
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  isRevoked Boolean  @default(false)
+  id          String   @id @default(uuid())
+  tokenDigest String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  authVersion Int
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  isRevoked   Boolean  @default(false)
 }
 
 // ─── CORO — Urgences environnementales (RUE / futur PUE) ───────────────────
@@ -1411,6 +1440,19 @@ enum RueDataSource {
 // Type d'acteur ayant réalisé une action traçable dans CORO.
 // L'identifiant associé peut référer un User, un ClientUser,
 // ou être absent lorsqu'il s'agit d'une action système.
+model PlatformMfaChallenge {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  verifier     String
+  expiresAt    DateTime
+  attemptCount Int       @default(0)
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
 enum CoroActorType {
   USER
   CLIENT_USER
@@ -3917,6 +3959,7 @@ model TrustedDevice {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  authVersion Int
   createdAt DateTime @default(now())
 }
 

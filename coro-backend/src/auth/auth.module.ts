@@ -6,12 +6,13 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { requireJwtSecret } from './auth-security.config';
 
 @Module({
   imports: [
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'coro-secret-key-2026',
+      secret: requireJwtSecret(),
       signOptions: { expiresIn: '24h' },
     }),
     UsersModule,

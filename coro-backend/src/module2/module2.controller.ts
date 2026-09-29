@@ -17,10 +17,11 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module2Service } from './module2.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { SaveModule2Dto } from './dto/save-module2.dto';
 
 @Controller('projects/:projectId/module2')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class Module2Controller {
 
   constructor(private readonly module2Service: Module2Service) {}

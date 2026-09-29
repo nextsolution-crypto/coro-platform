@@ -1,9 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('dangerous-substances')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class DangerousSubstancesController {
   constructor(private prisma: PrismaService) {}
 

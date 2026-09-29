@@ -1,10 +1,11 @@
 import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { GeneratorService } from './generator.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { ValidationService } from './validation.service';
 
 @Controller('generator')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class GeneratorController {
   constructor(
     private generatorService: GeneratorService,

@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { LibraryService } from './library.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('library')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class LibraryController {
   constructor(private libraryService: LibraryService) {}
 

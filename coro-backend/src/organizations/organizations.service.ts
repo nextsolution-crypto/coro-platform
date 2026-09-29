@@ -5,12 +5,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import * as bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private adminAudit: AdminAuditService) {}
 
   async findAll() {
     return this.prisma.organization.findMany({
@@ -63,7 +64,7 @@ additionalMembers?: {
     email: string;
     role: string;
   }[];
-}) {
+}, actor: any) {
   // Code de recommandation propre à la nouvelle organisation
   const newOrganizationReferralCode = await this.generateUniqueReferralCode();
 
@@ -182,6 +183,21 @@ if (
         organizationId: organization.id,
         title: data.adminTitle,
         province: data.province,
+      },
+    });
+
+    await this.adminAudit.record(tx, {
+      actorUserId: actor.userId,
+      action: 'ORGANIZATION_CREATED',
+      targetType: 'Organization',
+      targetId: organization.id,
+      targetLabel: organization.name,
+      organizationId: organization.id,
+      afterData: {
+        name: organization.name,
+        licenseType: organization.licenseType,
+        isActive: organization.isActive,
+        adminUserId: adminUser.id,
       },
     });
 
@@ -324,17 +340,23 @@ private async generateUniqueReferralCode(): Promise<string> {
     }
   }
 
-  async updateLicense(id: string, licenseType: string) {
-    return this.prisma.organization.update({
-      where: { id },
-      data: { licenseType },
+  async updateLicense(id: string, licenseType: string, actor: any, rawReason?: string) {
+    const reason = this.adminAudit.normalizeReason(rawReason, true);
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.organization.findUniqueOrThrow({ where: { id }, select: { id: true, name: true, licenseType: true, isActive: true } });
+      const updated = await tx.organization.update({ where: { id }, data: { licenseType } });
+      await this.adminAudit.record(tx, { actorUserId: actor.userId, action: 'ORGANIZATION_LICENSE_CHANGED', targetType: 'Organization', targetId: id, targetLabel: current.name, organizationId: id, reason, beforeData: { licenseType: current.licenseType }, afterData: { licenseType } });
+      return updated;
     });
   }
 
-  async toggleActive(id: string, isActive: boolean) {
-    return this.prisma.organization.update({
-      where: { id },
-      data: { isActive },
+  async toggleActive(id: string, isActive: boolean, actor: any, rawReason?: string) {
+    const reason = this.adminAudit.normalizeReason(rawReason, !isActive);
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.organization.findUniqueOrThrow({ where: { id }, select: { id: true, name: true, licenseType: true, isActive: true } });
+      const updated = await tx.organization.update({ where: { id }, data: { isActive } });
+      await this.adminAudit.record(tx, { actorUserId: actor.userId, action: isActive ? 'ORGANIZATION_ENABLED' : 'ORGANIZATION_DISABLED', targetType: 'Organization', targetId: id, targetLabel: current.name, organizationId: id, reason, beforeData: { active: current.isActive }, afterData: { active: isActive } });
+      return updated;
     });
   }
 

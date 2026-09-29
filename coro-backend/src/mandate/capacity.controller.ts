@@ -1,9 +1,10 @@
 import { Controller, ForbiddenException, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CapacityService } from './capacity.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('admin/capacity')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class CapacityController {
   constructor(private readonly service: CapacityService) {}
 

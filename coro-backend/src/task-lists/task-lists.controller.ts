@@ -2,9 +2,13 @@ import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request } f
 import { AuthGuard } from '@nestjs/passport';
 import { TaskListsService } from './task-lists.service';
 import { requireInternal, requireSuperAdmin, requireTenantAdmin } from '../auth/work-management-access';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { AddTaskListTemplateDto, CreateTaskListDto, UpdateTaskListDto } from './dto/task-list.dto';
+import { PlatformRolesGuard } from '../auth/platform-roles.guard';
+import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 
 @Controller('task-lists')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard, PlatformRolesGuard)
 export class TaskListsController {
   constructor(private readonly service: TaskListsService) {}
 
@@ -17,6 +21,7 @@ export class TaskListsController {
 
   // Listes globales seulement (SuperAdmin)
   @Get('global')
+  @SuperAdminOnly()
   getAllGlobal(@Request() req: any) {
     requireSuperAdmin(req.user);
     return this.service.getAllGlobal();
@@ -24,21 +29,22 @@ export class TaskListsController {
 
   // Créer une liste globale (SuperAdmin)
   @Post('global')
-  createGlobal(@Body() dto: any, @Request() req: any) {
+  @SuperAdminOnly()
+  createGlobal(@Body() dto: CreateTaskListDto, @Request() req: any) {
     requireSuperAdmin(req.user);
-    return this.service.create(dto, null);
+    return this.service.createGlobal(dto, req.user);
   }
 
   @Put('global/:id')
-  updateGlobal(@Param('id') id: string, @Body() dto: any, @Request() req: any) {
+  updateGlobal(@Param('id') id: string, @Body() dto: UpdateTaskListDto, @Request() req: any) {
     requireSuperAdmin(req.user);
-    return this.service.update(id, dto, null);
+    return this.service.updateGlobal(id, dto, req.user);
   }
 
   @Delete('global/:id')
   deleteGlobal(@Param('id') id: string, @Request() req: any) {
     requireSuperAdmin(req.user);
-    return this.service.delete(id, null);
+    return this.service.deleteGlobal(id, req.user);
   }
 
   // Créer une liste pour son organisation
@@ -64,7 +70,7 @@ export class TaskListsController {
 
   // Ajouter un template à une liste
   @Post(':id/templates')
-  addTemplate(@Param('id') id: string, @Body() dto: any, @Request() req: any) {
+  addTemplate(@Param('id') id: string, @Body() dto: AddTaskListTemplateDto, @Request() req: any) {
     requireTenantAdmin(req.user);
     return this.service.addTemplate(id, dto, req.user.organizationId);
   }

@@ -2,13 +2,16 @@ import { Controller, Get, Post, Param, Body, UseGuards, Request, UseInterceptors
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { ProjectFilesService } from './project-files.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
+import { EvidenceReadAccess } from '../auth/organization-access.decorator';
 
 @Controller('project-files/client')
-@UseGuards(ClientJwtGuard)
+@UseGuards(ClientJwtGuard, OrganizationStatusGuard)
 export class ProjectFilesClientController {
   constructor(private projectFilesService: ProjectFilesService) {}
 
   @Get(':projectId')
+  @EvidenceReadAccess()
   getFiles(
     @Param('projectId') projectId: string,
     @Query('visibility') visibility?: string,

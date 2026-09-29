@@ -1,9 +1,10 @@
 import { Controller, Get, Put, Body, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Module1TemplateService } from './module1-template.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('organizations/module1-template')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class Module1TemplateController {
   constructor(private readonly service: Module1TemplateService) {}
 

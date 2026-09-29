@@ -8,7 +8,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('coro_token');
+  const token = sessionStorage.getItem('coro_token') || localStorage.getItem('coro_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -17,6 +17,14 @@ api.interceptors.request.use((config) => {
 
 let isRefreshing = false;
 let failedQueue: { resolve: (token: string) => void; reject: (err: any) => void }[] = [];
+
+const clearAuthStorage = () => {
+  for (const storage of [sessionStorage, localStorage]) {
+    storage.removeItem('coro_token');
+    storage.removeItem('coro_refresh_token');
+    storage.removeItem('coro_user');
+  }
+};
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
@@ -32,11 +40,10 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      const refreshToken = localStorage.getItem('coro_refresh_token');
+      const refreshToken = sessionStorage.getItem('coro_refresh_token') || localStorage.getItem('coro_refresh_token');
 
       if (!refreshToken) {
-        localStorage.removeItem('coro_token');
-        localStorage.removeItem('coro_refresh_token');
+        clearAuthStorage();
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -61,14 +68,15 @@ api.interceptors.response.use(
         const { access_token, refresh_token: newRefreshToken } = response.data;
         localStorage.setItem('coro_token', access_token);
         localStorage.setItem('coro_refresh_token', newRefreshToken);
+        sessionStorage.setItem('coro_token', access_token);
+        sessionStorage.setItem('coro_refresh_token', newRefreshToken);
         api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
         processQueue(null, access_token);
         originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.removeItem('coro_token');
-        localStorage.removeItem('coro_refresh_token');
+        clearAuthStorage();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {

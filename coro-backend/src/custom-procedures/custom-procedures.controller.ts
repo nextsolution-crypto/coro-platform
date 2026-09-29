@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CustomProceduresService } from './custom-procedures.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('custom-procedures')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class CustomProceduresController {
   constructor(private service: CustomProceduresService) {}
 

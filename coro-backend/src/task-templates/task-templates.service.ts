@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdminAuditService } from '../admin-audit/admin-audit.service';
 
 @Injectable()
 export class TaskTemplatesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, @Optional() private adminAudit?: AdminAuditService) {}
+
+  private get audit(): AdminAuditService {
+    if (!this.adminAudit) throw new Error('AdminAuditService is required for global task-template mutations.');
+    return this.adminAudit;
+  }
 
   // Tous les templates globaux (SuperAdmin)
   async getAll() {
@@ -71,6 +77,34 @@ export class TaskTemplatesService {
     });
   }
 
+  async createGlobal(dto: any, actor: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.taskTemplate.create({ data: { categoryName: dto.categoryName, taskTitle: dto.taskTitle, documentTypes: dto.documentTypes || [], order: dto.order || 0, organizationId: null } });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_TEMPLATE_CREATED', targetType: 'TaskTemplate', targetId: created.id, targetLabel: created.taskTitle, afterData: { categoryName: created.categoryName, taskTitle: created.taskTitle } });
+      return created;
+    });
+  }
+
+  async updateGlobal(id: string, dto: any, actor: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.taskTemplate.findFirst({ where: { id, organizationId: null } });
+      if (!current) throw new NotFoundException('Template global introuvable');
+      const updated = await tx.taskTemplate.update({ where: { id }, data: { categoryName: dto.categoryName ?? current.categoryName, taskTitle: dto.taskTitle ?? current.taskTitle, documentTypes: dto.documentTypes ?? current.documentTypes, order: dto.order ?? current.order, isActive: dto.isActive ?? current.isActive } });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_TEMPLATE_UPDATED', targetType: 'TaskTemplate', targetId: id, targetLabel: updated.taskTitle, beforeData: { categoryName: current.categoryName, taskTitle: current.taskTitle, isActive: current.isActive }, afterData: { categoryName: updated.categoryName, taskTitle: updated.taskTitle, isActive: updated.isActive } });
+      return updated;
+    });
+  }
+
+  async deleteGlobal(id: string, actor: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.taskTemplate.findFirst({ where: { id, organizationId: null } });
+      if (!current) throw new NotFoundException('Template global introuvable');
+      const updated = await tx.taskTemplate.update({ where: { id }, data: { isActive: false } });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_TEMPLATE_DISABLED', targetType: 'TaskTemplate', targetId: id, targetLabel: current.taskTitle, beforeData: { active: current.isActive }, afterData: { active: false } });
+      return updated;
+    });
+  }
+
   async update(id: string, dto: any, organizationId: string | null) {
     const template = await this.prisma.taskTemplate.findFirst({ where: { id, organizationId } });
     if (!template) throw new NotFoundException('Template introuvable');
@@ -95,7 +129,7 @@ export class TaskTemplatesService {
     });
   }
 
-  async seedDefaultTemplates() {
+  async seedDefaultTemplates(actor: any) {
     const existing = await this.prisma.taskTemplate.count();
     if (existing > 0) return { message: 'Templates déjà initialisés' };
 
@@ -127,7 +161,10 @@ export class TaskTemplatesService {
       { categoryName: 'ADMINISTRATION', taskTitle: 'Demande de facturation', documentTypes: ['PMU', 'PSI', 'PCA', 'PGC', 'PRA', 'PUE'], order: 1 },
     ];
 
-    await this.prisma.taskTemplate.createMany({ data: templates });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.taskTemplate.createMany({ data: templates });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_TEMPLATES_SEEDED', targetType: 'TaskTemplateCollection', targetId: 'global', targetLabel: 'Modèles de tâches globaux', afterData: { count: templates.length } });
+    });
     return { message: `${templates.length} templates créés avec succès` };
   }
 }

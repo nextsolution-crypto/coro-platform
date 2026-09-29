@@ -1,9 +1,11 @@
-import { Injectable, ConflictException, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, ForbiddenException, BadRequestException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
 import { getLimitsForLicense } from '../organizations/license-limits';
 import { assertIanaTimeZone } from '../bookings/booking-time';
+import { AdminAuditService } from '../admin-audit/admin-audit.service';
+import { UserRole } from '@prisma/client';
 
 export type UpdateMeDto = Partial<{
   firstName: string; lastName: string; email: string; horaireBase: number;
@@ -19,7 +21,13 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    @Optional() private adminAudit?: AdminAuditService,
   ) {}
+
+  private get audit(): AdminAuditService {
+    if (!this.adminAudit) throw new Error('AdminAuditService is required for administrative user mutations.');
+    return this.adminAudit;
+  }
 
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
@@ -125,10 +133,12 @@ export class UsersService {
   async changePassword(id: string, newPassword: string) {
     this.validatePasswordStrength(newPassword);
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    return this.prisma.user.update({
-      where: { id },
-      data: { password: hashedPassword },
-      select: { id: true },
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({ where: { id }, data: { password: hashedPassword, authVersion: { increment: 1 } }, select: { id: true } });
+      await tx.refreshToken.updateMany({ where: { userId: id }, data: { isRevoked: true } });
+      await tx.trustedDevice.deleteMany({ where: { userId: id } });
+      await tx.platformMfaChallenge.deleteMany({ where: { userId: id } });
+      return user;
     });
   }
 
@@ -157,8 +167,13 @@ export class UsersService {
     password: string;
     firstName: string;
     lastName: string;
-    role?: string;
-  }) {
+    role?: UserRole;
+    reason?: string;
+  }, actor: any) {
+    if (data.role === UserRole.SUPER_ADMIN && actor.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Seul un super-administrateur peut créer ce rôle.');
+    }
+    const reason = this.audit.normalizeReason(data.reason, data.role === UserRole.SUPER_ADMIN);
     const organization = await this.prisma.organization.findUnique({ where: { id: organizationId } });
     if (!organization) {
       throw new NotFoundException('Organisation introuvable');
@@ -180,22 +195,17 @@ export class UsersService {
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
-        const newUser = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: (data.role as any) || 'OPERATOR',
-        organizationId,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-      },
+    const newUser = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { email: data.email, password: hashedPassword, firstName: data.firstName, lastName: data.lastName, role: data.role || UserRole.OPERATOR, organizationId },
+        select: { id: true, email: true, firstName: true, lastName: true, role: true },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId, action: 'PLATFORM_USER_CREATED', targetType: 'User', targetId: created.id,
+        targetLabel: created.email, organizationId, reason,
+        afterData: { role: created.role, active: true },
+      });
+      return created;
     });
 
     // Envoyer le courriel de bienvenue avec le mot de passe temporaire
@@ -223,10 +233,12 @@ export class UsersService {
 
     // Réinitialiser le mot de passe
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { password: hashedPassword, authVersion: { increment: 1 } } }),
+      this.prisma.refreshToken.updateMany({ where: { userId }, data: { isRevoked: true } }),
+      this.prisma.trustedDevice.deleteMany({ where: { userId } }),
+      this.prisma.platformMfaChallenge.deleteMany({ where: { userId } }),
+    ]);
 
     // Renvoyer le courriel
     try {
@@ -245,15 +257,28 @@ export class UsersService {
     return { success: true };
   }
 
-  async toggleActiveInOrganization(userId: string, organizationId: string, isActive: boolean) {
+  async toggleActiveInOrganization(userId: string, organizationId: string, isActive: boolean, actor: any, rawReason?: string) {
+    if (userId === actor.userId && !isActive) throw new ForbiddenException('Vous ne pouvez pas désactiver votre propre compte.');
+    const reason = this.audit.normalizeReason(rawReason, !isActive);
     const user = await this.prisma.user.findFirst({ where: { id: userId, organizationId } });
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable dans cette organisation.');
     }
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { isActive },
-      select: { id: true, email: true, isActive: true },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(11223344)`;
+      if (!isActive && user.role === UserRole.SUPER_ADMIN) {
+        const remaining = await tx.user.count({ where: { role: UserRole.SUPER_ADMIN, isActive: true, id: { not: userId } } });
+        if (remaining === 0) throw new ForbiddenException('Le dernier super-administrateur actif ne peut pas être désactivé.');
+      }
+      const updated = await tx.user.update({ where: { id: userId }, data: { isActive, authVersion: { increment: 1 } }, select: { id: true, email: true, isActive: true } });
+      await tx.refreshToken.updateMany({ where: { userId }, data: { isRevoked: true } });
+      await tx.trustedDevice.deleteMany({ where: { userId } });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId, action: isActive ? 'PLATFORM_USER_ENABLED' : 'PLATFORM_USER_DISABLED', targetType: 'User', targetId: userId,
+        targetLabel: user.email, organizationId, reason,
+        beforeData: { active: user.isActive, role: user.role }, afterData: { active: isActive, role: user.role },
+      });
+      return updated;
     });
   }
 }

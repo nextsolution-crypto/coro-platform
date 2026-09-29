@@ -11,12 +11,14 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../client-portal/email.service';
 import * as bcrypt from 'bcryptjs';
+import { AdminAuditService } from '../admin-audit/admin-audit.service';
 
 @Injectable()
 export class ClientsService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private adminAudit: AdminAuditService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -246,7 +248,7 @@ export class ClientsService {
           correctiveActionPermissions: true,
         },
       });
-      await tx.auditLog.create({
+        await tx.auditLog.create({
         data: {
           action: 'CLIENT_USER_OPERATIONAL_PERMISSIONS_UPDATED',
           entityType: 'ClientUser',
@@ -269,8 +271,18 @@ export class ClientsService {
               correctiveActionPermissions: nextCorrective,
             },
           },
-        },
-      });
+          },
+        });
+        await this.adminAudit.record(tx, {
+          actorUserId: actor.userId,
+          action: 'CLIENT_USER_OPERATIONAL_PERMISSIONS_CHANGED',
+          targetType: 'ClientUser',
+          targetId: clientUserId,
+          targetLabel: current.email,
+          organizationId,
+          beforeData: { operationalReviewPermissions: current.operationalReviewPermissions, correctiveActionPermissions: current.correctiveActionPermissions },
+          afterData: { operationalReviewPermissions: nextReview, correctiveActionPermissions: nextCorrective },
+        });
       return user;
     });
     return this.toOperationalPermissionResponse(updated);

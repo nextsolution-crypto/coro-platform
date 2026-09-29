@@ -3,11 +3,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import * as bodyParser from 'body-parser';
 import helmet from 'helmet';
+import { RequestIdMiddleware } from './common/request-id.middleware';
+import { SafeExceptionFilter } from './common/safe-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
   });
+  const requestIdMiddleware = new RequestIdMiddleware();
+  app.use(requestIdMiddleware.use.bind(requestIdMiddleware));
+  app.useGlobalFilters(new SafeExceptionFilter());
 
     // ── Helmet – headers HTTP sécurisés ──
   app.use(helmet({
@@ -51,6 +56,7 @@ async function bootstrap() {
     ].filter(Boolean),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['X-Request-ID'],
     credentials: true,
   });
 

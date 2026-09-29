@@ -54,10 +54,14 @@ import { PlanningModule } from './planning/planning.module';
 import { ActivityTypesModule } from './activity-types/activity-types.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { AdminAuditModule } from './admin-audit/admin-audit.module';
+import { PlatformAuthorizationModule } from './auth/platform-authorization.module';
 
 @Module({
   imports: [
   PrismaModule,
+  AdminAuditModule,
+  PlatformAuthorizationModule,
   AuthModule,
   UsersModule,
   ClientsModule,

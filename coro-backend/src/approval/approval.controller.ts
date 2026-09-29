@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApprovalService } from './approval.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('approval')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class ApprovalController {
   constructor(private service: ApprovalService) {}
 

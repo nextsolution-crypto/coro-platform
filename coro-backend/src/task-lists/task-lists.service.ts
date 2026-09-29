@@ -1,9 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdminAuditService } from '../admin-audit/admin-audit.service';
 
 @Injectable()
 export class TaskListsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, @Optional() private adminAudit?: AdminAuditService) {}
+
+  private get audit(): AdminAuditService {
+    if (!this.adminAudit) throw new Error('AdminAuditService is required for global task-list mutations.');
+    return this.adminAudit;
+  }
 
   // Toutes les listes disponibles (globales + organisation)
   async getAll(organizationId: string) {
@@ -52,6 +58,36 @@ export class TaskListsService {
         organizationId: organizationId || null,
         isDefault: false,
       },
+    });
+  }
+
+  async createGlobal(dto: any, actor: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.taskList.create({
+        data: { name: dto.name, description: dto.description || null, category: dto.category || 'DOCUMENT', documentTypes: dto.documentTypes || [], organizationId: null, isDefault: false },
+      });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_LIST_CREATED', targetType: 'TaskList', targetId: created.id, targetLabel: created.name, afterData: { name: created.name, category: created.category } });
+      return created;
+    });
+  }
+
+  async updateGlobal(id: string, dto: any, actor: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.taskList.findFirst({ where: { id, organizationId: null } });
+      if (!current) throw new NotFoundException('Liste globale introuvable');
+      const updated = await tx.taskList.update({ where: { id }, data: { name: dto.name ?? current.name, description: dto.description ?? current.description, category: dto.category ?? current.category, documentTypes: dto.documentTypes ?? current.documentTypes } });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_LIST_UPDATED', targetType: 'TaskList', targetId: id, targetLabel: updated.name, beforeData: { name: current.name, category: current.category }, afterData: { name: updated.name, category: updated.category } });
+      return updated;
+    });
+  }
+
+  async deleteGlobal(id: string, actor: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.taskList.findFirst({ where: { id, organizationId: null } });
+      if (!current) throw new NotFoundException('Liste globale introuvable');
+      const updated = await tx.taskList.update({ where: { id }, data: { isActive: false } });
+      await this.audit.record(tx, { actorUserId: actor.userId, action: 'GLOBAL_TASK_LIST_DISABLED', targetType: 'TaskList', targetId: id, targetLabel: current.name, beforeData: { active: current.isActive }, afterData: { active: false } });
+      return updated;
     });
   }
 

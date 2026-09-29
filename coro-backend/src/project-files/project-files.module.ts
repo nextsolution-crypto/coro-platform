@@ -7,6 +7,7 @@ import { StorageModule } from '../storage/storage.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { JwtModule } from '@nestjs/jwt';
+import { requireJwtSecret } from '../auth/auth-security.config';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
     NotificationsModule,
     MulterModule.register({ limits: { fileSize: 50 * 1024 * 1024 } }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'coro-secret',
+      secret: requireJwtSecret(),
       signOptions: { expiresIn: '7d' },
     }),
   ],

@@ -2,9 +2,10 @@ import { Controller, Post, Param, Body, UseGuards, Request, Res } from '@nestjs/
 import { AuthGuard } from '@nestjs/passport';
 import { GuideService } from './guide.service';
 import type { Response } from 'express';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('projects/:projectId/guide')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class GuideController {
   constructor(private readonly service: GuideService) {}
 

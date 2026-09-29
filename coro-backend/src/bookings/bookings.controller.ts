@@ -3,9 +3,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { BookingsService } from './bookings.service';
 import { UpdateBookingStatusDto } from './booking.dto';
 import { BookingAssignmentsService } from './booking-assignments.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('bookings')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class BookingsController {
   constructor(private bookingsService: BookingsService, private assignments: BookingAssignmentsService) {}
 

@@ -9,9 +9,10 @@ import { MandateOperationsPreviewService } from './mandate-operations-preview.se
 import { MandateOperationsPreviewDto } from './mandate-operations-preview.dto';
 import { ApplyMandateOperationsDto } from './mandate-operations-apply.dto';
 import { MandateOperationsApplyService } from './mandate-operations-apply.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('projects/:projectId')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class MandateController {
   constructor(private readonly service: MandateService, private readonly mandateServices: MandateServicesService,
     private readonly operationsPreview: MandateOperationsPreviewService,

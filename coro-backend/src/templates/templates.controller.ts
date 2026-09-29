@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TemplatesService } from './templates.service';
+import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 
 @Controller('templates')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
 export class TemplatesController {
   constructor(private templatesService: TemplatesService) {}
 
