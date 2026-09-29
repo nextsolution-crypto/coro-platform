@@ -57,6 +57,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AdminAuditModule } from './admin-audit/admin-audit.module';
 import { PlatformAuthorizationModule } from './auth/platform-authorization.module';
 import { Organization360Module } from './organization-360/organization-360.module';
+import { CommercialCatalogModule } from './commercial-catalog/commercial-catalog.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { Organization360Module } from './organization-360/organization-360.modul
   AdminAuditModule,
   PlatformAuthorizationModule,
   Organization360Module,
+  CommercialCatalogModule,
   AuthModule,
   UsersModule,
   ClientsModule,

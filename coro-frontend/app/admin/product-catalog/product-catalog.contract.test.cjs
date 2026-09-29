@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = __dirname;
+const capabilities = fs.readFileSync(path.join(root, 'capabilities/page.tsx'), 'utf8');
+const priceBooks = fs.readFileSync(path.join(root, 'price-books/page.tsx'), 'utf8');
+const organization = fs.readFileSync(path.join(root, '../organizations/[organizationId]/page.tsx'), 'utf8');
+assert.match(capabilities, /aucune ligne ne constitue\s+un\s+entitlement/);
+assert.match(capabilities, /isAvailable/);
+assert.match(capabilities, /scopePolicies/);
+assert.match(priceBooks, /CAD uniquement/);
+assert.match(priceBooks, /\/publish/);
+assert.doesNotMatch(priceBooks, /Stripe|invoice|subscription|entitlement/i);
+assert.match(organization, /commercial-identity/);
+assert.match(organization, /NOT_ASSIGNED/);
+assert.match(organization, /OBSERVATION/);
+console.log('Phase 2A Product Catalog UI contract: PASS');

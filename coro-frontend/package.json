@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:planning": "node app/planning/planning.test.cjs",
-    "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs"
+    "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs",
+    "test:commercial-catalog": "node app/admin/product-catalog/product-catalog.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
