@@ -297,6 +297,11 @@ function CapabilitiesPanel({ items }: { items: JsonRecord[] }) {
 function CommercialPanel({ data }: { data: JsonRecord }) {
   const { organizationId } = useParams<{ organizationId: string }>();
   const legacy = (data.legacy ?? {}) as JsonRecord;
+  const contracts = (data.contracts as JsonRecord[]) ?? [];
+  const current =
+    data.contract && typeof data.contract === "object"
+      ? (data.contract as JsonRecord)
+      : null;
   const [relationship, setRelationship] = useState(
     String(data.relationship ?? "NOT_CONFIGURED"),
   );
@@ -351,12 +356,45 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
         rows={[
           ["License type legacy", legacy.licenseType],
           ["Organization status", legacy.organizationStatus],
-          ["Price Book", "NOT_ASSIGNED"],
-          ["Contract", data.contract],
+          ["Current Contract", current?.reference ?? "NOT_CONFIGURED"],
+          ["Contract status", current?.status ?? "NOT_CONFIGURED"],
+          ["Price Book legacy assignment", "NOT_ASSIGNED"],
           ["Pricing", data.pricing],
           ["Entitlements", data.entitlements ?? "OBSERVATION_ONLY"],
+          ["Enforcement", data.enforcement ?? "NONE"],
+          ["Billing", data.billing ?? "NOT_CONFIGURED"],
         ]}
       />
+      <h3 className="mt-6 font-semibold">Contracts and history</h3>
+      <div className="mt-3 space-y-3">
+        {contracts.length ? contracts.map((contract) => {
+          const revisions = (contract.revisions as JsonRecord[]) ?? [];
+          const revision = revisions[0];
+          const book = (revision?.priceBookVersion as JsonRecord) ?? {};
+          const priceBook = (book.priceBook as JsonRecord) ?? {};
+          return (
+            <article key={String(contract.id)} className="rounded-lg border p-4">
+              <div className="flex flex-wrap justify-between gap-2">
+                <strong>{String(contract.reference)} · {String(contract.title)}</strong>
+                <Badge>{String(contract.status)}</Badge>
+              </div>
+              <p className="mt-2 text-sm" style={{ color: palette.muted }}>
+                {String(revision?.termStartAt ?? "—")} → {String(revision?.termEndAt ?? "open")} · {String(revision?.currency ?? "—")} · {String(revision?.billingCadence ?? "one-time")}
+              </p>
+              <p className="mt-1 text-xs" style={{ color: palette.muted }}>
+                PriceBook {String(priceBook.code ?? "—")} / version {String(book.versionNumber ?? "—")} · renewal {String(revision?.renewalMode ?? "—")}
+              </p>
+              <p className="mt-2 text-xs">{revisions.length} revision(s) · {((contract.documents as JsonRecord[]) ?? []).length} document(s)</p>
+              {revision ? <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                <span>Adjustments: {((revision.adjustments as JsonRecord[]) ?? []).length}</span>
+                <span>Exclusivities: {((revision.exclusivities as JsonRecord[]) ?? []).length}</span>
+                <span>Commitments: {((revision.commitments as JsonRecord[]) ?? []).length}</span>
+                <span>Revision documents: {((revision.documents as JsonRecord[]) ?? []).length}</span>
+              </div> : null}
+            </article>
+          );
+        }) : <State text="Aucun contrat configuré." />}
+      </div>
     </section>
   );
 }

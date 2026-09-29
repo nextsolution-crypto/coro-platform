@@ -55,6 +55,7 @@ model Organization {
   referralsSent                Referral[]                   @relation("ReferralReferrer")
   referralReceived             Referral?                    @relation("ReferralReferred")
   referralCredits              ReferralCredit[]             @relation("ReferralCreditOrganization")
+  contracts                    OrganizationContract[]
 }
 
 model User {
@@ -115,6 +116,9 @@ model User {
   mfaChallenge              PlatformMfaChallenge?
   adminAuditEvents          AdminAuditEvent[]
   priceBookVersionsCreated  PriceBookVersion[]    @relation("PriceBookVersionCreator")
+  organizationContractsCreated OrganizationContract[]         @relation("OrganizationContractCreator")
+  contractRevisionsCreated     OrganizationContractRevision[] @relation("ContractRevisionCreator")
+  contractDocumentsUploaded    OrganizationContractDocument[] @relation("ContractDocumentUploader")
 
   resetToken       String?
   resetTokenExpiry DateTime?
@@ -295,6 +299,82 @@ enum TierCalculationMode {
   GRADUATED
 }
 
+enum OrganizationContractStatus {
+  DRAFT
+  APPROVED
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  CANCELLED
+}
+enum ContractRevisionType {
+  INITIAL
+  AMENDMENT
+  RENEWAL
+}
+enum ContractRevisionStatus {
+  DRAFT
+  APPROVED
+  SIGNED
+  CANCELLED
+}
+enum ContractRenewalMode {
+  NONE
+  MANUAL
+  AUTO
+}
+enum ContractBillingCadence {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+enum ContractAdjustmentScope {
+  GLOBAL
+  COMPONENT
+  CUSTOM_COMPONENT
+}
+enum ContractAdjustmentType {
+  PERCENT_DISCOUNT
+  FIXED_OVERRIDE
+  CUSTOM_FIXED_PRICE
+}
+enum ContractPriceLineSource {
+  CATALOG_COMPONENT
+  CUSTOM_COMPONENT
+  EXCLUSIVITY_FEE
+}
+enum ContractTerritoryType {
+  ISO_COUNTRY
+  ISO_SUBDIVISION
+  REGION
+  CUSTOM
+}
+enum ContractExclusivityStatus {
+  AGREED
+  TERMINATED
+  EXPIRED
+}
+enum ContractCommitmentType {
+  MINIMUM_SPEND
+  MINIMUM_SEATS
+  MINIMUM_SITES
+  MINIMUM_CLIENTS
+  CUSTOM
+}
+enum ContractCommitmentPeriod {
+  MONTH
+  QUARTER
+  YEAR
+  CONTRACT_TERM
+}
+enum ContractDocumentType {
+  SIGNED_CONTRACT
+  SIGNED_AMENDMENT
+  SIGNED_RENEWAL
+  SUPPORTING_DOCUMENT
+}
+
 model CommercialCapability {
   id              String                  @id @default(uuid())
   code            CapabilityCode          @unique
@@ -309,6 +389,9 @@ model CommercialCapability {
   updatedAt       DateTime                @updatedAt
   scopePolicies   CapabilityScopePolicy[]
   priceComponents PriceComponent[]
+  contractAdjustments ContractPricingAdjustment[]
+  contractPriceSnapshots ContractPriceSnapshotLine[]
+  contractExclusivityCapabilities ContractExclusivityCapability[]
 
   @@index([displayOrder])
   @@index([lifecycle, isAvailable])
@@ -359,6 +442,7 @@ model PriceBookVersion {
   priceBook            PriceBook              @relation(fields: [priceBookId], references: [id], onDelete: Restrict)
   createdBy            User?                  @relation("PriceBookVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   components           PriceComponent[]
+  contractRevisions    OrganizationContractRevision[]
 
   @@unique([priceBookId, versionNumber])
   @@index([priceBookId, status])
@@ -387,6 +471,8 @@ model PriceComponent {
   priceBookVersion   PriceBookVersion     @relation(fields: [priceBookVersionId], references: [id], onDelete: Restrict)
   capability         CommercialCapability @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
   tiers              PriceTier[]
+  contractAdjustments ContractPricingAdjustment[]
+  contractSnapshots   ContractPriceSnapshotLine[]
 
   @@unique([priceBookVersionId, code])
   @@index([priceBookVersionId, displayOrder])
@@ -407,6 +493,227 @@ model PriceTier {
 
   @@unique([priceComponentId, displayOrder])
   @@index([priceComponentId, minimumQuantity, maximumQuantity])
+}
+
+model OrganizationContract {
+  id String @id @default(uuid())
+  organizationId String
+  reference String @unique
+  title String
+  status OrganizationContractStatus @default(DRAFT)
+  isPrimary Boolean @default(false)
+  approvedAt DateTime?
+  activatedAt DateTime?
+  expiredAt DateTime?
+  terminatedAt DateTime?
+  cancelledAt DateTime?
+  lifecycleReason String?
+  internalNotes String?
+  lockVersion Int @default(0)
+  createdByUserId String?
+  createdByDisplayName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("OrganizationContractCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revisions OrganizationContractRevision[]
+  documents OrganizationContractDocument[]
+  @@index([organizationId, status])
+  @@index([organizationId, isPrimary, status])
+  @@index([createdByUserId])
+}
+
+model OrganizationContractRevision {
+  id String @id @default(uuid())
+  contractId String
+  revisionNumber Int
+  revisionType ContractRevisionType
+  status ContractRevisionStatus @default(DRAFT)
+  basedOnRevisionId String?
+  priceBookVersionId String
+  currency String @db.Char(3)
+  effectiveFrom DateTime
+  effectiveUntil DateTime?
+  termStartAt DateTime
+  termEndAt DateTime?
+  renewalMode ContractRenewalMode @default(NONE)
+  renewalTermMonths Int?
+  renewalNoticeDays Int?
+  renewalTerms String?
+  billingCadence ContractBillingCadence?
+  approvedAt DateTime?
+  signedAt DateTime?
+  signedByName String?
+  signatureReference String?
+  changeSummary String?
+  justification String?
+  lockVersion Int @default(0)
+  createdByUserId String?
+  createdByDisplayName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contract OrganizationContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  basedOnRevision OrganizationContractRevision? @relation("ContractRevisionLineage", fields: [basedOnRevisionId], references: [id], onDelete: Restrict)
+  derivedRevisions OrganizationContractRevision[] @relation("ContractRevisionLineage")
+  priceBookVersion PriceBookVersion @relation(fields: [priceBookVersionId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("ContractRevisionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  adjustments ContractPricingAdjustment[]
+  priceLines ContractPriceSnapshotLine[]
+  exclusivities ContractExclusivity[]
+  commitments ContractMinimumCommitment[]
+  documents OrganizationContractDocument[]
+  @@unique([contractId, revisionNumber])
+  @@index([contractId, status, effectiveFrom, effectiveUntil])
+  @@index([priceBookVersionId])
+  @@index([basedOnRevisionId])
+  @@index([createdByUserId])
+}
+
+model ContractPricingAdjustment {
+  id String @id @default(uuid())
+  contractRevisionId String
+  scope ContractAdjustmentScope
+  adjustmentType ContractAdjustmentType
+  sourcePriceComponentId String?
+  capabilityId String?
+  code String?
+  label String?
+  discountBasisPoints Int?
+  overrideAmountMinor BigInt?
+  justification String
+  displayOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contractRevision OrganizationContractRevision @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
+  sourcePriceComponent PriceComponent? @relation(fields: [sourcePriceComponentId], references: [id], onDelete: Restrict)
+  capability CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  @@unique([contractRevisionId, displayOrder])
+  @@index([contractRevisionId, scope])
+  @@index([sourcePriceComponentId])
+  @@index([capabilityId])
+}
+
+model ContractPriceSnapshotLine {
+  id String @id @default(uuid())
+  contractRevisionId String
+  source ContractPriceLineSource
+  sourcePriceComponentId String?
+  capabilityId String?
+  componentCode String
+  componentName String
+  description String?
+  pricingModel PricingModel
+  chargeType PriceChargeType
+  billingPeriod BillingPeriod?
+  metric PriceMetric?
+  tierMode TierCalculationMode?
+  currency String @db.Char(3)
+  catalogAmountMinor BigInt?
+  contractAmountMinor BigInt?
+  adjustmentSummary String?
+  displayOrder Int
+  createdAt DateTime @default(now())
+  contractRevision OrganizationContractRevision @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
+  sourcePriceComponent PriceComponent? @relation(fields: [sourcePriceComponentId], references: [id], onDelete: Restrict)
+  capability CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  tiers ContractPriceSnapshotTier[]
+  exclusivityFeeFor ContractExclusivity? @relation("ContractExclusivityEconomicLine")
+  @@unique([contractRevisionId, componentCode])
+  @@index([contractRevisionId, displayOrder])
+  @@index([contractRevisionId, source])
+  @@index([sourcePriceComponentId])
+  @@index([capabilityId])
+}
+
+model ContractPriceSnapshotTier {
+  id String @id @default(uuid())
+  snapshotLineId String
+  minimumQuantity Decimal @db.Decimal(20, 6)
+  maximumQuantity Decimal? @db.Decimal(20, 6)
+  catalogAmountMinor BigInt
+  contractAmountMinor BigInt
+  displayOrder Int
+  createdAt DateTime @default(now())
+  snapshotLine ContractPriceSnapshotLine @relation(fields: [snapshotLineId], references: [id], onDelete: Restrict)
+  @@unique([snapshotLineId, displayOrder])
+  @@index([snapshotLineId, minimumQuantity, maximumQuantity])
+}
+
+model ContractExclusivity {
+  id String @id @default(uuid())
+  contractRevisionId String
+  territoryType ContractTerritoryType
+  territoryCode String?
+  territoryLabel String
+  startsAt DateTime
+  endsAt DateTime?
+  status ContractExclusivityStatus @default(AGREED)
+  hasEconomicImpact Boolean @default(false)
+  economicSnapshotLineId String? @unique
+  conditions String?
+  renewalTerms String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contractRevision OrganizationContractRevision @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
+  economicSnapshotLine ContractPriceSnapshotLine? @relation("ContractExclusivityEconomicLine", fields: [economicSnapshotLineId], references: [id], onDelete: Restrict)
+  sectors ContractExclusivitySector[]
+  capabilities ContractExclusivityCapability[]
+  @@index([contractRevisionId, startsAt, endsAt])
+  @@index([territoryType, territoryCode])
+  @@index([status])
+}
+
+model ContractExclusivitySector {
+  exclusivityId String
+  sectorCode String
+  sectorLabel String
+  exclusivity ContractExclusivity @relation(fields: [exclusivityId], references: [id], onDelete: Restrict)
+  @@id([exclusivityId, sectorCode])
+  @@index([sectorCode])
+}
+
+model ContractExclusivityCapability {
+  exclusivityId String
+  capabilityId String
+  exclusivity ContractExclusivity @relation(fields: [exclusivityId], references: [id], onDelete: Restrict)
+  capability CommercialCapability @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  @@id([exclusivityId, capabilityId])
+  @@index([capabilityId])
+}
+
+model ContractMinimumCommitment {
+  id String @id @default(uuid())
+  contractRevisionId String
+  type ContractCommitmentType
+  period ContractCommitmentPeriod
+  amountMinor BigInt?
+  quantity Decimal? @db.Decimal(20, 6)
+  currency String? @db.Char(3)
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  contractRevision OrganizationContractRevision @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
+  @@index([contractRevisionId, type])
+}
+
+model OrganizationContractDocument {
+  id String @id @default(uuid())
+  contractId String
+  contractRevisionId String?
+  type ContractDocumentType
+  fileName String
+  mimeType String
+  sizeBytes Int
+  storageKey String @unique
+  sha256 String @db.Char(64)
+  uploadedByUserId String?
+  uploadedByName String?
+  createdAt DateTime @default(now())
+  contract OrganizationContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  contractRevision OrganizationContractRevision? @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
+  uploadedBy User? @relation("ContractDocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  @@index([contractId, createdAt])
+  @@index([contractRevisionId])
 }
 
 model Client {

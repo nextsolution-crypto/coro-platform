@@ -401,6 +401,26 @@ export class Organization360Service {
 
   async commercial(organizationId: string) {
     const organization = await this.organization(organizationId);
+    const contracts = await this.prisma.organizationContract.findMany({
+      where: { organizationId },
+      include: {
+        revisions: {
+          include: {
+            priceBookVersion: { include: { priceBook: true } },
+            adjustments: true,
+            exclusivities: { include: { sectors: true, capabilities: true } },
+            commitments: true,
+            documents: true,
+          },
+          orderBy: { revisionNumber: 'desc' },
+        },
+        documents: true,
+      },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+    });
+    const currentContract =
+      contracts.find((item) => item.isPrimary && item.status === 'ACTIVE') ??
+      null;
     return {
       legacy: {
         licenseType: organization.licenseType,
@@ -408,9 +428,12 @@ export class Organization360Service {
       },
       futureCommercialModel: 'NOT_CONFIGURED',
       relationship: organization.commercialRelationship ?? 'NOT_CONFIGURED',
-      contract: 'NOT_CONFIGURED',
-      pricing: 'NOT_CONFIGURED',
+      contract: currentContract ?? 'NOT_CONFIGURED',
+      contracts,
+      pricing: currentContract ? 'CONTRACT_SNAPSHOT' : 'NOT_CONFIGURED',
       entitlements: 'OBSERVATION_ONLY',
+      enforcement: 'NONE',
+      billing: 'NOT_CONFIGURED',
       editable: false,
     };
   }

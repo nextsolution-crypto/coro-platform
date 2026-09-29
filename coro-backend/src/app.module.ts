@@ -58,6 +58,7 @@ import { AdminAuditModule } from './admin-audit/admin-audit.module';
 import { PlatformAuthorizationModule } from './auth/platform-authorization.module';
 import { Organization360Module } from './organization-360/organization-360.module';
 import { CommercialCatalogModule } from './commercial-catalog/commercial-catalog.module';
+import { OrganizationContractsModule } from './organization-contracts/organization-contracts.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { CommercialCatalogModule } from './commercial-catalog/commercial-catalog
   PlatformAuthorizationModule,
   Organization360Module,
   CommercialCatalogModule,
+  OrganizationContractsModule,
   AuthModule,
   UsersModule,
   ClientsModule,
