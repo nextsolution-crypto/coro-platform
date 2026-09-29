@@ -12,10 +12,10 @@ const baseline = JSON.parse(read('tests/fixtures/partners-baseline.json')) as Ba
 const page = read('app/partners/page.tsx');
 
 test('the registry holds exactly /about, /contact and /partners; /partners has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/']);
   assert.equal(isLegacyFooterVisible('/partners'), false);
   assert.equal(isLegacyFooterVisible('/performance-objectifs'), false); // migrated in MIG-02C
-  assert.equal(isLegacyFooterVisible('/'), true);
+  assert.equal(isLegacyFooterVisible('/'), false); // MIG-08A: Homepage is now V2
 });
 
 test('V2Shell owns the chrome: no page-owned header, main or footer, no legacy shell, no hiding hack, V1 tokens only', () => {
@@ -93,8 +93,12 @@ test('EditorialHero is the shared opening of About, Contact and Partners, and ke
   assert.equal((hero.match(/<h1\b/g) ?? []).length, 1);
   assert.match(hero, /PageSection/);
   for (const file of ['app/about/AboutV2.tsx', 'app/contact/page.tsx', 'app/partners/page.tsx']) assert.match(read(file), /<EditorialHero\b/, file);
-  const css = read('components/page/editorial-hero.module.css');
-  assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|box-shadow|blur|@keyframes|animation/);
+  const css = read('components/page/editorial-hero.module.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Approved exception (MIG-08A-QA-GOV): backdrop-filter: blur(10px) is the human-approved frosted treatment for the
+  // Homepage Hero's CONNAÎTRE/PERSONNES/AGIR overlay cards — scoped to this exact declaration, not a license for blur
+  // elsewhere in this file or in V2 generally. Every other forbidden pattern remains checked as before.
+  const cssWithoutApprovedBlur = css.replace(/(?:-webkit-)?backdrop-filter:\s*blur\(10px\);?/g, '');
+  assert.doesNotMatch(cssWithoutApprovedBlur, /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|box-shadow|blur|@keyframes|animation/);
   // The plain-mode options survive (VISUAL-01 moved About and Contact to photographic mode, which is additive).
   assert.match(hero, /compactTop = false, density = 'immersive', narrow = false, photo/);
   assert.match(css, /\.hero\[data-compact="true"\]/);

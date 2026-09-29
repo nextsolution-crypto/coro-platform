@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import HomePageClient from './HomePageClient';
+import { Home } from './home/Home';
 
 const SITE_URL = 'https://getcoro.io';
 
@@ -302,7 +302,7 @@ export default async function HomePage({
         }}
       />
 
-      <HomePageClient />
+      <Home locale={isEnglish ? 'en' : 'fr'} />
     </>
   );
 }

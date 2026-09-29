@@ -35,7 +35,7 @@ RÈGLE — le statut LOCKED est appliqué par instruction de gel LAB-09. Il pren
 
 ## 3.1 Couleur, forme, profondeur
 
-- Rouge CORO `#E51B2A` (`--coro-v1-red-600`) : action et signal. Jamais une couleur de remplissage de surface, jamais décorative.
+- Rouge CORO `#C0392B` (`--coro-v1-red-600`) : action et signal. Jamais une couleur de remplissage de surface, jamais décorative.
 - Bleu structurel (`--coro-v1-blue-700`) : information, architecture, structure technique et données.
 - Marine profond (`--coro-v1-navy-950` / `-900`) : autorité et profondeur opérationnelle.
 - Média photographique : rayon 10 px (`--coro-v1-radius-image`), uniquement sur les coins visibles et contenus (jamais là où l'image déborde de la page).
@@ -73,6 +73,18 @@ RÈGLE — le statut LOCKED est appliqué par instruction de gel LAB-09. Il pren
 - Contrat de parrainage (voir `05-migration/CONTENT-MIGRATION-MATRIX.md` §4 et §13) : cookies `coro_referral_code` et `coro_referral_first_touch`, capturés par la page d'accueil et lus par `DemoForm`. À PRÉSERVER pendant la migration.
 - Fournisseur et destination du formulaire de démonstration : à préserver tant qu'un remplacement n'est pas approuvé séparément. La source d'autorité est `app/DemoForm.tsx` ; ce document ne recopie pas la valeur du point d'accès.
 - Destinations de connexion : CORO Platform `https://app.getcoro.io/login`, CORO Client `https://client.getcoro.io/login`. Aucun autre portail.
+
+## 3.5 Exception approuvée — EditorialHero (superpositions du Hero d'accueil)
+
+Décision humaine MIG-08A-QA-GOV. Portée strictement limitée aux superpositions CONNAÎTRE/PERSONNES/AGIR de `components/page/EditorialHero.tsx` / `editorial-hero.module.css`. N'autorise rien d'équivalent ailleurs dans V2 sans nouvelle revue explicite.
+
+- **Point de rupture `62rem`** : les superpositions restent masquées entre `48rem` et `62rem` pour éviter la collision avec la colonne éditoriale (`48rem` : trop tôt : `68rem` : trop tard sur les largeurs laptop courantes ~992–1088 px). Rupture spécifique au composant, pas un troisième point de rupture général.
+- **`backdrop-filter: blur(10px)`** : traitement « verre dépoli » approuvé pour ces trois cartes uniquement.
+- **`border-radius: var(--coro-v1-radius-sm, 8px)`** : les trois cartes de superposition sont des objets éditoriaux de type carte, intentionnellement posés sur la photographie ; ce petit rayon V1 fait partie de leur traitement visuel humainement approuvé.
+
+Portée limitée à ces superpositions ; toute réutilisation ailleurs (autre Hero, autre carte) exige une nouvelle revue explicite.
+
+Tests concernés : `tests/hardening.test.ts`, `tests/partners-migration.test.ts`, `tests/visual-01.test.ts` — chacun garde la règle globale et ajoute une exception nominative et étroite pour ces déclarations précises, à l'intérieur de `.overlay` uniquement.
 
 # 4. Registre des composants (synthèse)
 

@@ -45,3 +45,29 @@
 }
 @media (min-width: 48rem) and (max-width: 68rem) { .photoCopy { max-inline-size: 42%; } }
 @media (max-width: 30rem) { .photoHero .actions { flex-direction: column; align-items: stretch; } .photoHero .actions > * { inline-size: 100%; justify-content: center; text-align: center; } }
+
+/* ── Photo overlays: restrained editorial capability context, desktop only. Not live data, not product UI. ── */
+.overlays { display: none; }
+@media (min-width: 62rem) {
+  .overlays { display: contents; }
+  .overlay {
+    position: absolute;
+    display: grid;
+    gap: .6rem;
+    inline-size: clamp(16.25rem, 19vw, 18.75rem);
+    padding: 1.25rem 1.375rem;
+    border: 1px solid color-mix(in srgb, var(--coro-v1-on-dark-900) 30%, transparent);
+    border-radius: var(--coro-v1-radius-sm, 8px);
+    background: color-mix(in srgb, var(--coro-v1-navy-950) 80%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .overlayLabel { font-size: var(--coro-v1-text-small); font-weight: var(--coro-v1-label-weight); letter-spacing: var(--coro-v1-label-tracking); text-transform: uppercase; color: var(--coro-v1-focus-on-dark); }
+  .overlayText { font-size: var(--coro-v1-text-body, 1rem); line-height: 1.5; color: var(--coro-v1-on-dark-900); white-space: pre-line; }
+  /* Architectural vertical narrative: knowledge (upper floors) → people (occupied floors) → action (entrance/ground level).
+     A responsive right safe-margin (clamp, ~80-120px at normal desktop widths) keeps Connaître/Agir off the viewport edge;
+     Personnes stays clear of the text column's reserved ~45% and clear of the right-edge overlays' vertical band. */
+  .overlay:nth-of-type(1) { inset-block-start: 11%; inset-inline-end: clamp(5rem, 9vw, 7.5rem); }
+  .overlay:nth-of-type(2) { inset-block-start: 41%; inset-inline-start: 21%; }
+  .overlay:nth-of-type(3) { inset-block-end: 12%; inset-inline-end: clamp(5rem, 9vw, 7.5rem); }
+}

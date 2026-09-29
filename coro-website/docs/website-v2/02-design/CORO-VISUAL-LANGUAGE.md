@@ -56,7 +56,7 @@ La maquette de homepage approuvée le 23 septembre 2026 constitue la référence
 |---|---|
 | Bleu marine CORO | Fondation institutionnelle, sections immersives, autorité et profondeur opérationnelle. |
 | Blanc architectural | Respiration, clarté, contenu éditorial et contraste. |
-| Rouge CORO `#E51B2A` | Action (CTA principal) et signal. Usage contrôlé. |
+| Rouge CORO `#C0392B` | Action (CTA principal) et signal. Usage contrôlé. |
 | Bleu structurel | Information, architecture, données, étiquettes techniques. |
 | Vert / ambre / rouge | États sémantiques stables. Jamais seuls : glyphe et mot toujours. |
 

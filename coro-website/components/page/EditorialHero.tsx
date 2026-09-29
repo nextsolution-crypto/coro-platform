@@ -17,6 +17,8 @@ export type HeroPhoto = {
   coverage?: number;
   mobileRatio?: string;
   priority?: boolean;
+  /** Optional restrained editorial context cards over the photograph (desktop only). Capability/editorial labels, never live product data. */
+  overlays?: readonly { label: string; text: string }[];
 };
 
 /**
@@ -38,7 +40,7 @@ export function EditorialHero({ id, label, title, lead, detail, signature, actio
   const copy = (
     <>
       <p className={styles.label}>{label}</p>
-      <h1 id={id} className={styles.title}>{lines.map((line) => <span key={line}>{line}</span>)}</h1>
+      <h1 id={id} className={styles.title}>{lines.flatMap((line, i) => i === 0 ? [<span key={line}>{line}</span>] : [' ', <span key={line}>{line}</span>])}</h1>
       <p className={styles.lead}>{lead}</p>
       {detail && <p className={styles.detail}>{detail}</p>}
       {signature && <p className={styles.signature}>{signature}</p>}
@@ -53,6 +55,16 @@ export function EditorialHero({ id, label, title, lead, detail, signature, actio
         <div className={styles.photoField}>
           <Image className={styles.photoImage} src={photo.src} alt={photo.alt ?? ''} fill sizes="(min-width: 48rem) 64vw, 100vw" priority={photo.priority ?? true} />
           <span className={styles.scrim} aria-hidden="true" />
+          {photo.overlays && photo.overlays.length > 0 && (
+            <div className={styles.overlays}>
+              {photo.overlays.map((o) => (
+                <div key={o.label} className={styles.overlay}>
+                  <span className={styles.overlayLabel}>{o.label}</span>
+                  <span className={styles.overlayText}>{o.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className={styles.photoInner}>
           <div className={styles.photoCopy}>{copy}</div>

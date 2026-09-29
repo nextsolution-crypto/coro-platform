@@ -11,8 +11,10 @@
  * Migrated so far: /about (MIG-01A pilot) /contact (MIG-01B), /partners (MIG-01C) /programme-recommandation (MIG-01D) /gestion-documentaire (MIG-02A) and /gestion-de-projets (MIG-02B), each added only after QA passed. Every other current route is legacy.
  * /blog (MIG-07A) is the index. /blog/[slug] (dynamic article route, MIG-07B) is registered via `migratedV2DynamicRoutes`,
  * not here, because this array only ever does exact-string matching.
+ * / (MIG-08A, Homepage) was the final remaining legacy surface — registered last, after the pre-registry QA gate passed.
+ * `normalizePath('/')` returns `'/'` and `Array.includes` is exact-match only, so this cannot over-match any other route.
  */
-export const migratedV2Routes: readonly string[] = ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog'];
+export const migratedV2Routes: readonly string[] = ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/'];
 
 /**
  * Explicit, opt-in registry for MIGRATED dynamic routes. `migratedV2Routes` is exact-match only and can never

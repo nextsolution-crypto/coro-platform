@@ -158,7 +158,7 @@ test('semantic colours come from V1 tokens, with no unexplained local hex values
   const tokens = read('app/design-tokens.css');
   assert.match(tokens, /--coro-v1-success-on-dark: #4cc38a/);
   assert.match(tokens, /--coro-v1-warning-on-dark: #f0b34a/);
-  assert.match(tokens, /--coro-v1-red-600: #e51b2a/, 'signal red is untouched');
+  assert.match(tokens, /--coro-v1-red-600: #c0392b/, 'signal red matches the official CORO brand red');
   assert.match(code, /var\(--coro-v1-success-on-dark\)/);
   assert.match(code, /var\(--coro-v1-warning-on-dark\)/);
 });

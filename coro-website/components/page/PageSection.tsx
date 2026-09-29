@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import styles from './page.module.css';
 
 /** soft: cool architectural neutral, no grid (default accent surface). paper: the graph-paper surface, contextual to technical / documentary pages only. */
-export type SectionTone = 'white' | 'soft' | 'paper' | 'navy';
+export type SectionTone = 'white' | 'soft' | 'paper' | 'navy' | 'ecosystem';
 export type SectionDensity = 'compact' | 'standard' | 'immersive';
 
 /**

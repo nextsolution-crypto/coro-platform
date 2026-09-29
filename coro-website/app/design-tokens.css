@@ -29,7 +29,7 @@
   /* Colour — navy, structural blue, signal red */
   --coro-v1-navy-950: #061d35; --coro-v1-navy-900: #082b52; --coro-v1-navy-800: #0f3a68;
   --coro-v1-blue-700: #0d4f8b; --coro-v1-blue-500: #1a6fb8; --coro-v1-blue-100: #e6eef6;
-  --coro-v1-red-600: #e51b2a; --coro-v1-red-700: #bf1522; --coro-v1-red-300: #ff5a66; --coro-v1-red-100: #fdecee;
+  --coro-v1-red-600: #c0392b; --coro-v1-red-700: #a93226; --coro-v1-red-300: #d67e75; --coro-v1-red-100: #fdecee;
   /* Surfaces, text, borders */
   --coro-v1-surface-0: #ffffff; --coro-v1-surface-1: #f6f8fa; --coro-v1-surface-2: #eef3f7;
   --coro-v1-text-900: #162b3e; --coro-v1-text-600: #5d6e7f;
@@ -58,7 +58,7 @@
   --coro-v1-shadow-2: 0 6px 18px rgb(6 29 53 / 10%);
   /* shadow-3 / shadow-4 are EXCEPTIONAL (justified floating UI, signal). Depth comes from surface, border, media, overlay and light first. */
   --coro-v1-shadow-3: 0 18px 48px rgb(6 29 53 / 16%);
-  --coro-v1-shadow-4: 0 0 0 1px rgb(229 27 42 / 35%), 0 12px 32px rgb(229 27 42 / 22%);
+  --coro-v1-shadow-4: 0 0 0 1px rgb(192 57 43 / 35%), 0 12px 32px rgb(192 57 43 / 22%);
   /* Motion — durations final-candidate, easings PROVISIONAL until motion is tested in the Lab */
   --coro-v1-motion-instant: 80ms; --coro-v1-motion-fast: 140ms; --coro-v1-motion-base: 220ms;
   --coro-v1-motion-slow: 420ms; --coro-v1-motion-narrative: 650ms;

@@ -1,0 +1,9 @@
+{
+  "sections": [
+    "home-title", "home-tension", "home-continuum", "home-ecosystem", "home-documents",
+    "home-sentinelle", "home-intervention", "home-resilience", "home-platform",
+    "home-trust", "home-demo", "home-resources", "home-cta"
+  ],
+  "legacySectionCount": 19,
+  "targetSectionCount": 13
+}

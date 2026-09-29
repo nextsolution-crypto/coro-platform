@@ -1,0 +1,490 @@
+.heading { margin: var(--coro-v1-space-3) 0 0; font-size: clamp(1.75rem, 3.2vw, var(--coro-v1-text-h1, 2.5rem)); font-weight: 800; line-height: 1.15; color: var(--ink); max-inline-size: 24ch; }
+.lead { margin: var(--coro-v1-space-4) 0 0; max-inline-size: 60ch; color: var(--muted); font-size: var(--coro-v1-text-body-l); line-height: 1.65; }
+
+/* Section 03 — CORO Resilience Continuum. Section tone="soft" (cool architectural neutral + top accent rule,
+   see PageSection) gives this section its own chapter-break background against Section 02's white. The PRIMARY
+   hierarchy is nine equal editorial cards (Connaître → Améliorer); Avant/Pendant/Après are SECONDARY group
+   labels above them, not containing panels. Pendant cards get a restrained red icon accent for operational
+   intensity; Avant uses CORO blue, Après returns to a calmer secondary navy. No connecting spine — order alone
+   carries the progression. */
+.continuumHeader { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: end; gap: var(--coro-v1-space-6); }
+.continuumHeaderAside { display: grid; gap: var(--coro-v1-space-3); max-inline-size: 44ch; }
+.continuumHeaderLead { margin: 0; color: var(--muted); font-size: var(--coro-v1-text-body); line-height: 1.6; }
+.continuumLink { color: var(--ink); font-weight: 650; text-decoration: underline; text-underline-offset: .2em; white-space: nowrap; }
+
+/* ONE flat 9-column grid — the single-row ecosystem strip Mathieu's reference specifies. Zone labels (2 / 4 / 3
+   column spans, summing to 9) occupy row 1 entirely via plain CSS auto-placement, so the nine stage cards that
+   follow in DOM order automatically wrap to row 2 with no explicit grid-row bookkeeping needed. The <ol> uses
+   `display: contents` so its <li> cards participate directly in this grid while keeping real list semantics for
+   assistive tech — reading order stays Connaître → Améliorer regardless of the visual column spans. */
+.continuumZones { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: var(--coro-v1-space-3) var(--coro-v1-space-3); margin: var(--coro-v1-space-8, 3.5rem) 0 0; }
+.continuumZoneLabel { display: grid; gap: .5rem; align-content: start; padding-block-end: var(--coro-v1-space-3); }
+.continuumZoneLabel span { font-size: var(--coro-v1-label-size); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.continuumZoneLabel::after { content: ''; display: block; height: 2px; border-radius: 2px; background: var(--line); }
+.continuumZoneLabel[data-zone='pendant']::after { background: color-mix(in srgb, var(--coro-v1-red-600) 55%, var(--line)); }
+.continuumStrip { display: contents; }
+
+/* Equal editorial cards — no timeline device. Order communicates progression. */
+.continuumUnit { display: grid; align-content: start; justify-items: start; gap: .5rem; padding: var(--coro-v1-space-4) var(--coro-v1-space-3); background: var(--coro-v1-surface-0, #fff); border: 1px solid var(--line); border-radius: var(--coro-v1-radius-control); min-inline-size: 0; }
+.continuumNode { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--coro-v1-radius-control); background: var(--coro-v1-blue-700); color: white; flex-shrink: 0; }
+.continuumUnit[data-zone='pendant'] .continuumNode { background: var(--coro-v1-red-600); }
+.continuumUnit[data-zone='apres'] .continuumNode { background: var(--coro-v1-navy-800, var(--coro-v1-navy-900)); }
+.continuumStageName { font-weight: 800; font-size: var(--coro-v1-text-body, 1rem); color: var(--ink); }
+.continuumStagePhrase { font-size: var(--coro-v1-text-small); color: var(--muted); line-height: 1.4; }
+
+.continuumPunchline { margin: var(--coro-v1-space-8, 3.5rem) 0 0; padding-block-start: var(--coro-v1-space-6); border-block-start: 1px solid var(--line); font-size: var(--coro-v1-text-h3, 1.4rem); font-weight: 700; color: var(--ink); line-height: 1.4; max-inline-size: 42ch; }
+
+@media (max-width: 68rem) {
+  .continuumHeader { grid-template-columns: 1fr; }
+  .continuumHeaderAside { max-inline-size: none; }
+  .continuumZones { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--coro-v1-space-3); margin-block-start: var(--coro-v1-space-7); }
+  .continuumZoneLabel { grid-column: 1 / -1 !important; padding-block-start: var(--coro-v1-space-4); }
+  .continuumZoneLabel:first-child { padding-block-start: 0; }
+}
+
+@media (max-width: 30rem) {
+  .continuumZones { grid-template-columns: 1fr; }
+}
+
+/* Section 04 — building as operational memory, secondary-Hero treatment. .buildingWide breaks the composition
+   out of PageSection's standard 82.5rem `.inner` container (full-bleed technique: centered on the viewport, not
+   on .inner) so the illustration can reach the wide, immersive scale the art direction calls for. The image
+   (building-operational-cutaway-v2.webp) fills the complete section as a background layer — same idiom as
+   EditorialHero's photographic mode — with the editorial copy overlaid on its own pale/blueprint left side and
+   a single Indice CORO panel overlaid on its right side. No floating capability callouts: the illustration's
+   own detail (occupied floors, blueprint line-work, mechanical room) carries that role now. */
+.buildingWide { position: relative; left: 50%; transform: translateX(-50%); inline-size: min(97rem, calc(100vw - 3rem)); margin-block: calc(-1 * clamp(2.5rem, 5vw, 4.5rem)); }
+.buildingHero { position: relative; isolation: isolate; overflow: hidden; inline-size: 100%; block-size: clamp(35rem, 44vw, 42.5rem); }
+.buildingHeroImage {
+  object-fit: cover; object-position: 68% center;
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 93%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 93%, transparent 100%);
+}
+
+.buildingHeroCopy {
+  position: absolute; inset-block: 0; inset-inline-start: 0; z-index: 1; display: grid; align-content: center; gap: var(--coro-v1-space-3);
+  inline-size: min(400px, 44%); padding-inline: var(--coro-v1-space-6);
+  background: linear-gradient(to right, #F4F8FC 0%, color-mix(in srgb, #F4F8FC 88%, transparent) 15%, color-mix(in srgb, #F4F8FC 65%, transparent) 35%, color-mix(in srgb, #F4F8FC 35%, transparent) 55%, color-mix(in srgb, #F4F8FC 12%, transparent) 75%, transparent 100%);
+}
+.buildingHeroHeading { margin: var(--coro-v1-space-2) 0 0; font-size: clamp(2.75rem, 3.4vw, 3.5rem); font-weight: 850; line-height: 1.08; letter-spacing: -.02em; color: var(--ink); text-wrap: balance; }
+.buildingHeroLead { margin: var(--coro-v1-space-2) 0 0; max-inline-size: 26ch; color: var(--coro-v1-text-700, var(--ink)); font-size: var(--coro-v1-text-body); line-height: 1.55; }
+.buildingCta { justify-self: start; margin-block-start: var(--coro-v1-space-2); padding: .5em 1em; border: 1px solid var(--coro-v1-navy-900, var(--ink)); border-radius: var(--coro-v1-radius-control); font-weight: 700; font-size: var(--coro-v1-text-small); color: var(--coro-v1-navy-900, var(--ink)); text-decoration: none; }
+.buildingCta:hover { background: var(--coro-v1-navy-900, var(--ink)); color: #fff; }
+
+/* Indice CORO: the only major overlay card, positioned in the image's right-side negative/blueprint space, clear
+   of the building's strongest architectural detail, with generous safe margins from the section edges. */
+.indicePanel {
+  position: absolute; z-index: 3; inset-block-start: 50%; transform: translateY(-50%); inset-inline-end: calc(clamp(2.8125rem, 3.6vw, 4.375rem) - 7cm);
+  inline-size: clamp(18.75rem, 22vw, 21.25rem); min-block-size: clamp(26.875rem, 34vw, 31.25rem);
+  display: flex; flex-direction: column; align-items: stretch; text-align: left;
+  padding: clamp(1.5rem, 1.8vw, 1.875rem) clamp(1.5rem, 1.8vw, 1.875rem) clamp(1.625rem, 2vw, 2rem); background: rgba(252, 253, 255, .98);
+  border: 1px solid var(--coro-v1-paper-line-strong); border-radius: 14px;
+  box-shadow: 0 1rem 2.5rem rgba(11, 31, 58, .12);
+}
+.indiceTitle { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--coro-v1-navy-900, var(--ink)); text-transform: uppercase; letter-spacing: .04em; }
+.indiceGaugeWrap { position: relative; inline-size: 100%; max-inline-size: 10.5rem; margin: 1.5rem auto 0; display: grid; justify-items: center; }
+.indiceGauge { inline-size: 100%; }
+.indiceScore { position: absolute; inset-block-end: .1rem; margin: 0; font-size: 2.6rem; font-weight: 900; color: var(--coro-v1-navy-900, var(--ink)); line-height: 1; }
+.indiceScore span { font-size: .95rem; font-weight: 700; color: var(--coro-v1-text-600); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.indiceScoreLabel { margin: .85rem 0 0; text-align: center; font-size: .68rem; font-weight: 700; color: var(--coro-v1-red-600); text-transform: uppercase; letter-spacing: .05em; }
+.indiceLead { margin: 1.375rem 0 0; font-size: .95rem; font-weight: 500; color: var(--coro-v1-navy-900, var(--ink)); line-height: 1.4; }
+.indiceChecklist { list-style: none; margin: 1.375rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
+.indiceChecklist li { display: flex; align-items: center; gap: .65rem; font-size: .95rem; font-weight: 500; color: var(--coro-v1-navy-900, var(--ink)); }
+.indiceCheckIcon { flex: none; inline-size: 1.375rem; block-size: 1.375rem; border-radius: 6px; background: #1F9D63; color: #fff; display: grid; place-items: center; }
+.indiceMaturityNote { margin: auto 0 0; padding-block-start: 1.25rem; font-size: .68rem; color: var(--coro-v1-text-600); line-height: 1.45; }
+
+/* Restrained architectural/BIM-style annotations — translucent labels with an accent icon medallion, positioned
+   near the illustration's own regions, deliberately subordinate to the building, headline and Indice panel. */
+.buildingAnnotation {
+  position: absolute; z-index: 1; inline-size: clamp(11.875rem, 13vw, 15rem);
+  display: grid; grid-template-columns: auto 1fr; column-gap: .6rem; row-gap: .1rem; align-items: start; padding: .75rem .85rem;
+  background: rgba(255, 255, 255, .94); backdrop-filter: blur(3px);
+  border: 1px solid var(--coro-v1-paper-line-strong); border-radius: var(--coro-v1-radius-control);
+  box-shadow: 0 .375rem 1rem rgba(11, 31, 58, .08);
+}
+.buildingAnnotationIcon {
+  grid-row: 1 / 3; inline-size: clamp(2.625rem, 3vw, 3.375rem); block-size: clamp(2.625rem, 3vw, 3.375rem);
+  display: grid; place-items: center; border-radius: 50%; background: var(--accent-color); color: #fff;
+}
+.buildingAnnotationLabel { font-size: .78rem; font-weight: 800; color: var(--coro-v1-navy-900, var(--ink)); text-transform: uppercase; letter-spacing: .01em; line-height: 1.25; align-self: end; }
+.buildingAnnotationText { font-size: .74rem; color: var(--coro-v1-text-600); line-height: 1.3; }
+
+@media (max-width: 68rem) {
+  .buildingWide { inline-size: calc(100vw - 3rem); }
+  .buildingHero { block-size: auto; display: grid; gap: var(--coro-v1-space-5); padding-block: var(--coro-v1-space-6); }
+  .buildingHeroImage { position: static !important; inline-size: 100%; block-size: 20rem; object-position: 62% center; border-radius: var(--coro-v1-radius-control); }
+  .buildingHeroCopy { position: static; inline-size: 100%; padding-inline: 0; background: none; order: -1; }
+  .buildingHeroLead { max-inline-size: none; }
+  .indicePanel { position: static; transform: none; inline-size: 100%; max-inline-size: 24rem; box-shadow: none; order: 1; }
+  .buildingAnnotation { display: none; }
+}
+
+/* Section 05 — compact document-suite strip: left editorial block + six equal cards in one row on desktop. */
+.documentSuite { display: grid; grid-template-columns: minmax(0, 22%) minmax(0, 78%); gap: var(--coro-v1-space-6); align-items: start; }
+.documentSuiteText { display: grid; gap: var(--coro-v1-space-2); align-content: start; }
+.documentSuiteHeading { margin: 0; font-size: clamp(1.5rem, 2vw, 1.875rem); font-weight: 850; line-height: 1.15; letter-spacing: -.01em; color: var(--ink); }
+.documentSuiteLead { margin: 0; font-size: var(--coro-v1-text-small); color: var(--muted); line-height: 1.5; }
+.documentSuiteGrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .75rem; }
+.documentSuiteCard { display: grid; gap: .3rem; align-content: start; padding: var(--coro-v1-space-3); background: #fff; border: 1px solid var(--coro-v1-paper-line-strong); border-radius: var(--coro-v1-radius-control); }
+.documentSuiteIcon { display: inline-flex; align-items: center; justify-content: center; inline-size: 2rem; block-size: 2rem; border-radius: var(--coro-v1-radius-pill, 999px); background: color-mix(in srgb, var(--accent-color) 15%, transparent); color: var(--accent-color); }
+.documentSuiteCode { font-weight: 850; font-size: var(--coro-v1-text-small); color: var(--ink); margin-block-start: .2rem; }
+.documentSuiteName { font-weight: 650; font-size: .8rem; color: var(--ink); line-height: 1.3; }
+.documentSuitePurpose { font-size: .7rem; color: var(--muted); line-height: 1.35; }
+.documentSuiteLink { margin-block-start: .3rem; font-size: .7rem; font-weight: 700; color: var(--coro-v1-blue-700); text-decoration: none; }
+.documentSuiteLink:hover { text-decoration: underline; }
+.documentSuitePhase { margin-block-start: .3rem; font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+@media (max-width: 68rem) {
+  .documentSuite { grid-template-columns: 1fr; }
+  .documentSuiteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 30rem) {
+  .documentSuiteGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.stack { display: grid; gap: var(--coro-v1-space-6); }
+
+/* Section 02 — fragments of operational reality. Six real assets (photo + sanitized CORO UI) in an asymmetric
+   editorial collage, resolving into the CORO destination statement. Domain names are real captions/cartouches
+   (MediaFrame), so the images carry no meaning the text lacks. */
+.fragments { display: grid; gap: var(--coro-v1-space-7); }
+.fragmentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas: "plans proc pers" "sys data inc";
+  gap: var(--coro-v1-space-3);
+}
+.fragmentTile[data-area="plans"] { grid-area: plans; }
+.fragmentTile[data-area="proc"] { grid-area: proc; }
+.fragmentTile[data-area="pers"] { grid-area: pers; }
+.fragmentTile[data-area="sys"] { grid-area: sys; }
+.fragmentTile[data-area="data"] { grid-area: data; }
+.fragmentTile[data-area="inc"] { grid-area: inc; }
+
+/* Normalize the outer label chrome across all six tiles: photo tiles get a solid navy bottom bar (instead of a
+   translucent overlay pill) so they read as the same editorial system as the technical cartouche bar — the
+   underlying media (photo / illustration / real sanitized UI) stays visually distinct, only the label chrome
+   is unified. The demo-account cell on technical tiles is kept but made visually subordinate to the domain name. */
+.fragmentTile figure > div > p {
+  inset-inline: 0;
+  inset-block-end: 0;
+  margin: 0;
+  padding: .55rem .8rem;
+  background: var(--coro-v1-navy-950);
+  color: var(--coro-v1-on-dark-600, #fff);
+  font-size: .625rem;
+  font-weight: var(--coro-v1-label-weight, 650);
+  letter-spacing: var(--coro-v1-label-tracking, .06em);
+  text-transform: uppercase;
+}
+.fragmentTile figure > div > p i { display: none; }
+.fragmentTile figcaption > span:nth-child(3) { opacity: .55; font-weight: 500; }
+
+.fragmentDestination { display: grid; justify-items: start; gap: var(--coro-v1-space-3); border-block-start: 1px solid var(--line); padding-block-start: var(--coro-v1-space-6); margin-block-start: var(--coro-v1-space-2); }
+.fragmentMark { font-size: 2.75rem; line-height: 1; font-weight: 950; letter-spacing: -.04em; color: var(--coro-v1-navy-900); }
+.fragmentMark span { color: var(--coro-v1-red-600); }
+.diagramDestinationNote { margin: 0; color: var(--muted); font-size: var(--coro-v1-text-body-l); }
+.diagramDestinationText { margin: 0; font-size: var(--coro-v1-text-h3); font-weight: 800; color: var(--ink); }
+
+@media (max-width: 68rem) {
+  .fragments { gap: var(--coro-v1-space-5); }
+  .fragmentGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "plans proc" "pers sys" "data inc"; }
+}
+
+.linkRow { margin: var(--coro-v1-space-6) 0 0; display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-4); }
+.textLink { color: var(--ink); font-weight: 650; text-decoration: underline; text-underline-offset: .3em; }
+.textLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+
+/* Section — Sentinelle dark operational band. Full-bleed photo (person + QR + security operator, real asset,
+   already in the site's approved marketing library) with a strong left-side navy scrim for copy legibility —
+   same full-bleed idiom as the Section 04 building composition, but dark instead of light. Deliberate rupture
+   after the light, compact Documents strip before it. */
+.sentinelleWide { position: relative; left: 50%; transform: translateX(-50%); inline-size: min(97rem, calc(100vw - 3rem)); margin-block: calc(-1 * clamp(2.5rem, 5vw, 4.5rem)); }
+.sentinelleBand { position: relative; isolation: isolate; overflow: hidden; inline-size: 100%; block-size: clamp(27rem, 34vw, 32.5rem); }
+.sentinelleBandImage { object-fit: cover; }
+.sentinelleScrim {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(to right,
+      var(--coro-v1-navy-950) 0%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 94%, transparent) 8%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 78%, transparent) 16%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 55%, transparent) 24%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 28%, transparent) 32%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 10%, transparent) 38%,
+      transparent 46%
+    ),
+    linear-gradient(to left,
+      var(--coro-v1-navy-950) 0%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 90%, transparent) 6%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 68%, transparent) 12%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 40%, transparent) 18%,
+      color-mix(in srgb, var(--coro-v1-navy-950) 15%, transparent) 24%,
+      transparent 30%
+    );
+}
+.sentinelleAlert {
+  position: absolute; z-index: 2; inset-block-start: 50%; inset-inline-start: 50%; transform: translate(calc(-50% + 3cm), calc(-50% - 3cm));
+  inline-size: clamp(19.5rem, 28vw, 24.5rem); display: grid; gap: .4rem;
+  padding: calc(var(--coro-v1-space-3) * 1.3) calc(var(--coro-v1-space-4) * 1.3);
+  background: linear-gradient(to right, rgba(165, 0, 0, .88) 0%, rgba(165, 0, 0, .6) 65%, transparent 100%); border: 1px solid rgba(255, 90, 90, .35); border-inline-end: 0; border-radius: var(--coro-v1-radius-control);
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.4);
+}
+.sentinelleAlertTag { justify-self: start; padding: .2rem .8rem; border-radius: var(--coro-v1-radius-pill, 999px); background: #fff; color: #A50000; font-size: .88rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.sentinelleAlertTitle { margin: 0; color: #fff; font-size: 1.37rem; font-weight: 850; letter-spacing: -.01em; }
+.sentinelleAlertMeta { margin: 0; color: rgba(255,255,255,.78); font-size: 1.04rem; }
+.sentinelleCopy {
+  position: absolute; z-index: 1; inset-block: 0; inset-inline-start: calc(0px - 5cm); display: grid; align-content: center; gap: var(--coro-v1-space-3);
+  inline-size: min(460px, 36%); padding-inline: var(--coro-v1-space-6);
+}
+.sentinelleCopy :global(p[class]) { color: rgba(255,255,255,.68); }
+.sentinelleHeading { margin: var(--coro-v1-space-2) 0 0; font-size: clamp(1.9rem, 2.6vw, 2.5rem); font-weight: 850; line-height: 1.12; letter-spacing: -.01em; color: #fff; text-wrap: balance; }
+.sentinelleLead { margin: var(--coro-v1-space-2) 0 var(--coro-v1-space-4); max-inline-size: 34ch; color: rgba(255,255,255,.72); font-size: var(--coro-v1-text-small); line-height: 1.55; }
+.sentinelleSequence {
+  position: absolute; z-index: 1; inset-block-start: 50%; transform: translateY(-50%); inset-inline-end: calc(clamp(.5rem, 1.5vw, 1.5rem) - 5cm);
+  list-style: none; margin: 0; padding: 30px calc(var(--coro-v1-space-4) * 1.5);
+  display: grid; align-content: center; gap: 2.625rem;
+  border-inline-start: 3px solid var(--coro-v1-red-600);
+  background: linear-gradient(to left, rgba(6,16,33,.62) 0%, rgba(6,16,33,.42) 70%, transparent 100%);
+  border-radius: 0 var(--coro-v1-radius-control) var(--coro-v1-radius-control) 0;
+  font-size: clamp(1.425rem, 1.95vw, 1.725rem); font-weight: 800; letter-spacing: .03em; text-transform: uppercase; color: rgba(255,255,255,.55);
+}
+.sentinelleSequence li:first-child { color: #fff; }
+
+/* Combined Intervention -> Improvement section (merges the previous Incident + Exercises sections into one
+   compact two-panel band). Target ~550-600px total desktop height: compact intro + two editorially-composed
+   photo panels with integrated gradient/text, no separate full-height sections. */
+.iiIntro { max-inline-size: 48rem; margin-block-end: var(--coro-v1-space-4); }
+.iiHeading { margin: var(--coro-v1-space-2) 0 0; font-size: clamp(1.6rem, 2.4vw, 2.1rem); font-weight: 850; line-height: 1.16; letter-spacing: -.01em; color: #fff; }
+.iiGrid { display: grid; grid-template-columns: 52fr 48fr; gap: 8px; }
+.iiPanel { position: relative; isolation: isolate; overflow: hidden; block-size: clamp(24.5rem, 30.5vw, 27.5rem); border-radius: var(--coro-v1-radius-panel, var(--coro-v1-radius-control)); }
+.iiPanelImage { object-fit: cover; }
+.iiPanelScrimDark { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(to top, rgba(6,14,28,.6) 0%, rgba(6,14,28,.15) 42%, transparent 60%); }
+.iiPanelScrimLight { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(to top, rgba(6,14,28,.5) 0%, rgba(6,14,28,.1) 42%, transparent 60%); }
+.iiPanelContent { position: absolute; inset: 0; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding: 0 0 1.1rem; }
+.iiPanelCard {
+  inline-size: 85%; display: grid; gap: 0;
+  background: rgba(255,255,255,.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.5); border-radius: 16px; padding: 1.6rem 1.9rem 1.75rem;
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.28);
+}
+.iiPanelHeading { margin: .65rem 0 0; color: var(--coro-v1-navy-900, #0B1F3A); font-size: clamp(1.1rem, 1.5vw, 1.35rem); font-weight: 850; line-height: 1.16; }
+.iiPanelLead { margin: .85rem 0 0; color: var(--coro-v1-text-700, #4A5568); font-size: var(--coro-v1-text-small); line-height: 1.5; max-inline-size: 40ch; }
+.iiMicroRow { list-style: none; margin: 1.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .85rem 1.5rem; }
+.iiMicroRow li { display: inline-flex; align-items: center; gap: .5rem; color: var(--coro-v1-navy-900, #0B1F3A); font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.iiMicroIcon { display: inline-grid; place-items: center; inline-size: 1.6rem; block-size: 1.6rem; border-radius: 999px; color: #fff; flex: none; }
+.iiLoop { list-style: none; margin: 1.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1rem 0; row-gap: 1.1rem; }
+.iiLoop li { display: inline-flex; align-items: flex-start; gap: .5rem; flex: 1 1 10rem; min-inline-size: 8rem; }
+.iiLoopIcon { display: inline-grid; place-items: center; inline-size: 1.6rem; block-size: 1.6rem; border-radius: 999px; color: #fff; flex: none; margin-block-start: .05rem; }
+.iiLoopText { display: grid; gap: .15rem; }
+.iiLoopStep { color: var(--coro-v1-navy-900, #0B1F3A); font-size: .66rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; line-height: 1.25; }
+.iiLoopDesc { color: var(--coro-v1-text-600, #6B7280); font-size: .62rem; line-height: 1.3; }
+.iiLoopArrow { align-self: center; margin: 0 .6rem; color: var(--coro-v1-text-400, #A0AEC0); font-weight: 700; flex: none; }
+.iiCtaLink { justify-self: start; margin-block-start: 1.15rem; display: inline-flex; align-items: center; gap: .3rem; color: var(--coro-v1-red-600); font-size: .8rem; font-weight: 800; text-decoration: none; }
+.iiCtaLink:hover { text-decoration: underline; }
+.iiConnector { margin: var(--coro-v1-space-4) 0 0; text-align: center; color: rgba(255,255,255,.45); font-size: 2.16rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.iiConnector span > span { color: var(--coro-v1-red-600); margin: 0 .3rem; }
+
+@media (max-width: 68rem) {
+  .iiGrid { grid-template-columns: 1fr; }
+  .iiPanel { block-size: 22rem; }
+  .sentinelleWide { inline-size: calc(100vw - 3rem); }
+  .sentinelleBand { block-size: auto; min-block-size: 26rem; }
+  .sentinelleCopy { position: static; inset: auto; inline-size: 100%; padding: var(--coro-v1-space-6); }
+  .sentinelleLead { max-inline-size: none; }
+  .sentinelleSequence { position: static; inset: auto; flex-direction: row; flex-wrap: wrap; display: flex; gap: var(--coro-v1-space-3); padding: 0 var(--coro-v1-space-6) var(--coro-v1-space-6); border-inline-start: 0; border-block-start: 2px solid var(--coro-v1-red-600); padding-block-start: var(--coro-v1-space-3); }
+  .sentinelleScrim { background: linear-gradient(180deg, rgba(6,14,28,.55) 0%, rgba(6,14,28,.85) 60%, rgba(6,14,28,.94) 100%); }
+}
+
+/* Ecosystem solutions strip — seven compact photographic cards, one per public-facing CORO solution. Full-bleed
+   images with a bottom-anchored dark gradient (photo stays visible, lower text stays readable); a Homepage-only
+   wide track (.esGrid) lets all seven sit on one row at large desktop without touching the standard ~1200px
+   content container used by ordinary sections. */
+.esHeader {
+  position: relative; left: 50%; transform: translateX(-50%); inline-size: min(103rem, calc(100vw - 3rem));
+  display: grid; grid-template-columns: 52fr 48fr; align-items: end; column-gap: var(--coro-v1-space-5);
+  margin-block-end: 1.75rem;
+}
+.esHeading { margin: var(--coro-v1-space-2) 0 0; font-size: clamp(1.6rem, 2.4vw, 2.1rem); font-weight: 850; line-height: 1.16; letter-spacing: -.01em; color: #fff; }
+.esLead { margin: 0; justify-self: start; color: rgba(255,255,255,.68); font-size: var(--coro-v1-text-small); line-height: 1.6; text-align: start; white-space: pre-line; }
+.esGrid {
+  list-style: none; margin: 0; padding: 0; position: relative; left: 50%; transform: translateX(-50%);
+  inline-size: min(103rem, calc(100vw - 3rem));
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px;
+}
+.esCard { position: relative; isolation: isolate; overflow: hidden; aspect-ratio: 0.76; border-radius: 14px; border: 1px solid rgba(148, 190, 230, .3); }
+.esCardLink { position: absolute; inset: 0; display: block; color: inherit; text-decoration: none; transition: border-color .2s ease; }
+.esCardLink[data-static="true"] { cursor: default; }
+.esCard:hover .esCardImage { transform: scale(1.03); }
+.esCard:has(.esCardLink:not([data-static="true"])):hover { border-color: rgba(148, 190, 230, .6); transform: translateY(-3px); transition: transform .2s ease, border-color .2s ease; }
+.esCardImage { object-fit: cover; transition: transform .25s ease; }
+.esCardScrim { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(to top, rgba(4,10,22,.92) 0%, rgba(4,10,22,.55) 38%, rgba(4,10,22,.08) 68%, transparent 82%); }
+.esCardContent { position: absolute; inset-inline: 0; inset-block-end: 0; z-index: 1; display: grid; gap: 0; padding: 1.15rem 1.05rem 1.2rem; }
+.esCardIcon { display: inline-grid; place-items: center; inline-size: 2.5rem; block-size: 2.5rem; border-radius: 10px; color: #fff; }
+.esCardTitle { margin-block-start: .68rem; color: #fff; font-size: 1.05rem; font-weight: 800; line-height: 1.2; }
+.esCardDesc { margin-block-start: .42rem; color: rgba(255,255,255,.72); font-size: .74rem; line-height: 1.35; white-space: pre-line; }
+.esCardArrow {
+  position: absolute; z-index: 1; inset-block-end: 1.05rem; inset-inline-end: 1.05rem;
+  display: inline-grid; place-items: center; inline-size: 2.1rem; block-size: 2.1rem; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.4); color: #fff; font-size: .9rem; transition: transform .2s ease;
+}
+.esCard:hover .esCardArrow { transform: translate(2px, -2px); }
+
+@media (max-width: 74rem) {
+  .esGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .esHeader { grid-template-columns: 1fr; gap: var(--coro-v1-space-3); }
+}
+@media (max-width: 48rem) {
+  .esGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+  .esCard { aspect-ratio: .85; }
+}
+
+/* Indice CORO progression graph card — compact data visualization replacing the former photo in the
+   "Mesurer la préparation" section. All values (52/60/68/78, +50%) are explicit illustrative demonstration
+   data, never real customer figures; see .graphDemoTag / .graphMaturityNote disclosures. */
+.graphCard {
+  background: #fff; border: 1px solid var(--coro-v1-paper-line-strong); border-radius: var(--coro-v1-radius-panel, 14px);
+  padding: 1.9rem 2.1rem 1.75rem; box-shadow: 0 .75rem 2rem rgba(15, 35, 65, .07);
+}
+.graphCardHead { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .5rem .9rem; }
+.graphCardTitle { margin: 0; color: var(--coro-v1-navy-900, #0B1F3A); font-size: 1.05rem; font-weight: 800; }
+.graphDemoTag { color: var(--coro-v1-red-600); font-size: .68rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.graphSvg { display: block; inline-size: 100%; block-size: auto; margin-block-start: 1rem; }
+.graphGrid { stroke: var(--coro-v1-paper-line-strong); stroke-width: 1; }
+.graphArea { fill: #1F9D63; opacity: .1; }
+.graphLine { fill: none; stroke: #1F9D63; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.graphNode { fill: #fff; stroke: #1F9D63; stroke-width: 2.5; }
+.graphNodeValue { fill: var(--coro-v1-navy-900, #0B1F3A); font-size: 11px; font-weight: 800; }
+.graphAxisLabel { fill: var(--coro-v1-text-600, #6B7280); font-size: 10px; font-weight: 600; text-transform: uppercase; }
+.graphCallout {
+  justify-self: end; margin-block-start: -5.4rem; margin-inline-start: auto; inline-size: fit-content;
+  background: rgba(31, 157, 99, .1); border: 1px solid rgba(31, 157, 99, .3); border-radius: 10px;
+  padding: .4rem .8rem; text-align: center;
+}
+.graphCalloutValue { margin: 0; color: #1F9D63; font-size: 1.05rem; font-weight: 900; line-height: 1.1; }
+.graphCalloutSpan { margin: 0; color: #1F9D63; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+.graphIndicators { list-style: none; margin: 1.4rem 0 0; padding: 1rem 0 0; border-block-start: 1px solid var(--coro-v1-paper-line-strong); display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; }
+.graphIndicators li { display: inline-flex; align-items: center; gap: .35rem; color: var(--coro-v1-text-700, #4A5568); font-size: .68rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+.graphIndicators svg { color: #1F9D63; flex: none; }
+.graphMaturityNote { margin: .9rem 0 0; color: var(--coro-v1-text-600, #6B7280); font-size: .7rem; line-height: 1.4; }
+
+@media (max-width: 48rem) {
+  .graphCard { padding: 1.4rem 1.3rem 1.3rem; }
+  .graphCallout { justify-self: start; margin-inline-start: 0; margin-block-start: .5rem; }
+  .graphIndicators { gap: .5rem .8rem; }
+}
+
+/* Resources strip — compact two-column bar: eyebrow+headline left, grouped arrow-links right.
+   Section padding-block is halved relative to the shared "compact" density (id-scoped, does not
+   affect other compact sections like Sentinelle/EcosystemSolutions/Trust). */
+:global(#ressources) { padding-block: clamp(3rem, 4vw, 4rem); }
+.resourcesStrip { display: grid; grid-template-columns: 58fr 42fr; align-items: center; gap: var(--coro-v1-space-3) var(--coro-v1-space-6); }
+.resourcesHeading { margin: var(--coro-v1-space-2) 0 0; color: var(--ink); font-size: clamp(1.75rem, 2.2vw, 2.125rem); font-weight: 800; letter-spacing: -.01em; line-height: 1.15; }
+.resourcesLinks { justify-self: end; display: flex; flex-wrap: wrap; gap: 2rem 2.25rem; }
+.resourcesLink { display: inline-flex; align-items: center; gap: .8rem; color: var(--ink); font-size: 2.1rem; font-weight: 650; text-decoration: none; }
+.resourcesLink span { color: var(--coro-v1-red-600); }
+.resourcesLink:hover { text-decoration: underline; text-underline-offset: .3em; }
+.resourcesLink:focus-visible { outline: 3px solid var(--coro-v1-focus); outline-offset: 2px; }
+
+/* Final panoramic CTA — full-bleed Montreal skyline at dusk. Left navy gradient carries the main copy, right
+   navy gradient carries a short manifesto; the lit skyline band across the center stays clear of overlay. */
+.panoramicCta { position: relative; isolation: isolate; overflow: hidden; inline-size: 100%; block-size: clamp(22.5rem, 30vw, 26.9rem); margin-block-end: 5px; }
+.panoramicCtaImage { object-fit: cover; }
+.panoramicCtaScrimLeft {
+  position: absolute; inset-block: 0; inset-inline-start: 0; z-index: 1; pointer-events: none; inline-size: 46%;
+  background: linear-gradient(to right,
+    var(--coro-v1-navy-950) 0%,
+    color-mix(in srgb, var(--coro-v1-navy-950) 92%, transparent) 20%,
+    color-mix(in srgb, var(--coro-v1-navy-950) 65%, transparent) 45%,
+    color-mix(in srgb, var(--coro-v1-navy-950) 30%, transparent) 70%,
+    transparent 100%
+  );
+}
+.panoramicCtaScrimRight {
+  position: absolute; inset-block: 0; inset-inline-end: 0; z-index: 1; pointer-events: none; inline-size: 34%;
+  background: linear-gradient(to left,
+    var(--coro-v1-navy-950) 0%,
+    color-mix(in srgb, var(--coro-v1-navy-950) 92%, transparent) 30%,
+    color-mix(in srgb, var(--coro-v1-navy-950) 62%, transparent) 60%,
+    transparent 100%
+  );
+}
+.panoramicCtaContent {
+  position: absolute; z-index: 2; inset-block: 0; inset-inline-start: 0; inline-size: min(38rem, 44%);
+  display: grid; align-content: center; gap: var(--coro-v1-space-2); padding-inline: var(--coro-v1-space-6);
+}
+.panoramicCtaStatement { margin: var(--coro-v1-space-2) 0 0; color: #fff; font-size: clamp(1.7rem, 2.7vw, 2.35rem); font-weight: 850; line-height: 1.12; letter-spacing: -.01em; text-wrap: balance; }
+.panoramicCtaSupport { margin: var(--coro-v1-space-2) 0 var(--coro-v1-space-4); max-inline-size: 40ch; color: rgba(255,255,255,.72); font-size: var(--coro-v1-text-small); line-height: 1.55; }
+.panoramicCtaButtons { display: flex; flex-wrap: wrap; gap: var(--coro-v1-space-3); }
+.panoramicCtaManifesto {
+  position: absolute; z-index: 2; inset-block: 0; inset-inline-end: clamp(5rem, 7.5vw, 7.5rem);
+  inline-size: clamp(280px, 20vw, 340px);
+  display: flex; align-items: center; justify-content: flex-start;
+}
+.panoramicCtaManifestoInner { display: flex; align-items: stretch; gap: 24px; }
+.panoramicCtaManifestoRule { flex: none; align-self: stretch; inline-size: 3.5px; background: var(--coro-v1-red-600); }
+.panoramicCtaManifestoText { margin: 0; white-space: pre-line; color: #fff; font-size: clamp(1.35rem, 1.7vw, 1.75rem); font-weight: 800; letter-spacing: -.005em; line-height: 1.3; text-align: start; }
+
+@media (max-width: 68rem) {
+  .resourcesStrip { grid-template-columns: 1fr; gap: var(--coro-v1-space-3); }
+  .resourcesLinks { justify-self: start; }
+  .panoramicCta { block-size: auto; min-block-size: 30rem; }
+  .panoramicCtaScrimLeft { inline-size: 100%; background: linear-gradient(180deg, var(--coro-v1-navy-950) 0%, color-mix(in srgb, var(--coro-v1-navy-950) 78%, transparent) 45%, color-mix(in srgb, var(--coro-v1-navy-950) 55%, transparent) 100%); }
+  .panoramicCtaScrimRight { display: none; }
+  .panoramicCtaContent { position: static; inline-size: 100%; padding: var(--coro-v1-space-6); }
+  .panoramicCtaManifesto { position: static; inset: auto; inline-size: 100%; padding: 0 var(--coro-v1-space-6) var(--coro-v1-space-6); }
+}
+
+/* Demo + proof section — two columns over the approved architectural background (glass towers/trees on the left,
+   fading to pale blue-white on the right, per coro-home-demo-proof-background.webp). Left: editorial value/proof
+   narrative. Right: the existing DemoForm (untouched business logic) inside a compact premium card. */
+#demo { padding-block: clamp(4rem, 6.5vw, 5.25rem); }
+.demoBg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.demoBg :global(img) { object-fit: cover; }
+.demoBgFade { position: absolute; inset: 0; background: linear-gradient(to right, transparent 0%, transparent 40%, color-mix(in srgb, #F8FAFC 55%, transparent) 62%, #F8FAFC 78%); }
+.demoGrid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 36rem) auto minmax(0, 33.5rem); align-items: start; column-gap: 2.25rem; }
+.demoAccent { align-self: start; margin-block-start: .3rem; inline-size: 3px; block-size: clamp(70px, 6vw, 100px); background: var(--coro-v1-red-600); border-radius: 2px; }
+.demoLeft { max-inline-size: 36rem; }
+.demoHeadline { margin: var(--coro-v1-space-2) 0 0; white-space: pre-line; color: var(--ink); font-size: clamp(2rem, 2.5vw, 2.75rem); font-weight: 800; line-height: 1.18; letter-spacing: -.01em; }
+.demoIntro { margin: var(--coro-v1-space-3) 0 0; max-inline-size: 42ch; color: var(--coro-v1-text-600, #6B7280); font-size: var(--coro-v1-text-small); line-height: 1.6; }
+.demoValues { list-style: none; margin: var(--coro-v1-space-6) 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem 2rem; }
+.demoValues li { display: flex; align-items: flex-start; gap: .7rem; }
+.demoValueIcon { flex: none; display: inline-grid; place-items: center; inline-size: 3.25rem; block-size: 3.25rem; border-radius: 999px; background: color-mix(in srgb, var(--coro-v1-blue-700) 10%, transparent); color: var(--coro-v1-blue-700); }
+.demoValueTitle { margin: 0; color: var(--ink); font-size: .92rem; font-weight: 800; line-height: 1.35; }
+.demoValueText { margin: .25rem 0 0; color: var(--coro-v1-text-600, #6B7280); font-size: .82rem; line-height: 1.45; }
+.demoDivider { margin: var(--coro-v1-space-6) 0 1.375rem; block-size: 1px; background: var(--coro-v1-paper-line-strong, #DEE2E6); }
+.demoProofCard {
+  margin-block-start: var(--coro-v1-space-2); padding: 1.35rem 1.5rem;
+  background: rgba(255,255,255,.86); border: 1px solid var(--coro-v1-paper-line-strong, #DEE2E6); border-radius: 14px;
+}
+.demoProofIcon { color: var(--coro-v1-blue-700); }
+.demoProofTitle { margin: .6rem 0 0; color: var(--ink); font-size: .92rem; font-weight: 750; line-height: 1.4; }
+.demoProofBody { margin: .4rem 0 0; max-inline-size: 46ch; color: var(--coro-v1-text-600, #6B7280); font-size: .82rem; line-height: 1.55; }
+.demoContribution { display: flex; align-items: center; gap: .5rem; margin: 1.1rem 0 0; color: var(--coro-v1-text-600, #6B7280); font-size: .78rem; font-weight: 600; }
+.demoContribution svg { flex: none; color: var(--coro-v1-blue-700); }
+.demoRight { display: flex; justify-content: flex-end; }
+.demoFormCard {
+  inline-size: min(100%, 33.5rem); background: #fff; border: 1px solid var(--coro-v1-paper-line-strong, #DEE2E6);
+  border-radius: 18px; padding: clamp(2rem, 2.6vw, 2.25rem) clamp(2rem, 2.4vw, 2.25rem); box-shadow: 0 1.5rem 3rem rgba(15, 30, 55, .1);
+}
+.demoFormCard input, .demoFormCard select, .demoFormCard textarea { min-block-size: 48px; }
+.demoFormCard :global(.coro-demo-form-row) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+.demoFormCard :global(.coro-demo-form-row > div) { min-width: 0; }
+.demoFormCard :global(.coro-demo-form-success) { padding: 2.5rem 1.25rem; text-align: center; }
+@media (min-width: 40rem) {
+  .demoFormCard :global(.coro-demo-form-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.demoFormHeading { margin: .85rem 0 0; white-space: pre-line; color: var(--ink); font-size: 1.4rem; font-weight: 800; line-height: 1.25; }
+.demoFormSupport { margin: .6rem 0 1.7rem; color: var(--coro-v1-text-600, #6B7280); font-size: .85rem; line-height: 1.55; }
+
+@media (max-width: 68rem) {
+  .demoGrid { grid-template-columns: 1fr; row-gap: var(--coro-v1-space-8); }
+  .demoAccent { display: none; }
+  .demoLeft { max-inline-size: none; }
+  .demoRight { justify-content: stretch; }
+  .demoFormCard { inline-size: 100%; }
+  .demoBgFade { background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, #F8FAFC 65%, transparent) 55%, #F8FAFC 82%); }
+}
+@media (max-width: 30rem) {
+  .demoValues { grid-template-columns: 1fr; }
+}

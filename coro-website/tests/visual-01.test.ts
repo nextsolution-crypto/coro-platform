@@ -30,8 +30,18 @@ test('the photographic hero is an additive mode of EditorialHero: plain mode is 
   assert.match(hero, /data-surface="dark"/);
 });
 
-test('photographic hero styling: V1 tokens only, gradient confined to the photo edge, no shadow, blur, glow or motion', () => {
-  assert.doesNotMatch(heroCssCode, /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|box-shadow|blur|glow|@keyframes|animation|transition|parallax|backdrop-filter/);
+test('photographic hero styling: V1 tokens only, gradient confined to the photo edge, no shadow, blur, glow or motion, with three approved overlay exceptions', () => {
+  // Approved exceptions (MIG-08A-QA-GOV): the Homepage Hero's CONNAÎTRE/PERSONNES/AGIR overlay cards are intentional
+  // card-like editorial objects over photography — human-approved frosted-glass treatment. Scoped to these exact
+  // declarations inside .overlay only; every other forbidden pattern (hex, legacy tokens, shadow, glow, keyframes,
+  // animation, transition, parallax, any other/different blur, backdrop-filter or border-radius) remains checked as before.
+  const overlayRule = heroCssCode.match(/\.overlay \{[^}]*\}/)?.[0] ?? '';
+  assert.match(overlayRule, /backdrop-filter:\s*blur\(10px\)/, 'expected the approved overlay blur to still be present');
+  assert.match(overlayRule, /border-radius:\s*var\(--coro-v1-radius-sm, 8px\)/, 'expected the approved overlay radius to still be present');
+  const heroCssWithoutApprovedOverlayExceptions = heroCssCode.replace(overlayRule, overlayRule
+    .replace(/(?:-webkit-)?backdrop-filter:\s*blur\(10px\);?/g, '')
+    .replace(/border-radius:\s*var\(--coro-v1-radius-sm, 8px\);?/g, ''));
+  assert.doesNotMatch(heroCssWithoutApprovedOverlayExceptions, /#[0-9a-fA-F]{3,8}\b|--coro-(?!v1)|box-shadow|blur|glow|@keyframes|animation|transition|parallax|backdrop-filter|border-radius/);
   assert.match(heroCssCode, /\.photoHero \{[^}]*background: var\(--coro-v1-navy-950\)/);
   assert.match(heroCssCode, /color-mix\(in srgb, var\(--coro-v1-navy-950\)/);
   assert.match(heroCssCode, /\.photoField \{[^}]*inline-size: var\(--cov\)/);
@@ -39,7 +49,6 @@ test('photographic hero styling: V1 tokens only, gradient confined to the photo 
   assert.match(heroCssCode, /data-side="start"\] \.scrim \{ background: linear-gradient\(to left/);
   assert.match(heroCssCode, /object-position: var\(--pos-m\)/);
   assert.match(heroCssCode, /object-position: var\(--pos\)/);
-  assert.doesNotMatch(heroCssCode, /border-radius/, 'no rounded container on the hero');
 });
 
 test('assets: the five approved photographs exist at their exact committed paths and are used once each, by their own page', () => {
@@ -119,7 +128,7 @@ test('no product-truth expansion: the Projects boundary and Booking/Planner limi
 });
 
 test('registry, metadata and routes are unchanged by the visual enrichment', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/']);
   assert.ok(read('app/gestion-documentaire/page.tsx').includes("metaTitle: 'Gestion documentaire des plans d’urgence et de continuité'"));
   assert.ok(read('app/gestion-de-projets/page.tsx').includes("metaTitle: 'Gestion de projets et de mandats en mesures d’urgence'"));
   assert.ok(read('app/partners/page.tsx').includes("metaTitle: 'Partenaires et collaborations'"));

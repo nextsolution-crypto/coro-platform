@@ -49,7 +49,9 @@ Aucune page de production n'a été migrée sous le Design System V1.0. L'adopti
 | 03d | MIG-04-PRE Security & Pricing Governance Gate (vérité publique sûre pour `/security` et `/pricing`, registre de blockers et décisions) | `05-migration/MIG-04-PRE-SECURITY-PRICING-GATE.md` | Gate de gouvernance, à lire avant MIG-04A et MIG-04B |
 | 03e | MIG-05-PRE / MIG-05A Guides Family Audit & Migration Gate (hub `/guides` implémenté) (inventaire des six guides et du hub, frontière de vérité produit, audit réglementaire, audit des sept images, séquence de migration) | `05-migration/MIG-05-GUIDES-GATE.md` | Gate de pré-migration, à lire avant MIG-05A |
 | 03f | MIG-06-PRE Remaining Legacy Surface Audit & Next-Phase Gate (surface publique restante après MIG-05 : `/`, `/blog`, `/blog/[slug]`, `/privacy`, `/terms` ; phases proposées, phase MIG-06 recommandée = pages légales) | `05-migration/MIG-06-REMAINING-LEGACY-GATE.md` | Gate d'audit, à lire avant MIG-06 |
-| 03g | MIG-07-PRE Blog Architecture, Content, API, SEO & Migration Gate + MIG-07A/B/B-B/C Implementation Results (index V2 + pagination, article V2 + registre dynamique explicite, polish du canevas desktop, découverte par catégorie/mot-clé) — surface légale restante après clôture Blog = `/` uniquement, en attente MIG-08 (Homepage) et revue visuelle mobile humaine | `05-migration/MIG-07-BLOG-GATE.md` | Gate d'audit + résultats d'implémentation, MIG-07 CLOSED (techniquement complet, en attente de revue) |
+| 03g | MIG-07-PRE Blog Architecture, Content, API, SEO & Migration Gate + MIG-07A/B/B-B/C Implementation Results (index V2 + pagination, article V2 + registre dynamique explicite, polish du canevas desktop, découverte par catégorie/mot-clé) — surface légale restante après clôture Blog = `/` uniquement | `05-migration/MIG-07-BLOG-GATE.md` | Gate d'audit + résultats d'implémentation, MIG-07 CLOSED |
+| 03h | MIG-08-PRE Homepage Master Audit, Preservation Matrix, Visual Narrative & Final-Showpiece Gate (audit initial, storyboard cible, aucune implémentation à ce stade) | `05-migration/MIG-08-HOMEPAGE-GATE.md` | Gate d'audit historique — voir bandeau de statut en tête de fichier ; superseded par MIG-08A |
+| 03i | MIG-08A Homepage implementation, MIG-08A-QA master audit, MIG-08A-QA-FIX technical closure, MIG-08A-QA-GOV EditorialHero governance resolution (`app/home/**` construit section par section, revue visuelle humaine, 632/632 tests, validation humaine desktop + iPad + iPhone) | `app/home/**` (pas de doc dédiée — code + suite de tests faisant autorité) | MIG-08A CLOSED — implémentation complète, gouvernance résolue, prêt pour commit |
 | 04 | CORO Visual Language | `02-design/CORO-VISUAL-LANGUAGE.md` | APPROVED, V1.1 (motifs interdits autoritatifs §16) |
 | 05 | CORO Design System | `02-design/CORO-DESIGN-SYSTEM.md` | V1.0 gelé |
 | 06 | CORO Component Library | `02-design/CORO-COMPONENT-LIBRARY.md` | V1.0 gelé (catalogue autoritatif) |
@@ -205,7 +207,7 @@ Architecture et migration :
 # 24. Ce qui est désormais décidé
 
 - ADN visuel CORO, refus du SaaS générique, alternance clair / sombre, mouvement fonctionnel, mobile comme expérience complète.
-- Rouge d'action `#E51B2A`, rayons 10 / 4 / 8 / 2–4, profondeur par surface d'abord.
+- Rouge d'action `#C0392B`, rayons 10 / 4 / 8 / 2–4, profondeur par surface d'abord.
 - Trois familles de pages reliées : Architectural, Opérationnel, Technique.
 - Continuum canonique en neuf étapes, quatre mouvements.
 - Design Lab avant migration, migration progressive, protection absolue des URL, contenus et SEO.

@@ -9,6 +9,10 @@
 /* Soft architectural surface: surface-2, a hairline border and one small registration tick. No grid, no gradient, no texture. */
 .section[data-tone="soft"] { --bg: var(--coro-v1-surface-2); border-block: 1px solid var(--coro-v1-paper-line-strong); }
 .section[data-tone="soft"]::before { content: ""; position: absolute; inset-block-start: -1px; inset-inline-start: var(--gutter); inline-size: 3rem; block-size: 3px; background: var(--coro-v1-blue-700); }
+/* Ecosystem surface (Homepage Section 04 only): pale blue-white, matched to the building-cutaway illustration's own
+   background so the image reads as native to the section rather than a framed rectangle. */
+.section[data-tone="ecosystem"] { --bg: #F4F8FC; border-block: 1px solid var(--coro-v1-paper-line-strong); }
+.section[data-tone="ecosystem"]::before { content: ""; position: absolute; inset-block-start: -1px; inset-inline-start: var(--gutter); inline-size: 3rem; block-size: 3px; background: var(--coro-v1-blue-700); }
 .section[data-density="compact"] { padding-block: clamp(2.5rem, 5vw, 4.5rem); }
 .section[data-density="standard"] { padding-block: clamp(3.5rem, 7vw, 6.5rem); }
 .section[data-density="immersive"] { padding-block: clamp(4.5rem, 10vw, 9rem); }

@@ -7,9 +7,10 @@ import { isLegacyFooterVisible, isV2MigratedRoute, migratedV2Routes } from '../l
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 test('the V2 migration registry holds ONLY the approved migrated routes; every other current route stays legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/']);
   assert.equal(isV2MigratedRoute('/about'), true); assert.equal(isV2MigratedRoute('/contact'), true);
-  const partial = ['/', '/design-lab'];
+  assert.equal(isV2MigratedRoute('/'), true); // MIG-08A: Homepage is now V2
+  const partial = ['/design-lab'];
   for (const path of partial) assert.equal(isV2MigratedRoute(path), false, path);
   // MIG-07B: dynamic article route registered via migratedV2DynamicRoutes, not the exact-match array.
   assert.equal(isV2MigratedRoute('/blog/some-slug'), true);
@@ -28,7 +29,7 @@ test('the registry matches exact paths only and ignores query, hash and trailing
 
 test('the legacy footer is kept for legacy routes and suppressed only for migrated ones', () => {
   assert.equal(isLegacyFooterVisible('/about'), false, '/about is migrated: no legacy footer');
-  assert.equal(isLegacyFooterVisible('/'), true);
+  assert.equal(isLegacyFooterVisible('/'), false); // MIG-08A: Homepage is now V2
   assert.equal(isLegacyFooterVisible('/performance-objectifs'), false); // migrated in MIG-02C
   assert.equal(isLegacyFooterVisible('/about', ['/about']), false);
   assert.equal(isLegacyFooterVisible('/contact', ['/about']), true);

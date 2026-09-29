@@ -40,7 +40,7 @@ test('not matched: nested segments and lookalike routes stay legacy', () => {
 
 test('unaffected: previously migrated exact routes and unrelated routes are unchanged', () => {
   assert.equal(isV2MigratedRoute('/about'), true);
-  assert.equal(isV2MigratedRoute('/'), false);
+  assert.equal(isV2MigratedRoute('/'), true); // MIG-08A: Homepage is now V2
   assert.equal(isV2MigratedRoute('/unknown-route'), false);
 });
 

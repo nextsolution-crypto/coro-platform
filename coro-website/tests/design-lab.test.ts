@@ -31,7 +31,7 @@ test('the Design Lab is absent from the sitemap, route registry, navigation and 
 
 test('the target signal red exists while the legacy reds stay untouched', () => {
   const tokens = read('app/design-tokens.css');
-  assert.match(tokens, /--coro-v1-red-600:\s*#e51b2a/i);
+  assert.match(tokens, /--coro-v1-red-600:\s*#c0392b/i);
   assert.match(tokens, /--coro-red-600:\s*#c0392b/i);
   assert.match(tokens, /--coro-red-700:\s*#a93226/i);
   assert.match(read('components/product.module.css'), /#bd3b31/i);
@@ -98,7 +98,7 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
     // app/gestion-de-projets/page.tsx left the checkpoint list in MIG-02B; tests/gestion-de-projets-migration.test.ts guards it.
     // app/gestion-documentaire/page.tsx left the checkpoint list in MIG-02A (product pilot); tests/gestion-documentaire-migration.test.ts guards it.
     // app/DemoForm.tsx left the checkpoint list in MIG-01B (label association and alert/status roles only); tests/contact-migration.test.ts guards its contract.
-    'app/HomePageClient.tsx', 'app/page.tsx', 'app/robots.ts',
+    'app/robots.ts',
     // CookieBanner.tsx and ChatWidget.tsx left the checkpoint list in VISUAL-01C (vertical coordination via --coro-cookie-offset).
     'app/components/Footer.tsx', 'app/components/ScrollToTop.tsx',
     'components/ProductPage.tsx', 'components/ProductCompositions.tsx', 'components/product.module.css', 'components/product-compositions.module.css',
@@ -107,6 +107,7 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
     'app/institutional.module.css',
     // app/performance-objectifs/page.tsx left the checkpoint list in MIG-02C (migrated to V2Shell); tests/performance-objectifs-migration.test.ts guards it.
     // app/portail-client/page.tsx left the checkpoint list in MIG-02D (migrated to V2Shell); tests/portail-client-migration.test.ts guards it.
+    // app/page.tsx and app/HomePageClient.tsx left the checkpoint list in MIG-08A (Homepage migrated to app/home/Home.tsx); tests/home-migration.test.ts guards it.
   ];
   try {
     execFileSync('git', ['cat-file', '-e', '609698fc^{commit}'], { cwd: root, stdio: 'ignore' });
@@ -122,7 +123,7 @@ test('protected checkpoint and production files are unchanged since checkpoint 6
 });
 
 test('the referral mechanism is still owned by the homepage', () => {
-  const home = read('app/HomePageClient.tsx');
+  const home = read('app/home/client/ReferralCapture.tsx');
   assert.match(home, /coro_referral_code|REFERRAL_COOKIE_CODE/);
   assert.match(home, /\^CR-\[A-HJ-NP-Z2-9\]\{6\}\$/);
   const form = read('app/DemoForm.tsx');
@@ -133,7 +134,7 @@ test('the referral mechanism is still owned by the homepage', () => {
 test('LAB-01B: radius hierarchy, architectural surface and depth guidance exist without changing target values', () => {
   const tokens = read('app/design-tokens.css');
   for (const token of ['radius-frame', 'radius-panel', 'radius-control', 'paper', 'paper-line', 'label-tracking']) assert.match(tokens, new RegExp(`--coro-v1-${token}:`), `--coro-v1-${token} is missing`);
-  assert.match(tokens, /--coro-v1-red-600:\s*#e51b2a/i);
+  assert.match(tokens, /--coro-v1-red-600:\s*#c0392b/i);
   assert.match(tokens, /--coro-v1-radius-xl:\s*1\.5rem/);
   assert.match(tokens, /--coro-v1-shadow-3:/);
   const page = read('app/design-lab/page.tsx');

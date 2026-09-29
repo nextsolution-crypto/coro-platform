@@ -47,8 +47,8 @@ Ce document distingue cinq niveaux. Chaque règle appartient à un seul.
 
 | Jeton | Valeur | Rôle | Niveau |
 |---|---|---|---|
-| `--coro-v1-red-600` | `#e51b2a` | Action (CTA principal) et signal. Rare. | LOCKED |
-| `--coro-v1-red-700` | `#bf1522` | Survol, texte critique sur clair. | APPROVED |
+| `--coro-v1-red-600` | `#c0392b` | Action (CTA principal) et signal — aligné sur le rouge officiel CORO (CLAUDE.md). | LOCKED |
+| `--coro-v1-red-700` | `#a93226` | Survol, texte critique sur clair. | APPROVED |
 | `--coro-v1-red-300` | `#ff5a66` | Rouge sur fond sombre (texte, critique). | APPROVED |
 | `--coro-v1-navy-950` / `-900` / `-800` | `#061d35` / `#082b52` / `#0f3a68` | Autorité, profondeur opérationnelle. | LOCKED (950 / 900) |
 | `--coro-v1-blue-700` | `#0d4f8b` | Bleu structurel : information, données, étiquettes techniques. | LOCKED |

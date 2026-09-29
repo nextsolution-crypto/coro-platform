@@ -46,7 +46,7 @@ test('demo CTA copy is the approved Lab copy and the primary action stays CORO r
   assert.match(cta, /<Button href=\{primary\.href\} surface=/, 'the primary action uses the default (primary) shared Button');
   assert.doesNotMatch(cta, /variant="(secondary|ghost)"[^>]*primary/);
   assert.match(read('components/ui/primitives.module.css'), /\.primary\{background:var\(--coro-red-600\)/);
-  assert.match(read('app/design-tokens.css'), /--coro-v1-red-600: #e51b2a/);
+  assert.match(read('app/design-tokens.css'), /--coro-v1-red-600: #c0392b/);
   const route = publicRoutes.find((r) => r.path === '/contact');
   assert.ok(route?.implemented, 'the demo CTA points at an implemented route');
 });

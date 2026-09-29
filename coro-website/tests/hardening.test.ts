@@ -34,7 +34,7 @@ test('contrast holds on the navy surfaces and for the CORO red CTA and focus rin
     }
   }
   assert.ok(ratio('#ffffff', token('red-600')) >= 4.5, 'white on the CORO red');
-  assert.equal(token('red-600').toLowerCase(), '#e51b2a', 'the signal red is unchanged');
+  assert.equal(token('red-600').toLowerCase(), '#c0392b', 'the signal red matches the official CORO brand red (CLAUDE.md)');
   for (const surface of [token('surface-0'), token('surface-2')]) assert.ok(ratio(token('focus'), surface) >= 3, 'focus ring on light');
   for (const navy of [token('navy-950'), token('navy-900')]) assert.ok(ratio(token('focus-on-dark'), navy) >= 3, 'focus ring on navy');
 });
@@ -86,12 +86,17 @@ test('V2 header switches between the two navigations at one shared breakpoint', 
   assert.match(css, /\.desktopNav,\.headerActions\{display:none\}\.menuToggle\{/);
 });
 
-test('V2 breakpoints are the shared 48rem / 68rem pair, with two documented content-driven exceptions', () => {
+test('V2 breakpoints are the shared 48rem / 68rem pair, with three documented content-driven exceptions', () => {
   const found = new Set<string>();
   for (const path of v2Css) for (const match of read(path).matchAll(/@media\s*\(min-width:\s*([\d.]+)rem/g)) found.add(`${match[1]}rem`);
-  assert.deepEqual([...found].sort(), ['48rem', '68rem', '75rem', '80rem']);
+  assert.deepEqual([...found].sort(), ['48rem', '62rem', '68rem', '75rem', '80rem']);
   assert.match(read('components/flow/flow.module.css'), /75rem/);
   assert.match(read('components/hero/technical-annotations.module.css'), /80rem/);
+  // Approved exception (MIG-08A-QA-GOV): EditorialHero's Homepage Hero overlay cards (CONNAÎTRE/PERSONNES/AGIR) must stay
+  // hidden through the width range where they would collide with the editorial copy column. 48rem shows them too early
+  // (copy is still wide); 68rem hides them too late on common laptop widths (992-1088px). 62rem is an intentional,
+  // component-specific collision breakpoint — scoped to this one overlay, not a general-purpose addition to the pair.
+  assert.match(read('components/page/editorial-hero.module.css'), /62rem/);
 });
 
 test('LAB08-009: the form error summary receives focus when it appears and shows a visible ring', () => {

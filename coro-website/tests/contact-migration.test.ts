@@ -23,10 +23,10 @@ test('FIX-24H: DemoForm success wording makes no response-time promise, in FR an
 });
 
 test('the registry holds exactly /about and /contact; /contact has no legacy footer', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/']);
   assert.equal(isLegacyFooterVisible('/contact'), false);
   assert.equal(isLegacyFooterVisible('/performance-objectifs'), false); // migrated in MIG-02C
-  assert.equal(isLegacyFooterVisible('/'), true);
+  assert.equal(isLegacyFooterVisible('/'), false); // MIG-08A: Homepage is now V2
 });
 
 test('V2Shell owns the chrome: no page-owned header, main or footer, no legacy shell, no footer-hiding hack', () => {

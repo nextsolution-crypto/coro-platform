@@ -101,7 +101,7 @@
 .footerTop { display: grid; gap: var(--coro-v1-space-8); padding-block-end: var(--coro-v1-space-8); }
 .footerBrand { display: grid; gap: .5rem; align-content: start; }
 .footerLogo { justify-self: start; font-size: 1.75rem; font-weight: 900; letter-spacing: -.04em; text-decoration: none; }
-.footerLogo span { color: var(--coro-v1-red-300); }
+.footerLogo span { color: var(--coro-red-600); }
 .footerTagline { margin: 0; max-inline-size: 22rem; color: var(--dim); }
 .footerNav { display: grid; gap: var(--coro-v1-space-6); }
 .footerGroup { display: grid; gap: .5rem; align-content: start; padding-block-start: var(--coro-v1-space-3); border-block-start: 1px solid var(--rule); }
