@@ -14,7 +14,8 @@
     "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs",
     "test:commercial-catalog": "node app/admin/product-catalog/product-catalog.contract.test.cjs",
     "test:organization-contracts": "node app/admin/organizations/[organizationId]/organization-contracts.contract.test.cjs",
-    "test:capability-entitlements": "node app/admin/organizations/[organizationId]/capability-entitlements.contract.test.cjs"
+    "test:capability-entitlements": "node app/admin/organizations/[organizationId]/capability-entitlements.contract.test.cjs",
+    "test:commercial-proposals": "node app/admin/commercial/proposals/commercial-proposals.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

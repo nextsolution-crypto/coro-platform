@@ -60,6 +60,7 @@ import { Organization360Module } from './organization-360/organization-360.modul
 import { CommercialCatalogModule } from './commercial-catalog/commercial-catalog.module';
 import { OrganizationContractsModule } from './organization-contracts/organization-contracts.module';
 import { CapabilityEntitlementsModule } from './capability-entitlements/capability-entitlements.module';
+import { CommercialProposalsModule } from './commercial-proposals/commercial-proposals.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { CapabilityEntitlementsModule } from './capability-entitlements/capabili
   CommercialCatalogModule,
   OrganizationContractsModule,
   CapabilityEntitlementsModule,
+  CommercialProposalsModule,
   AuthModule,
   UsersModule,
   ClientsModule,

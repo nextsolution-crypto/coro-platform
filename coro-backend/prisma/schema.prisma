@@ -57,6 +57,8 @@ model Organization {
   referralCredits              ReferralCredit[]             @relation("ReferralCreditOrganization")
   contracts                    OrganizationContract[]
   capabilityEntitlements       CapabilityEntitlement[]
+  commercialProposals          CommercialProposal[]
+  convertedCommercialProspects CommercialProspect[] @relation("CommercialProspectConversion")
 }
 
 model User {
@@ -90,6 +92,11 @@ model User {
   observationsTreated ReviewObservation[] @relation("observationTreater")
   capabilityEntitlementsCreated CapabilityEntitlement[] @relation("CapabilityEntitlementCreator")
   capabilityEntitlementRevisionsCreated CapabilityEntitlementRevision[] @relation("CapabilityEntitlementRevisionActor")
+  commercialProspectsCreated CommercialProspect[] @relation("CommercialProspectCreator")
+  commercialProspectsConverted CommercialProspect[] @relation("CommercialProspectConverter")
+  commercialProposalsCreated CommercialProposal[] @relation("CommercialProposalCreator")
+  commercialProposalRevisionsCreated CommercialProposalRevision[] @relation("CommercialProposalRevisionCreator")
+  proposalDocumentsCreated ProposalDocument[] @relation("ProposalDocumentCreator")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -399,6 +406,81 @@ enum EntitlementLimitType {
   USAGE
 }
 
+enum CommercialProspectStatus {
+  ACTIVE
+  CONVERTED
+  DISQUALIFIED
+}
+enum CommercialProposalStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+enum CommercialProposalRevisionStatus {
+  DRAFT
+  INTERNAL_REVIEW
+  READY
+  SENT
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+  CANCELLED
+}
+enum ProposalLineSource {
+  CATALOG_COMPONENT
+  CUSTOM_COMPONENT
+  EXCLUSIVITY_FEE
+}
+enum ProposalAdjustmentScope {
+  GLOBAL
+  COMPONENT
+  CUSTOM_COMPONENT
+}
+enum ProposalAdjustmentType {
+  PERCENT_DISCOUNT
+  FIXED_OVERRIDE
+  CUSTOM_FIXED_PRICE
+}
+enum ProposalInputCategory {
+  QUANTITY
+  COMPLEXITY
+  VALUE_ANALYSIS
+  COMMERCIAL_ASSUMPTION
+}
+enum ProposalInputValueType {
+  DECIMAL
+  INTEGER
+  MONEY
+  BOOLEAN
+  TEXT
+}
+enum ProposalInputSource {
+  DECLARED
+  OBSERVED_SNAPSHOT
+  MANUAL_ASSUMPTION
+}
+enum ProposalCalculationStatus {
+  CALCULATED
+  ESTIMATED
+  MANUAL
+  TBD
+}
+enum ProposalDocumentType {
+  OFFER
+  ACCEPTANCE_EVIDENCE
+  SUPPORTING_DOCUMENT
+}
+enum ProposalDocumentStatus {
+  GENERATING
+  FINALIZED
+  FAILED
+}
+enum ProposalLanguage {
+  FR
+  EN
+}
+
 model CommercialCapability {
   id              String                  @id @default(uuid())
   code            CapabilityCode          @unique
@@ -417,6 +499,9 @@ model CommercialCapability {
   contractPriceSnapshots ContractPriceSnapshotLine[]
   contractExclusivityCapabilities ContractExclusivityCapability[]
   entitlements CapabilityEntitlement[]
+  proposalLines ProposalLine[]
+  proposalInputs ProposalInput[]
+  proposalExclusivityCapabilities ProposalExclusivityCapability[]
 
   @@index([displayOrder])
   @@index([lifecycle, isAvailable])
@@ -445,6 +530,7 @@ model PriceBook {
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
   versions   PriceBookVersion[]
+  proposalRevisions CommercialProposalRevision[]
 
   @@index([audience, currency])
   @@index([archivedAt])
@@ -468,6 +554,7 @@ model PriceBookVersion {
   createdBy            User?                  @relation("PriceBookVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   components           PriceComponent[]
   contractRevisions    OrganizationContractRevision[]
+  proposalRevisions    CommercialProposalRevision[]
 
   @@unique([priceBookId, versionNumber])
   @@index([priceBookId, status])
@@ -498,6 +585,7 @@ model PriceComponent {
   tiers              PriceTier[]
   contractAdjustments ContractPricingAdjustment[]
   contractSnapshots   ContractPriceSnapshotLine[]
+  proposalLines       ProposalLine[]
 
   @@unique([priceBookVersionId, code])
   @@index([priceBookVersionId, displayOrder])
@@ -590,6 +678,8 @@ model OrganizationContractRevision {
   commitments ContractMinimumCommitment[]
   documents OrganizationContractDocument[]
   entitlementSources CapabilityEntitlement[]
+  sourceProposalRevisionId String? @unique
+  sourceProposalRevision CommercialProposalRevision? @relation("ProposalContractOrigin", fields: [sourceProposalRevisionId], references: [id], onDelete: Restrict)
   @@unique([id, contractId])
   @@unique([contractId, revisionNumber])
   @@index([contractId, status, effectiveFrom, effectiveUntil])
@@ -640,6 +730,17 @@ model ContractPriceSnapshotLine {
   catalogAmountMinor BigInt?
   contractAmountMinor BigInt?
   adjustmentSummary String?
+  quantity Decimal? @db.Decimal(20, 6)
+  quantityUnit String?
+  catalogExtendedAmountMinor BigInt?
+  contractExtendedAmountMinor BigInt?
+  calculationStatus ProposalCalculationStatus?
+  calculationFormula String?
+  calculationExplanation String?
+  internalUse Boolean?
+  distributable Boolean?
+  distributionLimit Decimal? @db.Decimal(20, 6)
+  distributionMetric PriceMetric?
   displayOrder Int
   createdAt DateTime @default(now())
   contractRevision OrganizationContractRevision @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
@@ -720,6 +821,7 @@ model ContractMinimumCommitment {
   amountMinor BigInt?
   quantity Decimal? @db.Decimal(20, 6)
   currency String? @db.Char(3)
+  unit String?
   description String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -822,6 +924,368 @@ model CapabilityEntitlementLimit {
   entitlementRevision CapabilityEntitlementRevision @relation(fields: [entitlementRevisionId], references: [id], onDelete: Restrict)
   @@unique([entitlementRevisionId, type, metricCode])
   @@index([type, metricCode])
+}
+
+model CommercialProspect {
+  id String @id @default(uuid())
+  reference String @unique
+  legalName String
+  displayName String
+  preferredLanguage ProposalLanguage @default(FR)
+  contactName String?
+  contactTitle String?
+  contactEmail String?
+  contactPhone String?
+  addressLine1 String?
+  addressLine2 String?
+  city String?
+  subdivision String?
+  postalCode String?
+  country String @db.Char(2)
+  status CommercialProspectStatus @default(ACTIVE)
+  convertedOrganizationId String? @unique
+  convertedAt DateTime?
+  convertedByUserId String?
+  convertedByDisplayName String?
+  disqualifiedAt DateTime?
+  disqualificationReason String?
+  lockVersion Int @default(0)
+  createdByUserId String?
+  createdByDisplayName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  convertedOrganization Organization? @relation("CommercialProspectConversion", fields: [convertedOrganizationId], references: [id], onDelete: Restrict)
+  convertedBy User? @relation("CommercialProspectConverter", fields: [convertedByUserId], references: [id], onDelete: SetNull)
+  createdBy User? @relation("CommercialProspectCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  proposals CommercialProposal[]
+  @@index([status, createdAt])
+  @@index([legalName])
+}
+
+model CommercialProposal {
+  id String @id @default(uuid())
+  reference String @unique
+  title String
+  organizationId String?
+  prospectId String?
+  status CommercialProposalStatus @default(OPEN)
+  acceptedRevisionId String? @unique
+  lockVersion Int @default(0)
+  createdByUserId String?
+  createdByDisplayName String?
+  acceptedAt DateTime?
+  rejectedAt DateTime?
+  cancelledAt DateTime?
+  terminalReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  prospect CommercialProspect? @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  acceptedRevision CommercialProposalRevision? @relation("AcceptedProposalRevision", fields: [acceptedRevisionId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("CommercialProposalCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revisions CommercialProposalRevision[] @relation("ProposalRevisions")
+  @@index([organizationId, status])
+  @@index([prospectId, status])
+  @@index([status, createdAt])
+}
+
+model CommercialProposalRevision {
+  id String @id @default(uuid())
+  proposalId String
+  revisionNumber Int
+  basedOnRevisionId String?
+  status CommercialProposalRevisionStatus @default(DRAFT)
+  sourcePriceBookId String?
+  sourcePriceBookVersionId String?
+  priceBookCodeSnapshot String?
+  priceBookNameSnapshot String?
+  priceBookVersionSnapshot Int?
+  audienceSnapshot PriceBookAudience?
+  relationshipSnapshot CommercialRelationship
+  currency String @db.Char(3)
+  validFrom DateTime?
+  validUntil DateTime?
+  recipientLegalName String
+  recipientDisplayName String
+  recipientContactName String?
+  recipientContactTitle String?
+  recipientEmail String?
+  recipientAddressLine1 String?
+  recipientAddressLine2 String?
+  recipientCity String?
+  recipientSubdivision String?
+  recipientPostalCode String?
+  recipientCountry String @db.Char(2)
+  recipientPreferredLanguage ProposalLanguage
+  contextFR String?
+  contextEN String?
+  termsFR String?
+  termsEN String?
+  internalNotes String?
+  oneTimeTotalMinor BigInt?
+  recurringMonthlyCadenceMinor BigInt?
+  recurringAnnualCadenceMinor BigInt?
+  monthlyRecurringEquivalentMinor BigInt?
+  annualRecurringEquivalentMinor BigInt?
+  estimatedUsageTotalMinor BigInt?
+  firstYearCommitmentMinor BigInt?
+  firstYearIncludesEstimate Boolean @default(false)
+  calculationVersion String
+  calculatedAt DateTime?
+  sentAt DateTime?
+  sentDocumentId String? @unique
+  acceptedAt DateTime?
+  acceptedByName String?
+  acceptanceReference String?
+  rejectedAt DateTime?
+  cancelledAt DateTime?
+  supersededAt DateTime?
+  lifecycleReason String?
+  lockVersion Int @default(0)
+  createdByUserId String?
+  createdByDisplayName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposal CommercialProposal @relation("ProposalRevisions", fields: [proposalId], references: [id], onDelete: Restrict)
+  acceptedForProposal CommercialProposal? @relation("AcceptedProposalRevision")
+  basedOnRevision CommercialProposalRevision? @relation("ProposalRevisionLineage", fields: [basedOnRevisionId], references: [id], onDelete: Restrict)
+  derivedRevisions CommercialProposalRevision[] @relation("ProposalRevisionLineage")
+  sourcePriceBook PriceBook? @relation(fields: [sourcePriceBookId], references: [id], onDelete: Restrict)
+  sourcePriceBookVersion PriceBookVersion? @relation(fields: [sourcePriceBookVersionId], references: [id], onDelete: Restrict)
+  sentDocument ProposalDocument? @relation("ProposalSentDocument", fields: [sentDocumentId], references: [id], onDelete: Restrict)
+  createdBy User? @relation("CommercialProposalRevisionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  inputs ProposalInput[]
+  lines ProposalLine[]
+  adjustments ProposalAdjustment[]
+  exclusivities ProposalExclusivity[]
+  commitments ProposalMinimumCommitment[]
+  documents ProposalDocument[] @relation("ProposalRevisionDocuments")
+  valueAnalysis ProposalValueAnalysis?
+  sourceContractRevision OrganizationContractRevision? @relation("ProposalContractOrigin")
+  @@unique([proposalId, revisionNumber])
+  @@unique([id, proposalId])
+  @@index([proposalId, status])
+  @@index([sourcePriceBookVersionId])
+  @@index([status, validUntil])
+}
+
+model ProposalInput {
+  id String @id @default(uuid())
+  proposalRevisionId String
+  capabilityId String?
+  proposalLineId String?
+  code String
+  category ProposalInputCategory
+  valueType ProposalInputValueType
+  decimalValue Decimal? @db.Decimal(20, 6)
+  integerValue BigInt?
+  moneyMinor BigInt?
+  booleanValue Boolean?
+  textValue String?
+  currency String? @db.Char(3)
+  unit String?
+  source ProposalInputSource
+  labelFR String
+  labelEN String?
+  justification String?
+  displayOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  capability CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  proposalLine ProposalLine? @relation(fields: [proposalLineId], references: [id], onDelete: Restrict)
+  @@index([proposalRevisionId, category])
+  @@index([capabilityId])
+  @@index([proposalLineId])
+}
+
+model ProposalLine {
+  id String @id @default(uuid())
+  proposalRevisionId String
+  source ProposalLineSource
+  sourcePriceComponentId String?
+  capabilityId String?
+  componentCode String
+  componentNameFR String
+  componentNameEN String?
+  descriptionFR String?
+  descriptionEN String?
+  pricingModel PricingModel
+  chargeType PriceChargeType
+  billingPeriod BillingPeriod?
+  metric PriceMetric?
+  tierMode TierCalculationMode?
+  quantity Decimal? @db.Decimal(20, 6)
+  quantityUnit String?
+  catalogUnitAmountMinor BigInt?
+  proposedUnitAmountMinor BigInt?
+  catalogExtendedAmountMinor BigInt?
+  proposedExtendedAmountMinor BigInt?
+  calculationStatus ProposalCalculationStatus
+  calculationFormula String?
+  calculationExplanationFR String
+  calculationExplanationEN String?
+  internalUse Boolean @default(false)
+  distributable Boolean @default(false)
+  distributionLimit Decimal? @db.Decimal(20, 6)
+  distributionMetric PriceMetric?
+  justification String?
+  displayOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  sourcePriceComponent PriceComponent? @relation(fields: [sourcePriceComponentId], references: [id], onDelete: Restrict)
+  capability CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  tiers ProposalTierSnapshot[]
+  inputs ProposalInput[]
+  adjustments ProposalAdjustment[]
+  exclusivityFeeFor ProposalExclusivity? @relation("ProposalExclusivityFee")
+  @@unique([proposalRevisionId, componentCode])
+  @@index([proposalRevisionId, displayOrder])
+  @@index([sourcePriceComponentId])
+  @@index([capabilityId])
+}
+
+model ProposalTierSnapshot {
+  id String @id @default(uuid())
+  proposalLineId String
+  minimumQuantity Decimal @db.Decimal(20, 6)
+  maximumQuantity Decimal? @db.Decimal(20, 6)
+  amountMinor BigInt
+  quantityApplied Decimal? @db.Decimal(20, 6)
+  extendedAmountMinor BigInt?
+  displayOrder Int
+  createdAt DateTime @default(now())
+  proposalLine ProposalLine @relation(fields: [proposalLineId], references: [id], onDelete: Restrict)
+  @@unique([proposalLineId, displayOrder])
+  @@index([proposalLineId, minimumQuantity, maximumQuantity])
+}
+
+model ProposalAdjustment {
+  id String @id @default(uuid())
+  proposalRevisionId String
+  proposalLineId String?
+  scope ProposalAdjustmentScope
+  adjustmentType ProposalAdjustmentType
+  discountBasisPoints Int?
+  overrideAmountMinor BigInt?
+  labelFR String?
+  labelEN String?
+  justification String
+  displayOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  proposalLine ProposalLine? @relation(fields: [proposalLineId], references: [id], onDelete: Restrict)
+  @@unique([proposalRevisionId, displayOrder])
+  @@index([proposalRevisionId, scope])
+  @@index([proposalLineId])
+}
+
+model ProposalExclusivity {
+  id String @id @default(uuid())
+  proposalRevisionId String
+  territoryType ContractTerritoryType
+  territoryCode String?
+  territoryLabel String
+  startsAt DateTime
+  endsAt DateTime?
+  conditions String?
+  renewalTerms String?
+  hasEconomicImpact Boolean @default(false)
+  economicProposalLineId String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  economicProposalLine ProposalLine? @relation("ProposalExclusivityFee", fields: [economicProposalLineId], references: [id], onDelete: Restrict)
+  sectors ProposalExclusivitySector[]
+  capabilities ProposalExclusivityCapability[]
+  @@index([proposalRevisionId, startsAt, endsAt])
+  @@index([territoryType, territoryCode])
+}
+
+model ProposalExclusivitySector {
+  exclusivityId String
+  sectorCode String
+  sectorLabel String
+  exclusivity ProposalExclusivity @relation(fields: [exclusivityId], references: [id], onDelete: Restrict)
+  @@id([exclusivityId, sectorCode])
+  @@index([sectorCode])
+}
+
+model ProposalExclusivityCapability {
+  exclusivityId String
+  capabilityId String
+  exclusivity ProposalExclusivity @relation(fields: [exclusivityId], references: [id], onDelete: Restrict)
+  capability CommercialCapability @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  @@id([exclusivityId, capabilityId])
+  @@index([capabilityId])
+}
+
+model ProposalMinimumCommitment {
+  id String @id @default(uuid())
+  proposalRevisionId String
+  type ContractCommitmentType
+  period ContractCommitmentPeriod
+  amountMinor BigInt?
+  quantity Decimal? @db.Decimal(20, 6)
+  currency String? @db.Char(3)
+  unit String?
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  @@index([proposalRevisionId, type])
+}
+
+model ProposalDocument {
+  id String @id @default(uuid())
+  proposalRevisionId String
+  type ProposalDocumentType
+  language ProposalLanguage?
+  artifactVersion Int @default(1)
+  status ProposalDocumentStatus @default(GENERATING)
+  fileName String
+  mimeType String
+  sizeBytes Int?
+  storageKey String @unique
+  sha256 String? @db.Char(64)
+  templateVersion String
+  generatorVersion String
+  generationKey String @unique
+  generationStartedAt DateTime
+  generationLeaseUntil DateTime?
+  generatedAt DateTime?
+  failedAt DateTime?
+  failureCode String?
+  createdByUserId String?
+  createdByDisplayName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation("ProposalRevisionDocuments", fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+  sentForRevision CommercialProposalRevision? @relation("ProposalSentDocument")
+  createdBy User? @relation("ProposalDocumentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  @@unique([proposalRevisionId, type, language, artifactVersion])
+  @@index([proposalRevisionId, status])
+  @@index([status, generationLeaseUntil])
+}
+
+model ProposalValueAnalysis {
+  id String @id @default(uuid())
+  proposalRevisionId String @unique
+  mandatesPerYear Decimal @db.Decimal(20, 6)
+  averageHoursPerMandate Decimal @db.Decimal(20, 6)
+  currentBillableRateMinorPerHour BigInt
+  estimatedProductivityGainBasisPoints Int
+  estimatedHoursSaved Decimal @db.Decimal(20, 6)
+  estimatedCapacityValueMinor BigInt
+  methodologyVersion String
+  roundingPolicy String
+  disclaimerFR String
+  disclaimerEN String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
 }
 
 model Client {
