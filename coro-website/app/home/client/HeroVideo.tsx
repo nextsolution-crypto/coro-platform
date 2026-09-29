@@ -6,10 +6,12 @@ import type { Locale } from '@/lib/site/locale';
 import styles from './hero-video.module.css';
 
 /**
- * Homepage demo-video trigger + modal (MIG-08A-B). Real asset preserved from the legacy `HomePageClient.tsx`
- * (`/videos/Video_home_page_CORO.mp4`, poster `/videos/Video_home_page_CORO_poster.jpg`) — no invented URL.
- * Video only loads/plays on intentional activation; no autoplay on page load.
+ * Homepage demo-video trigger + modal (MIG-08A-B). Embeds the approved CORO presentation video via the
+ * privacy-enhanced youtube-nocookie.com domain (video ID fh3PuO23a1Q). Video only loads/plays on intentional
+ * activation; no autoplay on page load — autoplay is scoped to the modal, which only opens on click.
  */
+const YOUTUBE_VIDEO_ID = 'fh3PuO23a1Q';
+
 export function HeroVideo({ label, lang }: { label: string; lang: Locale }) {
   const [open, setOpen] = useState(false);
   return (
@@ -34,9 +36,14 @@ export function HeroVideo({ label, lang }: { label: string; lang: Locale }) {
               {lang === 'fr' ? 'Fermer' : 'Close'}
             </button>
             <div className={styles.videoFrame}>
-              <video controls autoPlay playsInline poster="/videos/Video_home_page_CORO_poster.jpg" className={styles.video}>
-                <source src="/videos/Video_home_page_CORO.mp4" type="video/mp4" />
-              </video>
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_VIDEO_ID}?autoplay=1&rel=0`}
+                title={lang === 'fr' ? 'Vidéo de démonstration CORO' : 'CORO demo video'}
+                className={styles.video}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                frameBorder={0}
+              />
             </div>
           </div>
         </div>

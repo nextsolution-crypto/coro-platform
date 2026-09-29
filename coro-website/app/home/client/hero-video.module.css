@@ -6,4 +6,4 @@
 .panel { width: 100%; max-width: 65rem; position: relative; }
 .close { position: absolute; top: -44px; right: 0; display: flex; align-items: center; gap: 8px; background: none; border: none; color: rgba(255, 255, 255, 0.75); font-size: 14px; font-weight: 600; cursor: pointer; }
 .videoFrame { border-radius: 12px; overflow: hidden; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5); line-height: 0; }
-.video { width: 100%; display: block; background-color: #000000; }
+.video { width: 100%; aspect-ratio: 16 / 9; display: block; border: 0; background-color: #000000; }
