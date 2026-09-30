@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ComponentProps } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import { ORGANIZATION_360_TABS } from "./organization360-contract.mjs";
+import {
+  CapabilityMatrix,
+  CapabilityScopeTree,
+  LegacyLicensePanel,
+} from "@/components/admin/control-center/ControlCenterComponents";
 
 type JsonRecord = Record<string, unknown>;
 type TabCode = (typeof ORGANIZATION_360_TABS)[number][0];
@@ -39,7 +45,17 @@ export default function Organization360Page() {
         const selectedResponse =
           tab === "overview"
             ? overviewResponse
-            : await api.get(`${base}/${tab}`);
+            : tab === "capabilities"
+              ? {
+                  data: {
+                    matrix: (await api.get(`${base}/capability-matrix`)).data,
+                    tree: (await api.get(`${base}/scope-tree`)).data,
+                    reconciliation: (
+                      await api.get(`${base}/commercial-reconciliation`)
+                    ).data,
+                  },
+                }
+              : await api.get(`${base}/${tab}`);
         if (!cancelled) {
           setOverview(overviewResponse.data);
           setPayload(selectedResponse.data);
@@ -174,8 +190,7 @@ function TabContent({ tab, payload }: { tab: TabCode; payload: unknown }) {
         fields={["name", "city", "province", "buildingType", "isActive"]}
       />
     );
-  if (tab === "capabilities")
-    return <CapabilitiesPanel items={(payload as JsonRecord[]) ?? []} />;
+  if (tab === "capabilities") return <CapabilitiesPanel data={data} />;
   if (tab === "commercial") return <CommercialPanel data={data} />;
   if (tab === "usage")
     return <UsagePanel metrics={(data.metrics as JsonRecord[]) ?? []} />;
@@ -256,7 +271,35 @@ function ListPanel({
   );
 }
 
-function CapabilitiesPanel({ items }: { items: JsonRecord[] }) {
+function CapabilitiesPanel({ data }: { data: JsonRecord }) {
+  const matrix = (data.matrix ?? {}) as JsonRecord;
+  const tree = (data.tree ?? {}) as JsonRecord;
+  const reconciliation = (data.reconciliation ?? {}) as JsonRecord;
+  const items: JsonRecord[] = [];
+  return (
+    <section>
+      <Title
+        title="Capabilities"
+        subtitle="Proposed, contracted, entitled, configured and observed remain distinct."
+      />
+      <CapabilityMatrix
+        rows={
+          (matrix.rows as ComponentProps<typeof CapabilityMatrix>["rows"]) ?? []
+        }
+      />
+      <h3 className="mt-8 font-semibold">Organization / Client / Site</h3>
+      <p className="mb-3 text-xs text-slate-500">
+        Explicit entitlements only · no implicit inheritance.
+      </p>
+      <CapabilityScopeTree
+        root={tree.root as ComponentProps<typeof CapabilityScopeTree>["root"]}
+      />
+      <h3 className="mt-8 font-semibold">Reconciliation</h3>
+      <pre className="mt-2 max-h-80 overflow-auto rounded-lg bg-slate-50 p-3 text-xs">
+        {JSON.stringify(reconciliation.organizationMismatches ?? [], null, 2)}
+      </pre>
+    </section>
+  );
   return (
     <section>
       <Title
@@ -344,6 +387,8 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
   const { organizationId } = useParams<{ organizationId: string }>();
   const legacy = (data.legacy ?? {}) as JsonRecord;
   const contracts = (data.contracts as JsonRecord[]) ?? [];
+  const proposals = (data.proposals as JsonRecord[]) ?? [];
+  const entitlementSummary = (data.entitlementSummary as JsonRecord[]) ?? [];
   const current =
     data.contract && typeof data.contract === "object"
       ? (data.contract as JsonRecord)
@@ -411,6 +456,33 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
           ["Billing", data.billing ?? "NOT_CONFIGURED"],
         ]}
       />
+      <div className="mt-5">
+        <LegacyLicensePanel
+          licenseType={String(legacy.licenseType ?? "NOT_CONFIGURED")}
+        />
+      </div>
+      <h3 className="mt-6 font-semibold">Commercial chain</h3>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border p-4">
+          <strong>Proposals</strong>
+          <p className="mt-1 text-sm text-slate-600">
+            {proposals.length} proposal(s) ·{" "}
+            {proposals.filter((proposal) => proposal.acceptedRevisionId).length}{" "}
+            accepted
+          </p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <strong>Entitlements</strong>
+          <p className="mt-1 text-sm text-slate-600">
+            {entitlementSummary
+              .map(
+                (entry) =>
+                  `${String(entry.source)}: ${formatValue((entry._count as JsonRecord)?.id)}`,
+              )
+              .join(" · ") || "None"}
+          </p>
+        </div>
+      </div>
       <h3 className="mt-6 font-semibold">Contracts and history</h3>
       <div className="mt-3 space-y-3">
         {contracts.length ? (

@@ -445,6 +445,39 @@ export class Organization360Service {
       },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
     });
+    const [proposals, entitlementSummary] = await this.prisma.$transaction([
+      this.prisma.commercialProposal.findMany({
+        where: { organizationId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          reference: true,
+          title: true,
+          status: true,
+          acceptedRevisionId: true,
+          acceptedAt: true,
+          updatedAt: true,
+          acceptedRevision: {
+            select: {
+              id: true,
+              revisionNumber: true,
+              sourcePriceBookVersionId: true,
+              priceBookCodeSnapshot: true,
+              priceBookVersionSnapshot: true,
+              sourceContractRevision: {
+                select: { id: true, contractId: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.capabilityEntitlement.groupBy({
+        by: ['source'],
+        where: { organizationId },
+        orderBy: { source: 'asc' },
+        _count: { id: true },
+      }),
+    ]);
     const currentContract =
       contracts.find((item) => item.isPrimary && item.status === 'ACTIVE') ??
       null;
@@ -457,6 +490,10 @@ export class Organization360Service {
       relationship: organization.commercialRelationship ?? 'NOT_CONFIGURED',
       contract: currentContract ?? 'NOT_CONFIGURED',
       contracts,
+      proposals,
+      acceptedProposal:
+        proposals.find((proposal) => proposal.acceptedRevisionId) ?? null,
+      entitlementSummary,
       pricing: currentContract ? 'CONTRACT_SNAPSHOT' : 'NOT_CONFIGURED',
       entitlements: 'OBSERVATION_ONLY',
       enforcement: 'NONE',

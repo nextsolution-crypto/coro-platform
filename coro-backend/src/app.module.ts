@@ -61,6 +61,7 @@ import { CommercialCatalogModule } from './commercial-catalog/commercial-catalog
 import { OrganizationContractsModule } from './organization-contracts/organization-contracts.module';
 import { CapabilityEntitlementsModule } from './capability-entitlements/capability-entitlements.module';
 import { CommercialProposalsModule } from './commercial-proposals/commercial-proposals.module';
+import { ControlCenterModule } from './control-center/control-center.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { CommercialProposalsModule } from './commercial-proposals/commercial-pro
   OrganizationContractsModule,
   CapabilityEntitlementsModule,
   CommercialProposalsModule,
+  ControlCenterModule,
   AuthModule,
   UsersModule,
   ClientsModule,

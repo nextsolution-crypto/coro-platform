@@ -59,8 +59,15 @@ const ADMIN_GROUP = {
 };
 
 const SUPER_ADMIN_GROUP = {
-  label: 'Super Admin',
+  label: 'Super Admin · Control Center · Commercial · Product · Platform',
   items: [
+    { label: 'Control Center', path: '/admin/control-center', icon: '◉' },
+    { label: 'Commercial', path: '/admin/commercial', icon: '◈' },
+    { label: 'Prospects', path: '/admin/commercial/prospects', icon: '○' },
+    { label: 'Proposals', path: '/admin/commercial/proposals', icon: '◇' },
+    { label: 'Contracts', path: '/admin/commercial/contracts', icon: '▧' },
+    { label: 'Entitlements', path: '/admin/commercial/entitlements', icon: '✓' },
+    { label: 'Reconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },
     { label: 'Organisations',    path: '/admin/organizations', icon: 'ðŸ¢' },
     { label: 'Product Catalog', path: '/admin/product-catalog', icon: '◫' },
     { label: 'Rapports REX', path: '/admin/rex-reports', icon: '📄' },
