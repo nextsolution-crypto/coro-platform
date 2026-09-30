@@ -62,6 +62,7 @@ const SUPER_ADMIN_GROUP = {
   label: 'Super Admin · Control Center · Commercial · Product · Platform',
   items: [
     { label: 'Control Center', path: '/admin/control-center', icon: '◉' },
+    { label: 'Metering', path: '/admin/metering', icon: '∑' },
     { label: 'Commercial', path: '/admin/commercial', icon: '◈' },
     { label: 'Prospects', path: '/admin/commercial/prospects', icon: '○' },
     { label: 'Proposals', path: '/admin/commercial/proposals', icon: '◇' },

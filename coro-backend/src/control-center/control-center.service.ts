@@ -2,10 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ControlCenterOrganizationsQueryDto } from './control-center.dto';
+import { OperationalStateService } from '../operational-observation/operational-state.service';
+import { METRIC_REGISTRY } from '../metering/metric-registry';
 
 @Injectable()
 export class ControlCenterService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly operationalState: OperationalStateService,
+  ) {}
 
   async overview(
     asOf: Date,
@@ -28,7 +33,6 @@ export class ControlCenterService {
       expiring,
       distributions,
       sites,
-      incidents,
       populationPrograms,
       correctiveActions,
       attention,
@@ -73,7 +77,6 @@ export class ControlCenterService {
         where: { source: 'DISTRIBUTION' },
       }),
       this.prisma.building.count(),
-      this.prisma.incidentEvent.count({ where: { status: 'ACTIVE' } }),
       this.prisma.populationProgram.count(),
       this.prisma.correctiveAction.count({
         where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } },
@@ -112,6 +115,25 @@ export class ControlCenterService {
         },
       }),
     ]);
+    const [
+      activeIncidentState,
+      activeEvacuationState,
+      populationState,
+      currentResults,
+      correctedResults,
+      measuredOrganizations,
+    ] = await Promise.all([
+      this.operationalState.incident(),
+      this.operationalState.evacuation(),
+      this.operationalState.population(),
+      this.prisma.meteringResult.count({ where: { supersededBy: null } }),
+      this.prisma.meteringResult.count({
+        where: { supersedesResultId: { not: null } },
+      }),
+      this.prisma.meteringResult
+        .groupBy({ by: ['organizationId'] })
+        .then((rows) => rows.length),
+    ]);
     const rel = Object.fromEntries(
       relationships.map((item) => [
         item.commercialRelationship ?? 'NOT_CONFIGURED',
@@ -147,13 +169,23 @@ export class ControlCenterService {
       operational: {
         sites: { value: sites, quality: 'CANONICAL', billable: false },
         activeIncidents: {
-          value: incidents,
-          quality: 'CANONICAL',
+          value: activeIncidentState.count,
+          quality: activeIncidentState.quality,
+          billable: false,
+        },
+        activeEvacuations: {
+          value: activeEvacuationState.count,
+          quality: activeEvacuationState.quality,
           billable: false,
         },
         populationPrograms: {
           value: populationPrograms,
           quality: 'CANONICAL',
+          billable: false,
+        },
+        activePopulationOperations: {
+          value: populationState.operation.count,
+          quality: populationState.operation.quality,
           billable: false,
         },
         openCorrectiveActions: {
@@ -166,6 +198,13 @@ export class ControlCenterService {
           quality: 'NOT_AVAILABLE',
           billable: false,
         },
+      },
+      measurement: {
+        supportedMetrics: METRIC_REGISTRY.length,
+        currentResults,
+        correctedResultRows: correctedResults,
+        organizationsWithMeasurements: measuredOrganizations,
+        billingStatus: 'NOT_EVALUATED',
       },
       attentionItems: attention,
       recentAdministrativeActivity: recentAudit,

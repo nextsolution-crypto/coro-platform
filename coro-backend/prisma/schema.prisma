@@ -59,6 +59,7 @@ model Organization {
   capabilityEntitlements       CapabilityEntitlement[]
   commercialProposals          CommercialProposal[]
   convertedCommercialProspects CommercialProspect[] @relation("CommercialProspectConversion")
+  meteringResults              MeteringResult[]
 }
 
 model User {
@@ -154,6 +155,7 @@ model User {
   mandateServicesUpdated           ProjectMandateService[]   @relation("MandateServiceUpdater")
   mandateServicesRemoved           ProjectMandateService[]   @relation("MandateServiceRemover")
   mandateServiceOperations         MandateServiceOperation[] @relation("MandateServiceOperationCreator")
+  meteringResultsCreated           MeteringResult[] @relation("MeteringResultCreator")
 }
 
 model UserWorkSchedule {
@@ -254,6 +256,11 @@ enum CommercialScope {
   ORGANIZATION
   CLIENT
   SITE
+}
+
+enum MeteringSourceQuality {
+  CANONICAL
+  DERIVED
 }
 
 enum CapabilityScopeStatus {
@@ -1319,6 +1326,7 @@ model Client {
   clientUsers     ClientUser[]
   exerciseReports ExerciseReport[]
   capabilityEntitlements CapabilityEntitlement[]
+  meteringResults MeteringResult[]
   @@unique([id, organizationId])
 }
 
@@ -1403,6 +1411,7 @@ model Building {
   complianceEvidence   ComplianceEvidence[]
   correctiveActions    CorrectiveAction[]
   capabilityEntitlements CapabilityEntitlement[]
+  meteringResults MeteringResult[]
 
   @@unique([id, clientId, organizationId])
 
@@ -5157,4 +5166,53 @@ model ReferralCredit {
   @@index([referralId])
   @@index([status])
   @@index([createdAt])
+}
+
+model MeteringResult {
+  id String @id @default(uuid())
+
+  organizationId String
+  clientId       String?
+  buildingId     String?
+
+  capabilityCode CapabilityCode
+  scope          CommercialScope
+  metricCode     String @db.VarChar(100)
+  metricVersion  String @db.VarChar(50)
+  policyVersion  String @db.VarChar(50)
+
+  periodStart DateTime
+  periodEnd   DateTime
+  timezone    String   @db.VarChar(100)
+
+  quantity      Decimal               @db.Decimal(30, 6)
+  unit          String                @db.VarChar(50)
+  sourceQuality MeteringSourceQuality
+  sourceCount   BigInt?
+
+  sourceFingerprint String  @db.Char(64)
+  sourceSummary     Json?
+  calculatedAt     DateTime @default(now())
+  calculationKey   String   @unique @db.Char(64)
+
+  supersedesResultId String? @unique
+  correctionReason  String? @db.VarChar(1000)
+
+  createdByUserId     String?
+  createdByDisplayName String? @db.VarChar(255)
+  createdAt             DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  client       Client?      @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Restrict, onUpdate: Restrict)
+  building     Building?    @relation(fields: [buildingId, clientId, organizationId], references: [id, clientId, organizationId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy    User?        @relation("MeteringResultCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  supersedes   MeteringResult? @relation("MeteringResultSupersession", fields: [supersedesResultId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  supersededBy MeteringResult? @relation("MeteringResultSupersession")
+
+  @@index([organizationId, capabilityCode, metricCode, periodStart, periodEnd])
+  @@index([organizationId, scope, periodStart, periodEnd])
+  @@index([clientId, capabilityCode, metricCode, periodStart])
+  @@index([buildingId, capabilityCode, metricCode, periodStart])
+  @@index([organizationId, calculatedAt])
 }

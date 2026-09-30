@@ -62,6 +62,8 @@ import { OrganizationContractsModule } from './organization-contracts/organizati
 import { CapabilityEntitlementsModule } from './capability-entitlements/capability-entitlements.module';
 import { CommercialProposalsModule } from './commercial-proposals/commercial-proposals.module';
 import { ControlCenterModule } from './control-center/control-center.module';
+import { MeteringModule } from './metering/metering.module';
+import { OperationalObservationModule } from './operational-observation/operational-observation.module';
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { ControlCenterModule } from './control-center/control-center.module';
   CapabilityEntitlementsModule,
   CommercialProposalsModule,
   ControlCenterModule,
+  MeteringModule,
+  OperationalObservationModule,
   AuthModule,
   UsersModule,
   ClientsModule,

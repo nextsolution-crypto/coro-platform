@@ -16,10 +16,14 @@ export const mismatch = (
 
 export const observedMismatch = (input: {
   licensed: boolean;
-  quality: 'CANONICAL' | 'INFERABLE' | 'NOT_AVAILABLE';
+  quality: 'CANONICAL' | 'DERIVED' | 'INFERABLE' | 'NOT_AVAILABLE';
   observed: boolean | null;
 }): ReconciliationMismatch[] => {
-  if (input.quality !== 'CANONICAL' || input.observed === null) return [];
+  if (
+    !['CANONICAL', 'DERIVED'].includes(input.quality) ||
+    input.observed === null
+  )
+    return [];
   if (input.observed && !input.licensed)
     return [
       mismatch(

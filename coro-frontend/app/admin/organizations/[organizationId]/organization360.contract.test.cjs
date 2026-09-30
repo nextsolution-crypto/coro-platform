@@ -6,7 +6,7 @@ const { pathToFileURL } = require('node:url');
 (async () => {
   const contract = await import(pathToFileURL(path.join(__dirname, 'organization360-contract.mjs')));
   assert.deepEqual(contract.ORGANIZATION_360_TABS.map(([code]) => code), [
-    'overview', 'users', 'clients', 'sites', 'capabilities', 'commercial', 'usage', 'security', 'audit-events',
+    'overview', 'users', 'clients', 'sites', 'capabilities', 'commercial', 'usage', 'measurement', 'security', 'audit-events',
   ]);
   const rendered = contract.renderTabListForContract();
   for (const [, label] of contract.ORGANIZATION_360_TABS) assert.match(rendered, new RegExp(`>${label}<`));

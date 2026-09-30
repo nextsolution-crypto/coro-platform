@@ -41,13 +41,27 @@ describe('ControlCenterService', () => {
       populationProgram: { count: jest.fn() },
       correctiveAction: { count: jest.fn() },
       adminAuditEvent: { findMany: jest.fn() },
+      meteringResult: {
+        count: jest.fn().mockResolvedValue(0),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
+    } as any;
+    const operationalState = {
+      incident: jest
+        .fn()
+        .mockResolvedValue({ count: 12, quality: 'CANONICAL' }),
+      evacuation: jest
+        .fn()
+        .mockResolvedValue({ count: 0, quality: 'CANONICAL' }),
+      population: jest
+        .fn()
+        .mockResolvedValue({ operation: { count: 0, quality: 'CANONICAL' } }),
     } as any;
     const asOf = new Date('2026-01-01T00:00:00Z');
-    const result = await new ControlCenterService(prisma).overview(
-      asOf,
-      10,
-      30,
-    );
+    const result = await new ControlCenterService(
+      prisma,
+      operationalState,
+    ).overview(asOf, 10, 30);
     expect(result).toMatchObject({
       asOf,
       observationOnly: true,

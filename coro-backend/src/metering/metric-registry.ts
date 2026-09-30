@@ -1,0 +1,108 @@
+import {
+  CapabilityCode,
+  CommercialScope,
+  MeteringSourceQuality,
+} from '@prisma/client';
+import { MetricDefinition } from './metering.types';
+
+const metric = (
+  code: string,
+  capabilityCode: CapabilityCode,
+  labelFr: string,
+  labelEn: string,
+  unit: string,
+  allowedScopes: CommercialScope[],
+  sourceDomain: string,
+  aggregation: 'COUNT' | 'DISTINCT_COUNT',
+  minimumSourceQuality: MeteringSourceQuality,
+): MetricDefinition =>
+  Object.freeze({
+    code,
+    metricVersion: '1',
+    policyVersion: '1',
+    capabilityCode,
+    labelFr,
+    labelEn,
+    descriptionFr: `${labelFr} pendant la période d'observation.`,
+    descriptionEn: `${labelEn} during the observation period.`,
+    unit,
+    allowedScopes: Object.freeze([...allowedScopes]),
+    sourceDomain,
+    aggregation,
+    timeSemantics: '[periodStart,periodEnd)',
+    minimumSourceQuality,
+    maxPeriodDays: 366,
+    billingStatus: 'NOT_EVALUATED',
+  });
+
+export const METRIC_REGISTRY: readonly MetricDefinition[] = Object.freeze([
+  metric(
+    'INCIDENTS_STARTED',
+    'INCIDENT',
+    'Incidents déclenchés',
+    'Incidents started',
+    'INCIDENT',
+    ['ORGANIZATION', 'CLIENT', 'SITE'],
+    'INCIDENT',
+    'COUNT',
+    'CANONICAL',
+  ),
+  metric(
+    'EVACUATIONS_STARTED',
+    'SENTINELLE',
+    'Évacuations déclenchées',
+    'Evacuations started',
+    'EVACUATION',
+    ['ORGANIZATION', 'CLIENT', 'SITE'],
+    'SENTINELLE',
+    'COUNT',
+    'CANONICAL',
+  ),
+  metric(
+    'OCCUPANCY_EVENTS',
+    'SENTINELLE',
+    "Événements d'occupation",
+    'Occupancy events',
+    'EVENT',
+    ['ORGANIZATION', 'CLIENT', 'SITE'],
+    'SENTINELLE',
+    'COUNT',
+    'CANONICAL',
+  ),
+  metric(
+    'UNIQUE_OBSERVED_SENTINELLE_SITES',
+    'SENTINELLE',
+    'Sites Sentinelle observés uniques',
+    'Unique observed Sentinelle sites',
+    'SITE',
+    ['ORGANIZATION', 'CLIENT'],
+    'SENTINELLE',
+    'DISTINCT_COUNT',
+    'DERIVED',
+  ),
+  metric(
+    'POPULATION_OPERATIONAL_EVENTS',
+    'SENTINELLE_POPULATION',
+    'Événements Population',
+    'Population operational events',
+    'EVENT',
+    ['ORGANIZATION', 'CLIENT', 'SITE'],
+    'POPULATION',
+    'COUNT',
+    'CANONICAL',
+  ),
+  metric(
+    'POPULATION_ALERTS_ACTIVATED',
+    'SENTINELLE_POPULATION',
+    'Alertes Population activées',
+    'Population alerts activated',
+    'ALERT',
+    ['ORGANIZATION', 'CLIENT', 'SITE'],
+    'POPULATION',
+    'COUNT',
+    'CANONICAL',
+  ),
+]);
+
+export const metricDefinition = (code: string) =>
+  METRIC_REGISTRY.find((item) => item.code === code);

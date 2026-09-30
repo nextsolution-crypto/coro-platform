@@ -1,6 +1,10 @@
 import { CapabilityCode, CommercialScope } from '@prisma/client';
 
-export type DataQuality = 'CANONICAL' | 'INFERABLE' | 'NOT_AVAILABLE';
+export type DataQuality =
+  | 'CANONICAL'
+  | 'DERIVED'
+  | 'INFERABLE'
+  | 'NOT_AVAILABLE';
 export type MismatchSeverity =
   | 'INFO'
   | 'WARNING'

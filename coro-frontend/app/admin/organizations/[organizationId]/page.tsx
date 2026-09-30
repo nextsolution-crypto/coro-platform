@@ -56,7 +56,9 @@ export default function Organization360Page() {
                     ).data,
                   },
                 }
-              : await api.get(`${base}/${tab}`);
+              : tab === "measurement"
+                ? await api.get(`${base}/metering?page=1&pageSize=10`)
+                : await api.get(`${base}/${tab}`);
         if (!cancelled) {
           setOverview(overviewResponse.data);
           setPayload(selectedResponse.data);
@@ -208,8 +210,27 @@ function TabContent({
   if (tab === "commercial") return <CommercialPanel data={data} />;
   if (tab === "usage")
     return <UsagePanel metrics={(data.metrics as JsonRecord[]) ?? []} />;
+  if (tab === "measurement")
+    return <MeasurementPanel data={data} organizationId={organizationId} />;
   if (tab === "security") return <SecurityPanel data={data} />;
   return <AuditPanel data={data} />;
+}
+
+function MeasurementPanel({ data, organizationId }: { data: JsonRecord; organizationId: string }) {
+  const items = (data.items as JsonRecord[]) ?? [];
+  return (
+    <section>
+      <Title title="Measurement" subtitle="Résultats opérationnels immuables · Évaluation commerciale non effectuée." />
+      <Link className="mb-4 inline-block font-medium text-red-700" href={`/admin/metering?organizationId=${organizationId}`}>
+        Open Metering →
+      </Link>
+      {items.length === 0 ? (
+        <State text="NOT_AVAILABLE — aucun résultat de mesure enregistré." />
+      ) : (
+        <ListPanel title="Measurement results" items={items} fields={["metricCode", "quantity", "unit", "sourceQuality", "periodStart", "periodEnd", "status"]} />
+      )}
+    </section>
+  );
 }
 
 function OverviewPanel({ data }: { data: Overview }) {

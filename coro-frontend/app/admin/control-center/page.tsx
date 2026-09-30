@@ -20,6 +20,7 @@ type ControlOverview = {
   entitlements: Record<string, number>;
   operational: Record<string, { value: number }>;
   attentionItems: AttentionOrganization[];
+  measurement: { supportedMetrics: number; currentResults: number; correctedResultRows: number; organizationsWithMeasurements: number; billingStatus: string };
 };
 export default function ControlCenterPage() {
   const [data, setData] = useState<ControlOverview>();
@@ -109,6 +110,16 @@ export default function ControlCenterPage() {
                 label="Open corrective actions"
                 value={data.operational.openCorrectiveActions.value}
               />
+              <ControlCenterSummaryCard label="Active evacuations" value={data.operational.activeEvacuations.value} />
+              <ControlCenterSummaryCard label="Active Population operations" value={data.operational.activePopulationOperations.value} />
+            </div>
+            <h2 className="mt-8 text-xl font-semibold">Measurement</h2>
+            <p className="text-sm text-slate-600">Operational measurements · Commercial evaluation not performed</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-4">
+              <ControlCenterSummaryCard label="Supported metrics" value={data.measurement.supportedMetrics} href="/admin/metering" />
+              <ControlCenterSummaryCard label="Current results" value={data.measurement.currentResults} href="/admin/metering" />
+              <ControlCenterSummaryCard label="Corrected result rows" value={data.measurement.correctedResultRows} href="/admin/metering" />
+              <ControlCenterSummaryCard label="Organizations measured" value={data.measurement.organizationsWithMeasurements} href="/admin/metering" />
             </div>
             <h2 className="mt-8 text-xl font-semibold">
               Organizations requiring attention
@@ -136,6 +147,7 @@ export default function ControlCenterPage() {
                 ["Health", "/admin/health"],
                 ["Commercial", "/admin/commercial"],
                 ["Product", "/admin/product-catalog"],
+                ["Metering", "/admin/metering"],
               ].map(([label, href]) => (
                 <Link
                   className="rounded-lg border bg-white px-4 py-2"
