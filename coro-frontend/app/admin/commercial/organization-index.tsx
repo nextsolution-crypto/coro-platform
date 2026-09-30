@@ -18,10 +18,12 @@ export default function CommercialOrganizationIndex({
   title,
   description,
   tab,
+  hrefBase,
 }: {
   title: string;
   description: string;
   tab: string;
+  hrefBase?: string;
 }) {
   const [data, setData] = useState<OrganizationIndexResponse>();
   useEffect(() => {
@@ -40,7 +42,11 @@ export default function CommercialOrganizationIndex({
           {data?.items?.map((o) => (
             <Link
               className="flex items-center gap-3 border-b p-4 last:border-0"
-              href={`/admin/organizations/${o.id}?tab=${tab}`}
+              href={
+                hrefBase
+                  ? `${hrefBase}/${o.id}`
+                  : `/admin/organizations/${o.id}?tab=${tab}`
+              }
               key={o.id}
             >
               <span className="flex-1 font-medium">{o.name}</span>

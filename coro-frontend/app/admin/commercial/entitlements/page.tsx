@@ -5,6 +5,7 @@ export default function Page() {
       title="Entitlements"
       description="Select an organization to review explicit grants and scope tree."
       tab="capabilities"
+      hrefBase="/admin/commercial/entitlements"
     />
   );
 }

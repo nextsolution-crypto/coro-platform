@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ComponentProps } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import { ORGANIZATION_360_TABS } from "./organization360-contract.mjs";
@@ -154,7 +155,11 @@ export default function Organization360Page() {
           ) : error ? (
             <State text={error} error />
           ) : (
-            <TabContent tab={tab} payload={payload} />
+            <TabContent
+              tab={tab}
+              payload={payload}
+              organizationId={organizationId}
+            />
           )}
         </main>
       </div>
@@ -162,7 +167,15 @@ export default function Organization360Page() {
   );
 }
 
-function TabContent({ tab, payload }: { tab: TabCode; payload: unknown }) {
+function TabContent({
+  tab,
+  payload,
+  organizationId,
+}: {
+  tab: TabCode;
+  payload: unknown;
+  organizationId: string;
+}) {
   const data = (payload ?? {}) as JsonRecord;
   if (tab === "overview")
     return <OverviewPanel data={data as unknown as Overview} />;
@@ -190,7 +203,8 @@ function TabContent({ tab, payload }: { tab: TabCode; payload: unknown }) {
         fields={["name", "city", "province", "buildingType", "isActive"]}
       />
     );
-  if (tab === "capabilities") return <CapabilitiesPanel data={data} />;
+  if (tab === "capabilities")
+    return <CapabilitiesPanel data={data} organizationId={organizationId} />;
   if (tab === "commercial") return <CommercialPanel data={data} />;
   if (tab === "usage")
     return <UsagePanel metrics={(data.metrics as JsonRecord[]) ?? []} />;
@@ -271,7 +285,13 @@ function ListPanel({
   );
 }
 
-function CapabilitiesPanel({ data }: { data: JsonRecord }) {
+function CapabilitiesPanel({
+  data,
+  organizationId,
+}: {
+  data: JsonRecord;
+  organizationId: string;
+}) {
   const matrix = (data.matrix ?? {}) as JsonRecord;
   const tree = (data.tree ?? {}) as JsonRecord;
   const reconciliation = (data.reconciliation ?? {}) as JsonRecord;
@@ -282,6 +302,12 @@ function CapabilitiesPanel({ data }: { data: JsonRecord }) {
         title="Capabilities"
         subtitle="Proposed, contracted, entitled, configured and observed remain distinct."
       />
+      <Link
+        href={`/admin/commercial/entitlements/${organizationId}`}
+        className="mb-5 inline-block rounded bg-slate-900 px-4 py-2 text-sm text-white"
+      >
+        Open Capability Operations
+      </Link>
       <CapabilityMatrix
         rows={
           (matrix.rows as ComponentProps<typeof CapabilityMatrix>["rows"]) ?? []

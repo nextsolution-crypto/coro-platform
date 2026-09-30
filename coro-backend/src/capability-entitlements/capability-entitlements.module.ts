@@ -9,15 +9,25 @@ import {
 } from './capability-entitlements.controller';
 import { CapabilityEntitlementsService } from './capability-entitlements.service';
 import { EntitlementResolver } from './entitlement-resolver.service';
+import { EntitlementCommandService } from './entitlement-command.service';
+import { CapabilityObservationModule } from '../control-center/capability-observation.module';
 @Module({
-  imports: [PrismaModule, AdminAuditModule],
+  imports: [PrismaModule, AdminAuditModule, CapabilityObservationModule],
   controllers: [
     CapabilityEntitlementsController,
     ClientEntitlementsController,
     SiteEntitlementsController,
     ContractEntitlementProvisioningController,
   ],
-  providers: [CapabilityEntitlementsService, EntitlementResolver],
-  exports: [CapabilityEntitlementsService, EntitlementResolver],
+  providers: [
+    CapabilityEntitlementsService,
+    EntitlementResolver,
+    EntitlementCommandService,
+  ],
+  exports: [
+    CapabilityEntitlementsService,
+    EntitlementResolver,
+    EntitlementCommandService,
+  ],
 })
 export class CapabilityEntitlementsModule {}

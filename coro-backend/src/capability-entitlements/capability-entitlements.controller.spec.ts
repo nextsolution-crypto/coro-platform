@@ -40,4 +40,22 @@ describe('Capability entitlement API security', () => {
       ),
     ).not.toContain('@Delete');
   });
+  it('exposes explicit Phase 3B operations and no generic patch', () => {
+    const source = readFileSync(
+      __dirname + '/capability-entitlements.controller.ts',
+      'utf8',
+    );
+    for (const route of [
+      "@Post('preview')",
+      "@Post('trials')",
+      "@Post('manual-overrides')",
+      "@Post('internal')",
+      "@Post(':id/set-distributable')",
+      "@Post(':id/change-limits')",
+      "@Post(':id/change-dates')",
+      "@Post('distribute')",
+    ])
+      expect(source).toContain(route);
+    expect(source).not.toContain('@Patch');
+  });
 });
