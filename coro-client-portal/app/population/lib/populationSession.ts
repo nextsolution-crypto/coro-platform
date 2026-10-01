@@ -10,6 +10,7 @@ type PopulationWorkflowSessionBase = {
   publicSlug: string;
   subscriberId: string;
   preferredLanguage: PopulationPreferredLanguage;
+  smsSubscribed?: boolean;
 };
 
 export type PendingPopulationWorkflowSession = PopulationWorkflowSessionBase & {
@@ -68,6 +69,7 @@ export function savePopulationWorkflowSession(
     publicSlug,
     subscriberId: result.subscriber.id,
     preferredLanguage: result.subscriber.preferredLanguage,
+    smsSubscribed: result.smsSubscribed,
     state: "PENDING",
     verification: {
       channel: result.verificationChannel,
@@ -107,6 +109,7 @@ export function authenticatePopulationWorkflowSession(
     publicSlug: session.publicSlug,
     subscriberId: session.subscriberId,
     preferredLanguage: session.preferredLanguage,
+    smsSubscribed: session.smsSubscribed,
     accessToken,
     accessTokenExpiresInSeconds,
   });
@@ -116,6 +119,7 @@ export function saveAuthenticatedPopulationWorkflowSession(data: {
   publicSlug: string;
   subscriberId: string;
   preferredLanguage: PopulationPreferredLanguage;
+  smsSubscribed?: boolean;
   accessToken: string;
   accessTokenExpiresInSeconds: number;
   locationConfigured?: boolean;
@@ -126,6 +130,7 @@ export function saveAuthenticatedPopulationWorkflowSession(data: {
     publicSlug: data.publicSlug,
     subscriberId: data.subscriberId,
     preferredLanguage: data.preferredLanguage,
+    smsSubscribed: data.smsSubscribed,
     state: "AUTHENTICATED",
     accessToken: data.accessToken,
     accessTokenExpiresAt: new Date(

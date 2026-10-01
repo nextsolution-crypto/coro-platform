@@ -56,6 +56,10 @@ describe('PopulationService', () => {
     populationConsentEvent: {
       create: jest.fn(),
     },
+    populationSmsConsentEvidence: {
+      create: jest.fn(),
+      updateMany: jest.fn(),
+    },
     rueEmergencyScenario: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -1795,6 +1799,10 @@ describe('PopulationService', () => {
       smsEnabled: true,
       emailEnabled: true,
       consentVersion: '2026-09-v1',
+      consentTextFR: 'Consentement du programme',
+      consentTextEN: 'Program consent',
+      privacyTextFR: 'Confidentialité du programme',
+      privacyTextEN: 'Program privacy',
       rueFacilityProfile: {
         assessmentStatus: RueAssessmentStatus.CONFIRMED_SUBJECT,
         populationEnabled: true,
@@ -1823,11 +1831,17 @@ describe('PopulationService', () => {
     });
 
     it('crée une inscription SMS en attente de vérification et un OTP hashé', async () => {
-      const result = await service.registerSubscriber('sobeys-boucherville', {
+      const requestWithUntrustedSnapshot = {
         phone: '+14505551234',
         preferredLanguage: PopulationPreferredLanguage.FR,
         consentVersion: '2026-09-v1',
-      });
+        smsConsent: true,
+        disclosureSnapshot: 'UNTRUSTED CLIENT LEGAL TEXT',
+      };
+      const result = await service.registerSubscriber(
+        'sobeys-boucherville',
+        requestWithUntrustedSnapshot,
+      );
 
       expect(prisma.populationSubscriber.create).toHaveBeenCalledWith({
         data: {
@@ -1859,6 +1873,30 @@ describe('PopulationService', () => {
         prisma.populationVerification.create.mock.calls[0][0];
 
       expect(verificationCall.data.codeHash).not.toMatch(/^\d{6}$/);
+
+      expect(prisma.populationSmsConsentEvidence.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          programId: 'program-1',
+          subscriberId: 'subscriber-1',
+          consentVersion: '2026-09-v1',
+          language: PopulationPreferredLanguage.FR,
+          disclosureSnapshot: expect.stringContaining(
+            'La fréquence des messages varie.',
+          ),
+          source: 'PUBLIC_PORTAL',
+          surface: 'SENTINELLE_POPULATION_REGISTRATION',
+          smsEnabled: true,
+          emailEnabled: false,
+          submittedAt: expect.any(Date),
+        }),
+      });
+      expect(
+        prisma.populationSmsConsentEvidence.create.mock.calls[0][0].data,
+      ).not.toHaveProperty('code');
+      expect(
+        prisma.populationSmsConsentEvidence.create.mock.calls[0][0].data
+          .disclosureSnapshot,
+      ).not.toContain(requestWithUntrustedSnapshot.disclosureSnapshot);
 
       expect(result.verificationRequired).toBe(true);
       expect(result.verificationChannel).toBe(
@@ -1906,7 +1944,25 @@ describe('PopulationService', () => {
           html: expect.stringMatching(/\d{6}/),
         }),
       );
+      expect(prisma.populationSmsConsentEvidence.create).not.toHaveBeenCalled();
     });
+
+    it.each([undefined, false])(
+      'refuse une inscription SMS lorsque le consentement explicite vaut %s',
+      async (smsConsent) => {
+        await expect(
+          service.registerSubscriber('sobeys-boucherville', {
+            phone: '+14505551234',
+            preferredLanguage: PopulationPreferredLanguage.FR,
+            consentVersion: '2026-09-v1',
+            smsConsent,
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+
+        expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
+        expect(prisma.populationSmsConsentEvidence.create).not.toHaveBeenCalled();
+      },
+    );
 
     it('conserve l inscription en attente lorsque le transport echoue', async () => {
       populationDeliveryService.sendSms.mockRejectedValue(
@@ -1917,6 +1973,7 @@ describe('PopulationService', () => {
         phone: '+14505551234',
         preferredLanguage: PopulationPreferredLanguage.FR,
         consentVersion: '2026-09-v1',
+        smsConsent: true,
       });
 
       expect(result.deliveryStatus).toBe('FAILED');
@@ -2287,6 +2344,18 @@ describe('PopulationService', () => {
       });
 
       expect(prisma.populationConsentEvent.create).toHaveBeenCalledTimes(2);
+
+      expect(
+        prisma.populationSmsConsentEvidence.updateMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          subscriberId: 'subscriber-1',
+          programId: 'program-1',
+          consentVersion: '2026-09-v1',
+          verifiedAt: null,
+        },
+        data: { verifiedAt: expect.any(Date) },
+      });
 
       expect(prisma.populationConsentEvent.create).toHaveBeenNthCalledWith(1, {
         data: expect.objectContaining({

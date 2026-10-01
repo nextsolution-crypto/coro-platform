@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsOptional,
@@ -31,4 +32,8 @@ export class RegisterPopulationSubscriberDto {
   @IsString()
   @MaxLength(100)
   consentVersion: string;
+
+  @IsOptional()
+  @IsBoolean()
+  smsConsent?: boolean;
 }

@@ -383,6 +383,24 @@
   cursor: pointer;
   line-height: 1.5;
 }
+
+.smsDisclosure {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(15, 118, 110, 0.3);
+  border-radius: 0.75rem;
+  background: rgba(240, 253, 250, 0.7);
+}
+
+.smsDisclosure p {
+  margin: 0.35rem 0;
+}
+
+.smsDisclosure a {
+  color: #0f766e;
+  font-weight: 600;
+  text-decoration: underline;
+}
 .consentCheck input {
   width: 20px;
   height: 20px;

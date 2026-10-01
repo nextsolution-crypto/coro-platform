@@ -9,7 +9,8 @@
     "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:sms-compliance": "node --experimental-strip-types app/population/lib/smsCompliance.test.ts"
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",

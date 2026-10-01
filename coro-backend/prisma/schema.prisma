@@ -2845,6 +2845,7 @@ model PopulationProgram {
 
   subscribers       PopulationSubscriber[]
   consentEvents     PopulationConsentEvent[]
+  smsConsentEvidence PopulationSmsConsentEvidence[]
   alerts            PopulationAlert[]
   operationalEvents PopulationOperationalEvent[]
   evidenceRecords   PopulationEvidenceRecord[]
@@ -2904,6 +2905,7 @@ model PopulationSubscriber {
   updatedAt DateTime @updatedAt
 
   consentEvents   PopulationConsentEvent[]
+  smsConsentEvidence PopulationSmsConsentEvidence[]
   verifications   PopulationVerification[]
   alertDeliveries PopulationAlertDelivery[]
 
@@ -2944,6 +2946,32 @@ model PopulationConsentEvent {
   @@index([subscriberId])
   @@index([type])
   @@index([occurredAt])
+}
+
+model PopulationSmsConsentEvidence {
+  id String @id @default(uuid())
+
+  programId String
+  program   PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  subscriberId String
+  subscriber   PopulationSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+
+  consentVersion     String
+  language           PopulationPreferredLanguage
+  disclosureSnapshot String
+  source             String
+  surface            String
+  smsEnabled         Boolean
+  emailEnabled       Boolean
+  submittedAt        DateTime
+  verifiedAt         DateTime?
+  createdAt          DateTime @default(now())
+
+  @@index([programId])
+  @@index([subscriberId])
+  @@index([submittedAt])
+  @@index([verifiedAt])
 }
 
 model PopulationVerification {

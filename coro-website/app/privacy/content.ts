@@ -57,6 +57,11 @@ const fr: LegalContent = {
       'CORO ne vend pas les renseignements personnels. Nous pouvons toutefois faire appel à des fournisseurs de services qui nous aident à exploiter, sécuriser, maintenir ou soutenir la plateforme. Ces fournisseurs ne reçoivent que les renseignements nécessaires à l’exécution de leurs fonctions et sont assujettis aux mesures contractuelles ou autres protections appropriées.',
       'Des renseignements peuvent également être communiqués lorsque la loi l’exige, pour répondre à une ordonnance valide, protéger nos droits, prévenir une fraude ou un incident de sécurité, ou dans le cadre d’une opération commerciale autorisée par la loi.',
     ] },
+    { title: '6A. Messages texte et consentement SMS', paragraphs: [
+      'Lorsque vous choisissez de recevoir des messages texte de CORO ou de Sentinelle Population, nous recueillons votre numéro de téléphone mobile, vos choix d’abonnement, la version du consentement présenté, la date et la source de votre consentement ainsi que les événements nécessaires à la livraison et au désabonnement.',
+      'Les données d’adhésion SMS et le consentement SMS ne sont ni vendus ni communiqués à des tiers ou à des sociétés affiliées à des fins de marketing ou de promotion.',
+      'Ils peuvent être traités uniquement par les fournisseurs de services nécessaires à la transmission, à la sécurité et à l’exploitation du service, sous réserve de protections appropriées.',
+    ] },
     { title: '7. Hébergement et localisation des données', paragraphs: [
       'L’infrastructure applicative principale de CORO est hébergée au Canada. Certains services de soutien nécessaires au fonctionnement de la plateforme — notamment selon les fonctionnalités utilisées — peuvent toutefois entraîner le traitement de certains renseignements à l’extérieur du Canada. Notre architecture est conçue afin de favoriser la souveraineté des données et de répondre aux attentes des organisations canadiennes en matière de protection de l’information.',
       'Lorsque des renseignements personnels doivent être communiqués ou traités à l’extérieur du Québec, CORO effectue les évaluations requises et met en place les mesures de protection appropriées conformément à la législation applicable.',
@@ -133,6 +138,11 @@ const en: LegalContent = {
     { title: '6. Disclosure to third parties and service providers', paragraphs: [
       'CORO does not sell personal information. We may, however, use service providers that help us operate, secure, maintain or support the platform. Those providers receive only the information necessary to perform their functions and are subject to appropriate contractual or other safeguards.',
       'Information may also be disclosed when required by law, to respond to a valid order, protect our rights, prevent fraud or a security incident, or as part of a business transaction permitted by law.',
+    ] },
+    { title: '6A. Text messages and SMS consent', paragraphs: [
+      'When you choose to receive text messages from CORO or Sentinelle Population, we collect your mobile telephone number, subscription choices, the version of the consent presented, the date and source of your consent, and events required for delivery and opt-out processing.',
+      'SMS opt-in data and SMS consent are not sold or shared with third parties or affiliates for marketing or promotional purposes.',
+      'They may be processed only by service providers required to transmit, secure, and operate the service, subject to appropriate safeguards.',
     ] },
     { title: '7. Hosting and data location', paragraphs: [
       'CORO’s primary application infrastructure is hosted in Canada. However, certain supporting services required to operate the platform — depending on the features used — may process certain information outside Canada. Our architecture is designed to support data sovereignty and the expectations of Canadian organizations regarding information protection.',

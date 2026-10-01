@@ -39,6 +39,11 @@ import { RegisterPopulationSubscriberDto } from './dto/register-population-subsc
 import { VerifyPopulationSubscriberDto } from './dto/verify-population-subscriber.dto';
 import { ResendPopulationVerificationDto } from './dto/resend-population-verification.dto';
 import { UnsubscribePopulationSubscriberDto } from './dto/unsubscribe-population-subscriber.dto';
+import {
+  POPULATION_SMS_CONSENT_SOURCE,
+  POPULATION_SMS_CONSENT_SURFACE,
+  buildPopulationSmsConsentSnapshot,
+} from './population-sms-compliance';
 import { PopulationAccessDto } from './dto/population-access.dto';
 import { UpdatePopulationPreferencesDto } from './dto/update-population-preferences.dto';
 import { CreatePopulationAlertDraftDto } from './dto/create-population-alert-draft.dto';
@@ -1223,6 +1228,10 @@ export class PopulationService {
         smsEnabled: true,
         emailEnabled: true,
         consentVersion: true,
+        consentTextFR: true,
+        consentTextEN: true,
+        privacyTextFR: true,
+        privacyTextEN: true,
 
         rueFacilityProfile: {
           select: {
@@ -1266,6 +1275,12 @@ export class PopulationService {
       );
     }
 
+    if (phone && dto.smsConsent !== true) {
+      throw new BadRequestException(
+        'Un consentement SMS explicite est requis',
+      );
+    }
+
     if (email && !program.emailEnabled) {
       throw new BadRequestException(
         'Les inscriptions par courriel ne sont pas disponibles pour ce programme',
@@ -1280,6 +1295,7 @@ export class PopulationService {
         'La version du consentement n’est plus valide',
       );
     }
+    const consentVersion = program.consentVersion;
 
     const verificationChannel =
       phone && program.smsEnabled
@@ -1291,6 +1307,15 @@ export class PopulationService {
     const verificationCode = this.generateVerificationCode();
 
     const verificationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const submittedAt = new Date();
+    const programConsentText =
+      dto.preferredLanguage === PopulationPreferredLanguage.EN
+        ? program.consentTextEN || program.consentTextFR
+        : program.consentTextFR;
+    const programPrivacyText =
+      dto.preferredLanguage === PopulationPreferredLanguage.EN
+        ? program.privacyTextEN || program.privacyTextFR
+        : program.privacyTextFR;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const subscriber = await tx.populationSubscriber.create({
@@ -1319,6 +1344,27 @@ export class PopulationService {
         },
       });
 
+      if (phone) {
+        await tx.populationSmsConsentEvidence.create({
+          data: {
+            programId: program.id,
+            subscriberId: subscriber.id,
+            consentVersion,
+            language: dto.preferredLanguage,
+            disclosureSnapshot: buildPopulationSmsConsentSnapshot({
+              language: dto.preferredLanguage,
+              programConsentText,
+              programPrivacyText,
+            }),
+            source: POPULATION_SMS_CONSENT_SOURCE,
+            surface: POPULATION_SMS_CONSENT_SURFACE,
+            smsEnabled: true,
+            emailEnabled: Boolean(email),
+            submittedAt,
+          },
+        });
+      }
+
       return subscriber;
     });
 
@@ -1340,6 +1386,7 @@ export class PopulationService {
       verificationExpiresAt,
 
       deliveryStatus,
+      smsSubscribed: Boolean(phone),
     };
   }
 
@@ -2077,6 +2124,18 @@ export class PopulationService {
             dto.channel === PopulationVerificationChannel.EMAIL,
         },
       });
+
+      if (dto.channel === PopulationVerificationChannel.SMS) {
+        await tx.populationSmsConsentEvidence.updateMany({
+          where: {
+            subscriberId: subscriber.id,
+            programId: program.id,
+            consentVersion,
+            verifiedAt: null,
+          },
+          data: { verifiedAt },
+        });
+      }
 
       await tx.populationConsentEvent.create({
         data: {
