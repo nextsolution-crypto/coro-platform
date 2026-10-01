@@ -20,6 +20,12 @@ import {
 import { ProposalPricingEngine } from './proposal-pricing-engine';
 import { PROPOSAL_INPUT_REGISTRY } from './proposal-input-registry';
 import { calculateValueAnalysis } from './proposal-value-analysis';
+import {
+  CommercialBindingError,
+  CommercialRuleRegistry,
+  PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+  validateCommercialQuantityBinding,
+} from './commercial-rule-registry';
 
 type Actor = { userId: string };
 const money = (v: string | undefined) =>
@@ -31,6 +37,7 @@ export class CommercialProposalsService {
     private prisma: PrismaService,
     private audit: AdminAuditService,
     private pricing: ProposalPricingEngine,
+    private commercialRules: CommercialRuleRegistry = PRODUCTION_COMMERCIAL_RULE_REGISTRY,
   ) {}
   listProposals() {
     return this.prisma.commercialProposal.findMany({
@@ -210,6 +217,38 @@ export class CommercialProposalsService {
   async configure(revisionId: string, d: ConfigureRevisionDto, a: Actor) {
     return this.prisma.$transaction(async (tx) => {
       const r = await this.draft(tx, revisionId);
+      const capabilityIds = [
+        ...new Set(
+          d.lines
+            .map((line) => line.capabilityId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const capabilities = await tx.commercialCapability.findMany({
+        where: { id: { in: capabilityIds } },
+        select: { id: true, code: true },
+      });
+      const capabilityCodeById = new Map(
+        capabilities.map((capability) => [capability.id, capability.code]),
+      );
+      for (const line of d.lines) {
+        try {
+          validateCommercialQuantityBinding(
+            {
+              ...line,
+              capabilityCode: line.capabilityId
+                ? capabilityCodeById.get(line.capabilityId)
+                : null,
+            },
+            this.commercialRules,
+            { requireExplicit: false, requireCurrentRule: false },
+          );
+        } catch (error) {
+          if (error instanceof CommercialBindingError)
+            throw new BadRequestException(error.message);
+          throw error;
+        }
+      }
       for (const i of d.inputs)
         if (!(i.code in PROPOSAL_INPUT_REGISTRY))
           throw new BadRequestException(`Input inconnu: ${i.code}`);
@@ -337,6 +376,9 @@ export class CommercialProposalsService {
             distributable: x.distributable,
             distributionLimit: x.distributionLimit,
             distributionMetric: x.distributionMetric,
+            commercialQuantityBasis: x.commercialQuantityBasis,
+            commercialRuleCode: x.commercialRuleCode,
+            commercialRuleVersion: x.commercialRuleVersion,
             justification: x.justification,
             displayOrder: x.displayOrder,
             tiers: {
@@ -685,7 +727,11 @@ export class CommercialProposalsService {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id},0))`;
       const r = await tx.commercialProposalRevision.findUnique({
         where: { id },
-        include: { proposal: true, sentDocument: true },
+        include: {
+          proposal: true,
+          sentDocument: true,
+          lines: { include: { capability: true } },
+        },
       });
       if (!r) throw new NotFoundException();
       const allowed: Record<string, string[]> = {
@@ -700,6 +746,21 @@ export class CommercialProposalsService {
       };
       if (!allowed[r.status].includes(target))
         throw new BadRequestException('Transition invalide.');
+      if (target === 'READY') {
+        for (const line of r.lines) {
+          try {
+            validateCommercialQuantityBinding(
+              { ...line, capabilityCode: line.capability?.code },
+              this.commercialRules,
+              { requireExplicit: true, requireCurrentRule: true },
+            );
+          } catch (error) {
+            if (error instanceof CommercialBindingError)
+              throw new BadRequestException(error.message);
+            throw error;
+          }
+        }
+      }
       if (target === 'SENT' && !d.sentDocumentId)
         throw new BadRequestException('Document envoyé requis.');
       if (target === 'ACCEPTED' && (!d.acceptedByName || !r.sentDocumentId))
@@ -834,6 +895,9 @@ export class CommercialProposalsService {
               distributable: l.distributable,
               distributionLimit: l.distributionLimit,
               distributionMetric: l.distributionMetric,
+              commercialQuantityBasis: l.commercialQuantityBasis,
+              commercialRuleCode: l.commercialRuleCode,
+              commercialRuleVersion: l.commercialRuleVersion,
               displayOrder: l.displayOrder,
               tiers: {
                 create: l.tiers.map((t) => ({

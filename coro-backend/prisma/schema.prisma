@@ -473,6 +473,11 @@ enum ProposalCalculationStatus {
   MANUAL
   TBD
 }
+
+enum CommercialQuantityBasis {
+  DECLARED
+  METERED
+}
 enum ProposalDocumentType {
   OFFER
   ACCEPTANCE_EVIDENCE
@@ -748,6 +753,9 @@ model ContractPriceSnapshotLine {
   distributable Boolean?
   distributionLimit Decimal? @db.Decimal(20, 6)
   distributionMetric PriceMetric?
+  commercialQuantityBasis CommercialQuantityBasis?
+  commercialRuleCode String? @db.VarChar(100)
+  commercialRuleVersion String? @db.VarChar(50)
   displayOrder Int
   createdAt DateTime @default(now())
   contractRevision OrganizationContractRevision @relation(fields: [contractRevisionId], references: [id], onDelete: Restrict)
@@ -1136,6 +1144,9 @@ model ProposalLine {
   distributable Boolean @default(false)
   distributionLimit Decimal? @db.Decimal(20, 6)
   distributionMetric PriceMetric?
+  commercialQuantityBasis CommercialQuantityBasis?
+  commercialRuleCode String? @db.VarChar(100)
+  commercialRuleVersion String? @db.VarChar(50)
   justification String?
   displayOrder Int
   createdAt DateTime @default(now())

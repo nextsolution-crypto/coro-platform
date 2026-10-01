@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 import {
   BillingPeriod,
+  CommercialQuantityBasis,
   CommercialRelationship,
   ContractCommitmentPeriod,
   ContractCommitmentType,
@@ -126,6 +127,15 @@ export class ProposalLineDto {
   @IsBoolean() distributable!: boolean;
   @IsOptional() @Matches(/^\d+$/) distributionLimit?: string;
   @IsOptional() @IsEnum(PriceMetric) distributionMetric?: PriceMetric;
+  @IsOptional()
+  @IsEnum(CommercialQuantityBasis)
+  commercialQuantityBasis?: CommercialQuantityBasis;
+  @IsOptional()
+  @Matches(/^[A-Z][A-Z0-9_]{0,99}$/)
+  commercialRuleCode?: string;
+  @IsOptional()
+  @Matches(/^\S(?:.{0,48}\S)?$/)
+  commercialRuleVersion?: string;
   @IsOptional() @IsString() justification?: string;
   @IsInt() @Min(0) displayOrder!: number;
   @IsArray()

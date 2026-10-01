@@ -103,6 +103,7 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
               source: 'CATALOG_COMPONENT',
               sourcePriceComponentId: catalogComponent.id,
               capabilityId: capability.id,
+              commercialQuantityBasis: 'DECLARED',
               componentCode: catalogComponent.code,
               componentNameFR: catalogComponent.nameFr,
               componentNameEN: catalogComponent.nameEn,
@@ -144,6 +145,7 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
               source: 'CATALOG_COMPONENT',
               sourcePriceComponentId: catalogFixedComponent.id,
               capabilityId: capability.id,
+              commercialQuantityBasis: 'DECLARED',
               componentCode: catalogFixedComponent.code,
               componentNameFR: catalogFixedComponent.nameFr,
               componentNameEN: catalogFixedComponent.nameEn,
@@ -161,6 +163,7 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
             {
               source: 'CUSTOM_COMPONENT',
               capabilityId: capability.id,
+              commercialQuantityBasis: 'DECLARED',
               componentCode: `${fixture}_SENTINELLE`,
               componentNameFR: 'Sentinelle',
               pricingModel: 'CUSTOM',
@@ -518,6 +521,9 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
         internalUse: sourceLine.internalUse,
         distributable: sourceLine.distributable,
         distributionMetric: sourceLine.distributionMetric,
+        commercialQuantityBasis: sourceLine.commercialQuantityBasis,
+        commercialRuleCode: sourceLine.commercialRuleCode,
+        commercialRuleVersion: sourceLine.commercialRuleVersion,
       });
       expect(contractLine.quantity?.toString() ?? null).toBe(
         sourceLine.quantity?.toString() ?? null,

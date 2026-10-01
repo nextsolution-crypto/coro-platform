@@ -65,6 +65,9 @@ export default function NewProposalPage() {
   const [capabilityId, setCapabilityId] = useState(""),
     [componentName, setComponentName] = useState("Compliance Operations"),
     [quantity, setQuantity] = useState("1"),
+    [commercialQuantityBasis, setCommercialQuantityBasis] = useState<
+      "" | "DECLARED"
+    >(""),
     [amountMinor, setAmountMinor] = useState("");
   const [pricingModel, setPricingModel] = useState<
       "PER_SEAT" | "PER_SITE" | "FLAT" | "CUSTOM"
@@ -157,6 +160,7 @@ export default function NewProposalPage() {
             ? undefined
             : quantity,
           quantityUnit: pricingModel === "PER_SITE" ? "SITE" : "SEAT",
+          commercialQuantityBasis: commercialQuantityBasis || undefined,
           amountMinor,
           requestedStatus: pricingModel === "CUSTOM" ? "MANUAL" : "CALCULATED",
           internalUse,
@@ -427,6 +431,25 @@ export default function NewProposalPage() {
                   value={quantity}
                   set={setQuantity}
                 />
+                <label>
+                  Source de quantité commerciale
+                  <select
+                    value={commercialQuantityBasis}
+                    onChange={(event) =>
+                      setCommercialQuantityBasis(
+                        event.target.value as "" | "DECLARED",
+                      )
+                    }
+                    className="mt-1 w-full rounded border p-3"
+                  >
+                    <option value="">Non sélectionnée</option>
+                    <option value="DECLARED">Quantité déclarée</option>
+                  </select>
+                </label>
+                <p className="text-sm text-slate-600">
+                  METERED est indisponible tant qu’aucune règle commerciale de
+                  production n’est publiée.
+                </p>
                 <Field
                   label="Montant catalogue (minor units CAD)"
                   value={amountMinor}

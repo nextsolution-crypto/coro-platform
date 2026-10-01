@@ -26,6 +26,11 @@ import {
   SignRevisionDto,
   UpdateContractDto,
 } from './organization-contracts.dto';
+import {
+  CommercialBindingError,
+  PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+  validateCommercialQuantityBinding,
+} from '../commercial-proposals/commercial-rule-registry';
 type Actor = { userId: string };
 const detail = {
   organization: true,
@@ -71,6 +76,28 @@ export class OrganizationContractsService {
   }
   private reason(v: string) {
     return this.audit.normalizeReason(v, true)!;
+  }
+  private validatePriceLineBinding(line: {
+    source: 'CATALOG_COMPONENT' | 'CUSTOM_COMPONENT' | 'EXCLUSIVITY_FEE';
+    capabilityId: string | null;
+    capability: { code: import('@prisma/client').CapabilityCode } | null;
+    commercialQuantityBasis:
+      | import('@prisma/client').CommercialQuantityBasis
+      | null;
+    commercialRuleCode: string | null;
+    commercialRuleVersion: string | null;
+  }) {
+    try {
+      validateCommercialQuantityBinding(
+        { ...line, capabilityCode: line.capability?.code },
+        PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+        { requireExplicit: true, requireCurrentRule: true },
+      );
+    } catch (error) {
+      if (error instanceof CommercialBindingError)
+        throw new BadRequestException(error.message);
+      throw error;
+    }
   }
   private async owned(
     tx: Prisma.TransactionClient,
@@ -394,9 +421,27 @@ export class OrganizationContractsService {
       await this.owned(tx, o, cid);
       const rev = await tx.organizationContractRevision.findFirst({
         where: { id: rid, contractId: cid },
+        include: {
+          priceLines: { include: { capability: true } },
+          priceBookVersion: {
+            select: { components: { select: { id: true } } },
+          },
+          adjustments: true,
+        },
       });
       if (!rev || !rule.from.includes(rev.status))
         throw new BadRequestException('Transition de révision invalide.');
+      if (rule.to === 'APPROVED') {
+        if (
+          rev.priceLines.length === 0 &&
+          (rev.priceBookVersion.components.length > 0 ||
+            rev.adjustments.some((item) => item.scope === 'CUSTOM_COMPONENT'))
+        )
+          throw new BadRequestException(
+            'Applicable commercial lines require an explicit quantity binding; use a finalized Proposal.',
+          );
+        rev.priceLines.forEach((line) => this.validatePriceLineBinding(line));
+      }
       const res = await tx.organizationContractRevision.updateMany({
         where: { id: rid, lockVersion: d.lockVersion },
         data: {
@@ -965,10 +1010,20 @@ export class OrganizationContractsService {
             basedOnRevision: true,
             adjustments: true,
             exclusivities: true,
+            priceLines: { include: { capability: true } },
           },
         });
         if (!rev || rev.status !== 'APPROVED')
           throw new BadRequestException('La révision doit être APPROVED.');
+        if (
+          rev.priceLines.length === 0 &&
+          (rev.priceBookVersion.components.length > 0 ||
+            rev.adjustments.some((item) => item.scope === 'CUSTOM_COMPONENT'))
+        )
+          throw new BadRequestException(
+            'Applicable commercial lines require an explicit quantity binding; use a finalized Proposal.',
+          );
+        rev.priceLines.forEach((line) => this.validatePriceLineBinding(line));
         if (
           c.organization.commercialRelationship === 'INTERNAL' ||
           !c.organization.commercialRelationship
@@ -1005,7 +1060,7 @@ export class OrganizationContractsService {
         const global =
           rev.adjustments.find((x) => x.scope === 'GLOBAL')
             ?.discountBasisPoints ?? 0;
-        for (const component of pb.components) {
+        for (const component of rev.priceLines.length ? [] : pb.components) {
           const adj = rev.adjustments.find(
             (x) => x.sourcePriceComponentId === component.id,
           );
@@ -1054,9 +1109,9 @@ export class OrganizationContractsService {
             },
           });
         }
-        for (const x of rev.adjustments.filter(
-          (x) => x.scope === 'CUSTOM_COMPONENT',
-        ))
+        for (const x of rev.priceLines.length
+          ? []
+          : rev.adjustments.filter((x) => x.scope === 'CUSTOM_COMPONENT'))
           await tx.contractPriceSnapshotLine.create({
             data: {
               contractRevisionId: rid,

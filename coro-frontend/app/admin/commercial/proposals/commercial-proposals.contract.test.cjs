@@ -23,6 +23,9 @@ for (const token of [
   "Aucun prix n’est calculé dans React",
   "VALEUR OPÉRATIONNELLE ESTIMÉE",
   "OBSERVED_SNAPSHOT",
+  "commercialQuantityBasis",
+  "commercialQuantityBasis: commercialQuantityBasis || undefined",
+  "METERED est indisponible",
 ])
   if (!wizard.includes(token)) throw new Error(`wizard missing ${token}`);
 console.log("Commercial proposals configurator contract: OK");
