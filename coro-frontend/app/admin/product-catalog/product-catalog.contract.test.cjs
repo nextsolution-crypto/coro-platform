@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,6 +11,9 @@ assert.match(capabilities, /isAvailable/);
 assert.match(capabilities, /scopePolicies/);
 assert.match(priceBooks, /CAD uniquement/);
 assert.match(priceBooks, /\/publish/);
+assert.match(priceBooks, /revenueCategory/);
+assert.match(priceBooks, /revenueCategoryLabel/);
+assert.match(priceBooks, /COMMERCIAL_REVENUE_CATEGORIES/);
 assert.doesNotMatch(priceBooks, /Stripe|invoice|subscription|entitlement/i);
 assert.match(organization, /commercial-identity/);
 assert.match(organization, /NOT_ASSIGNED/);

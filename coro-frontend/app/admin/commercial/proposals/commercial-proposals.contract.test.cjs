@@ -26,6 +26,9 @@ for (const token of [
   "commercialQuantityBasis",
   "commercialQuantityBasis: commercialQuantityBasis || undefined",
   "METERED est indisponible",
+  "revenueCategory",
+  "Catégorie de revenu",
+  'revenueCategory: "OTHER_ONE_TIME"',
 ])
   if (!wizard.includes(token)) throw new Error(`wizard missing ${token}`);
 console.log("Commercial proposals configurator contract: OK");

@@ -3,6 +3,7 @@ import {
   FIRST_WAVE_COST_ASSUMPTIONS,
   PROFESSIONAL_SERVICE_ROLES,
   professionalServiceRoleForComponent,
+  assertFirstWaveRevenueCategory,
 } from './first-wave-commercial.registry';
 
 describe('first-wave commercial structure registry', () => {
@@ -37,5 +38,27 @@ describe('first-wave commercial structure registry', () => {
     expect(
       professionalServiceRoleForComponent('DOCUMENT_COMPLIANCE_SUBSCRIPTION'),
     ).toBeNull();
+  });
+
+  it('owns the approved first-wave revenue semantics without prices', () => {
+    expect(
+      Object.fromEntries(
+        Object.entries(FIRST_WAVE_COMPONENTS).map(([code, value]) => [
+          code,
+          value.expectedRevenueCategory,
+        ]),
+      ),
+    ).toEqual({
+      DOCUMENT_COMPLIANCE_SUBSCRIPTION: 'SAAS',
+      DOCUMENT_COMPLIANCE_IMPLEMENTATION: 'IMPLEMENTATION',
+      DOCUMENT_COMPLIANCE_DELIVERY_HOUR: 'PROFESSIONAL_SERVICE',
+      DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR: 'PROFESSIONAL_SERVICE',
+    });
+    expect(() =>
+      assertFirstWaveRevenueCategory(
+        'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
+        'IMPLEMENTATION',
+      ),
+    ).toThrow('REVENUE_CATEGORY_MISMATCH');
   });
 });

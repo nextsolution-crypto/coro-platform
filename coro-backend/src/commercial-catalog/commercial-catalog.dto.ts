@@ -15,6 +15,7 @@ import {
   CapabilityLifecycle,
   CapabilityScopeStatus,
   CommercialRelationship,
+  CommercialRevenueCategory,
   CommercialScope,
   PriceBookAudience,
   PriceChargeType,
@@ -75,6 +76,8 @@ export class CreateComponentDto {
   @IsOptional() @IsString() descriptionEn?: string;
   @IsEnum(PricingModel) pricingModel!: PricingModel;
   @IsEnum(PriceChargeType) chargeType!: PriceChargeType;
+  @IsEnum(CommercialRevenueCategory)
+  revenueCategory?: CommercialRevenueCategory;
   @IsOptional() @IsEnum(BillingPeriod) billingPeriod?: BillingPeriod;
   @IsOptional() @IsEnum(PriceMetric) metric?: PriceMetric;
   @IsOptional() @IsEnum(TierCalculationMode) tierMode?: TierCalculationMode;

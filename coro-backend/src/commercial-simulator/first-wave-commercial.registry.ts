@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { CommercialRevenueCategory } from '@prisma/client';
 
 export const PROFESSIONAL_SERVICE_ROLES = Object.freeze([
   'DELIVERY_PROFESSIONAL',
@@ -39,24 +40,29 @@ export const FIRST_WAVE_COMPONENTS = Object.freeze({
   DOCUMENT_COMPLIANCE_SUBSCRIPTION: Object.freeze({
     capabilityCode: 'COMPLIANCE_OPERATIONS',
     professionalServiceRole: null,
+    expectedRevenueCategory: CommercialRevenueCategory.SAAS,
   }),
   DOCUMENT_COMPLIANCE_IMPLEMENTATION: Object.freeze({
     capabilityCode: 'COMPLIANCE_OPERATIONS',
     professionalServiceRole: null,
+    expectedRevenueCategory: CommercialRevenueCategory.IMPLEMENTATION,
   }),
   DOCUMENT_COMPLIANCE_DELIVERY_HOUR: Object.freeze({
     capabilityCode: 'COMPLIANCE_OPERATIONS',
     professionalServiceRole: 'DELIVERY_PROFESSIONAL',
+    expectedRevenueCategory: CommercialRevenueCategory.PROFESSIONAL_SERVICE,
   }),
   DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR: Object.freeze({
     capabilityCode: 'COMPLIANCE_OPERATIONS',
     professionalServiceRole: 'SENIOR_REVIEWER',
+    expectedRevenueCategory: CommercialRevenueCategory.PROFESSIONAL_SERVICE,
   }),
 } as const satisfies Record<
   string,
   {
     capabilityCode: 'COMPLIANCE_OPERATIONS';
     professionalServiceRole: ProfessionalServiceRole | null;
+    expectedRevenueCategory: CommercialRevenueCategory;
   }
 >);
 
@@ -74,6 +80,17 @@ export function professionalServiceRoleForComponent(
     FIRST_WAVE_COMPONENTS[componentCode as keyof typeof FIRST_WAVE_COMPONENTS]
       ?.professionalServiceRole ?? null
   );
+}
+
+export function assertFirstWaveRevenueCategory(
+  componentCode: string,
+  revenueCategory: CommercialRevenueCategory,
+): void {
+  const expected =
+    FIRST_WAVE_COMPONENTS[componentCode as keyof typeof FIRST_WAVE_COMPONENTS]
+      ?.expectedRevenueCategory;
+  if (expected && expected !== revenueCategory)
+    throw new BadRequestException('REVENUE_CATEGORY_MISMATCH');
 }
 
 export function roleCostScope(roleCode: ProfessionalServiceRole): string {

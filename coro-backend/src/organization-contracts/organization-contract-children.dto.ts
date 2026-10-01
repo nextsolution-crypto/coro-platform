@@ -20,10 +20,14 @@ import {
   ContractCommitmentType,
   ContractDocumentType,
   ContractTerritoryType,
+  CommercialRevenueCategory,
 } from '@prisma/client';
 export class AdjustmentDto {
   @IsEnum(ContractAdjustmentScope) scope!: ContractAdjustmentScope;
   @IsEnum(ContractAdjustmentType) adjustmentType!: ContractAdjustmentType;
+  @IsOptional()
+  @IsEnum(CommercialRevenueCategory)
+  revenueCategory?: CommercialRevenueCategory;
   @IsOptional() @IsString() sourcePriceComponentId?: string;
   @IsOptional() @IsString() capabilityId?: string;
   @IsOptional() @IsString() @Matches(/^[A-Z][A-Z0-9_]{1,63}$/) code?: string;

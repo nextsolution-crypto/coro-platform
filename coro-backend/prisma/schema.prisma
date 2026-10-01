@@ -447,6 +447,13 @@ enum ProposalLineSource {
   CUSTOM_COMPONENT
   EXCLUSIVITY_FEE
 }
+enum CommercialRevenueCategory {
+  SAAS
+  PROFESSIONAL_SERVICE
+  IMPLEMENTATION
+  OTHER_RECURRING
+  OTHER_ONE_TIME
+}
 enum ProposalAdjustmentScope {
   GLOBAL
   COMPONENT
@@ -597,6 +604,7 @@ model PriceComponent {
   descriptionEn      String?
   pricingModel       PricingModel
   chargeType         PriceChargeType
+  revenueCategory    CommercialRevenueCategory?
   billingPeriod      BillingPeriod?
   metric             PriceMetric?
   tierMode           TierCalculationMode?
@@ -718,6 +726,7 @@ model ContractPricingAdjustment {
   contractRevisionId String
   scope ContractAdjustmentScope
   adjustmentType ContractAdjustmentType
+  revenueCategory CommercialRevenueCategory?
   sourcePriceComponentId String?
   capabilityId String?
   code String?
@@ -748,6 +757,7 @@ model ContractPriceSnapshotLine {
   description String?
   pricingModel PricingModel
   chargeType PriceChargeType
+  revenueCategory CommercialRevenueCategory?
   billingPeriod BillingPeriod?
   metric PriceMetric?
   tierMode TierCalculationMode?
@@ -1143,6 +1153,7 @@ model ProposalLine {
   descriptionEN String?
   pricingModel PricingModel
   chargeType PriceChargeType
+  revenueCategory CommercialRevenueCategory?
   billingPeriod BillingPeriod?
   metric PriceMetric?
   tierMode TierCalculationMode?
@@ -5371,6 +5382,7 @@ model CommercialSimulationScenarioLine {
   componentNameEn              String? @db.VarChar(255)
   pricingModel                 PricingModel
   chargeType                   PriceChargeType
+  revenueCategory              CommercialRevenueCategory?
   billingPeriod                BillingPeriod?
   metric                       PriceMetric?
   tierMode                     TierCalculationMode?
@@ -5618,6 +5630,7 @@ model CommercialSimulationRunLine {
   componentNameFr              String @db.VarChar(255)
   pricingModel                 PricingModel
   chargeType                   PriceChargeType
+  revenueCategory              CommercialRevenueCategory?
   billingPeriod                BillingPeriod?
   metric                       PriceMetric?
   quantity                     Decimal? @db.Decimal(20, 6)

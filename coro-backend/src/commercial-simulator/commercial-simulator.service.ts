@@ -24,7 +24,10 @@ import {
   CreateWorkspaceDto,
   SelectScenarioDto,
 } from './commercial-simulator.dto';
-import { simulatorFingerprint } from './calculation-identity';
+import {
+  SIMULATOR_FINGERPRINT_VERSION,
+  simulatorFingerprint,
+} from './calculation-identity';
 import {
   resolveSimulatorDriver,
   SIMULATOR_DRIVER_REGISTRY,
@@ -64,18 +67,29 @@ export class CommercialSimulatorService {
   ) {}
 
   async configuratorBootstrap() {
-    const [activeCatalogs, publishedCostVersions, publishedValueVersions] =
-      await this.prisma.$transaction([
-        this.prisma.priceBookVersion.count({
-          where: { status: 'ACTIVE', priceBook: { archivedAt: null } },
-        }),
-        this.prisma.commercialCostAssumptionVersion.count({
-          where: { status: 'PUBLISHED' },
-        }),
-        this.prisma.commercialValuationAssumptionVersion.count({
-          where: { status: 'PUBLISHED' },
-        }),
-      ]);
+    const [
+      activeCatalogs,
+      incompleteCatalogs,
+      publishedCostVersions,
+      publishedValueVersions,
+    ] = await this.prisma.$transaction([
+      this.prisma.priceBookVersion.count({
+        where: { status: 'ACTIVE', priceBook: { archivedAt: null } },
+      }),
+      this.prisma.priceBookVersion.count({
+        where: {
+          status: 'ACTIVE',
+          priceBook: { archivedAt: null },
+          components: { some: { revenueCategory: null } },
+        },
+      }),
+      this.prisma.commercialCostAssumptionVersion.count({
+        where: { status: 'PUBLISHED' },
+      }),
+      this.prisma.commercialValuationAssumptionVersion.count({
+        where: { status: 'PUBLISHED' },
+      }),
+    ]);
     return {
       registryVersion: COMMERCIAL_FAMILY_REGISTRY_VERSION,
       families: COMMERCIAL_FAMILY_REGISTRY,
@@ -84,6 +98,11 @@ export class CommercialSimulatorService {
       currencies: ['CAD'],
       readiness: {
         catalog: activeCatalogs ? 'READY' : 'SETUP_REQUIRED',
+        semanticClassification: !activeCatalogs
+          ? 'UNKNOWN'
+          : incompleteCatalogs
+            ? 'INCOMPLETE'
+            : 'COMPLETE',
         cost: publishedCostVersions ? 'AVAILABLE' : 'NOT_CONFIGURED',
         value: publishedValueVersions ? 'AVAILABLE' : 'NOT_CONFIGURED',
       },
@@ -223,7 +242,10 @@ export class CommercialSimulatorService {
           OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: asOf } }],
           priceBook: { archivedAt: null, audience, currency: query.currency },
         },
-        include: { priceBook: true },
+        include: {
+          priceBook: true,
+          components: { select: { revenueCategory: true } },
+        },
         orderBy: { versionNumber: 'desc' },
       }),
       this.prisma.priceBookVersion.count({
@@ -234,7 +256,10 @@ export class CommercialSimulatorService {
         },
       }),
     ]);
-    const candidates = versions.map((version) => ({
+    const classifiedVersions = versions.filter((version) =>
+      version.components.every((component) => component.revenueCategory),
+    );
+    const candidates = classifiedVersions.map((version) => ({
       priceBookId: version.priceBookId,
       priceBookVersionId: version.id,
       label: `${version.priceBook.name} · ${audience} · ${query.currency} · v${version.versionNumber} · ACTIVE · ${version.effectiveFrom?.toISOString().slice(0, 10) ?? 'no effective date'}`,
@@ -252,9 +277,14 @@ export class CommercialSimulatorService {
       readiness: candidates.length ? 'READY' : 'SETUP_REQUIRED',
       code: candidates.length ? null : 'COMMERCIAL_CATALOG_SETUP_REQUIRED',
       requiresSelection: candidates.length > 1,
-      warnings: overdueScheduled
-        ? ['SCHEDULED_PRICEBOOK_EFFECTIVE_DATE_PASSED']
-        : [],
+      warnings: [
+        ...(overdueScheduled
+          ? ['SCHEDULED_PRICEBOOK_EFFECTIVE_DATE_PASSED']
+          : []),
+        ...(classifiedVersions.length !== versions.length
+          ? ['REVENUE_CLASSIFICATION_INCOMPLETE']
+          : []),
+      ],
       candidates,
     };
   }
@@ -572,6 +602,12 @@ export class CommercialSimulatorService {
     dto: ConfigureScenarioDto,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      const workspace = await tx.commercialSimulationWorkspace.findUnique({
+        where: { id: workspaceId },
+        select: { priceBookVersionId: true },
+      });
+      if (!workspace)
+        throw new NotFoundException('Simulation workspace introuvable.');
       const updated = await tx.commercialSimulationScenario.updateMany({
         where: {
           id: scenarioId,
@@ -626,6 +662,32 @@ export class CommercialSimulatorService {
           where: { scenarioId },
         });
         for (const [index, line] of dto.lines.entries()) {
+          let revenueCategory = line.revenueCategory;
+          if (line.source === 'CATALOG_COMPONENT') {
+            if (!line.priceComponentId)
+              throw new BadRequestException('CATALOG_COMPONENT_REQUIRED');
+            const component = await tx.priceComponent.findFirst({
+              where: {
+                id: line.priceComponentId,
+                priceBookVersionId: workspace.priceBookVersionId,
+              },
+              select: { revenueCategory: true },
+            });
+            if (!component)
+              throw new BadRequestException('CATALOG_COMPONENT_INVALID');
+            if (!component.revenueCategory)
+              throw new BadRequestException(
+                'REVENUE_CLASSIFICATION_INCOMPLETE',
+              );
+            if (
+              revenueCategory &&
+              revenueCategory !== component.revenueCategory
+            )
+              throw new BadRequestException('REVENUE_CATEGORY_MISMATCH');
+            revenueCategory = component.revenueCategory;
+          } else if (!revenueCategory) {
+            throw new BadRequestException('REVENUE_CATEGORY_REQUIRED');
+          }
           if (
             line.pricingModel === 'PER_UNIT' &&
             (line.metric !== 'HOUR' ||
@@ -653,6 +715,7 @@ export class CommercialSimulatorService {
           await tx.commercialSimulationScenarioLine.create({
             data: {
               ...lineData,
+              revenueCategory,
               scenarioId,
               quantity:
                 line.quantity == null
@@ -813,6 +876,12 @@ export class CommercialSimulatorService {
       const component = line.priceComponentId
         ? componentById.get(line.priceComponentId)
         : undefined;
+      const authoritativeCategory =
+        component?.revenueCategory ?? line.revenueCategory;
+      if (!authoritativeCategory)
+        throw new BadRequestException('REVENUE_CLASSIFICATION_INCOMPLETE');
+      if (component && line.revenueCategory !== component.revenueCategory)
+        throw new BadRequestException('REVENUE_CATEGORY_MISMATCH');
       return {
         code: line.componentCode,
         pricingModel: line.pricingModel,
@@ -1034,7 +1103,7 @@ export class CommercialSimulatorService {
           })
         : null;
     const evidence = {
-      fingerprintVersion: 'simulator-input/v1',
+      fingerprintVersion: SIMULATOR_FINGERPRINT_VERSION,
       priceBookVersionId: scenario.workspace.priceBookVersionId,
       currency: scenario.workspace.currency,
       pricingMethodology: 'proposal-pricing/v1',
@@ -1042,7 +1111,10 @@ export class CommercialSimulatorService {
       valuationAssumptionVersionIds: [
         ...(dto.valuationAssumptionVersionIds ?? []),
       ].sort(),
-      lines: requestLines,
+      lines: scenario.lines.map((line, index) => ({
+        ...requestLines[index],
+        revenueCategory: line.revenueCategory,
+      })),
       costEfforts: scenario.lines.map((line) => ({
         componentCode: line.componentCode,
         deterministicRole: professionalServiceRoleForComponent(
@@ -1100,7 +1172,7 @@ export class CommercialSimulatorService {
             costAssumptionVersionId: dto.costAssumptionVersionId,
             sequence: (latest._max.sequence ?? 0) + 1,
             calculationKey,
-            fingerprintVersion: 'simulator-input/v1',
+            fingerprintVersion: SIMULATOR_FINGERPRINT_VERSION,
             inputFingerprint: calculationKey,
             workspaceLockVersion: scenario.workspace.lockVersion,
             scenarioLockVersion: scenario.lockVersion,
@@ -1151,6 +1223,7 @@ export class CommercialSimulatorService {
                   componentNameFr: source.componentNameFr,
                   pricingModel: source.pricingModel,
                   chargeType: source.chargeType,
+                  revenueCategory: source.revenueCategory,
                   billingPeriod: source.billingPeriod,
                   metric: source.metric,
                   quantity: source.quantity,
@@ -1570,6 +1643,7 @@ export class CommercialSimulatorService {
               componentNameFR: line.componentNameFr,
               pricingModel: line.pricingModel,
               chargeType: line.chargeType,
+              revenueCategory: line.revenueCategory,
               billingPeriod: line.billingPeriod,
               metric: line.metric,
               quantity: line.quantity,

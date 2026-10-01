@@ -2,6 +2,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
+import {
+  COMMERCIAL_REVENUE_CATEGORIES,
+  CommercialRevenueCategory,
+  revenueCategoryLabel,
+} from "@/lib/commercial-revenue-category";
 type Version = {
   id: string;
   versionNumber: number;
@@ -20,6 +25,7 @@ type Component = {
   id: string;
   code: string;
   pricingModel: string;
+  revenueCategory: CommercialRevenueCategory | null;
   amountMinor: string | null;
   tiers: Tier[];
 };
@@ -77,7 +83,16 @@ export default function PriceBooksPage() {
     const amountMinor = window.prompt(
       "Amount in minor units (empty for TIERED/COMPLEXITY/CUSTOM)",
     );
-    if (!code || !capabilityCode || !pricingModel) return;
+    const categoryChoice = window.prompt(
+      COMMERCIAL_REVENUE_CATEGORIES.map(
+        (category, index) => `${index + 1}. ${revenueCategoryLabel(category)}`,
+      ).join("\n"),
+      "1",
+    );
+    const revenueCategory = categoryChoice
+      ? COMMERCIAL_REVENUE_CATEGORIES[Number(categoryChoice) - 1]
+      : undefined;
+    if (!code || !capabilityCode || !pricingModel || !revenueCategory) return;
     await api.post(
       `/admin/v1/commercial/price-books/${bookId}/versions/${versionId}/components`,
       {
@@ -87,6 +102,7 @@ export default function PriceBooksPage() {
         nameEn: code,
         pricingModel,
         chargeType: "RECURRING",
+        revenueCategory,
         billingPeriod: "MONTH",
         metric:
           pricingModel === "PER_SEAT"
@@ -218,7 +234,8 @@ export default function PriceBooksPage() {
                           <div className="flex justify-between">
                             <span>
                               {component.code} · {component.pricingModel} ·{" "}
-                              {component.amountMinor ?? "NO AMOUNT"}
+                              {revenueCategoryLabel(component.revenueCategory)}{" "}
+                              · {component.amountMinor ?? "NO AMOUNT"}
                             </span>
                             {v.status === "DRAFT" &&
                             component.pricingModel === "TIERED" ? (

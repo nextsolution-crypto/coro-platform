@@ -12,7 +12,7 @@ describe('CommercialCatalogService invariants', () => {
   ) => service.validateTiers(tiers, contiguous);
   const validateComponent = (
     component: Parameters<typeof service.validateComponent>[0],
-  ) => service.validateComponent(component);
+  ) => service.validateComponent({ revenueCategory: 'SAAS', ...component });
 
   it('accepte VOLUME et GRADUATED continus avec maximum exclusif', () => {
     for (const tierMode of ['VOLUME', 'GRADUATED']) {

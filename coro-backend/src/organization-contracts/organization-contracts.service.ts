@@ -494,10 +494,13 @@ export class OrganizationContractsService {
     );
   }
   private adjustmentData(v: string, d: AdjustmentDto) {
+    if (d.scope === 'CUSTOM_COMPONENT' && !d.revenueCategory)
+      throw new BadRequestException('REVENUE_CATEGORY_REQUIRED');
     return {
       contractRevisionId: v,
       scope: d.scope,
       adjustmentType: d.adjustmentType,
+      revenueCategory: d.revenueCategory,
       sourcePriceComponentId: d.sourcePriceComponentId,
       capabilityId: d.capabilityId,
       code: d.code,
@@ -641,6 +644,7 @@ export class OrganizationContractsService {
             componentName: `Frais d'exclusivité — ${d.territoryLabel}`,
             pricingModel: 'CUSTOM',
             chargeType: 'ONE_TIME',
+            revenueCategory: 'OTHER_ONE_TIME',
             currency: r.currency,
             contractAmountMinor: BigInt(d.economicAmountMinor),
             displayOrder: 100000,
@@ -720,6 +724,7 @@ export class OrganizationContractsService {
                 componentName: `Frais d'exclusivité — ${d.territoryLabel}`,
                 pricingModel: 'CUSTOM',
                 chargeType: 'ONE_TIME',
+                revenueCategory: 'OTHER_ONE_TIME',
                 currency: r.currency,
                 contractAmountMinor: BigInt(d.economicAmountMinor),
                 displayOrder: 100000,
@@ -1061,6 +1066,8 @@ export class OrganizationContractsService {
           rev.adjustments.find((x) => x.scope === 'GLOBAL')
             ?.discountBasisPoints ?? 0;
         for (const component of rev.priceLines.length ? [] : pb.components) {
+          if (!component.revenueCategory)
+            throw new BadRequestException('REVENUE_CLASSIFICATION_INCOMPLETE');
           const adj = rev.adjustments.find(
             (x) => x.sourcePriceComponentId === component.id,
           );
@@ -1080,6 +1087,7 @@ export class OrganizationContractsService {
               description: component.descriptionFr,
               pricingModel: component.pricingModel,
               chargeType: component.chargeType,
+              revenueCategory: component.revenueCategory,
               billingPeriod: component.billingPeriod,
               metric: component.metric,
               tierMode: component.tierMode,
@@ -1111,7 +1119,9 @@ export class OrganizationContractsService {
         }
         for (const x of rev.priceLines.length
           ? []
-          : rev.adjustments.filter((x) => x.scope === 'CUSTOM_COMPONENT'))
+          : rev.adjustments.filter((x) => x.scope === 'CUSTOM_COMPONENT')) {
+          if (!x.revenueCategory)
+            throw new BadRequestException('REVENUE_CATEGORY_REQUIRED');
           await tx.contractPriceSnapshotLine.create({
             data: {
               contractRevisionId: rid,
@@ -1121,12 +1131,14 @@ export class OrganizationContractsService {
               componentName: x.label!,
               pricingModel: 'CUSTOM',
               chargeType: 'RECURRING',
+              revenueCategory: x.revenueCategory,
               currency: rev.currency,
               contractAmountMinor: x.overrideAmountMinor,
               adjustmentSummary: x.justification,
               displayOrder: x.displayOrder,
             },
           });
+        }
         const res = await tx.organizationContractRevision.updateMany({
           where: { id: rid, lockVersion: d.lockVersion, status: 'APPROVED' },
           data: {

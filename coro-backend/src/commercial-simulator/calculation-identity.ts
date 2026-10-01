@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-export const SIMULATOR_FINGERPRINT_VERSION = 'simulator-input/v1';
+export const SIMULATOR_FINGERPRINT_VERSION = 'simulator-input/v2';
 
 function canonical(value: unknown): unknown {
   if (typeof value === 'bigint') return value.toString();

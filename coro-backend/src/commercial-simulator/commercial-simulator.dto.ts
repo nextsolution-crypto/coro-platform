@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { CommercialRevenueCategory } from '@prisma/client';
 import {
   IsArray,
   IsBoolean,
@@ -141,6 +142,9 @@ export class ScenarioLineDto {
     | 'COMPLEXITY'
     | 'CUSTOM';
   @IsIn(['RECURRING', 'ONE_TIME']) chargeType!: 'RECURRING' | 'ONE_TIME';
+  @IsOptional()
+  @IsIn(Object.values(CommercialRevenueCategory))
+  revenueCategory?: CommercialRevenueCategory;
   @IsOptional() @IsIn(['MONTH', 'YEAR']) billingPeriod?: 'MONTH' | 'YEAR';
   @IsOptional()
   @IsIn(['FIXED', 'HOUR', 'SEAT', 'SITE', 'CLIENT', 'USAGE_UNIT', 'COMPLEXITY'])

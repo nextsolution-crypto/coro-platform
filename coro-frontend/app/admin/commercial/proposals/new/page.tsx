@@ -3,6 +3,11 @@
 import { useMemo, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
+import {
+  COMMERCIAL_REVENUE_CATEGORIES,
+  CommercialRevenueCategory,
+  revenueCategoryLabel,
+} from "@/lib/commercial-revenue-category";
 
 const steps = [
   "Target",
@@ -69,6 +74,8 @@ export default function NewProposalPage() {
       "" | "DECLARED"
     >(""),
     [amountMinor, setAmountMinor] = useState("");
+  const [revenueCategory, setRevenueCategory] =
+    useState<CommercialRevenueCategory>("SAAS");
   const [pricingModel, setPricingModel] = useState<
       "PER_SEAT" | "PER_SITE" | "FLAT" | "CUSTOM"
     >("PER_SEAT"),
@@ -149,6 +156,7 @@ export default function NewProposalPage() {
           componentNameFR: componentName,
           pricingModel,
           chargeType: pricingModel === "FLAT" ? "ONE_TIME" : "RECURRING",
+          revenueCategory,
           billingPeriod: pricingModel === "FLAT" ? undefined : "MONTH",
           metric:
             pricingModel === "PER_SITE"
@@ -182,6 +190,7 @@ export default function NewProposalPage() {
           componentNameFR: "Frais d’exclusivité",
           pricingModel: "FLAT",
           chargeType: "ONE_TIME",
+          revenueCategory: "OTHER_ONE_TIME",
           metric: "FIXED",
           amountMinor: exclusivityFee,
           requestedStatus: "MANUAL",
@@ -455,6 +464,24 @@ export default function NewProposalPage() {
                   value={amountMinor}
                   set={setAmountMinor}
                 />
+                <label>
+                  Catégorie de revenu
+                  <select
+                    value={revenueCategory}
+                    onChange={(event) =>
+                      setRevenueCategory(
+                        event.target.value as CommercialRevenueCategory,
+                      )
+                    }
+                    className="mt-1 w-full rounded border p-3"
+                  >
+                    {COMMERCIAL_REVENUE_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {revenueCategoryLabel(category)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label>
                   Modèle
                   <select

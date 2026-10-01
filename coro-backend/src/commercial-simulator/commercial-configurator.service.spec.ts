@@ -8,7 +8,9 @@ describe('Commercial Configurator projections', () => {
   it('returns deterministic metadata and readiness without assumption values', async () => {
     const prisma = {
       $transaction: jest.fn((calls: Promise<number>[]) => Promise.all(calls)),
-      priceBookVersion: { count: jest.fn(() => Promise.resolve(1)) },
+      priceBookVersion: {
+        count: jest.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(0),
+      },
       commercialCostAssumptionVersion: {
         count: jest.fn(() => Promise.resolve(0)),
       },
@@ -21,6 +23,7 @@ describe('Commercial Configurator projections', () => {
     expect(result.drivers).toHaveLength(18);
     expect(result.readiness).toEqual({
       catalog: 'READY',
+      semanticClassification: 'COMPLETE',
       cost: 'NOT_CONFIGURED',
       value: 'AVAILABLE',
     });
@@ -110,6 +113,7 @@ describe('Commercial Configurator projections', () => {
       effectiveFrom: new Date('2026-01-01T00:00:00Z'),
       effectiveUntil: null,
       priceBook: { name: 'Direct Canada' },
+      components: [{ revenueCategory: 'SAAS' }],
     };
     const prisma = {
       organization: {

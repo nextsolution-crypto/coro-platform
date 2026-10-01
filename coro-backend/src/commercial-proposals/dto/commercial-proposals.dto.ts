@@ -18,6 +18,7 @@ import {
   BillingPeriod,
   CommercialQuantityBasis,
   CommercialRelationship,
+  CommercialRevenueCategory,
   ContractCommitmentPeriod,
   ContractCommitmentType,
   ContractTerritoryType,
@@ -115,6 +116,9 @@ export class ProposalLineDto {
   @IsOptional() @IsString() componentNameEN?: string;
   @IsEnum(PricingModel) pricingModel!: PricingModel;
   @IsEnum(PriceChargeType) chargeType!: PriceChargeType;
+  @IsOptional()
+  @IsEnum(CommercialRevenueCategory)
+  revenueCategory?: CommercialRevenueCategory;
   @IsOptional() @IsEnum(BillingPeriod) billingPeriod?: BillingPeriod;
   @IsOptional() @IsEnum(PriceMetric) metric?: PriceMetric;
   @IsOptional() @IsEnum(TierCalculationMode) tierMode?: TierCalculationMode;

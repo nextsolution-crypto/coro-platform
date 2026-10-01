@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CapabilityCode, Prisma, PriceBookVersionStatus } from '@prisma/client';
+import {
+  CapabilityCode,
+  CommercialRevenueCategory,
+  Prisma,
+  PriceBookVersionStatus,
+} from '@prisma/client';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -20,6 +25,7 @@ import {
   UpdateTierDto,
   UpdateVersionDto,
 } from './commercial-catalog.dto';
+import { assertFirstWaveRevenueCategory } from '../commercial-simulator/first-wave-commercial.registry';
 
 type Actor = { userId: string };
 type TierShape = {
@@ -29,6 +35,7 @@ type TierShape = {
 type ComponentShape = {
   code: string;
   chargeType: string;
+  revenueCategory?: CommercialRevenueCategory | null;
   billingPeriod: string | null;
   pricingModel: string;
   metric?: string | null;
@@ -375,6 +382,11 @@ export class CommercialCatalogService {
     });
   }
   validateComponent(component: ComponentShape) {
+    if (!component.revenueCategory)
+      throw new BadRequestException(
+        `REVENUE_CLASSIFICATION_INCOMPLETE: ${component.code}`,
+      );
+    assertFirstWaveRevenueCategory(component.code, component.revenueCategory);
     if (component.chargeType === 'ONE_TIME' && component.billingPeriod)
       throw new BadRequestException(
         `Le composant ${component.code} ONE_TIME ne peut pas avoir de période.`,
@@ -585,6 +597,9 @@ export class CommercialCatalogService {
   ) {
     return this.prisma.$transaction(async (tx) => {
       await this.draft(tx, versionId);
+      if (!dto.revenueCategory)
+        throw new BadRequestException('REVENUE_CATEGORY_REQUIRED');
+      assertFirstWaveRevenueCategory(dto.code, dto.revenueCategory);
       const capability = await tx.commercialCapability.findUnique({
         where: { code: dto.capabilityCode as CapabilityCode },
       });

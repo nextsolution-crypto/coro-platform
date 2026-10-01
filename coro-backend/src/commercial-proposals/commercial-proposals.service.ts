@@ -217,9 +217,48 @@ export class CommercialProposalsService {
   async configure(revisionId: string, d: ConfigureRevisionDto, a: Actor) {
     return this.prisma.$transaction(async (tx) => {
       const r = await this.draft(tx, revisionId);
+      const catalogIds = d.lines
+        .filter((line) => line.source === 'CATALOG_COMPONENT')
+        .map((line) => line.sourcePriceComponentId)
+        .filter((id): id is string => Boolean(id));
+      if (catalogIds.length && !r.sourcePriceBookVersionId)
+        throw new BadRequestException('CATALOG_PRICEBOOK_VERSION_REQUIRED');
+      const catalogComponents = await tx.priceComponent.findMany({
+        where: {
+          id: { in: catalogIds },
+          priceBookVersionId: r.sourcePriceBookVersionId ?? undefined,
+        },
+        select: { id: true, revenueCategory: true },
+      });
+      const categoryByComponentId = new Map(
+        catalogComponents.map((component) => [
+          component.id,
+          component.revenueCategory,
+        ]),
+      );
+      const lines = d.lines.map((line) => {
+        if (line.source === 'CATALOG_COMPONENT') {
+          if (
+            !line.sourcePriceComponentId ||
+            !categoryByComponentId.has(line.sourcePriceComponentId)
+          )
+            throw new BadRequestException('CATALOG_COMPONENT_INVALID');
+          const category = categoryByComponentId.get(
+            line.sourcePriceComponentId,
+          );
+          if (!category)
+            throw new BadRequestException('REVENUE_CLASSIFICATION_INCOMPLETE');
+          if (line.revenueCategory && line.revenueCategory !== category)
+            throw new BadRequestException('REVENUE_CATEGORY_MISMATCH');
+          return { ...line, revenueCategory: category };
+        }
+        if (!line.revenueCategory)
+          throw new BadRequestException('REVENUE_CATEGORY_REQUIRED');
+        return line;
+      });
       const capabilityIds = [
         ...new Set(
-          d.lines
+          lines
             .map((line) => line.capabilityId)
             .filter((id): id is string => Boolean(id)),
         ),
@@ -231,7 +270,7 @@ export class CommercialProposalsService {
       const capabilityCodeById = new Map(
         capabilities.map((capability) => [capability.id, capability.code]),
       );
-      for (const line of d.lines) {
+      for (const line of lines) {
         try {
           validateCommercialQuantityBinding(
             {
@@ -300,7 +339,7 @@ export class CommercialProposalsService {
         calculationVersion: r.calculationVersion,
         includeEstimatedUsageInFirstYear: d.includeEstimatedUsageInFirstYear,
         globalAdjustments: globalInputs,
-        lines: d.lines.map((x) => ({
+        lines: lines.map((x) => ({
           code: x.componentCode,
           pricingModel: x.pricingModel,
           chargeType: x.chargeType,
@@ -338,8 +377,8 @@ export class CommercialProposalsService {
           },
         });
       const proposalLineByCode = new Map<string, string>();
-      for (let n = 0; n < d.lines.length; n++) {
-        const x = d.lines[n],
+      for (let n = 0; n < lines.length; n++) {
+        const x = lines[n],
           c = calculated.lines[n];
         const line = await tx.proposalLine.create({
           data: {
@@ -352,6 +391,7 @@ export class CommercialProposalsService {
             componentNameEN: x.componentNameEN,
             pricingModel: x.pricingModel,
             chargeType: x.chargeType,
+            revenueCategory: x.revenueCategory,
             billingPeriod: x.billingPeriod,
             metric: x.metric,
             tierMode: x.tierMode,
@@ -430,7 +470,7 @@ export class CommercialProposalsService {
           );
         }
         const economicLine = exclusivity.economicComponentCode
-          ? d.lines.find(
+          ? lines.find(
               (line) =>
                 line.componentCode === exclusivity.economicComponentCode,
             )
@@ -878,6 +918,7 @@ export class CommercialProposalsService {
               componentName: l.componentNameFR,
               pricingModel: l.pricingModel,
               chargeType: l.chargeType,
+              revenueCategory: l.revenueCategory,
               billingPeriod: l.billingPeriod,
               metric: l.metric,
               tierMode: l.tierMode,
@@ -916,6 +957,7 @@ export class CommercialProposalsService {
               return {
                 scope: x.scope,
                 adjustmentType: x.adjustmentType,
+                revenueCategory: line?.revenueCategory,
                 sourcePriceComponentId: line?.sourcePriceComponentId,
                 capabilityId: line?.capabilityId,
                 code: line?.componentCode,

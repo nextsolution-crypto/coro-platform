@@ -142,6 +142,7 @@ describe('Commercial Simulator V1 PostgreSQL invariants', () => {
         componentNameFr: 'Heures de livraison',
         pricingModel: 'PER_UNIT',
         chargeType: 'ONE_TIME',
+        revenueCategory: 'PROFESSIONAL_SERVICE',
         metric: 'HOUR',
         quantity: '1.5',
         quantityUnit: 'HOUR',
@@ -176,6 +177,7 @@ describe('Commercial Simulator V1 PostgreSQL invariants', () => {
         componentNameFr: 'Heures de livraison',
         pricingModel: 'PER_UNIT',
         chargeType: 'ONE_TIME',
+        revenueCategory: 'PROFESSIONAL_SERVICE',
         metric: 'HOUR',
         quantity: '1.5',
         quantityUnit: 'HOUR',
@@ -201,6 +203,12 @@ describe('Commercial Simulator V1 PostgreSQL invariants', () => {
         scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
       },
     });
+    await expect(
+      prisma.commercialSimulationRunLine.update({
+        where: { id: runLine.id },
+        data: { revenueCategory: 'OTHER_ONE_TIME' },
+      }),
+    ).rejects.toThrow();
     await expect(
       prisma.commercialSimulationRunLineCostEffort.update({
         where: { id: snapshot.id },

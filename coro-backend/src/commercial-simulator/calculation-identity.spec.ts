@@ -1,9 +1,24 @@
 import {
+  SIMULATOR_FINGERPRINT_VERSION,
   canonicalSimulatorJson,
   simulatorFingerprint,
 } from './calculation-identity';
 
 describe('commercial simulator calculation identity', () => {
+  it('uses the C2 semantic identity version', () => {
+    expect(SIMULATOR_FINGERPRINT_VERSION).toBe('simulator-input/v2');
+  });
+
+  it('changes identity when revenue category changes without changing price', () => {
+    expect(
+      simulatorFingerprint({ amountMinor: '100', revenueCategory: 'SAAS' }),
+    ).not.toBe(
+      simulatorFingerprint({
+        amountMinor: '100',
+        revenueCategory: 'OTHER_RECURRING',
+      }),
+    );
+  });
   it('canonicalizes object keys recursively and hashes deterministically', () => {
     const left = { z: 1, nested: { b: null, a: ['2.000000', true] } };
     const right = { nested: { a: ['2.000000', true], b: null }, z: 1 };
