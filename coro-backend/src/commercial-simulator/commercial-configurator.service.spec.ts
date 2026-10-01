@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { ProposalPricingEngine } from '../commercial-proposals/proposal-pricing-engine';
 import { CommercialSimulatorService } from './commercial-simulator.service';
 
 const serviceWith = (prisma: Record<string, unknown>) =>
@@ -165,5 +166,314 @@ describe('Commercial Configurator projections', () => {
     ).rejects.toEqual(
       new BadRequestException('CONFIGURATOR_AUDIENCE_REQUIRED'),
     );
+  });
+
+  it('projects only the workspace catalog with decimal money strings and no internal cost', async () => {
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersion: {
+              id: 'version-a',
+              status: 'ACTIVE',
+              components: [
+                {
+                  id: 'component-a',
+                  code: 'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
+                  nameFr: 'Conformité',
+                  nameEn: 'Compliance',
+                  descriptionFr: null,
+                  capability: { code: 'COMPLIANCE_OPERATIONS' },
+                  revenueCategory: 'SAAS',
+                  chargeType: 'RECURRING',
+                  billingPeriod: 'YEAR',
+                  pricingModel: 'FLAT',
+                  metric: 'FIXED',
+                  amountMinor: 12345n,
+                  displayOrder: 1,
+                  tiers: [],
+                },
+              ],
+            },
+          }),
+        ),
+      },
+    };
+    const result = await serviceWith(prisma).guidedCatalog('workspace-a');
+    expect(result.components[0]).toMatchObject({
+      catalogAmountCad: '123.45',
+      capabilityCode: 'COMPLIANCE_OPERATIONS',
+      revenueCategory: 'SAAS',
+    });
+    expect(JSON.stringify(result)).not.toMatch(/cost|minor/i);
+    expect(
+      prisma.commercialSimulationWorkspace.findUnique,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'workspace-a' } }),
+    );
+  });
+
+  it('rejects a future commercial family before persisting a guided scenario', async () => {
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersionId: 'version-a',
+            scenarios: [{ lines: [] }],
+          }),
+        ),
+      },
+    };
+    await expect(
+      serviceWith(prisma).configureGuidedScenario(
+        'workspace-a',
+        'scenario-a',
+        {
+          lockVersion: 0,
+          familyCodes: ['NETWORK'],
+          catalogLines: [],
+          customLines: [],
+          driverValues: [],
+        },
+        { userId: 'super-admin' },
+      ),
+    ).rejects.toEqual(
+      new BadRequestException('COMMERCIAL_FAMILY_NOT_SELECTABLE'),
+    );
+  });
+
+  it('rejects a catalog component outside the workspace PriceBookVersion', async () => {
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersionId: 'version-a',
+            scenarios: [{ lines: [] }],
+          }),
+        ),
+      },
+      commercialCapability: {
+        findMany: jest.fn(() =>
+          Promise.resolve([
+            { id: 'capability-a', code: 'COMPLIANCE_OPERATIONS' },
+          ]),
+        ),
+      },
+      priceComponent: { findMany: jest.fn(() => Promise.resolve([])) },
+    };
+    await expect(
+      serviceWith(prisma).configureGuidedScenario(
+        'workspace-a',
+        'scenario-a',
+        {
+          lockVersion: 0,
+          familyCodes: ['COMPLIANCE'],
+          catalogLines: [{ priceComponentId: 'foreign-component' }],
+          customLines: [],
+          driverValues: [],
+        },
+        { userId: 'super-admin' },
+      ),
+    ).rejects.toEqual(new BadRequestException('CATALOG_COMPONENT_INVALID'));
+    expect(prisma.priceComponent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: { in: ['foreign-component'] },
+          priceBookVersionId: 'version-a',
+        },
+      }),
+    );
+  });
+
+  it('refuses to archive the selected scenario without deleting evidence', async () => {
+    const tx = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({ selectedScenarioId: 'scenario-a' }),
+        ),
+      },
+      commercialSimulationScenario: { updateMany: jest.fn() },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    await expect(
+      serviceWith(prisma).archiveScenario(
+        'workspace-a',
+        'scenario-a',
+        { lockVersion: 0 },
+        { userId: 'super-admin' },
+      ),
+    ).rejects.toThrow('SELECTED_SCENARIO_CANNOT_BE_ARCHIVED');
+    expect(tx.commercialSimulationScenario.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('requires structured custom-line semantics and a non-blank justification', async () => {
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersionId: 'version-a',
+            scenarios: [{ lines: [] }],
+          }),
+        ),
+      },
+      commercialCapability: {
+        findMany: jest.fn(() =>
+          Promise.resolve([
+            { id: 'capability-a', code: 'COMPLIANCE_OPERATIONS' },
+          ]),
+        ),
+      },
+    };
+    await expect(
+      serviceWith(prisma).configureGuidedScenario(
+        'workspace-a',
+        'scenario-a',
+        {
+          lockVersion: 0,
+          familyCodes: ['COMPLIANCE'],
+          catalogLines: [],
+          customLines: [
+            {
+              name: 'Specialized integration support',
+              source: 'CUSTOM_COMPONENT',
+              pricingModel: 'FLAT',
+              chargeType: 'ONE_TIME',
+              revenueCategory: 'OTHER_ONE_TIME',
+              unitAmountCad: '1200.00',
+              justification: '   ',
+            },
+          ],
+          driverValues: [],
+        },
+        { userId: 'super-admin' },
+      ),
+    ).rejects.toEqual(
+      new BadRequestException('CUSTOM_LINE_JUSTIFICATION_REQUIRED'),
+    );
+  });
+
+  it('does not reuse a stale run when capability-dependent value applicability changes', async () => {
+    const runs = new Map<string, Record<string, unknown>>();
+    const scenario = {
+      id: 'scenario-a',
+      lockVersion: 1,
+      workspace: {
+        id: 'workspace-a',
+        lockVersion: 1,
+        priceBookVersionId: 'price-book-version-a',
+        currency: 'CAD',
+        priceBookVersion: { components: [] },
+      },
+      lines: [
+        {
+          id: 'line-a',
+          source: 'CUSTOM_COMPONENT',
+          componentCode: 'CUSTOM-A',
+          componentNameFr: 'Service personnalisé',
+          componentNameEn: null,
+          capability: null,
+          priceComponentId: null,
+          pricingModel: 'FLAT',
+          chargeType: 'ONE_TIME',
+          revenueCategory: 'OTHER_ONE_TIME',
+          billingPeriod: null,
+          metric: 'FIXED',
+          tierMode: null,
+          quantity: null,
+          quantityUnit: null,
+          proposedUnitAmountMinor: 100n,
+          internalUse: false,
+          distributable: false,
+          distributionLimit: null,
+          distributionMetric: null,
+          commercialQuantityBasis: null,
+          commercialRuleCode: null,
+          commercialRuleVersion: null,
+          justification: 'Test fixture',
+          displayOrder: 0,
+          costEfforts: [],
+        },
+      ],
+      capabilities: [] as Array<{ capability: { code: string } }>,
+      driverValues: [],
+    };
+    const findRun = jest.fn(
+      ({
+        where,
+      }: {
+        where: { scenarioId_calculationKey: { calculationKey: string } };
+      }) =>
+        Promise.resolve(
+          runs.get(where.scenarioId_calculationKey.calculationKey) ?? null,
+        ),
+    );
+    const tx = {
+      $executeRaw: jest.fn(() => Promise.resolve(0)),
+      commercialSimulationCalculationRun: {
+        findUnique: findRun,
+        aggregate: jest.fn(() => Promise.resolve({ _max: { sequence: null } })),
+        create: jest.fn(({ data }: { data: Record<string, unknown> }) => {
+          const run = {
+            id: `run-${runs.size + 1}`,
+            calculationKey: data.calculationKey,
+            fingerprintVersion: data.fingerprintVersion,
+            scenarioLockVersion: data.scenarioLockVersion,
+            valueStatus: data.valueStatus,
+            priceResult: {},
+            lines: [],
+            inputs: [],
+          };
+          runs.set(String(data.calculationKey), run);
+          return Promise.resolve(run);
+        }),
+      },
+    };
+    const prisma = {
+      commercialSimulationScenario: {
+        findFirst: jest.fn(() => Promise.resolve(scenario)),
+      },
+      commercialSimulationCalculationRun: { findUnique: findRun },
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const service = new CommercialSimulatorService(
+      prisma as never,
+      new ProposalPricingEngine(),
+      {} as never,
+    );
+
+    const first = (await service.calculate(
+      'workspace-a',
+      'scenario-a',
+      {},
+      { userId: 'super-admin' },
+    )) as unknown as Record<string, unknown>;
+    expect(first.valueStatus).toBe('NOT_APPLICABLE');
+
+    scenario.capabilities = [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }];
+    scenario.lockVersion = 2;
+    const second = (await service.calculate(
+      'workspace-a',
+      'scenario-a',
+      {},
+      { userId: 'super-admin' },
+    )) as unknown as Record<string, unknown>;
+
+    expect(first.scenarioLockVersion).toBe(1);
+    expect(first.scenarioLockVersion).not.toBe(scenario.lockVersion);
+    expect(second.id).not.toBe(first.id);
+    expect(second.calculationKey).not.toBe(first.calculationKey);
+    expect(second.scenarioLockVersion).toBe(2);
+    expect(second.valueStatus).toBe('UNAVAILABLE');
+    expect(runs).toHaveProperty('size', 2);
   });
 });

@@ -48,6 +48,85 @@ export class CreateScenarioDto {
   @IsOptional() @IsInt() @Min(0) displayOrder?: number;
 }
 
+export class UpdateScenarioMetadataDto {
+  @IsString() @Length(1, 255) name!: string;
+  @IsOptional() @IsString() description?: string;
+  @IsInt() @Min(0) lockVersion!: number;
+}
+
+export class ScenarioMutationDto {
+  @IsInt() @Min(0) lockVersion!: number;
+}
+
+export class GuidedDriverValueDto {
+  @IsString() driverCode!: string;
+  @IsString() value!: string;
+  @IsOptional() @IsString() justification?: string;
+}
+
+export class GuidedCostEffortDto {
+  @IsIn(['DELIVERY_PROFESSIONAL', 'SENIOR_REVIEWER'])
+  role!: 'DELIVERY_PROFESSIONAL' | 'SENIOR_REVIEWER';
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,6})?$/) hours!: string;
+  @IsOptional() @IsString() justification?: string;
+}
+
+export class GuidedCatalogLineDto {
+  @IsUUID() priceComponentId!: string;
+  @IsOptional()
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,6})?$/)
+  quantity?: string;
+  @IsOptional() @Matches(/^\d+(?:\.\d{1,2})?$/) proposedUnitAmountCad?: string;
+  @IsOptional() @IsString() justification?: string;
+  @IsOptional() @IsInt() @Min(0) displayOrder?: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedCostEffortDto)
+  costEfforts?: GuidedCostEffortDto[];
+}
+
+export class GuidedCustomLineDto {
+  @IsOptional() @IsUUID() lineId?: string;
+  @IsString() @Length(1, 255) name!: string;
+  @IsIn(['CUSTOM_COMPONENT', 'PROFESSIONAL_SERVICE'])
+  source!: 'CUSTOM_COMPONENT' | 'PROFESSIONAL_SERVICE';
+  @IsIn(['FLAT', 'PER_UNIT']) pricingModel!: 'FLAT' | 'PER_UNIT';
+  @IsIn(['RECURRING', 'ONE_TIME']) chargeType!: 'RECURRING' | 'ONE_TIME';
+  @IsIn(Object.values(CommercialRevenueCategory))
+  revenueCategory!: CommercialRevenueCategory;
+  @IsOptional() @IsIn(['MONTH', 'YEAR']) billingPeriod?: 'MONTH' | 'YEAR';
+  @IsOptional() @IsIn(['FIXED', 'HOUR']) metric?: 'FIXED' | 'HOUR';
+  @IsOptional()
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,6})?$/)
+  quantity?: string;
+  @Matches(/^\d+(?:\.\d{1,2})?$/) unitAmountCad!: string;
+  @IsString() @Length(1, 1000) justification!: string;
+  @IsOptional() @IsInt() @Min(0) displayOrder?: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedCostEffortDto)
+  costEfforts?: GuidedCostEffortDto[];
+}
+
+export class GuidedConfigureScenarioDto {
+  @IsInt() @Min(0) lockVersion!: number;
+  @IsArray() @IsString({ each: true }) familyCodes!: string[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedCatalogLineDto)
+  catalogLines!: GuidedCatalogLineDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedCustomLineDto)
+  customLines!: GuidedCustomLineDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedDriverValueDto)
+  driverValues!: GuidedDriverValueDto[];
+}
+
 export class DriverValueDto {
   @IsString() driverCode!: string;
   @IsString() driverVersion!: string;

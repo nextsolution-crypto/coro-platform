@@ -28,6 +28,9 @@ import {
   CreateValuationAssumptionVersionDto,
   CreateWorkspaceDto,
   SelectScenarioDto,
+  GuidedConfigureScenarioDto,
+  ScenarioMutationDto,
+  UpdateScenarioMetadataDto,
 } from './commercial-simulator.dto';
 
 type RequestWithUser = { user: { id: string } };
@@ -140,18 +143,86 @@ export class CommercialSimulatorController {
   ) {
     return this.service.getWorkspace(workspaceId);
   }
+  @Get('configurator/workspaces/:workspaceId') getGuidedWorkspace(
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.service.getGuidedWorkspace(workspaceId);
+  }
+  @Get('configurator/workspaces/:workspaceId/catalog') guidedCatalog(
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.service.guidedCatalog(workspaceId);
+  }
+  @Post('configurator/workspaces/:workspaceId/scenarios') createGuidedScenario(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: CreateScenarioDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.createScenario(workspaceId, dto, {
+      userId: req.user.id,
+    });
+  }
+  @Put('configurator/workspaces/:workspaceId/scenarios/:scenarioId/metadata')
+  updateGuidedScenarioMetadata(
+    @Param('workspaceId') workspaceId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: UpdateScenarioMetadataDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.updateScenarioMetadata(workspaceId, scenarioId, dto, {
+      userId: req.user.id,
+    });
+  }
+  @Put('configurator/workspaces/:workspaceId/scenarios/:scenarioId')
+  configureGuidedScenario(
+    @Param('workspaceId') workspaceId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: GuidedConfigureScenarioDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.configureGuidedScenario(workspaceId, scenarioId, dto, {
+      userId: req.user.id,
+    });
+  }
+  @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/duplicate')
+  duplicateGuidedScenario(
+    @Param('workspaceId') workspaceId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.duplicateScenario(workspaceId, scenarioId, {
+      userId: req.user.id,
+    });
+  }
+  @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/archive')
+  archiveGuidedScenario(
+    @Param('workspaceId') workspaceId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: ScenarioMutationDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.archiveScenario(workspaceId, scenarioId, dto, {
+      userId: req.user.id,
+    });
+  }
   @Post('workspaces/:workspaceId/scenarios') createScenario(
     @Param('workspaceId') workspaceId: string,
     @Body() dto: CreateScenarioDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.service.createScenario(workspaceId, dto);
+    return this.service.createScenario(workspaceId, dto, {
+      userId: req.user.id,
+    });
   }
   @Put('workspaces/:workspaceId/scenarios/:scenarioId') configure(
     @Param('workspaceId') workspaceId: string,
     @Param('scenarioId') scenarioId: string,
     @Body() dto: ConfigureScenarioDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.service.configureScenario(workspaceId, scenarioId, dto);
+    return this.service.configureScenario(workspaceId, scenarioId, dto, {
+      userId: req.user.id,
+    });
   }
   @Post('workspaces/:workspaceId/select') select(
     @Param('workspaceId') workspaceId: string,

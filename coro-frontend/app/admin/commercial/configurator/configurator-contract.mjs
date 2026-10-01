@@ -20,5 +20,13 @@ export const GUIDED_WORKSPACE_FIELDS = Object.freeze([
   "audience",
   "priceBookSelector",
 ]);
+export const GUIDED_SCENARIO_ACTIONS = Object.freeze([
+  "create",
+  "edit",
+  "duplicate",
+  "archive",
+  "select",
+  "calculate",
+]);
 export const CONFIGURATOR_BOUNDARY_NOTICE =
-  "Guided setup only — pricing remains owned by PriceBookVersion and complete scenario editing remains in the advanced Simulator.";
+  "Guided scenario configuration — catalog pricing remains owned by PriceBookVersion and calculation remains owned by the existing Simulator engine.";

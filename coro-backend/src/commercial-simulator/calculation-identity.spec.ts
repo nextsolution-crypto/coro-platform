@@ -1,12 +1,33 @@
 import {
   SIMULATOR_FINGERPRINT_VERSION,
+  canonicalCapabilityCodes,
   canonicalSimulatorJson,
   simulatorFingerprint,
 } from './calculation-identity';
 
 describe('commercial simulator calculation identity', () => {
-  it('uses the C2 semantic identity version', () => {
-    expect(SIMULATOR_FINGERPRINT_VERSION).toBe('simulator-input/v2');
+  it('uses the expanded semantic identity version without redefining persisted v2 runs', () => {
+    expect(SIMULATOR_FINGERPRINT_VERSION).toBe('simulator-input/v3');
+  });
+
+  it('canonicalizes capability order and changes identity for a different set', () => {
+    const left = canonicalCapabilityCodes([
+      'SENTINELLE',
+      'COMPLIANCE_OPERATIONS',
+    ]);
+    const reordered = canonicalCapabilityCodes([
+      'COMPLIANCE_OPERATIONS',
+      'SENTINELLE',
+    ]);
+    const different = canonicalCapabilityCodes(['SENTINELLE']);
+
+    expect(left).toEqual(['COMPLIANCE_OPERATIONS', 'SENTINELLE']);
+    expect(simulatorFingerprint({ capabilities: left })).toBe(
+      simulatorFingerprint({ capabilities: reordered }),
+    );
+    expect(simulatorFingerprint({ capabilities: left })).not.toBe(
+      simulatorFingerprint({ capabilities: different }),
+    );
   });
 
   it('changes identity when revenue category changes without changing price', () => {

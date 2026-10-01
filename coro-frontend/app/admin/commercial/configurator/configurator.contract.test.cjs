@@ -14,11 +14,27 @@ const path = require("node:path");
     path.join(__dirname, "../simulator/page.tsx"),
     "utf8",
   );
+  const guided = [
+    "GuidedWorkspace.tsx",
+    "ScenarioEditor.tsx",
+    "ScenarioSidebar.tsx",
+    "ScenarioResults.tsx",
+  ]
+    .map((file) => fs.readFileSync(path.join(__dirname, file), "utf8"))
+    .join("\n");
   assert.equal(
     contract.CONFIGURATOR_API_BASE,
     "/admin/v1/commercial/simulator/configurator",
   );
   assert.equal(contract.COMMERCIAL_FAMILY_CODES.length, 8);
+  assert.deepEqual(contract.GUIDED_SCENARIO_ACTIONS, [
+    "create",
+    "edit",
+    "duplicate",
+    "archive",
+    "select",
+    "calculate",
+  ]);
   assert.match(page, /"organizations"/);
   assert.match(page, /"prospects"/);
   assert.match(page, /targets\/\$\{resource\}/);
@@ -33,6 +49,16 @@ const path = require("node:path");
   assert.match(page, /availability === "FUTURE"/);
   assert.match(layout, /Commercial Configurator/);
   assert.match(legacy, /workspace/);
+  assert.match(page, /GuidedWorkspace/);
+  assert.match(guided, /Save configuration/);
+  assert.match(guided, /Recalculate/);
+  assert.match(guided, /Contribution/);
+  assert.match(guided, /duplicate/);
+  assert.match(guided, /archive/);
+  assert.match(guided, /lockVersion/);
+  assert.match(guided, /Catalog\s+setup is required/);
+  assert.doesNotMatch(guided, /<textarea[^>]*>.*JSON/is);
+  assert.doesNotMatch(guided, /UUID|minor units|basis points|scopeKey/i);
   console.log("commercial configurator frontend contract: PASS");
 })().catch((error) => {
   console.error(error);

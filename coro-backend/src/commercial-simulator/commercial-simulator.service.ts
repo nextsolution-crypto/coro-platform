@@ -16,6 +16,7 @@ import {
   ConfiguratorPriceBookQueryDto,
   ConfiguratorTargetQueryDto,
   CreateCostAssumptionSetDto,
+  GuidedConfigureScenarioDto,
   CreateGuidedWorkspaceDto,
   CreateCostAssumptionVersionDto,
   CreateScenarioDto,
@@ -23,9 +24,12 @@ import {
   CreateValuationAssumptionVersionDto,
   CreateWorkspaceDto,
   SelectScenarioDto,
+  ScenarioMutationDto,
+  UpdateScenarioMetadataDto,
 } from './commercial-simulator.dto';
 import {
   SIMULATOR_FINGERPRINT_VERSION,
+  canonicalCapabilityCodes,
   simulatorFingerprint,
 } from './calculation-identity';
 import {
@@ -56,6 +60,20 @@ const json = (value: unknown): Prisma.InputJsonValue => {
     typeof item === 'bigint' ? item.toString() : item;
   const parsed: unknown = JSON.parse(JSON.stringify(value, replaceBigInt));
   return parsed as Prisma.InputJsonValue;
+};
+
+const cadToMinor = (value: string) => {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value))
+    throw new BadRequestException('INVALID_CAD_AMOUNT');
+  const [whole, fraction = ''] = value.split('.');
+  return (BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'))).toString();
+};
+
+const minorToCad = (value: bigint | null) => {
+  if (value == null) return null;
+  const whole = value / 100n;
+  const fraction = (value % 100n).toString().padStart(2, '0');
+  return `${whole}.${fraction}`;
 };
 
 @Injectable()
@@ -550,6 +568,343 @@ export class CommercialSimulatorService {
     return workspace;
   }
 
+  async getGuidedWorkspace(id: string) {
+    const workspace = await this.getWorkspace(id);
+    return {
+      id: workspace.id,
+      reference: workspace.reference,
+      title: workspace.title,
+      description: workspace.description,
+      status: workspace.status,
+      lockVersion: workspace.lockVersion,
+      currency: workspace.currency,
+      selectedScenarioId: workspace.selectedScenarioId,
+      target: workspace.organization
+        ? { type: 'ORGANIZATION', name: workspace.organization.name }
+        : { type: 'PROSPECT', name: workspace.prospect?.displayName ?? '' },
+      catalog: {
+        name: workspace.priceBookVersion.priceBook.name,
+        audience: workspace.priceBookVersion.priceBook.audience,
+        versionNumber: workspace.priceBookVersion.versionNumber,
+        status: workspace.priceBookVersion.status,
+      },
+      scenarios: workspace.scenarios.map((scenario) => {
+        const latestRun = scenario.runs[0] ?? null;
+        const contribution =
+          latestRun?.priceResult &&
+          latestRun.costResult &&
+          latestRun.costStatus === 'COMPLETE'
+            ? deriveMargin(
+                latestRun.priceResult.firstYearCommitmentMinor.toString(),
+                latestRun.costResult.firstYearCostMinor.toString(),
+              )
+            : null;
+        return {
+          id: scenario.id,
+          name: scenario.name,
+          description: scenario.description,
+          status: scenario.status,
+          displayOrder: scenario.displayOrder,
+          lockVersion: scenario.lockVersion,
+          selected: workspace.selectedScenarioId === scenario.id,
+          familyCodes: COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
+            family.capabilityCodes.some((code) =>
+              scenario.capabilities.some(
+                (selection) => selection.capability.code === code,
+              ),
+            ),
+          ).map((family) => family.code),
+          capabilityCodes: scenario.capabilities.map(
+            (selection) => selection.capability.code,
+          ),
+          lines: scenario.lines.map((line) => ({
+            id: line.id,
+            source: line.source,
+            priceComponentId: line.priceComponentId,
+            name: line.componentNameFr,
+            pricingModel: line.pricingModel,
+            chargeType: line.chargeType,
+            revenueCategory: line.revenueCategory,
+            billingPeriod: line.billingPeriod,
+            metric: line.metric,
+            quantity: line.quantity?.toString() ?? null,
+            quantityUnit: line.quantityUnit,
+            proposedUnitAmountCad: minorToCad(line.proposedUnitAmountMinor),
+            justification: line.justification,
+            displayOrder: line.displayOrder,
+            costEfforts: line.costEfforts.map((effort) => ({
+              role: effort.roleCode,
+              hours: effort.hours.toString(),
+              justification: effort.justification,
+            })),
+          })),
+          drivers: scenario.driverValues.map((driver) => ({
+            code: driver.driverCode,
+            value:
+              driver.decimalValue?.toString() ??
+              driver.integerValue?.toString() ??
+              minorToCad(driver.moneyMinorValue) ??
+              (driver.booleanValue == null
+                ? driver.textValue
+                : String(driver.booleanValue)),
+            justification: driver.justification,
+          })),
+          stale: latestRun
+            ? latestRun.scenarioLockVersion !== scenario.lockVersion
+            : null,
+          latestResult: latestRun
+            ? {
+                id: latestRun.id,
+                calculatedAt: latestRun.calculatedAt,
+                priceStatus: latestRun.priceStatus,
+                costStatus: latestRun.costStatus,
+                valueStatus: latestRun.valueStatus,
+                warningCodes: latestRun.warningCodes,
+                firstYearCommitmentCad: minorToCad(
+                  latestRun.priceResult?.firstYearCommitmentMinor ?? null,
+                ),
+                firstYearCostCad: minorToCad(
+                  latestRun.costResult?.firstYearCostMinor ?? null,
+                ),
+                contributionCad: contribution
+                  ? minorToCad(BigInt(contribution.contributionMinor))
+                  : null,
+                marginPercent:
+                  contribution?.marginBasisPoints == null
+                    ? null
+                    : (contribution.marginBasisPoints / 100).toFixed(2),
+              }
+            : null,
+        };
+      }),
+    };
+  }
+
+  async guidedCatalog(workspaceId: string) {
+    const workspace =
+      await this.prisma.commercialSimulationWorkspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          currency: true,
+          priceBookVersion: {
+            select: {
+              id: true,
+              status: true,
+              components: {
+                include: {
+                  capability: true,
+                  tiers: { orderBy: { displayOrder: 'asc' } },
+                },
+                orderBy: { displayOrder: 'asc' },
+              },
+            },
+          },
+        },
+      });
+    if (!workspace)
+      throw new NotFoundException('Simulation workspace introuvable.');
+    return {
+      currency: workspace.currency,
+      priceBookVersionStatus: workspace.priceBookVersion.status,
+      components: workspace.priceBookVersion.components.map((component) => ({
+        id: component.id,
+        code: component.code,
+        labelFr: component.nameFr,
+        labelEn: component.nameEn,
+        descriptionFr: component.descriptionFr,
+        capabilityCode: component.capability.code,
+        revenueCategory: component.revenueCategory,
+        chargeType: component.chargeType,
+        billingPeriod: component.billingPeriod,
+        pricingModel: component.pricingModel,
+        metric: component.metric,
+        unit: component.metric,
+        catalogAmountCad: minorToCad(component.amountMinor),
+        tiers: component.tiers.map((tier) => ({
+          minimumQuantity: tier.minimumQuantity.toString(),
+          maximumQuantity: tier.maximumQuantity?.toString() ?? null,
+          amountCad: minorToCad(tier.amountMinor),
+        })),
+        displayOrder: component.displayOrder,
+        selectable: Boolean(component.revenueCategory),
+      })),
+    };
+  }
+
+  async updateScenarioMetadata(
+    workspaceId: string,
+    scenarioId: string,
+    dto: UpdateScenarioMetadataDto,
+    actor: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const changed = await tx.commercialSimulationScenario.updateMany({
+        where: {
+          id: scenarioId,
+          workspaceId,
+          status: 'ACTIVE',
+          lockVersion: dto.lockVersion,
+        },
+        data: {
+          name: dto.name.trim(),
+          description: dto.description?.trim() || null,
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException('Scenario changed or unavailable.');
+      const scenario = await tx.commercialSimulationScenario.findUniqueOrThrow({
+        where: { id: scenarioId },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_SIMULATION_SCENARIO_METADATA_UPDATED',
+        targetType: 'CommercialSimulationScenario',
+        targetId: scenarioId,
+        afterData: { workspaceId, name: scenario.name },
+      });
+      return scenario;
+    });
+  }
+
+  async duplicateScenario(
+    workspaceId: string,
+    scenarioId: string,
+    actor: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${workspaceId}, 0))`;
+      const source = await tx.commercialSimulationScenario.findFirst({
+        where: { id: scenarioId, workspaceId },
+        include: {
+          capabilities: true,
+          lines: { include: { costEfforts: true } },
+          driverValues: true,
+        },
+      });
+      if (!source) throw new NotFoundException('Scenario introuvable.');
+      const siblings = await tx.commercialSimulationScenario.count({
+        where: { workspaceId, name: { startsWith: `${source.name} — Copy` } },
+      });
+      const name = `${source.name} — Copy${siblings ? ` ${siblings + 1}` : ''}`;
+      const duplicate = await tx.commercialSimulationScenario.create({
+        data: {
+          workspaceId,
+          name,
+          description: source.description,
+          displayOrder: source.displayOrder + 1,
+          capabilities: {
+            create: source.capabilities.map((item) => ({
+              capabilityId: item.capabilityId,
+              displayOrder: item.displayOrder,
+            })),
+          },
+          driverValues: {
+            create: source.driverValues.map((value) => ({
+              driverCode: value.driverCode,
+              driverVersion: value.driverVersion,
+              scopeKey: value.scopeKey,
+              valueType: value.valueType,
+              source: value.source,
+              decimalValue: value.decimalValue,
+              integerValue: value.integerValue,
+              moneyMinorValue: value.moneyMinorValue,
+              booleanValue: value.booleanValue,
+              textValue: value.textValue,
+              currency: value.currency,
+              unit: value.unit,
+              justification: value.justification,
+            })),
+          },
+          lines: {
+            create: source.lines.map((line) => ({
+              capabilityId: line.capabilityId,
+              priceComponentId: line.priceComponentId,
+              source: line.source,
+              componentCode: line.componentCode,
+              componentNameFr: line.componentNameFr,
+              componentNameEn: line.componentNameEn,
+              pricingModel: line.pricingModel,
+              chargeType: line.chargeType,
+              revenueCategory: line.revenueCategory,
+              billingPeriod: line.billingPeriod,
+              metric: line.metric,
+              tierMode: line.tierMode,
+              quantity: line.quantity,
+              quantityUnit: line.quantityUnit,
+              proposedUnitAmountMinor: line.proposedUnitAmountMinor,
+              internalUse: line.internalUse,
+              distributable: line.distributable,
+              distributionLimit: line.distributionLimit,
+              distributionMetric: line.distributionMetric,
+              commercialQuantityBasis: line.commercialQuantityBasis,
+              commercialRuleCode: line.commercialRuleCode,
+              commercialRuleVersion: line.commercialRuleVersion,
+              justification: line.justification,
+              displayOrder: line.displayOrder,
+              costEfforts: {
+                create: line.costEfforts.map((effort) => ({
+                  roleCode: effort.roleCode,
+                  hours: effort.hours,
+                  source: effort.source,
+                  justification: effort.justification,
+                })),
+              },
+            })),
+          },
+        },
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_SIMULATION_SCENARIO_DUPLICATED',
+        targetType: 'CommercialSimulationScenario',
+        targetId: duplicate.id,
+        afterData: { workspaceId, sourceScenarioId: source.id },
+      });
+      return duplicate;
+    });
+  }
+
+  async archiveScenario(
+    workspaceId: string,
+    scenarioId: string,
+    dto: ScenarioMutationDto,
+    actor: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const workspace = await tx.commercialSimulationWorkspace.findUnique({
+        where: { id: workspaceId },
+        select: { selectedScenarioId: true },
+      });
+      if (!workspace) throw new NotFoundException('Workspace introuvable.');
+      if (workspace.selectedScenarioId === scenarioId)
+        throw new ConflictException('SELECTED_SCENARIO_CANNOT_BE_ARCHIVED');
+      const changed = await tx.commercialSimulationScenario.updateMany({
+        where: {
+          id: scenarioId,
+          workspaceId,
+          status: 'ACTIVE',
+          lockVersion: dto.lockVersion,
+        },
+        data: {
+          status: 'ARCHIVED',
+          archivedAt: new Date(),
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException('Scenario changed or unavailable.');
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_SIMULATION_SCENARIO_ARCHIVED',
+        targetType: 'CommercialSimulationScenario',
+        targetId: scenarioId,
+        afterData: { workspaceId, status: 'ARCHIVED' },
+      });
+      return { id: scenarioId, status: 'ARCHIVED' };
+    });
+  }
+
   async createWorkspace(dto: CreateWorkspaceDto, actor: Actor) {
     if (Boolean(dto.organizationId) === Boolean(dto.prospectId))
       throw new BadRequestException(
@@ -589,17 +944,247 @@ export class CommercialSimulatorService {
     });
   }
 
-  async createScenario(workspaceId: string, dto: CreateScenarioDto) {
+  async createScenario(
+    workspaceId: string,
+    dto: CreateScenarioDto,
+    actor?: Actor,
+  ) {
     await this.getWorkspace(workspaceId);
-    return this.prisma.commercialSimulationScenario.create({
-      data: { workspaceId, ...dto },
+    return this.prisma.$transaction(async (tx) => {
+      const scenario = await tx.commercialSimulationScenario.create({
+        data: { workspaceId, ...dto },
+      });
+      if (actor)
+        await this.audit.record(tx, {
+          actorUserId: actor.userId,
+          action: 'COMMERCIAL_SIMULATION_SCENARIO_CREATED',
+          targetType: 'CommercialSimulationScenario',
+          targetId: scenario.id,
+          afterData: { workspaceId, name: scenario.name },
+        });
+      return scenario;
     });
+  }
+
+  async configureGuidedScenario(
+    workspaceId: string,
+    scenarioId: string,
+    dto: GuidedConfigureScenarioDto,
+    actor: Actor,
+  ) {
+    const workspace =
+      await this.prisma.commercialSimulationWorkspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          currency: true,
+          priceBookVersionId: true,
+          scenarios: {
+            where: { id: scenarioId, status: 'ACTIVE' },
+            select: { lines: { select: { id: true, componentCode: true } } },
+          },
+        },
+      });
+    if (!workspace || workspace.scenarios.length !== 1)
+      throw new NotFoundException('Scenario introuvable.');
+    if (workspace.currency !== 'CAD')
+      throw new BadRequestException('Simulator V1 supports CAD only.');
+
+    const familyCodes = [...new Set(dto.familyCodes)];
+    if (familyCodes.length !== dto.familyCodes.length)
+      throw new BadRequestException('DUPLICATE_COMMERCIAL_FAMILY');
+    const families = familyCodes.map((code) => {
+      const family = COMMERCIAL_FAMILY_REGISTRY.find(
+        (item) => item.code === code,
+      );
+      if (!family || family.availability === 'FUTURE')
+        throw new BadRequestException('COMMERCIAL_FAMILY_NOT_SELECTABLE');
+      return family;
+    });
+    const capabilityCodes = [
+      ...new Set(families.flatMap((family) => family.capabilityCodes)),
+    ];
+    const capabilities = capabilityCodes.length
+      ? await this.prisma.commercialCapability.findMany({
+          where: {
+            code: { in: capabilityCodes },
+            isAvailable: true,
+            lifecycle: 'CURRENT',
+          },
+          select: { id: true, code: true },
+        })
+      : [];
+    if (capabilities.length !== capabilityCodes.length)
+      throw new BadRequestException('COMMERCIAL_CAPABILITY_NOT_AVAILABLE');
+    const capabilityIdByCode = new Map(
+      capabilities.map((item) => [item.code, item.id]),
+    );
+
+    const catalogIds = dto.catalogLines.map((line) => line.priceComponentId);
+    if (new Set(catalogIds).size !== catalogIds.length)
+      throw new BadRequestException('DUPLICATE_CATALOG_COMPONENT');
+    const components = catalogIds.length
+      ? await this.prisma.priceComponent.findMany({
+          where: {
+            id: { in: catalogIds },
+            priceBookVersionId: workspace.priceBookVersionId,
+          },
+          include: { capability: true },
+        })
+      : [];
+    if (components.length !== catalogIds.length)
+      throw new BadRequestException('CATALOG_COMPONENT_INVALID');
+    const componentById = new Map(components.map((item) => [item.id, item]));
+    const permittedCapabilityCodes = new Set(capabilityCodes);
+    for (const component of components) {
+      if (!component.revenueCategory)
+        throw new BadRequestException('REVENUE_CLASSIFICATION_INCOMPLETE');
+      if (!permittedCapabilityCodes.has(component.capability.code))
+        throw new BadRequestException(
+          'CATALOG_COMPONENT_OUTSIDE_SELECTED_FAMILY',
+        );
+    }
+
+    const applicableDrivers = new Set(
+      families.flatMap((family) => [
+        ...family.applicableDriverCodes,
+        ...family.optionalDriverCodes,
+      ]),
+    );
+    const driverCodes = dto.driverValues.map((driver) => driver.driverCode);
+    if (new Set(driverCodes).size !== driverCodes.length)
+      throw new BadRequestException('DUPLICATE_DRIVER');
+    const driverValues = dto.driverValues.map((input) => {
+      const definition = resolveSimulatorDriver(input.driverCode, 'v1');
+      if (!applicableDrivers.has(definition.code as never))
+        throw new BadRequestException('DRIVER_NOT_APPLICABLE');
+      const base = {
+        driverCode: definition.code,
+        driverVersion: definition.version,
+        scopeKey: 'GLOBAL',
+        valueType: definition.valueType,
+        source: 'USER_INPUT' as const,
+        unit: definition.unit ?? undefined,
+        justification: input.justification,
+      };
+      if (definition.valueType === 'INTEGER') {
+        if (!/^\d+$/.test(input.value))
+          throw new BadRequestException('INVALID_INTEGER_DRIVER');
+        return { ...base, integerValue: input.value };
+      }
+      if (definition.valueType === 'DECIMAL') {
+        if (!/^\d+(?:\.\d{1,6})?$/.test(input.value))
+          throw new BadRequestException('INVALID_DECIMAL_DRIVER');
+        return { ...base, decimalValue: input.value };
+      }
+      if (definition.valueType === 'MONEY')
+        return {
+          ...base,
+          moneyMinorValue: cadToMinor(input.value),
+          currency: workspace.currency,
+        };
+      return { ...base, textValue: input.value };
+    });
+
+    const existingCodeByLineId = new Map(
+      workspace.scenarios[0].lines.map((line) => [line.id, line.componentCode]),
+    );
+    const catalogLines = dto.catalogLines.map((input, index) => {
+      const component = componentById.get(input.priceComponentId)!;
+      if (input.proposedUnitAmountCad != null && !input.justification?.trim())
+        throw new BadRequestException(
+          'CATALOG_OVERRIDE_JUSTIFICATION_REQUIRED',
+        );
+      return {
+        capabilityId: component.capabilityId,
+        priceComponentId: component.id,
+        source: 'CATALOG_COMPONENT' as const,
+        componentCode: component.code,
+        componentNameFr: component.nameFr,
+        componentNameEn: component.nameEn,
+        pricingModel: component.pricingModel,
+        chargeType: component.chargeType,
+        revenueCategory: component.revenueCategory!,
+        billingPeriod: component.billingPeriod ?? undefined,
+        metric: component.metric ?? undefined,
+        tierMode: component.tierMode ?? undefined,
+        quantity: input.quantity,
+        quantityUnit: component.metric ?? undefined,
+        commercialQuantityBasis:
+          component.pricingModel === 'PER_UNIT' && component.metric === 'HOUR'
+            ? ('DECLARED' as const)
+            : undefined,
+        proposedUnitAmountMinor:
+          input.proposedUnitAmountCad == null
+            ? undefined
+            : cadToMinor(input.proposedUnitAmountCad),
+        justification: input.justification,
+        displayOrder: input.displayOrder ?? index,
+        costEfforts: input.costEfforts?.map((effort) => ({
+          roleCode: effort.role,
+          hours: effort.hours,
+          source: 'USER_INPUT' as const,
+          justification: effort.justification,
+        })),
+      };
+    });
+    const customLines = dto.customLines.map((input, index) => {
+      const existingCode = input.lineId
+        ? existingCodeByLineId.get(input.lineId)
+        : undefined;
+      if (input.lineId && !existingCode)
+        throw new BadRequestException('CUSTOM_LINE_OUTSIDE_SCENARIO');
+      if (input.pricingModel === 'PER_UNIT' && input.metric !== 'HOUR')
+        throw new BadRequestException('CUSTOM_PER_UNIT_REQUIRES_HOUR');
+      if (input.chargeType === 'RECURRING' && !input.billingPeriod)
+        throw new BadRequestException('RECURRING_LINE_REQUIRES_PERIOD');
+      if (!input.name.trim())
+        throw new BadRequestException('CUSTOM_LINE_NAME_REQUIRED');
+      if (!input.justification.trim())
+        throw new BadRequestException('CUSTOM_LINE_JUSTIFICATION_REQUIRED');
+      return {
+        source: input.source,
+        componentCode: existingCode ?? `CUSTOM-${randomUUID()}`,
+        componentNameFr: input.name.trim(),
+        pricingModel: input.pricingModel,
+        chargeType: input.chargeType,
+        revenueCategory: input.revenueCategory,
+        billingPeriod: input.billingPeriod,
+        metric: input.metric ?? 'FIXED',
+        quantity: input.quantity,
+        quantityUnit: input.metric ?? 'FIXED',
+        proposedUnitAmountMinor: cadToMinor(input.unitAmountCad),
+        justification: input.justification.trim(),
+        commercialQuantityBasis:
+          input.pricingModel === 'PER_UNIT' ? ('DECLARED' as const) : undefined,
+        displayOrder: input.displayOrder ?? catalogLines.length + index,
+        costEfforts: input.costEfforts?.map((effort) => ({
+          roleCode: effort.role,
+          hours: effort.hours,
+          source: 'USER_INPUT' as const,
+          justification: effort.justification,
+        })),
+      };
+    });
+    return this.configureScenario(
+      workspaceId,
+      scenarioId,
+      {
+        lockVersion: dto.lockVersion,
+        capabilityIds: capabilityCodes.map(
+          (code) => capabilityIdByCode.get(code)!,
+        ),
+        lines: [...catalogLines, ...customLines],
+        driverValues,
+      },
+      actor,
+    );
   }
 
   async configureScenario(
     workspaceId: string,
     scenarioId: string,
     dto: ConfigureScenarioDto,
+    actor?: Actor,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const workspace = await tx.commercialSimulationWorkspace.findUnique({
@@ -744,7 +1329,7 @@ export class CommercialSimulatorService {
           });
         }
       }
-      return tx.commercialSimulationScenario.findUniqueOrThrow({
+      const scenario = await tx.commercialSimulationScenario.findUniqueOrThrow({
         where: { id: scenarioId },
         include: {
           capabilities: true,
@@ -752,6 +1337,21 @@ export class CommercialSimulatorService {
           driverValues: true,
         },
       });
+      if (actor)
+        await this.audit.record(tx, {
+          actorUserId: actor.userId,
+          action: 'COMMERCIAL_SIMULATION_SCENARIO_CONFIGURED',
+          targetType: 'CommercialSimulationScenario',
+          targetId: scenarioId,
+          afterData: {
+            workspaceId,
+            lockVersion: scenario.lockVersion,
+            capabilityCount: scenario.capabilities.length,
+            lineCount: scenario.lines.length,
+            driverCount: scenario.driverValues.length,
+          },
+        });
+      return scenario;
     });
   }
 
@@ -1111,24 +1711,41 @@ export class CommercialSimulatorService {
       valuationAssumptionVersionIds: [
         ...(dto.valuationAssumptionVersionIds ?? []),
       ].sort(),
-      lines: scenario.lines.map((line, index) => ({
-        ...requestLines[index],
-        revenueCategory: line.revenueCategory,
-      })),
-      costEfforts: scenario.lines.map((line) => ({
-        componentCode: line.componentCode,
-        deterministicRole: professionalServiceRoleForComponent(
-          line.componentCode,
-        ),
-        efforts: line.costEfforts
-          .map((effort) => ({
-            roleCode: effort.roleCode,
-            hours: effort.hours.toString(),
-            source: effort.source,
-            justification: effort.justification,
-          }))
-          .sort((a, b) => a.roleCode.localeCompare(b.roleCode)),
-      })),
+      capabilities: canonicalCapabilityCodes(
+        scenario.capabilities.map((item) => item.capability.code),
+      ),
+      lines: scenario.lines
+        .map((line, index) => ({
+          ...requestLines[index],
+          source: line.source,
+          capabilityCode: line.capability?.code ?? null,
+          componentNameFr: line.componentNameFr,
+          revenueCategory: line.revenueCategory,
+          internalUse: line.internalUse,
+          distributable: line.distributable,
+          distributionLimit: line.distributionLimit?.toString() ?? null,
+          distributionMetric: line.distributionMetric,
+          commercialQuantityBasis: line.commercialQuantityBasis,
+          commercialRuleCode: line.commercialRuleCode,
+          commercialRuleVersion: line.commercialRuleVersion,
+        }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
+      costEfforts: scenario.lines
+        .map((line) => ({
+          componentCode: line.componentCode,
+          deterministicRole: professionalServiceRoleForComponent(
+            line.componentCode,
+          ),
+          efforts: line.costEfforts
+            .map((effort) => ({
+              roleCode: effort.roleCode,
+              hours: effort.hours.toString(),
+              source: effort.source,
+              justification: effort.justification,
+            }))
+            .sort((a, b) => a.roleCode.localeCompare(b.roleCode)),
+        }))
+        .sort((a, b) => a.componentCode.localeCompare(b.componentCode)),
       inputs: scenario.driverValues.map((value) => ({
         ...value,
         id: undefined,
