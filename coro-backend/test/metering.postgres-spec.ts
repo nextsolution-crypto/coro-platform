@@ -11,7 +11,12 @@ import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { MeteringService } from '../src/metering/metering.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-const prisma = new PrismaClient();
+const databaseUrl = process.env.TEST_DATABASE_URL;
+if (!databaseUrl)
+  throw new Error(
+    'TEST_DATABASE_URL jetable est obligatoire pour metering.postgres-spec',
+  );
+const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const orgA = `meter-org-a-${suffix}`;
 const orgB = `meter-org-b-${suffix}`;
@@ -113,6 +118,15 @@ describe('Phase 3C MeteringResult PostgreSQL invariants', () => {
         },
       ],
     });
+  });
+
+  it('uses the explicitly configured disposable PostgreSQL database', async () => {
+    const [{ database }] = await prisma.$queryRaw<Array<{ database: string }>>`
+      SELECT current_database() AS database
+    `;
+    const expectedDatabase = new URL(databaseUrl).pathname.replace(/^\//, '');
+    expect(database).toBe(expectedDatabase);
+    expect(database).not.toBe('coro_db');
   });
   afterAll(() => prisma.$disconnect());
 

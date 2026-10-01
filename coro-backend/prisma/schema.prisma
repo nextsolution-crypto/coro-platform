@@ -60,6 +60,7 @@ model Organization {
   commercialProposals          CommercialProposal[]
   convertedCommercialProspects CommercialProspect[] @relation("CommercialProspectConversion")
   meteringResults              MeteringResult[]
+  commercialSimulationWorkspaces CommercialSimulationWorkspace[]
 }
 
 model User {
@@ -98,6 +99,11 @@ model User {
   commercialProposalsCreated CommercialProposal[] @relation("CommercialProposalCreator")
   commercialProposalRevisionsCreated CommercialProposalRevision[] @relation("CommercialProposalRevisionCreator")
   proposalDocumentsCreated ProposalDocument[] @relation("ProposalDocumentCreator")
+  commercialSimulationWorkspacesCreated CommercialSimulationWorkspace[] @relation("CommercialSimulationWorkspaceCreator")
+  commercialSimulationRunsCreated CommercialSimulationCalculationRun[] @relation("CommercialSimulationRunCreator")
+  commercialSimulationConversionsCreated CommercialSimulationProposalConversion[] @relation("CommercialSimulationConversionCreator")
+  commercialCostAssumptionVersionsCreated CommercialCostAssumptionVersion[] @relation("CommercialCostAssumptionVersionCreator")
+  commercialValuationAssumptionVersionsCreated CommercialValuationAssumptionVersion[] @relation("CommercialValuationAssumptionVersionCreator")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -514,6 +520,8 @@ model CommercialCapability {
   proposalLines ProposalLine[]
   proposalInputs ProposalInput[]
   proposalExclusivityCapabilities ProposalExclusivityCapability[]
+  simulationScenarioCapabilities CommercialSimulationScenarioCapability[]
+  simulationScenarioLines CommercialSimulationScenarioLine[]
 
   @@index([displayOrder])
   @@index([lifecycle, isAvailable])
@@ -567,6 +575,8 @@ model PriceBookVersion {
   components           PriceComponent[]
   contractRevisions    OrganizationContractRevision[]
   proposalRevisions    CommercialProposalRevision[]
+  simulationWorkspaces CommercialSimulationWorkspace[]
+  simulationRuns       CommercialSimulationCalculationRun[]
 
   @@unique([priceBookId, versionNumber])
   @@index([priceBookId, status])
@@ -598,6 +608,7 @@ model PriceComponent {
   contractAdjustments ContractPricingAdjustment[]
   contractSnapshots   ContractPriceSnapshotLine[]
   proposalLines       ProposalLine[]
+  simulationScenarioLines CommercialSimulationScenarioLine[]
 
   @@unique([priceBookVersionId, code])
   @@index([priceBookVersionId, displayOrder])
@@ -973,6 +984,7 @@ model CommercialProspect {
   convertedBy User? @relation("CommercialProspectConverter", fields: [convertedByUserId], references: [id], onDelete: SetNull)
   createdBy User? @relation("CommercialProspectCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   proposals CommercialProposal[]
+  simulationWorkspaces CommercialSimulationWorkspace[]
   @@index([status, createdAt])
   @@index([legalName])
 }
@@ -999,6 +1011,7 @@ model CommercialProposal {
   acceptedRevision CommercialProposalRevision? @relation("AcceptedProposalRevision", fields: [acceptedRevisionId], references: [id], onDelete: Restrict)
   createdBy User? @relation("CommercialProposalCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   revisions CommercialProposalRevision[] @relation("ProposalRevisions")
+  simulationConversion CommercialSimulationProposalConversion?
   @@index([organizationId, status])
   @@index([prospectId, status])
   @@index([status, createdAt])
@@ -1077,6 +1090,7 @@ model CommercialProposalRevision {
   documents ProposalDocument[] @relation("ProposalRevisionDocuments")
   valueAnalysis ProposalValueAnalysis?
   sourceContractRevision OrganizationContractRevision? @relation("ProposalContractOrigin")
+  simulationConversion CommercialSimulationProposalConversion?
   @@unique([proposalId, revisionNumber])
   @@unique([id, proposalId])
   @@index([proposalId, status])
@@ -5226,4 +5240,469 @@ model MeteringResult {
   @@index([clientId, capabilityCode, metricCode, periodStart])
   @@index([buildingId, capabilityCode, metricCode, periodStart])
   @@index([organizationId, calculatedAt])
+}
+
+enum CommercialSimulationWorkspaceStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum CommercialSimulationScenarioStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum CommercialSimulationLineSource {
+  CATALOG_COMPONENT
+  CUSTOM_COMPONENT
+  PROFESSIONAL_SERVICE
+}
+
+enum CommercialSimulationValueType {
+  DECIMAL
+  INTEGER
+  MONEY
+  BOOLEAN
+  TEXT
+}
+
+enum CommercialSimulationValueSource {
+  USER_INPUT
+  CUSTOMER_INPUT
+  SYSTEM_CONFIGURATION
+  CONTRACT
+  METERING
+  EXTERNAL_PROVIDER
+  CALCULATED
+  INTERNAL_ASSUMPTION
+}
+
+enum CommercialAssumptionVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommercialSimulationResultStatus {
+  COMPLETE
+  UNAVAILABLE
+  NOT_APPLICABLE
+}
+
+model CommercialSimulationWorkspace {
+  id                           String @id @default(uuid())
+  reference                    String @unique @db.VarChar(100)
+  title                        String @db.VarChar(255)
+  description                  String?
+  organizationId               String?
+  prospectId                   String?
+  priceBookVersionId           String
+  currency                     String @db.Char(3)
+  status                       CommercialSimulationWorkspaceStatus @default(ACTIVE)
+  selectedScenarioId           String? @unique
+  lockVersion                  Int @default(0)
+  createdByUserId              String?
+  createdByDisplayName         String? @db.VarChar(255)
+  archivedAt                   DateTime?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  organization                 Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  prospect                     CommercialProspect? @relation(fields: [prospectId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  priceBookVersion             PriceBookVersion @relation(fields: [priceBookVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy                    User? @relation("CommercialSimulationWorkspaceCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  selectedScenario             CommercialSimulationScenario? @relation("CommercialSimulationSelectedScenario", fields: [selectedScenarioId, id], references: [id, workspaceId], onDelete: Restrict, onUpdate: Restrict)
+  scenarios                    CommercialSimulationScenario[] @relation("CommercialSimulationWorkspaceScenarios")
+  conversions                  CommercialSimulationProposalConversion[]
+
+  @@unique([id, organizationId])
+  @@unique([id, prospectId])
+  @@unique([selectedScenarioId, id])
+  @@index([organizationId, status, updatedAt])
+  @@index([prospectId, status, updatedAt])
+  @@index([priceBookVersionId])
+}
+
+model CommercialSimulationScenario {
+  id                           String @id @default(uuid())
+  workspaceId                  String
+  name                         String @db.VarChar(255)
+  description                  String?
+  status                       CommercialSimulationScenarioStatus @default(ACTIVE)
+  displayOrder                 Int @default(0)
+  lockVersion                  Int @default(0)
+  archivedAt                   DateTime?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  workspace                    CommercialSimulationWorkspace @relation("CommercialSimulationWorkspaceScenarios", fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  selectedByWorkspace          CommercialSimulationWorkspace? @relation("CommercialSimulationSelectedScenario")
+  capabilities                 CommercialSimulationScenarioCapability[]
+  lines                        CommercialSimulationScenarioLine[]
+  driverValues                 CommercialSimulationDriverValue[]
+  runs                         CommercialSimulationCalculationRun[]
+  conversions                  CommercialSimulationProposalConversion[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, name])
+  @@index([workspaceId, status, displayOrder])
+}
+
+model CommercialSimulationScenarioCapability {
+  id                           String @id @default(uuid())
+  scenarioId                   String
+  capabilityId                 String
+  displayOrder                 Int @default(0)
+  createdAt                    DateTime @default(now())
+  scenario                     CommercialSimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  capability                   CommercialCapability @relation(fields: [capabilityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([scenarioId, capabilityId])
+  @@index([scenarioId, displayOrder])
+}
+
+model CommercialSimulationScenarioLine {
+  id                           String @id @default(uuid())
+  scenarioId                   String
+  capabilityId                 String?
+  priceComponentId             String?
+  source                       CommercialSimulationLineSource
+  componentCode                String @db.VarChar(100)
+  componentNameFr              String @db.VarChar(255)
+  componentNameEn              String? @db.VarChar(255)
+  pricingModel                 PricingModel
+  chargeType                   PriceChargeType
+  billingPeriod                BillingPeriod?
+  metric                       PriceMetric?
+  tierMode                     TierCalculationMode?
+  quantity                     Decimal? @db.Decimal(20, 6)
+  quantityUnit                 String? @db.VarChar(50)
+  proposedUnitAmountMinor      BigInt?
+  internalUse                  Boolean @default(false)
+  distributable                Boolean @default(false)
+  distributionLimit            Decimal? @db.Decimal(20, 6)
+  distributionMetric           PriceMetric?
+  commercialQuantityBasis      CommercialQuantityBasis?
+  commercialRuleCode           String? @db.VarChar(100)
+  commercialRuleVersion        String? @db.VarChar(50)
+  justification                String?
+  displayOrder                 Int @default(0)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  scenario                     CommercialSimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  capability                   CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  priceComponent               PriceComponent? @relation(fields: [priceComponentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([scenarioId, componentCode])
+  @@index([scenarioId, displayOrder])
+  @@index([priceComponentId])
+}
+
+model CommercialSimulationDriverValue {
+  id                           String @id @default(uuid())
+  scenarioId                   String
+  driverCode                   String @db.VarChar(100)
+  driverVersion                String @db.VarChar(50)
+  scopeKey                     String @default("GLOBAL") @db.VarChar(255)
+  valueType                    CommercialSimulationValueType
+  source                       CommercialSimulationValueSource
+  decimalValue                 Decimal? @db.Decimal(20, 6)
+  integerValue                 BigInt?
+  moneyMinorValue              BigInt?
+  booleanValue                 Boolean?
+  textValue                    String?
+  currency                     String? @db.Char(3)
+  unit                         String? @db.VarChar(50)
+  justification                String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  scenario                     CommercialSimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([scenarioId, driverCode, scopeKey])
+  @@index([scenarioId, driverCode])
+}
+
+model CommercialCostAssumptionSet {
+  id                           String @id @default(uuid())
+  code                         String @unique @db.VarChar(100)
+  name                         String @db.VarChar(255)
+  description                  String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  versions                     CommercialCostAssumptionVersion[]
+}
+
+model CommercialCostAssumptionVersion {
+  id                           String @id @default(uuid())
+  setId                        String
+  versionNumber                Int
+  status                       CommercialAssumptionVersionStatus @default(DRAFT)
+  currency                     String @db.Char(3)
+  methodologyCode              String @db.VarChar(100)
+  methodologyVersion           String @db.VarChar(50)
+  contentHash                  String? @db.Char(64)
+  createdByUserId              String?
+  publishedAt                  DateTime?
+  archivedAt                   DateTime?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  set                          CommercialCostAssumptionSet @relation(fields: [setId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy                    User? @relation("CommercialCostAssumptionVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  values                       CommercialCostAssumptionValue[]
+  runs                         CommercialSimulationCalculationRun[]
+  @@unique([setId, versionNumber])
+  @@index([setId, status])
+}
+
+model CommercialCostAssumptionValue {
+  id                           String @id @default(uuid())
+  versionId                    String
+  assumptionCode               String @db.VarChar(100)
+  assumptionVersion            String @db.VarChar(50)
+  scopeKey                     String @default("GLOBAL") @db.VarChar(255)
+  valueType                    CommercialSimulationValueType
+  decimalValue                 Decimal? @db.Decimal(20, 6)
+  integerValue                 BigInt?
+  moneyMinorValue              BigInt?
+  booleanValue                 Boolean?
+  textValue                    String?
+  currency                     String? @db.Char(3)
+  unit                         String? @db.VarChar(50)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  version                      CommercialCostAssumptionVersion @relation(fields: [versionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([versionId, assumptionCode, scopeKey])
+}
+
+model CommercialValuationAssumptionSet {
+  id                           String @id @default(uuid())
+  code                         String @unique @db.VarChar(100)
+  name                         String @db.VarChar(255)
+  capabilityCode               CapabilityCode?
+  methodologyCode              String @db.VarChar(100)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  versions                     CommercialValuationAssumptionVersion[]
+}
+
+model CommercialValuationAssumptionVersion {
+  id                           String @id @default(uuid())
+  setId                        String
+  versionNumber                Int
+  status                       CommercialAssumptionVersionStatus @default(DRAFT)
+  methodologyVersion           String @db.VarChar(50)
+  contentHash                  String? @db.Char(64)
+  createdByUserId              String?
+  publishedAt                  DateTime?
+  archivedAt                   DateTime?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  set                          CommercialValuationAssumptionSet @relation(fields: [setId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy                    User? @relation("CommercialValuationAssumptionVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  values                       CommercialValuationAssumptionValue[]
+  runLinks                     CommercialSimulationRunValuationVersion[]
+  @@unique([setId, versionNumber])
+  @@index([setId, status])
+}
+
+model CommercialValuationAssumptionValue {
+  id                           String @id @default(uuid())
+  versionId                    String
+  assumptionCode               String @db.VarChar(100)
+  assumptionVersion            String @db.VarChar(50)
+  scopeKey                     String @default("GLOBAL") @db.VarChar(255)
+  valueType                    CommercialSimulationValueType
+  decimalValue                 Decimal? @db.Decimal(20, 6)
+  integerValue                 BigInt?
+  moneyMinorValue              BigInt?
+  booleanValue                 Boolean?
+  textValue                    String?
+  currency                     String? @db.Char(3)
+  unit                         String? @db.VarChar(50)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  version                      CommercialValuationAssumptionVersion @relation(fields: [versionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([versionId, assumptionCode, scopeKey])
+}
+
+model CommercialSimulationCalculationRun {
+  id                           String @id @default(uuid())
+  scenarioId                   String
+  workspaceId                  String
+  priceBookVersionId           String
+  costAssumptionVersionId      String?
+  sequence                     Int
+  calculationKey               String @db.Char(64)
+  fingerprintVersion           String @db.VarChar(50)
+  inputFingerprint             String @db.Char(64)
+  workspaceLockVersion         Int
+  scenarioLockVersion          Int
+  currency                     String @db.Char(3)
+  pricingMethodologyCode       String @db.VarChar(100)
+  pricingMethodologyVersion    String @db.VarChar(50)
+  costMethodologyCode          String? @db.VarChar(100)
+  costMethodologyVersion       String? @db.VarChar(50)
+  priceStatus                  CommercialSimulationResultStatus
+  costStatus                   CommercialSimulationResultStatus
+  valueStatus                  CommercialSimulationResultStatus
+  warningCodes                 String[] @default([])
+  createdByUserId              String?
+  calculatedAt                 DateTime @default(now())
+  createdAt                    DateTime @default(now())
+  scenario                     CommercialSimulationScenario @relation(fields: [scenarioId, workspaceId], references: [id, workspaceId], onDelete: Restrict, onUpdate: Restrict)
+  priceBookVersion             PriceBookVersion @relation(fields: [priceBookVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  costAssumptionVersion        CommercialCostAssumptionVersion? @relation(fields: [costAssumptionVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy                    User? @relation("CommercialSimulationRunCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  valuationVersions            CommercialSimulationRunValuationVersion[]
+  inputs                       CommercialSimulationRunInput[]
+  lines                        CommercialSimulationRunLine[]
+  priceResult                  CommercialSimulationPriceResult?
+  costResult                   CommercialSimulationCostResult?
+  valueResults                CommercialSimulationValueResult[]
+  conversion                   CommercialSimulationProposalConversion?
+  @@unique([scenarioId, calculationKey])
+  @@unique([scenarioId, sequence])
+  @@unique([id, scenarioId])
+  @@index([workspaceId, calculatedAt])
+}
+
+model CommercialSimulationRunValuationVersion {
+  runId                        String
+  valuationAssumptionVersionId String
+  run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  valuationAssumptionVersion   CommercialValuationAssumptionVersion @relation(fields: [valuationAssumptionVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@id([runId, valuationAssumptionVersionId])
+}
+
+model CommercialSimulationRunInput {
+  id                           String @id @default(uuid())
+  runId                        String
+  driverCode                   String @db.VarChar(100)
+  driverVersion                String @db.VarChar(50)
+  scopeKey                     String @db.VarChar(255)
+  valueType                    CommercialSimulationValueType
+  source                       CommercialSimulationValueSource
+  decimalValue                 Decimal? @db.Decimal(20, 6)
+  integerValue                 BigInt?
+  moneyMinorValue              BigInt?
+  booleanValue                 Boolean?
+  textValue                    String?
+  currency                     String? @db.Char(3)
+  unit                         String? @db.VarChar(50)
+  labelFr                      String @db.VarChar(255)
+  labelEn                      String? @db.VarChar(255)
+  justification                String?
+  createdAt                    DateTime @default(now())
+  run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([runId, driverCode, scopeKey])
+}
+
+model CommercialSimulationRunLine {
+  id                           String @id @default(uuid())
+  runId                        String
+  componentCode                String @db.VarChar(100)
+  capabilityCode               CapabilityCode?
+  priceComponentId             String?
+  componentNameFr              String @db.VarChar(255)
+  pricingModel                 PricingModel
+  chargeType                   PriceChargeType
+  billingPeriod                BillingPeriod?
+  metric                       PriceMetric?
+  quantity                     Decimal? @db.Decimal(20, 6)
+  quantityUnit                 String? @db.VarChar(50)
+  catalogUnitAmountMinor       BigInt?
+  proposedUnitAmountMinor      BigInt?
+  catalogExtendedAmountMinor   BigInt?
+  proposedExtendedAmountMinor  BigInt?
+  estimatedCostMinor           BigInt?
+  calculationStatus            ProposalCalculationStatus
+  calculationExplanationFr     String
+  internalUse                  Boolean
+  distributable                Boolean
+  distributionLimit            Decimal? @db.Decimal(20, 6)
+  distributionMetric           PriceMetric?
+  commercialQuantityBasis      CommercialQuantityBasis?
+  commercialRuleCode           String? @db.VarChar(100)
+  commercialRuleVersion        String? @db.VarChar(50)
+  displayOrder                 Int
+  createdAt                    DateTime @default(now())
+  run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([runId, componentCode])
+  @@index([runId, displayOrder])
+}
+
+model CommercialSimulationPriceResult {
+  id                           String @id @default(uuid())
+  runId                        String @unique
+  currency                     String @db.Char(3)
+  oneTimeTotalMinor            BigInt
+  recurringMonthlyCadenceMinor BigInt
+  recurringAnnualCadenceMinor  BigInt
+  monthlyRecurringEquivalentMinor BigInt
+  annualRecurringEquivalentMinor BigInt
+  estimatedUsageTotalMinor     BigInt
+  firstYearCommitmentMinor     BigInt
+  firstYearIncludesEstimate    Boolean
+  createdAt                    DateTime @default(now())
+  run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model CommercialSimulationCostResult {
+  id                           String @id @default(uuid())
+  runId                        String @unique
+  currency                     String @db.Char(3)
+  oneTimeDirectCostMinor       BigInt
+  recurringMonthlyCostMinor    BigInt
+  recurringAnnualCostMinor     BigInt
+  variableEstimatedCostMinor   BigInt
+  firstYearCostMinor           BigInt
+  createdAt                    DateTime @default(now())
+  run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model CommercialSimulationValueResult {
+  id                           String @id @default(uuid())
+  runId                        String
+  capabilityCode               CapabilityCode?
+  methodologyCode              String @db.VarChar(100)
+  methodologyVersion           String @db.VarChar(50)
+  status                       CommercialSimulationResultStatus
+  createdAt                    DateTime @default(now())
+  run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  metrics                      CommercialSimulationValueMetric[]
+  @@unique([runId, methodologyCode, capabilityCode])
+}
+
+model CommercialSimulationValueMetric {
+  id                           String @id @default(uuid())
+  valueResultId                String
+  metricCode                   String @db.VarChar(100)
+  metricVersion                String @db.VarChar(50)
+  valueType                    CommercialSimulationValueType
+  decimalValue                 Decimal? @db.Decimal(20, 6)
+  integerValue                 BigInt?
+  moneyMinorValue              BigInt?
+  booleanValue                 Boolean?
+  textValue                    String?
+  currency                     String? @db.Char(3)
+  unit                         String? @db.VarChar(50)
+  customerVisible              Boolean @default(false)
+  createdAt                    DateTime @default(now())
+  valueResult                  CommercialSimulationValueResult @relation(fields: [valueResultId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([valueResultId, metricCode])
+}
+
+model CommercialSimulationProposalConversion {
+  id                           String @id @default(uuid())
+  workspaceId                  String
+  scenarioId                   String
+  calculationRunId             String @unique
+  proposalId                   String @unique
+  proposalRevisionId           String @unique
+  convertedByUserId            String?
+  convertedAt                  DateTime @default(now())
+  workspace                    CommercialSimulationWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  scenario                     CommercialSimulationScenario @relation(fields: [scenarioId, workspaceId], references: [id, workspaceId], onDelete: Restrict, onUpdate: Restrict)
+  calculationRun               CommercialSimulationCalculationRun @relation(fields: [calculationRunId, scenarioId], references: [id, scenarioId], onDelete: Restrict, onUpdate: Restrict)
+  proposal                     CommercialProposal @relation(fields: [proposalId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  proposalRevision             CommercialProposalRevision @relation(fields: [proposalRevisionId, proposalId], references: [id, proposalId], onDelete: Restrict, onUpdate: Restrict)
+  convertedBy                  User? @relation("CommercialSimulationConversionCreator", fields: [convertedByUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  @@index([workspaceId, convertedAt])
+  @@unique([calculationRunId, scenarioId])
+  @@unique([proposalRevisionId, proposalId])
 }

@@ -66,6 +66,7 @@ const SUPER_ADMIN_GROUP = {
     { label: 'Commercial', path: '/admin/commercial', icon: '◈' },
     { label: 'Prospects', path: '/admin/commercial/prospects', icon: '○' },
     { label: 'Proposals', path: '/admin/commercial/proposals', icon: '◇' },
+    { label: 'Simulator', path: '/admin/commercial/simulator', icon: '∆' },
     { label: 'Contracts', path: '/admin/commercial/contracts', icon: '▧' },
     { label: 'Entitlements', path: '/admin/commercial/entitlements', icon: '✓' },
     { label: 'Reconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },

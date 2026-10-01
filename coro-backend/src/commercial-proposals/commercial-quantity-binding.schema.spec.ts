@@ -15,16 +15,22 @@ describe('Phase 3D foundation schema contract', () => {
   );
 
   it('adds only the nullable commercial quantity binding triplet', () => {
+    const proposalLine = schema.match(/model ProposalLine \{[\s\S]*?\n\}/)?.[0];
+    const contractLine = schema.match(
+      /model ContractPriceSnapshotLine \{[\s\S]*?\n\}/,
+    )?.[0];
     expect(schema).toContain('enum CommercialQuantityBasis');
-    expect(
-      schema.match(/commercialQuantityBasis CommercialQuantityBasis\?/g),
-    ).toHaveLength(2);
-    expect(
-      schema.match(/commercialRuleCode\s+String\?\s+@db\.VarChar\(100\)/g),
-    ).toHaveLength(2);
-    expect(
-      schema.match(/commercialRuleVersion\s+String\?\s+@db\.VarChar\(50\)/g),
-    ).toHaveLength(2);
+    for (const model of [proposalLine, contractLine]) {
+      expect(model).toMatch(
+        /commercialQuantityBasis\s+CommercialQuantityBasis\?/,
+      );
+      expect(model).toMatch(
+        /commercialRuleCode\s+String\?\s+@db\.VarChar\(100\)/,
+      );
+      expect(model).toMatch(
+        /commercialRuleVersion\s+String\?\s+@db\.VarChar\(50\)/,
+      );
+    }
     expect(migration).not.toMatch(
       /\b(?:INSERT\s+INTO|UPDATE\s+"|DELETE\s+FROM)/i,
     );
