@@ -14,6 +14,53 @@ const tiers = [
 
 describe('ProposalPricingEngine', () => {
   it.each([
+    ['2', '12500', '25000'],
+    ['1.5', '12500', '18750'],
+    ['0.333333', '3', '1'],
+  ])(
+    'calculates honest hourly PER_UNIT pricing at %s hours',
+    (quantity, amountMinor, total) => {
+      const result = engine.calculate({
+        ...base,
+        lines: [
+          {
+            code: 'DELIVERY_HOUR',
+            pricingModel: 'PER_UNIT',
+            metric: 'HOUR',
+            quantityUnit: 'HOUR',
+            chargeType: 'ONE_TIME',
+            quantity,
+            amountMinor,
+          },
+        ],
+      });
+      expect(result.lines[0].proposedExtendedAmountMinor).toBe(total);
+      expect(result.lines[0].calculationFormula).toContain('HOUR');
+    },
+  );
+
+  it.each(['0', '-1', '1.0000001'])(
+    'rejects invalid hourly quantity %s',
+    (quantity) => {
+      expect(() =>
+        engine.calculate({
+          ...base,
+          lines: [
+            {
+              code: 'DELIVERY_HOUR',
+              pricingModel: 'PER_UNIT',
+              metric: 'HOUR',
+              chargeType: 'ONE_TIME',
+              quantity,
+              amountMinor: '10000',
+            },
+          ],
+        }),
+      ).toThrow();
+    },
+  );
+
+  it.each([
     ['1', '100'],
     ['5', '500'],
     ['6', '540'],

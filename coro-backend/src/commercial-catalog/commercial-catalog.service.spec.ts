@@ -112,4 +112,28 @@ describe('CommercialCatalogService invariants', () => {
       }),
     ).toThrow('metric quantitative');
   });
+  it('reserves PER_UNIT for the HOUR metric', () => {
+    expect(() =>
+      validateComponent({
+        code: 'DELIVERY_HOUR',
+        chargeType: 'ONE_TIME',
+        billingPeriod: null,
+        pricingModel: 'PER_UNIT',
+        metric: 'HOUR',
+        amountMinor: 0n,
+        tiers: [],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateComponent({
+        code: 'INVALID_UNIT',
+        chargeType: 'ONE_TIME',
+        billingPeriod: null,
+        pricingModel: 'PER_UNIT',
+        metric: 'SITE',
+        amountMinor: 0n,
+        tiers: [],
+      }),
+    ).toThrow('metric HOUR');
+  });
 });

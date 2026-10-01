@@ -399,6 +399,7 @@ export class CommercialCatalogService {
       );
     const requiredMetric: Record<string, string> = {
       FLAT: 'FIXED',
+      PER_UNIT: 'HOUR',
       PER_SEAT: 'SEAT',
       PER_SITE: 'SITE',
       USAGE: 'USAGE_UNIT',

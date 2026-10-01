@@ -1,5 +1,6 @@
 export type PricingModel =
   | 'FLAT'
+  | 'PER_UNIT'
   | 'PER_SEAT'
   | 'PER_SITE'
   | 'TIERED'
@@ -28,6 +29,7 @@ export interface PricingLineInput {
   billingPeriod?: 'MONTH' | 'YEAR' | null;
   metric?:
     | 'FIXED'
+    | 'HOUR'
     | 'SEAT'
     | 'SITE'
     | 'CLIENT'
@@ -80,6 +82,21 @@ export interface PricingResult {
     firstYearIncludesEstimate: boolean;
   };
 }
+
+const DECIMAL_SCALE = 1_000_000n;
+
+function positiveDecimal6(value: string, label: string): bigint {
+  if (!/^\d+(?:\.\d{1,6})?$/.test(value))
+    throw new Error(`${label} must be a decimal with at most 6 places`);
+  const [whole, fraction = ''] = value.split('.');
+  const scaled =
+    BigInt(whole) * DECIMAL_SCALE + BigInt(fraction.padEnd(6, '0'));
+  if (scaled <= 0n) throw new Error(`${label} must be positive`);
+  return scaled;
+}
+
+const halfUp = (numerator: bigint, denominator: bigint) =>
+  (numerator + denominator / 2n) / denominator;
 
 const integer = (value: string | null | undefined, name: string) => {
   if (value == null || !/^\d+$/.test(value))
@@ -169,7 +186,14 @@ export class ProposalPricingEngine {
     line: PricingLineInput,
     globals: PricingAdjustmentInput[],
   ): PricingLineResult {
-    const q = line.quantity == null ? null : integer(line.quantity, 'quantity');
+    const perUnitQuantity =
+      line.pricingModel === 'PER_UNIT' && line.quantity != null
+        ? positiveDecimal6(line.quantity, 'quantity')
+        : null;
+    const q =
+      line.pricingModel === 'PER_UNIT' || line.quantity == null
+        ? null
+        : integer(line.quantity, 'quantity');
     let unit =
       line.amountMinor == null
         ? null
@@ -184,6 +208,13 @@ export class ProposalPricingEngine {
         throw new Error('FLAT quantity must be absent or 1');
       catalog = unit;
       formula = 'flat amount';
+    } else if (line.pricingModel === 'PER_UNIT') {
+      if (line.metric !== 'HOUR')
+        throw new Error('PER_UNIT requires the HOUR metric');
+      if (perUnitQuantity === null || unit === null)
+        throw new Error('PER_UNIT requires quantity and unit amount');
+      catalog = halfUp(perUnitQuantity * unit, DECIMAL_SCALE);
+      formula = `${line.quantity} × ${unit} per ${line.metric}`;
     } else if (
       line.pricingModel === 'PER_SEAT' ||
       line.pricingModel === 'PER_SITE'

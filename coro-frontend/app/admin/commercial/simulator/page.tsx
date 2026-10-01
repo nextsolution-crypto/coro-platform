@@ -5,6 +5,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 import {
   SIMULATOR_API_BASE,
+  FIRST_WAVE_HOURLY_PRICING,
+  FIRST_WAVE_SERVICE_ROLES,
   SIMULATOR_OBSERVATION_NOTICE,
   SIMULATOR_TABS,
 } from "./simulator-contract.mjs";
@@ -269,6 +271,11 @@ export default function CommercialSimulatorPage() {
                     </span>
                   ))}
                 </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  Professional services use {FIRST_WAVE_HOURLY_PRICING.pricingModel}
+                  /{FIRST_WAVE_HOURLY_PRICING.metric} pricing. Direct costs remain
+                  separate by role: {FIRST_WAVE_SERVICE_ROLES.join(" and ")}.
+                </p>
                 <form onSubmit={createScenario} className="mt-6 flex gap-2">
                   <input
                     name="name"

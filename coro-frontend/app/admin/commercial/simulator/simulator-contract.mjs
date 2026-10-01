@@ -14,3 +14,12 @@ export const SIMULATOR_AUTHORITY = Object.freeze({
   value: "ValuationAssumptionVersion",
   proposal: "explicit conversion",
 });
+export const FIRST_WAVE_SERVICE_ROLES = Object.freeze([
+  "DELIVERY_PROFESSIONAL",
+  "SENIOR_REVIEWER",
+]);
+export const FIRST_WAVE_HOURLY_PRICING = Object.freeze({
+  pricingModel: "PER_UNIT",
+  metric: "HOUR",
+  quantityUnit: "HOUR",
+});

@@ -114,6 +114,106 @@ describe('Commercial Simulator V1 PostgreSQL invariants', () => {
     ).resolves.toBe(0);
   });
 
+  it('adds first-wave structure without seeding pricing, cost, or effort data', async () => {
+    const migration = await prisma.$queryRaw<Array<{ finishedAt: Date }>>`
+      SELECT "finished_at" AS "finishedAt" FROM "_prisma_migrations"
+      WHERE "migration_name" = '20261005010000_commercial_simulator_first_wave_structure'
+        AND "finished_at" IS NOT NULL
+    `;
+    expect(migration).toHaveLength(1);
+    await expect(
+      prisma.commercialSimulationScenarioLineCostEffort.count({
+        where: { createdAt: { lte: migration[0].finishedAt } },
+      }),
+    ).resolves.toBe(0);
+    await expect(
+      prisma.commercialSimulationRunLineCostEffort.count({
+        where: { createdAt: { lte: migration[0].finishedAt } },
+      }),
+    ).resolves.toBe(0);
+  });
+
+  it('enforces approved roles, positive hours, and immutable run snapshots', async () => {
+    const scenarioLine = await prisma.commercialSimulationScenarioLine.create({
+      data: {
+        scenarioId,
+        source: 'CUSTOM_COMPONENT',
+        componentCode: `HOURS_${suffix}`,
+        componentNameFr: 'Heures de livraison',
+        pricingModel: 'PER_UNIT',
+        chargeType: 'ONE_TIME',
+        metric: 'HOUR',
+        quantity: '1.5',
+        quantityUnit: 'HOUR',
+        commercialQuantityBasis: 'DECLARED',
+      },
+    });
+    await expect(
+      prisma.commercialSimulationScenarioLineCostEffort.create({
+        data: {
+          scenarioLineId: scenarioLine.id,
+          roleCode: 'UNAPPROVED_ROLE',
+          hours: '1',
+          source: 'USER_INPUT',
+        },
+      }),
+    ).rejects.toThrow();
+    await expect(
+      prisma.commercialSimulationScenarioLineCostEffort.create({
+        data: {
+          scenarioLineId: scenarioLine.id,
+          roleCode: 'DELIVERY_PROFESSIONAL',
+          hours: '0',
+          source: 'USER_INPUT',
+        },
+      }),
+    ).rejects.toThrow();
+
+    const runLine = await prisma.commercialSimulationRunLine.create({
+      data: {
+        runId,
+        componentCode: `HOURS_${suffix}`,
+        componentNameFr: 'Heures de livraison',
+        pricingModel: 'PER_UNIT',
+        chargeType: 'ONE_TIME',
+        metric: 'HOUR',
+        quantity: '1.5',
+        quantityUnit: 'HOUR',
+        proposedUnitAmountMinor: 1n,
+        proposedExtendedAmountMinor: 2n,
+        calculationStatus: 'CALCULATED',
+        calculationExplanationFr: 'fixture',
+        internalUse: false,
+        distributable: false,
+        commercialQuantityBasis: 'DECLARED',
+        displayOrder: 0,
+      },
+    });
+    const snapshot = await prisma.commercialSimulationRunLineCostEffort.create({
+      data: {
+        runLineId: runLine.id,
+        roleCode: 'DELIVERY_PROFESSIONAL',
+        hours: '1.5',
+        roleCostMinor: 100n,
+        calculatedCostMinor: 150n,
+        assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
+        assumptionVersion: 'v1',
+        scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
+      },
+    });
+    await expect(
+      prisma.commercialSimulationRunLineCostEffort.update({
+        where: { id: snapshot.id },
+        data: { hours: '2' },
+      }),
+    ).rejects.toThrow();
+    await expect(
+      prisma.commercialSimulationRunLineCostEffort.delete({
+        where: { id: snapshot.id },
+      }),
+    ).rejects.toThrow();
+  });
+
   it('enforces organization XOR prospect targets', async () => {
     await expect(
       prisma.commercialSimulationWorkspace.create({

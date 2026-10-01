@@ -118,7 +118,7 @@ export class ProposalLineDto {
   @IsOptional() @IsEnum(BillingPeriod) billingPeriod?: BillingPeriod;
   @IsOptional() @IsEnum(PriceMetric) metric?: PriceMetric;
   @IsOptional() @IsEnum(TierCalculationMode) tierMode?: TierCalculationMode;
-  @IsOptional() @Matches(/^\d+$/) quantity?: string;
+  @IsOptional() @Matches(/^\d+(?:\.\d{1,6})?$/) quantity?: string;
   @IsOptional() @IsString() quantityUnit?: string;
   @IsOptional() @Matches(/^\d+$/) amountMinor?: string;
   @IsEnum(ProposalCalculationStatus)

@@ -23,8 +23,18 @@ import {
 } from './commercial-simulator.dto';
 import { simulatorFingerprint } from './calculation-identity';
 import { resolveSimulatorDriver } from './commercial-simulator.registry';
-import { calculateDirectCost, deriveMargin } from './cost-engine';
+import {
+  calculateDirectCost,
+  calculateRoleBasedDirectCost,
+  costAtBillingCadence,
+  deriveMargin,
+} from './cost-engine';
 import { calculateValueAnalysis } from '../commercial-proposals/proposal-value-analysis';
+import {
+  assertProfessionalServiceRole,
+  professionalServiceRoleForComponent,
+  roleCostScope,
+} from './first-wave-commercial.registry';
 
 type Actor = { userId: string };
 
@@ -254,7 +264,7 @@ export class CommercialSimulatorService {
           scenarios: {
             include: {
               capabilities: { include: { capability: true } },
-              lines: true,
+              lines: { include: { costEfforts: true } },
               driverValues: true,
               runs: {
                 orderBy: { calculatedAt: 'desc' },
@@ -380,10 +390,34 @@ export class CommercialSimulatorService {
         await tx.commercialSimulationScenarioLine.deleteMany({
           where: { scenarioId },
         });
-        if (dto.lines.length)
-          await tx.commercialSimulationScenarioLine.createMany({
-            data: dto.lines.map((line, index) => ({
-              ...line,
+        for (const [index, line] of dto.lines.entries()) {
+          if (
+            line.pricingModel === 'PER_UNIT' &&
+            (line.metric !== 'HOUR' ||
+              line.quantityUnit !== 'HOUR' ||
+              line.commercialQuantityBasis !== 'DECLARED')
+          )
+            throw new BadRequestException(
+              'PER_UNIT_HOUR_REQUIRES_DECLARED_HOUR_QUANTITY',
+            );
+          const deterministicRole = professionalServiceRoleForComponent(
+            line.componentCode,
+          );
+          if (deterministicRole && line.costEfforts?.length)
+            throw new BadRequestException(
+              'HOURLY_ROLE_EFFORT_MUST_USE_DECLARED_QUANTITY',
+            );
+          const roles = new Set<string>();
+          for (const effort of line.costEfforts ?? []) {
+            assertProfessionalServiceRole(effort.roleCode);
+            if (roles.has(effort.roleCode))
+              throw new BadRequestException('DUPLICATE_ROLE_EFFORT');
+            roles.add(effort.roleCode);
+          }
+          const { costEfforts, ...lineData } = line;
+          await tx.commercialSimulationScenarioLine.create({
+            data: {
+              ...lineData,
               scenarioId,
               quantity:
                 line.quantity == null
@@ -398,12 +432,27 @@ export class CommercialSimulatorService {
                   ? undefined
                   : new Prisma.Decimal(line.distributionLimit),
               displayOrder: line.displayOrder ?? index,
-            })),
+              costEfforts: costEfforts?.length
+                ? {
+                    create: costEfforts.map((effort) => ({
+                      roleCode: effort.roleCode,
+                      hours: new Prisma.Decimal(effort.hours),
+                      source: effort.source,
+                      justification: effort.justification,
+                    })),
+                  }
+                : undefined,
+            },
           });
+        }
       }
       return tx.commercialSimulationScenario.findUniqueOrThrow({
         where: { id: scenarioId },
-        include: { capabilities: true, lines: true, driverValues: true },
+        include: {
+          capabilities: true,
+          lines: { include: { costEfforts: true } },
+          driverValues: true,
+        },
       });
     });
   }
@@ -452,7 +501,10 @@ export class CommercialSimulatorService {
             where: { status: 'ACTIVE' },
             orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
             include: {
-              lines: { orderBy: { displayOrder: 'asc' } },
+              lines: {
+                include: { costEfforts: true },
+                orderBy: { displayOrder: 'asc' },
+              },
               runs: {
                 orderBy: { calculatedAt: 'desc' },
                 take: 1,
@@ -506,7 +558,7 @@ export class CommercialSimulatorService {
           },
         },
         lines: {
-          include: { capability: true },
+          include: { capability: true, costEfforts: true },
           orderBy: { displayOrder: 'asc' },
         },
         capabilities: { include: { capability: true } },
@@ -566,7 +618,7 @@ export class CommercialSimulatorService {
     if (
       costVersion &&
       (costVersion.methodologyCode !== 'direct-cost' ||
-        costVersion.methodologyVersion !== 'v1')
+        !['v1', 'v2'].includes(costVersion.methodologyVersion))
     )
       throw new BadRequestException('COST_ASSUMPTION_METHODOLOGY_INVALID');
     const valuationVersions = dto.valuationAssumptionVersionIds?.length
@@ -597,28 +649,118 @@ export class CommercialSimulatorService {
         )
         .map((value) => [value.scopeKey, value.moneyMinorValue!.toString()]),
     );
-    const costLines = scenario.lines.map((line) => {
+    const roleCostByScope = new Map(
+      (costVersion?.values ?? [])
+        .filter(
+          (value) =>
+            value.assumptionCode === 'LOADED_DIRECT_DELIVERY_COST' &&
+            value.valueType === 'MONEY' &&
+            value.moneyMinorValue !== null &&
+            value.currency === scenario.workspace.currency,
+        )
+        .map((value) => [
+          value.scopeKey,
+          {
+            amountMinor: value.moneyMinorValue!.toString(),
+            assumptionCode: value.assumptionCode,
+            assumptionVersion: value.assumptionVersion,
+            scopeKey: value.scopeKey,
+          },
+        ]),
+    );
+    const lineCosts = scenario.lines.map((line) => {
       const unitCostMinor = costValueByLine.get(line.componentCode);
+      const deterministicRole = professionalServiceRoleForComponent(
+        line.componentCode,
+      );
+      const efforts = deterministicRole
+        ? line.quantity
+          ? [
+              {
+                roleCode: deterministicRole,
+                hours: line.quantity.toString(),
+              },
+            ]
+          : []
+        : line.costEfforts.map((effort) => ({
+            roleCode: effort.roleCode,
+            hours: effort.hours.toString(),
+          }));
+      if (efforts.length && unitCostMinor)
+        throw new BadRequestException('AMBIGUOUS_COST_AUTHORITY');
+      if (efforts.length) {
+        if (costVersion?.methodologyVersion !== 'v2') return null;
+        const resolved = efforts.map((effort) => {
+          const roleCode = effort.roleCode;
+          assertProfessionalServiceRole(roleCode);
+          const authority = roleCostByScope.get(roleCostScope(roleCode));
+          return authority
+            ? { roleCode, hours: effort.hours, authority }
+            : null;
+        });
+        if (resolved.some((item) => item === null)) return null;
+        const calculation = calculateRoleBasedDirectCost(
+          resolved.map((item) => ({
+            roleCode: item!.roleCode,
+            hours: item!.hours,
+            roleCostMinor: item!.authority.amountMinor,
+            chargeType: line.chargeType,
+            billingPeriod: line.billingPeriod ?? undefined,
+          })),
+        );
+        const totalMinor = costAtBillingCadence(
+          calculation,
+          line.chargeType,
+          line.billingPeriod ?? undefined,
+        );
+        return {
+          totalMinor,
+          chargeType: line.chargeType,
+          billingPeriod: line.billingPeriod ?? undefined,
+          roleBreakdown: calculation.breakdown.map((item, index) => ({
+            roleCode: item.roleCode,
+            hours: item.hours,
+            roleCostMinor: item.roleCostMinor,
+            calculatedCostMinor: item.calculatedCostMinor,
+            ...resolved[index]!.authority,
+          })),
+        };
+      }
       const quantity =
         line.quantity?.toString() ??
         (line.pricingModel === 'FLAT' ? '1.000000' : null);
-      return unitCostMinor && quantity
-        ? {
-            quantity,
-            unitCostMinor,
-            chargeType: line.chargeType,
-            billingPeriod: line.billingPeriod ?? undefined,
-          }
-        : null;
+      if (!unitCostMinor || !quantity) return null;
+      const calculation = calculateDirectCost([
+        {
+          quantity,
+          unitCostMinor,
+          chargeType: line.chargeType,
+          billingPeriod: line.billingPeriod ?? undefined,
+        },
+      ]);
+      const totalMinor = costAtBillingCadence(
+        calculation,
+        line.chargeType,
+        line.billingPeriod ?? undefined,
+      );
+      return {
+        totalMinor,
+        chargeType: line.chargeType,
+        billingPeriod: line.billingPeriod ?? undefined,
+        roleBreakdown: [],
+      };
     });
     const completeCost =
       costVersion &&
-      costLines.length > 0 &&
-      costLines.every((line) => line !== null)
+      lineCosts.length > 0 &&
+      lineCosts.every((line) => line !== null)
         ? calculateDirectCost(
-            costLines.filter(
-              (line): line is NonNullable<typeof line> => line !== null,
-            ),
+            lineCosts.map((line) => ({
+              quantity: '1',
+              unitCostMinor: line.totalMinor,
+              chargeType: line.chargeType,
+              billingPeriod: line.billingPeriod,
+            })),
           )
         : null;
     const inputByCode = new Map(
@@ -666,6 +808,20 @@ export class CommercialSimulatorService {
         ...(dto.valuationAssumptionVersionIds ?? []),
       ].sort(),
       lines: requestLines,
+      costEfforts: scenario.lines.map((line) => ({
+        componentCode: line.componentCode,
+        deterministicRole: professionalServiceRoleForComponent(
+          line.componentCode,
+        ),
+        efforts: line.costEfforts
+          .map((effort) => ({
+            roleCode: effort.roleCode,
+            hours: effort.hours.toString(),
+            source: effort.source,
+            justification: effort.justification,
+          }))
+          .sort((a, b) => a.roleCode.localeCompare(b.roleCode)),
+      })),
       inputs: scenario.driverValues.map((value) => ({
         ...value,
         id: undefined,
@@ -780,11 +936,8 @@ export class CommercialSimulatorService {
                     result.proposedExtendedAmountMinor == null
                       ? null
                       : BigInt(result.proposedExtendedAmountMinor),
-                  estimatedCostMinor: costLines[index]
-                    ? BigInt(
-                        calculateDirectCost([costLines[index]])
-                          .firstYearCostMinor,
-                      )
+                  estimatedCostMinor: lineCosts[index]
+                    ? BigInt(lineCosts[index].totalMinor)
                     : null,
                   calculationStatus: result.status,
                   calculationExplanationFr: result.explanation,
@@ -796,6 +949,23 @@ export class CommercialSimulatorService {
                   commercialRuleCode: source.commercialRuleCode,
                   commercialRuleVersion: source.commercialRuleVersion,
                   displayOrder: source.displayOrder,
+                  costEfforts: lineCosts[index]?.roleBreakdown.length
+                    ? {
+                        create: lineCosts[index].roleBreakdown.map(
+                          (effort) => ({
+                            roleCode: effort.roleCode,
+                            hours: new Prisma.Decimal(effort.hours),
+                            roleCostMinor: BigInt(effort.roleCostMinor),
+                            calculatedCostMinor: BigInt(
+                              effort.calculatedCostMinor,
+                            ),
+                            assumptionCode: effort.assumptionCode,
+                            assumptionVersion: effort.assumptionVersion,
+                            scopeKey: effort.scopeKey,
+                          }),
+                        ),
+                      }
+                    : undefined,
                 };
               }),
             },
@@ -1123,29 +1293,34 @@ export class CommercialSimulatorService {
           createdByUserId: actor.userId,
           createdByDisplayName: actorName,
           inputs: {
-            create: run.inputs.map((input, displayOrder) => ({
-              code: input.driverCode,
-              category: resolveSimulatorDriver(
-                input.driverCode,
-                input.driverVersion,
-              ).category,
-              valueType: input.valueType,
-              decimalValue: input.decimalValue,
-              integerValue: input.integerValue,
-              moneyMinor: input.moneyMinorValue,
-              booleanValue: input.booleanValue,
-              textValue: input.textValue,
-              currency: input.currency,
-              unit: input.unit,
-              source:
-                input.source === 'INTERNAL_ASSUMPTION'
-                  ? 'MANUAL_ASSUMPTION'
-                  : 'DECLARED',
-              labelFR: input.labelFr,
-              labelEN: input.labelEn,
-              justification: input.justification,
-              displayOrder,
-            })),
+            create: run.inputs
+              .filter(
+                (input) =>
+                  input.driverCode !== 'PRODUCTIVITY_GAIN' || proposalValue,
+              )
+              .map((input, displayOrder) => ({
+                code: input.driverCode,
+                category: resolveSimulatorDriver(
+                  input.driverCode,
+                  input.driverVersion,
+                ).category,
+                valueType: input.valueType,
+                decimalValue: input.decimalValue,
+                integerValue: input.integerValue,
+                moneyMinor: input.moneyMinorValue,
+                booleanValue: input.booleanValue,
+                textValue: input.textValue,
+                currency: input.currency,
+                unit: input.unit,
+                source:
+                  input.source === 'INTERNAL_ASSUMPTION'
+                    ? 'MANUAL_ASSUMPTION'
+                    : 'DECLARED',
+                labelFR: input.labelFr,
+                labelEN: input.labelEn,
+                justification: input.justification,
+                displayOrder,
+              })),
           },
           lines: {
             create: run.lines.map((line) => ({

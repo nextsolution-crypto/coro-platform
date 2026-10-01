@@ -290,6 +290,7 @@ enum PriceBookVersionStatus {
 
 enum PricingModel {
   FLAT
+  PER_UNIT
   PER_SEAT
   PER_SITE
   TIERED
@@ -310,6 +311,7 @@ enum BillingPeriod {
 
 enum PriceMetric {
   FIXED
+  HOUR
   SEAT
   SITE
   CLIENT
@@ -5389,9 +5391,24 @@ model CommercialSimulationScenarioLine {
   scenario                     CommercialSimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   capability                   CommercialCapability? @relation(fields: [capabilityId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   priceComponent               PriceComponent? @relation(fields: [priceComponentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  costEfforts                  CommercialSimulationScenarioLineCostEffort[]
   @@unique([scenarioId, componentCode])
   @@index([scenarioId, displayOrder])
   @@index([priceComponentId])
+}
+
+model CommercialSimulationScenarioLineCostEffort {
+  id             String @id @default(uuid())
+  scenarioLineId String
+  roleCode       String @db.VarChar(50)
+  hours          Decimal @db.Decimal(20, 6)
+  source         CommercialSimulationValueSource
+  justification  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  scenarioLine   CommercialSimulationScenarioLine @relation(fields: [scenarioLineId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  @@unique([scenarioLineId, roleCode])
+  @@index([scenarioLineId])
 }
 
 model CommercialSimulationDriverValue {
@@ -5622,8 +5639,25 @@ model CommercialSimulationRunLine {
   displayOrder                 Int
   createdAt                    DateTime @default(now())
   run                          CommercialSimulationCalculationRun @relation(fields: [runId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  costEfforts                  CommercialSimulationRunLineCostEffort[]
   @@unique([runId, componentCode])
   @@index([runId, displayOrder])
+}
+
+model CommercialSimulationRunLineCostEffort {
+  id                  String @id @default(uuid())
+  runLineId           String
+  roleCode            String @db.VarChar(50)
+  hours               Decimal @db.Decimal(20, 6)
+  roleCostMinor       BigInt
+  calculatedCostMinor BigInt
+  assumptionCode      String @db.VarChar(100)
+  assumptionVersion   String @db.VarChar(50)
+  scopeKey            String @db.VarChar(255)
+  createdAt           DateTime @default(now())
+  runLine             CommercialSimulationRunLine @relation(fields: [runLineId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([runLineId, roleCode])
+  @@index([runLineId])
 }
 
 model CommercialSimulationPriceResult {

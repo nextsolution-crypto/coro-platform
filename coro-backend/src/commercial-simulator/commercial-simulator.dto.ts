@@ -83,6 +83,16 @@ export class ConfigureScenarioDto {
   driverValues!: DriverValueDto[];
 }
 
+export class ScenarioLineCostEffortDto {
+  @IsIn(['DELIVERY_PROFESSIONAL', 'SENIOR_REVIEWER'])
+  roleCode!: 'DELIVERY_PROFESSIONAL' | 'SENIOR_REVIEWER';
+  @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,6})?$/)
+  hours!: string;
+  @IsIn(['USER_INPUT', 'INTERNAL_ASSUMPTION'])
+  source!: 'USER_INPUT' | 'INTERNAL_ASSUMPTION';
+  @IsOptional() @IsString() justification?: string;
+}
+
 export class ScenarioLineDto {
   @IsOptional() @IsUUID() capabilityId?: string;
   @IsOptional() @IsUUID() priceComponentId?: string;
@@ -93,6 +103,7 @@ export class ScenarioLineDto {
   @IsOptional() @IsString() componentNameEn?: string;
   @IsIn([
     'FLAT',
+    'PER_UNIT',
     'PER_SEAT',
     'PER_SITE',
     'TIERED',
@@ -102,6 +113,7 @@ export class ScenarioLineDto {
   ])
   pricingModel!:
     | 'FLAT'
+    | 'PER_UNIT'
     | 'PER_SEAT'
     | 'PER_SITE'
     | 'TIERED'
@@ -111,8 +123,15 @@ export class ScenarioLineDto {
   @IsIn(['RECURRING', 'ONE_TIME']) chargeType!: 'RECURRING' | 'ONE_TIME';
   @IsOptional() @IsIn(['MONTH', 'YEAR']) billingPeriod?: 'MONTH' | 'YEAR';
   @IsOptional()
-  @IsIn(['FIXED', 'SEAT', 'SITE', 'CLIENT', 'USAGE_UNIT', 'COMPLEXITY'])
-  metric?: 'FIXED' | 'SEAT' | 'SITE' | 'CLIENT' | 'USAGE_UNIT' | 'COMPLEXITY';
+  @IsIn(['FIXED', 'HOUR', 'SEAT', 'SITE', 'CLIENT', 'USAGE_UNIT', 'COMPLEXITY'])
+  metric?:
+    | 'FIXED'
+    | 'HOUR'
+    | 'SEAT'
+    | 'SITE'
+    | 'CLIENT'
+    | 'USAGE_UNIT'
+    | 'COMPLEXITY';
   @IsOptional()
   @IsIn(['VOLUME', 'GRADUATED'])
   tierMode?: 'VOLUME' | 'GRADUATED';
@@ -138,6 +157,11 @@ export class ScenarioLineDto {
   @IsOptional() @IsString() commercialRuleCode?: string;
   @IsOptional() @IsString() commercialRuleVersion?: string;
   @IsOptional() @IsInt() @Min(0) displayOrder?: number;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ScenarioLineCostEffortDto)
+  costEfforts?: ScenarioLineCostEffortDto[];
 }
 
 export class SelectScenarioDto {

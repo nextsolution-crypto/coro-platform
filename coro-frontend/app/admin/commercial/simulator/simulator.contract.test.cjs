@@ -14,6 +14,15 @@ const assert = require("node:assert/strict");
   assert.match(contract.SIMULATOR_OBSERVATION_NOTICE, /no entitlement/i);
   assert.equal(contract.SIMULATOR_AUTHORITY.price, "PriceBookVersion");
   assert.equal(contract.SIMULATOR_AUTHORITY.proposal, "explicit conversion");
+  assert.deepEqual(contract.FIRST_WAVE_SERVICE_ROLES, [
+    "DELIVERY_PROFESSIONAL",
+    "SENIOR_REVIEWER",
+  ]);
+  assert.deepEqual(contract.FIRST_WAVE_HOURLY_PRICING, {
+    pricingModel: "PER_UNIT",
+    metric: "HOUR",
+    quantityUnit: "HOUR",
+  });
   console.log("commercial simulator frontend contract: PASS");
 })().catch((error) => {
   console.error(error);

@@ -5,6 +5,14 @@ export type CostLine = Readonly<{
   billingPeriod?: 'MONTH' | 'YEAR';
 }>;
 
+export type RoleEffortCost = Readonly<{
+  roleCode: 'DELIVERY_PROFESSIONAL' | 'SENIOR_REVIEWER';
+  hours: string;
+  roleCostMinor: string;
+  chargeType: 'ONE_TIME' | 'RECURRING';
+  billingPeriod?: 'MONTH' | 'YEAR';
+}>;
+
 const decimal6 = (value: string) => {
   if (!/^\d+(\.\d{1,6})?$/.test(value)) throw new Error('INVALID_DECIMAL');
   const [whole, fraction = ''] = value.split('.');
@@ -34,6 +42,38 @@ export function calculateDirectCost(lines: readonly CostLine[]) {
     recurringAnnualCostMinor: annual.toString(),
     firstYearCostMinor: (oneTime + monthly * 12n + annual).toString(),
   };
+}
+
+export function costAtBillingCadence(
+  costs: ReturnType<typeof calculateDirectCost>,
+  chargeType: 'ONE_TIME' | 'RECURRING',
+  billingPeriod?: 'MONTH' | 'YEAR',
+): string {
+  if (chargeType === 'ONE_TIME') return costs.oneTimeDirectCostMinor;
+  if (billingPeriod === 'MONTH') return costs.recurringMonthlyCostMinor;
+  if (billingPeriod === 'YEAR') return costs.recurringAnnualCostMinor;
+  throw new Error('COST_BILLING_PERIOD_REQUIRED');
+}
+
+export function calculateRoleBasedDirectCost(
+  efforts: readonly RoleEffortCost[],
+) {
+  const breakdown = efforts.map((effort) => {
+    const calculatedCostMinor = halfUp(
+      decimal6(effort.hours) * BigInt(effort.roleCostMinor),
+      1_000_000n,
+    );
+    return { ...effort, calculatedCostMinor: calculatedCostMinor.toString() };
+  });
+  const totals = calculateDirectCost(
+    breakdown.map((item) => ({
+      quantity: '1',
+      unitCostMinor: item.calculatedCostMinor,
+      chargeType: item.chargeType,
+      billingPeriod: item.billingPeriod,
+    })),
+  );
+  return { breakdown, ...totals };
 }
 
 export function deriveMargin(revenueMinor: string, costMinor: string) {
