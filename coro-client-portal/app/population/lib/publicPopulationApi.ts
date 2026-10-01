@@ -33,6 +33,7 @@ export type RegisterPopulationSubscriberInput = {
   email?: string;
   preferredLanguage: PopulationPreferredLanguage;
   consentVersion: string;
+  smsConsent?: boolean;
 };
 
 export type RegisterPopulationSubscriberResult = {
@@ -46,6 +47,7 @@ export type RegisterPopulationSubscriberResult = {
   verificationChannel: "SMS" | "EMAIL";
   verificationExpiresAt: string;
   deliveryStatus: "SENT" | "FAILED";
+  smsSubscribed: boolean;
 };
 
 export type VerifyPopulationSubscriberResult = {

@@ -16,6 +16,7 @@ import {
 } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
 import PopulationLocation from "./PopulationLocation";
+import { SMS_CONFIRMATION_DISCLOSURE } from "../lib/smsCompliance";
 
 type Language = "fr" | "en";
 
@@ -189,6 +190,11 @@ export default function PopulationVerification({
           </span>
           <h1>{t.confirmed}</h1>
           <p>{deferred ? t.deferred : t.confirmedText}</p>
+          {workflow.smsSubscribed && (
+            <p className={styles.optionalNotice}>
+              {SMS_CONFIRMATION_DISCLOSURE[language]}
+            </p>
+          )}
           {!deferred && <p className={styles.optionalNotice}>{t.optional}</p>}
           {deferred ? (
             <button className={`${styles.button} ${styles.primary}`} type="button" onClick={onBack}>

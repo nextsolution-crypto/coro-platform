@@ -23,9 +23,20 @@ export default async function TermsPage({ searchParams }: PageProps) {
       <LegalV2
         content={content}
         id="terms-title"
-        extra={(section) => ('privacyLink' in section && section.privacyLink) ? (
-          <p><a className={styles.crossLink} href={privacyHref}>{content.privacyLinkLabel}</a></p>
-        ) : null}
+        extra={(section) => {
+          if ('smsLinks' in section && section.smsLinks) {
+            return (
+              <p>
+                <a className={styles.crossLink} href="https://getcoro.io/terms">{locale === 'fr' ? 'Conditions d’utilisation' : 'Terms of Service'}</a>
+                {' · '}
+                <a className={styles.crossLink} href="https://getcoro.io/privacy">{locale === 'fr' ? 'Politique de confidentialité' : 'Privacy Policy'}</a>
+              </p>
+            );
+          }
+          return ('privacyLink' in section && section.privacyLink) ? (
+            <p><a className={styles.crossLink} href={privacyHref}>{content.privacyLinkLabel}</a></p>
+          ) : null;
+        }}
       />
     </V2Shell>
   );

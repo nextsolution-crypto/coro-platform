@@ -39,8 +39,15 @@ test('effective/update dates match the baseline exactly', () => {
 });
 
 test('section titles match the baseline exactly, in order, for both languages', () => {
-  assert.deepEqual(privacyContent.fr.sections.map((s) => s.title), baseline.fr.sectionTitles);
-  assert.deepEqual(privacyContent.en.sections.map((s) => s.title), baseline.en.sectionTitles);
+  assert.deepEqual(privacyContent.fr.sections.filter((s) => !s.title.startsWith('6A.')).map((s) => s.title), baseline.fr.sectionTitles);
+  assert.deepEqual(privacyContent.en.sections.filter((s) => !s.title.startsWith('6A.')).map((s) => s.title), baseline.en.sectionTitles);
+});
+
+test('SMS privacy clauses prohibit sale and marketing sharing in FR and EN', () => {
+  const frSms = privacyContent.fr.sections.find((s) => s.title.startsWith('6A.'));
+  const enSms = privacyContent.en.sections.find((s) => s.title.startsWith('6A.'));
+  assert.match(frSms?.paragraphs?.join(' ') ?? '', /ni vendus ni communiqués.*marketing ou de promotion/i);
+  assert.match(enSms?.paragraphs?.join(' ') ?? '', /not sold or shared.*marketing or promotional purposes/i);
 });
 
 test('legal identity (name, NEQ, address, contact) matches the baseline', () => {
@@ -53,8 +60,8 @@ test('legal identity (name, NEQ, address, contact) matches the baseline', () => 
 test('key material clauses (scope, security, applicable law) are present verbatim in both languages', () => {
   assert.match(privacyContent.fr.sections[0].paragraphs![0], /NEQ 2282543935/);
   assert.match(privacyContent.en.sections[0].paragraphs![0], /NEQ 2282543935/);
-  assert.match(privacyContent.fr.sections[14].paragraphs![0], /Loi sur la protection des renseignements personnels/);
-  assert.match(privacyContent.en.sections[14].paragraphs![0], /Personal Information Protection and Electronic Documents Act/);
+  assert.match(privacyContent.fr.sections.find((s) => s.title.startsWith('15.'))!.paragraphs![0], /Loi sur la protection des renseignements personnels/);
+  assert.match(privacyContent.en.sections.find((s) => s.title.startsWith('15.'))!.paragraphs![0], /Personal Information Protection and Electronic Documents Act/);
 });
 
 test('canonical stays https://getcoro.io/privacy for both languages (no new slug, no query-string canonical)', () => {

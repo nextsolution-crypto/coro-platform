@@ -8,7 +8,7 @@ import type { LegalContent } from '@/app/privacy/content';
  * Section 13 additionally carries a `privacyLink` marker (rendered by TermsV2's `extra` callback), matching the
  * pre-migration page's inline link to the Privacy Policy.
  */
-export type TermsSection = LegalContent['sections'][number] & { readonly privacyLink?: boolean };
+export type TermsSection = LegalContent['sections'][number] & { readonly privacyLink?: boolean; readonly smsLinks?: boolean };
 export type TermsContent = Omit<LegalContent, 'sections'> & { readonly sections: readonly TermsSection[]; readonly privacyLinkLabel: string };
 
 const LAST_UPDATED_FR = '10 septembre 2026';
@@ -80,6 +80,11 @@ const fr: TermsContent = {
     { title: '13. Confidentialité et protection des renseignements personnels', paragraphs: [
       'L’utilisation de renseignements personnels dans CORO est assujettie à notre Politique de confidentialité et aux lois applicables. Les organisations clientes demeurent également responsables de leurs propres obligations concernant les renseignements qu’elles recueillent et saisissent dans la plateforme.',
     ], privacyLink: true },
+    { title: '13A. CORO — Messages SMS Sentinelle Population', paragraphs: [
+      'En vous inscrivant, vous acceptez de recevoir des codes de vérification ainsi que, selon le programme choisi, des alertes de sécurité publique, des préalertes, des consignes de protection, des mises à jour d’incident, des messages de fin d’alerte et des exercices ou tests. La fréquence des messages varie.',
+      'Des frais de messagerie et de données peuvent s’appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l’aide. Le consentement n’est pas une condition d’achat.',
+      'Pour obtenir de l’aide, communiquez avec CORO à info@getcoro.io ou au +1 514 791-7871. Les transporteurs ne sont pas responsables des messages retardés ou non livrés.',
+    ], smsLinks: true },
     { title: '14. Suspension et résiliation', paragraphs: [
       'CORO peut suspendre ou restreindre l’accès lorsqu’une mesure est raisonnablement nécessaire pour protéger la sécurité du service, prévenir une utilisation abusive, répondre à une obligation légale, remédier à un défaut de paiement ou faire cesser une violation importante des présentes conditions.',
       'Les modalités de résiliation, de non-renouvellement et de fin de service applicables à un abonnement payant sont celles prévues dans l’offre, la commande ou l’entente commerciale concernée.',
@@ -175,6 +180,11 @@ const en: TermsContent = {
     { title: '13. Privacy and personal information', paragraphs: [
       'Use of personal information in CORO is subject to our Privacy Policy and applicable law. Customer organizations also remain responsible for their own obligations concerning information they collect and enter into the platform.',
     ], privacyLink: true },
+    { title: '13A. CORO — Sentinelle Population text messages', paragraphs: [
+      'By subscribing, you agree to receive verification codes and, depending on the selected program, public-safety alerts, pre-alerts, protective-action instructions, incident updates, all-clear messages, and exercises or tests. Message frequency varies.',
+      'Message and data rates may apply. Reply STOP to unsubscribe or HELP for help. Consent is not a condition of purchase.',
+      'For help, contact CORO at info@getcoro.io or +1 514 791-7871. Carriers are not liable for delayed or undelivered messages.',
+    ], smsLinks: true },
     { title: '14. Suspension and termination', paragraphs: [
       'CORO may suspend or restrict access where reasonably necessary to protect service security, prevent abuse, comply with a legal obligation, address non-payment or stop a material violation of these terms.',
       'Termination, non-renewal and end-of-service terms applicable to a paid subscription are those stated in the relevant offer, order or commercial agreement.',

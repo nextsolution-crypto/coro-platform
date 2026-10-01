@@ -18,6 +18,11 @@ import {
   type PopulationWorkflowSession,
 } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
+import {
+  SMS_CARRIER_DISCLOSURE,
+  SMS_PRIVACY_URL,
+  SMS_TERMS_URL,
+} from "../lib/smsCompliance";
 import PopulationVerification from "./PopulationVerification";
 
 type Language = "fr" | "en";
@@ -157,6 +162,8 @@ export default function PopulationRegistration({
     consented &&
     !submitting;
   const firstChannel = program.smsEnabled && phone.trim() ? "SMS" : "EMAIL";
+  const smsSelected = program.smsEnabled && Boolean(phone.trim());
+  const smsDisclosure = SMS_CARRIER_DISCLOSURE[language];
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -185,6 +192,7 @@ export default function PopulationRegistration({
         ...(program.emailEnabled && trimmedEmail ? { email: trimmedEmail } : {}),
         preferredLanguage: language === "fr" ? "FR" : "EN",
         consentVersion: program.consentVersion,
+        ...(smsSelected ? { smsConsent: consented } : {}),
       });
       setPhone("");
       setEmail("");
@@ -238,6 +246,20 @@ export default function PopulationRegistration({
             <h2>{t.consentTitle}</h2>
             {consentText ? <p>{consentText}</p> : <p className={styles.fieldError}>{t.consentUnavailable}</p>}
             {privacyText && <details className={styles.details}><summary>{t.privacy}</summary><p>{privacyText}</p></details>}
+            {smsSelected && (
+              <div className={styles.smsDisclosure} data-testid="sms-carrier-disclosure">
+                <p>{smsDisclosure.intro}</p>
+                <p>{smsDisclosure.frequency}</p>
+                <p>{smsDisclosure.rates}</p>
+                <p>{smsDisclosure.keywords}</p>
+                <p>{smsDisclosure.purchase}</p>
+                <p>
+                  <a href={SMS_TERMS_URL}>{smsDisclosure.terms}</a>
+                  {" · "}
+                  <a href={SMS_PRIVACY_URL}>{smsDisclosure.privacy}</a>
+                </p>
+              </div>
+            )}
             <label className={styles.consentCheck}>
               <input ref={consentRef} type="checkbox" checked={consented} onChange={(event) => setConsented(event.target.checked)} aria-invalid={!!fieldErrors.consent} />
               <span>{t.consentCheck}</span>
