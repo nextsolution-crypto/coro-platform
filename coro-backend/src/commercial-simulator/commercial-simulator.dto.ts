@@ -4,11 +4,13 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   Matches,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -19,6 +21,24 @@ export class CreateWorkspaceDto {
   @IsOptional() @IsUUID() organizationId?: string;
   @IsOptional() @IsUUID() prospectId?: string;
   @IsUUID() priceBookVersionId!: string;
+}
+
+export class ConfiguratorTargetQueryDto {
+  @IsOptional() @IsString() @Length(1, 100) search?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(25) pageSize = 10;
+}
+
+export class ConfiguratorPriceBookQueryDto {
+  @IsIn(['ORGANIZATION', 'PROSPECT']) targetType!: 'ORGANIZATION' | 'PROSPECT';
+  @IsUUID() targetId!: string;
+  @IsOptional() @IsIn(['DIRECT', 'PARTNER']) audience?: 'DIRECT' | 'PARTNER';
+  @IsOptional() @IsIn(['CAD']) currency = 'CAD';
+  @IsOptional() @IsISO8601() asOf?: string;
+}
+
+export class CreateGuidedWorkspaceDto extends CreateWorkspaceDto {
+  @IsOptional() @IsIn(['DIRECT', 'PARTNER']) audience?: 'DIRECT' | 'PARTNER';
 }
 
 export class CreateScenarioDto {

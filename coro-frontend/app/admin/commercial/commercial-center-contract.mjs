@@ -1,5 +1,6 @@
 export const COMMERCIAL_CENTER_ROUTES = Object.freeze([
   "/admin/commercial",
+  "/admin/commercial/configurator",
   "/admin/commercial/prospects",
   "/admin/commercial/proposals",
   "/admin/commercial/contracts",

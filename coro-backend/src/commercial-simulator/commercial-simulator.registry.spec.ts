@@ -22,4 +22,25 @@ describe('commercial simulator driver registry', () => {
       'SIMULATOR_DRIVER_NOT_SUPPORTED',
     );
   });
+
+  it('exposes localized presentation without changing canonical types or units', () => {
+    expect(
+      SIMULATOR_DRIVER_REGISTRY.every(
+        (item) => item.labelFr && item.labelEn && item.helpFr && item.helpEn,
+      ),
+    ).toBe(true);
+    expect(
+      SIMULATOR_DRIVER_REGISTRY.find(
+        (item) => item.code === 'PRODUCTIVITY_GAIN',
+      ),
+    ).toMatchObject({
+      required: false,
+      hasDefault: false,
+      visibility: 'VALUE_ANALYSIS',
+    });
+    expect(
+      SIMULATOR_DRIVER_REGISTRY.find((item) => item.code === 'BILLABLE_RATE')
+        ?.helpEn,
+    ).toMatch(/not the CORO Professional Services selling price/i);
+  });
 });

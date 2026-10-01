@@ -13,7 +13,10 @@ import {
   CalculateScenarioDto,
   ConfigureScenarioDto,
   ConvertScenarioDto,
+  ConfiguratorPriceBookQueryDto,
+  ConfiguratorTargetQueryDto,
   CreateCostAssumptionSetDto,
+  CreateGuidedWorkspaceDto,
   CreateCostAssumptionVersionDto,
   CreateScenarioDto,
   CreateValuationAssumptionSetDto,
@@ -22,7 +25,14 @@ import {
   SelectScenarioDto,
 } from './commercial-simulator.dto';
 import { simulatorFingerprint } from './calculation-identity';
-import { resolveSimulatorDriver } from './commercial-simulator.registry';
+import {
+  resolveSimulatorDriver,
+  SIMULATOR_DRIVER_REGISTRY,
+} from './commercial-simulator.registry';
+import {
+  COMMERCIAL_FAMILY_REGISTRY,
+  COMMERCIAL_FAMILY_REGISTRY_VERSION,
+} from './commercial-family.registry';
 import {
   calculateDirectCost,
   calculateRoleBasedDirectCost,
@@ -52,6 +62,231 @@ export class CommercialSimulatorService {
     private readonly pricing: ProposalPricingEngine,
     private readonly audit: AdminAuditService,
   ) {}
+
+  async configuratorBootstrap() {
+    const [activeCatalogs, publishedCostVersions, publishedValueVersions] =
+      await this.prisma.$transaction([
+        this.prisma.priceBookVersion.count({
+          where: { status: 'ACTIVE', priceBook: { archivedAt: null } },
+        }),
+        this.prisma.commercialCostAssumptionVersion.count({
+          where: { status: 'PUBLISHED' },
+        }),
+        this.prisma.commercialValuationAssumptionVersion.count({
+          where: { status: 'PUBLISHED' },
+        }),
+      ]);
+    return {
+      registryVersion: COMMERCIAL_FAMILY_REGISTRY_VERSION,
+      families: COMMERCIAL_FAMILY_REGISTRY,
+      drivers: SIMULATOR_DRIVER_REGISTRY,
+      supportedTargetTypes: ['ORGANIZATION', 'PROSPECT'],
+      currencies: ['CAD'],
+      readiness: {
+        catalog: activeCatalogs ? 'READY' : 'SETUP_REQUIRED',
+        cost: publishedCostVersions ? 'AVAILABLE' : 'NOT_CONFIGURED',
+        value: publishedValueVersions ? 'AVAILABLE' : 'NOT_CONFIGURED',
+      },
+      boundaries: {
+        priceAuthority: 'PriceBookVersion',
+        scenarioAuthority: 'CommercialSimulationWorkspace',
+        productionReadyClaim: false,
+      },
+    };
+  }
+
+  async configuratorOrganizations(query: ConfiguratorTargetQueryDto) {
+    const where: Prisma.OrganizationWhereInput = {
+      isInternal: false,
+      OR: [
+        { commercialRelationship: null },
+        { commercialRelationship: { not: 'INTERNAL' } },
+      ],
+      ...(query.search
+        ? { name: { contains: query.search, mode: 'insensitive' } }
+        : {}),
+    };
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.organization.count({ where }),
+      this.prisma.organization.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+          commercialRelationship: true,
+          sector: true,
+        },
+        orderBy: { name: 'asc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+    ]);
+    return {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      items: rows.map((row) => ({
+        id: row.id,
+        type: 'ORGANIZATION' as const,
+        displayName: row.name,
+        secondaryLabel: row.sector,
+        status: row.isActive ? 'ACTIVE' : 'SUSPENDED',
+        selectable: row.isActive,
+        commercialRelationship: row.commercialRelationship,
+      })),
+    };
+  }
+
+  async configuratorProspects(query: ConfiguratorTargetQueryDto) {
+    const where: Prisma.CommercialProspectWhereInput = query.search
+      ? {
+          OR: [
+            { displayName: { contains: query.search, mode: 'insensitive' } },
+            { legalName: { contains: query.search, mode: 'insensitive' } },
+            { reference: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.commercialProspect.count({ where }),
+      this.prisma.commercialProspect.findMany({
+        where,
+        select: {
+          id: true,
+          reference: true,
+          legalName: true,
+          displayName: true,
+          status: true,
+          convertedOrganizationId: true,
+          preferredLanguage: true,
+        },
+        orderBy: { displayName: 'asc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+    ]);
+    return {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      items: rows.map((row) => ({
+        id: row.id,
+        type: 'PROSPECT' as const,
+        displayName: row.displayName,
+        secondaryLabel: `${row.legalName} · ${row.reference}`,
+        status: row.status,
+        selectable: row.status === 'ACTIVE',
+        convertedOrganizationId: row.convertedOrganizationId,
+        preferredLanguage: row.preferredLanguage,
+      })),
+    };
+  }
+
+  async configuratorPriceBooks(query: ConfiguratorPriceBookQueryDto) {
+    const asOf = query.asOf ? new Date(query.asOf) : new Date();
+    let audience = query.audience;
+    if (query.targetType === 'ORGANIZATION') {
+      const target = await this.prisma.organization.findUnique({
+        where: { id: query.targetId },
+        select: {
+          isActive: true,
+          isInternal: true,
+          commercialRelationship: true,
+        },
+      });
+      if (
+        !target ||
+        !target.isActive ||
+        target.isInternal ||
+        target.commercialRelationship === 'INTERNAL'
+      )
+        throw new BadRequestException('CONFIGURATOR_TARGET_NOT_SELECTABLE');
+      if (target.commercialRelationship)
+        audience = target.commercialRelationship;
+    } else {
+      const target = await this.prisma.commercialProspect.findUnique({
+        where: { id: query.targetId },
+        select: { status: true },
+      });
+      if (!target || target.status !== 'ACTIVE')
+        throw new BadRequestException('CONFIGURATOR_TARGET_NOT_SELECTABLE');
+    }
+    if (!audience)
+      throw new BadRequestException('CONFIGURATOR_AUDIENCE_REQUIRED');
+
+    const [versions, overdueScheduled] = await this.prisma.$transaction([
+      this.prisma.priceBookVersion.findMany({
+        where: {
+          status: 'ACTIVE',
+          effectiveFrom: { lte: asOf },
+          OR: [{ effectiveUntil: null }, { effectiveUntil: { gt: asOf } }],
+          priceBook: { archivedAt: null, audience, currency: query.currency },
+        },
+        include: { priceBook: true },
+        orderBy: { versionNumber: 'desc' },
+      }),
+      this.prisma.priceBookVersion.count({
+        where: {
+          status: 'SCHEDULED',
+          effectiveFrom: { lte: asOf },
+          priceBook: { archivedAt: null, audience, currency: query.currency },
+        },
+      }),
+    ]);
+    const candidates = versions.map((version) => ({
+      priceBookId: version.priceBookId,
+      priceBookVersionId: version.id,
+      label: `${version.priceBook.name} · ${audience} · ${query.currency} · v${version.versionNumber} · ACTIVE · ${version.effectiveFrom?.toISOString().slice(0, 10) ?? 'no effective date'}`,
+      audience,
+      currency: query.currency,
+      versionNumber: version.versionNumber,
+      status: version.status,
+      effectiveFrom: version.effectiveFrom,
+      effectiveUntil: version.effectiveUntil,
+      selectable: true,
+    }));
+    return {
+      audience,
+      currency: query.currency,
+      readiness: candidates.length ? 'READY' : 'SETUP_REQUIRED',
+      code: candidates.length ? null : 'COMMERCIAL_CATALOG_SETUP_REQUIRED',
+      requiresSelection: candidates.length > 1,
+      warnings: overdueScheduled
+        ? ['SCHEDULED_PRICEBOOK_EFFECTIVE_DATE_PASSED']
+        : [],
+      candidates,
+    };
+  }
+
+  async createGuidedWorkspace(dto: CreateGuidedWorkspaceDto, actor: Actor) {
+    const targetType = dto.organizationId ? 'ORGANIZATION' : 'PROSPECT';
+    const targetId = dto.organizationId ?? dto.prospectId;
+    if (!targetId)
+      throw new BadRequestException(
+        'Exactly one organization or prospect target is required.',
+      );
+    const options = await this.configuratorPriceBooks({
+      targetType,
+      targetId,
+      audience: dto.audience,
+      currency: 'CAD',
+    });
+    if (
+      !options.candidates.some(
+        (candidate) => candidate.priceBookVersionId === dto.priceBookVersionId,
+      )
+    )
+      throw new BadRequestException('CONFIGURATOR_PRICEBOOK_NOT_ELIGIBLE');
+    const workspaceDto: CreateWorkspaceDto = {
+      title: dto.title,
+      description: dto.description,
+      organizationId: dto.organizationId,
+      prospectId: dto.prospectId,
+      priceBookVersionId: dto.priceBookVersionId,
+    };
+    return this.createWorkspace(workspaceDto, actor);
+  }
 
   listCostAssumptions() {
     return this.prisma.commercialCostAssumptionSet.findMany({

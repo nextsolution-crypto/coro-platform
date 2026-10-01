@@ -54,7 +54,16 @@ export default function CommercialSimulatorPage() {
     api
       .get(`${SIMULATOR_API_BASE}/workspaces`)
       .then((response) => {
-        if (active) setWorkspaces(response.data);
+        if (!active) return;
+        setWorkspaces(response.data);
+        const requestedWorkspace = new URLSearchParams(
+          window.location.search,
+        ).get("workspace");
+        if (requestedWorkspace) {
+          void openWorkspace(requestedWorkspace).catch(() => {
+            if (active) setMessage("Unable to open the requested workspace.");
+          });
+        }
       })
       .catch(() => {
         if (active) setMessage("Unable to load internal simulations.");
@@ -272,9 +281,11 @@ export default function CommercialSimulatorPage() {
                   ))}
                 </div>
                 <p className="mt-3 text-xs text-slate-500">
-                  Professional services use {FIRST_WAVE_HOURLY_PRICING.pricingModel}
-                  /{FIRST_WAVE_HOURLY_PRICING.metric} pricing. Direct costs remain
-                  separate by role: {FIRST_WAVE_SERVICE_ROLES.join(" and ")}.
+                  Professional services use{" "}
+                  {FIRST_WAVE_HOURLY_PRICING.pricingModel}/
+                  {FIRST_WAVE_HOURLY_PRICING.metric} pricing. Direct costs
+                  remain separate by role:{" "}
+                  {FIRST_WAVE_SERVICE_ROLES.join(" and ")}.
                 </p>
                 <form onSubmit={createScenario} className="mt-6 flex gap-2">
                   <input

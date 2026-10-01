@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Put,
   Req,
   UseGuards,
@@ -15,10 +16,13 @@ import { CommercialSimulatorService } from './commercial-simulator.service';
 import {
   AssumptionTransitionDto,
   CalculateScenarioDto,
+  ConfiguratorPriceBookQueryDto,
+  ConfiguratorTargetQueryDto,
   ConfigureScenarioDto,
   ConvertScenarioDto,
   CreateCostAssumptionSetDto,
   CreateCostAssumptionVersionDto,
+  CreateGuidedWorkspaceDto,
   CreateScenarioDto,
   CreateValuationAssumptionSetDto,
   CreateValuationAssumptionVersionDto,
@@ -33,6 +37,30 @@ type RequestWithUser = { user: { id: string } };
 @SuperAdminOnly()
 export class CommercialSimulatorController {
   constructor(private readonly service: CommercialSimulatorService) {}
+  @Get('configurator/bootstrap') configuratorBootstrap() {
+    return this.service.configuratorBootstrap();
+  }
+  @Get('configurator/targets/organizations') configuratorOrganizations(
+    @Query() query: ConfiguratorTargetQueryDto,
+  ) {
+    return this.service.configuratorOrganizations(query);
+  }
+  @Get('configurator/targets/prospects') configuratorProspects(
+    @Query() query: ConfiguratorTargetQueryDto,
+  ) {
+    return this.service.configuratorProspects(query);
+  }
+  @Get('configurator/price-books') configuratorPriceBooks(
+    @Query() query: ConfiguratorPriceBookQueryDto,
+  ) {
+    return this.service.configuratorPriceBooks(query);
+  }
+  @Post('configurator/workspaces') createGuidedWorkspace(
+    @Body() dto: CreateGuidedWorkspaceDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.createGuidedWorkspace(dto, { userId: req.user.id });
+  }
   @Get('assumptions/cost') listCostAssumptions() {
     return this.service.listCostAssumptions();
   }

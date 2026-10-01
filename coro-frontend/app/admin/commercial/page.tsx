@@ -26,6 +26,7 @@ export default function CommercialCenterPage() {
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           {[
+            ["Commercial Configurator", "/admin/commercial/configurator"],
             ["Prospects", "/admin/commercial/prospects"],
             ["Proposals", "/admin/commercial/proposals"],
             ["New proposal", "/admin/commercial/proposals/new"],
