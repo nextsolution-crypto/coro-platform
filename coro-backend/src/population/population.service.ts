@@ -65,6 +65,8 @@ import { SelectPopulationLocationDto } from './dto/select-population-location.dt
 import type { GeocodingResult } from '../geocoding/geocoding.types';
 import { PopulationReadinessService } from './population-readiness.service';
 import { POPULATION_DELIVERY_LEASE_MS } from './population-delivery.constants';
+import { PhoneNumberService } from '../common/phone/phone-number.service';
+import { PhoneNumberError } from '../common/phone/phone-number.errors';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
@@ -89,6 +91,12 @@ const POPULATION_ACCESS_REQUEST_TOKEN_AAD = Buffer.from(
 
 const POPULATION_DELIVERY_MAX_ATTEMPTS = 3;
 const POPULATION_DELIVERY_BACKOFF_MS = [60_000, 5 * 60_000, 15 * 60_000];
+// PHONE-01A: existing Population programs are Canadian. Keeping the context
+// explicit allows a later program -> site -> organization resolver.
+const POPULATION_PHONE_CONTEXT = {
+  defaultCountry: 'CA' as const,
+  purpose: 'SMS' as const,
+};
 
 type PopulationLocationResolutionPayload = {
   purpose: typeof POPULATION_LOCATION_RESOLUTION_PURPOSE;
@@ -133,14 +141,60 @@ export class PopulationService {
     private readonly geocodingService: GeocodingService,
     private readonly readiness: PopulationReadinessService,
     private readonly operationalEvents: PopulationOperationalEventsService,
+    private readonly phoneNumbers: PhoneNumberService,
   ) {}
+
+  private smsDestination(subscriber: {
+    phone: string | null;
+    phoneCanonical?: string | null;
+  }): string | null {
+    return subscriber.phoneCanonical ?? subscriber.phone;
+  }
+
+  private normalizePopulationPhone(input: string): string {
+    try {
+      return this.phoneNumbers.normalizePhoneNumber(
+        input,
+        POPULATION_PHONE_CONTEXT,
+      ).canonical;
+    } catch (error) {
+      if (error instanceof PhoneNumberError) {
+        throw new BadRequestException('Le numéro de téléphone est invalide');
+      }
+      throw error;
+    }
+  }
+
+  private tryNormalizeLegacyPopulationPhone(input: string | null): string | null {
+    if (!input) return null;
+    try {
+      return this.phoneNumbers.normalizePhoneNumber(
+        input,
+        POPULATION_PHONE_CONTEXT,
+      ).canonical;
+    } catch {
+      return null;
+    }
+  }
+
+  private maskPopulationPhone(subscriber: {
+    phone: string | null;
+    phoneCanonical?: string | null;
+  }): string | null {
+    const canonical =
+      subscriber.phoneCanonical ??
+      this.tryNormalizeLegacyPopulationPhone(subscriber.phone);
+    if (canonical) return this.phoneNumbers.maskPhoneNumber(canonical);
+    if (!subscriber.phone) return null;
+    return `${'*'.repeat(Math.max(subscriber.phone.length - 4, 0))}${subscriber.phone.slice(-4)}`;
+  }
 
   private canReceiveSms(
     program: { smsEnabled: boolean },
-    subscriber: { smsEnabled: boolean; phone: string | null },
+    subscriber: { smsEnabled: boolean; phone: string | null; phoneCanonical?: string | null },
   ) {
     return Boolean(
-      subscriber.smsEnabled && program.smsEnabled && subscriber.phone,
+      subscriber.smsEnabled && program.smsEnabled && this.smsDestination(subscriber),
     );
   }
 
@@ -1261,6 +1315,7 @@ export class PopulationService {
     }
 
     const phone = dto.phone?.trim() || null;
+    const phoneCanonical = phone ? this.normalizePopulationPhone(phone) : null;
     const email = dto.email?.trim().toLowerCase() || null;
 
     if (!phone && !email) {
@@ -1322,6 +1377,7 @@ export class PopulationService {
         data: {
           programId: program.id,
           phone,
+          phoneCanonical,
           email,
           preferredLanguage: dto.preferredLanguage,
           status: PopulationSubscriberStatus.PENDING_VERIFICATION,
@@ -1372,7 +1428,7 @@ export class PopulationService {
       channel: verificationChannel,
       destination:
         verificationChannel === PopulationVerificationChannel.SMS
-          ? phone!
+          ? phoneCanonical!
           : email!,
       code: verificationCode,
       preferredLanguage: dto.preferredLanguage,
@@ -1446,6 +1502,7 @@ export class PopulationService {
         id: true,
         status: true,
         phone: true,
+        phoneCanonical: true,
         email: true,
         preferredLanguage: true,
       },
@@ -1463,7 +1520,7 @@ export class PopulationService {
 
     if (
       dto.channel === PopulationVerificationChannel.SMS &&
-      (!subscriber.phone || !program.smsEnabled)
+      (!this.smsDestination(subscriber) || !program.smsEnabled)
     ) {
       throw new BadRequestException(
         'La vérification SMS n’est pas disponible pour cette inscription',
@@ -1541,7 +1598,7 @@ export class PopulationService {
       channel: dto.channel,
       destination:
         dto.channel === PopulationVerificationChannel.SMS
-          ? subscriber.phone!
+          ? this.smsDestination(subscriber)!
           : subscriber.email!,
       code: verificationCode,
       preferredLanguage: subscriber.preferredLanguage,
@@ -1600,6 +1657,7 @@ export class PopulationService {
       select: {
         id: true,
         phone: true,
+        phoneCanonical: true,
         email: true,
         smsEnabled: true,
         emailEnabled: true,
@@ -1610,7 +1668,7 @@ export class PopulationService {
     const destination =
       dto.channel === PopulationVerificationChannel.SMS
         ? subscriber?.smsEnabled && program.smsEnabled
-          ? subscriber.phone
+          ? this.smsDestination(subscriber)
           : null
         : subscriber?.emailEnabled && program.emailEnabled
           ? subscriber.email
@@ -1713,6 +1771,10 @@ export class PopulationService {
       dto.channel === PopulationVerificationChannel.EMAIL
         ? dto.destination.trim().toLowerCase()
         : dto.destination.trim();
+    const canonicalDestination =
+      dto.channel === PopulationVerificationChannel.SMS && destination
+        ? this.normalizePopulationPhone(destination)
+        : null;
 
     if (operational && destination) {
       const channelAvailable =
@@ -1720,22 +1782,50 @@ export class PopulationService {
           ? program!.smsEnabled
           : program!.emailEnabled;
       if (channelAvailable) {
-        const candidates = await this.prisma.populationSubscriber.findMany({
-          where: {
-            programId: program!.id,
-            status: PopulationSubscriberStatus.ACTIVE,
-            ...(dto.channel === PopulationVerificationChannel.SMS
-              ? { phone: destination, smsEnabled: true }
-              : { email: destination, emailEnabled: true }),
-          },
-          select: {
-            id: true,
-            phone: true,
-            email: true,
-            preferredLanguage: true,
-          },
-          take: 2,
-        });
+        const candidates =
+          dto.channel === PopulationVerificationChannel.SMS
+            ? (
+                await this.prisma.populationSubscriber.findMany({
+                  where: {
+                    programId: program!.id,
+                    status: PopulationSubscriberStatus.ACTIVE,
+                    smsEnabled: true,
+                    OR: [
+                      { phoneCanonical: canonicalDestination! },
+                      { phoneCanonical: null, phone: { not: null } },
+                    ],
+                  },
+                  select: {
+                    id: true,
+                    phone: true,
+                    phoneCanonical: true,
+                    email: true,
+                    preferredLanguage: true,
+                  },
+                })
+              ).filter(
+                (candidate) =>
+                  candidate.phoneCanonical === canonicalDestination ||
+                  (candidate.phoneCanonical == null &&
+                    this.tryNormalizeLegacyPopulationPhone(candidate.phone) ===
+                      canonicalDestination),
+              )
+            : await this.prisma.populationSubscriber.findMany({
+              where: {
+                programId: program!.id,
+                status: PopulationSubscriberStatus.ACTIVE,
+                email: destination,
+                emailEnabled: true,
+              },
+                select: {
+                  id: true,
+                  phone: true,
+                  phoneCanonical: true,
+                  email: true,
+                  preferredLanguage: true,
+                },
+                take: 2,
+              });
 
         if (candidates.length === 1) {
           const subscriber = candidates[0];
@@ -1773,7 +1863,7 @@ export class PopulationService {
               channel: dto.channel,
               destination:
                 dto.channel === PopulationVerificationChannel.SMS
-                  ? subscriber.phone!
+                  ? this.smsDestination(subscriber)!
                   : subscriber.email!,
               code: verificationCode,
               preferredLanguage: subscriber.preferredLanguage,
@@ -2394,6 +2484,7 @@ export class PopulationService {
         latitude: true,
         longitude: true,
         phone: true,
+        phoneCanonical: true,
         email: true,
         smsEnabled: true,
         emailEnabled: true,
@@ -4872,6 +4963,7 @@ export class PopulationService {
         status: true,
         preferredLanguage: true,
         phone: true,
+        phoneCanonical: true,
         email: true,
         smsEnabled: true,
         emailEnabled: true,
@@ -5000,7 +5092,7 @@ export class PopulationService {
             : this.canReceiveEmail(program, subscriber);
         const destination =
           channel === PopulationAlertChannel.SMS
-            ? subscriber.phone
+            ? this.smsDestination(subscriber)
             : subscriber.email;
         const suppressionReason =
           program.deliveryMode === PopulationDeliveryMode.SANDBOX
@@ -5531,6 +5623,7 @@ export class PopulationService {
             smsEnabled: true,
             emailEnabled: true,
             phone: true,
+            phoneCanonical: true,
             email: true,
           },
         },
@@ -5571,7 +5664,8 @@ export class PopulationService {
             (!delivery.subscriber.emailEnabled ||
               !delivery.subscriber.email)) ||
           (delivery.channel === PopulationAlertChannel.SMS &&
-            (!delivery.subscriber.smsEnabled || !delivery.subscriber.phone)),
+            (!delivery.subscriber.smsEnabled ||
+              !this.smsDestination(delivery.subscriber))),
       )
     ) {
       blockingReasons.push('ROSTER_REVALIDATION_FAILED');
@@ -5632,6 +5726,7 @@ export class PopulationService {
             smsEnabled: true,
             emailEnabled: true,
             phone: true,
+            phoneCanonical: true,
             email: true,
           },
         },
@@ -5659,7 +5754,7 @@ export class PopulationService {
         const current =
           delivery.channel === PopulationAlertChannel.EMAIL
             ? subscriber.email?.trim().toLowerCase()
-            : subscriber.phone;
+            : this.smsDestination(subscriber);
         const frozen =
           delivery.channel === PopulationAlertChannel.EMAIL
             ? delivery.destinationSnapshot?.trim().toLowerCase()
@@ -5943,6 +6038,7 @@ export class PopulationService {
             smsEnabled: true,
             emailEnabled: true,
             phone: true,
+            phoneCanonical: true,
             email: true,
           },
         },
@@ -6027,6 +6123,7 @@ export class PopulationService {
             smsEnabled: true,
             emailEnabled: true,
             phone: true,
+            phoneCanonical: true,
             email: true,
           },
         },
@@ -6081,7 +6178,7 @@ export class PopulationService {
       const currentDestination =
         delivery.channel === PopulationAlertChannel.EMAIL
           ? delivery.subscriber.email
-          : delivery.subscriber.phone;
+          : this.smsDestination(delivery.subscriber);
       const destinationChanged =
         delivery.channel === PopulationAlertChannel.EMAIL
           ? currentDestination?.trim().toLowerCase() !==
@@ -6702,6 +6799,7 @@ export class PopulationService {
         status: true,
         preferredLanguage: true,
         phone: true,
+        phoneCanonical: true,
         email: true,
         smsEnabled: true,
         emailEnabled: true,
@@ -6716,14 +6814,6 @@ export class PopulationService {
     if (!subscriber) {
       throw new NotFoundException('Inscription introuvable');
     }
-
-    const maskPhone = (phone: string | null) => {
-      if (!phone) return null;
-
-      const visible = phone.slice(-4);
-
-      return `${'*'.repeat(Math.max(phone.length - 4, 0))}${visible}`;
-    };
 
     const maskEmail = (email: string | null) => {
       if (!email) return null;
@@ -6744,9 +6834,9 @@ export class PopulationService {
 
       channels: {
         sms: {
-          available: Boolean(subscriber.phone),
+          available: Boolean(this.smsDestination(subscriber)),
           enabled: subscriber.smsEnabled,
-          destination: maskPhone(subscriber.phone),
+          destination: this.maskPopulationPhone(subscriber),
         },
 
         email: {

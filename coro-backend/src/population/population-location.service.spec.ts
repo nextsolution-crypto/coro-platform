@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { createCipheriv, createHmac, randomBytes } from 'crypto';
 import { PopulationService } from './population.service';
+import { PhoneNumberService } from '../common/phone/phone-number.service';
 
 const ACCESS_SECRET = 'test-population-access-secret-not-for-production';
 const KEY = Buffer.alloc(32, 7);
@@ -146,6 +147,7 @@ describe('PopulationService location resolution', () => {
       geocoding as any,
       readiness as any,
       {} as any,
+      new PhoneNumberService(),
     );
   });
 

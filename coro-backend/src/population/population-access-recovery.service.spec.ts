@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { createCipheriv, createHmac, randomBytes, randomUUID } from 'crypto';
 import { PopulationService } from './population.service';
+import { PhoneNumberService } from '../common/phone/phone-number.service';
 
 const REQUEST_KEY = Buffer.alloc(32, 11);
 const OTP_SECRET = 'test-population-otp-secret-not-for-production';
@@ -48,6 +49,7 @@ describe('Population access recovery', () => {
   const subscriber = {
     id: 'subscriber-1',
     phone: '+14505551234',
+    phoneCanonical: null,
     email: 'citizen@example.com',
   };
 
@@ -111,6 +113,7 @@ describe('Population access recovery', () => {
       {} as any,
       readiness as any,
       {} as any,
+      new PhoneNumberService(),
     );
   });
 
@@ -138,10 +141,9 @@ describe('Population access recovery', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           status: PopulationSubscriberStatus.ACTIVE,
-          phone: '+14505551234',
           smsEnabled: true,
+          OR: expect.arrayContaining([{ phoneCanonical: '+14505551234' }]),
         }),
-        take: 2,
       }),
     );
     expect(prisma.populationVerification.create).toHaveBeenCalledWith(
@@ -158,6 +160,39 @@ describe('Population access recovery', () => {
     );
     expect(result).not.toHaveProperty('subscriberId');
     expect(result).not.toHaveProperty('verificationId');
+  });
+
+  it('matches canonical identity across presentation formats', async () => {
+    prisma.populationSubscriber.findMany.mockResolvedValue([
+      {
+        ...subscriber,
+        phone: '(450) 555-1234',
+        phoneCanonical: '+14505551234',
+      },
+    ]);
+
+    await requestSms();
+
+    expect(delivery.sendSms).toHaveBeenCalledWith(
+      '+14505551234',
+      expect.any(String),
+    );
+  });
+
+  it('fails safely when canonical identity matches multiple subscribers', async () => {
+    prisma.populationSubscriber.findMany.mockResolvedValue([
+      { ...subscriber, phoneCanonical: '+14505551234' },
+      {
+        ...subscriber,
+        id: 'subscriber-2',
+        phoneCanonical: '+14505551234',
+      },
+    ]);
+
+    await requestSms();
+
+    expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+    expect(delivery.sendSms).not.toHaveBeenCalled();
   });
 
   it('normalizes email exactly as registration does', async () => {
