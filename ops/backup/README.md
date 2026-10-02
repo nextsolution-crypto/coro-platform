@@ -124,3 +124,15 @@ Remote deletion is intentionally not implemented. DigitalOcean Spaces supports t
 ### Future provider validation
 
 After separate authorization, validate with dedicated test credentials and a random prefix under `database-backups/validation/`. Use a non-production fixture, confirm private ACL, HEAD metadata, full GET checksum and versioning state, then request explicit approval before deleting the validation objects. BACKUP-01B does not execute this procedure.
+
+## Isolated restore drill (BACKUP-01D)
+
+`coro-db-restore-test.sh` proves a local or freshly downloaded verified artifact in a newly generated PostgreSQL 16 disposable container. It accepts no database or container target. Database names always begin with `coro_restore_test_`; container names always end with `_disposable`; resources are labelled with their generated restore ID and cleanup refuses mismatched labels.
+
+Local mode accepts the original `LOCAL_VERIFIED` manifest. Remote mode accepts the matching `REMOTE_VERIFIED` manifest, requires the original local evidence, downloads through the private S3 API into `.partial`, checks size/metadata/VersionId/SHA-256, and then atomically finalizes the downloaded artifact.
+
+The drill validates the archive, PostgreSQL major version, public schema, Prisma migration head, stable critical tables, aggregate counts, orphan aggregates, and canonical Population phone anomaly count. It never prints rows or PII and never starts the application backend. Its application smoke is a provider-free, read-only SQL connectivity/model-count check.
+
+The generated report and workspace are mode `0600`/`0700`. Default cleanup removes only the labelled disposable container after the report. Remote downloaded dump cleanup occurs only after success; original backup artifacts are never removed. Failure cleanup can be disabled explicitly for investigation, but this does not weaken target guards.
+
+See `RECOVERY-RUNBOOK.md` for incident scenarios and the mandatory separation between isolated restoration and human-approved production cutover.
