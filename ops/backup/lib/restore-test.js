@@ -40,6 +40,9 @@ let tableChecks = {};
 let aggregateCounts = {};
 let consistencyChecks = {};
 let applicationSmoke = { status: 'NOT_RUN' };
+let artifactTransport = null;
+let containerArtifactSize = null;
+let containerArtifactSha256Verified = false;
 
 class RestoreError extends Error {
   constructor(code, message) { super(message); this.code = code; }
@@ -156,6 +159,24 @@ function sha256File(file) {
   });
 }
 
+function copyVerifiedArtifact(dumpPath, expectedSize, expectedHash) {
+  const containerArtifactPath = `/tmp/coro-restore-${suffix}.dump`;
+  artifactTransport = 'DOCKER_COPY';
+  const collision = runDockerOptional(['exec', restoreContainer, 'test', '-e', containerArtifactPath]);
+  ensure(collision.status !== 0, 'RESTORE_ARTIFACT_TRANSFER_FAILED', 'Generated container artifact path already exists');
+  runDocker(['cp', dumpPath, `${restoreContainer}:${containerArtifactPath}`], 'RESTORE_ARTIFACT_TRANSFER_FAILED', { timeout: 30 * 60 * 1000 });
+  runDocker(['exec', restoreContainer, 'test', '-f', containerArtifactPath], 'RESTORE_ARTIFACT_TRANSFER_FAILED');
+  const symlink = runDockerOptional(['exec', restoreContainer, 'test', '-L', containerArtifactPath]);
+  ensure(symlink.status !== 0, 'RESTORE_ARTIFACT_TRANSFER_FAILED', 'Container artifact must not be a symbolic link');
+  containerArtifactSize = Number(runDocker(['exec', restoreContainer, 'stat', '-c', '%s', containerArtifactPath], 'RESTORE_ARTIFACT_TRANSFER_FAILED'));
+  ensure(Number.isSafeInteger(containerArtifactSize) && containerArtifactSize === expectedSize, 'RESTORE_ARTIFACT_TRANSFER_FAILED', 'Container artifact size does not match verified source');
+  const hashOutput = runDocker(['exec', restoreContainer, 'sha256sum', containerArtifactPath], 'RESTORE_ARTIFACT_TRANSFER_FAILED');
+  const containerHash = hashOutput.split(/\s+/)[0];
+  ensure(containerHash === expectedHash, 'RESTORE_ARTIFACT_TRANSFER_FAILED', 'Container artifact checksum does not match verified source');
+  containerArtifactSha256Verified = true;
+  return containerArtifactPath;
+}
+
 function sleep(ms) { if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
 
 function psqlScalar(sql, code = 'RESTORE_SMOKE_FAILED') {
@@ -173,6 +194,7 @@ function atomicReport(status, errorCode = null) {
     source: sourceDescription, remoteObjectKey, remoteVersionId, expectedSha256, verifiedSha256,
     postgresBackupVersion: versions.backup || null, postgresRestoreVersion: versions.restore || null,
     restoreDatabase, restoreContainer, migrationHeadExpected, migrationHeadRestored,
+    artifactTransport, containerArtifactSize, containerArtifactSha256Verified,
     tableChecks, aggregateCounts, consistencyChecks, applicationSmoke, status, errorCode,
   };
   const partial = `${reportPath}.partial`;
@@ -261,9 +283,10 @@ async function main() {
   const backupMajorMatch = String(versions.backup || '').match(/([0-9]+)(?:\.[0-9]+)?/);
   ensure(backupMajorMatch && Number(backupMajorMatch[1]) === 16 && Number(versions.restore.split('.')[0]) === 16, 'RESTORE_VERSION_MISMATCH', 'PostgreSQL major versions are incompatible');
 
-  const listOutput = await streamIntoDocker(['exec', '--interactive', restoreContainer, 'pg_restore', '--list'], dumpPath, 'RESTORE_ARCHIVE_INVALID');
+  const containerArtifactPath = copyVerifiedArtifact(dumpPath, evidence.sizeBytes, expectedSha256);
+  const listOutput = runDocker(['exec', restoreContainer, 'pg_restore', '--list', containerArtifactPath], 'RESTORE_ARCHIVE_INVALID', { timeout: 30 * 60 * 1000 });
   ensure(/^[0-9]+;\s+[0-9]+\s+/m.test(listOutput), 'RESTORE_ARCHIVE_INVALID', 'Archive contains no meaningful objects');
-  await streamIntoDocker(['exec', '--interactive', restoreContainer, 'pg_restore', '--no-owner', '--no-privileges', '--exit-on-error', '--username', 'postgres', '--dbname', restoreDatabase], dumpPath, 'PG_RESTORE_FAILED');
+  runDocker(['exec', restoreContainer, 'pg_restore', '--no-owner', '--no-privileges', '--exit-on-error', '--username', 'postgres', '--dbname', restoreDatabase, containerArtifactPath], 'PG_RESTORE_FAILED', { timeout: 30 * 60 * 1000 });
 
   ensure(psqlScalar(`SELECT datname FROM pg_database WHERE datname = '${restoreDatabase}';`) === restoreDatabase, 'STRUCTURAL_CHECK_FAILED', 'Restore database is missing');
   ensure(psqlScalar("SELECT schema_name FROM information_schema.schemata WHERE schema_name='public';") === 'public', 'STRUCTURAL_CHECK_FAILED', 'Public schema is missing');
@@ -299,7 +322,7 @@ async function main() {
   process.stdout.write(`restoreId=${restoreId}\nstatus=RESTORE_VERIFIED\nreportPath=${reportPath}\ncleanup=${cleanupEnabled ? 'COMPLETED' : 'SKIPPED'}\n`);
 }
 
-main().catch(error => {
+function handleFailure(error) {
   const code = error instanceof RestoreError ? error.code : (error && /^[A-Z0-9_]+$/.test(error.message || '') ? error.message : 'RESTORE_FAILED');
   try { atomicReport('RESTORE_FAILED', code); } catch { /* retain primary failure */ }
   if (containerCreated && cleanupEnabled && !preserveOnFailure) {
@@ -307,4 +330,8 @@ main().catch(error => {
   }
   process.stderr.write(`ERROR_CODE=${code}\nERROR_MESSAGE=Restore drill did not complete\n`);
   process.exit(1);
-});
+}
+
+if (require.main === module) main().catch(handleFailure);
+
+module.exports = { RestoreError, streamIntoDocker };

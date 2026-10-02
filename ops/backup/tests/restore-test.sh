@@ -55,6 +55,10 @@ printf '%s\n' "$*" >>"$MOCK_DOCKER_LOG"
 operation="${1:-}"
 shift || true
 case "$operation" in
+  cp)
+    [[ "${MOCK_SCENARIO:-success}" == transfer-failure ]] && exit 2
+    cp "$1" "$MOCK_STATE/artifact"
+    ;;
   inspect)
     if [[ "$*" == *'--format'* ]]; then
       [[ "${MOCK_SCENARIO:-success}" == cleanup-guard ]] && { printf 'false|wrong\n'; exit 0; }
@@ -83,22 +87,36 @@ case "$operation" in
     shift
     command_name="${1:-}"; shift
     case "$command_name" in
+      test)
+        if [[ "${1:-}" == '-e' ]]; then
+          [[ "${MOCK_SCENARIO:-success}" == artifact-collision || -f "$MOCK_STATE/artifact" ]]
+        elif [[ "${1:-}" == '-f' ]]; then
+          [[ -f "$MOCK_STATE/artifact" ]]
+        elif [[ "${1:-}" == '-L' ]]; then
+          exit 1
+        else
+          exit 2
+        fi
+        ;;
+      stat)
+        size="$(stat -c '%s' "$MOCK_STATE/artifact")"
+        [[ "${MOCK_SCENARIO:-success}" == artifact-size-mismatch ]] && size=$((size+1))
+        printf '%s\n' "$size"
+        ;;
+      sha256sum)
+        if [[ "${MOCK_SCENARIO:-success}" == artifact-sha-mismatch ]]; then
+          printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  %s\n' "${1:-}"
+        else
+          sha256sum "$MOCK_STATE/artifact" | sed "s|$MOCK_STATE/artifact|${1:-}|"
+        fi
+        ;;
       pg_isready)
         [[ "${MOCK_SCENARIO:-success}" == startup-failure ]] && exit 1
         printf 'accepting connections\n'
         ;;
       pg_restore)
-        if [[ "${MOCK_SCENARIO:-success}" == epipe-list && "$*" == *'--list'* ]]; then
-          : >"$MOCK_STATE/early-exit"
-          exit 23
-        fi
-        if [[ "${MOCK_SCENARIO:-success}" == epipe-restore && "$*" != *'--list'* ]]; then
-          : >"$MOCK_STATE/early-exit"
-          exit 24
-        fi
-        cat >/dev/null
         if [[ "$*" == *'--list'* ]]; then
-          [[ "${MOCK_SCENARIO:-success}" == invalid-dump ]] && exit 2
+          [[ "${MOCK_SCENARIO:-success}" == invalid-dump || "${MOCK_SCENARIO:-success}" == list-failure ]] && exit 2
           printf '1; 2615 2200 SCHEMA - public postgres\n'
         elif [[ "${MOCK_SCENARIO:-success}" == restore-failure ]]; then exit 2
         fi
@@ -186,7 +204,7 @@ run_case() {
 
 run_case success success success
 report="$(find "${TEST_ROOT}/success/workspace" -name '*.restore-report.json' -type f | head -n 1)"
-if node -e "const r=require(process.argv[1]);if(r.status!=='RESTORE_VERIFIED'||r.aggregateCounts.Organization!==1||r.consistencyChecks.orphanUsers!==0||!r.restoreDatabase.startsWith('coro_restore_test_')||!r.restoreContainer.endsWith('_disposable'))process.exit(1)" "$report"; then pass report-contract; else fail report-contract invalid; fi
+if node -e "const r=require(process.argv[1]);if(r.status!=='RESTORE_VERIFIED'||r.artifactTransport!=='DOCKER_COPY'||!r.containerArtifactSha256Verified||r.containerArtifactSize<1||r.aggregateCounts.Organization!==1||r.consistencyChecks.orphanUsers!==0||!r.restoreDatabase.startsWith('coro_restore_test_')||!r.restoreContainer.endsWith('_disposable'))process.exit(1)" "$report"; then pass report-contract; else fail report-contract invalid; fi
 if [[ -f "${TEST_ROOT}/success/mock/removed" ]]; then pass cleanup-success; else fail cleanup-success missing; fi
 
 run_case invalid-dump invalid-dump failure
@@ -194,16 +212,36 @@ run_case existing-container existing-container failure
 run_case startup-run-failure startup-run-failure failure
 run_case startup-failure startup-failure failure
 run_case restore-failure restore-failure failure
-run_case epipe-list epipe-list failure
-run_case epipe-restore epipe-restore failure
-for epipe_case in epipe-list epipe-restore; do
-  epipe_root="${TEST_ROOT}/${epipe_case}"
-  expected_code=RESTORE_ARCHIVE_INVALID
-  [[ "$epipe_case" == epipe-restore ]] && expected_code=PG_RESTORE_FAILED
-  if grep -q "\"errorCode\": \"${expected_code}\"" "$epipe_root"/workspace/*.restore-report.json; then pass "${epipe_case}-stage-code"; else fail "${epipe_case}-stage-code" wrong; fi
-  if [[ -f "$epipe_root/mock/early-exit" && -f "$epipe_root/mock/removed" ]]; then pass "${epipe_case}-cleanup"; else fail "${epipe_case}-cleanup" missing; fi
-  if grep -Eq "Unhandled 'error' event|Error: write EPIPE|Emitted 'error' event" "$epipe_root/stderr"; then fail "${epipe_case}-handled" crashed; else pass "${epipe_case}-handled"; fi
+run_case list-failure list-failure failure
+run_case transfer-failure transfer-failure failure
+run_case artifact-collision artifact-collision failure
+run_case artifact-size-mismatch artifact-size-mismatch failure
+run_case artifact-sha-mismatch artifact-sha-mismatch failure
+for transfer_case in transfer-failure artifact-collision artifact-size-mismatch artifact-sha-mismatch; do
+  transfer_root="${TEST_ROOT}/${transfer_case}"
+  if grep -q '"errorCode": "RESTORE_ARTIFACT_TRANSFER_FAILED"' "$transfer_root"/workspace/*.restore-report.json; then pass "${transfer_case}-code"; else fail "${transfer_case}-code" wrong; fi
+  if [[ -f "$transfer_root/mock/removed" ]]; then pass "${transfer_case}-cleanup"; else fail "${transfer_case}-cleanup" missing; fi
 done
+for restore_failure_case in invalid-dump list-failure restore-failure; do
+  if [[ -f "${TEST_ROOT}/${restore_failure_case}/mock/removed" ]]; then pass "${restore_failure_case}-cleanup"; else fail "${restore_failure_case}-cleanup" missing; fi
+done
+
+epipe_root="${TEST_ROOT}/g1-epipe-regression"
+make_fixture "$epipe_root"
+make_large_stream_fixture "$epipe_root"
+status=0
+env PATH="${epipe_root}/bin:${PATH}" MOCK_STATE="${epipe_root}/mock" MOCK_DOCKER_LOG="${epipe_root}/docker.log" \
+  node - "$ROOT/ops/backup/lib/restore-test.js" "$epipe_root/source/test-20261002T220000Z-abcdef123456.dump" >"$epipe_root/stdout" 2>"$epipe_root/stderr" <<'NODE' || status=$?
+const { streamIntoDocker } = require(process.argv[2]);
+streamIntoDocker(['close-before-input'], process.argv[3], 'PG_RESTORE_FAILED')
+  .then(() => process.exit(2))
+  .catch(error => {
+    if (error.code !== 'PG_RESTORE_FAILED') process.exit(3);
+    process.stdout.write('EXPECTED_STREAM_REJECTION\n');
+  });
+NODE
+if [[ "$status" -eq 0 ]] && grep -q EXPECTED_STREAM_REJECTION "$epipe_root/stdout"; then pass g1-epipe-rejection; else fail g1-epipe-rejection "exit=${status}"; fi
+if grep -Eq "Unhandled 'error' event|Error: write EPIPE|Emitted 'error' event" "$epipe_root/stderr"; then fail g1-epipe-handled crashed; else pass g1-epipe-handled; fi
 run_case missing-migrations missing-migrations failure
 run_case missing-critical missing-critical failure
 run_case migration-mismatch migration-mismatch failure
