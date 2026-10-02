@@ -4,6 +4,8 @@ This package provides the version-controlled, local-only foundation for a fail-s
 
 It does not contact DigitalOcean Spaces, delete old backups, install a schedule, alter deployment, or restore production data.
 
+BACKUP-01B adds an optional, separate remote stage. The local command remains independently usable. The remote stage uses the AWS CLI against the configured S3-compatible HTTPS endpoint and never imports backup credentials into the application runtime.
+
 ## Architecture
 
 ```text
@@ -70,7 +72,55 @@ BACKUP-01A validates the archive but performs no restore. Future restore drills 
 
 ## Future phases
 
-- BACKUP-01B: verified private off-site upload and retention.
+- BACKUP-01B: verified private off-site upload and safe local retention (implemented by `coro-db-upload.sh` and `coro-db-retention.sh`).
 - BACKUP-01C: systemd service/timer and monitoring.
 - BACKUP-01D: automated isolated restore drill and full runbook.
 - BACKUP-01E: PITR/WAL and infrastructure-level resilience if adopted.
+
+## Verified off-site stage (BACKUP-01B)
+
+The remote stage accepts exactly one absolute path to a `LOCAL_VERIFIED` manifest. It rechecks the dump name, size and SHA-256 before making any request. Remote support is disabled unless `CORO_BACKUP_REMOTE_ENABLED=true` is explicit.
+
+Required configuration:
+
+| Variable | Meaning |
+|---|---|
+| `CORO_BACKUP_SPACES_ENDPOINT` | Plain HTTPS regional endpoint |
+| `CORO_BACKUP_SPACES_REGION` | Spaces region |
+| `CORO_BACKUP_SPACES_BUCKET` | Preferably a dedicated private backup bucket |
+| `CORO_BACKUP_SPACES_PREFIX` | Safe trailing-slash prefix, such as `database-backups/production/` |
+| `CORO_BACKUP_SPACES_ACCESS_KEY` | Dedicated backup access key |
+| `CORO_BACKUP_SPACES_SECRET_KEY` | Dedicated backup secret |
+
+Credentials must later be loaded from a root-readable environment file. They must never be included in an invocation, log, filename, manifest, or application environment. The backup key should be separate from the general application key and limited to the dedicated bucket where supported.
+
+Objects use unique keys:
+
+```text
+<prefix>/<YYYY>/<MM>/<DD>/<backupId>.dump
+<prefix>/<YYYY>/<MM>/<DD>/<backupId>.manifest.json
+```
+
+Both objects are private. The dump is verified by HEAD size and immutable metadata (`sha256`, `backup-id`), followed by a full streamed GET and SHA-256 recomputation. ETag is deliberately not used as a content-integrity authority. The manifest undergoes the same HEAD, metadata and full-GET verification. Only then is its local pending form atomically renamed to `<backupId>.remote.manifest.json`, and the atomic PII-safe `backup-state.json` records success.
+
+The original `<backupId>.manifest.json` is never mutated and remains evidence of `LOCAL_VERIFIED`. A remote failure keeps the dump and original manifest, never creates the authoritative remote manifest, increments `consecutiveFailures`, and exits non-zero.
+
+Transient network, timeout, throttling and HTTP 5xx failures receive at most three attempts with bounded exponential backoff and jitter. Authentication, authorization, deterministic size and checksum failures are not retried. Production command timeout defaults to five minutes per provider operation.
+
+### Local retention
+
+`coro-db-retention.sh` defaults to dry-run. Only a strict triplet containing a valid `REMOTE_VERIFIED` manifest, matching local manifest, and matching dump is eligible. The policy keeps seven days, at most approximately 28 six-hourly backups, and always the newest two. `LOCAL_VERIFIED`, failed, partial, unrelated, symlinked, and historical SQL/gzip files are not eligible.
+
+Apply mode must be explicit:
+
+```bash
+CORO_BACKUP_DIR=/path/to/private/backups \
+CORO_BACKUP_RETENTION_DRY_RUN=false \
+./ops/backup/coro-db-retention.sh
+```
+
+Remote deletion is intentionally not implemented. DigitalOcean Spaces supports time-based lifecycle and versioning through its API, but the reviewed documentation does not establish a WORM/Object Lock control suitable for CORO. Its limited keys are bucket-scoped and object write permission includes delete. A credential compromise therefore remains capable of deleting remote backups. A dedicated bucket, versioning, a separately controlled retention identity, access logs, and eventually a second immutable destination are recommended before destructive remote retention.
+
+### Future provider validation
+
+After separate authorization, validate with dedicated test credentials and a random prefix under `database-backups/validation/`. Use a non-production fixture, confirm private ACL, HEAD metadata, full GET checksum and versioning state, then request explicit approval before deleting the validation objects. BACKUP-01B does not execute this procedure.
