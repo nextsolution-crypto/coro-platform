@@ -52,7 +52,7 @@ const FRAGMENT_ASSETS = [
   { kind: 'technical' as const, src: '/images/homepage/platform-incident.webp', ratio: 1185 / 1327, aspect: '4 / 3', position: '50% 12%', area: 'inc' },
 ];
 
-function FragmentCollage({ inputs, destination, note }: { inputs: readonly string[]; destination: string; note: string }) {
+function FragmentCollage({ inputs, destination, note, demoAccount }: { inputs: readonly string[]; destination: string; note: string; demoAccount: string }) {
   return (
     <div className={styles.fragments}>
       <div className={styles.fragmentGrid}>
@@ -61,7 +61,7 @@ function FragmentCollage({ inputs, destination, note }: { inputs: readonly strin
             {asset.kind === 'photo' ? (
               <MediaFrame src={asset.src} alt="" ratio={asset.ratio} aspect={asset.aspect} position={asset.position} sizes="(min-width: 68rem) 260px, 50vw" overlayLabel={inputs[i]} />
             ) : (
-              <MediaFrame kind="technical" src={asset.src} alt="" ratio={asset.ratio} aspect={asset.aspect} position={asset.position} sizes="(min-width: 68rem) 260px, 50vw" cartouche={['CORO', inputs[i], 'Compte démo']} />
+              <MediaFrame kind="technical" src={asset.src} alt="" ratio={asset.ratio} aspect={asset.aspect} position={asset.position} sizes="(min-width: 68rem) 260px, 50vw" cartouche={['CORO', inputs[i], demoAccount]} />
             )}
           </div>
         ))}
@@ -80,7 +80,7 @@ export function Tension({ c }: { c: HomeContent }) {
     <PageSection tone="white" density="standard" labelledBy="home-tension">
       <SplitContent ratio="4-8" align="center"
         text={<EditorialBlock id="home-tension" label={c.tension.label} heading={c.tension.heading} size="lg"><p>{c.tension.lead}</p></EditorialBlock>}
-        media={<FragmentCollage inputs={c.tension.inputs} destination={c.tension.destination} note={c.tension.destinationNote} />} />
+        media={<FragmentCollage inputs={c.tension.inputs} destination={c.tension.destination} note={c.tension.destinationNote} demoAccount={c.tension.demoAccount} />} />
     </PageSection>
   );
 }
@@ -299,10 +299,10 @@ export function Sentinelle({ c }: { c: HomeContent }) {
           <div className={styles.sentinelleScrim} aria-hidden="true" />
         </div>
 
-        <div className={styles.sentinelleAlert} role="note" aria-label="Exemple d'alerte — démonstration">
-          <span className={styles.sentinelleAlertTag}>Urgent</span>
-          <p className={styles.sentinelleAlertTitle}>Alerte incendie</p>
-          <p className={styles.sentinelleAlertMeta}>RDC · 10:31 — Procédures activées</p>
+        <div className={styles.sentinelleAlert} role="note" aria-label={c.sentinelle.alert.accessibleLabel}>
+          <span className={styles.sentinelleAlertTag}>{c.sentinelle.alert.label}</span>
+          <p className={styles.sentinelleAlertTitle}>{c.sentinelle.alert.title}</p>
+          <p className={styles.sentinelleAlertMeta}>{c.sentinelle.alert.meta}</p>
         </div>
 
         <div className={styles.sentinelleCopy}>

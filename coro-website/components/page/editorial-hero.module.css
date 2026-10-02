@@ -67,7 +67,7 @@
   /* Architectural vertical narrative: knowledge (upper floors) → people (occupied floors) → action (entrance/ground level).
      A responsive right safe-margin (clamp, ~80-120px at normal desktop widths) keeps Connaître/Agir off the viewport edge;
      Personnes stays clear of the text column's reserved ~45% and clear of the right-edge overlays' vertical band. */
-  .overlay:nth-of-type(1) { inset-block-start: 11%; inset-inline-end: clamp(5rem, 9vw, 7.5rem); }
+  .overlay:nth-of-type(1) { inset-block-start: 11%; inset-inline-end: calc(clamp(5rem, 9vw, 7.5rem) + 220px); }
   .overlay:nth-of-type(2) { inset-block-start: 41%; inset-inline-start: 21%; }
-  .overlay:nth-of-type(3) { inset-block-end: 12%; inset-inline-end: clamp(5rem, 9vw, 7.5rem); }
+  .overlay:nth-of-type(3) { inset-block-end: 12%; inset-inline-end: calc(clamp(5rem, 9vw, 7.5rem) + 220px); }
 }
