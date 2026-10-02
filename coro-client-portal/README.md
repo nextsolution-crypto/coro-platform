@@ -16,6 +16,13 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Public Population portal URL
+
+Set `NEXT_PUBLIC_CLIENT_PORTAL_URL` to the canonical public origin used for
+citizen registration links and QR codes (production: `https://client.getcoro.io`).
+Development falls back to `http://localhost:3003`. The generated route is
+`/population/{publicSlug}` and never includes authentication parameters.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
