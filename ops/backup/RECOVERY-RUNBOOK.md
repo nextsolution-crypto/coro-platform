@@ -58,3 +58,20 @@ For backup `production-20261002T210109Z-893a383f9dfa`:
 12. never connect to or modify `coro_db`.
 
 This procedure requires separate production authorization.
+
+## Automated service operations
+
+Installation and enablement remain separate approvals. Verify the deployed commit, run `install.sh --dry-run`, install/update scripts and units, preserve the existing `/etc/coro-backup/spaces.env`, derive `backup.env` from its example, run `systemd-analyze verify`, then perform one manual service execution. Require a new `REMOTE_VERIFIED` manifest, HEALTHY output, clean journal and a confirmed next timer trigger before enabling schedules. Do not enable retention.
+
+Useful diagnostics:
+
+```bash
+systemctl status coro-db-backup.service coro-db-backup.timer coro-db-backup-health.timer
+journalctl -u coro-db-backup.service -u coro-db-backup-health.service
+/opt/coro-ops/backup/coro-db-backup-health.sh
+systemctl list-timers coro-db-backup.timer coro-db-backup-health.timer
+```
+
+`Persistent=true` runs a missed timer after boot. The existing non-blocking backup flock prevents overlap and produces a visible service failure; systemd does not use an aggressive automatic restart, so the next normal timer remains authoritative.
+
+The restore timer is monthly but must stay disabled until `/etc/coro-backup/restore.env` names an exact verified manifest and VersionId. A successful historical restore report may satisfy health without being rewritten. Automatic production restore and production cutover remain forbidden.

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run CORO isolated restore drill monthly when explicitly configured
+
+[Timer]
+OnCalendar=*-*-01 03:00:00
+Persistent=true
+AccuracySec=5min
+Unit=coro-db-restore-test.service
+
+[Install]
+WantedBy=timers.target

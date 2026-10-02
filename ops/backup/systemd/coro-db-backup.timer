@@ -1,0 +1,11 @@
+[Unit]
+Description=Run CORO verified database backup every six hours
+
+[Timer]
+OnCalendar=*-*-* 00/6:00:00
+Persistent=true
+AccuracySec=1min
+Unit=coro-db-backup.service
+
+[Install]
+WantedBy=timers.target

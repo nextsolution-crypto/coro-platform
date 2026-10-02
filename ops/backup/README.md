@@ -136,3 +136,23 @@ The drill validates the archive, PostgreSQL major version, public schema, Prisma
 The generated report and workspace are mode `0600`/`0700`. Default cleanup removes only the labelled disposable container after the report. Remote downloaded dump cleanup occurs only after success; original backup artifacts are never removed. Failure cleanup can be disabled explicitly for investigation, but this does not weaken target guards.
 
 See `RECOVERY-RUNBOOK.md` for incident scenarios and the mandatory separation between isolated restoration and human-approved production cutover.
+
+## Automated operations (BACKUP-01C)
+
+`coro-db-backup-run.sh` is the only scheduled entry point. It runs the local backup, accepts only the exact `manifestPath` and `backupId` emitted by that invocation, uploads that manifest, and succeeds only after `REMOTE_VERIFIED`. The existing flock in `coro-db-backup.sh` remains authoritative for timer/manual concurrency. Retention is not part of this chain.
+
+Configuration is split between `/etc/coro-backup/backup.env` (operational values) and root-only `/etc/coro-backup/spaces.env` (provider credentials). Examples under `config/` contain no production secret. systemd logs PII-safe status through journald. No external alert provider is configured; `OnFailure` records `ALERT_PROVIDER=NOT_CONFIGURED` and operators must inspect `systemctl status` and `journalctl`.
+
+The backup timer runs every six hours with `Persistent=true`. Health runs every fifteen minutes. `coro-db-backup-health.sh` exits `0` for HEALTHY, `1` for WARNING and `2` for CRITICAL. Backup thresholds are 7/8 hours and two consecutive failures. Restore thresholds are 35/45 days; existing valid `RESTORE_VERIFIED` reports are discovered read-only.
+
+The monthly restore service requires an explicitly installed `restore.env` containing an exact REMOTE_VERIFIED manifest and VersionId. Because current remote manifests do not persist VersionId, its timer must remain disabled until that deterministic selection is configured and reviewed. No backup or restore timer is enabled by `install.sh` unless `--enable` is explicit; even that flag enables only backup and health timers.
+
+Installation preview:
+
+```bash
+./ops/backup/install.sh --dry-run
+```
+
+After production configuration and separate approval, install as root, verify units, execute one manual `coro-db-backup.service`, confirm REMOTE_VERIFIED and HEALTHY, inspect the journal, then enable backup and health timers. Never enable retention automatically.
+
+Migration checkpoint contract: risky migrations must invoke `coro-db-backup-run.sh` immediately before mutation and stop unless it returns zero/REMOTE_VERIFIED. Additive low-risk work may instead use `coro-db-backup-health.sh` when policy permits a recent verified backup; destructive, backfill and new constraint operations always require a dedicated checkpoint.
