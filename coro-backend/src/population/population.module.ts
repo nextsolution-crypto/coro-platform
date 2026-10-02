@@ -15,6 +15,7 @@ import {
   POPULATION_ENVIRONMENT,
   PopulationReadinessService,
 } from './population-readiness.service';
+import { PhoneNumberService } from '../common/phone/phone-number.service';
 
 @Module({
   imports: [GeocodingModule, StorageModule],
@@ -25,6 +26,7 @@ import {
   ],
   providers: [
     PopulationService,
+    PhoneNumberService,
     PopulationGeospatialService,
     PopulationDeliveryService,
     {

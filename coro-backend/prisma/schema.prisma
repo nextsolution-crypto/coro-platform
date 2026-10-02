@@ -2875,8 +2875,9 @@ model PopulationSubscriber {
   firstName String?
   lastName  String?
 
-  phone String?
-  email String?
+  phone          String?
+  phoneCanonical String?
+  email          String?
 
   smsEnabled   Boolean @default(false)
   emailEnabled Boolean @default(false)
@@ -2913,6 +2914,7 @@ model PopulationSubscriber {
   @@index([status])
   @@index([programId, status])
   @@index([phone])
+  @@index([programId, phoneCanonical])
   @@index([email])
 }
 

@@ -23,6 +23,7 @@ import {
 } from '@prisma/client';
 import { PopulationService } from './population.service';
 import { PopulationProviderError } from './population-delivery.service';
+import { PhoneNumberService } from '../common/phone/phone-number.service';
 
 describe('PopulationService', () => {
   let service: PopulationService;
@@ -161,6 +162,7 @@ describe('PopulationService', () => {
       geocodingService as any,
       readiness as any,
       operationalEvents as any,
+      new PhoneNumberService(),
     );
   });
 
@@ -1847,6 +1849,7 @@ describe('PopulationService', () => {
         data: {
           programId: 'program-1',
           phone: '+14505551234',
+          phoneCanonical: '+14505551234',
           email: null,
           preferredLanguage: PopulationPreferredLanguage.FR,
           status: PopulationSubscriberStatus.PENDING_VERIFICATION,
@@ -1909,6 +1912,43 @@ describe('PopulationService', () => {
       expect(destination).toBe('+14505551234');
       expect(message).toMatch(/\d{6}/);
       expect(JSON.stringify(result)).not.toContain(message.match(/\d{6}/)?.[0]);
+    });
+
+    it('keeps presentation input and uses E.164 for identity and delivery', async () => {
+      await service.registerSubscriber('sobeys-boucherville', {
+        phone: '(450) 555-1234',
+        preferredLanguage: PopulationPreferredLanguage.FR,
+        consentVersion: '2026-09-v1',
+        smsConsent: true,
+      });
+      expect(prisma.populationSubscriber.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            phone: '(450) 555-1234',
+            phoneCanonical: '+14505551234',
+          }),
+        }),
+      );
+      expect(populationDeliveryService.sendSms).toHaveBeenCalledWith(
+        '+14505551234',
+        expect.any(String),
+      );
+    });
+
+    it('rejects an invalid phone before persistence or SMS', async () => {
+      await expect(
+        service.registerSubscriber('sobeys-boucherville', {
+          phone: '12345',
+          preferredLanguage: PopulationPreferredLanguage.FR,
+          consentVersion: '2026-09-v1',
+          smsConsent: true,
+        }),
+      ).rejects.toMatchObject({
+        message: 'Le numéro de téléphone est invalide',
+      });
+      expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
+      expect(prisma.populationVerification.create).not.toHaveBeenCalled();
+      expect(populationDeliveryService.sendSms).not.toHaveBeenCalled();
     });
 
     it('crée une inscription EMAIL lorsque seul le courriel est fourni', async () => {
@@ -2085,7 +2125,8 @@ describe('PopulationService', () => {
     const pendingSubscriber = {
       id: 'subscriber-1',
       status: PopulationSubscriberStatus.PENDING_VERIFICATION,
-      phone: '+14505551234',
+      phone: '(450) 555-1234',
+      phoneCanonical: '+14505551234',
       email: 'citoyen@example.com',
     };
 
@@ -2132,6 +2173,10 @@ describe('PopulationService', () => {
       );
       expect(result.deliveryStatus).toBe('SENT');
       expect(populationDeliveryService.sendSms).toHaveBeenCalledTimes(1);
+      expect(populationDeliveryService.sendSms).toHaveBeenCalledWith(
+        '+14505551234',
+        expect.any(String),
+      );
     });
 
     it('retourne FAILED sans creer une seconde inscription si le renvoi echoue', async () => {
@@ -2184,6 +2229,7 @@ describe('PopulationService', () => {
       prisma.populationSubscriber.findFirst.mockResolvedValue({
         ...pendingSubscriber,
         phone: null,
+        phoneCanonical: null,
       });
 
       await expect(
@@ -3254,6 +3300,7 @@ describe('PopulationService', () => {
           latitude: true,
           longitude: true,
           phone: true,
+          phoneCanonical: true,
           email: true,
           smsEnabled: true,
           emailEnabled: true,
@@ -5599,7 +5646,8 @@ describe('PopulationService', () => {
           {
             id: 'subscriber-security',
             preferredLanguage: PopulationPreferredLanguage.FR,
-            phone: '+15145550199',
+            phone: '(514) 555-0199',
+            phoneCanonical: '+15145550199',
             email: null,
             smsEnabled: true,
             emailEnabled: false,
@@ -5616,7 +5664,14 @@ describe('PopulationService', () => {
 
         expect(prisma.populationAlertDelivery.createMany).toHaveBeenCalledWith({
           data: expect.arrayContaining([
-            expect.objectContaining({ status, suppressionReason: reason }),
+            expect.objectContaining({
+              status,
+              suppressionReason: reason,
+              destinationSnapshot:
+                status === PopulationDeliveryStatus.QUEUED
+                  ? '+15145550199'
+                  : null,
+            }),
           ]),
           skipDuplicates: true,
         });
@@ -7818,7 +7873,7 @@ describe('PopulationService', () => {
           sms: {
             available: true,
             enabled: true,
-            destination: '********1234',
+            destination: '+1******1234',
           },
           email: {
             available: true,
