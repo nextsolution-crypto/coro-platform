@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const { pipeline } = require('stream');
 const { downloadVerified } = require('./remote-download');
 
 const inputManifestPath = process.argv[2];
@@ -61,12 +62,90 @@ function runDockerOptional(args) {
 function streamIntoDocker(args, file, code) {
   return new Promise((resolve, reject) => {
     const child = spawn('docker', args, { stdio: ['pipe', 'pipe', 'pipe'] });
-    let stdout = ''; let stderr = '';
-    child.stdout.on('data', chunk => { stdout += chunk.toString(); if (stdout.length > 4 * 1024 * 1024) child.kill(); });
-    child.stderr.on('data', chunk => { stderr += chunk.toString(); if (stderr.length > 1024 * 1024) child.kill(); });
-    child.on('error', () => reject(new RestoreError(code, 'Disposable restore process could not start')));
-    child.on('close', status => status === 0 ? resolve(stdout) : reject(new RestoreError(code, 'Disposable restore process failed')));
-    fs.createReadStream(file).on('error', () => reject(new RestoreError(code, 'Backup artifact could not be streamed'))).pipe(child.stdin);
+    const source = fs.createReadStream(file);
+    const stdoutLimit = 4 * 1024 * 1024;
+    const stderrLimit = 1024 * 1024;
+    let stdout = '';
+    let stderr = '';
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let pipelineComplete = false;
+    let childClosed = false;
+    let childStatus = null;
+    let childSignal = null;
+    let pendingFailure = null;
+    let settled = false;
+
+    const stopStreaming = () => {
+      source.unpipe(child.stdin);
+      if (!source.destroyed) source.destroy();
+      if (!child.stdin.destroyed) child.stdin.destroy();
+    };
+
+    const settleFailure = () => {
+      if (settled || !pendingFailure) return;
+      settled = true;
+      stopStreaming();
+      reject(new RestoreError(code, pendingFailure));
+    };
+
+    const requestFailure = (message, terminateChild = true) => {
+      if (settled || pendingFailure) return;
+      pendingFailure = message;
+      stopStreaming();
+      if (terminateChild && !childClosed && child.exitCode === null && child.signalCode === null) child.kill();
+      if (childClosed) settleFailure();
+    };
+
+    const maybeResolve = () => {
+      if (settled) return;
+      if (pendingFailure) {
+        if (childClosed) settleFailure();
+        return;
+      }
+      if (pipelineComplete && childClosed && childStatus === 0 && childSignal === null) {
+        settled = true;
+        resolve(stdout);
+      }
+    };
+
+    const capture = (chunk, streamName) => {
+      const bytes = Buffer.byteLength(chunk);
+      if (streamName === 'stdout') {
+        stdoutBytes += bytes;
+        if (stdoutBytes > stdoutLimit) return requestFailure('Disposable restore stdout exceeded its safety limit');
+        stdout += chunk.toString();
+      } else {
+        stderrBytes += bytes;
+        if (stderrBytes > stderrLimit) return requestFailure('Disposable restore stderr exceeded its safety limit');
+        stderr += chunk.toString();
+      }
+    };
+
+    child.stdout.on('data', chunk => capture(chunk, 'stdout'));
+    child.stderr.on('data', chunk => capture(chunk, 'stderr'));
+    child.stdout.on('error', () => requestFailure('Disposable restore stdout failed'));
+    child.stderr.on('error', () => requestFailure('Disposable restore stderr failed'));
+    child.stdin.on('error', () => requestFailure('Backup artifact stream was rejected'));
+    child.on('error', () => {
+      pendingFailure = pendingFailure || 'Disposable restore process could not start';
+      childClosed = true;
+      settleFailure();
+    });
+    child.on('close', (status, signal) => {
+      childClosed = true;
+      childStatus = status;
+      childSignal = signal;
+      if (status !== 0 || signal !== null) pendingFailure = pendingFailure || 'Disposable restore process failed';
+      if (!pipelineComplete && !pendingFailure) pendingFailure = 'Disposable restore process closed before the backup stream completed';
+      if (pendingFailure) settleFailure(); else maybeResolve();
+    });
+
+    pipeline(source, child.stdin, error => {
+      if (error) requestFailure('Backup artifact could not be streamed');
+      else pipelineComplete = true;
+      maybeResolve();
+    });
   });
 }
 
@@ -170,7 +249,11 @@ async function main() {
   let ready = false;
   for (let attempt = 0; attempt < startupAttempts; attempt += 1) {
     const result = runDockerOptional(['exec', restoreContainer, 'pg_isready', '--username', 'postgres', '--dbname', restoreDatabase]);
-    if (result.status === 0) { ready = true; break; }
+    if (result.status === 0) {
+      sleep(startupDelayMs);
+      const stableResult = runDockerOptional(['exec', restoreContainer, 'pg_isready', '--username', 'postgres', '--dbname', restoreDatabase]);
+      if (stableResult.status === 0) { ready = true; break; }
+    }
     sleep(startupDelayMs);
   }
   ensure(ready, 'POSTGRES_START_FAILED', 'Disposable PostgreSQL did not become ready');

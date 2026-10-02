@@ -30,6 +30,22 @@ NODE
   make_aws_mock "$root/bin/aws"
 }
 
+make_large_stream_fixture() {
+  local root="$1"
+  dd if=/dev/zero of="$root/source/test-20261002T220000Z-abcdef123456.dump" bs=1048576 count=16 status=none
+  node - "$root" <<'NODE'
+const crypto=require('crypto'),fs=require('fs'),path=require('path');
+const root=process.argv[2], id='test-20261002T220000Z-abcdef123456';
+const dump=path.join(root,'source',`${id}.dump`), data=fs.readFileSync(dump);
+for (const suffix of ['manifest.json','remote.manifest.json']) {
+  const file=path.join(root,'source',`${id}.${suffix}`), manifest=JSON.parse(fs.readFileSync(file,'utf8'));
+  manifest.sizeBytes=data.length;
+  manifest.sha256=crypto.createHash('sha256').update(data).digest('hex');
+  fs.writeFileSync(file,JSON.stringify(manifest));
+}
+NODE
+}
+
 make_docker_mock() {
   local target="$1"
   cat >"$target" <<'MOCK'
@@ -72,6 +88,14 @@ case "$operation" in
         printf 'accepting connections\n'
         ;;
       pg_restore)
+        if [[ "${MOCK_SCENARIO:-success}" == epipe-list && "$*" == *'--list'* ]]; then
+          : >"$MOCK_STATE/early-exit"
+          exit 23
+        fi
+        if [[ "${MOCK_SCENARIO:-success}" == epipe-restore && "$*" != *'--list'* ]]; then
+          : >"$MOCK_STATE/early-exit"
+          exit 24
+        fi
         cat >/dev/null
         if [[ "$*" == *'--list'* ]]; then
           [[ "${MOCK_SCENARIO:-success}" == invalid-dump ]] && exit 2
@@ -147,6 +171,7 @@ run_case() {
   local name="$1" scenario="$2" expectation="$3" source_mode="${4:-local}" remote_scenario="${5:-success}"
   local root="${TEST_ROOT}/${name}"
   make_fixture "$root"
+  if [[ "$scenario" == epipe-list || "$scenario" == epipe-restore ]]; then make_large_stream_fixture "$root"; fi
   local manifest="${root}/source/test-20261002T220000Z-abcdef123456.manifest.json"
   [[ "$source_mode" == remote ]] && manifest="${root}/source/test-20261002T220000Z-abcdef123456.remote.manifest.json"
   local status=0
@@ -169,6 +194,16 @@ run_case existing-container existing-container failure
 run_case startup-run-failure startup-run-failure failure
 run_case startup-failure startup-failure failure
 run_case restore-failure restore-failure failure
+run_case epipe-list epipe-list failure
+run_case epipe-restore epipe-restore failure
+for epipe_case in epipe-list epipe-restore; do
+  epipe_root="${TEST_ROOT}/${epipe_case}"
+  expected_code=RESTORE_ARCHIVE_INVALID
+  [[ "$epipe_case" == epipe-restore ]] && expected_code=PG_RESTORE_FAILED
+  if grep -q "\"errorCode\": \"${expected_code}\"" "$epipe_root"/workspace/*.restore-report.json; then pass "${epipe_case}-stage-code"; else fail "${epipe_case}-stage-code" wrong; fi
+  if [[ -f "$epipe_root/mock/early-exit" && -f "$epipe_root/mock/removed" ]]; then pass "${epipe_case}-cleanup"; else fail "${epipe_case}-cleanup" missing; fi
+  if grep -Eq "Unhandled 'error' event|Error: write EPIPE|Emitted 'error' event" "$epipe_root/stderr"; then fail "${epipe_case}-handled" crashed; else pass "${epipe_case}-handled"; fi
+done
 run_case missing-migrations missing-migrations failure
 run_case missing-critical missing-critical failure
 run_case migration-mismatch migration-mismatch failure
