@@ -1,0 +1,16 @@
+[Unit]
+Description=Evaluate CORO backup and restore-drill health
+OnFailure=coro-backup-alert@%n.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/coro-backup/backup.env
+ExecStart=/opt/coro-ops/backup/coro-db-backup-health.sh
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/etc/coro-backup /opt/coro-ops
+RestrictSUIDSGID=true
+LockPersonality=true

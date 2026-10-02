@@ -1,0 +1,20 @@
+[Unit]
+Description=CORO verified PostgreSQL backup and remote verification
+After=docker.service
+Requires=docker.service
+OnFailure=coro-backup-alert@%n.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/coro-backup/backup.env
+EnvironmentFile=/etc/coro-backup/spaces.env
+ExecStart=/opt/coro-ops/backup/coro-db-backup-run.sh
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/etc/coro-backup /opt/coro-ops/backup
+ReadWritePaths=/opt/coro-ops/backups/database /opt/coro-ops/restore-drills
+RestrictSUIDSGID=true
+LockPersonality=true

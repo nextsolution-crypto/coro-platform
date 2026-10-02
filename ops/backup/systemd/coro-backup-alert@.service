@@ -1,0 +1,10 @@
+[Unit]
+Description=Record unconfigured CORO backup alert for %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/logger --tag coro-backup-alert ALERT_PROVIDER=NOT_CONFIGURED failedUnit=%i
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
