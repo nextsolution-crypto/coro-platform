@@ -1,6 +1,7 @@
 .trigger { display: inline-flex; align-items: center; gap: 10px; margin-block-start: var(--coro-v1-space-3); padding: 0; background: none; border: none; cursor: pointer; }
 .icon { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.3); flex-shrink: 0; }
 .label { font-size: 14.5px; font-weight: 700; color: #FFFFFF; text-decoration: underline; text-underline-offset: 3px; }
+.trigger:focus-visible, .close:focus-visible { outline: 3px solid #fff; outline-offset: 4px; border-radius: 4px; }
 
 .overlay { position: fixed; inset: 0; z-index: 2000; background-color: rgba(9, 18, 27, 0.92); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .panel { width: min(90vw, 65rem, calc(85vh * 16 / 9)); position: relative; }

@@ -3,15 +3,12 @@ import type { Locale } from '@/lib/site/locale';
 import { ReferralCapture } from './client/ReferralCapture';
 import { getHomeContent } from './content';
 import {
-  Continuum,
   DemoSection,
   Documents,
   Ecosystem,
   EcosystemSolutions,
-  FinalCta,
   Hero,
   InterventionImprovement,
-  Resilience,
   Resources,
   Sentinelle,
   Tension,
@@ -31,17 +28,14 @@ export function Home({ locale }: { locale: Locale }) {
       <ReferralCapture />
       <Hero c={c} locale={locale} />
       <Tension c={c} />
-      <Continuum c={c} />
       <Ecosystem c={c} />
       <Documents c={c} />
       <Sentinelle c={c} />
       <InterventionImprovement c={c} />
-      <Resilience c={c} />
-      <EcosystemSolutions c={c} />
       <Trust c={c} />
-      <DemoSection c={c} locale={locale} />
+      <EcosystemSolutions c={c} />
       <Resources c={c} />
-      <FinalCta c={c} />
+      <DemoSection c={c} locale={locale} />
     </V2Shell>
   );
 }

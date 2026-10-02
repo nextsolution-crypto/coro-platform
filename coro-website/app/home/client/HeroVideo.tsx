@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, X } from 'lucide-react';
 import type { Locale } from '@/lib/site/locale';
@@ -19,24 +19,37 @@ const YOUTUBE_VIDEO_ID = 'fh3PuO23a1Q';
 
 export function HeroVideo({ label, lang }: { label: string; lang: Locale }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : triggerRef.current;
     document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>('button, iframe, [href], [tabindex]:not([tabindex="-1"])'));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
     };
   }, [open]);
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={styles.trigger}>
+      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={styles.trigger}>
         <span className={styles.icon}>
           <Play size={13} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
         </span>
@@ -50,8 +63,8 @@ export function HeroVideo({ label, lang }: { label: string; lang: Locale }) {
           onClick={() => setOpen(false)}
           className={styles.overlay}
         >
-          <div onClick={(e) => e.stopPropagation()} className={styles.panel}>
-            <button type="button" onClick={() => setOpen(false)} aria-label={lang === 'fr' ? 'Fermer' : 'Close'} className={styles.close}>
+          <div ref={panelRef} onClick={(e) => e.stopPropagation()} className={styles.panel}>
+            <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label={lang === 'fr' ? 'Fermer' : 'Close'} className={styles.close}>
               <X size={20} />
               {lang === 'fr' ? 'Fermer' : 'Close'}
             </button>

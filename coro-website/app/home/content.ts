@@ -27,6 +27,7 @@ const fr = {
     inputs: ['Plans', 'Procédures', 'Personnes', 'Systèmes', 'Données', 'Incidents'],
     destination: 'Information → Décision → Action',
     destinationNote: 'Relier l’information à l’action.',
+    demoAccount: 'Compte démo',
   },
   continuum: {
     label: 'Un continuum de résilience',
@@ -89,11 +90,12 @@ const fr = {
     ],
   },
   sentinelle: {
-    label: '02 · SAVOIR',
+    label: 'Présence et évacuation',
     heading: 'Savoir qui est là. Savoir qui est sorti. Savoir qui manque.',
     lead: 'Présence en temps réel, registre d’occupation, mode évacuation et point de rassemblement — CORO Sentinelle relie le bâtiment aux personnes qui s’y trouvent, en tout temps.',
     imageAlt: 'Une personne enregistre sa présence par code QR à l’entrée d’un bâtiment pendant qu’un agent de sécurité suit l’occupation et l’évacuation depuis un poste CORO Sentinelle.',
     sequence: ['Savoir', 'Confirmer', 'Évacuer', 'Rassembler', 'Protéger'],
+    alert: { label: 'Urgent', title: 'Alerte incendie', meta: 'RDC · 10:31 — Procédures activées', accessibleLabel: 'Exemple d’alerte — démonstration' },
     links: [
       { label: 'Découvrir Sentinelle', href: '/sentinelle' },
       { label: 'Sentinelle Population', href: '/sentinelle-population' },
@@ -103,7 +105,7 @@ const fr = {
     label: 'De l’action à l’amélioration',
     heading: 'De l’intervention à l’amélioration.',
     left: {
-      label: '03 · INTERVENIR',
+      label: 'Intervenir',
       heading: 'La bonne information. Au bon moment.',
       lead: 'CORO relie l’événement, les procédures, les rôles et les actions pour soutenir une intervention coordonnée.',
       markers: ['Procédures', 'Rôles', 'Actions', 'Chronologie'],
@@ -111,7 +113,7 @@ const fr = {
       imageAlt: 'Équipe d’intervention consultant les procédures et le suivi opérationnel.',
     },
     right: {
-      label: '04 · AMÉLIORER',
+      label: 'Améliorer',
       heading: 'Chaque événement doit rendre le prochain meilleur.',
       lead: 'Le document n’est plus la fin du processus : l’exercice et l’incident nourrissent la révision, les actions correctives et la mise à jour des plans.',
       loop: ['Rapport', 'REX', 'Actions correctives', 'Plans actualisés'],
@@ -222,6 +224,7 @@ const en: HomeContent = {
     inputs: ['Plans', 'Procedures', 'People', 'Systems', 'Data', 'Incidents'],
     destination: 'Information → Decision → Action',
     destinationNote: 'Connecting information to action.',
+    demoAccount: 'Demo account',
   },
   continuum: {
     label: 'A resilience continuum',
@@ -284,11 +287,12 @@ const en: HomeContent = {
     ],
   },
   sentinelle: {
-    label: '02 · KNOW',
+    label: 'Occupancy and evacuation',
     heading: 'Know who is there. Know who left. Know who is missing.',
     lead: 'Real-time occupancy, an occupancy registry, evacuation mode and assembly points — CORO Sentinelle connects the building to the people inside it, at all times.',
     imageAlt: 'A person checks in with a QR code at a building entrance while a security officer monitors occupancy and evacuation from a CORO Sentinelle station.',
     sequence: ['Know', 'Confirm', 'Evacuate', 'Assemble', 'Protect'],
+    alert: { label: 'Urgent', title: 'Fire alert', meta: 'Ground floor · 10:31 — Procedures activated', accessibleLabel: 'Alert example — demonstration' },
     links: [
       { label: 'Discover Sentinelle', href: '/sentinelle?lang=en' },
       { label: 'Sentinelle Population', href: '/sentinelle-population?lang=en' },
@@ -298,7 +302,7 @@ const en: HomeContent = {
     label: 'From action to improvement',
     heading: 'From intervention to improvement.',
     left: {
-      label: '03 · RESPOND',
+      label: 'Respond',
       heading: 'The right information. At the right time.',
       lead: 'CORO connects the event, procedures, roles and actions to support a coordinated response.',
       markers: ['Procedures', 'Roles', 'Actions', 'Timeline'],
@@ -306,7 +310,7 @@ const en: HomeContent = {
       imageAlt: 'Response team reviewing procedures and operational tracking.',
     },
     right: {
-      label: '04 · IMPROVE',
+      label: 'Improve',
       heading: 'Every event should make the next one better.',
       lead: 'The document is no longer the end of the process: exercises and incidents feed review, corrective actions and updated plans.',
       loop: ['Report', 'REX', 'Corrective actions', 'Updated plans'],

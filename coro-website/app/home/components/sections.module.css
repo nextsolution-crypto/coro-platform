@@ -74,7 +74,7 @@
 /* Indice CORO: the only major overlay card, positioned in the image's right-side negative/blueprint space, clear
    of the building's strongest architectural detail, with generous safe margins from the section edges. */
 .indicePanel {
-  position: absolute; z-index: 3; inset-block-start: 50%; transform: translateY(-50%); inset-inline-end: calc(clamp(2.8125rem, 3.6vw, 4.375rem) - 7cm);
+  position: absolute; z-index: 3; inset-block-start: 50%; transform: translateY(-50%); inset-inline-end: calc(clamp(1.5rem, 4vw, 4.5rem) - 70px);
   inline-size: clamp(18.75rem, 22vw, 21.25rem); min-block-size: clamp(26.875rem, 34vw, 31.25rem);
   display: flex; flex-direction: column; align-items: stretch; text-align: left;
   padding: clamp(1.5rem, 1.8vw, 1.875rem) clamp(1.5rem, 1.8vw, 1.875rem) clamp(1.625rem, 2vw, 2rem); background: rgba(252, 253, 255, .98);
@@ -129,11 +129,11 @@
 .documentSuiteCard { display: grid; gap: .3rem; align-content: start; padding: var(--coro-v1-space-3); background: #fff; border: 1px solid var(--coro-v1-paper-line-strong); border-radius: var(--coro-v1-radius-control); }
 .documentSuiteIcon { display: inline-flex; align-items: center; justify-content: center; inline-size: 2rem; block-size: 2rem; border-radius: var(--coro-v1-radius-pill, 999px); background: color-mix(in srgb, var(--accent-color) 15%, transparent); color: var(--accent-color); }
 .documentSuiteCode { font-weight: 850; font-size: var(--coro-v1-text-small); color: var(--ink); margin-block-start: .2rem; }
-.documentSuiteName { font-weight: 650; font-size: .8rem; color: var(--ink); line-height: 1.3; }
-.documentSuitePurpose { font-size: .7rem; color: var(--muted); line-height: 1.35; }
-.documentSuiteLink { margin-block-start: .3rem; font-size: .7rem; font-weight: 700; color: var(--coro-v1-blue-700); text-decoration: none; }
+.documentSuiteName { font-weight: 650; font-size: .875rem; color: var(--ink); line-height: 1.35; }
+.documentSuitePurpose { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+.documentSuiteLink { margin-block-start: .3rem; font-size: .78rem; font-weight: 700; color: var(--coro-v1-blue-700); text-decoration: none; }
 .documentSuiteLink:hover { text-decoration: underline; }
-.documentSuitePhase { margin-block-start: .3rem; font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.documentSuitePhase { margin-block-start: .3rem; font-size: .78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 @media (max-width: 68rem) {
   .documentSuite { grid-template-columns: 1fr; }
   .documentSuiteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -224,7 +224,7 @@
     );
 }
 .sentinelleAlert {
-  position: absolute; z-index: 2; inset-block-start: 50%; inset-inline-start: 50%; transform: translate(calc(-50% + 3cm), calc(-50% - 3cm));
+  position: absolute; z-index: 2; inset-block-start: 28%; inset-inline-start: 50%; transform: translate(-50%, -50%);
   inline-size: clamp(19.5rem, 28vw, 24.5rem); display: grid; gap: .4rem;
   padding: calc(var(--coro-v1-space-3) * 1.3) calc(var(--coro-v1-space-4) * 1.3);
   background: linear-gradient(to right, rgba(165, 0, 0, .88) 0%, rgba(165, 0, 0, .6) 65%, transparent 100%); border: 1px solid rgba(255, 90, 90, .35); border-inline-end: 0; border-radius: var(--coro-v1-radius-control);
@@ -233,15 +233,18 @@
 .sentinelleAlertTag { justify-self: start; padding: .2rem .8rem; border-radius: var(--coro-v1-radius-pill, 999px); background: #fff; color: #A50000; font-size: .88rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .sentinelleAlertTitle { margin: 0; color: #fff; font-size: 1.37rem; font-weight: 850; letter-spacing: -.01em; }
 .sentinelleAlertMeta { margin: 0; color: rgba(255,255,255,.78); font-size: 1.04rem; }
+@media (min-width: 68.01rem) {
+  .sentinelleAlert { transform: translate(calc(-50% + 170px), -50%); }
+}
 .sentinelleCopy {
-  position: absolute; z-index: 1; inset-block: 0; inset-inline-start: calc(0px - 5cm); display: grid; align-content: center; gap: var(--coro-v1-space-3);
+  position: absolute; z-index: 1; inset-block: 0; inset-inline-start: 0; display: grid; align-content: center; gap: var(--coro-v1-space-3);
   inline-size: min(460px, 36%); padding-inline: var(--coro-v1-space-6);
 }
 .sentinelleCopy :global(p[class]) { color: rgba(255,255,255,.68); }
 .sentinelleHeading { margin: var(--coro-v1-space-2) 0 0; font-size: clamp(1.9rem, 2.6vw, 2.5rem); font-weight: 850; line-height: 1.12; letter-spacing: -.01em; color: #fff; text-wrap: balance; }
 .sentinelleLead { margin: var(--coro-v1-space-2) 0 var(--coro-v1-space-4); max-inline-size: 34ch; color: rgba(255,255,255,.72); font-size: var(--coro-v1-text-small); line-height: 1.55; }
 .sentinelleSequence {
-  position: absolute; z-index: 1; inset-block-start: 50%; transform: translateY(-50%); inset-inline-end: calc(clamp(.5rem, 1.5vw, 1.5rem) - 5cm);
+  position: absolute; z-index: 1; inset-block-start: 50%; transform: translateY(-50%); inset-inline-end: calc(clamp(.75rem, 2vw, 2rem) - 170px);
   list-style: none; margin: 0; padding: 30px calc(var(--coro-v1-space-4) * 1.5);
   display: grid; align-content: center; gap: 2.625rem;
   border-inline-start: 3px solid var(--coro-v1-red-600);
