@@ -37,7 +37,7 @@ export default function HistoriquePage() {
     setLoading(true);
     try {
       // Récupérer le token kiosque d'abord
-      const kioskRes = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
+      const kioskRes = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/kiosk-token`);
       const kioskToken = kioskRes.token;
       const res = await apiGet(`/occupancy/buildings/${buildingId}/history-public?token=${kioskToken}&from=${from}&to=${to}`);
       setData(res);

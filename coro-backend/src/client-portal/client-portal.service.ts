@@ -243,6 +243,83 @@ export class ClientPortalService {
     return building;
   }
 
+  async assertEmployeeAccess(
+    buildingId: string,
+    employeeId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    const employee = await this.prisma.buildingEmployee.findFirst({
+      where: {
+        id: employeeId,
+        buildingId,
+        organizationId: actor.organizationId,
+      },
+      select: { id: true },
+    });
+    if (!employee) throw new NotFoundException('Employé introuvable');
+  }
+
+  async assertEvacuationAccess(
+    buildingId: string,
+    evacuationId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    await this.assertBuildingAccess(buildingId, actor);
+    const evacuation = await this.prisma.evacuationEvent.findFirst({
+      where: { id: evacuationId, buildingId },
+      select: { id: true },
+    });
+    if (!evacuation) throw new NotFoundException('Évacuation introuvable');
+  }
+
+  async assertIncidentAccess(
+    incidentId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    const incident = await this.prisma.incidentEvent.findFirst({
+      where: { id: incidentId, organizationId: actor.organizationId },
+      select: { buildingId: true },
+    });
+    if (!incident) throw new NotFoundException('Incident introuvable');
+    await this.assertBuildingAccess(incident.buildingId, actor);
+  }
+
+  async assertIncidentTaskAccess(
+    taskId: string,
+    actor: {
+      clientId: string;
+      organizationId: string;
+      role: string;
+      buildingIds?: string[];
+    },
+  ) {
+    const task = await this.prisma.incidentTask.findFirst({
+      where: {
+        id: taskId,
+        incidentEvent: { organizationId: actor.organizationId },
+      },
+      select: { incidentEvent: { select: { buildingId: true } } },
+    });
+    if (!task) throw new NotFoundException('Tâche incident introuvable');
+    await this.assertBuildingAccess(task.incidentEvent.buildingId, actor);
+  }
+
   /**
    * Retourne l'état RUE / Sentinelle Population d'un bâtiment accessible
    * depuis le portail client.

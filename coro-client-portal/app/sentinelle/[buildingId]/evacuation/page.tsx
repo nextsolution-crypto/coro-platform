@@ -37,7 +37,7 @@ export default function EvacuationPage() {
 
   const fetchEvacuation = async () => {
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/evacuation/active`);
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/evacuation/active`);
       setEvacuation(res);
     } catch {
       setEvacuation(null);
@@ -49,8 +49,7 @@ export default function EvacuationPage() {
   const handleAccountFor = async (occupantRecordId: string) => {
     if (!evacuation) return;
     try {
-      await apiPost('/occupancy/evacuation/account', {
-        evacuationEventId: evacuation.id,
+      await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/evacuations/${evacuation.id}/account`, {
         occupantRecordId,
         checkedBy: `${user?.firstName} ${user?.lastName}`,
       });
@@ -75,7 +74,7 @@ export default function EvacuationPage() {
     if (!confirm(`Clore l'évacuation ?\n\n${evacuation.missing} personne(s) non comptabilisée(s).\n\nCette action est irréversible.`)) return;
     setResolving(true);
     try {
-      await apiPut(`/occupancy/evacuation/${evacuation.id}/resolve`, {});
+      await apiPut(`/client-portal/buildings/${buildingId}/sentinelle/evacuations/${evacuation.id}/resolve`, {});
       router.push(`/sentinelle/${buildingId}`);
     } catch {
       alert('Erreur lors de la clôture.');

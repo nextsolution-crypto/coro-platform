@@ -50,7 +50,7 @@ export default function SentinelleDashboard() {
     setLoading(true);
     try {
       // 1. D'abord récupérer le token kiosque
-      const kioskRes = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
+      const kioskRes = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/kiosk-token`);
       const token = kioskRes.token;
       setKioskToken(token);
       // 2. Ensuite fetcher avec le token
@@ -81,14 +81,14 @@ export default function SentinelleDashboard() {
 
   const fetchActiveEvacuation = async () => {
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/evacuation/active`);
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/evacuation/active`);
       setActiveEvacuation(res);
     } catch (err) { setActiveEvacuation(null); }
   };
 
   const fetchAlarmToken = async () => {
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/alarm-token`);
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/alarm-token`);
       setAlarmToken(res.token);
     } catch (err) { console.error(err); }
   };
@@ -113,7 +113,7 @@ export default function SentinelleDashboard() {
     if (!confirm("Régénérer le jeton du pont panneau d'alarme ?\n\nL'ancienne adresse cessera de fonctionner immédiatement — le dispositif installé devra être reconfiguré avec la nouvelle.")) return;
     setRegeneratingAlarm(true);
     try {
-      const res = await apiPost(`/occupancy/buildings/${buildingId}/alarm-token/regenerate`, {});
+      const res = await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/alarm-token/regenerate`, {});
       setAlarmToken(res.token);
     } catch { alert('Erreur lors de la régénération.'); }
     finally { setRegeneratingAlarm(false); }
@@ -148,8 +148,7 @@ export default function SentinelleDashboard() {
     if (!confirm('⚠️ Déclencher le mode évacuation pour ce bâtiment ?\n\nUn snapshot de tous les occupants présents sera figé immédiatement.')) return;
     setTriggeringEvac(true);
     try {
-      await apiPost('/occupancy/evacuation/trigger', {
-        buildingId,
+      await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/evacuation/trigger`, {
         triggeredBy: `${user?.firstName} ${user?.lastName}`,
       });
       await fetchActiveEvacuation();

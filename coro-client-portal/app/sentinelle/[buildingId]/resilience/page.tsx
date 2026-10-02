@@ -68,7 +68,7 @@ export default function ResiliencePage() {
 
   const init = async () => {
     try {
-      const kiosk = await apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`);
+      const kiosk = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/kiosk-token`);
       setKioskToken(kiosk.token);
       await fetchData(kiosk.token);
       await fetchHistory();

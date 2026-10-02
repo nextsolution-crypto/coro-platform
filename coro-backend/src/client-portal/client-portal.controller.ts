@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -26,6 +27,10 @@ import { CreateBookingDto, CreateActivityBookingDto } from '../bookings/booking.
 import { IncidentService } from '../occupancy/incident.service';
 import { OccupancyEmployeesService } from '../occupancy/occupancy-employees.service';
 import { OccupancyService } from '../occupancy/occupancy.service';
+import {
+  AccountForOccupantDto,
+  TriggerEvacuationDto,
+} from '../occupancy/occupancy.dto';
 import { CorrectiveActionsService } from '../occupancy/corrective-actions.service';
 import {
   CreateCorrectiveActionDto,
@@ -88,6 +93,220 @@ export class ClientPortalController {
       req.clientUser.organizationId,
       req.clientUser.role,
       req.clientUser.buildingIds,
+    );
+  }
+
+  // Client Portal Sentinelle facade. Platform /occupancy routes deliberately
+  // retain their platform JWT boundary; every client operation is scoped here.
+  @Get('buildings/:buildingId/sentinelle/kiosk-token')
+  async getSentinelleKioskToken(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.getOrCreateKioskToken(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/alarm-token')
+  async getSentinelleAlarmToken(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.getOrCreateAlarmToken(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Post('buildings/:buildingId/sentinelle/alarm-token/regenerate')
+  async regenerateSentinelleAlarmToken(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.regenerateAlarmToken(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/evacuation/active')
+  async getSentinelleActiveEvacuation(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.getActiveEvacuation(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Post('buildings/:buildingId/sentinelle/evacuation/trigger')
+  async triggerSentinelleEvacuation(
+    @Param('buildingId') buildingId: string,
+    @Body() body: Omit<TriggerEvacuationDto, 'buildingId'>,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.triggerEvacuation(
+      { ...body, buildingId },
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Post('buildings/:buildingId/sentinelle/evacuations/:evacuationId/account')
+  async accountForSentinelleOccupant(
+    @Param('buildingId') buildingId: string,
+    @Param('evacuationId') evacuationId: string,
+    @Body() body: Omit<AccountForOccupantDto, 'evacuationEventId'>,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertEvacuationAccess(
+      buildingId,
+      evacuationId,
+      req.clientUser,
+    );
+    return this.occupancyService.accountForOccupant(
+      { ...body, evacuationEventId: evacuationId },
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Put('buildings/:buildingId/sentinelle/evacuations/:evacuationId/resolve')
+  async resolveSentinelleEvacuation(
+    @Param('buildingId') buildingId: string,
+    @Param('evacuationId') evacuationId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertEvacuationAccess(
+      buildingId,
+      evacuationId,
+      req.clientUser,
+    );
+    return this.occupancyService.resolveEvacuation(
+      evacuationId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/evacuations')
+  async getSentinelleEvacuationHistory(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyService.getEvacuationHistory(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/evacuations/:evacuationId')
+  async getSentinelleEvacuationDetail(
+    @Param('buildingId') buildingId: string,
+    @Param('evacuationId') evacuationId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertEvacuationAccess(
+      buildingId,
+      evacuationId,
+      req.clientUser,
+    );
+    return this.occupancyService.getEvacuationDetail(
+      evacuationId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/employees')
+  async getSentinelleEmployees(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyEmployeesService.getEmployees(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Post('buildings/:buildingId/sentinelle/employees')
+  async createSentinelleEmployee(
+    @Param('buildingId') buildingId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyEmployeesService.createEmployee(
+      { ...body, buildingId },
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Put('buildings/:buildingId/sentinelle/employees/:employeeId')
+  async updateSentinelleEmployee(
+    @Param('buildingId') buildingId: string,
+    @Param('employeeId') employeeId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertEmployeeAccess(
+      buildingId,
+      employeeId,
+      req.clientUser,
+    );
+    return this.occupancyEmployeesService.updateEmployee(
+      employeeId,
+      body,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Delete('buildings/:buildingId/sentinelle/employees/:employeeId')
+  async deleteSentinelleEmployee(
+    @Param('buildingId') buildingId: string,
+    @Param('employeeId') employeeId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertEmployeeAccess(
+      buildingId,
+      employeeId,
+      req.clientUser,
+    );
+    return this.occupancyEmployeesService.deleteEmployee(
+      employeeId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Get('buildings/:buildingId/sentinelle/invitations')
+  async getSentinelleInvitations(
+    @Param('buildingId') buildingId: string,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyEmployeesService.getInvitations(
+      buildingId,
+      req.clientUser.organizationId,
+    );
+  }
+
+  @Post('buildings/:buildingId/sentinelle/invitations')
+  async createSentinelleInvitation(
+    @Param('buildingId') buildingId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    await this.clientPortalService.assertBuildingAccess(buildingId, req.clientUser);
+    return this.occupancyEmployeesService.createInvitation(
+      { ...body, buildingId },
+      req.clientUser.organizationId,
+      req.clientUser.sub,
     );
   }
 
@@ -917,6 +1136,10 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.incidentService.triggerPanic(
       buildingId,
       body,
@@ -926,6 +1149,10 @@ export class ClientPortalController {
 
   @Post('incidents/trigger')
   async triggerIncident(@Body() body: any, @Request() req: any) {
+    await this.clientPortalService.assertBuildingAccess(
+      body.buildingId,
+      req.clientUser,
+    );
     return this.incidentService.triggerIncident(
       body,
       req.clientUser.organizationId,
@@ -937,6 +1164,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.incidentService.getActiveIncident(
       buildingId,
       req.clientUser.organizationId,
@@ -948,6 +1179,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.incidentService.getActiveIncidents(
       buildingId,
       req.clientUser.organizationId,
@@ -960,6 +1195,10 @@ export class ClientPortalController {
     @Request() req: any,
     @Query('days') days?: string,
   ) {
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.occupancyService.getResilienceHistory(
       buildingId,
       req.clientUser.organizationId,
@@ -972,6 +1211,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     const kiosk = await this.occupancyService.getOrCreateKioskTokenForOrg(
       buildingId,
       req.clientUser.organizationId,
@@ -1097,6 +1340,10 @@ export class ClientPortalController {
 
   @Put('incidents/tasks/:taskId/uncomplete')
   async uncompleteStep(@Param('taskId') taskId: string, @Request() req: any) {
+    await this.clientPortalService.assertIncidentTaskAccess(
+      taskId,
+      req.clientUser,
+    );
     return this.incidentService.uncompleteStep(
       taskId,
       req.clientUser.organizationId,
@@ -1105,6 +1352,10 @@ export class ClientPortalController {
 
   @Put('incidents/tasks/:taskId/acknowledge')
   async acknowledgeTask(@Param('taskId') taskId: string, @Request() req: any) {
+    await this.clientPortalService.assertIncidentTaskAccess(
+      taskId,
+      req.clientUser,
+    );
     return this.incidentService.acknowledgeTask(
       taskId,
       req.clientUser.organizationId,
@@ -1113,6 +1364,10 @@ export class ClientPortalController {
 
   @Put('incidents/tasks/:taskId/complete')
   async completeTask(@Param('taskId') taskId: string, @Request() req: any) {
+    await this.clientPortalService.assertIncidentTaskAccess(
+      taskId,
+      req.clientUser,
+    );
     return this.incidentService.completeTask(
       taskId,
       req.clientUser.organizationId,
@@ -1125,6 +1380,10 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.addLog(
       incidentId,
       body,
@@ -1137,6 +1396,10 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.confirmPreAlert(
       incidentId,
       req.clientUser.organizationId,
@@ -1149,6 +1412,10 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.cancelPreAlert(
       incidentId,
       req.clientUser.organizationId,
@@ -1161,6 +1428,10 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.containIncident(
       incidentId,
       req.clientUser.organizationId,
@@ -1173,6 +1444,10 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.resolveIncident(
       incidentId,
       body,
@@ -1186,6 +1461,10 @@ export class ClientPortalController {
     @Body() body: { emails: string[] },
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.sendInterventionAccessByEmail(
       incidentId,
       body.emails,
@@ -1198,6 +1477,10 @@ export class ClientPortalController {
     @Param('buildingId') buildingId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertBuildingAccess(
+      buildingId,
+      req.clientUser,
+    );
     return this.incidentService.getIncidentHistory(
       buildingId,
       req.clientUser.organizationId,
@@ -1206,6 +1489,10 @@ export class ClientPortalController {
 
   @Post('employees/import-csv')
   async importEmployeesCsv(@Body() body: any, @Request() req: any) {
+    await this.clientPortalService.assertBuildingAccess(
+      body.buildingId,
+      req.clientUser,
+    );
     return this.occupancyEmployeesService.importEmployeesCsv(
       body.buildingId,
       body.csvContent,
@@ -1219,6 +1506,10 @@ export class ClientPortalController {
     @Param('incidentId') incidentId: string,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.getIncidentDetail(
       incidentId,
       req.clientUser.organizationId,
@@ -1231,6 +1522,10 @@ export class ClientPortalController {
     @Body() body: any,
     @Request() req: any,
   ) {
+    await this.clientPortalService.assertIncidentAccess(
+      incidentId,
+      req.clientUser,
+    );
     return this.incidentService.updateRex(
       incidentId,
       body,

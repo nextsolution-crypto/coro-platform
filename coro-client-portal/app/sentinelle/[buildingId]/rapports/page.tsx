@@ -26,7 +26,7 @@ export default function RapportsPage() {
   const fetchEvacuations = async () => {
     setLoading(true);
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/evacuation/history`);
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/evacuations`);
       setEvacuations(res);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -35,7 +35,7 @@ export default function RapportsPage() {
   const fetchDetail = async (id: string) => {
     setLoadingDetail(true);
     try {
-      const res = await apiGet(`/occupancy/evacuation/${id}/detail`);
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/evacuations/${id}`);
       setSelected(res);
     } catch (err) { console.error(err); }
     finally { setLoadingDetail(false); }
