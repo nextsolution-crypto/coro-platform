@@ -111,7 +111,7 @@
 .buildingAnnotationText { font-size: .74rem; color: var(--coro-v1-text-600); line-height: 1.3; }
 
 @media (max-width: 68rem) {
-  .buildingWide { inline-size: calc(100vw - 3rem); }
+  .buildingWide { inline-size: calc(100vw - 3rem); margin-block-end: 0; }
   .buildingHero { block-size: auto; display: grid; gap: var(--coro-v1-space-5); padding-block: var(--coro-v1-space-6); }
   .buildingHeroImage { position: static !important; inline-size: 100%; block-size: 20rem; object-position: 62% center; border-radius: var(--coro-v1-radius-control); }
   .buildingHeroCopy { position: static; inline-size: 100%; padding-inline: 0; background: none; order: -1; }
@@ -289,14 +289,37 @@
 .iiConnector span > span { color: var(--coro-v1-red-600); margin: 0 .3rem; }
 
 @media (max-width: 68rem) {
-  .iiGrid { grid-template-columns: 1fr; }
-  .iiPanel { block-size: 22rem; }
-  .sentinelleWide { inline-size: calc(100vw - 3rem); }
-  .sentinelleBand { block-size: auto; min-block-size: 26rem; }
-  .sentinelleCopy { position: static; inset: auto; inline-size: 100%; padding: var(--coro-v1-space-6); }
+  .iiGrid { grid-template-columns: 1fr; gap: var(--coro-v1-space-4); }
+  .iiPanel { block-size: auto; min-block-size: 0; overflow: hidden; }
+  .iiPanelContent { position: relative; inset: auto; display: block; padding: clamp(12rem, 38vw, 16rem) var(--coro-v1-space-4) var(--coro-v1-space-4); }
+  .iiPanelCard { inline-size: 100%; padding: 1.35rem 1.4rem 1.5rem; }
+  .iiMicroRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
+  .iiMicroRow li { min-inline-size: 0; font-size: .78rem; }
+  .iiLoop { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .iiLoop li { min-inline-size: 0; }
+  .iiLoopStep { font-size: .76rem; }
+  .iiLoopDesc { font-size: .74rem; }
+  .iiLoopArrow { display: none; }
+  .iiConnector { display: flex; flex-wrap: wrap; justify-content: center; gap: .35rem .7rem; font-size: clamp(.9rem, 3.8vw, 1.15rem); line-height: 1.4; }
+  .sentinelleWide { inline-size: calc(100vw - 3rem); margin-block-end: 0; }
+  .sentinelleBand { block-size: 22rem; min-block-size: 0; }
+  .sentinelleAlert { position: relative; inset: auto; transform: none; inline-size: min(24.5rem, calc(100% - 2rem)); margin: -5.5rem auto 0; }
+  .sentinelleCopy { position: static; inset: auto; inline-size: 100%; padding: var(--coro-v1-space-6) var(--coro-v1-space-6) var(--coro-v1-space-5); }
   .sentinelleLead { max-inline-size: none; }
-  .sentinelleSequence { position: static; inset: auto; flex-direction: row; flex-wrap: wrap; display: flex; gap: var(--coro-v1-space-3); padding: 0 var(--coro-v1-space-6) var(--coro-v1-space-6); border-inline-start: 0; border-block-start: 2px solid var(--coro-v1-red-600); padding-block-start: var(--coro-v1-space-3); }
+  .sentinelleSequence { position: static; inset: auto; transform: none; flex-direction: row; flex-wrap: wrap; display: flex; gap: .75rem 1rem; margin-block-start: var(--coro-v1-space-4); padding: var(--coro-v1-space-4) var(--coro-v1-space-6) var(--coro-v1-space-6); border-inline-start: 0; border-block-start: 2px solid var(--coro-v1-red-600); background: none; font-size: clamp(.82rem, 3vw, 1rem); line-height: 1.3; }
   .sentinelleScrim { background: linear-gradient(180deg, rgba(6,14,28,.55) 0%, rgba(6,14,28,.85) 60%, rgba(6,14,28,.94) 100%); }
+}
+
+@media (max-width: 30rem) {
+  .sentinelleWide { inline-size: calc(100vw - 2rem); }
+  .sentinelleBand { block-size: 19rem; }
+  .sentinelleAlert { margin-block-start: -4.75rem; padding: var(--coro-v1-space-3) var(--coro-v1-space-4); }
+  .sentinelleCopy { padding: var(--coro-v1-space-5) var(--coro-v1-space-4) var(--coro-v1-space-4); }
+  .sentinelleSequence { padding: var(--coro-v1-space-3) var(--coro-v1-space-4) var(--coro-v1-space-5); }
+  .iiPanelContent { padding: 11rem .75rem .75rem; }
+  .iiPanelCard { padding: 1.2rem 1.1rem 1.3rem; }
+  .iiMicroRow, .iiLoop { grid-template-columns: 1fr; }
+  .iiConnector { justify-content: flex-start; text-align: start; }
 }
 
 /* Ecosystem solutions strip — seven compact photographic cards, one per public-facing CORO solution. Full-bleed
