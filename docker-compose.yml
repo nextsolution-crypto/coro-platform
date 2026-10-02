@@ -94,6 +94,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: https://api.getcoro.io/api
+      NEXT_PUBLIC_CLIENT_PORTAL_URL: https://client.getcoro.io
     networks:
       - coro_network
     ports:

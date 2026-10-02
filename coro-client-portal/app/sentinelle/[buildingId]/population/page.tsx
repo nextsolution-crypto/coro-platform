@@ -24,6 +24,7 @@ import PortalLayout from "../../../components/PortalLayout";
 import { formatMoment, plural } from "../../presentation.mjs";
 import PopulationOperationalMap from "./PopulationOperationalMap";
 import PopulationEvidenceEntry from "./evidence/PopulationEvidenceEntry";
+import PublicPortalSharing from "./PublicPortalSharing";
 import {
   normalizeOperationalEvent,
   normalizeLegacyActiveAlerts,
@@ -3862,6 +3863,11 @@ export default function PopulationPage() {
                 onChange={(value) =>
                   updateConfigurationField("emailEnabled", value)
                 }
+              />
+
+              <PublicPortalSharing
+                publicSlug={configurationForm.publicSlug}
+                registrationEnabled={configurationForm.registrationEnabled}
               />
             </ConfigurationSection>
 
