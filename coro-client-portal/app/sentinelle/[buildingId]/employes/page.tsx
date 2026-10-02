@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { apiGet, apiPost, getUser } from '../../../store/auth';
+import { apiDelete, apiGet, apiPost, getUser } from '../../../store/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
 
@@ -148,7 +148,7 @@ export default function EmployesPage() {
     if (!editingId || !form.firstName.trim() || !form.lastName.trim()) return;
     setSaving(true);
     try {
-      await apiPut(`/occupancy/employees/${editingId}`, form);
+      await apiPut(`/client-portal/buildings/${buildingId}/sentinelle/employees/${editingId}`, form);
       setEditingId(null);
       setForm({ ...EMPTY_FORM });
       fetchAll();
@@ -167,8 +167,8 @@ export default function EmployesPage() {
     setLoading(true);
     try {
       const [emps, kiosk] = await Promise.all([
-        apiGet(`/occupancy/buildings/${buildingId}/employees`),
-        apiGet(`/occupancy/buildings/${buildingId}/kiosk-token`),
+        apiGet(`/client-portal/buildings/${buildingId}/sentinelle/employees`),
+        apiGet(`/client-portal/buildings/${buildingId}/sentinelle/kiosk-token`),
       ]);
       setEmployees(emps);
     } catch (err) { console.error(err); }
@@ -179,7 +179,7 @@ export default function EmployesPage() {
     if (!form.firstName.trim() || !form.lastName.trim()) return;
     setSaving(true);
     try {
-      await apiPost('/occupancy/employees', { ...form, buildingId });
+      await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/employees`, form);
       setForm({ ...EMPTY_FORM });
       setShowForm(false);
       fetchAll();
@@ -190,10 +190,7 @@ export default function EmployesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Désactiver cet employé ?')) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/occupancy/employees/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('coro_client_token')}` },
-      });
+      await apiDelete(`/client-portal/buildings/${buildingId}/sentinelle/employees/${id}`);
       fetchAll();
     } catch (err) { console.error(err); }
   };

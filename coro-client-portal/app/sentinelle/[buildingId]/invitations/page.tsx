@@ -38,7 +38,7 @@ export default function InvitationsPage() {
   const fetchInvitations = async () => {
     setLoading(true);
     try {
-      const res = await apiGet(`/occupancy/buildings/${buildingId}/invitations`);
+      const res = await apiGet(`/client-portal/buildings/${buildingId}/sentinelle/invitations`);
       setInvitations(res);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -48,7 +48,7 @@ export default function InvitationsPage() {
     if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim() || !form.visitDate) return;
     setSaving(true);
     try {
-      await apiPost('/occupancy/invitations', { ...form, buildingId });
+      await apiPost(`/client-portal/buildings/${buildingId}/sentinelle/invitations`, form);
       setSaved(true);
       setForm({ firstName: '', lastName: '', email: '', company: '', reason: '', hostName: '', visitDate: new Date().toISOString().split('T')[0] });
       setShowForm(false);

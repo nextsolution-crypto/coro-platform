@@ -36,7 +36,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Registre d\'accueil',
         short_name: 'Sentinelle',
         description: 'Accéder au registre d\'occupation',
-        url: '/sentinelle',
+        url: '/dashboard',
         icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
       },
     ],
