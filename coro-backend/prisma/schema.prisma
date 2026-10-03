@@ -3182,6 +3182,8 @@ model PopulationAlertDelivery {
 
   provider String?
 
+  inboundSmsEvents PopulationInboundSmsEvent[]
+
   // UUID stable transmis au fournisseur pour dédupliquer les reprises.
   providerIdempotencyKey String? @unique
 
@@ -3376,6 +3378,60 @@ enum PopulationDeliverySuppressionReason {
   SUBSCRIBER_INACTIVE
   CHANNEL_DISABLED
   DESTINATION_CHANGED
+  GLOBAL_SMS_SUPPRESSION
+}
+
+enum PopulationInboundSmsEventType {
+  STOP
+  HELP
+  REPLY
+  SUBSCRIBE
+  UNSUBSCRIBE
+}
+
+enum PopulationSmsSuppressionReason {
+  PROVIDER_STOP
+  PROVIDER_UNSUBSCRIBE
+}
+
+model PopulationInboundSmsEvent {
+  id String @id @default(uuid())
+
+  provider           String
+  providerEventKey   String @unique
+  eventType          PopulationInboundSmsEventType
+  phoneCanonical     String
+  providerMessageId  String?
+  providerOccurredAt DateTime
+  receivedAt         DateTime @default(now())
+  payloadFingerprint String
+
+  deliveryId String?
+  delivery   PopulationAlertDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  suppression PopulationSmsSuppression?
+
+  @@index([phoneCanonical])
+  @@index([providerMessageId])
+  @@index([deliveryId])
+  @@index([providerOccurredAt])
+}
+
+model PopulationSmsSuppression {
+  id String @id @default(uuid())
+
+  phoneCanonical String @unique
+  provider       String
+  reason         PopulationSmsSuppressionReason
+  source         String
+  suppressedAt   DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  originEventId String @unique
+  originEvent   PopulationInboundSmsEvent @relation(fields: [originEventId], references: [id], onDelete: Restrict)
+
+  @@index([suppressedAt])
 }
 
 enum PopulationDeliveryMode {

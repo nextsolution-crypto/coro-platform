@@ -61,6 +61,10 @@ async function bootstrap() {
   });
 
   // ── Body parser avec limite pour les images/PDF base64 ──
+  app.use(
+    '/api/webhooks/brevo/population/sms',
+    bodyParser.json({ limit: '64kb', type: 'application/json' }),
+  );
   app.use(bodyParser.json({ limit: '250mb' }));
   app.use(bodyParser.urlencoded({ limit: '250mb', extended: true }));
 

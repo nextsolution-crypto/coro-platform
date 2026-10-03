@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -66,6 +67,7 @@ import type { GeocodingResult } from '../geocoding/geocoding.types';
 import { PopulationReadinessService } from './population-readiness.service';
 import { POPULATION_DELIVERY_LEASE_MS } from './population-delivery.constants';
 import { PhoneNumberService } from '../common/phone/phone-number.service';
+import { PopulationSmsSuppressionService } from './population-sms-suppression.service';
 import { PhoneNumberError } from '../common/phone/phone-number.errors';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
@@ -142,7 +144,22 @@ export class PopulationService {
     private readonly readiness: PopulationReadinessService,
     private readonly operationalEvents: PopulationOperationalEventsService,
     private readonly phoneNumbers: PhoneNumberService,
+    @Optional()
+    private readonly smsSuppressions?: PopulationSmsSuppressionService,
   ) {}
+
+  private async isSmsGloballySuppressed(phoneCanonical: string) {
+    if (this.smsSuppressions) {
+      return this.smsSuppressions.isSuppressed(phoneCanonical);
+    }
+    const authority = this.prisma.populationSmsSuppression;
+    if (!authority) return false;
+    const suppression = await authority.findUnique({
+      where: { phoneCanonical },
+      select: { id: true },
+    });
+    return Boolean(suppression);
+  }
 
   private smsDestination(subscriber: {
     phone: string | null;
@@ -219,6 +236,10 @@ export class PopulationService {
 
     try {
       if (data.channel === PopulationVerificationChannel.SMS) {
+        const canonical = this.normalizePopulationPhone(data.destination);
+        if (await this.isSmsGloballySuppressed(canonical)) {
+          return 'FAILED';
+        }
         const message = english
           ? `CORO Sentinelle Population: your ${isAccess ? 'access' : 'verification'} code is ${data.code}. Valid for 10 minutes.`
           : `CORO Sentinelle Population : votre code ${isAccess ? "d'accès" : 'de vérification'} est ${data.code}. Valide 10 minutes.`;
@@ -1317,6 +1338,9 @@ export class PopulationService {
     const phone = dto.phone?.trim() || null;
     const phoneCanonical = phone ? this.normalizePopulationPhone(phone) : null;
     const email = dto.email?.trim().toLowerCase() || null;
+    const smsGloballySuppressed = phoneCanonical
+      ? await this.isSmsGloballySuppressed(phoneCanonical)
+      : false;
 
     if (!phone && !email) {
       throw new BadRequestException(
@@ -1352,8 +1376,14 @@ export class PopulationService {
     }
     const consentVersion = program.consentVersion;
 
+    if (smsGloballySuppressed && !email) {
+      throw new BadRequestException(
+        'Le canal SMS n’est pas disponible; une adresse courriel est requise',
+      );
+    }
+
     const verificationChannel =
-      phone && program.smsEnabled
+      phone && program.smsEnabled && !smsGloballySuppressed
         ? PopulationVerificationChannel.SMS
         : PopulationVerificationChannel.EMAIL;
 
@@ -1414,7 +1444,7 @@ export class PopulationService {
             }),
             source: POPULATION_SMS_CONSENT_SOURCE,
             surface: POPULATION_SMS_CONSENT_SURFACE,
-            smsEnabled: true,
+            smsEnabled: !smsGloballySuppressed,
             emailEnabled: Boolean(email),
             submittedAt,
           },
@@ -1442,7 +1472,7 @@ export class PopulationService {
       verificationExpiresAt,
 
       deliveryStatus,
-      smsSubscribed: Boolean(phone),
+      smsSubscribed: Boolean(phone) && !smsGloballySuppressed,
     };
   }
 
@@ -1510,6 +1540,16 @@ export class PopulationService {
 
     if (!subscriber) {
       throw new NotFoundException('Inscription introuvable');
+    }
+
+    if (
+      dto.channel === PopulationVerificationChannel.SMS &&
+      subscriber.phoneCanonical &&
+      (await this.isSmsGloballySuppressed(subscriber.phoneCanonical))
+    ) {
+      throw new BadRequestException(
+        'Le canal SMS n’est pas disponible; utilisez le canal courriel',
+      );
     }
 
     if (subscriber.status !== PopulationSubscriberStatus.PENDING_VERIFICATION) {
@@ -2101,6 +2141,16 @@ export class PopulationService {
 
     if (!subscriber) {
       throw new NotFoundException('Inscription introuvable');
+    }
+
+    if (
+      dto.channel === PopulationVerificationChannel.SMS &&
+      subscriber.phoneCanonical &&
+      (await this.isSmsGloballySuppressed(subscriber.phoneCanonical))
+    ) {
+      throw new BadRequestException(
+        'Le canal SMS n’est pas disponible; utilisez le canal courriel',
+      );
     }
 
     const isInitialVerification =
@@ -6174,6 +6224,13 @@ export class PopulationService {
     ) {
       currentSuppressionReason =
         PopulationDeliverySuppressionReason.CHANNEL_DISABLED;
+    } else if (
+      delivery.channel === PopulationAlertChannel.SMS &&
+      delivery.subscriber.phoneCanonical &&
+      (await this.isSmsGloballySuppressed(delivery.subscriber.phoneCanonical))
+    ) {
+      currentSuppressionReason =
+        PopulationDeliverySuppressionReason.GLOBAL_SMS_SUPPRESSION;
     } else {
       const currentDestination =
         delivery.channel === PopulationAlertChannel.EMAIL
