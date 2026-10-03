@@ -16,6 +16,9 @@ import {
   PopulationReadinessService,
 } from './population-readiness.service';
 import { PhoneNumberService } from '../common/phone/phone-number.service';
+import { PopulationBrevoSmsWebhookController } from './population-brevo-sms-webhook.controller';
+import { PopulationBrevoSmsWebhookService } from './population-brevo-sms-webhook.service';
+import { PopulationSmsSuppressionService } from './population-sms-suppression.service';
 
 @Module({
   imports: [GeocodingModule, StorageModule],
@@ -23,6 +26,7 @@ import { PhoneNumberService } from '../common/phone/phone-number.service';
     PopulationPublicController,
     PopulationReadinessController,
     PopulationBrevoWebhookController,
+    PopulationBrevoSmsWebhookController,
   ],
   providers: [
     PopulationService,
@@ -35,6 +39,8 @@ import { PhoneNumberService } from '../common/phone/phone-number.service';
     },
     PopulationReadinessService,
     PopulationBrevoWebhookService,
+    PopulationBrevoSmsWebhookService,
+    PopulationSmsSuppressionService,
     PopulationOperationalEventsService,
     PopulationEvidenceService,
     PopulationEvidenceReportService,
