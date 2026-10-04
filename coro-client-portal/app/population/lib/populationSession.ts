@@ -8,7 +8,6 @@ const SESSION_PREFIX = "coro.population.workflow.v1";
 type PopulationWorkflowSessionBase = {
   version: 1;
   publicSlug: string;
-  subscriberId: string;
   preferredLanguage: PopulationPreferredLanguage;
   smsSubscribed?: boolean;
 };
@@ -18,17 +17,19 @@ export type PendingPopulationWorkflowSession = PopulationWorkflowSessionBase & {
   verification: {
     channel: "SMS" | "EMAIL";
     expiresAt: string;
-    deliveryStatus?: "SENT" | "FAILED";
+    accessRequestToken: string;
   };
 };
 
-export type AuthenticatedPopulationWorkflowSession = PopulationWorkflowSessionBase & {
-  state: "AUTHENTICATED";
-  accessToken: string;
-  accessTokenExpiresAt: string;
-  locationConfigured?: boolean;
-  locationResolvedAt?: string | null;
-};
+export type AuthenticatedPopulationWorkflowSession =
+  PopulationWorkflowSessionBase & {
+    state: "AUTHENTICATED";
+    subscriberId: string;
+    accessToken: string;
+    accessTokenExpiresAt: string;
+    locationConfigured?: boolean;
+    locationResolvedAt?: string | null;
+  };
 
 export type PopulationWorkflowSession =
   | PendingPopulationWorkflowSession
@@ -63,23 +64,28 @@ export function updateAuthenticatedPopulationLanguage(
 export function savePopulationWorkflowSession(
   publicSlug: string,
   result: RegisterPopulationSubscriberResult,
+  preferredLanguage: PopulationPreferredLanguage,
+  channel: "SMS" | "EMAIL",
+  smsSubscribed: boolean,
 ) {
   const session: PendingPopulationWorkflowSession = {
     version: 1,
     publicSlug,
-    subscriberId: result.subscriber.id,
-    preferredLanguage: result.subscriber.preferredLanguage,
-    smsSubscribed: result.smsSubscribed,
+    preferredLanguage,
+    smsSubscribed,
     state: "PENDING",
     verification: {
-      channel: result.verificationChannel,
-      expiresAt: result.verificationExpiresAt,
-      deliveryStatus: result.deliveryStatus,
+      channel,
+      expiresAt: result.expiresAt,
+      accessRequestToken: result.accessRequestToken,
     },
   };
 
   try {
-    window.sessionStorage.setItem(sessionKey(publicSlug), JSON.stringify(session));
+    window.sessionStorage.setItem(
+      sessionKey(publicSlug),
+      JSON.stringify(session),
+    );
   } catch {
     // The current screen still works when browser session storage is unavailable.
   }
@@ -90,11 +96,11 @@ export function savePopulationWorkflowSession(
 export function updatePopulationVerificationExpiry(
   session: PendingPopulationWorkflowSession,
   expiresAt: string,
-  deliveryStatus: "SENT" | "FAILED",
+  accessRequestToken: string,
 ) {
   const updated: PendingPopulationWorkflowSession = {
     ...session,
-    verification: { ...session.verification, expiresAt, deliveryStatus },
+    verification: { ...session.verification, expiresAt, accessRequestToken },
   };
   writePopulationWorkflowSession(updated);
   return updated;
@@ -104,10 +110,11 @@ export function authenticatePopulationWorkflowSession(
   session: PendingPopulationWorkflowSession,
   accessToken: string,
   accessTokenExpiresInSeconds: number,
+  subscriberId: string,
 ) {
   return saveAuthenticatedPopulationWorkflowSession({
     publicSlug: session.publicSlug,
-    subscriberId: session.subscriberId,
+    subscriberId,
     preferredLanguage: session.preferredLanguage,
     smsSubscribed: session.smsSubscribed,
     accessToken,
@@ -171,7 +178,6 @@ export function readPopulationWorkflowSession(publicSlug: string) {
     if (
       value.version !== 1 ||
       value.publicSlug !== publicSlug ||
-      typeof value.subscriberId !== "string" ||
       (value.preferredLanguage !== "FR" && value.preferredLanguage !== "EN") ||
       (value.state !== "PENDING" && value.state !== "AUTHENTICATED")
     ) {
@@ -184,7 +190,8 @@ export function readPopulationWorkflowSession(publicSlug: string) {
       if (
         (pending.verification?.channel !== "SMS" &&
           pending.verification?.channel !== "EMAIL") ||
-        typeof pending.verification?.expiresAt !== "string"
+        typeof pending.verification?.expiresAt !== "string" ||
+        typeof pending.verification?.accessRequestToken !== "string"
       ) {
         clearPopulationWorkflowSession(publicSlug);
         return null;
@@ -192,9 +199,11 @@ export function readPopulationWorkflowSession(publicSlug: string) {
     }
 
     if (value.state === "AUTHENTICATED") {
-      const authenticated = value as Partial<AuthenticatedPopulationWorkflowSession>;
+      const authenticated =
+        value as Partial<AuthenticatedPopulationWorkflowSession>;
       if (
         typeof authenticated.accessToken !== "string" ||
+        typeof authenticated.subscriberId !== "string" ||
         typeof authenticated.accessTokenExpiresAt !== "string" ||
         Date.parse(authenticated.accessTokenExpiresAt) <= Date.now()
       ) {

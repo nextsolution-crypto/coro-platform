@@ -46,6 +46,7 @@ describe('PopulationService', () => {
       findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     populationVerification: {
       create: jest.fn(),
@@ -56,6 +57,7 @@ describe('PopulationService', () => {
     },
     populationConsentEvent: {
       create: jest.fn(),
+      createMany: jest.fn(),
     },
     populationSmsConsentEvidence: {
       create: jest.fn(),
@@ -95,6 +97,7 @@ describe('PopulationService', () => {
       updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
   };
 
   const populationGeospatialService = {
@@ -151,6 +154,8 @@ describe('PopulationService', () => {
 
     process.env.POPULATION_ACCESS_SECRET =
       'test-population-access-secret-not-for-production';
+    process.env.POPULATION_ACCESS_REQUEST_TOKEN_SECRET =
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
     prisma.$transaction.mockImplementation(
       async (callback: (tx: typeof prisma) => unknown) => callback(prisma),
@@ -1819,9 +1824,19 @@ describe('PopulationService', () => {
       prisma.populationSubscriber.create.mockResolvedValue({
         id: 'subscriber-1',
         status: PopulationSubscriberStatus.PENDING_VERIFICATION,
+        phone: '+14505551234',
+        phoneCanonical: '+14505551234',
+        email: null,
+        emailCanonical: null,
         preferredLanguage: PopulationPreferredLanguage.FR,
+        smsEnabled: false,
+        emailEnabled: false,
         createdAt: new Date('2026-09-17T12:00:00Z'),
       });
+
+      prisma.populationSubscriber.findMany.mockResolvedValue([]);
+      prisma.populationVerification.findFirst.mockResolvedValue(null);
+      prisma.populationVerification.count.mockResolvedValue(0);
 
       prisma.populationVerification.create.mockResolvedValue({
         id: 'verification-1',
@@ -1851,13 +1866,21 @@ describe('PopulationService', () => {
           phone: '+14505551234',
           phoneCanonical: '+14505551234',
           email: null,
+          emailCanonical: null,
+          identityAuthorityAt: expect.any(Date),
           preferredLanguage: PopulationPreferredLanguage.FR,
           status: PopulationSubscriberStatus.PENDING_VERIFICATION,
         },
         select: {
           id: true,
           status: true,
+          phone: true,
+          phoneCanonical: true,
+          email: true,
+          emailCanonical: true,
           preferredLanguage: true,
+          smsEnabled: true,
+          emailEnabled: true,
           createdAt: true,
         },
       });
@@ -1870,6 +1893,7 @@ describe('PopulationService', () => {
           expiresAt: expect.any(Date),
           maxAttempts: 5,
         },
+        select: { id: true },
       });
 
       const verificationCall =
@@ -1901,11 +1925,13 @@ describe('PopulationService', () => {
           .disclosureSnapshot,
       ).not.toContain(requestWithUntrustedSnapshot.disclosureSnapshot);
 
-      expect(result.verificationRequired).toBe(true);
-      expect(result.verificationChannel).toBe(
-        PopulationVerificationChannel.SMS,
+      expect(result).toEqual(
+        expect.objectContaining({
+          accepted: true,
+          accessRequestToken: expect.any(String),
+          expiresAt: expect.any(String),
+        }),
       );
-      expect(result.deliveryStatus).toBe('SENT');
       expect(populationDeliveryService.sendSms).toHaveBeenCalledTimes(1);
       const [destination, message] =
         populationDeliveryService.sendSms.mock.calls[0];
@@ -1952,6 +1978,18 @@ describe('PopulationService', () => {
     });
 
     it('crée une inscription EMAIL lorsque seul le courriel est fourni', async () => {
+      prisma.populationSubscriber.create.mockResolvedValueOnce({
+        id: 'subscriber-1',
+        status: PopulationSubscriberStatus.PENDING_VERIFICATION,
+        phone: null,
+        phoneCanonical: null,
+        email: 'Citoyen@Example.com',
+        emailCanonical: 'citoyen@example.com',
+        preferredLanguage: PopulationPreferredLanguage.EN,
+        smsEnabled: false,
+        emailEnabled: false,
+        createdAt: new Date('2026-09-17T12:00:00Z'),
+      });
       await service.registerSubscriber('sobeys-boucherville', {
         email: 'Citoyen@Example.com',
         preferredLanguage: PopulationPreferredLanguage.EN,
@@ -1963,7 +2001,8 @@ describe('PopulationService', () => {
           data: expect.objectContaining({
             programId: 'program-1',
             phone: null,
-            email: 'citoyen@example.com',
+            email: 'Citoyen@Example.com',
+            emailCanonical: 'citoyen@example.com',
             preferredLanguage: PopulationPreferredLanguage.EN,
           }),
         }),
@@ -1976,6 +2015,7 @@ describe('PopulationService', () => {
           codeHash: expect.stringMatching(/^[a-f0-9]{64}$/),
           maxAttempts: 5,
         }),
+        select: { id: true },
       });
       expect(populationDeliveryService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -2000,7 +2040,9 @@ describe('PopulationService', () => {
         ).rejects.toBeInstanceOf(BadRequestException);
 
         expect(prisma.populationSubscriber.create).not.toHaveBeenCalled();
-        expect(prisma.populationSmsConsentEvidence.create).not.toHaveBeenCalled();
+        expect(
+          prisma.populationSmsConsentEvidence.create,
+        ).not.toHaveBeenCalled();
       },
     );
 
@@ -2016,7 +2058,7 @@ describe('PopulationService', () => {
         smsConsent: true,
       });
 
-      expect(result.deliveryStatus).toBe('FAILED');
+      expect(result.accepted).toBe(true);
       expect(prisma.populationSubscriber.create).toHaveBeenCalledTimes(1);
       expect(prisma.populationVerification.create).toHaveBeenCalledTimes(1);
     });

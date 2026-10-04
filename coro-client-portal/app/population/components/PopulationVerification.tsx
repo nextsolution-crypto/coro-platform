@@ -4,13 +4,11 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, MapPin, RefreshCw } from "lucide-react";
 import {
   PublicPopulationApiError,
-  resendPopulationVerification,
-  verifyPopulationSubscriber,
+  verifyPopulationAccess,
 } from "../lib/publicPopulationApi";
 import {
   authenticatePopulationWorkflowSession,
   clearPopulationWorkflowSession,
-  updatePopulationVerificationExpiry,
   type PendingPopulationWorkflowSession,
   type PopulationWorkflowSession,
 } from "../lib/populationSession";
@@ -35,24 +33,30 @@ const text = {
     resending: "Envoi…",
     resendIn: "Nouveau code disponible dans",
     resent: "Un nouveau code a été envoyé.",
-    deliveryFailed: "Le code n’a pas pu être transmis. Vous pourrez demander un nouvel envoi dans un instant.",
+    deliveryFailed:
+      "Le code n’a pas pu être transmis. Vous pourrez demander un nouvel envoi dans un instant.",
     invalid: "Le code est invalide. Vérifiez les 6 chiffres et réessayez.",
     attempts: "Ce code ne peut plus être utilisé. Demandez-en un nouveau.",
     used: "Ce code n’est plus actif. Demandez-en un nouveau.",
     alreadyConfirmed: "Votre inscription semble déjà confirmée.",
     accessRegistration: "Accéder à mon inscription",
-    transitionFailed: "Votre inscription a été confirmée, mais cet écran n’a pas pu être actualisé. Accédez à votre inscription pour continuer.",
+    transitionFailed:
+      "Votre inscription a été confirmée, mais cet écran n’a pas pu être actualisé. Accédez à votre inscription pour continuer.",
     cooldown: "Veuillez attendre avant de demander un nouveau code.",
     tooMany: "Trop de codes ont été demandés. Réessayez plus tard.",
     unavailable: "Ce programme n’est plus disponible.",
-    network: "La vérification n’a pas pu être effectuée. Vérifiez votre connexion et réessayez.",
+    network:
+      "La vérification n’a pas pu être effectuée. Vérifiez votre connexion et réessayez.",
     back: "Retour",
     confirmed: "Inscription confirmée",
-    confirmedText: "Vous pouvez maintenant configurer votre secteur d’alerte afin que Sentinelle Population puisse déterminer si une communication concerne votre emplacement.",
-    optional: "La localisation est facultative. Elle sert uniquement au ciblage géographique des alertes.",
+    confirmedText:
+      "Vous pouvez maintenant configurer votre secteur d’alerte afin que Sentinelle Population puisse déterminer si une communication concerne votre emplacement.",
+    optional:
+      "La localisation est facultative. Elle sert uniquement au ciblage géographique des alertes.",
     configure: "Configurer mon secteur d’alerte",
     later: "Plus tard",
-    deferred: "Votre inscription est active. Vous pourrez configurer votre secteur d’alerte plus tard.",
+    deferred:
+      "Votre inscription est active. Vous pourrez configurer votre secteur d’alerte plus tard.",
     finish: "Terminer",
   },
   en: {
@@ -69,30 +73,38 @@ const text = {
     resending: "Sending…",
     resendIn: "New code available in",
     resent: "A new code has been sent.",
-    deliveryFailed: "The code could not be delivered. You can request another one shortly.",
+    deliveryFailed:
+      "The code could not be delivered. You can request another one shortly.",
     invalid: "The code is invalid. Check all 6 digits and try again.",
     attempts: "This code can no longer be used. Request a new one.",
     used: "This code is no longer active. Request a new one.",
     alreadyConfirmed: "Your registration appears to be already confirmed.",
     accessRegistration: "Access my subscription",
-    transitionFailed: "Your registration was confirmed, but this screen could not be updated. Access your subscription to continue.",
+    transitionFailed:
+      "Your registration was confirmed, but this screen could not be updated. Access your subscription to continue.",
     cooldown: "Please wait before requesting a new code.",
     tooMany: "Too many codes have been requested. Try again later.",
     unavailable: "This program is no longer available.",
-    network: "Verification could not be completed. Check your connection and try again.",
+    network:
+      "Verification could not be completed. Check your connection and try again.",
     back: "Back",
     confirmed: "Registration confirmed",
-    confirmedText: "You can now configure your alert area so Sentinelle Population can determine whether a communication concerns your location.",
-    optional: "Location is optional. It is used only for geographic alert targeting.",
+    confirmedText:
+      "You can now configure your alert area so Sentinelle Population can determine whether a communication concerns your location.",
+    optional:
+      "Location is optional. It is used only for geographic alert targeting.",
     configure: "Configure my alert area",
     later: "Later",
-    deferred: "Your registration is active. You can configure your alert area later.",
+    deferred:
+      "Your registration is active. You can configure your alert area later.",
     finish: "Finish",
   },
 } as const;
 
 function formatDuration(seconds: number) {
-  const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
+  const minutes = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0");
   const remaining = (seconds % 60).toString().padStart(2, "0");
   return `${minutes}:${remaining}`;
 }
@@ -136,14 +148,7 @@ export default function PopulationVerification({
   const verifyInFlight = useRef(false);
   const resendInFlight = useRef(false);
 
-  useEffect(() => {
-    if (
-      workflow.state === "PENDING" &&
-      workflow.verification.deliveryStatus === "FAILED"
-    ) {
-      setError(t.deliveryFailed);
-    }
-  }, [t.deliveryFailed, workflow]);
+  useEffect(() => {}, [t.deliveryFailed, workflow]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -197,15 +202,29 @@ export default function PopulationVerification({
           )}
           {!deferred && <p className={styles.optionalNotice}>{t.optional}</p>}
           {deferred ? (
-            <button className={`${styles.button} ${styles.primary}`} type="button" onClick={onBack}>
+            <button
+              className={`${styles.button} ${styles.primary}`}
+              type="button"
+              onClick={onBack}
+            >
               {t.finish}
             </button>
           ) : (
             <div className={styles.postVerificationActions}>
-              <button className={`${styles.button} ${styles.primary}`} type="button" onClick={() => setLocationOpen(true)}>
-                <MapPin size={18} />{t.configure}<ArrowRight size={17} />
+              <button
+                className={`${styles.button} ${styles.primary}`}
+                type="button"
+                onClick={() => setLocationOpen(true)}
+              >
+                <MapPin size={18} />
+                {t.configure}
+                <ArrowRight size={17} />
               </button>
-              <button className={`${styles.button} ${styles.secondary}`} type="button" onClick={() => setDeferred(true)}>
+              <button
+                className={`${styles.button} ${styles.secondary}`}
+                type="button"
+                onClick={() => setDeferred(true)}
+              >
                 {t.later}
               </button>
             </div>
@@ -221,7 +240,8 @@ export default function PopulationVerification({
   const expired = forcedExpired || secondsLeft === 0;
   const complete = /^\d{6}$/.test(code);
 
-  const focusError = () => window.requestAnimationFrame(() => errorRef.current?.focus());
+  const focusError = () =>
+    window.requestAnimationFrame(() => errorRef.current?.focus());
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -232,13 +252,13 @@ export default function PopulationVerification({
     setNotice(null);
     let result;
     try {
-      result = await verifyPopulationSubscriber(
-        workflow.publicSlug,
-        workflow.subscriberId,
-        { channel: workflow.verification.channel, code },
-      );
+      result = await verifyPopulationAccess(workflow.publicSlug, {
+        accessRequestToken: workflow.verification.accessRequestToken,
+        code,
+      });
     } catch (caught: unknown) {
-      const apiError = caught instanceof PublicPopulationApiError ? caught : null;
+      const apiError =
+        caught instanceof PublicPopulationApiError ? caught : null;
       if (apiError?.reason === "INVALID_CODE") {
         setError(t.invalid);
         setCode("");
@@ -251,8 +271,13 @@ export default function PopulationVerification({
         setError(t.attempts);
         setCode("");
         setForcedExpired(true);
-      } else if (apiError?.reason === "NO_ACTIVE_CODE" || apiError?.reason === "ALREADY_VERIFIED") {
-        setError(apiError.reason === "ALREADY_VERIFIED" ? t.alreadyConfirmed : t.used);
+      } else if (
+        apiError?.reason === "NO_ACTIVE_CODE" ||
+        apiError?.reason === "ALREADY_VERIFIED"
+      ) {
+        setError(
+          apiError.reason === "ALREADY_VERIFIED" ? t.alreadyConfirmed : t.used,
+        );
         setAlreadyConfirmed(apiError.reason === "ALREADY_VERIFIED");
         setCode("");
         setForcedExpired(true);
@@ -273,6 +298,7 @@ export default function PopulationVerification({
         workflow,
         result.accessToken,
         result.accessTokenExpiresInSeconds,
+        result.subscriberId,
       );
       onWorkflowChange(authenticated);
     } catch {
@@ -286,43 +312,9 @@ export default function PopulationVerification({
     setVerifying(false);
   };
 
-  const resend = async () => {
-    if (cooldownLeft > 0 || resendInFlight.current) return;
-    resendInFlight.current = true;
-    setResending(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const result = await resendPopulationVerification(
-        workflow.publicSlug,
-        workflow.subscriberId,
-        { channel: workflow.verification.channel },
-      );
-      const updated = updatePopulationVerificationExpiry(
-        workflow,
-        result.verificationExpiresAt,
-        result.deliveryStatus,
-      );
-      setCode("");
-      setForcedExpired(false);
-      setAlreadyConfirmed(false);
-      setNow(Date.now());
-      setCooldownUntil(initialCooldown(result.verificationExpiresAt));
-      onWorkflowChange(updated);
-      if (result.deliveryStatus === "SENT") setNotice(t.resent);
-      else setError(t.deliveryFailed);
-      window.requestAnimationFrame(() => codeRef.current?.focus());
-    } catch (caught: unknown) {
-      const apiError = caught instanceof PublicPopulationApiError ? caught : null;
-      if (apiError?.reason === "RESEND_COOLDOWN") setError(t.cooldown);
-      else if (apiError?.reason === "TOO_MANY_CODES") setError(t.tooMany);
-      else if (apiError?.status === 404) setError(t.unavailable);
-      else setError(t.network);
-      focusError();
-    } finally {
-      resendInFlight.current = false;
-      setResending(false);
-    }
+  const resend = () => {
+    clearPopulationWorkflowSession(workflow.publicSlug);
+    onBack();
   };
 
   return (
@@ -333,7 +325,12 @@ export default function PopulationVerification({
           {workflow.verification.channel === "SMS" ? t.sms : t.email}
         </p>
         <form onSubmit={submit}>
-          <label className={styles.otpLabel} htmlFor="population-verification-code">{t.code}</label>
+          <label
+            className={styles.otpLabel}
+            htmlFor="population-verification-code"
+          >
+            {t.code}
+          </label>
           <input
             ref={codeRef}
             id="population-verification-code"
@@ -344,22 +341,43 @@ export default function PopulationVerification({
             enterKeyHint="done"
             maxLength={6}
             value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(event) =>
+              setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+            }
             aria-invalid={!!error}
             autoFocus
           />
           <p className={expired ? styles.expiredTimer : styles.otpTimer}>
             {expired ? t.expired : `${t.timer} ${formatDuration(secondsLeft)}`}
           </p>
-          <div ref={errorRef} className={styles.formError} role="alert" aria-live="assertive" tabIndex={-1}>{error}</div>
-          <div className={styles.formNotice} role="status" aria-live="polite">{notice}</div>
-          <button className={`${styles.button} ${styles.primary} ${styles.submitButton}`} type="submit" disabled={!complete || expired || verifying}>
-            {verifying ? t.verifying : t.verify}<ArrowRight size={17} />
+          <div
+            ref={errorRef}
+            className={styles.formError}
+            role="alert"
+            aria-live="assertive"
+            tabIndex={-1}
+          >
+            {error}
+          </div>
+          <div className={styles.formNotice} role="status" aria-live="polite">
+            {notice}
+          </div>
+          <button
+            className={`${styles.button} ${styles.primary} ${styles.submitButton}`}
+            type="submit"
+            disabled={!complete || expired || verifying}
+          >
+            {verifying ? t.verifying : t.verify}
+            <ArrowRight size={17} />
           </button>
         </form>
         {alreadyConfirmed ? (
           <div className={styles.resendBlock}>
-            <button className={styles.resendButton} type="button" onClick={onAccess}>
+            <button
+              className={styles.resendButton}
+              type="button"
+              onClick={onAccess}
+            >
               <ArrowRight size={16} />
               {t.accessRegistration}
             </button>
@@ -367,9 +385,18 @@ export default function PopulationVerification({
         ) : (
           <div className={styles.resendBlock}>
             <p>{t.noCode}</p>
-            <button className={styles.resendButton} type="button" onClick={resend} disabled={resending || cooldownLeft > 0}>
+            <button
+              className={styles.resendButton}
+              type="button"
+              onClick={resend}
+              disabled={resending || cooldownLeft > 0}
+            >
               <RefreshCw size={16} />
-              {resending ? t.resending : cooldownLeft > 0 ? `${t.resendIn} ${formatDuration(cooldownLeft)}` : t.resend}
+              {resending
+                ? t.resending
+                : cooldownLeft > 0
+                  ? `${t.resendIn} ${formatDuration(cooldownLeft)}`
+                  : t.resend}
             </button>
           </div>
         )}

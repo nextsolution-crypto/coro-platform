@@ -2878,6 +2878,11 @@ model PopulationSubscriber {
   phone          String?
   phoneCanonical String?
   email          String?
+  emailCanonical String?
+
+  // Transitional Phase A marker. Historical rows remain unmanaged until
+  // the explicit remediation phase has resolved existing collisions.
+  identityAuthorityAt DateTime?
 
   smsEnabled   Boolean @default(false)
   emailEnabled Boolean @default(false)
@@ -2915,6 +2920,8 @@ model PopulationSubscriber {
   @@index([programId, status])
   @@index([phone])
   @@index([programId, phoneCanonical])
+  @@index([programId, emailCanonical])
+  @@index([programId, identityAuthorityAt])
   @@index([email])
 }
 
@@ -3302,6 +3309,7 @@ enum PopulationSubscriberStatus {
   ACTIVE
   UNSUBSCRIBED
   SUSPENDED
+  ABANDONED
 }
 
 enum PopulationPreferredLanguage {
