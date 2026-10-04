@@ -102,7 +102,46 @@ describePostgres('Population identity remediation PostgreSQL', () => {
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
+    try {
+      await prisma.populationSmsSuppression.deleteMany({
+        where: {
+          originEvent: { providerEventKey: { startsWith: prefix } },
+        },
+      });
+      await prisma.populationInboundSmsEvent.deleteMany({
+        where: { providerEventKey: { startsWith: prefix } },
+      });
+      await prisma.populationAlertDelivery.deleteMany({
+        where: { subscriberId: { startsWith: prefix } },
+      });
+      await prisma.populationAlert.deleteMany({
+        where: { id: { startsWith: prefix } },
+      });
+      await prisma.populationSmsConsentEvidence.deleteMany({
+        where: { subscriberId: { startsWith: prefix } },
+      });
+      await prisma.populationConsentEvent.deleteMany({
+        where: { subscriberId: { startsWith: prefix } },
+      });
+      await prisma.populationVerification.deleteMany({
+        where: { subscriberId: { startsWith: prefix } },
+      });
+      await prisma.populationSubscriber.deleteMany({
+        where: { id: { startsWith: prefix } },
+      });
+      await prisma.populationProgram.deleteMany({
+        where: { id: { in: [ids.programA, ids.programB] } },
+      });
+      await prisma.rueFacilityProfile.deleteMany({
+        where: { id: { in: [ids.profileA, ids.profileB] } },
+      });
+      await prisma.building.deleteMany({
+        where: { id: { in: [ids.buildingA, ids.buildingB] } },
+      });
+      await prisma.client.delete({ where: { id: ids.client } });
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   async function createPair(
