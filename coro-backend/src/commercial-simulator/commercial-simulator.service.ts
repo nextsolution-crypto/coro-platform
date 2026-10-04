@@ -55,6 +55,14 @@ import {
 } from './first-wave-commercial.registry';
 import { buildFamilyReadiness } from './commercial-readiness';
 import {
+  COMMERCIAL_PACKAGING_POLICY,
+  COMMERCIAL_PACKAGING_POLICY_VERSION,
+} from './commercial-packaging.registry';
+import {
+  packagingDraftBlockingIssues,
+  validatePackagingSelection,
+} from './commercial-packaging';
+import {
   assessCostMethodologyCompatibility,
   costMethodologyDefinitions,
 } from './cost-methodology.registry';
@@ -816,6 +824,29 @@ export class CommercialSimulatorService {
                 latestRun.costResult.firstYearCostMinor.toString(),
               )
             : null;
+        const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
+          family.capabilityCodes.some((code) =>
+            scenario.capabilities.some(
+              (selection) => selection.capability.code === code,
+            ),
+          ),
+        ).map((family) => family.code);
+        if (
+          scenario.lines.some(
+            (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
+          ) &&
+          !familyCodes.includes('PROFESSIONAL_SERVICES')
+        )
+          familyCodes.push('PROFESSIONAL_SERVICES');
+        const packaging = validatePackagingSelection({
+          familyCodes,
+          components: scenario.lines
+            .filter((line) => line.source === 'CATALOG_COMPONENT')
+            .map((line) => ({
+              componentCode: line.componentCode,
+              revenueCategory: line.revenueCategory,
+            })),
+        });
         return {
           id: scenario.id,
           name: scenario.name,
@@ -824,13 +855,8 @@ export class CommercialSimulatorService {
           displayOrder: scenario.displayOrder,
           lockVersion: scenario.lockVersion,
           selected: workspace.selectedScenarioId === scenario.id,
-          familyCodes: COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
-            family.capabilityCodes.some((code) =>
-              scenario.capabilities.some(
-                (selection) => selection.capability.code === code,
-              ),
-            ),
-          ).map((family) => family.code),
+          familyCodes,
+          packaging,
           capabilityCodes: scenario.capabilities.map(
             (selection) => selection.capability.code,
           ),
@@ -1009,7 +1035,23 @@ export class CommercialSimulatorService {
         })),
         displayOrder: component.displayOrder,
         selectable: Boolean(component.revenueCategory),
+        packaging: COMMERCIAL_PACKAGING_POLICY.flatMap((policy) =>
+          policy.components
+            .filter((rule) => rule.componentCode === component.code)
+            .map((rule) => ({
+              familyCode: policy.familyCode,
+              role: rule.role,
+              dependencies: rule.dependencies,
+              exclusions: rule.exclusions,
+              professionalServiceAttachments:
+                rule.professionalServiceAttachments,
+            })),
+        ),
       })),
+      packagingPolicy: {
+        version: COMMERCIAL_PACKAGING_POLICY_VERSION,
+        families: COMMERCIAL_PACKAGING_POLICY,
+      },
       readiness: buildFamilyReadiness({
         families: COMMERCIAL_FAMILY_REGISTRY,
         components,
@@ -1351,11 +1393,28 @@ export class CommercialSimulatorService {
     for (const component of components) {
       if (!component.revenueCategory)
         throw new BadRequestException('REVENUE_CLASSIFICATION_INCOMPLETE');
-      if (!permittedCapabilityCodes.has(component.capability.code))
+      if (
+        !permittedCapabilityCodes.has(component.capability.code) &&
+        component.revenueCategory !== 'PROFESSIONAL_SERVICE'
+      )
         throw new BadRequestException(
           'CATALOG_COMPONENT_OUTSIDE_SELECTED_FAMILY',
         );
     }
+    const packaging = validatePackagingSelection({
+      familyCodes,
+      components: components.map((component) => ({
+        componentCode: component.code,
+        revenueCategory: component.revenueCategory,
+      })),
+    });
+    const invalidDraft = packagingDraftBlockingIssues(packaging.blockers);
+    if (invalidDraft.length)
+      throw new BadRequestException({
+        code: 'GUIDED_PACKAGING_INVALID',
+        policyVersion: packaging.policyVersion,
+        blockers: invalidDraft,
+      });
 
     const applicableDrivers = new Set(
       families.flatMap((family) => [
@@ -1750,6 +1809,74 @@ export class CommercialSimulatorService {
         margin,
       };
     });
+  }
+
+  private async assertGuidedPackaging(workspaceId: string, scenarioId: string) {
+    const scenario = await this.prisma.commercialSimulationScenario.findFirst({
+      where: { id: scenarioId, workspaceId },
+      select: {
+        capabilities: { select: { capability: { select: { code: true } } } },
+        lines: {
+          select: {
+            source: true,
+            componentCode: true,
+            revenueCategory: true,
+          },
+        },
+      },
+    });
+    if (!scenario) throw new NotFoundException('Scenario introuvable.');
+    const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
+      family.capabilityCodes.some((code) =>
+        scenario.capabilities.some(
+          (selection) => selection.capability.code === code,
+        ),
+      ),
+    ).map((family) => family.code);
+    if (
+      scenario.lines.some(
+        (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
+      ) &&
+      !familyCodes.includes('PROFESSIONAL_SERVICES')
+    )
+      familyCodes.push('PROFESSIONAL_SERVICES');
+    const result = validatePackagingSelection({
+      familyCodes,
+      components: scenario.lines
+        .filter((line) => line.source === 'CATALOG_COMPONENT')
+        .map((line) => ({
+          componentCode: line.componentCode,
+          revenueCategory: line.revenueCategory,
+        })),
+    });
+    if (result.status !== 'READY')
+      throw new BadRequestException({
+        code: 'GUIDED_PACKAGING_NOT_READY',
+        policyVersion: result.policyVersion,
+        blockers: result.blockers,
+      });
+    return result;
+  }
+
+  async calculateGuided(
+    workspaceId: string,
+    scenarioId: string,
+    dto: CalculateScenarioDto,
+    actor: Actor,
+  ) {
+    await this.assertGuidedPackaging(workspaceId, scenarioId);
+    return this.calculate(workspaceId, scenarioId, dto, actor);
+  }
+
+  async convertGuided(
+    workspaceId: string,
+    scenarioId: string,
+    runId: string,
+    dto: ConvertScenarioDto,
+    actor: Actor,
+  ) {
+    await this.assertGuidedPackaging(workspaceId, scenarioId);
+    return this.convert(workspaceId, scenarioId, runId, dto, actor);
   }
 
   async calculate(

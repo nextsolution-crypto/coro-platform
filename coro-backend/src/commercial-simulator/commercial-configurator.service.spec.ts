@@ -5,7 +5,53 @@ import { CommercialSimulatorService } from './commercial-simulator.service';
 const serviceWith = (prisma: Record<string, unknown>) =>
   new CommercialSimulatorService(prisma as never, {} as never, {} as never);
 
+const expectPackagingNotReady = async (operation: Promise<unknown>) => {
+  try {
+    await operation;
+    throw new Error('Expected guided packaging rejection');
+  } catch (error: unknown) {
+    expect(error).toBeInstanceOf(BadRequestException);
+    const response = (error as BadRequestException).getResponse();
+    expect(response).toEqual(
+      expect.objectContaining({ code: 'GUIDED_PACKAGING_NOT_READY' }),
+    );
+  }
+};
+
 describe('Commercial Configurator projections', () => {
+  it('blocks guided calculation and conversion when packaging is invalid', async () => {
+    const prisma = {
+      commercialSimulationScenario: {
+        findFirst: jest.fn(() =>
+          Promise.resolve({
+            capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
+            lines: [
+              {
+                source: 'CATALOG_COMPONENT',
+                componentCode: 'UNMAPPED_COMPONENT',
+                revenueCategory: 'SAAS',
+              },
+            ],
+          }),
+        ),
+      },
+    };
+    const service = serviceWith(prisma);
+    await expectPackagingNotReady(
+      service.calculateGuided(
+        'workspace-a',
+        'scenario-a',
+        {},
+        { userId: 'admin' },
+      ),
+    );
+    await expectPackagingNotReady(
+      service.convertGuided('workspace-a', 'scenario-a', 'run-a', {} as never, {
+        userId: 'admin',
+      }),
+    );
+  });
+
   it('returns deterministic metadata and readiness without assumption values', async () => {
     const prisma = {
       $transaction: jest.fn((calls: Promise<number>[]) => Promise.all(calls)),

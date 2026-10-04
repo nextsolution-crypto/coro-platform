@@ -13,3 +13,5 @@ Future annual indexation must create a new draft PriceBookVersion, apply determi
 The future Business Command Center may consume these authorities, but must not replace or duplicate them.
 
 Package database authority remains unproven. V1 packaging policy should remain code-owned, versioned, and derived from the Commercial Family Registry, CommercialCapability, PriceBookVersion, and PriceComponent. Price remains exclusively owned by the PriceBook. A future persisted Package authority requires a demonstrated independent lifecycle.
+
+`commercial-packaging/v1` is the code-owned composition policy for the guided Configurator. It governs eligibility and compatibility only; selected priced terms remain snapshotted by Proposal and Contract. Current included-feature keys are presentation-only and create neither a zero-price line nor an entitlement. Families without approved stable component mappings remain explicitly policy-incomplete rather than implicitly sellable.

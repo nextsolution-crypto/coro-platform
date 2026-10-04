@@ -38,12 +38,20 @@ export type CatalogComponent = {
     amountCad: string;
   }>;
   selectable: boolean;
+  packaging: Array<{
+    familyCode: string;
+    role: "REQUIRED" | "OPTIONAL" | "DEFAULT_SELECTED";
+    dependencies: string[];
+    exclusions: string[];
+    professionalServiceAttachments: string[];
+  }>;
 };
 
 export type FamilyReadiness = {
   familyCode: string;
   availability: string;
   price: { status: string; messages: string[] };
+  packaging: { status: string; messages: string[] };
   quantity: { status: string; messages: string[] };
   drivers: { status: string; messages: string[] };
   cost: { status: string; messages: string[] };
@@ -82,6 +90,11 @@ export type GuidedScenario = {
   lockVersion: number;
   selected: boolean;
   familyCodes: string[];
+  packaging: {
+    policyVersion: string;
+    status: "READY" | "BLOCKED";
+    blockers: string[];
+  };
   lines: GuidedLine[];
   drivers: Array<{ code: string; value: string; justification: string | null }>;
   stale: boolean | null;

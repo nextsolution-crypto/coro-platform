@@ -275,6 +275,31 @@ export class CommercialSimulatorController {
       userId: req.user.id,
     });
   }
+  @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/calculate')
+  calculateGuided(
+    @Param('workspaceId') workspaceId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Body() dto: CalculateScenarioDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.calculateGuided(workspaceId, scenarioId, dto, {
+      userId: req.user.id,
+    });
+  }
+  @Post(
+    'configurator/workspaces/:workspaceId/scenarios/:scenarioId/runs/:runId/convert',
+  )
+  convertGuided(
+    @Param('workspaceId') workspaceId: string,
+    @Param('scenarioId') scenarioId: string,
+    @Param('runId') runId: string,
+    @Body() dto: ConvertScenarioDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.convertGuided(workspaceId, scenarioId, runId, dto, {
+      userId: req.user.id,
+    });
+  }
   @Post('workspaces/:workspaceId/scenarios/:scenarioId/runs/:runId/convert')
   convert(
     @Param('workspaceId') workspaceId: string,

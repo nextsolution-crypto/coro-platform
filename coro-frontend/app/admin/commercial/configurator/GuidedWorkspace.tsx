@@ -182,7 +182,7 @@ export function GuidedWorkspace({
                   action(
                     () =>
                       api.post(
-                        `/admin/v1/commercial/simulator/workspaces/${workspaceId}/scenarios/${scenario.id}/calculate`,
+                        `/admin/v1/commercial/simulator/configurator/workspaces/${workspaceId}/scenarios/${scenario.id}/calculate`,
                         {
                           costAssumptionVersionId: costVersionId || undefined,
                           valuationAssumptionVersionIds: valuationVersionId ? [valuationVersionId] : undefined,

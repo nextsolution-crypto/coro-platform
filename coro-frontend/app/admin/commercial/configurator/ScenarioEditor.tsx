@@ -56,9 +56,6 @@ export function ScenarioEditor({
   const selectedFamilies = families.filter((family) =>
     familyCodes.includes(family.code),
   );
-  const selectedCapabilities = new Set(
-    selectedFamilies.flatMap((family) => family.capabilityCodes),
-  );
   const applicableDrivers = useMemo(() => {
     const codes = new Set(
       selectedFamilies.flatMap((family) => [
@@ -69,7 +66,9 @@ export function ScenarioEditor({
     return drivers.filter((driver) => codes.has(driver.code));
   }, [drivers, selectedFamilies]);
   const availableCatalog = catalog.filter((component) =>
-    selectedCapabilities.has(component.capabilityCode),
+    component.packaging.some((policy) =>
+      familyCodes.includes(policy.familyCode),
+    ),
   );
   const capabilityLabels = new Map(
     selectedFamilies.flatMap((family) =>
@@ -278,6 +277,17 @@ export function ScenarioEditor({
                 />
                 <span className="flex-1">
                   <strong>{component.labelFr}</strong>
+                  {component.packaging
+                    .filter((policy) => familyCodes.includes(policy.familyCode))
+                    .map((policy) => (
+                      <span key={policy.familyCode} className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs">
+                        {policy.role === "REQUIRED"
+                          ? "Requis"
+                          : policy.role === "DEFAULT_SELECTED"
+                            ? "Présélectionné"
+                            : "Optionnel"}
+                      </span>
+                    ))}
                   <span className="block text-xs text-slate-500">
                     {capabilityLabels.get(component.capabilityCode) ??
                       "Solution"}
@@ -567,6 +577,11 @@ export function ScenarioEditor({
       </section>
 
       <div className="flex flex-wrap gap-2">
+        {scenario.packaging.status !== "READY" && (
+          <p className="w-full rounded bg-amber-50 p-3 text-sm text-amber-800">
+            Composition incomplète : {scenario.packaging.blockers.join(" · ")}
+          </p>
+        )}
         <button
           type="button"
           disabled={busy || !dirty}
@@ -577,7 +592,7 @@ export function ScenarioEditor({
         </button>
         <button
           type="button"
-          disabled={busy || dirty || !lines.length}
+          disabled={busy || dirty || !lines.length || scenario.packaging.status !== "READY"}
           onClick={onCalculate}
           className="rounded bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-40"
         >

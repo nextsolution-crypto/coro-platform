@@ -1,5 +1,6 @@
 import { CommercialFamilyDefinition } from './commercial-family.registry';
 import { FIRST_WAVE_COMPONENTS } from './first-wave-commercial.registry';
+import { packagingPolicyForFamily } from './commercial-packaging.registry';
 
 export type ReadinessStatus =
   | 'READY'
@@ -35,6 +36,7 @@ export function buildFamilyReadiness(input: {
         familyCode: family.code,
         availability: family.availability,
         product: dimension('NOT_APPLICABLE', ['FAMILY_NOT_SELLABLE']),
+        packaging: dimension('NOT_APPLICABLE'),
         catalog: dimension('NOT_APPLICABLE'),
         price: dimension('NOT_APPLICABLE'),
         quantity: dimension('NOT_APPLICABLE'),
@@ -53,6 +55,20 @@ export function buildFamilyReadiness(input: {
           ? component.revenueCategory === 'PROFESSIONAL_SERVICE'
           : false,
     );
+    const packagingPolicy = packagingPolicyForFamily(family.code);
+    const mappedPackagingComponents = familyComponents.filter((component) =>
+      packagingPolicy?.components.some(
+        (rule) => rule.componentCode === component.code,
+      ),
+    );
+    const packagingStatus: ReadinessStatus =
+      packagingPolicy?.status === 'NOT_SELLABLE'
+        ? 'NOT_APPLICABLE'
+        : packagingPolicy?.status === 'POLICY_INCOMPLETE'
+          ? 'BLOCKED'
+          : mappedPackagingComponents.length
+            ? 'READY'
+            : 'NOT_CONFIGURED';
     const invalid = familyComponents.filter(
       (component) =>
         !component.revenueCategory ||
@@ -101,6 +117,9 @@ export function buildFamilyReadiness(input: {
     const blockers = [
       ...(familyComponents.length ? [] : ['CATALOG_COMPONENT_MISSING']),
       ...invalid.map((item) => `PRICE_CONFIGURATION_INVALID:${item.code}`),
+      ...(packagingPolicy?.status === 'POLICY_INCOMPLETE'
+        ? [`PACKAGING_POLICY_INCOMPLETE:${family.code}`]
+        : []),
     ];
     const warnings = [
       ...(input.incompatibleCostAuthorities
@@ -117,6 +136,7 @@ export function buildFamilyReadiness(input: {
       familyCode: family.code,
       availability: family.availability,
       product: dimension('READY'),
+      packaging: dimension(packagingStatus),
       catalog: dimension(catalogStatus),
       price: dimension(priceStatus),
       quantity: dimension(familyComponents.length ? 'READY' : 'NOT_CONFIGURED'),
