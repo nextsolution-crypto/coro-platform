@@ -4,6 +4,17 @@ import type {
 } from "./publicPopulationApi";
 
 const SESSION_PREFIX = "coro.population.workflow.v1";
+const CONTACT_CHANGE_PREFIX = "coro.population.contactChange.v1";
+
+export type PopulationContactChangeSession = {
+  version: 1;
+  publicSlug: string;
+  subscriberId: string;
+  type: "PHONE" | "EMAIL";
+  challengeToken: string;
+  maskedProposedDestination: string | null;
+  expiresAt: string;
+};
 
 type PopulationWorkflowSessionBase = {
   version: 1;
@@ -37,6 +48,61 @@ export type PopulationWorkflowSession =
 
 function sessionKey(publicSlug: string) {
   return `${SESSION_PREFIX}:${publicSlug}`;
+}
+
+function contactChangeKey(publicSlug: string) {
+  return `${CONTACT_CHANGE_PREFIX}:${publicSlug}`;
+}
+
+export function savePopulationContactChangeSession(
+  session: PopulationContactChangeSession,
+) {
+  try {
+    window.sessionStorage.setItem(
+      contactChangeKey(session.publicSlug),
+      JSON.stringify(session),
+    );
+  } catch {
+    // The in-memory workflow remains usable when session storage is unavailable.
+  }
+  return session;
+}
+
+export function clearPopulationContactChangeSession(publicSlug: string) {
+  try {
+    window.sessionStorage.removeItem(contactChangeKey(publicSlug));
+  } catch {
+    // No other browser session state is affected.
+  }
+}
+
+export function readPopulationContactChangeSession(
+  publicSlug: string,
+  subscriberId: string,
+) {
+  try {
+    const raw = window.sessionStorage.getItem(contactChangeKey(publicSlug));
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<PopulationContactChangeSession>;
+    if (
+      value.version !== 1 ||
+      value.publicSlug !== publicSlug ||
+      value.subscriberId !== subscriberId ||
+      (value.type !== "PHONE" && value.type !== "EMAIL") ||
+      typeof value.challengeToken !== "string" ||
+      typeof value.expiresAt !== "string" ||
+      (value.maskedProposedDestination !== null &&
+        typeof value.maskedProposedDestination !== "string") ||
+      Date.parse(value.expiresAt) <= Date.now()
+    ) {
+      clearPopulationContactChangeSession(publicSlug);
+      return null;
+    }
+    return value as PopulationContactChangeSession;
+  } catch {
+    clearPopulationContactChangeSession(publicSlug);
+    return null;
+  }
 }
 
 export function configurePopulationLocationSession(

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
-  ArrowLeft,
   ArrowRight,
   BellRing,
   CheckCircle2,
@@ -23,7 +22,10 @@ import {
 } from "../lib/publicPopulationApi";
 import PopulationRegistration from "./PopulationRegistration";
 import PopulationAccess from "./PopulationAccess";
-import { clearPopulationWorkflowSession, readPopulationWorkflowSession } from "../lib/populationSession";
+import {
+  clearPopulationWorkflowSession,
+  readPopulationWorkflowSession,
+} from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
 
 type Language = "fr" | "en";
@@ -148,12 +150,16 @@ export default function PopulationPublicShell({
   );
   useEffect(() => {
     const controller = new AbortController();
+    // The initial public-program fetch is the external synchronization owned by this effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(controller.signal);
     return () => controller.abort();
   }, [load]);
   useEffect(() => {
     const workflow = readPopulationWorkflowSession(publicSlug);
     if (!workflow) return;
+    // Restore the browser-owned workflow once when this public route is entered.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLanguage(workflow.preferredLanguage === "EN" ? "en" : "fr");
     setView(workflow.state === "AUTHENTICATED" ? "access" : "register");
   }, [publicSlug]);
@@ -239,7 +245,8 @@ export default function PopulationPublicShell({
   const website = safeWebsite(program.websiteUrl);
   const openAccess = () => {
     const workflow = readPopulationWorkflowSession(publicSlug);
-    if (workflow?.state === "PENDING") clearPopulationWorkflowSession(publicSlug);
+    if (workflow?.state === "PENDING")
+      clearPopulationWorkflowSession(publicSlug);
     setView("access");
   };
   const header = (
@@ -280,6 +287,10 @@ export default function PopulationPublicShell({
           program={program}
           language={language}
           onLanguageChange={setLanguage}
+          onProgramRefresh={async () => {
+            const refreshed = await getPublicPopulationProgram(publicSlug);
+            setProgram(refreshed);
+          }}
           onBack={() => setView("home")}
         />
         <footer className={styles.footer}>
