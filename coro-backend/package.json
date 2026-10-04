@@ -25,6 +25,7 @@
     "demo:premont:population": "ts-node src/seed-demo-premont-population.ts",
     "demo:booking:planner": "ts-node src/seed-booking-planner-demo.ts",
     "admin:population-live-setup": "ts-node src/admin/setup-population-live-validation.ts",
+    "admin:population-sms-live-validation": "ts-node src/admin/run-population-sms-live-validation.ts",
     "audit:population-phones": "ts-node src/admin/audit-population-phones.ts",
     "audit:population-identities": "ts-node src/admin/audit-population-identities.ts",
     "admin:remediate-population-identity": "ts-node src/admin/remediate-population-identity.ts",
