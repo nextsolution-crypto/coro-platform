@@ -7,3 +7,7 @@ export function populationIdentityLockKey(input: {
 }) {
   return `${input.programId}:${input.identityType.toLowerCase()}:${input.canonicalIdentity}`;
 }
+
+export function populationGlobalPhoneLockKey(phoneCanonical: string) {
+  return `global:phone:${phoneCanonical}`;
+}
