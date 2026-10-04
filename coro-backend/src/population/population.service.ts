@@ -24,6 +24,8 @@ import {
   PopulationGovernanceMode,
   PopulationOperationalEventStatus,
   CoroActorType,
+  PopulationContactChangeStatus,
+  PopulationContactChangeType,
 } from '@prisma/client';
 import {
   createCipheriv,
@@ -70,6 +72,7 @@ import { PhoneNumberService } from '../common/phone/phone-number.service';
 import { PopulationSmsSuppressionService } from './population-sms-suppression.service';
 import { PhoneNumberError } from '../common/phone/phone-number.errors';
 import { populationIdentityLockKey } from './population-identity-lock';
+import { PopulationContactCryptoService } from './population-contact-crypto.service';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
@@ -148,6 +151,8 @@ export class PopulationService {
     private readonly phoneNumbers: PhoneNumberService,
     @Optional()
     private readonly smsSuppressions?: PopulationSmsSuppressionService,
+    @Optional()
+    private readonly contactCrypto?: PopulationContactCryptoService,
   ) {}
 
   private async isSmsGloballySuppressed(phoneCanonical: string) {
@@ -1040,6 +1045,19 @@ export class PopulationService {
     }
 
     return payload;
+  }
+
+  /** Shared server-side citizen authorization boundary for scoped services. */
+  assertSubscriberAccessToken(
+    token: string,
+    expectedSubscriberId: string,
+    expectedProgramId: string,
+  ) {
+    return this.verifySubscriberAccessToken(
+      token,
+      expectedSubscriberId,
+      expectedProgramId,
+    );
   }
 
   private createLocationResolutionToken(
@@ -7089,6 +7107,8 @@ export class PopulationService {
       },
       select: {
         id: true,
+        smsEnabled: true,
+        emailEnabled: true,
       },
     });
 
@@ -7112,6 +7132,7 @@ export class PopulationService {
         phone: true,
         phoneCanonical: true,
         email: true,
+        emailCanonical: true,
         smsEnabled: true,
         emailEnabled: true,
         verifiedAt: true,
@@ -7138,6 +7159,71 @@ export class PopulationService {
       return `${visibleLocal}@${domain}`;
     };
 
+    const phoneCanonical =
+      subscriber.phoneCanonical ??
+      this.tryNormalizeLegacyPopulationPhone(subscriber.phone);
+    const emailCanonical =
+      subscriber.emailCanonical ??
+      subscriber.email?.trim().toLowerCase() ??
+      null;
+    const fingerprints = this.contactCrypto
+      ? [
+          phoneCanonical
+            ? this.contactCrypto.fingerprintDestination({
+                type: PopulationContactChangeType.PHONE,
+                canonicalDestination: phoneCanonical,
+              })
+            : null,
+          emailCanonical
+            ? this.contactCrypto.fingerprintDestination({
+                type: PopulationContactChangeType.EMAIL,
+                canonicalDestination: emailCanonical,
+              })
+            : null,
+        ].filter((value): value is string => Boolean(value))
+      : [];
+    const applied = fingerprints.length
+      ? await this.prisma.populationContactChangeChallenge.findMany({
+          where: {
+            subscriberId,
+            status: PopulationContactChangeStatus.APPLIED,
+          },
+          select: { type: true, proposedDestinationFingerprint: true },
+          orderBy: { appliedAt: 'desc' },
+          take: 4,
+        })
+      : [];
+    const phoneEvidence = applied.filter(
+      (row) => row.type === PopulationContactChangeType.PHONE,
+    );
+    const phoneVerified = Boolean(
+      phoneCanonical &&
+      (phoneEvidence.some(
+        (row) => row.proposedDestinationFingerprint === fingerprints[0],
+      ) ||
+        (phoneEvidence.length === 0 && subscriber.verifiedAt)),
+    );
+    const emailFingerprint =
+      emailCanonical && this.contactCrypto
+        ? this.contactCrypto.fingerprintDestination({
+            type: PopulationContactChangeType.EMAIL,
+            canonicalDestination: emailCanonical,
+          })
+        : null;
+    const emailEvidence = applied.filter(
+      (row) => row.type === PopulationContactChangeType.EMAIL,
+    );
+    const emailVerified = Boolean(
+      emailCanonical &&
+      (emailEvidence.some(
+        (row) => row.proposedDestinationFingerprint === emailFingerprint,
+      ) ||
+        (emailEvidence.length === 0 && subscriber.verifiedAt)),
+    );
+    const phoneSuppressed = phoneCanonical
+      ? await this.isSmsGloballySuppressed(phoneCanonical)
+      : false;
+
     return {
       id: subscriber.id,
       status: subscriber.status,
@@ -7158,6 +7244,40 @@ export class PopulationService {
       },
 
       verifiedAt: subscriber.verifiedAt,
+      communications: {
+        phone: {
+          exists: Boolean(phoneCanonical),
+          maskedDestination: this.maskPopulationPhone(subscriber),
+          verified: phoneVerified,
+          localEnabled: subscriber.smsEnabled,
+          programEnabled: program.smsEnabled,
+          suppressed: phoneSuppressed,
+          effectivelyAvailable: Boolean(
+            phoneCanonical &&
+            phoneVerified &&
+            subscriber.smsEnabled &&
+            program.smsEnabled &&
+            !phoneSuppressed,
+          ),
+          actionRequired: Boolean(
+            phoneCanonical && (!phoneVerified || phoneSuppressed),
+          ),
+        },
+        email: {
+          exists: Boolean(emailCanonical),
+          maskedDestination: maskEmail(emailCanonical),
+          verified: emailVerified,
+          localEnabled: subscriber.emailEnabled,
+          programEnabled: program.emailEnabled,
+          effectivelyAvailable: Boolean(
+            emailCanonical &&
+            emailVerified &&
+            subscriber.emailEnabled &&
+            program.emailEnabled,
+          ),
+          actionRequired: Boolean(emailCanonical && !emailVerified),
+        },
+      },
       unsubscribedAt: subscriber.unsubscribedAt,
       locationConfigured:
         subscriber.latitude != null && subscriber.longitude != null,

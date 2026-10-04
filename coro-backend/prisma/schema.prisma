@@ -2851,6 +2851,7 @@ model PopulationProgram {
   evidenceRecords   PopulationEvidenceRecord[]
   evidenceManifests PopulationEvidenceManifest[]
   evidenceReports   PopulationEvidenceReport[]
+  contactChangeChallenges PopulationContactChangeChallenge[]
 
   @@index([status])
   @@index([registrationEnabled])
@@ -2914,6 +2915,7 @@ model PopulationSubscriber {
   smsConsentEvidence PopulationSmsConsentEvidence[]
   verifications   PopulationVerification[]
   alertDeliveries PopulationAlertDelivery[]
+  contactChangeChallenges PopulationContactChangeChallenge[]
 
   @@index([programId])
   @@index([status])
@@ -2975,12 +2977,65 @@ model PopulationSmsConsentEvidence {
   emailEnabled       Boolean
   submittedAt        DateTime
   verifiedAt         DateTime?
+  contactChangeChallengeId String? @unique
+  contactChangeChallenge PopulationContactChangeChallenge? @relation(fields: [contactChangeChallengeId], references: [id], onDelete: Restrict)
   createdAt          DateTime @default(now())
 
   @@index([programId])
   @@index([subscriberId])
   @@index([submittedAt])
   @@index([verifiedAt])
+}
+
+model PopulationContactChangeChallenge {
+  id String @id @default(uuid())
+
+  programId String
+  program PopulationProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+
+  subscriberId String
+  subscriber PopulationSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Restrict)
+
+  type PopulationContactChangeType
+  purpose PopulationContactChangePurpose
+  status PopulationContactChangeStatus @default(DELIVERY_PENDING)
+
+  proposedDestinationProtected String?
+  proposedDestinationFingerprint String
+  expectedCurrentDestinationFingerprint String?
+  expectedCurrentDestinationAbsent Boolean @default(false)
+
+  codeHash String
+  expiresAt DateTime
+  attemptCount Int @default(0)
+  maxAttempts Int @default(5)
+  deliveryGeneration Int @default(1)
+  resendCount Int @default(0)
+
+  operationVersion String
+  consentVersion String?
+  source String
+  surface String
+
+  deliveryAttemptedAt DateTime?
+  deliveryAcceptedAt DateTime?
+  deliveryFailedAt DateTime?
+  verifiedAt DateTime?
+  appliedAt DateTime?
+  cancelledAt DateTime?
+  expiredAt DateTime?
+  exhaustedAt DateTime?
+  supersededAt DateTime?
+
+  smsConsentEvidence PopulationSmsConsentEvidence?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subscriberId, type, status])
+  @@index([subscriberId, type, status, proposedDestinationFingerprint])
+  @@index([programId])
+  @@index([expiresAt])
 }
 
 model PopulationVerification {
@@ -3327,6 +3382,27 @@ enum PopulationConsentEventType {
 enum PopulationVerificationChannel {
   SMS
   EMAIL
+}
+
+enum PopulationContactChangeType {
+  PHONE
+  EMAIL
+}
+
+enum PopulationContactChangePurpose {
+  ADD
+  CHANGE
+}
+
+enum PopulationContactChangeStatus {
+  DELIVERY_PENDING
+  OTP_REQUIRED
+  APPLIED
+  CANCELLED
+  EXPIRED
+  ATTEMPTS_EXHAUSTED
+  SUPERSEDED
+  DELIVERY_FAILED
 }
 
 enum PopulationProgramStatus {

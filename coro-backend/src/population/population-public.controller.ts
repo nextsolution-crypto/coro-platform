@@ -19,12 +19,153 @@ import { ConfirmPopulationLocationDto } from './dto/confirm-population-location.
 import { RequestPopulationAccessByDestinationDto } from './dto/request-population-access-by-destination.dto';
 import { VerifyPopulationAccessRequestDto } from './dto/verify-population-access-request.dto';
 import { SelectPopulationLocationDto } from './dto/select-population-location.dto';
+import {
+  InitiatePopulationEmailChangeDto,
+  InitiatePopulationPhoneChangeDto,
+  PopulationContactChangeActionDto,
+  VerifyPopulationContactChangeDto,
+} from './dto/population-contact-change.dto';
+import { PopulationContactChangeService } from './population-contact-change.service';
+import { PopulationContactChangeType } from '@prisma/client';
 
 @Controller('population/public')
 export class PopulationPublicController {
   constructor(
     private readonly populationService: PopulationService,
+    private readonly contactChanges: PopulationContactChangeService,
   ) {}
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/phone/initiate')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
+  initiatePhoneChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: InitiatePopulationPhoneChangeDto,
+  ) {
+    return this.contactChanges.initiatePhone(publicSlug, subscriberId, {
+      ...dto,
+      destination: dto.phone,
+    });
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/phone/verify')
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    long: { ttl: 3600000, limit: 30 },
+  })
+  verifyPhoneChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: VerifyPopulationContactChangeDto,
+  ) {
+    return this.contactChanges.verify(
+      publicSlug,
+      subscriberId,
+      PopulationContactChangeType.PHONE,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/phone/resend')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
+  resendPhoneChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: PopulationContactChangeActionDto,
+  ) {
+    return this.contactChanges.resend(
+      publicSlug,
+      subscriberId,
+      PopulationContactChangeType.PHONE,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/phone/cancel')
+  cancelPhoneChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: PopulationContactChangeActionDto,
+  ) {
+    return this.contactChanges.cancel(
+      publicSlug,
+      subscriberId,
+      PopulationContactChangeType.PHONE,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/email/initiate')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
+  initiateEmailChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: InitiatePopulationEmailChangeDto,
+  ) {
+    return this.contactChanges.initiateEmail(publicSlug, subscriberId, {
+      ...dto,
+      destination: dto.email,
+    });
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/email/verify')
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    long: { ttl: 3600000, limit: 30 },
+  })
+  verifyEmailChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: VerifyPopulationContactChangeDto,
+  ) {
+    return this.contactChanges.verify(
+      publicSlug,
+      subscriberId,
+      PopulationContactChangeType.EMAIL,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/email/resend')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    long: { ttl: 3600000, limit: 10 },
+  })
+  resendEmailChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: PopulationContactChangeActionDto,
+  ) {
+    return this.contactChanges.resend(
+      publicSlug,
+      subscriberId,
+      PopulationContactChangeType.EMAIL,
+      dto,
+    );
+  }
+
+  @Post(':publicSlug/subscribers/:subscriberId/contact/email/cancel')
+  cancelEmailChange(
+    @Param('publicSlug') publicSlug: string,
+    @Param('subscriberId') subscriberId: string,
+    @Body() dto: PopulationContactChangeActionDto,
+  ) {
+    return this.contactChanges.cancel(
+      publicSlug,
+      subscriberId,
+      PopulationContactChangeType.EMAIL,
+      dto,
+    );
+  }
 
   @Get(':publicSlug')
   async getPublicProgram(

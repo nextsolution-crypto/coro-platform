@@ -7880,6 +7880,8 @@ describe('PopulationService', () => {
     beforeEach(() => {
       prisma.populationProgram.findUnique.mockResolvedValue({
         id: 'program-1',
+        smsEnabled: true,
+        emailEnabled: true,
       });
 
       prisma.populationSubscriber.findFirst.mockResolvedValue({
@@ -7924,6 +7926,27 @@ describe('PopulationService', () => {
           },
         },
         verifiedAt: new Date('2026-09-17T12:00:00Z'),
+        communications: {
+          phone: {
+            exists: true,
+            maskedDestination: '+1******1234',
+            verified: true,
+            localEnabled: true,
+            programEnabled: true,
+            suppressed: false,
+            effectivelyAvailable: true,
+            actionRequired: false,
+          },
+          email: {
+            exists: true,
+            maskedDestination: 'c***@example.com',
+            verified: true,
+            localEnabled: true,
+            programEnabled: true,
+            effectivelyAvailable: true,
+            actionRequired: false,
+          },
+        },
         unsubscribedAt: null,
         locationConfigured: true,
         locationResolvedAt: new Date('2026-09-18T12:00:00Z'),

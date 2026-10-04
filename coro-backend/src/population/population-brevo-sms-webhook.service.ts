@@ -15,6 +15,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { POPULATION_ENVIRONMENT } from './population-readiness.service';
 import { PopulationSmsSuppressionService } from './population-sms-suppression.service';
+import { populationGlobalPhoneLockKey } from './population-identity-lock';
 
 type ParsedSmsEvent = {
   eventType: PopulationInboundSmsEventType;
@@ -57,6 +58,8 @@ export class PopulationBrevoSmsWebhookService {
 
     try {
       await this.prisma.$transaction(async (tx) => {
+        const phoneLock = populationGlobalPhoneLockKey(parsed.phoneCanonical);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${phoneLock}, 0))`;
         const event = await tx.populationInboundSmsEvent.create({
           data: {
             provider: 'BREVO',
