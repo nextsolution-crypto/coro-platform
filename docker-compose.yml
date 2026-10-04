@@ -63,6 +63,10 @@ services:
       - coro_network
     ports:
       - "3002:3002"
+    volumes:
+      - type: bind
+        source: ${POPULATION_SMS_VALIDATION_EVIDENCE_HOST_DIR:-/var/lib/coro/sms-validation}
+        target: /var/lib/coro/sms-validation
 
   frontend:
     image: ghcr.io/nextsolution-crypto/coro-frontend:latest

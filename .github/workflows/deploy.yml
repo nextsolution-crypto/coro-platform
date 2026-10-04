@@ -26,6 +26,11 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
+      - name: Validate SMS evidence persistence mount
+        if: matrix.app == 'coro-backend'
+        shell: bash
+        run: docker compose config --format json | node ops/sms-validation/verify-compose-mount.mjs
+
       - name: Install dependencies
         working-directory: ${{ matrix.app }}
         run: npm ci
