@@ -34,7 +34,7 @@ import {
   UpdateAssumptionVersionDto,
 } from './commercial-simulator.dto';
 
-type RequestWithUser = { user: { id: string } };
+type RequestWithUser = { user: { userId: string } };
 
 @Controller('admin/v1/commercial/simulator')
 @UseGuards(AuthGuard('jwt'), PlatformRolesGuard)
@@ -63,7 +63,7 @@ export class CommercialSimulatorController {
     @Body() dto: CreateGuidedWorkspaceDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.service.createGuidedWorkspace(dto, { userId: req.user.id });
+    return this.service.createGuidedWorkspace(dto, { userId: req.user.userId });
   }
   @Get('assumptions/cost') listCostAssumptions() {
     return this.service.listCostAssumptions();
@@ -75,7 +75,9 @@ export class CommercialSimulatorController {
     @Body() dto: CreateCostAssumptionSetDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.service.createCostAssumptionSet(dto, { userId: req.user.id });
+    return this.service.createCostAssumptionSet(dto, {
+      userId: req.user.userId,
+    });
   }
   @Put('assumptions/cost/versions/:versionId') updateCostAssumptionVersion(
     @Param('versionId') versionId: string,
@@ -83,7 +85,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.updateAssumptionVersion('cost', versionId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('assumptions/cost/:setId/versions') createCostAssumptionVersion(
@@ -92,7 +94,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.createCostAssumptionVersion(setId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('assumptions/cost/versions/:versionId/:transition')
@@ -107,7 +109,7 @@ export class CommercialSimulatorController {
       versionId,
       transition,
       dto.reason,
-      { userId: req.user.id },
+      { userId: req.user.userId },
     );
   }
   @Get('assumptions/valuation') listValuationAssumptions() {
@@ -118,7 +120,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.createValuationAssumptionSet(dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Put('assumptions/valuation/versions/:versionId')
@@ -128,7 +130,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.updateAssumptionVersion('valuation', versionId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('assumptions/valuation/:setId/versions')
@@ -138,7 +140,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.createValuationAssumptionVersion(setId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('assumptions/valuation/versions/:versionId/:transition')
@@ -153,7 +155,7 @@ export class CommercialSimulatorController {
       versionId,
       transition,
       dto.reason,
-      { userId: req.user.id },
+      { userId: req.user.userId },
     );
   }
   @Get('workspaces') list() {
@@ -163,7 +165,7 @@ export class CommercialSimulatorController {
     @Body() dto: CreateWorkspaceDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.service.createWorkspace(dto, { userId: req.user.id });
+    return this.service.createWorkspace(dto, { userId: req.user.userId });
   }
   @Get('workspaces/:workspaceId') get(
     @Param('workspaceId') workspaceId: string,
@@ -191,7 +193,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.createScenario(workspaceId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Put('configurator/workspaces/:workspaceId/scenarios/:scenarioId/metadata')
@@ -202,7 +204,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.updateScenarioMetadata(workspaceId, scenarioId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Put('configurator/workspaces/:workspaceId/scenarios/:scenarioId')
@@ -213,7 +215,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.configureGuidedScenario(workspaceId, scenarioId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/duplicate')
@@ -223,7 +225,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.duplicateScenario(workspaceId, scenarioId, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/archive')
@@ -234,7 +236,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.archiveScenario(workspaceId, scenarioId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('workspaces/:workspaceId/scenarios') createScenario(
@@ -243,7 +245,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.createScenario(workspaceId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Put('workspaces/:workspaceId/scenarios/:scenarioId') configure(
@@ -253,7 +255,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.configureScenario(workspaceId, scenarioId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('workspaces/:workspaceId/select') select(
@@ -262,7 +264,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.selectScenario(workspaceId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Get('workspaces/:workspaceId/compare') compare(
@@ -277,7 +279,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.calculate(workspaceId, scenarioId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/calculate')
@@ -288,7 +290,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.calculateGuided(workspaceId, scenarioId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post(
@@ -302,7 +304,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.convertGuided(workspaceId, scenarioId, runId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
   @Post('workspaces/:workspaceId/scenarios/:scenarioId/runs/:runId/convert')
@@ -314,7 +316,7 @@ export class CommercialSimulatorController {
     @Req() req: RequestWithUser,
   ) {
     return this.service.convert(workspaceId, scenarioId, runId, dto, {
-      userId: req.user.id,
+      userId: req.user.userId,
     });
   }
 }

@@ -20,11 +20,11 @@ class HeaderAuthenticationGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest<{
       headers: Record<string, string | undefined>;
-      user?: { id: string; role: UserRole };
+      user?: { userId: string; role: UserRole };
     }>();
     const role = req.headers['x-test-role'];
     if (!role) throw new UnauthorizedException();
-    req.user = { id: 'test-user', role: role as UserRole };
+    req.user = { userId: 'test-user', role: role as UserRole };
     return true;
   }
 }
@@ -41,6 +41,12 @@ describe('CommercialSimulatorController security contract', () => {
 
   describe('effective HTTP RBAC', () => {
     let app: INestApplication;
+    const createGuidedWorkspace = jest.fn(
+      (_dto: unknown, actor: { userId: string }) => ({
+        id: 'test-workspace',
+        actorUserId: actor.userId,
+      }),
+    );
 
     beforeAll(async () => {
       const module = await Test.createTestingModule({
@@ -52,6 +58,7 @@ describe('CommercialSimulatorController security contract', () => {
             provide: CommercialSimulatorService,
             useValue: {
               configuratorBootstrap: jest.fn(() => ({ families: [] })),
+              createGuidedWorkspace,
             },
           },
         ],
@@ -81,5 +88,39 @@ describe('CommercialSimulatorController security contract', () => {
         await call.expect(expected);
       },
     );
+
+    it.each([
+      [undefined, 401],
+      ['OPERATOR', 403],
+      ['ADMIN', 403],
+      ['SUPER_ADMIN', 201],
+    ])(
+      'protects guided Workspace creation for role %s',
+      async (role, expected) => {
+        const server = app.getHttpServer() as Parameters<typeof request>[0];
+        const call = request(server)
+          .post('/admin/v1/commercial/simulator/configurator/workspaces')
+          .send({ title: 'Test workspace' });
+        if (role) call.set('x-test-role', role);
+        await call.expect(expected);
+      },
+    );
+
+    it('passes the canonical authenticated userId to the audited service actor', async () => {
+      createGuidedWorkspace.mockClear();
+      const server = app.getHttpServer() as Parameters<typeof request>[0];
+
+      await request(server)
+        .post('/admin/v1/commercial/simulator/configurator/workspaces')
+        .set('x-test-role', 'SUPER_ADMIN')
+        .send({ title: 'Actor contract regression' })
+        .expect(201)
+        .expect({ id: 'test-workspace', actorUserId: 'test-user' });
+
+      expect(createGuidedWorkspace).toHaveBeenCalledWith(
+        { title: 'Actor contract regression' },
+        { userId: 'test-user' },
+      );
+    });
   });
 });
