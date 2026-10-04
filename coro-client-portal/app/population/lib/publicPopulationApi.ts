@@ -79,11 +79,64 @@ export type PopulationSubscriberProfile = {
     sms: { available: boolean; enabled: boolean; destination: string | null };
     email: { available: boolean; enabled: boolean; destination: string | null };
   };
+  communications: {
+    phone: PopulationCommunicationChannel & { suppressed: boolean };
+    email: PopulationCommunicationChannel;
+  };
   verifiedAt: string | null;
   unsubscribedAt: string | null;
   locationConfigured: boolean;
   locationResolvedAt: string | null;
 };
+
+export type PopulationCommunicationChannel = {
+  exists: boolean;
+  maskedDestination: string | null;
+  verified: boolean;
+  localEnabled: boolean;
+  programEnabled: boolean;
+  effectivelyAvailable: boolean;
+  actionRequired: boolean;
+};
+
+export type PopulationContactType = "PHONE" | "EMAIL";
+export type PopulationContactChangeStatus =
+  | "DELIVERY_PENDING"
+  | "OTP_REQUIRED"
+  | "APPLIED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "ATTEMPTS_EXHAUSTED"
+  | "SUPERSEDED"
+  | "DELIVERY_FAILED";
+export type PopulationContactChangeResult = {
+  challengeToken?: string;
+  contactType: PopulationContactType;
+  purpose: "ADD" | "CHANGE";
+  status: PopulationContactChangeStatus;
+  maskedProposedDestination: string | null;
+  expiresAt: string;
+  applied: boolean;
+};
+
+export type PopulationContactChangeErrorCode =
+  | "CONTACT_CHANGE_UNAVAILABLE"
+  | "CONTACT_CHANGE_INVALID_DESTINATION"
+  | "CONTACT_CHANGE_NO_CHANGE"
+  | "CONTACT_CHANGE_CONFLICT"
+  | "CONTACT_CHANGE_NOT_AUTHORIZED"
+  | "CONTACT_CHANGE_INVALID_CHALLENGE"
+  | "CONTACT_CHANGE_EXPIRED"
+  | "CONTACT_CHANGE_INVALID_OTP"
+  | "CONTACT_CHANGE_ATTEMPTS_EXHAUSTED"
+  | "CONTACT_CHANGE_CANCELLED"
+  | "CONTACT_CHANGE_SUPERSEDED"
+  | "CONTACT_CHANGE_DELIVERY_FAILED"
+  | "CONTACT_CHANGE_RESEND_UNAVAILABLE"
+  | "CONTACT_CHANGE_CONSENT_REQUIRED"
+  | "CONTACT_CHANGE_CONSENT_STALE"
+  | "CONTACT_CHANGE_CHANNEL_DISABLED"
+  | "CONTACT_CHANGE_DESTINATION_SUPPRESSED";
 
 export type PublicPopulationErrorReason =
   | "INVALID_CODE"
@@ -99,7 +152,8 @@ export type PublicPopulationErrorReason =
   | "LOCATION_UNAVAILABLE"
   | "ACCESS_INVALID"
   | "RESOLUTION_INVALID"
-  | "RESOLUTION_STALE";
+  | "RESOLUTION_STALE"
+  | PopulationContactChangeErrorCode;
 
 export type CanadianProvinceCode =
   | "AB"
@@ -140,7 +194,8 @@ export type PopulationLocationSelectionResult = {
 };
 
 export type ResolvePopulationLocationResult =
-  ResolvedPopulationLocationResult | PopulationLocationSelectionResult;
+  | ResolvedPopulationLocationResult
+  | PopulationLocationSelectionResult;
 
 export type ConfirmPopulationLocationResult = {
   confirmed: true;
@@ -207,8 +262,14 @@ async function publicRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     let reason: PublicPopulationErrorReason | undefined;
     try {
-      const body = (await response.json()) as { message?: unknown };
-      reason = classifyPublicError(body.message);
+      const body = (await response.json()) as {
+        message?: unknown;
+        code?: unknown;
+      };
+      reason =
+        typeof body.code === "string" && body.code.startsWith("CONTACT_CHANGE_")
+          ? (body.code as PopulationContactChangeErrorCode)
+          : classifyPublicError(body.message);
     } catch {
       reason = undefined;
     }
@@ -294,6 +355,69 @@ export function getPopulationSubscriberProfile(
   return publicRequest<PopulationSubscriberProfile>(
     `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/profile`,
     { method: "POST", body: JSON.stringify({ accessToken }) },
+  );
+}
+
+function contactChangePath(
+  publicSlug: string,
+  subscriberId: string,
+  type: PopulationContactType,
+  action: string,
+) {
+  return `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/contact/${type.toLowerCase()}/${action}`;
+}
+
+export function initiatePopulationContactChange(
+  publicSlug: string,
+  subscriberId: string,
+  type: PopulationContactType,
+  input: {
+    accessToken: string;
+    phone?: string;
+    email?: string;
+    smsConsent?: boolean;
+    consentVersion?: string;
+  },
+) {
+  return publicRequest<PopulationContactChangeResult>(
+    contactChangePath(publicSlug, subscriberId, type, "initiate"),
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function verifyPopulationContactChange(
+  publicSlug: string,
+  subscriberId: string,
+  type: PopulationContactType,
+  input: { accessToken: string; challengeToken: string; code: string },
+) {
+  return publicRequest<PopulationContactChangeResult>(
+    contactChangePath(publicSlug, subscriberId, type, "verify"),
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function resendPopulationContactChange(
+  publicSlug: string,
+  subscriberId: string,
+  type: PopulationContactType,
+  input: { accessToken: string; challengeToken: string },
+) {
+  return publicRequest<PopulationContactChangeResult>(
+    contactChangePath(publicSlug, subscriberId, type, "resend"),
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function cancelPopulationContactChange(
+  publicSlug: string,
+  subscriberId: string,
+  type: PopulationContactType,
+  input: { accessToken: string; challengeToken: string },
+) {
+  return publicRequest<PopulationContactChangeResult>(
+    contactChangePath(publicSlug, subscriberId, type, "cancel"),
+    { method: "POST", body: JSON.stringify(input) },
   );
 }
 
