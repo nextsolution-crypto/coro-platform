@@ -63,6 +63,13 @@ import {
   validatePackagingSelection,
 } from './commercial-packaging';
 import {
+  assertCustomerSafeProjection,
+  customerCadence,
+  customerLineGroup,
+  customerQuantityLabel,
+  customerSafeInputs,
+} from '../commercial-proposals/customer-safe-commercial-projection';
+import {
   assessCostMethodologyCompatibility,
   costMethodologyDefinitions,
 } from './cost-methodology.registry';
@@ -1771,6 +1778,7 @@ export class CommercialSimulatorService {
             where: { status: 'ACTIVE' },
             orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
             include: {
+              capabilities: { include: { capability: true } },
               lines: {
                 include: { costEfforts: true },
                 orderBy: { displayOrder: 'asc' },
@@ -1779,6 +1787,8 @@ export class CommercialSimulatorService {
                 orderBy: { calculatedAt: 'desc' },
                 take: 1,
                 include: {
+                  lines: { orderBy: { displayOrder: 'asc' } },
+                  inputs: true,
                   priceResult: true,
                   costResult: true,
                   valueResults: { include: { metrics: true } },
@@ -1790,8 +1800,13 @@ export class CommercialSimulatorService {
       });
     if (!workspace)
       throw new NotFoundException('Simulation workspace introuvable.');
-    return workspace.scenarios.map((scenario) => {
+    const scenarios = workspace.scenarios.map((scenario) => {
       const run = scenario.runs[0] ?? null;
+      const state = !run
+        ? ('NOT_CALCULATED' as const)
+        : run.scenarioLockVersion !== scenario.lockVersion
+          ? ('RECALCULATION_REQUIRED' as const)
+          : ('CURRENT' as const);
       const margin =
         run?.priceResult && run.costResult && run.costStatus === 'COMPLETE'
           ? deriveMargin(
@@ -1803,11 +1818,268 @@ export class CommercialSimulatorService {
         scenarioId: scenario.id,
         name: scenario.name,
         selected: workspace.selectedScenarioId === scenario.id,
-        stale: run ? run.scenarioLockVersion !== scenario.lockVersion : null,
-        configuration: scenario.lines,
-        run,
-        margin,
+        state,
+        calculatedAt:
+          state === 'CURRENT' ? run?.calculatedAt.toISOString() : null,
+        currency: run?.currency ?? workspace.currency,
+        packaging: validatePackagingSelection({
+          familyCodes: (() => {
+            const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
+              family.capabilityCodes.some((code) =>
+                scenario.capabilities.some(
+                  (item) => item.capability.code === code,
+                ),
+              ),
+            ).map((family) => family.code);
+            if (
+              scenario.lines.some(
+                (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
+              ) &&
+              !familyCodes.includes('PROFESSIONAL_SERVICES')
+            )
+              familyCodes.push('PROFESSIONAL_SERVICES');
+            return familyCodes;
+          })(),
+          components: scenario.lines.map((line) => ({
+            componentCode: line.componentCode,
+            revenueCategory: line.revenueCategory,
+          })),
+        }).status,
+        lines:
+          state === 'CURRENT'
+            ? run.lines.map((line) => ({
+                componentCode: line.componentCode,
+                label: line.componentNameFr,
+                quantity: line.quantity?.toString() ?? null,
+                quantityUnit: line.quantityUnit,
+                unitAmountMinor:
+                  line.proposedUnitAmountMinor?.toString() ?? null,
+                extendedAmountMinor:
+                  line.proposedExtendedAmountMinor?.toString() ?? null,
+                chargeType: line.chargeType,
+                billingPeriod: line.billingPeriod,
+                professionalService:
+                  line.revenueCategory === 'PROFESSIONAL_SERVICE',
+                implementation: line.revenueCategory === 'IMPLEMENTATION',
+              }))
+            : [],
+        totals:
+          state === 'CURRENT' && run?.priceResult
+            ? {
+                oneTimeMinor:
+                  run.priceResult.oneTimeTotalMinor?.toString() ?? null,
+                monthlyRecurringMinor:
+                  run.priceResult.recurringMonthlyCadenceMinor?.toString() ??
+                  null,
+                annualRecurringMinor:
+                  run.priceResult.recurringAnnualCadenceMinor?.toString() ??
+                  null,
+                firstYearMinor:
+                  run.priceResult.firstYearCommitmentMinor?.toString() ?? null,
+              }
+            : null,
+        internalEconomics:
+          state === 'CURRENT'
+            ? {
+                costMinor:
+                  run?.costResult?.firstYearCostMinor.toString() ?? null,
+                contributionMinor: margin?.contributionMinor ?? null,
+                marginBasisPoints: margin?.marginBasisPoints ?? null,
+              }
+            : null,
+        value:
+          state === 'CURRENT'
+            ? (run?.valueResults
+                .filter((value) => value.status === 'COMPLETE')
+                .map((value) => ({
+                  metrics: value.metrics
+                    .filter((metric) => metric.customerVisible)
+                    .map((metric) => ({
+                      label: metric.metricCode,
+                      decimalValue: metric.decimalValue?.toString() ?? null,
+                      moneyMinorValue:
+                        metric.moneyMinorValue?.toString() ?? null,
+                    })),
+                })) ?? [])
+            : [],
       };
+    });
+    const baseline =
+      scenarios.find((scenario) => scenario.state === 'CURRENT') ??
+      scenarios[0];
+    const codes = [
+      ...new Set(
+        scenarios.flatMap((scenario) =>
+          scenario.lines.map((line) => line.componentCode),
+        ),
+      ),
+    ];
+    return {
+      baselineScenarioName: baseline?.name ?? null,
+      scenarios,
+      components: codes.map((componentCode) => ({
+        componentCode,
+        label:
+          scenarios
+            .flatMap((scenario) => scenario.lines)
+            .find((line) => line.componentCode === componentCode)?.label ??
+          componentCode,
+        scenarios: scenarios.map((scenario) => {
+          const line = scenario.lines.find(
+            (item) => item.componentCode === componentCode,
+          );
+          const baseLine = baseline?.lines.find(
+            (item) => item.componentCode === componentCode,
+          );
+          const delta = (
+            value: string | null | undefined,
+            base: string | null | undefined,
+          ) =>
+            value == null || base == null
+              ? null
+              : (BigInt(value) - BigInt(base)).toString();
+          return {
+            scenarioName: scenario.name,
+            included: Boolean(line),
+            change:
+              scenario.state !== 'CURRENT'
+                ? 'UNAVAILABLE'
+                : scenario === baseline
+                  ? 'BASELINE'
+                  : line && !baseLine
+                    ? 'ADDED'
+                    : !line && baseLine
+                      ? 'REMOVED'
+                      : line
+                        ? 'UNCHANGED'
+                        : 'ABSENT',
+            professionalService: line?.professionalService ?? false,
+            implementation: line?.implementation ?? false,
+            quantity: line?.quantity ?? null,
+            quantityDelta:
+              line?.quantity == null || baseLine?.quantity == null
+                ? null
+                : new Prisma.Decimal(line.quantity)
+                    .minus(baseLine.quantity)
+                    .toString(),
+            unitAmountMinor: line?.unitAmountMinor ?? null,
+            unitAmountDeltaMinor: delta(
+              line?.unitAmountMinor,
+              baseLine?.unitAmountMinor,
+            ),
+            extendedAmountMinor: line?.extendedAmountMinor ?? null,
+            extendedAmountDeltaMinor: delta(
+              line?.extendedAmountMinor,
+              baseLine?.extendedAmountMinor,
+            ),
+          };
+        }),
+      })),
+    };
+  }
+
+  async customerPreview(workspaceId: string) {
+    const workspace =
+      await this.prisma.commercialSimulationWorkspace.findUnique({
+        where: { id: workspaceId },
+        include: {
+          organization: true,
+          prospect: true,
+          selectedScenario: {
+            include: {
+              capabilities: { include: { capability: true } },
+              lines: true,
+              runs: {
+                orderBy: { calculatedAt: 'desc' },
+                take: 1,
+                include: {
+                  lines: { orderBy: { displayOrder: 'asc' } },
+                  inputs: true,
+                  priceResult: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    if (!workspace?.selectedScenario)
+      throw new BadRequestException('CUSTOMER_PREVIEW_SCENARIO_REQUIRED');
+    const scenario = workspace.selectedScenario;
+    const run = scenario.runs[0];
+    if (!run)
+      throw new BadRequestException('CUSTOMER_PREVIEW_CALCULATION_REQUIRED');
+    if (run.scenarioLockVersion !== scenario.lockVersion)
+      throw new BadRequestException('CUSTOMER_PREVIEW_RECALCULATION_REQUIRED');
+    if (!run.priceResult || run.priceStatus !== 'COMPLETE')
+      throw new BadRequestException('CUSTOMER_PREVIEW_PRICE_INCOMPLETE');
+    await this.assertGuidedPackaging(workspaceId, scenario.id);
+    const familyDefinitions = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
+      family.capabilityCodes.some((code) =>
+        scenario.capabilities.some((item) => item.capability.code === code),
+      ),
+    );
+    const target = workspace.organization ?? workspace.prospect;
+    if (!target)
+      throw new BadRequestException('CUSTOMER_PREVIEW_TARGET_REQUIRED');
+    return assertCustomerSafeProjection({
+      sourceType: 'RUN_PREVIEW',
+      reference: null,
+      revision: null,
+      customer: {
+        legalName: 'legalName' in target ? target.legalName : target.name,
+        displayName: 'displayName' in target ? target.displayName : target.name,
+        contactName: 'contactName' in target ? target.contactName : null,
+        email: 'contactEmail' in target ? target.contactEmail : null,
+      },
+      currency: run.currency,
+      solutions: familyDefinitions.map((family) => ({
+        labelFr: family.labelFr,
+        labelEn: family.labelEn,
+      })),
+      lines: run.lines.map((line) => {
+        const cadence = customerCadence(line.chargeType, line.billingPeriod);
+        const quantityLabel = customerQuantityLabel(line.quantityUnit);
+        return {
+          labelFr: line.componentNameFr,
+          labelEn: null,
+          descriptionFr: null,
+          descriptionEn: null,
+          group: customerLineGroup(line.revenueCategory),
+          quantity: line.quantity?.toString() ?? null,
+          quantityLabelFr: quantityLabel?.fr ?? null,
+          quantityLabelEn: quantityLabel?.en ?? null,
+          offeredUnitAmountMinor:
+            line.proposedUnitAmountMinor?.toString() ?? null,
+          offeredExtendedAmountMinor:
+            line.proposedExtendedAmountMinor?.toString() ?? null,
+          cadenceFr: cadence.fr,
+          cadenceEn: cadence.en,
+        };
+      }),
+      totals: {
+        oneTimeMinor: run.priceResult.oneTimeTotalMinor?.toString() ?? null,
+        monthlyRecurringMinor:
+          run.priceResult.recurringMonthlyCadenceMinor?.toString() ?? null,
+        annualRecurringMinor:
+          run.priceResult.recurringAnnualCadenceMinor?.toString() ?? null,
+        firstYearMinor:
+          run.priceResult.firstYearCommitmentMinor?.toString() ?? null,
+        firstYearIncludesEstimate: run.priceResult.firstYearIncludesEstimate,
+      },
+      inputs: customerSafeInputs(
+        run.inputs.map((input) => ({ ...input, code: input.driverCode })),
+      ),
+      includedFeatures: [],
+      valueAnalysis: null,
+      exclusivities: [],
+      commitments: [],
+      commercialTerms: {
+        contextFr: null,
+        contextEn: null,
+        termsFr: null,
+        termsEn: null,
+      },
+      validity: { validFrom: null, validUntil: null },
     });
   }
 
@@ -2466,6 +2738,7 @@ export class CommercialSimulatorService {
         include: {
           scenario: {
             include: {
+              lines: { select: { componentCode: true, justification: true } },
               workspace: {
                 include: {
                   priceBookVersion: {
@@ -2625,6 +2898,12 @@ export class CommercialSimulatorService {
         select: { firstName: true, lastName: true },
       });
       const actorName = `${user.firstName} ${user.lastName}`.trim();
+      const scenarioJustification = new Map(
+        run.scenario.lines.map((line) => [
+          line.componentCode,
+          line.justification,
+        ]),
+      );
       const proposal = await tx.commercialProposal.create({
         data: {
           reference: `PROP-${randomUUID().slice(0, 8).toUpperCase()}`,
@@ -2730,6 +3009,7 @@ export class CommercialSimulatorService {
               commercialQuantityBasis: line.commercialQuantityBasis,
               commercialRuleCode: line.commercialRuleCode,
               commercialRuleVersion: line.commercialRuleVersion,
+              justification: scenarioJustification.get(line.componentCode),
               displayOrder: line.displayOrder,
             })),
           },

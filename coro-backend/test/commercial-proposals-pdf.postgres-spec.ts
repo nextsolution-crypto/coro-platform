@@ -190,20 +190,26 @@ describeDatabase('Phase 2D proposal PDF concurrency and rendering', () => {
     )!;
     expect(french).toContain('Solution proposée');
     expect(french).toContain('PRIX');
-    expect(french).toContain('Données et hypothèses');
-    expect(french).toContain('DISTRIBUTABLE');
+    expect(french).toContain('Données déclarées');
     expect(french).toContain('Exclusivité');
     expect(french).toContain('Engagements');
     expect(french).toContain('VALEUR ESTIMÉE');
     expect(french).toContain('Conditions et acceptation');
     expect(english).toContain('Proposed solution');
     expect(english).toContain('PRICE');
-    expect(english).toContain('Data and assumptions');
-    expect(english).toContain('DISTRIBUTABLE');
+    expect(english).toContain('Declared data');
     expect(english).toContain('Exclusivity');
     expect(english).toContain('Commitments');
     expect(english).toContain('ESTIMATED VALUE');
     expect(english).toContain('Terms and acceptance');
-    expect(english).toContain('TBD');
+    for (const html of [french, english]) {
+      expect(html).not.toContain('DISTRIBUTABLE');
+      expect(html).not.toContain('TBD');
+      expect(html).not.toContain('catalogUnitAmountMinor');
+      expect(html).not.toContain('commercialRuleCode');
+      expect(html).not.toContain('justification');
+      expect(html).not.toMatch(/>Marge<|>Margin</);
+      expect(html).not.toMatch(/Contribution interne|Internal contribution/);
+    }
   });
 });

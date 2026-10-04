@@ -3,6 +3,10 @@ const fs = require("fs"),
   path = require("path");
 const dashboard = fs.readFileSync(path.join(__dirname, "page.tsx"), "utf8");
 const wizard = fs.readFileSync(path.join(__dirname, "new/page.tsx"), "utf8");
+const detail = fs.readFileSync(
+  path.join(__dirname, "[proposalId]/page.tsx"),
+  "utf8",
+);
 for (const token of [
   "Nouvelle proposition",
   "Aucune proposition",
@@ -31,4 +35,13 @@ for (const token of [
   'revenueCategory: "OTHER_ONE_TIME"',
 ])
   if (!wizard.includes(token)) throw new Error(`wizard missing ${token}`);
+for (const token of [
+  "customer-preview",
+  "CustomerSafeReview",
+  "Générer le PDF privé",
+])
+  if (!detail.includes(token)) throw new Error(`detail missing ${token}`);
+for (const forbidden of ["catalogUnitAmountMinor", "costAssumption", "margin"])
+  if (detail.includes(forbidden))
+    throw new Error(`detail leaks internal field ${forbidden}`);
 console.log("Commercial proposals configurator contract: OK");

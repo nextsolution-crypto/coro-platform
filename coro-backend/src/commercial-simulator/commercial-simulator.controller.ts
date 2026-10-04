@@ -180,6 +180,11 @@ export class CommercialSimulatorController {
   ) {
     return this.service.guidedCatalog(workspaceId);
   }
+  @Get('configurator/workspaces/:workspaceId/customer-preview') customerPreview(
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.service.customerPreview(workspaceId);
+  }
   @Post('configurator/workspaces/:workspaceId/scenarios') createGuidedScenario(
     @Param('workspaceId') workspaceId: string,
     @Body() dto: CreateScenarioDto,

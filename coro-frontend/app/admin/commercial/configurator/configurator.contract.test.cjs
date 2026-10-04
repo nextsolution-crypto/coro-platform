@@ -19,9 +19,15 @@ const path = require("node:path");
     "ScenarioEditor.tsx",
     "ScenarioSidebar.tsx",
     "ScenarioResults.tsx",
+    "ScenarioComparison.tsx",
+    "CustomerSafeReview.tsx",
   ]
     .map((file) => fs.readFileSync(path.join(__dirname, file), "utf8"))
     .join("\n");
+  const customerReview = fs.readFileSync(
+    path.join(__dirname, "CustomerSafeReview.tsx"),
+    "utf8",
+  );
   assert.equal(
     contract.CONFIGURATOR_API_BASE,
     "/admin/v1/commercial/simulator/configurator",
@@ -60,6 +66,14 @@ const path = require("node:path");
   assert.match(guided, /component\.packaging/);
   assert.match(guided, /Composition incomplète/);
   assert.match(guided, /scenario\.packaging\.status/);
+  assert.match(guided, /Comparaison des sc/);
+  assert.match(
+    guided,
+    /CUSTOMER_PREVIEW_RECALCULATION_REQUIRED|customer-preview/,
+  );
+  assert.match(guided, /runs\/\$\{scenario\.latestResult!\.id\}\/convert/);
+  assert.match(guided, /Aperçu client non contractuel/);
+  assert.doesNotMatch(customerReview, /costAssumption|catalogUnitAmountMinor/);
   assert.match(guided, /simulator\/configurator\/workspaces/);
   assert.doesNotMatch(guided, /<textarea[^>]*>.*JSON/is);
   assert.doesNotMatch(guided, /UUID|minor units|basis points|scopeKey/i);

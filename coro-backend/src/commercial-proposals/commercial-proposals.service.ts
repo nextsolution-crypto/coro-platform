@@ -26,6 +26,7 @@ import {
   PRODUCTION_COMMERCIAL_RULE_REGISTRY,
   validateCommercialQuantityBinding,
 } from './commercial-rule-registry';
+import { buildProposalCustomerPreview } from './proposal-customer-preview';
 
 type Actor = { userId: string };
 const money = (v: string | undefined) =>
@@ -69,6 +70,22 @@ export class CommercialProposalsService {
         },
       },
     });
+  }
+  async customerPreview(proposalId: string, revisionId: string) {
+    const revision = await this.prisma.commercialProposalRevision.findFirst({
+      where: { id: revisionId, proposalId },
+      include: {
+        proposal: true,
+        lines: true,
+        inputs: true,
+        exclusivities: { include: { sectors: true } },
+        commitments: true,
+        valueAnalysis: true,
+      },
+    });
+    if (!revision)
+      throw new NotFoundException('Proposal revision introuvable.');
+    return buildProposalCustomerPreview(revision);
   }
   listProspects() {
     return this.prisma.commercialProspect.findMany({
@@ -800,6 +817,22 @@ export class CommercialProposalsService {
             throw error;
           }
         }
+        buildProposalCustomerPreview({
+          ...r,
+          inputs: await tx.proposalInput.findMany({
+            where: { proposalRevisionId: id },
+          }),
+          exclusivities: await tx.proposalExclusivity.findMany({
+            where: { proposalRevisionId: id },
+            include: { sectors: true },
+          }),
+          commitments: await tx.proposalMinimumCommitment.findMany({
+            where: { proposalRevisionId: id },
+          }),
+          valueAnalysis: await tx.proposalValueAnalysis.findUnique({
+            where: { proposalRevisionId: id },
+          }),
+        });
       }
       if (target === 'SENT' && !d.sentDocumentId)
         throw new BadRequestException('Document envoyé requis.');

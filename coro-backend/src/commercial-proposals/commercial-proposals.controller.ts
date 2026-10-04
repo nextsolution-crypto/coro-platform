@@ -44,6 +44,12 @@ export class CommercialProposalsController {
   @Get(':id') detail(@Param('id') id: string) {
     return this.service.proposal(id);
   }
+  @Get(':id/revisions/:revisionId/customer-preview') preview(
+    @Param('id') id: string,
+    @Param('revisionId') revisionId: string,
+  ) {
+    return this.service.customerPreview(id, revisionId);
+  }
   @Post(':id/revisions') revision(
     @Param('id') id: string,
     @Body() d: CreateRevisionDto,

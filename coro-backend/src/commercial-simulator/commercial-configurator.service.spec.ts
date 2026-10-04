@@ -620,4 +620,125 @@ describe('Commercial Configurator projections', () => {
     expect(second.valueStatus).toBe('UNAVAILABLE');
     expect(runs).toHaveProperty('size', 2);
   });
+
+  it('compares only current Runs and marks missing or stale evidence explicitly', async () => {
+    const line = {
+      componentCode: 'COMPLIANCE_SUBSCRIPTION',
+      componentNameFr: 'Conformité',
+      quantity: '10',
+      quantityUnit: 'SEAT',
+      proposedUnitAmountMinor: 1000n,
+      proposedExtendedAmountMinor: 10000n,
+      chargeType: 'RECURRING',
+      billingPeriod: 'MONTH',
+      revenueCategory: 'SAAS',
+    };
+    const currentRun = {
+      scenarioLockVersion: 1,
+      calculatedAt: new Date('2027-01-01T00:00:00Z'),
+      currency: 'CAD',
+      lines: [line],
+      inputs: [],
+      priceResult: {
+        oneTimeTotalMinor: 0n,
+        recurringMonthlyCadenceMinor: 10000n,
+        recurringAnnualCadenceMinor: 0n,
+        firstYearCommitmentMinor: 120000n,
+      },
+      costResult: { firstYearCostMinor: 40000n },
+      costStatus: 'COMPLETE',
+      valueResults: [],
+    };
+    const scenarios = [
+      {
+        id: 'current',
+        name: 'A',
+        lockVersion: 1,
+        capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
+        lines: [line],
+        runs: [currentRun],
+      },
+      {
+        id: 'missing',
+        name: 'B',
+        lockVersion: 1,
+        capabilities: [],
+        lines: [],
+        runs: [],
+      },
+      {
+        id: 'stale',
+        name: 'C',
+        lockVersion: 2,
+        capabilities: [],
+        lines: [],
+        runs: [currentRun],
+      },
+    ];
+    const result = await serviceWith({
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            selectedScenarioId: 'current',
+            scenarios,
+          }),
+        ),
+      },
+    }).compare('workspace-a');
+
+    expect(result.scenarios.map((scenario) => scenario.state)).toEqual([
+      'CURRENT',
+      'NOT_CALCULATED',
+      'RECALCULATION_REQUIRED',
+    ]);
+    expect(result.scenarios[1].totals).toBeNull();
+    expect(result.scenarios[2].lines).toEqual([]);
+    expect(result.components[0].scenarios).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ scenarioName: 'A', included: true }),
+        expect.objectContaining({ scenarioName: 'B', included: false }),
+        expect.objectContaining({ scenarioName: 'C', included: false }),
+      ]),
+    );
+  });
+
+  it('blocks customer preview when selected Run evidence is missing or stale', async () => {
+    const findUnique = jest
+      .fn()
+      .mockResolvedValueOnce({
+        selectedScenario: { lockVersion: 1, runs: [] },
+      })
+      .mockResolvedValueOnce({
+        selectedScenario: {
+          lockVersion: 2,
+          runs: [{ scenarioLockVersion: 1 }],
+        },
+      })
+      .mockResolvedValueOnce({
+        selectedScenario: {
+          lockVersion: 1,
+          runs: [
+            {
+              scenarioLockVersion: 1,
+              priceStatus: 'PARTIAL',
+              priceResult: {},
+            },
+          ],
+        },
+      });
+    const service = serviceWith({
+      commercialSimulationWorkspace: { findUnique },
+    });
+
+    await expect(service.customerPreview('workspace-a')).rejects.toThrow(
+      'CUSTOMER_PREVIEW_CALCULATION_REQUIRED',
+    );
+    await expect(service.customerPreview('workspace-a')).rejects.toThrow(
+      'CUSTOMER_PREVIEW_RECALCULATION_REQUIRED',
+    );
+    await expect(service.customerPreview('workspace-a')).rejects.toThrow(
+      'CUSTOMER_PREVIEW_PRICE_INCOMPLETE',
+    );
+  });
 });

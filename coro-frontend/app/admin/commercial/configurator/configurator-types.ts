@@ -99,6 +99,7 @@ export type GuidedScenario = {
   drivers: Array<{ code: string; value: string; justification: string | null }>;
   stale: boolean | null;
   latestResult: null | {
+    id: string;
     calculatedAt: string;
     priceStatus: string;
     costStatus: string;
@@ -128,4 +129,95 @@ export type GuidedWorkspace = {
     status: string;
   };
   scenarios: GuidedScenario[];
+};
+
+export type CustomerSafeProjection = {
+  sourceType: "RUN_PREVIEW" | "PROPOSAL_REVISION";
+  reference: string | null;
+  revision: number | null;
+  customer: {
+    legalName: string;
+    displayName: string;
+    contactName: string | null;
+    email: string | null;
+  };
+  currency: string;
+  solutions: Array<{ labelFr: string; labelEn: string }>;
+  lines: Array<{
+    labelFr: string;
+    labelEn: string | null;
+    descriptionFr: string | null;
+    group: string;
+    quantity: string | null;
+    quantityLabelFr: string | null;
+    offeredUnitAmountMinor: string | null;
+    offeredExtendedAmountMinor: string | null;
+    cadenceFr: string;
+  }>;
+  totals: {
+    oneTimeMinor: string | null;
+    monthlyRecurringMinor: string | null;
+    annualRecurringMinor: string | null;
+    firstYearMinor: string | null;
+  };
+  inputs: Array<{ labelFr: string; value: string; unit: string | null }>;
+  valueAnalysis: null | {
+    estimatedHoursSaved: string;
+    estimatedCapacityValueMinor: string;
+    disclaimerFr: string;
+  };
+  commercialTerms: { contextFr: string | null; termsFr: string | null };
+  validity: { validUntil: string | null };
+};
+
+export type ScenarioComparison = {
+  baselineScenarioName: string | null;
+  scenarios: Array<{
+    scenarioId: string;
+    name: string;
+    selected: boolean;
+    state: "CURRENT" | "NOT_CALCULATED" | "RECALCULATION_REQUIRED";
+    packaging: "READY" | "BLOCKED";
+    totals: null | {
+      oneTimeMinor: string | null;
+      monthlyRecurringMinor: string | null;
+      annualRecurringMinor: string | null;
+      firstYearMinor: string | null;
+    };
+    internalEconomics: null | {
+      costMinor: string | null;
+      contributionMinor: string | null;
+      marginBasisPoints: number | null;
+    };
+    value: Array<{
+      metrics: Array<{
+        label: string;
+        decimalValue: string | null;
+        moneyMinorValue: string | null;
+      }>;
+    }>;
+  }>;
+  components: Array<{
+    componentCode: string;
+    label: string;
+    scenarios: Array<{
+      scenarioName: string;
+      included: boolean;
+      change:
+        | "BASELINE"
+        | "ADDED"
+        | "REMOVED"
+        | "UNCHANGED"
+        | "ABSENT"
+        | "UNAVAILABLE";
+      professionalService: boolean;
+      implementation: boolean;
+      quantity: string | null;
+      quantityDelta: string | null;
+      unitAmountMinor: string | null;
+      unitAmountDeltaMinor: string | null;
+      extendedAmountMinor: string | null;
+      extendedAmountDeltaMinor: string | null;
+    }>;
+  }>;
 };

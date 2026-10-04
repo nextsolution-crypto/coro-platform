@@ -5,10 +5,11 @@ import {
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
 import puppeteer from 'puppeteer';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
+import { buildProposalCustomerPreview } from './proposal-customer-preview';
+import { CustomerSafeCommercialProjection } from './customer-safe-commercial-projection';
 
 const esc = (v: unknown) => {
   let display = '';
@@ -37,22 +38,6 @@ const money = (v: bigint | null | undefined) => {
   return `${dollars},${cents} $ CAD`;
 };
 
-type ProposalPdfView = Prisma.CommercialProposalRevisionGetPayload<{
-  include: {
-    proposal: true;
-    lines: { include: { tiers: true; adjustments: true; capability: true } };
-    inputs: true;
-    adjustments: true;
-    exclusivities: {
-      include: {
-        sectors: true;
-        capabilities: { include: { capability: true } };
-      };
-    };
-    commitments: true;
-    valueAnalysis: true;
-  };
-}>;
 @Injectable()
 export class ProposalPdfService {
   constructor(
@@ -138,7 +123,7 @@ export class ProposalPdfService {
             fileName: `${r.proposal.reference}-${language}-v${artifactVersion}.pdf`,
             mimeType: 'application/pdf',
             storageKey: `commercial-proposals/${r.proposalId}/${revisionId}/${id}-${language}.pdf`,
-            templateVersion: 'proposal-offer/v1',
+            templateVersion: 'proposal-offer/v2',
             generatorVersion: 'puppeteer/v1',
             generationKey,
             generationStartedAt: new Date(),
@@ -164,7 +149,10 @@ export class ProposalPdfService {
       let bytes: Buffer;
       try {
         const page = await browser.newPage();
-        await page.setContent(this.html(r, language), { waitUntil: 'load' });
+        await page.setContent(
+          this.html(buildProposalCustomerPreview(r), language),
+          { waitUntil: 'load' },
+        );
         bytes = Buffer.from(
           await page.pdf({
             format: 'Letter',
@@ -229,32 +217,32 @@ export class ProposalPdfService {
     }
     return this.prisma.proposalDocument.findUniqueOrThrow({ where: { id } });
   }
-  private html(r: ProposalPdfView, lang: 'FR' | 'EN') {
+  private html(r: CustomerSafeCommercialProjection, lang: 'FR' | 'EN') {
     const fr = lang === 'FR';
     const rows = r.lines
       .map(
         (l) =>
-          `<tr><td><b>${esc(fr ? l.componentNameFR : l.componentNameEN || l.componentNameFR)}</b><small>${esc(l.pricingModel)} · ${esc(l.calculationStatus)}</small><small>${l.internalUse ? 'INTERNAL USE · ' : ''}${l.distributable ? `DISTRIBUTABLE · ${esc(l.distributionLimit ?? '—')} ${esc(l.distributionMetric ?? '')}` : ''}</small></td><td>${esc(l.quantity)} ${esc(l.quantityUnit)}</td><td>${money(l.catalogExtendedAmountMinor)}</td><td>${money(l.proposedExtendedAmountMinor)}</td></tr>`,
+          `<tr><td><b>${esc(fr ? l.labelFr : l.labelEn || l.labelFr)}</b>${(fr ? l.descriptionFr : l.descriptionEn) ? `<small>${esc(fr ? l.descriptionFr : l.descriptionEn)}</small>` : ''}</td><td>${esc(l.quantity)} ${esc(fr ? l.quantityLabelFr : l.quantityLabelEn)}</td><td>${esc(fr ? l.cadenceFr : l.cadenceEn)}</td><td>${money(l.offeredExtendedAmountMinor == null ? null : BigInt(l.offeredExtendedAmountMinor))}</td></tr>`,
       )
       .join('');
     const inputs = r.inputs
       .map(
         (i) =>
-          `<li><b>${esc(i.labelFR)}</b>: ${esc(i.decimalValue ?? i.integerValue ?? i.moneyMinor ?? i.booleanValue ?? i.textValue)} <span>${esc(i.source)}</span></li>`,
+          `<li><b>${esc(fr ? i.labelFr : i.labelEn || i.labelFr)}</b>: ${esc(i.value)} ${esc(i.unit)}</li>`,
       )
       .join('');
     const exclusivities = r.exclusivities
       .map(
         (item) =>
-          `<li>${esc(item.territoryLabel)} · ${esc(item.sectors.map((sector) => sector.sectorLabel).join(', '))}${item.hasEconomicImpact ? ' · EXCLUSIVITY_FEE' : ''}</li>`,
+          `<li>${esc(item.territory)} · ${esc(item.sectors.join(', '))}</li>`,
       )
       .join('');
     const commitments = r.commitments
       .map(
         (item) =>
-          `<li>${esc(item.type)} · ${esc(item.period)} · ${money(item.amountMinor)}</li>`,
+          `<li>${esc(fr ? item.labelFr : item.labelEn)} · ${esc(item.value)}</li>`,
       )
       .join('');
-    return `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;color:#17233b;font-size:11px}header{border-bottom:4px solid #14a389;padding-bottom:18px}h1{font-size:28px;margin:8px 0}.tag{color:#14a389;font-weight:bold}section{margin-top:24px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left}th{background:#eef7f5}small{display:block;color:#667}span{font-size:9px;color:#087d6c}.price{background:#eef7f5;padding:16px}.value{background:#fff4d9;padding:16px;border-left:4px solid #d69b00}.muted{color:#667}</style></head><body><header><div class="tag">CORO</div><div>Résilience · Conformité · Action</div><h1>${fr ? 'Proposition commerciale' : 'Commercial proposal'}</h1><div>${esc(r.recipientDisplayName)} · ${esc(r.proposal.reference)}</div><div class="muted">${fr ? 'Valide jusqu’au' : 'Valid until'} ${esc(r.validUntil?.toISOString().slice(0, 10) || '—')}</div></header><section><h2>${fr ? 'Solution proposée' : 'Proposed solution'}</h2><p>${esc(fr ? r.contextFR : r.contextEN || r.contextFR)}</p><table><thead><tr><th>Capability</th><th>${fr ? 'Quantité' : 'Quantity'}</th><th>${fr ? 'Catalogue' : 'Catalog'}</th><th>${fr ? 'Prix proposé' : 'Proposed price'}</th></tr></thead><tbody>${rows}</tbody></table></section><section class="price"><h2>${fr ? 'PRIX' : 'PRICE'}</h2><p>${fr ? 'Ponctuel' : 'One-time'}: ${money(r.oneTimeTotalMinor)}<br>${fr ? 'Récurrent mensuel' : 'Monthly recurring'}: ${money(r.recurringMonthlyCadenceMinor)}<br>${fr ? 'Récurrent annuel' : 'Annual recurring'}: ${money(r.recurringAnnualCadenceMinor)}<br>${fr ? 'Usage estimé' : 'Estimated usage'}: ${r.estimatedUsageTotalMinor == null ? 'TBD' : money(r.estimatedUsageTotalMinor)}<br>${fr ? 'Engagement première année' : 'First-year commitment'}: ${money(r.firstYearCommitmentMinor)}</p></section><section><h2>${fr ? 'Données et hypothèses' : 'Data and assumptions'}</h2><ul>${inputs}</ul></section>${exclusivities ? `<section><h2>${fr ? 'Exclusivité' : 'Exclusivity'}</h2><ul>${exclusivities}</ul></section>` : ''}${commitments ? `<section><h2>${fr ? 'Engagements' : 'Commitments'}</h2><ul>${commitments}</ul></section>` : ''}${r.valueAnalysis ? `<section class="value"><h2>${fr ? 'VALEUR ESTIMÉE' : 'ESTIMATED VALUE'}</h2><p>${money(r.valueAnalysis.estimatedCapacityValueMinor)}</p><p>${esc(fr ? r.valueAnalysis.disclaimerFR : r.valueAnalysis.disclaimerEN || r.valueAnalysis.disclaimerFR)}</p></section>` : ''}<section><h2>${fr ? 'Conditions et acceptation' : 'Terms and acceptance'}</h2><p>${esc(fr ? r.termsFR : r.termsEN || r.termsFR)}</p><p>${fr ? 'Accepté par' : 'Accepted by'}: ____________________</p></section></body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;color:#17233b;font-size:11px}header{border-bottom:4px solid #14a389;padding-bottom:18px}h1{font-size:28px;margin:8px 0}.tag{color:#14a389;font-weight:bold}section{margin-top:24px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left}th{background:#eef7f5}small{display:block;color:#667}.price{background:#eef7f5;padding:16px}.value{background:#fff4d9;padding:16px;border-left:4px solid #d69b00}.muted{color:#667}</style></head><body><header><div class="tag">CORO</div><div>Résilience · Conformité · Action</div><h1>${fr ? 'Proposition commerciale' : 'Commercial proposal'}</h1><div>${esc(r.customer.displayName)} · ${esc(r.reference)} · v${esc(r.revision)}</div><div class="muted">${fr ? 'Valide jusqu’au' : 'Valid until'} ${esc(r.validity.validUntil?.slice(0, 10) || '—')}</div></header><section><h2>${fr ? 'Solution proposée' : 'Proposed solution'}</h2><p>${esc(fr ? r.commercialTerms.contextFr : r.commercialTerms.contextEn || r.commercialTerms.contextFr)}</p><table><thead><tr><th>${fr ? 'Composant' : 'Component'}</th><th>${fr ? 'Quantité' : 'Quantity'}</th><th>${fr ? 'Cadence' : 'Cadence'}</th><th>${fr ? 'Prix offert' : 'Offered price'}</th></tr></thead><tbody>${rows}</tbody></table></section><section class="price"><h2>${fr ? 'PRIX' : 'PRICE'}</h2><p>${fr ? 'Ponctuel' : 'One-time'}: ${money(r.totals.oneTimeMinor == null ? null : BigInt(r.totals.oneTimeMinor))}<br>${fr ? 'Récurrent mensuel' : 'Monthly recurring'}: ${money(r.totals.monthlyRecurringMinor == null ? null : BigInt(r.totals.monthlyRecurringMinor))}<br>${fr ? 'Récurrent annuel' : 'Annual recurring'}: ${money(r.totals.annualRecurringMinor == null ? null : BigInt(r.totals.annualRecurringMinor))}<br>${fr ? 'Engagement première année' : 'First-year commitment'}: ${money(r.totals.firstYearMinor == null ? null : BigInt(r.totals.firstYearMinor))}</p></section>${inputs ? `<section><h2>${fr ? 'Données déclarées' : 'Declared data'}</h2><ul>${inputs}</ul></section>` : ''}${exclusivities ? `<section><h2>${fr ? 'Exclusivité' : 'Exclusivity'}</h2><ul>${exclusivities}</ul></section>` : ''}${commitments ? `<section><h2>${fr ? 'Engagements' : 'Commitments'}</h2><ul>${commitments}</ul></section>` : ''}${r.valueAnalysis ? `<section class="value"><h2>${fr ? 'VALEUR ESTIMÉE' : 'ESTIMATED VALUE'}</h2><p>${money(BigInt(r.valueAnalysis.estimatedCapacityValueMinor))}</p><p>${esc(fr ? r.valueAnalysis.disclaimerFr : r.valueAnalysis.disclaimerEn || r.valueAnalysis.disclaimerFr)}</p></section>` : ''}<section><h2>${fr ? 'Conditions et acceptation' : 'Terms and acceptance'}</h2><p>${esc(fr ? r.commercialTerms.termsFr : r.commercialTerms.termsEn || r.commercialTerms.termsFr)}</p><p>${fr ? 'Accepté par' : 'Accepted by'}: ____________________</p></section></body></html>`;
   }
 }

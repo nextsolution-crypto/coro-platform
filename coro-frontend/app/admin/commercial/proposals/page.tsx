@@ -56,7 +56,13 @@ export default function ProposalsPage() {
               {items.map((x) => {
                 const r = x.revisions[0];
                 return (
-                  <tr key={x.id} className="border-t">
+                  <tr
+                    key={x.id}
+                    className="cursor-pointer border-t"
+                    onClick={() =>
+                      router.push(`/admin/commercial/proposals/${x.id}`)
+                    }
+                  >
                     <td className="p-4">
                       <b>{x.reference}</b>
                       <div className="text-slate-500">{x.title}</div>
