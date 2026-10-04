@@ -29,9 +29,34 @@ describe('PopulationIdentityAuditService', () => {
         verificationCount: 2,
         consentEventCount: 4,
         alertDeliveryCount: 6,
-        fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );
+    expect(report[0]?.fingerprint).toMatch(/^[a-f0-9]{64}$/);
     expect(JSON.stringify(report)).not.toContain('citizen@example.com');
+  });
+
+  it('does not report an abandoned historical row as a current duplicate', () => {
+    const now = new Date('2026-10-04T12:00:00Z');
+    const common = {
+      programId: 'program-1',
+      email: 'citizen@example.com',
+      emailCanonical: 'citizen@example.com',
+      phoneCanonical: null,
+      createdAt: now,
+      updatedAt: now,
+      verifiedAt: now,
+      verificationCount: 1,
+      consentEventCount: 2,
+      smsEvidenceCount: 0,
+      alertDeliveryCount: 0,
+    };
+    const report = new PopulationIdentityAuditService().audit(
+      [
+        { ...common, status: 'ACTIVE' },
+        { ...common, status: 'ABANDONED' },
+      ],
+      'a-key-long-enough-for-safe-hmac-output',
+    );
+    expect(report).toEqual([]);
   });
 });

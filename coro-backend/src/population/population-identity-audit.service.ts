@@ -50,6 +50,13 @@ export class PopulationIdentityAuditService {
       groups.set(key, current);
     };
     for (const subscriber of subscribers) {
+      if (
+        !['PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED'].includes(
+          subscriber.status,
+        )
+      ) {
+        continue;
+      }
       add(
         subscriber,
         'EMAIL',

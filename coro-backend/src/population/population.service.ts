@@ -69,6 +69,7 @@ import { POPULATION_DELIVERY_LEASE_MS } from './population-delivery.constants';
 import { PhoneNumberService } from '../common/phone/phone-number.service';
 import { PopulationSmsSuppressionService } from './population-sms-suppression.service';
 import { PhoneNumberError } from '../common/phone/phone-number.errors';
+import { populationIdentityLockKey } from './population-identity-lock';
 
 const POPULATION_LOCATION_RESOLUTION_PURPOSE = 'POPULATION_LOCATION_RESOLUTION';
 const POPULATION_LOCATION_RESOLUTION_TTL_MS = 10 * 60 * 1000;
@@ -1423,13 +1424,25 @@ export class PopulationService {
 
     const outcome = await this.prisma.$transaction(async (tx) => {
       const lockKeys = [
-        emailCanonical ? `${program.id}:email:${emailCanonical}` : null,
-        phoneCanonical ? `${program.id}:phone:${phoneCanonical}` : null,
+        emailCanonical
+          ? populationIdentityLockKey({
+              programId: program.id,
+              identityType: 'EMAIL',
+              canonicalIdentity: emailCanonical,
+            })
+          : null,
+        phoneCanonical
+          ? populationIdentityLockKey({
+              programId: program.id,
+              identityType: 'PHONE',
+              canonicalIdentity: phoneCanonical,
+            })
+          : null,
       ]
         .filter((value): value is string => Boolean(value))
         .sort();
       for (const lockKey of lockKeys) {
-        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
       }
 
       const currentStatuses = [

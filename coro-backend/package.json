@@ -27,6 +27,7 @@
     "admin:population-live-setup": "ts-node src/admin/setup-population-live-validation.ts",
     "audit:population-phones": "ts-node src/admin/audit-population-phones.ts",
     "audit:population-identities": "ts-node src/admin/audit-population-identities.ts",
+    "admin:remediate-population-identity": "ts-node src/admin/remediate-population-identity.ts",
     "backfill:population-phones": "ts-node src/admin/backfill-population-phones.ts",
     "audit:mandate-services": "ts-node src/admin/classify-mandate-services.ts"
   },

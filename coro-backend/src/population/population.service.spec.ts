@@ -97,7 +97,7 @@ describe('PopulationService', () => {
       updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
-    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
   };
 
   const populationGeospatialService = {

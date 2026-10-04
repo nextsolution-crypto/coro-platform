@@ -43,7 +43,7 @@ describe('Population identity acquisition', () => {
       updateMany: jest.fn(),
     },
     populationConsentEvent: { createMany: jest.fn() },
-    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
     $transaction: jest.fn(),
   };
   const delivery = { sendSms: jest.fn(), sendEmail: jest.fn() };
