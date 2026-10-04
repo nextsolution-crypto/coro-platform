@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  FormEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Mail, MessageSquare } from "lucide-react";
 import {
   PublicPopulationApiError,
@@ -30,25 +25,30 @@ type Language = "fr" | "en";
 const copy = {
   fr: {
     title: "S’inscrire aux alertes",
-    intro: "Choisissez comment vous souhaitez recevoir les alertes importantes de ce programme.",
+    intro:
+      "Choisissez comment vous souhaitez recevoir les alertes importantes de ce programme.",
     phone: "Téléphone",
     phoneHint: "Numéro pouvant recevoir des messages texte.",
     email: "Courriel",
     emailHint: "Adresse courriel utilisée pour recevoir les alertes.",
-    required: "Fournissez au moins un numéro de téléphone ou un courriel valide.",
+    required:
+      "Fournissez au moins un numéro de téléphone ou un courriel valide.",
     invalidPhone: "Entrez un numéro de téléphone valide.",
     invalidEmail: "Entrez une adresse courriel valide.",
     verificationSms: "Le premier code de vérification sera envoyé par SMS.",
-    verificationEmail: "Le premier code de vérification sera envoyé par courriel.",
+    verificationEmail:
+      "Le premier code de vérification sera envoyé par courriel.",
     consentTitle: "Consentement",
     privacy: "Confidentialité",
     consentCheck: "J’accepte le consentement présenté ci-dessus.",
     consentMissing: "Vous devez accepter le consentement pour continuer.",
-    consentUnavailable: "L’inscription est temporairement indisponible parce que le consentement du programme n’est pas configuré.",
+    consentUnavailable:
+      "L’inscription est temporairement indisponible parce que le consentement du programme n’est pas configuré.",
     submit: "Créer mon inscription",
     submitting: "Création de l’inscription…",
     back: "Retour",
-    error: "L’inscription n’a pas pu être créée. Vérifiez les renseignements et réessayez.",
+    error:
+      "L’inscription n’a pas pu être créée. Vérifiez les renseignements et réessayez.",
     closed: "Les nouvelles inscriptions sont actuellement fermées.",
     sent: "Code de vérification envoyé",
     sentSms: "Un code à 6 chiffres a été envoyé par SMS.",
@@ -58,7 +58,8 @@ const copy = {
   },
   en: {
     title: "Sign up for alerts",
-    intro: "Choose how you would like to receive important alerts from this program.",
+    intro:
+      "Choose how you would like to receive important alerts from this program.",
     phone: "Phone",
     phoneHint: "A number that can receive text messages.",
     email: "Email",
@@ -72,11 +73,13 @@ const copy = {
     privacy: "Privacy",
     consentCheck: "I agree to the consent presented above.",
     consentMissing: "You must agree to the consent to continue.",
-    consentUnavailable: "Registration is temporarily unavailable because the program consent is not configured.",
+    consentUnavailable:
+      "Registration is temporarily unavailable because the program consent is not configured.",
     submit: "Create my registration",
     submitting: "Creating registration…",
     back: "Back",
-    error: "Registration could not be created. Check the information and try again.",
+    error:
+      "Registration could not be created. Check the information and try again.",
     closed: "New registrations are currently closed.",
     sent: "Verification code sent",
     sentSms: "A 6-digit code was sent by SMS.",
@@ -115,7 +118,9 @@ export default function PopulationRegistration({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [workflow, setWorkflow] = useState<PopulationWorkflowSession | null>(null);
+  const [workflow, setWorkflow] = useState<PopulationWorkflowSession | null>(
+    null,
+  );
   const phoneRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
@@ -189,7 +194,9 @@ export default function PopulationRegistration({
     try {
       const result = await registerPopulationSubscriber(publicSlug, {
         ...(program.smsEnabled && phone.trim() ? { phone: phone.trim() } : {}),
-        ...(program.emailEnabled && trimmedEmail ? { email: trimmedEmail } : {}),
+        ...(program.emailEnabled && trimmedEmail
+          ? { email: trimmedEmail }
+          : {}),
         preferredLanguage: language === "fr" ? "FR" : "EN",
         consentVersion: program.consentVersion,
         ...(smsSelected ? { smsConsent: consented } : {}),
@@ -197,7 +204,15 @@ export default function PopulationRegistration({
       setPhone("");
       setEmail("");
       setConsented(false);
-      setWorkflow(savePopulationWorkflowSession(publicSlug, result));
+      setWorkflow(
+        savePopulationWorkflowSession(
+          publicSlug,
+          result,
+          language === "fr" ? "FR" : "EN",
+          firstChannel,
+          smsSelected,
+        ),
+      );
     } catch (caught: unknown) {
       setError(
         caught instanceof PublicPopulationApiError && caught.status === 400
@@ -216,7 +231,8 @@ export default function PopulationRegistration({
   return (
     <main className={styles.formMain}>
       <button className={styles.backButton} type="button" onClick={onBack}>
-        <ArrowLeft size={17} />{t.back}
+        <ArrowLeft size={17} />
+        {t.back}
       </button>
       <section className={styles.formSection}>
         <h1>{t.title}</h1>
@@ -225,29 +241,103 @@ export default function PopulationRegistration({
           <div className={styles.fields}>
             {program.smsEnabled && (
               <label className={styles.field}>
-                <span><MessageSquare size={17} />{t.phone}</span>
-                <input ref={phoneRef} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} onBlur={() => setFieldErrors((current) => ({ ...current, phone: phone.trim() && !isValidPhone(phone.trim()) ? t.invalidPhone : "" }))} aria-invalid={!!fieldErrors.phone} aria-describedby="population-phone-help population-phone-error" />
+                <span>
+                  <MessageSquare size={17} />
+                  {t.phone}
+                </span>
+                <input
+                  ref={phoneRef}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  onBlur={() =>
+                    setFieldErrors((current) => ({
+                      ...current,
+                      phone:
+                        phone.trim() && !isValidPhone(phone.trim())
+                          ? t.invalidPhone
+                          : "",
+                    }))
+                  }
+                  aria-invalid={!!fieldErrors.phone}
+                  aria-describedby="population-phone-help population-phone-error"
+                />
                 <small id="population-phone-help">{t.phoneHint}</small>
-                {fieldErrors.phone && <small id="population-phone-error" className={styles.fieldError}>{fieldErrors.phone}</small>}
+                {fieldErrors.phone && (
+                  <small
+                    id="population-phone-error"
+                    className={styles.fieldError}
+                  >
+                    {fieldErrors.phone}
+                  </small>
+                )}
               </label>
             )}
             {program.emailEnabled && (
               <label className={styles.field}>
-                <span><Mail size={17} />{t.email}</span>
-                <input ref={emailRef} type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} onBlur={() => setFieldErrors((current) => ({ ...current, email: email.trim() && !isValidEmail(email.trim()) ? t.invalidEmail : "" }))} aria-invalid={!!fieldErrors.email} aria-describedby="population-email-help population-email-error" />
+                <span>
+                  <Mail size={17} />
+                  {t.email}
+                </span>
+                <input
+                  ref={emailRef}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  onBlur={() =>
+                    setFieldErrors((current) => ({
+                      ...current,
+                      email:
+                        email.trim() && !isValidEmail(email.trim())
+                          ? t.invalidEmail
+                          : "",
+                    }))
+                  }
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby="population-email-help population-email-error"
+                />
                 <small id="population-email-help">{t.emailHint}</small>
-                {fieldErrors.email && <small id="population-email-error" className={styles.fieldError}>{fieldErrors.email}</small>}
+                {fieldErrors.email && (
+                  <small
+                    id="population-email-error"
+                    className={styles.fieldError}
+                  >
+                    {fieldErrors.email}
+                  </small>
+                )}
               </label>
             )}
           </div>
-          {fieldErrors.destination && <p className={styles.fieldError}>{fieldErrors.destination}</p>}
-          {hasDestination && <p className={styles.channelNotice}>{firstChannel === "SMS" ? t.verificationSms : t.verificationEmail}</p>}
+          {fieldErrors.destination && (
+            <p className={styles.fieldError}>{fieldErrors.destination}</p>
+          )}
+          {hasDestination && (
+            <p className={styles.channelNotice}>
+              {firstChannel === "SMS" ? t.verificationSms : t.verificationEmail}
+            </p>
+          )}
           <div className={styles.consentBlock}>
             <h2>{t.consentTitle}</h2>
-            {consentText ? <p>{consentText}</p> : <p className={styles.fieldError}>{t.consentUnavailable}</p>}
-            {privacyText && <details className={styles.details}><summary>{t.privacy}</summary><p>{privacyText}</p></details>}
+            {consentText ? (
+              <p>{consentText}</p>
+            ) : (
+              <p className={styles.fieldError}>{t.consentUnavailable}</p>
+            )}
+            {privacyText && (
+              <details className={styles.details}>
+                <summary>{t.privacy}</summary>
+                <p>{privacyText}</p>
+              </details>
+            )}
             {smsSelected && (
-              <div className={styles.smsDisclosure} data-testid="sms-carrier-disclosure">
+              <div
+                className={styles.smsDisclosure}
+                data-testid="sms-carrier-disclosure"
+              >
                 <p>{smsDisclosure.intro}</p>
                 <p>{smsDisclosure.frequency}</p>
                 <p>{smsDisclosure.rates}</p>
@@ -261,14 +351,35 @@ export default function PopulationRegistration({
               </div>
             )}
             <label className={styles.consentCheck}>
-              <input ref={consentRef} type="checkbox" checked={consented} onChange={(event) => setConsented(event.target.checked)} aria-invalid={!!fieldErrors.consent} />
+              <input
+                ref={consentRef}
+                type="checkbox"
+                checked={consented}
+                onChange={(event) => setConsented(event.target.checked)}
+                aria-invalid={!!fieldErrors.consent}
+              />
               <span>{t.consentCheck}</span>
             </label>
-            {fieldErrors.consent && <p className={styles.fieldError}>{fieldErrors.consent}</p>}
+            {fieldErrors.consent && (
+              <p className={styles.fieldError}>{fieldErrors.consent}</p>
+            )}
           </div>
-          <div ref={errorRef} className={styles.formError} role="alert" aria-live="polite" tabIndex={-1}>{error}</div>
-          <button className={`${styles.button} ${styles.primary} ${styles.submitButton}`} type="submit" disabled={!canSubmit}>
-            {submitting ? t.submitting : t.submit}<ArrowRight size={17} />
+          <div
+            ref={errorRef}
+            className={styles.formError}
+            role="alert"
+            aria-live="polite"
+            tabIndex={-1}
+          >
+            {error}
+          </div>
+          <button
+            className={`${styles.button} ${styles.primary} ${styles.submitButton}`}
+            type="submit"
+            disabled={!canSubmit}
+          >
+            {submitting ? t.submitting : t.submit}
+            <ArrowRight size={17} />
           </button>
         </form>
       </section>

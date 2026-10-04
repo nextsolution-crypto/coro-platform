@@ -37,17 +37,10 @@ export type RegisterPopulationSubscriberInput = {
 };
 
 export type RegisterPopulationSubscriberResult = {
-  subscriber: {
-    id: string;
-    status: "PENDING_VERIFICATION";
-    preferredLanguage: PopulationPreferredLanguage;
-    createdAt: string;
-  };
-  verificationRequired: true;
-  verificationChannel: "SMS" | "EMAIL";
-  verificationExpiresAt: string;
-  deliveryStatus: "SENT" | "FAILED";
-  smsSubscribed: boolean;
+  accepted: true;
+  message: string;
+  accessRequestToken: string;
+  expiresAt: string;
 };
 
 export type VerifyPopulationSubscriberResult = {
@@ -109,8 +102,19 @@ export type PublicPopulationErrorReason =
   | "RESOLUTION_STALE";
 
 export type CanadianProvinceCode =
-  | "AB" | "BC" | "MB" | "NB" | "NL" | "NS" | "NT"
-  | "NU" | "ON" | "PE" | "QC" | "SK" | "YT";
+  | "AB"
+  | "BC"
+  | "MB"
+  | "NB"
+  | "NL"
+  | "NS"
+  | "NT"
+  | "NU"
+  | "ON"
+  | "PE"
+  | "QC"
+  | "SK"
+  | "YT";
 
 export type ResolvedPopulationLocationResult = {
   status: "RESOLVED";
@@ -136,8 +140,7 @@ export type PopulationLocationSelectionResult = {
 };
 
 export type ResolvePopulationLocationResult =
-  | ResolvedPopulationLocationResult
-  | PopulationLocationSelectionResult;
+  ResolvedPopulationLocationResult | PopulationLocationSelectionResult;
 
 export type ConfirmPopulationLocationResult = {
   confirmed: true;
@@ -155,23 +158,38 @@ export class PublicPopulationApiError extends Error {
   }
 }
 
-function classifyPublicError(message: unknown): PublicPopulationErrorReason | undefined {
+function classifyPublicError(
+  message: unknown,
+): PublicPopulationErrorReason | undefined {
   if (typeof message !== "string") return undefined;
   if (message.includes("Code de vérification invalide")) return "INVALID_CODE";
-  if (message.includes("code de vérification est expiré")) return "EXPIRED_CODE";
-  if (message.includes("nombre maximal de tentatives")) return "TOO_MANY_ATTEMPTS";
+  if (message.includes("code de vérification est expiré"))
+    return "EXPIRED_CODE";
+  if (message.includes("nombre maximal de tentatives"))
+    return "TOO_MANY_ATTEMPTS";
   if (message.includes("Aucune vérification active")) return "NO_ACTIVE_CODE";
   if (message.includes("déjà vérifié")) return "ALREADY_VERIFIED";
-  if (message.includes("n’est pas en attente de vérification")) return "ALREADY_VERIFIED";
+  if (message.includes("n’est pas en attente de vérification"))
+    return "ALREADY_VERIFIED";
   if (message.includes("attendre avant de demander")) return "RESEND_COOLDOWN";
-  if (message.includes("Trop de codes de vérification")) return "TOO_MANY_CODES";
+  if (message.includes("Trop de codes de vérification"))
+    return "TOO_MANY_CODES";
   if (message.includes("Adresse invalide")) return "INVALID_ADDRESS";
   if (message.includes("Adresse introuvable")) return "ADDRESS_NOT_FOUND";
   if (message.includes("Adresse ambiguë")) return "AMBIGUOUS_ADDRESS";
-  if (message.includes("Résolution de localisation temporairement indisponible")) return "LOCATION_UNAVAILABLE";
-  if (message.includes("Jeton d’accès invalide") || message.includes("Accès citoyen invalide")) return "ACCESS_INVALID";
-  if (message.includes("Jeton de résolution de localisation invalide")) return "RESOLUTION_INVALID";
-  if (message.includes("confirmation de localisation est obsolète")) return "RESOLUTION_STALE";
+  if (
+    message.includes("Résolution de localisation temporairement indisponible")
+  )
+    return "LOCATION_UNAVAILABLE";
+  if (
+    message.includes("Jeton d’accès invalide") ||
+    message.includes("Accès citoyen invalide")
+  )
+    return "ACCESS_INVALID";
+  if (message.includes("Jeton de résolution de localisation invalide"))
+    return "RESOLUTION_INVALID";
+  if (message.includes("confirmation de localisation est obsolète"))
+    return "RESOLUTION_STALE";
   return undefined;
 }
 
@@ -285,9 +303,15 @@ export function updatePopulationSubscriberLanguage(
   accessToken: string,
   preferredLanguage: PopulationPreferredLanguage,
 ) {
-  return publicRequest<{ updated: boolean; preferredLanguage: PopulationPreferredLanguage }>(
+  return publicRequest<{
+    updated: boolean;
+    preferredLanguage: PopulationPreferredLanguage;
+  }>(
     `/population/public/${encodeURIComponent(publicSlug)}/subscribers/${encodeURIComponent(subscriberId)}/preferences`,
-    { method: "POST", body: JSON.stringify({ accessToken, preferredLanguage }) },
+    {
+      method: "POST",
+      body: JSON.stringify({ accessToken, preferredLanguage }),
+    },
   );
 }
 

@@ -21,13 +21,16 @@ const AAD = Buffer.from(`CORO:${PURPOSE}:v1`);
 describe('Population access recovery', () => {
   const prisma = {
     populationProgram: { findUnique: jest.fn() },
-    populationSubscriber: { findMany: jest.fn() },
+    populationSubscriber: { findMany: jest.fn(), update: jest.fn() },
     populationVerification: {
       findFirst: jest.fn(),
       count: jest.fn(),
       create: jest.fn(),
       updateMany: jest.fn(),
     },
+    populationSmsConsentEvidence: { updateMany: jest.fn() },
+    populationConsentEvent: { createMany: jest.fn() },
+    $transaction: jest.fn(),
   };
   const delivery = { sendSms: jest.fn(), sendEmail: jest.fn() };
   const readiness = {
@@ -98,6 +101,9 @@ describe('Population access recovery', () => {
       id: 'verification-1',
     });
     prisma.populationVerification.updateMany.mockResolvedValue({ count: 1 });
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback(prisma),
+    );
     delivery.sendSms.mockResolvedValue({
       provider: 'BREVO',
       providerMessageId: 'sms-1',
@@ -321,6 +327,51 @@ describe('Population access recovery', () => {
       subscriberId: 'subscriber-1',
       accessTokenExpiresInSeconds: 1800,
     });
+  });
+
+  it('activates a pending registration through the same opaque token contract', async () => {
+    const code = '123456';
+    prisma.populationProgram.findUnique.mockResolvedValue({
+      ...program,
+      consentVersion: 'v1',
+    });
+    prisma.populationVerification.findFirst.mockResolvedValue({
+      id: 'verification-1',
+      channel: PopulationVerificationChannel.EMAIL,
+      codeHash: otpHash(code),
+      expiresAt: new Date(Date.now() + 60_000),
+      attemptCount: 0,
+      maxAttempts: 5,
+      subscriber: {
+        id: 'subscriber-1',
+        programId: 'program-1',
+        status: PopulationSubscriberStatus.PENDING_VERIFICATION,
+        smsEnabled: false,
+        emailEnabled: false,
+        verifiedAt: null,
+      },
+    });
+    const result = await service.verifySubscriberAccessRequest(
+      'public-program',
+      {
+        accessRequestToken: forgeToken({
+          channel: PopulationVerificationChannel.EMAIL,
+        }),
+        code,
+      },
+    );
+    expect(prisma.populationSubscriber.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: PopulationSubscriberStatus.ACTIVE,
+          emailEnabled: true,
+        }),
+      }),
+    );
+    expect(prisma.populationConsentEvent.createMany).toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({ verified: true, subscriberId: 'subscriber-1' }),
+    );
   });
 
   it('rejects invalid OTPs generically and increments attempts atomically', async () => {

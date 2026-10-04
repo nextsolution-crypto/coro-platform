@@ -85,6 +85,7 @@ const POPULATION_LOCATION_SELECTION_AAD = Buffer.from(
 const POPULATION_ACCESS_REQUEST_PURPOSE = 'POPULATION_ACCESS_REQUEST';
 const POPULATION_ACCESS_REQUEST_TOKEN_VERSION = 'v1';
 const POPULATION_ACCESS_REQUEST_TTL_MS = 10 * 60 * 1000;
+const POPULATION_PENDING_IDENTITY_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const POPULATION_ACCESS_REQUEST_PLAINTEXT_BYTES = 512;
 const POPULATION_ACCESS_REQUEST_TOKEN_AAD = Buffer.from(
   `CORO:${POPULATION_ACCESS_REQUEST_PURPOSE}:${POPULATION_ACCESS_REQUEST_TOKEN_VERSION}`,
@@ -182,7 +183,9 @@ export class PopulationService {
     }
   }
 
-  private tryNormalizeLegacyPopulationPhone(input: string | null): string | null {
+  private tryNormalizeLegacyPopulationPhone(
+    input: string | null,
+  ): string | null {
     if (!input) return null;
     try {
       return this.phoneNumbers.normalizePhoneNumber(
@@ -208,10 +211,16 @@ export class PopulationService {
 
   private canReceiveSms(
     program: { smsEnabled: boolean },
-    subscriber: { smsEnabled: boolean; phone: string | null; phoneCanonical?: string | null },
+    subscriber: {
+      smsEnabled: boolean;
+      phone: string | null;
+      phoneCanonical?: string | null;
+    },
   ) {
     return Boolean(
-      subscriber.smsEnabled && program.smsEnabled && this.smsDestination(subscriber),
+      subscriber.smsEnabled &&
+      program.smsEnabled &&
+      this.smsDestination(subscriber),
     );
   }
 
@@ -1337,7 +1346,8 @@ export class PopulationService {
 
     const phone = dto.phone?.trim() || null;
     const phoneCanonical = phone ? this.normalizePopulationPhone(phone) : null;
-    const email = dto.email?.trim().toLowerCase() || null;
+    const email = dto.email?.trim() || null;
+    const emailCanonical = email?.toLowerCase() || null;
     const smsGloballySuppressed = phoneCanonical
       ? await this.isSmsGloballySuppressed(phoneCanonical)
       : false;
@@ -1355,9 +1365,7 @@ export class PopulationService {
     }
 
     if (phone && dto.smsConsent !== true) {
-      throw new BadRequestException(
-        'Un consentement SMS explicite est requis',
-      );
+      throw new BadRequestException('Un consentement SMS explicite est requis');
     }
 
     if (email && !program.emailEnabled) {
@@ -1382,16 +1390,15 @@ export class PopulationService {
       );
     }
 
-    const verificationChannel =
+    const requestedChannel =
       phone && program.smsEnabled && !smsGloballySuppressed
         ? PopulationVerificationChannel.SMS
         : PopulationVerificationChannel.EMAIL;
-
-    this.readiness.assertVerificationChannelReady(verificationChannel);
-
-    const verificationCode = this.generateVerificationCode();
-
-    const verificationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    this.readiness.assertVerificationChannelReady(requestedChannel);
+    const now = new Date();
+    const verificationExpiresAt = new Date(
+      now.getTime() + POPULATION_ACCESS_REQUEST_TTL_MS,
+    );
     const submittedAt = new Date();
     const programConsentText =
       dto.preferredLanguage === PopulationPreferredLanguage.EN
@@ -1402,34 +1409,113 @@ export class PopulationService {
         ? program.privacyTextEN || program.privacyTextFR
         : program.privacyTextFR;
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const subscriber = await tx.populationSubscriber.create({
+    const verificationCode = this.generateVerificationCode();
+    const verificationCodeHash = this.hashVerificationCode(verificationCode);
+    const tokenKey = this.getPopulationAccessRequestTokenKey();
+    const decoy = {
+      subscriberId: randomUUID(),
+      verificationId: randomUUID(),
+      channel: requestedChannel,
+      destination: null as string | null,
+      preferredLanguage: dto.preferredLanguage,
+      purpose: 'VERIFICATION' as const,
+    };
+
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      const lockKeys = [
+        emailCanonical ? `${program.id}:email:${emailCanonical}` : null,
+        phoneCanonical ? `${program.id}:phone:${phoneCanonical}` : null,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .sort();
+      for (const lockKey of lockKeys) {
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+      }
+
+      const currentStatuses = [
+        PopulationSubscriberStatus.PENDING_VERIFICATION,
+        PopulationSubscriberStatus.ACTIVE,
+        PopulationSubscriberStatus.SUSPENDED,
+      ];
+      const possible = await tx.populationSubscriber.findMany({
+        where: { programId: program.id, status: { in: currentStatuses } },
+        select: {
+          id: true,
+          status: true,
+          phone: true,
+          phoneCanonical: true,
+          email: true,
+          emailCanonical: true,
+          preferredLanguage: true,
+          smsEnabled: true,
+          emailEnabled: true,
+          createdAt: true,
+        },
+      });
+      const matching = possible.filter((candidate) => {
+        const candidateEmail =
+          candidate.emailCanonical ?? candidate.email?.trim().toLowerCase();
+        const candidatePhone =
+          candidate.phoneCanonical ??
+          this.tryNormalizeLegacyPopulationPhone(candidate.phone);
+        return Boolean(
+          (emailCanonical && candidateEmail === emailCanonical) ||
+          (phoneCanonical && candidatePhone === phoneCanonical),
+        );
+      });
+
+      const stalePendingIds = matching
+        .filter(
+          (candidate) =>
+            candidate.status ===
+              PopulationSubscriberStatus.PENDING_VERIFICATION &&
+            now.getTime() - candidate.createdAt.getTime() >=
+              POPULATION_PENDING_IDENTITY_TTL_MS,
+        )
+        .map((candidate) => candidate.id);
+      if (stalePendingIds.length) {
+        await tx.populationSubscriber.updateMany({
+          where: {
+            id: { in: stalePendingIds },
+            status: PopulationSubscriberStatus.PENDING_VERIFICATION,
+          },
+          data: { status: PopulationSubscriberStatus.ABANDONED },
+        });
+      }
+      const current = matching.filter(
+        (candidate) => !stalePendingIds.includes(candidate.id),
+      );
+      if (current.length > 1) return decoy;
+
+      let subscriber = current[0];
+      if (subscriber?.status === PopulationSubscriberStatus.SUSPENDED) {
+        return decoy;
+      }
+      if (!subscriber) {
+        subscriber = await tx.populationSubscriber.create({
         data: {
           programId: program.id,
           phone,
           phoneCanonical,
           email,
+            emailCanonical,
+            identityAuthorityAt: now,
           preferredLanguage: dto.preferredLanguage,
           status: PopulationSubscriberStatus.PENDING_VERIFICATION,
         },
         select: {
           id: true,
           status: true,
+            phone: true,
+            phoneCanonical: true,
+            email: true,
+            emailCanonical: true,
           preferredLanguage: true,
+            smsEnabled: true,
+            emailEnabled: true,
           createdAt: true,
         },
       });
-
-      await tx.populationVerification.create({
-        data: {
-          subscriberId: subscriber.id,
-          channel: verificationChannel,
-          codeHash: this.hashVerificationCode(verificationCode),
-          expiresAt: verificationExpiresAt,
-          maxAttempts: 5,
-        },
-      });
-
       if (phone) {
         await tx.populationSmsConsentEvidence.create({
           data: {
@@ -1450,29 +1536,115 @@ export class PopulationService {
           },
         });
       }
+      }
 
-      return subscriber;
+      const channel =
+        subscriber.status === PopulationSubscriberStatus.ACTIVE
+          ? requestedChannel === PopulationVerificationChannel.SMS &&
+            subscriber.smsEnabled &&
+            !smsGloballySuppressed
+            ? PopulationVerificationChannel.SMS
+            : subscriber.emailEnabled && subscriber.email
+              ? PopulationVerificationChannel.EMAIL
+              : null
+          : requestedChannel;
+      const destination =
+        channel === PopulationVerificationChannel.SMS
+          ? this.smsDestination(subscriber)
+          : channel === PopulationVerificationChannel.EMAIL
+            ? (subscriber.emailCanonical ?? subscriber.email)
+            : null;
+      if (!channel || !destination) return decoy;
+
+      const latest = await tx.populationVerification.findFirst({
+        where: { subscriberId: subscriber.id, channel },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          createdAt: true,
+          expiresAt: true,
+          verifiedAt: true,
+        },
+      });
+      const recentCount = await tx.populationVerification.count({
+        where: {
+          subscriberId: subscriber.id,
+          channel,
+          createdAt: { gte: new Date(now.getTime() - 60 * 60 * 1000) },
+        },
+      });
+      if (
+        (latest && now.getTime() - latest.createdAt.getTime() < 60 * 1000) ||
+        recentCount >= 5
+      ) {
+        if (
+          latest &&
+          !latest.verifiedAt &&
+          latest.expiresAt.getTime() > now.getTime()
+        ) {
+          return {
+            subscriberId: subscriber.id,
+            verificationId: latest.id,
+            channel,
+            destination: null,
+            preferredLanguage: subscriber.preferredLanguage,
+            purpose:
+              subscriber.status === PopulationSubscriberStatus.ACTIVE
+                ? ('ACCESS' as const)
+                : ('VERIFICATION' as const),
+          };
+        }
+        return decoy;
+      }
+      const verification = await tx.populationVerification.create({
+        data: {
+          subscriberId: subscriber.id,
+          channel,
+          codeHash: verificationCodeHash,
+          expiresAt: verificationExpiresAt,
+          maxAttempts: 5,
+        },
+        select: { id: true },
+      });
+      return {
+        subscriberId: subscriber.id,
+        verificationId: verification.id,
+        channel,
+        destination,
+        preferredLanguage: subscriber.preferredLanguage,
+        purpose:
+          subscriber.status === PopulationSubscriberStatus.ACTIVE
+            ? ('ACCESS' as const)
+            : ('VERIFICATION' as const),
+      };
     });
 
-    const deliveryStatus = await this.sendSubscriberOtp({
-      channel: verificationChannel,
-      destination:
-        verificationChannel === PopulationVerificationChannel.SMS
-          ? phoneCanonical!
-          : email!,
+    if (outcome.destination) {
+      await this.sendSubscriberOtp({
+        channel: outcome.channel,
+        destination: outcome.destination,
       code: verificationCode,
-      preferredLanguage: dto.preferredLanguage,
-      purpose: 'VERIFICATION',
+        preferredLanguage: outcome.preferredLanguage,
+        purpose: outcome.purpose,
     });
-
+    }
+    const expiresAt = verificationExpiresAt.getTime();
     return {
-      subscriber: result,
-      verificationRequired: true,
-      verificationChannel,
-      verificationExpiresAt,
-
-      deliveryStatus,
-      smsSubscribed: Boolean(phone) && !smsGloballySuppressed,
+      ...this.accessRequestResponse(),
+      accessRequestToken: this.createPopulationAccessRequestToken(
+        {
+          purpose: POPULATION_ACCESS_REQUEST_PURPOSE,
+          programId: program.id,
+          subscriberId: outcome.subscriberId,
+          verificationId: outcome.verificationId,
+          channel: outcome.channel,
+          iat: now.getTime(),
+          exp: expiresAt,
+          jti: randomUUID(),
+        },
+        tokenKey,
+      ),
+      expiresAt: verificationExpiresAt.toISOString(),
     };
   }
 
@@ -1947,7 +2119,7 @@ export class PopulationService {
     );
     const program = await this.prisma.populationProgram.findUnique({
       where: { publicSlug },
-      select: { id: true },
+      select: { id: true, consentVersion: true },
     });
     if (!program || program.id !== payload.programId) throw invalid();
 
@@ -1960,14 +2132,23 @@ export class PopulationService {
       },
       include: {
         subscriber: {
-          select: { id: true, programId: true, status: true },
+          select: {
+            id: true,
+            programId: true,
+            status: true,
+            smsEnabled: true,
+            emailEnabled: true,
+            verifiedAt: true,
+          },
         },
       },
     });
     if (
       !verification ||
       verification.subscriber.programId !== program.id ||
-      verification.subscriber.status !== PopulationSubscriberStatus.ACTIVE ||
+      (verification.subscriber.status !== PopulationSubscriberStatus.ACTIVE &&
+        verification.subscriber.status !==
+          PopulationSubscriberStatus.PENDING_VERIFICATION) ||
       verification.expiresAt.getTime() <= Date.now() ||
       verification.attemptCount >= verification.maxAttempts
     ) {
@@ -1984,16 +2165,76 @@ export class PopulationService {
       });
       throw invalid();
     }
-    const consumed = await this.prisma.populationVerification.updateMany({
+    const verifiedAt = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const consumed = await tx.populationVerification.updateMany({
       where: {
         id: verification.id,
         verifiedAt: null,
         attemptCount: { lt: verification.maxAttempts },
-        expiresAt: { gt: new Date() },
+          expiresAt: { gt: verifiedAt },
       },
-      data: { verifiedAt: new Date() },
+        data: { verifiedAt },
     });
     if (consumed.count !== 1) throw invalid();
+
+      if (
+        verification.subscriber.status ===
+        PopulationSubscriberStatus.PENDING_VERIFICATION
+      ) {
+        if (!program.consentVersion) throw invalid();
+        const smsEnabled =
+          verification.subscriber.smsEnabled ||
+          verification.channel === PopulationVerificationChannel.SMS;
+        const emailEnabled =
+          verification.subscriber.emailEnabled ||
+          verification.channel === PopulationVerificationChannel.EMAIL;
+        await tx.populationSubscriber.update({
+          where: { id: verification.subscriber.id },
+          data: {
+            status: PopulationSubscriberStatus.ACTIVE,
+            verifiedAt: verification.subscriber.verifiedAt ?? verifiedAt,
+            smsEnabled,
+            emailEnabled,
+          },
+        });
+        if (verification.channel === PopulationVerificationChannel.SMS) {
+          await tx.populationSmsConsentEvidence.updateMany({
+            where: {
+              subscriberId: verification.subscriber.id,
+              programId: program.id,
+              consentVersion: program.consentVersion,
+              verifiedAt: null,
+            },
+            data: { verifiedAt },
+          });
+        }
+        await tx.populationConsentEvent.createMany({
+          data: [
+            {
+              programId: program.id,
+              subscriberId: verification.subscriber.id,
+              type: PopulationConsentEventType.SUBSCRIBED,
+              consentVersion: program.consentVersion,
+              smsEnabled,
+              emailEnabled,
+              source: 'PUBLIC_PORTAL',
+              occurredAt: verifiedAt,
+            },
+            {
+              programId: program.id,
+              subscriberId: verification.subscriber.id,
+              type: PopulationConsentEventType.VERIFIED,
+              consentVersion: program.consentVersion,
+              smsEnabled,
+              emailEnabled,
+              source: 'PUBLIC_PORTAL',
+              occurredAt: verifiedAt,
+            },
+          ],
+        });
+      }
+    });
 
     return {
       verified: true,
@@ -3507,8 +3748,8 @@ export class PopulationService {
       if (
         existingIntent.type !== type ||
         existingIntent.contextSnapshot === null ||
-        (existingIntent.contextSnapshot as any)?.communication?.sourceAlertId !==
-          sourceAlertId
+        (existingIntent.contextSnapshot as any)?.communication
+          ?.sourceAlertId !== sourceAlertId
       ) {
         throw new ConflictException(
           'Cette clé d’intention est déjà associée à une autre opération',
