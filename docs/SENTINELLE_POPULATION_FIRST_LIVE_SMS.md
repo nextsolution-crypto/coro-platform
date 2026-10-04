@@ -38,6 +38,46 @@ Elle ne valide pas automatiquement la production et n’active jamais
    destination masquée seulement; son SHA-256 détecte une altération accidentelle
    mais ne signe pas la preuve.
 
+## Préparation du stockage persistant
+
+Le backend monte par bind mount le répertoire hôte défini par
+`POPULATION_SMS_VALIDATION_EVIDENCE_HOST_DIR` vers
+`/var/lib/coro/sms-validation`. Sans surcharge, le chemin hôte est également
+`/var/lib/coro/sms-validation`.
+
+Avant le déploiement ou toute validation, créer ce répertoire sur l’hôte avec
+des permissions restrictives et une propriété compatible avec l’utilisateur du
+conteneur backend. Ne pas le placer dans le dépôt :
+
+```bash
+sudo install -d -m 0700 /var/lib/coro/sms-validation
+```
+
+Si un chemin hôte différent est nécessaire, le définir dans le `.env` protégé :
+
+```text
+POPULATION_SMS_VALIDATION_EVIDENCE_HOST_DIR=/chemin/protege/sms-validation
+```
+
+Créer ce chemin avec le même niveau de protection avant `docker compose up`.
+Ne pas y stocker le téléphone brut ni de secret. Après rendu de la configuration,
+vérifier le bind mount sans afficher les autres variables résolues :
+
+```bash
+docker compose config --format json \
+  | node ops/sms-validation/verify-compose-mount.mjs
+```
+
+Résultat obligatoire :
+
+```text
+SMS_VALIDATION_EVIDENCE_MOUNT=VALID
+```
+
+Après déploiement, vérifier que le backend peut écrire dans la cible et qu’un
+fichier de preuve de dry-run demeure présent après recréation du backend. Ne pas
+utiliser un SMS LIVE pour cette vérification de persistance.
+
 ## Exécution dans le backend déployé
 
 La production ne contient pas `ts-node`. L’entrée compilée est :
