@@ -40,6 +40,19 @@ export type CatalogComponent = {
   selectable: boolean;
 };
 
+export type FamilyReadiness = {
+  familyCode: string;
+  availability: string;
+  price: { status: string; messages: string[] };
+  quantity: { status: string; messages: string[] };
+  drivers: { status: string; messages: string[] };
+  cost: { status: string; messages: string[] };
+  value: { status: string; messages: string[] };
+  blockers: string[];
+  warnings: string[];
+  nextActions: string[];
+};
+
 export type GuidedLine = {
   id: string;
   source: "CATALOG_COMPONENT" | "CUSTOM_COMPONENT" | "PROFESSIONAL_SERVICE";

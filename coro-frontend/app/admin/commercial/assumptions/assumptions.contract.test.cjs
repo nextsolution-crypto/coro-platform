@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const admin = fs.readFileSync(path.join(__dirname, 'AssumptionAdmin.tsx'), 'utf8');
+const catalog = fs.readFileSync(path.join(__dirname, '../../product-catalog/price-books/page.tsx'), 'utf8');
+const guided = fs.readFileSync(path.join(__dirname, '../configurator/GuidedWorkspace.tsx'), 'utf8');
+assert.match(admin, /Hypothèses de coûts internes/);
+assert.match(admin, /aucun benchmark de productivité par défaut/);
+assert.match(admin, /ROLE:DELIVERY_PROFESSIONAL/);
+assert.match(admin, /assumptions\/cost\/definitions/);
+assert.match(admin, /COMPONENT_CODE/);
+assert.doesNotMatch(admin, /window\.prompt/);
+assert.doesNotMatch(catalog, /window\.prompt/);
+assert.match(catalog, /Montant CAD/);
+assert.match(guided, /versions publiées/);
+assert.match(guided, /costAssumptionVersionId/);
+console.log('C4 catalog and assumptions contract: PASS');

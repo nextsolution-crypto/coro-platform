@@ -7,6 +7,7 @@ import type {
   CatalogComponent,
   CommercialFamily,
   DriverDefinition,
+  FamilyReadiness,
   GuidedWorkspace as Workspace,
 } from "./configurator-types";
 import { ScenarioEditor } from "./ScenarioEditor";
@@ -26,6 +27,10 @@ export function GuidedWorkspace({
 }) {
   const [workspace, setWorkspace] = useState<Workspace>();
   const [catalog, setCatalog] = useState<CatalogComponent[]>([]);
+  const [readiness, setReadiness] = useState<FamilyReadiness[]>([]);
+  const [assumptions, setAssumptions] = useState<{ cost: Array<{id:string;label:string}>; valuation: Array<{id:string;label:string}> }>({cost:[],valuation:[]});
+  const [costVersionId, setCostVersionId] = useState("");
+  const [valuationVersionId, setValuationVersionId] = useState("");
   const [activeId, setActiveId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -39,6 +44,8 @@ export function GuidedWorkspace({
       const next = workspaceResponse.data as Workspace;
       setWorkspace(next);
       setCatalog(catalogResponse.data.components);
+      setReadiness(catalogResponse.data.readiness ?? []);
+      setAssumptions(catalogResponse.data.assumptions ?? { cost: [], valuation: [] });
       setActiveId(
         (current) =>
           preferredId ??
@@ -134,6 +141,8 @@ export function GuidedWorkspace({
           }}
         />
         <main className="space-y-5">
+          <ReadinessPanel readiness={readiness} families={families} />
+          <section className="rounded-xl border bg-white p-5"><h2 className="text-lg font-semibold">Autorités d’hypothèses</h2><p className="text-xs text-slate-500">Sélection explicite de versions publiées. Aucun brouillon n’est offert.</p><div className="mt-3 grid gap-3 md:grid-cols-2"><label className="text-sm">Coûts internes<select value={costVersionId} onChange={e=>setCostVersionId(e.target.value)} className="mt-1 w-full rounded border p-2"><option value="">Non configuré — coût indisponible</option>{assumptions.cost.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label><label className="text-sm">Méthodologie de valeur<select value={valuationVersionId} onChange={e=>setValuationVersionId(e.target.value)} className="mt-1 w-full rounded border p-2"><option value="">Non configurée — valeur indisponible</option>{assumptions.valuation.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label></div></section>
           {scenario ? (
             <>
               <ScenarioEditor
@@ -174,7 +183,10 @@ export function GuidedWorkspace({
                     () =>
                       api.post(
                         `/admin/v1/commercial/simulator/workspaces/${workspaceId}/scenarios/${scenario.id}/calculate`,
-                        {},
+                        {
+                          costAssumptionVersionId: costVersionId || undefined,
+                          valuationAssumptionVersionIds: valuationVersionId ? [valuationVersionId] : undefined,
+                        },
                       ),
                     "Scenario calculated.",
                     scenario.id,
@@ -236,4 +248,12 @@ export function GuidedWorkspace({
       </div>
     </div>
   );
+}
+
+export function LegacyReadinessPanel({ readiness, families }: { readiness: FamilyReadiness[]; families: CommercialFamily[] }) {
+  return <section className="rounded-xl border bg-white p-5"><h2 className="text-lg font-semibold">État de préparation commercial</h2><p className="text-xs text-slate-500">Diagnostic serveur uniquement. Un coût ou une valeur manquante ne bloque jamais le prix.</p><div className="mt-3 grid gap-3 md:grid-cols-2">{readiness.map(item => <article key={item.familyCode} className="rounded border p-3"><strong>{families.find(f=>f.code===item.familyCode)?.labelFr??item.familyCode}</strong><div className="mt-2 grid grid-cols-2 gap-1 text-xs"><span>Prix</span><b>{item.price.status}</b><span>Quantités</span><b>{item.quantity.status}</b><span>Drivers</span><b>{item.drivers.status}</b><span>Coûts</span><b>{item.cost.status}</b><span>Valeur</span><b>{item.value.status}</b></div>{item.blockers.length>0&&<p className="mt-2 text-xs text-red-700">{item.blockers.join(" · ")}</p>}{item.warnings.length>0&&<p className="mt-2 text-xs text-amber-700">{item.warnings.join(" · ")}</p>}{item.nextActions.length>0&&<div className="mt-2 flex flex-wrap gap-2">{item.nextActions.includes("CATALOG")&&<a href="/admin/product-catalog/price-books" className="underline">Configurer le catalogue</a>}{item.nextActions.includes("COST_ASSUMPTIONS")&&<a href="/admin/commercial/assumptions/cost" className="underline">Configurer les coûts</a>}{item.nextActions.includes("VALUE_ASSUMPTIONS")&&<a href="/admin/commercial/assumptions/value" className="underline">Configurer la valeur</a>}</div>}</article>)}</div></section>
+}
+
+function ReadinessPanel({ readiness, families }: { readiness: FamilyReadiness[]; families: CommercialFamily[] }) {
+  return <section className="rounded-xl border bg-white p-5"><h2 className="text-lg font-semibold">État de préparation commercial</h2><p className="text-xs text-slate-500">Diagnostic serveur uniquement. Un coût ou une valeur manquante ne bloque jamais le prix.</p><div className="mt-3 grid gap-3 md:grid-cols-2">{readiness.map(item => <article key={item.familyCode} className="rounded border p-3"><strong>{families.find(f=>f.code===item.familyCode)?.labelFr??item.familyCode}</strong><div className="mt-2 grid grid-cols-2 gap-1 text-xs"><span>Prix</span><b>{item.price.status}</b><span>Quantités</span><b>{item.quantity.status}</b><span>Drivers</span><b>{item.drivers.status}</b><span>Coûts</span><b>{item.cost.status}</b><span>Valeur</span><b>{item.value.status}</b></div>{item.blockers.length>0&&<p className="mt-2 text-xs text-red-700">{item.blockers.join(" · ")}</p>}{item.warnings.length>0&&<p className="mt-2 text-xs text-amber-700">{item.warnings.join(" · ")}</p>}{item.nextActions.length>0&&<div className="mt-2 flex flex-wrap gap-2">{item.nextActions.includes("CATALOG")&&<a href="/admin/product-catalog/price-books" className="underline">Configurer le catalogue</a>}{item.nextActions.includes("COST_ASSUMPTIONS")&&<a href="/admin/commercial/assumptions/cost" className="underline">Configurer les coûts</a>}{item.nextActions.includes("VALUE_ASSUMPTIONS")&&<a href="/admin/commercial/assumptions/value" className="underline">Configurer la valeur</a>}</div>}</article>)}</div></section>
 }

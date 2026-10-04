@@ -73,6 +73,8 @@ const SUPER_ADMIN_GROUP = {
     { label: 'Reconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },
     { label: 'Organisations',    path: '/admin/organizations', icon: 'ðŸ¢' },
     { label: 'Product Catalog', path: '/admin/product-catalog', icon: '◫' },
+    { label: 'Cost Assumptions', path: '/admin/commercial/assumptions/cost', icon: '¤' },
+    { label: 'Value Assumptions', path: '/admin/commercial/assumptions/value', icon: '≈' },
     { label: 'Rapports REX', path: '/admin/rex-reports', icon: '📄' },
     { label: 'Recommandations', path: '/admin/referrals',     icon: '🎁' },
     { label: 'Carte globale',    path: '/admin/map',           icon: 'ðŸŒ' },

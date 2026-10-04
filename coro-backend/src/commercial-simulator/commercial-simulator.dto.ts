@@ -341,3 +341,12 @@ export class CreateValuationAssumptionVersionDto {
 export class AssumptionTransitionDto {
   @IsString() @Length(1, 500) reason!: string;
 }
+
+export class UpdateAssumptionVersionDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AssumptionValueDto)
+  values!: AssumptionValueDto[];
+
+  @IsString() @Length(1, 500) reason!: string;
+}

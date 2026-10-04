@@ -26,6 +26,7 @@ import {
   SelectScenarioDto,
   ScenarioMutationDto,
   UpdateScenarioMetadataDto,
+  UpdateAssumptionVersionDto,
 } from './commercial-simulator.dto';
 import {
   SIMULATOR_FINGERPRINT_VERSION,
@@ -52,6 +53,11 @@ import {
   professionalServiceRoleForComponent,
   roleCostScope,
 } from './first-wave-commercial.registry';
+import { buildFamilyReadiness } from './commercial-readiness';
+import {
+  assessCostMethodologyCompatibility,
+  costMethodologyDefinitions,
+} from './cost-methodology.registry';
 
 type Actor = { userId: string };
 
@@ -348,8 +354,23 @@ export class CommercialSimulatorService {
     });
   }
 
-  createCostAssumptionSet(dto: CreateCostAssumptionSetDto) {
-    return this.prisma.commercialCostAssumptionSet.create({ data: dto });
+  costAssumptionDefinitions() {
+    return costMethodologyDefinitions();
+  }
+
+  createCostAssumptionSet(dto: CreateCostAssumptionSetDto, actor: Actor) {
+    return this.prisma.$transaction(async (tx) => {
+      const row = await tx.commercialCostAssumptionSet.create({ data: dto });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_COST_ASSUMPTION_SET_CREATED',
+        targetType: 'CommercialCostAssumptionSet',
+        targetId: row.id,
+        targetLabel: row.code,
+        afterData: row,
+      });
+      return row;
+    });
   }
 
   async createCostAssumptionVersion(
@@ -357,13 +378,19 @@ export class CommercialSimulatorService {
     dto: CreateCostAssumptionVersionDto,
     actor: Actor,
   ) {
+    this.validateAssumptionValues(
+      'cost',
+      dto.values,
+      dto.methodologyCode,
+      dto.methodologyVersion,
+    );
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${setId}, 0))`;
       const latest = await tx.commercialCostAssumptionVersion.aggregate({
         where: { setId },
         _max: { versionNumber: true },
       });
-      return tx.commercialCostAssumptionVersion.create({
+      const row = await tx.commercialCostAssumptionVersion.create({
         data: {
           setId,
           versionNumber: (latest._max.versionNumber ?? 0) + 1,
@@ -377,6 +404,14 @@ export class CommercialSimulatorService {
         },
         include: { values: true },
       });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_COST_ASSUMPTION_VERSION_CREATED',
+        targetType: 'CommercialCostAssumptionVersion',
+        targetId: row.id,
+        afterData: { setId, versionNumber: row.versionNumber },
+      });
+      return row;
     });
   }
 
@@ -392,8 +427,24 @@ export class CommercialSimulatorService {
     });
   }
 
-  createValuationAssumptionSet(dto: CreateValuationAssumptionSetDto) {
-    return this.prisma.commercialValuationAssumptionSet.create({ data: dto });
+  createValuationAssumptionSet(
+    dto: CreateValuationAssumptionSetDto,
+    actor: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const row = await tx.commercialValuationAssumptionSet.create({
+        data: dto,
+      });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_VALUATION_ASSUMPTION_SET_CREATED',
+        targetType: 'CommercialValuationAssumptionSet',
+        targetId: row.id,
+        targetLabel: row.code,
+        afterData: row,
+      });
+      return row;
+    });
   }
 
   async createValuationAssumptionVersion(
@@ -401,13 +452,14 @@ export class CommercialSimulatorService {
     dto: CreateValuationAssumptionVersionDto,
     actor: Actor,
   ) {
+    this.validateAssumptionValues('valuation', dto.values);
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${setId}, 0))`;
       const latest = await tx.commercialValuationAssumptionVersion.aggregate({
         where: { setId },
         _max: { versionNumber: true },
       });
-      return tx.commercialValuationAssumptionVersion.create({
+      const row = await tx.commercialValuationAssumptionVersion.create({
         data: {
           setId,
           versionNumber: (latest._max.versionNumber ?? 0) + 1,
@@ -419,6 +471,88 @@ export class CommercialSimulatorService {
         },
         include: { values: true },
       });
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: 'COMMERCIAL_VALUATION_ASSUMPTION_VERSION_CREATED',
+        targetType: 'CommercialValuationAssumptionVersion',
+        targetId: row.id,
+        afterData: { setId, versionNumber: row.versionNumber },
+      });
+      return row;
+    });
+  }
+
+  async updateAssumptionVersion(
+    kind: 'cost' | 'valuation',
+    versionId: string,
+    dto: UpdateAssumptionVersionDto,
+    actor: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const current =
+        kind === 'cost'
+          ? await tx.commercialCostAssumptionVersion.findUnique({
+              where: { id: versionId },
+              include: { values: true },
+            })
+          : await tx.commercialValuationAssumptionVersion.findUnique({
+              where: { id: versionId },
+              include: { values: true },
+            });
+      if (!current)
+        throw new NotFoundException('Assumption version introuvable.');
+      if (current.status !== 'DRAFT')
+        throw new ConflictException('ASSUMPTION_VERSION_IMMUTABLE');
+      this.validateAssumptionValues(
+        kind,
+        dto.values,
+        kind === 'cost' && 'methodologyCode' in current
+          ? String(current.methodologyCode)
+          : undefined,
+        current.methodologyVersion,
+      );
+      if (kind === 'cost') {
+        await tx.commercialCostAssumptionValue.deleteMany({
+          where: { versionId },
+        });
+        await tx.commercialCostAssumptionValue.createMany({
+          data: dto.values.map((value) => ({
+            versionId,
+            ...this.assumptionValue(value),
+          })),
+        });
+      } else {
+        await tx.commercialValuationAssumptionValue.deleteMany({
+          where: { versionId },
+        });
+        await tx.commercialValuationAssumptionValue.createMany({
+          data: dto.values.map((value) => ({
+            versionId,
+            ...this.assumptionValue(value),
+          })),
+        });
+      }
+      await this.audit.record(tx, {
+        actorUserId: actor.userId,
+        action: `COMMERCIAL_${kind.toUpperCase()}_ASSUMPTION_DRAFT_UPDATED`,
+        targetType:
+          kind === 'cost'
+            ? 'CommercialCostAssumptionVersion'
+            : 'CommercialValuationAssumptionVersion',
+        targetId: versionId,
+        reason: this.audit.normalizeReason(dto.reason, true),
+        beforeData: { valueCount: current.values.length },
+        afterData: { valueCount: dto.values.length },
+      });
+      return kind === 'cost'
+        ? tx.commercialCostAssumptionVersion.findUniqueOrThrow({
+            where: { id: versionId },
+            include: { values: true },
+          })
+        : tx.commercialValuationAssumptionVersion.findUniqueOrThrow({
+            where: { id: versionId },
+            include: { values: true },
+          });
     });
   }
 
@@ -471,6 +605,22 @@ export class CommercialSimulatorService {
           updatedAt: undefined,
         })),
       );
+      if (transition === 'publish' && content.values.length === 0)
+        throw new BadRequestException('ASSUMPTION_VALUES_REQUIRED');
+      if (transition === 'publish' && kind === 'cost') {
+        if (!('methodologyCode' in content))
+          throw new BadRequestException('COST_ASSUMPTION_METHODOLOGY_INVALID');
+        const compatibility = assessCostMethodologyCompatibility({
+          methodologyCode: String(content.methodologyCode),
+          methodologyVersion: content.methodologyVersion,
+          values: content.values,
+        });
+        if (!compatibility.compatible)
+          throw new BadRequestException({
+            code: 'COST_ASSUMPTION_METHODOLOGY_INCOMPATIBLE',
+            issues: compatibility.issues,
+          });
+      }
       const data =
         transition === 'publish'
           ? { status: 'PUBLISHED' as const, publishedAt: now, contentHash }
@@ -527,6 +677,73 @@ export class CommercialSimulatorService {
           ? undefined
           : BigInt(value.moneyMinorValue),
     };
+  }
+
+  private validateAssumptionValues(
+    kind: 'cost' | 'valuation',
+    values: Array<{
+      assumptionCode: string;
+      assumptionVersion: string;
+      scopeKey?: string;
+      valueType: 'DECIMAL' | 'INTEGER' | 'MONEY' | 'BOOLEAN' | 'TEXT';
+      decimalValue?: string;
+      integerValue?: string;
+      moneyMinorValue?: string;
+      booleanValue?: boolean;
+      textValue?: string;
+      currency?: string;
+      unit?: string;
+    }>,
+    methodologyCode?: string,
+    methodologyVersion?: string,
+  ) {
+    const allowed = new Map([['PRODUCTIVITY_GAIN', 'DECIMAL']]);
+    const identities = new Set<string>();
+    for (const value of values) {
+      const scope = value.scopeKey ?? 'GLOBAL';
+      const identity = `${value.assumptionCode}/${scope}`;
+      if (identities.has(identity))
+        throw new BadRequestException('ASSUMPTION_VALUE_DUPLICATE');
+      identities.add(identity);
+      if (
+        kind === 'valuation' &&
+        (allowed.get(value.assumptionCode) !== value.valueType ||
+          value.assumptionVersion !== 'v1')
+      )
+        throw new BadRequestException('ASSUMPTION_DEFINITION_INVALID');
+      if (
+        kind === 'valuation' &&
+        scope !== 'GLOBAL' &&
+        !scope.startsWith('COMPONENT:')
+      )
+        throw new BadRequestException('ASSUMPTION_SCOPE_INVALID');
+      const populated = [
+        value.decimalValue,
+        value.integerValue,
+        value.moneyMinorValue,
+        value.booleanValue,
+        value.textValue,
+      ].filter((item) => item !== undefined).length;
+      if (populated !== 1)
+        throw new BadRequestException('ASSUMPTION_TYPED_VALUE_INVALID');
+      if (value.valueType === 'MONEY' && value.currency !== 'CAD')
+        throw new BadRequestException('ASSUMPTION_CURRENCY_INVALID');
+    }
+    if (kind === 'cost') {
+      const compatibility = assessCostMethodologyCompatibility({
+        methodologyCode: methodologyCode ?? '',
+        methodologyVersion: methodologyVersion ?? '',
+        values: values.map((value) => ({
+          ...value,
+          scopeKey: value.scopeKey ?? 'GLOBAL',
+        })),
+      });
+      if (!compatibility.compatible)
+        throw new BadRequestException({
+          code: 'COST_ASSUMPTION_METHODOLOGY_INCOMPATIBLE',
+          issues: compatibility.issues,
+        });
+    }
   }
 
   listWorkspaces() {
@@ -703,6 +920,71 @@ export class CommercialSimulatorService {
       });
     if (!workspace)
       throw new NotFoundException('Simulation workspace introuvable.');
+    const [costVersions, publishedValuationCount] =
+      await this.prisma.$transaction([
+        this.prisma.commercialCostAssumptionVersion.findMany({
+          where: {
+            status: 'PUBLISHED',
+            methodologyCode: 'direct-cost',
+            methodologyVersion: { in: ['v1', 'v2'] },
+          },
+          select: {
+            id: true,
+            versionNumber: true,
+            methodologyCode: true,
+            methodologyVersion: true,
+            publishedAt: true,
+            set: { select: { name: true, code: true } },
+            values: {
+              select: {
+                assumptionCode: true,
+                assumptionVersion: true,
+                scopeKey: true,
+                valueType: true,
+                currency: true,
+              },
+            },
+          },
+        }),
+        this.prisma.commercialValuationAssumptionVersion.findMany({
+          where: {
+            status: 'PUBLISHED',
+            methodologyVersion: 'v1',
+            set: { methodologyCode: 'proposal-value' },
+          },
+          select: {
+            id: true,
+            versionNumber: true,
+            methodologyVersion: true,
+            publishedAt: true,
+            set: { select: { name: true, code: true, methodologyCode: true } },
+          },
+        }),
+      ]);
+    const costCompatibility = costVersions.map((version) => ({
+      version,
+      result: assessCostMethodologyCompatibility({
+        methodologyCode: version.methodologyCode,
+        methodologyVersion: version.methodologyVersion,
+        values: version.values,
+      }),
+    }));
+    const compatibleCostVersions = costCompatibility
+      .filter((item) => item.result.compatible)
+      .map((item) => item.version);
+    const incompatibleCostAuthorities = costCompatibility.filter(
+      (item) => !item.result.compatible,
+    );
+    const components = workspace.priceBookVersion.components.map(
+      (component) => ({
+        code: component.code,
+        capabilityCode: component.capability.code,
+        pricingModel: component.pricingModel,
+        revenueCategory: component.revenueCategory,
+        amountConfigured: component.amountMinor !== null,
+        tierCount: component.tiers.length,
+      }),
+    );
     return {
       currency: workspace.currency,
       priceBookVersionStatus: workspace.priceBookVersion.status,
@@ -728,6 +1010,37 @@ export class CommercialSimulatorService {
         displayOrder: component.displayOrder,
         selectable: Boolean(component.revenueCategory),
       })),
+      readiness: buildFamilyReadiness({
+        families: COMMERCIAL_FAMILY_REGISTRY,
+        components,
+        publishedCostScopes: [
+          ...new Set(
+            compatibleCostVersions.flatMap((version) =>
+              version.values.map((value) => value.scopeKey),
+            ),
+          ),
+        ],
+        incompatibleCostAuthorities: incompatibleCostAuthorities.length,
+        publishedValuationCount: publishedValuationCount.length,
+      }),
+      assumptions: {
+        cost: compatibleCostVersions.map((version) => ({
+          id: version.id,
+          label: `${version.set.name} · v${version.versionNumber} · ${version.methodologyCode}/${version.methodologyVersion}`,
+          publishedAt: version.publishedAt,
+        })),
+        costCompatibilityWarnings: incompatibleCostAuthorities.map(
+          ({ version }) => ({
+            id: version.id,
+            message: `Published cost assumption version is incompatible with ${version.methodologyCode}/${version.methodologyVersion}.`,
+          }),
+        ),
+        valuation: publishedValuationCount.map((version) => ({
+          id: version.id,
+          label: `${version.set.name} · v${version.versionNumber} · ${version.set.methodologyCode}/${version.methodologyVersion}`,
+          publishedAt: version.publishedAt,
+        })),
+      },
     };
   }
 
@@ -1525,6 +1838,18 @@ export class CommercialSimulatorService {
         !['v1', 'v2'].includes(costVersion.methodologyVersion))
     )
       throw new BadRequestException('COST_ASSUMPTION_METHODOLOGY_INVALID');
+    if (costVersion) {
+      const compatibility = assessCostMethodologyCompatibility({
+        methodologyCode: costVersion.methodologyCode,
+        methodologyVersion: costVersion.methodologyVersion,
+        values: costVersion.values,
+      });
+      if (!compatibility.compatible)
+        throw new BadRequestException({
+          code: 'COST_ASSUMPTION_METHODOLOGY_INCOMPATIBLE',
+          issues: compatibility.issues,
+        });
+    }
     const valuationVersions = dto.valuationAssumptionVersionIds?.length
       ? await this.prisma.commercialValuationAssumptionVersion.findMany({
           where: { id: { in: dto.valuationAssumptionVersionIds } },

@@ -170,6 +170,13 @@ describe('Commercial Configurator projections', () => {
 
   it('projects only the workspace catalog with decimal money strings and no internal cost', async () => {
     const prisma = {
+      $transaction: jest.fn((calls: Promise<unknown>[]) => Promise.all(calls)),
+      commercialCostAssumptionVersion: {
+        findMany: jest.fn(() => Promise.resolve([])),
+      },
+      commercialValuationAssumptionVersion: {
+        findMany: jest.fn(() => Promise.resolve([])),
+      },
       commercialSimulationWorkspace: {
         findUnique: jest.fn(() =>
           Promise.resolve({
@@ -206,12 +213,103 @@ describe('Commercial Configurator projections', () => {
       capabilityCode: 'COMPLIANCE_OPERATIONS',
       revenueCategory: 'SAAS',
     });
-    expect(JSON.stringify(result)).not.toMatch(/cost|minor/i);
+    expect(JSON.stringify(result)).not.toMatch(/moneyMinorValue|roleCost/i);
     expect(
       prisma.commercialSimulationWorkspace.findUnique,
     ).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'workspace-a' } }),
     );
+  });
+
+  it('offers only structurally compatible published cost authorities', async () => {
+    const base = {
+      versionNumber: 1,
+      methodologyCode: 'direct-cost',
+      publishedAt: new Date(),
+      set: { name: 'Direct cost', code: 'DIRECT_COST' },
+    };
+    const prisma = {
+      $transaction: jest.fn((calls: Promise<unknown>[]) => Promise.all(calls)),
+      commercialCostAssumptionVersion: {
+        findMany: jest.fn(() =>
+          Promise.resolve([
+            {
+              ...base,
+              id: 'compatible-v2',
+              methodologyVersion: 'v2',
+              values: [
+                {
+                  assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
+                  assumptionVersion: 'v1',
+                  scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
+                  valueType: 'MONEY',
+                  currency: 'CAD',
+                },
+              ],
+            },
+            {
+              ...base,
+              id: 'legacy-incompatible-v1',
+              methodologyVersion: 'v1',
+              values: [
+                {
+                  assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
+                  assumptionVersion: 'v1',
+                  scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
+                  valueType: 'MONEY',
+                  currency: 'CAD',
+                },
+              ],
+            },
+          ]),
+        ),
+      },
+      commercialValuationAssumptionVersion: {
+        findMany: jest.fn(() => Promise.resolve([])),
+      },
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersion: {
+              id: 'version-a',
+              status: 'ACTIVE',
+              components: [
+                {
+                  id: 'component-a',
+                  code: 'DOCUMENT_COMPLIANCE_DELIVERY_HOUR',
+                  nameFr: 'Livraison',
+                  nameEn: 'Delivery',
+                  descriptionFr: null,
+                  capability: { code: 'COMPLIANCE_OPERATIONS' },
+                  revenueCategory: 'PROFESSIONAL_SERVICE',
+                  chargeType: 'ONE_TIME',
+                  billingPeriod: null,
+                  pricingModel: 'PER_UNIT',
+                  metric: 'HOUR',
+                  amountMinor: 10000n,
+                  displayOrder: 1,
+                  tiers: [],
+                },
+              ],
+            },
+          }),
+        ),
+      },
+    };
+    const result = await serviceWith(prisma).guidedCatalog('workspace-a');
+    expect(result.assumptions.cost.map((item) => item.id)).toEqual([
+      'compatible-v2',
+    ]);
+    expect(result.assumptions.costCompatibilityWarnings).toEqual([
+      expect.objectContaining({ id: 'legacy-incompatible-v1' }),
+    ]);
+    const compliance = result.readiness.find(
+      (item) => item.familyCode === 'COMPLIANCE',
+    );
+    expect(compliance?.price.status).toBe('READY');
+    expect(compliance?.cost.status).toBe('READY');
+    expect(compliance?.warnings.join(' ')).toMatch(/incompatible/i);
   });
 
   it('rejects a future commercial family before persisting a guided scenario', async () => {

@@ -31,6 +31,7 @@ import {
   GuidedConfigureScenarioDto,
   ScenarioMutationDto,
   UpdateScenarioMetadataDto,
+  UpdateAssumptionVersionDto,
 } from './commercial-simulator.dto';
 
 type RequestWithUser = { user: { id: string } };
@@ -67,10 +68,23 @@ export class CommercialSimulatorController {
   @Get('assumptions/cost') listCostAssumptions() {
     return this.service.listCostAssumptions();
   }
+  @Get('assumptions/cost/definitions') costAssumptionDefinitions() {
+    return this.service.costAssumptionDefinitions();
+  }
   @Post('assumptions/cost') createCostAssumptionSet(
     @Body() dto: CreateCostAssumptionSetDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.service.createCostAssumptionSet(dto);
+    return this.service.createCostAssumptionSet(dto, { userId: req.user.id });
+  }
+  @Put('assumptions/cost/versions/:versionId') updateCostAssumptionVersion(
+    @Param('versionId') versionId: string,
+    @Body() dto: UpdateAssumptionVersionDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.updateAssumptionVersion('cost', versionId, dto, {
+      userId: req.user.id,
+    });
   }
   @Post('assumptions/cost/:setId/versions') createCostAssumptionVersion(
     @Param('setId') setId: string,
@@ -101,8 +115,21 @@ export class CommercialSimulatorController {
   }
   @Post('assumptions/valuation') createValuationAssumptionSet(
     @Body() dto: CreateValuationAssumptionSetDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.service.createValuationAssumptionSet(dto);
+    return this.service.createValuationAssumptionSet(dto, {
+      userId: req.user.id,
+    });
+  }
+  @Put('assumptions/valuation/versions/:versionId')
+  updateValuationAssumptionVersion(
+    @Param('versionId') versionId: string,
+    @Body() dto: UpdateAssumptionVersionDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.service.updateAssumptionVersion('valuation', versionId, dto, {
+      userId: req.user.id,
+    });
   }
   @Post('assumptions/valuation/:setId/versions')
   createValuationAssumptionVersion(

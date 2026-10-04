@@ -18,7 +18,8 @@
     "test:commercial-proposals": "node app/admin/commercial/proposals/commercial-proposals.contract.test.cjs",
     "test:metering": "node app/admin/metering/metering.contract.test.cjs",
     "test:commercial-simulator": "node app/admin/commercial/simulator/simulator.contract.test.cjs",
-    "test:commercial-configurator": "node app/admin/commercial/configurator/configurator.contract.test.cjs"
+    "test:commercial-configurator": "node app/admin/commercial/configurator/configurator.contract.test.cjs",
+    "test:commercial-assumptions": "node app/admin/commercial/assumptions/assumptions.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
