@@ -11,10 +11,9 @@ import { PopulationOperationalEventsService } from './population-operational-eve
 import { PopulationEvidenceService } from './population-evidence.service';
 import { PopulationEvidenceReportService } from './population-evidence-report.service';
 import { StorageModule } from '../storage/storage.module';
-import {
-  POPULATION_ENVIRONMENT,
-  PopulationReadinessService,
-} from './population-readiness.service';
+import { PopulationReadinessService } from './population-readiness.service';
+import { POPULATION_ENVIRONMENT } from './population-environment';
+import { PopulationContactCryptoService } from './population-contact-crypto.service';
 import { PhoneNumberService } from '../common/phone/phone-number.service';
 import { PopulationBrevoSmsWebhookController } from './population-brevo-sms-webhook.controller';
 import { PopulationBrevoSmsWebhookService } from './population-brevo-sms-webhook.service';
@@ -38,6 +37,7 @@ import { PopulationSmsSuppressionService } from './population-sms-suppression.se
       useFactory: () => process.env,
     },
     PopulationReadinessService,
+    PopulationContactCryptoService,
     PopulationBrevoWebhookService,
     PopulationBrevoSmsWebhookService,
     PopulationSmsSuppressionService,
@@ -48,6 +48,7 @@ import { PopulationSmsSuppressionService } from './population-sms-suppression.se
   exports: [
     PopulationService,
     PopulationReadinessService,
+    PopulationContactCryptoService,
     PopulationOperationalEventsService,
     PopulationEvidenceService,
     PopulationEvidenceReportService,

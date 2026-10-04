@@ -11,6 +11,11 @@ function configuredEnvironment(): NodeJS.ProcessEnv {
     POPULATION_ACCESS_SECRET: strong('a'),
     POPULATION_ACCESS_REQUEST_TOKEN_SECRET: aes(1),
     POPULATION_LOCATION_TOKEN_SECRET: aes(2),
+    POPULATION_CONTACT_CHANGE_ACTIVE_KEY_ID: 'key-A',
+    POPULATION_CONTACT_CHANGE_ENCRYPTION_KEYS: JSON.stringify({
+      'key-A': aes(3),
+    }),
+    POPULATION_CONTACT_CHANGE_FINGERPRINT_KEY: aes(4),
     BREVO_API_KEY: 'brevo-test-key',
     BREVO_SENDER_EMAIL: 'alerts@example.test',
     POPULATION_EMAIL_TIMEOUT_MS: '10000',
@@ -128,11 +133,47 @@ describe('PopulationReadinessService', () => {
         emailWebhook: 'READY',
         emailLive: 'READY',
         sms: 'READY',
+        contactChangeCrypto: 'READY',
       },
     });
     for (const value of Object.values(env)) {
       expect(JSON.stringify(readiness)).not.toContain(value);
     }
+  });
+
+  it('keeps contact-change crypto optional for existing operations', () => {
+    const env = configuredEnvironment();
+    delete env.POPULATION_CONTACT_CHANGE_ACTIVE_KEY_ID;
+    delete env.POPULATION_CONTACT_CHANGE_ENCRYPTION_KEYS;
+    delete env.POPULATION_CONTACT_CHANGE_FINGERPRINT_KEY;
+    const readiness = new PopulationReadinessService(env).getReadiness();
+    expect(readiness.population.contactChangeCrypto).toBe('NOT_CONFIGURED');
+    expect(readiness.population.core).toBe('READY');
+  });
+
+  it.each([
+    {
+      POPULATION_CONTACT_CHANGE_ACTIVE_KEY_ID: undefined,
+    },
+    {
+      POPULATION_CONTACT_CHANGE_ENCRYPTION_KEYS: '{',
+    },
+    {
+      POPULATION_CONTACT_CHANGE_FINGERPRINT_KEY: 'weak',
+    },
+    {
+      POPULATION_CONTACT_CHANGE_ACTIVE_KEY_ID: 'missing',
+    },
+  ])('reports malformed contact-change crypto as INVALID', (changes) => {
+    const env = configuredEnvironment();
+    Object.assign(env, changes);
+    for (const [name, value] of Object.entries(changes)) {
+      if (value === undefined) delete env[name];
+    }
+    expect(
+      new PopulationReadinessService(env).getReadiness().population
+        .contactChangeCrypto,
+    ).toBe('INVALID');
   });
 
   it('distingue le transport sortant du webhook entrant', () => {

@@ -8,6 +8,10 @@ import {
   PopulationVerificationChannel,
 } from '@prisma/client';
 import { POPULATION_EMAIL_TIMEOUT_MAX_MS } from './population-delivery.constants';
+import { getPopulationContactCryptoStatus } from './population-contact-crypto.service';
+import { POPULATION_ENVIRONMENT } from './population-environment';
+
+export { POPULATION_ENVIRONMENT } from './population-environment';
 
 export type CapabilityStatus =
   | 'READY'
@@ -16,8 +20,6 @@ export type CapabilityStatus =
   | 'NOT_VALIDATED';
 
 type Environment = NodeJS.ProcessEnv;
-
-export const POPULATION_ENVIRONMENT = Symbol('POPULATION_ENVIRONMENT');
 
 const HMAC_SECRET_MIN_LENGTH = 32;
 const AES_SECRET_NAMES = [
@@ -68,6 +70,7 @@ export class PopulationReadinessService {
         emailWebhook,
         emailLive: this.combine(emailOutbound, emailWebhook),
         sms: this.smsStatus(),
+        contactChangeCrypto: getPopulationContactCryptoStatus(this.env),
       },
     };
   }
