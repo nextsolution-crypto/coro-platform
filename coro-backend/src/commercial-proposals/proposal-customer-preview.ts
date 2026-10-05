@@ -11,6 +11,7 @@ export type ProposalCustomerPreviewSource =
   Prisma.CommercialProposalRevisionGetPayload<{
     include: {
       proposal: true;
+      createdBy: true;
       lines: true;
       inputs: true;
       exclusivities: { include: { sectors: true } };
@@ -33,6 +34,14 @@ export function buildProposalCustomerPreview(
       displayName: source.recipientDisplayName,
       contactName: source.recipientContactName,
       email: source.recipientEmail,
+    },
+    issuer: {
+      brandName: source.createdBy?.companyName ?? 'CORO',
+      legalName: source.createdBy?.companyName ?? null,
+      email: source.createdBy?.companyEmail ?? null,
+      phone: source.createdBy?.companyPhone ?? null,
+      website: source.createdBy?.companyWebsite ?? null,
+      address: source.createdBy?.companyAddress ?? null,
     },
     currency: source.currency,
     // Proposal snapshots preserve customer-facing component labels, but do not

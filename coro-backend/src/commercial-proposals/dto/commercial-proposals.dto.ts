@@ -222,6 +222,15 @@ export class TransitionProposalDto {
   @IsOptional() @IsString() acceptanceReference?: string;
   @IsOptional() @IsString() sentDocumentId?: string;
 }
+export class UpdateProposalFinalizationDto {
+  @IsInt() @Min(0) lockVersion!: number;
+  @IsOptional() @IsISO8601() validFrom?: string | null;
+  @IsOptional() @IsISO8601() validUntil?: string | null;
+  @IsOptional() @IsString() contextFR?: string | null;
+  @IsOptional() @IsString() contextEN?: string | null;
+  @IsOptional() @IsString() termsFR?: string | null;
+  @IsOptional() @IsString() termsEN?: string | null;
+}
 export class GenerateProposalPdfDto {
   @IsEnum(ProposalLanguage) language!: ProposalLanguage;
   @IsString() idempotencyKey!: string;

@@ -55,6 +55,7 @@ export class ProposalPdfService {
       where: { id: revisionId },
       include: {
         proposal: true,
+        createdBy: true,
         lines: {
           include: { tiers: true, adjustments: true, capability: true },
         },
@@ -149,8 +150,13 @@ export class ProposalPdfService {
       let bytes: Buffer;
       try {
         const page = await browser.newPage();
+        const projection = buildProposalCustomerPreview(r);
         await page.setContent(
-          this.html(buildProposalCustomerPreview(r), language),
+          this.enhanceHtml(
+            this.html(projection, language),
+            projection,
+            language,
+          ),
           { waitUntil: 'load' },
         );
         bytes = Buffer.from(
@@ -207,6 +213,30 @@ export class ProposalPdfService {
       throw new ConflictException('Génération PDF échouée.');
     }
   }
+  async download(proposalId: string, revisionId: string, documentId: string) {
+    const document = await this.prisma.proposalDocument.findFirst({
+      where: {
+        id: documentId,
+        proposalRevisionId: revisionId,
+        status: 'FINALIZED',
+        proposalRevision: { proposalId },
+      },
+    });
+    if (!document) throw new NotFoundException('Document introuvable.');
+    const buffer = await this.storage.downloadPrivate(document.storageKey);
+    const sha256 = createHash('sha256').update(buffer).digest('hex');
+    if (
+      buffer.length !== document.sizeBytes ||
+      !document.sha256 ||
+      sha256 !== document.sha256
+    )
+      throw new ConflictException('Intégrité du document invalide.');
+    return {
+      buffer,
+      mimeType: document.mimeType,
+      fileName: document.fileName,
+    };
+  }
   private async waitForGeneration(id: string) {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 25));
@@ -216,6 +246,33 @@ export class ProposalPdfService {
       if (document && document.status !== 'GENERATING') return document;
     }
     return this.prisma.proposalDocument.findUniqueOrThrow({ where: { id } });
+  }
+  private enhanceHtml(
+    html: string,
+    projection: CustomerSafeCommercialProjection,
+    language: 'FR' | 'EN',
+  ) {
+    const fr = language === 'FR';
+    const issuer = [
+      projection.issuer.legalName,
+      projection.issuer.address,
+      projection.issuer.email,
+      projection.issuer.phone,
+      projection.issuer.website,
+    ]
+      .filter(Boolean)
+      .map(esc)
+      .join(' / ');
+    return html
+      .replace('>CORO</div>', `>${esc(projection.issuer.brandName)}</div>`)
+      .replace(
+        '</header>',
+        `<div class="muted">${fr ? 'Valide du' : 'Valid from'} ${esc(projection.validity.validFrom?.slice(0, 10) || '—')}</div>${issuer ? `<div class="muted">${issuer}</div>` : ''}</header>`,
+      )
+      .replace(
+        '</section></body></html>',
+        `<div><p>${fr ? 'Nom' : 'Name'}: ____________________</p><p>${fr ? 'Signature' : 'Signature'}: ____________________</p><p>${fr ? 'Date' : 'Date'}: ____________________</p></div></section></body></html>`,
+      );
   }
   private html(r: CustomerSafeCommercialProjection, lang: 'FR' | 'EN') {
     const fr = lang === 'FR';

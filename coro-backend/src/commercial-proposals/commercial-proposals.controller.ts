@@ -6,6 +6,7 @@ import {
   Post,
   Put,
   Request,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -23,6 +24,7 @@ import {
   GenerateProposalPdfDto,
   SnapshotPopulationDto,
   TransitionProposalDto,
+  UpdateProposalFinalizationDto,
   ValueAnalysisDto,
 } from './dto/commercial-proposals.dto';
 type Req = { user: { userId: string } };
@@ -49,6 +51,14 @@ export class CommercialProposalsController {
     @Param('revisionId') revisionId: string,
   ) {
     return this.service.customerPreview(id, revisionId);
+  }
+  @Put(':id/revisions/:revisionId/finalization') finalization(
+    @Param('id') id: string,
+    @Param('revisionId') revisionId: string,
+    @Body() d: UpdateProposalFinalizationDto,
+    @Request() r: Req,
+  ) {
+    return this.service.updateFinalization(id, revisionId, d, r.user);
   }
   @Post(':id/revisions') revision(
     @Param('id') id: string,
@@ -106,6 +116,18 @@ export class CommercialProposalsController {
     @Request() r: Req,
   ) {
     return this.pdf.generate(id, d.language, d.idempotencyKey, r.user);
+  }
+  @Get(':id/revisions/:revisionId/documents/:documentId/download')
+  async download(
+    @Param('id') id: string,
+    @Param('revisionId') revisionId: string,
+    @Param('documentId') documentId: string,
+  ) {
+    const document = await this.pdf.download(id, revisionId, documentId);
+    return new StreamableFile(document.buffer, {
+      type: document.mimeType,
+      disposition: `attachment; filename="${document.fileName.replace(/["\r\n]/g, '_')}"`,
+    });
   }
   @Post(':id/revisions/:revisionId/mark-sent') sent(
     @Param('revisionId') id: string,

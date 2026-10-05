@@ -15,6 +15,7 @@ import {
   ConfigureRevisionDto,
   ConvertProspectDto,
   TransitionProposalDto,
+  UpdateProposalFinalizationDto,
   ValueAnalysisDto,
 } from './dto/commercial-proposals.dto';
 import { ProposalPricingEngine } from './proposal-pricing-engine';
@@ -67,6 +68,7 @@ export class CommercialProposalsService {
       where: { id: revisionId, proposalId },
       include: {
         proposal: true,
+        createdBy: true,
         lines: true,
         inputs: true,
         exclusivities: { include: { sectors: true } },
@@ -77,6 +79,72 @@ export class CommercialProposalsService {
     if (!revision)
       throw new NotFoundException('Proposal revision introuvable.');
     return buildProposalCustomerPreview(revision);
+  }
+  async updateFinalization(
+    proposalId: string,
+    revisionId: string,
+    d: UpdateProposalFinalizationDto,
+    a: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${revisionId},0))`;
+      const before = await this.draft(tx, revisionId);
+      if (before.proposalId !== proposalId) throw new NotFoundException();
+      const validFrom = d.validFrom ? new Date(d.validFrom) : null;
+      const validUntil = d.validUntil ? new Date(d.validUntil) : null;
+      if (validFrom && validUntil && validUntil <= validFrom)
+        throw new BadRequestException(
+          'La fin de validité doit être postérieure au début.',
+        );
+      const updated = await tx.commercialProposalRevision.updateMany({
+        where: {
+          id: revisionId,
+          proposalId,
+          status: 'DRAFT',
+          lockVersion: d.lockVersion,
+        },
+        data: {
+          validFrom,
+          validUntil,
+          contextFR: d.contextFR?.trim() || null,
+          contextEN: d.contextEN?.trim() || null,
+          termsFR: d.termsFR?.trim() || null,
+          termsEN: d.termsEN?.trim() || null,
+          lockVersion: { increment: 1 },
+        },
+      });
+      if (updated.count !== 1)
+        throw new ConflictException(
+          'Conflit de version. Rechargez la proposition.',
+        );
+      const after = await tx.commercialProposalRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+      });
+      await this.audit.record(tx, {
+        actorUserId: a.userId,
+        action: 'PROPOSAL_FINALIZATION_UPDATED',
+        targetType: 'CommercialProposalRevision',
+        targetId: revisionId,
+        organizationId: before.proposal.organizationId,
+        beforeData: {
+          validFrom: before.validFrom,
+          validUntil: before.validUntil,
+          contextFR: before.contextFR,
+          contextEN: before.contextEN,
+          termsFR: before.termsFR,
+          termsEN: before.termsEN,
+        },
+        afterData: {
+          validFrom: after.validFrom,
+          validUntil: after.validUntil,
+          contextFR: after.contextFR,
+          contextEN: after.contextEN,
+          termsFR: after.termsFR,
+          termsEN: after.termsEN,
+        },
+      });
+      return proposalRevisionResponse(after);
+    });
   }
   listProspects() {
     return this.prisma.commercialProspect.findMany({
@@ -777,6 +845,7 @@ export class CommercialProposalsService {
         where: { id },
         include: {
           proposal: true,
+          createdBy: true,
           sentDocument: true,
           lines: { include: { capability: true } },
         },

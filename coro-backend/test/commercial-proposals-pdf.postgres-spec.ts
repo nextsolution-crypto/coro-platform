@@ -58,6 +58,11 @@ describeDatabase('Phase 2D proposal PDF concurrency and rendering', () => {
         lastName: 'Tester',
         role: 'SUPER_ADMIN',
         organizationId: organization.id,
+        companyName: 'CORO TEST ISSUER',
+        companyEmail: 'issuer@example.invalid',
+        companyPhone: '+1 555 010 0606',
+        companyWebsite: 'https://example.invalid',
+        companyAddress: '100 Test Street',
       },
     });
     actorId = actor.id;
@@ -75,6 +80,8 @@ describeDatabase('Phase 2D proposal PDF concurrency and rendering', () => {
         revisionNumber: 1,
         relationshipSnapshot: 'PARTNER',
         currency: 'CAD',
+        validFrom: new Date('2027-01-01T00:00:00Z'),
+        validUntil: new Date('2027-02-01T00:00:00Z'),
         recipientLegalName: 'Société Exemple',
         recipientDisplayName: 'Exemple',
         recipientCountry: 'CA',
@@ -195,6 +202,12 @@ describeDatabase('Phase 2D proposal PDF concurrency and rendering', () => {
     expect(french).toContain('Engagements');
     expect(french).toContain('VALEUR ESTIMÉE');
     expect(french).toContain('Conditions et acceptation');
+    expect(french).toContain('CORO TEST ISSUER');
+    expect(french).toContain('issuer@example.invalid');
+    expect(french).toContain('2027-01-01');
+    expect(french).toContain('2027-02-01');
+    expect(french).toContain('Signature');
+    expect(french).toContain('Date');
     expect(english).toContain('Proposed solution');
     expect(english).toContain('PRICE');
     expect(english).toContain('Declared data');

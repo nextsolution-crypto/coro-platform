@@ -32,6 +32,17 @@ export function CustomerSafeReview({
       <p className="mt-3 text-sm text-slate-600">
         {preview.solutions.map((item) => item.labelFr).join(" · ")}
       </p>
+      <div className="mt-3 text-sm text-slate-600">
+        <p>
+          Validité : {preview.validity.validFrom?.slice(0, 10) ?? "—"} au{" "}
+          {preview.validity.validUntil?.slice(0, 10) ?? "—"}
+        </p>
+        {preview.commercialTerms.contextFr && (
+          <p className="mt-2 whitespace-pre-wrap">
+            {preview.commercialTerms.contextFr}
+          </p>
+        )}
+      </div>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
@@ -99,6 +110,30 @@ export function CustomerSafeReview({
           <small>{preview.valueAnalysis.disclaimerFr}</small>
         </div>
       )}
+      {preview.commercialTerms.termsFr && (
+        <div className="mt-4 rounded border p-4">
+          <b>Conditions commerciales</b>
+          <p className="mt-2 whitespace-pre-wrap">
+            {preview.commercialTerms.termsFr}
+          </p>
+        </div>
+      )}
+      <div className="mt-4 border-t pt-3 text-sm text-slate-600">
+        <b>{preview.issuer.brandName}</b>
+        {[
+          preview.issuer.legalName,
+          preview.issuer.address,
+          preview.issuer.email,
+          preview.issuer.phone,
+          preview.issuer.website,
+        ]
+          .filter((value): value is string => Boolean(value))
+          .map((value) => (
+            <span key={value} className="ml-2">
+              {value}
+            </span>
+          ))}
+      </div>
     </section>
   );
 }

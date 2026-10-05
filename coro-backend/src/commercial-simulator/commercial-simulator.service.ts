@@ -1991,6 +1991,7 @@ export class CommercialSimulatorService {
         include: {
           organization: true,
           prospect: true,
+          createdBy: true,
           selectedScenario: {
             include: {
               capabilities: { include: { capability: true } },
@@ -2036,6 +2037,14 @@ export class CommercialSimulatorService {
         displayName: 'displayName' in target ? target.displayName : target.name,
         contactName: 'contactName' in target ? target.contactName : null,
         email: 'contactEmail' in target ? target.contactEmail : null,
+      },
+      issuer: {
+        brandName: workspace.createdBy?.companyName ?? 'CORO',
+        legalName: workspace.createdBy?.companyName ?? null,
+        email: workspace.createdBy?.companyEmail ?? null,
+        phone: workspace.createdBy?.companyPhone ?? null,
+        website: workspace.createdBy?.companyWebsite ?? null,
+        address: workspace.createdBy?.companyAddress ?? null,
       },
       currency: run.currency,
       solutions: familyDefinitions.map((family) => ({

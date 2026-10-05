@@ -17,6 +17,14 @@ export type CustomerSafeCommercialProjection = {
     contactName: string | null;
     email: string | null;
   };
+  issuer: {
+    brandName: string;
+    legalName: string | null;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    address: string | null;
+  };
   currency: string;
   solutions: Array<{ labelFr: string; labelEn: string }>;
   lines: Array<{

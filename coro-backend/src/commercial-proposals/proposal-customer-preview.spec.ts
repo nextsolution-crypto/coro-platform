@@ -4,6 +4,13 @@ import { buildProposalCustomerPreview } from './proposal-customer-preview';
 describe('proposal customer preview', () => {
   const source = {
     proposal: { reference: 'PROP-C6A' },
+    createdBy: {
+      companyName: 'CORO TEST',
+      companyEmail: 'issuer@example.test',
+      companyPhone: '+1 555 0100',
+      companyWebsite: 'https://example.test',
+      companyAddress: '100 Test Street',
+    },
     revisionNumber: 2,
     recipientLegalName: 'Acme Incorporated',
     recipientDisplayName: 'Acme',
@@ -90,6 +97,14 @@ describe('proposal customer preview', () => {
       annualRecurringMinor: null,
       annualRecurringEquivalentMinor: '120000',
       firstYearMinor: '145000',
+    });
+    expect(preview.issuer).toEqual({
+      brandName: 'CORO TEST',
+      legalName: 'CORO TEST',
+      email: 'issuer@example.test',
+      phone: '+1 555 0100',
+      website: 'https://example.test',
+      address: '100 Test Street',
     });
   });
 

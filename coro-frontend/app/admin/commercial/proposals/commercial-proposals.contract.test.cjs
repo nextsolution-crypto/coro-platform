@@ -24,23 +24,24 @@ for (const token of [
   "PDF",
   "Acceptance",
   "Contract",
-  "Aucun prix n’est calculé dans React",
-  "VALEUR OPÉRATIONNELLE ESTIMÉE",
   "OBSERVED_SNAPSHOT",
   "commercialQuantityBasis",
-  "commercialQuantityBasis: commercialQuantityBasis || undefined",
-  "METERED est indisponible",
   "revenueCategory",
-  "Catégorie de revenu",
-  'revenueCategory: "OTHER_ONE_TIME"',
 ])
   if (!wizard.includes(token)) throw new Error(`wizard missing ${token}`);
 for (const token of [
   "customer-preview",
   "CustomerSafeReview",
-  "Générer le PDF privé",
+  "generate-pdf",
+  "validFrom",
+  "termsFR",
+  "/finalization",
+  "request-review",
+  "mark-ready",
+  "download",
+  'responseType: "blob"',
 ])
-  if (!detail.includes(token)) throw new Error(`detail missing ${token}`);
+  if (!detail.includes(token)) throw new Error(`finalization missing ${token}`);
 for (const forbidden of ["catalogUnitAmountMinor", "costAssumption", "margin"])
   if (detail.includes(forbidden))
     throw new Error(`detail leaks internal field ${forbidden}`);

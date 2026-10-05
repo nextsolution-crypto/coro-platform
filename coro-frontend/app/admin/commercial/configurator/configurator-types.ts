@@ -142,6 +142,14 @@ export type CustomerSafeProjection = {
     contactName: string | null;
     email: string | null;
   };
+  issuer: {
+    brandName: string;
+    legalName: string | null;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    address: string | null;
+  };
   currency: string;
   solutions: Array<{ labelFr: string; labelEn: string }>;
   lines: Array<{
@@ -168,8 +176,13 @@ export type CustomerSafeProjection = {
     estimatedCapacityValueMinor: string;
     disclaimerFr: string;
   };
-  commercialTerms: { contextFr: string | null; termsFr: string | null };
-  validity: { validUntil: string | null };
+  commercialTerms: {
+    contextFr: string | null;
+    contextEn: string | null;
+    termsFr: string | null;
+    termsEn: string | null;
+  };
+  validity: { validFrom: string | null; validUntil: string | null };
 };
 
 export type ScenarioComparison = {
