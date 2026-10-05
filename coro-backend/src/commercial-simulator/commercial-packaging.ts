@@ -41,6 +41,15 @@ export function validatePackagingSelection(input: {
       (rule) => rule.role === 'REQUIRED' && !selected.has(rule.componentCode),
     )
     .map((rule) => rule.componentCode);
+  const requiredOneOfViolations = policies.flatMap((policy) =>
+    (policy?.requiredOneOf ?? [])
+      .filter(
+        (group) =>
+          group.filter((componentCode) => selected.has(componentCode))
+            .length !== 1,
+      )
+      .map((group) => [...group]),
+  );
   const dependencyViolations = [...selected].flatMap((code) =>
     (rules.get(code)?.dependencies ?? [])
       .filter((dependency) => !selected.has(dependency))
@@ -77,6 +86,9 @@ export function validatePackagingSelection(input: {
   const blockers = [
     ...unmappedComponents.map((code) => `UNMAPPED_COMPONENT:${code}`),
     ...missingRequired.map((code) => `MISSING_REQUIRED_COMPONENT:${code}`),
+    ...requiredOneOfViolations.map(
+      (group) => `REQUIRED_ONE_OF:${group.join('|')}`,
+    ),
     ...dependencyViolations.map(
       (item) => `MISSING_DEPENDENCY:${item.componentCode}:${item.requires}`,
     ),
@@ -93,6 +105,7 @@ export function validatePackagingSelection(input: {
     policyVersion: COMMERCIAL_PACKAGING_POLICY_VERSION,
     status: blockers.length ? ('BLOCKED' as const) : ('READY' as const),
     missingRequired,
+    requiredOneOfViolations,
     unmappedComponents,
     dependencyViolations,
     exclusionViolations,

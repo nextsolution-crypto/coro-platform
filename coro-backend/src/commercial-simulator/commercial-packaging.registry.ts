@@ -1,7 +1,7 @@
 import { COMMERCIAL_FAMILY_REGISTRY } from './commercial-family.registry';
 import { FIRST_WAVE_COMPONENTS } from './first-wave-commercial.registry';
 
-export const COMMERCIAL_PACKAGING_POLICY_VERSION = 'commercial-packaging/v1';
+export const COMMERCIAL_PACKAGING_POLICY_VERSION = 'commercial-packaging/v2';
 export type PackagingRole = 'REQUIRED' | 'OPTIONAL' | 'DEFAULT_SELECTED';
 export type PackagingPolicyStatus =
   | 'READY'
@@ -25,6 +25,7 @@ export type FamilyPackagingPolicy = Readonly<{
     key: string;
     classification: IncludedFeatureClassification;
   }>[];
+  requiredOneOf: readonly (readonly string[])[];
   unresolvedDecisions: readonly string[];
 }>;
 
@@ -32,12 +33,13 @@ const component = (
   componentCode: keyof typeof FIRST_WAVE_COMPONENTS,
   role: PackagingRole,
   professionalServiceAttachments: readonly string[] = [],
+  exclusions: readonly string[] = [],
 ): PackagingComponentPolicy =>
   Object.freeze({
     componentCode,
     role,
     dependencies: Object.freeze([]),
-    exclusions: Object.freeze([]),
+    exclusions: Object.freeze([...exclusions]),
     professionalServiceAttachments: Object.freeze([
       ...professionalServiceAttachments,
     ]),
@@ -48,6 +50,44 @@ const family: FamilyPackagingPolicy[] = COMMERCIAL_FAMILY_REGISTRY.map(
     const includedFeatures = definition.includedFeatureKeys.map((key) =>
       Object.freeze({ key, classification: 'PRESENTATION_ONLY' as const }),
     );
+    if (definition.code === 'PROFESSIONAL')
+      return Object.freeze({
+        familyCode: definition.code,
+        status: 'READY' as const,
+        components: Object.freeze([
+          component('CORO_PROFESSIONAL_ANNUAL', 'REQUIRED'),
+          component(
+            'CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD',
+            'OPTIONAL',
+            [],
+            ['CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED'],
+          ),
+          component(
+            'CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED',
+            'OPTIONAL',
+            [],
+            ['CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD'],
+          ),
+          component('DOCUMENT_COMPLIANCE_DELIVERY_HOUR', 'OPTIONAL', [
+            'PROFESSIONAL',
+            'PROFESSIONAL_SERVICES',
+          ]),
+          component('DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR', 'OPTIONAL', [
+            'PROFESSIONAL',
+            'PROFESSIONAL_SERVICES',
+          ]),
+        ]),
+        requiredOneOf: Object.freeze([
+          Object.freeze([
+            'CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD',
+            'CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED',
+          ]),
+        ]),
+        includedFeatures: Object.freeze(includedFeatures),
+        unresolvedDecisions: Object.freeze([
+          'No-implementation exceptions remain a founder-managed custom path.',
+        ]),
+      });
     if (definition.code === 'COMPLIANCE')
       return Object.freeze({
         familyCode: definition.code,
@@ -65,6 +105,7 @@ const family: FamilyPackagingPolicy[] = COMMERCIAL_FAMILY_REGISTRY.map(
           ]),
         ]),
         includedFeatures: Object.freeze(includedFeatures),
+        requiredOneOf: Object.freeze([]),
         unresolvedDecisions: Object.freeze([
           'Whether Document Compliance Subscription is mandatory remains a business decision.',
         ]),
@@ -84,6 +125,7 @@ const family: FamilyPackagingPolicy[] = COMMERCIAL_FAMILY_REGISTRY.map(
           ]),
         ]),
         includedFeatures: Object.freeze(includedFeatures),
+        requiredOneOf: Object.freeze([]),
         unresolvedDecisions: Object.freeze([
           'Additional cross-family professional service attachments are not approved.',
         ]),
@@ -96,6 +138,7 @@ const family: FamilyPackagingPolicy[] = COMMERCIAL_FAMILY_REGISTRY.map(
           : ('POLICY_INCOMPLETE' as const),
       components: Object.freeze([]),
       includedFeatures: Object.freeze(includedFeatures),
+      requiredOneOf: Object.freeze([]),
       unresolvedDecisions: Object.freeze([
         'Stable sellable component codes and composition rules are not yet approved.',
       ]),

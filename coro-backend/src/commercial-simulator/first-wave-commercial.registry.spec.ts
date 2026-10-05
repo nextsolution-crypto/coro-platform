@@ -16,6 +16,9 @@ describe('first-wave commercial structure registry', () => {
 
   it('contains only structural definitions and no numeric commercial assumptions', () => {
     expect(Object.keys(FIRST_WAVE_COMPONENTS)).toEqual([
+      'CORO_PROFESSIONAL_ANNUAL',
+      'CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD',
+      'CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED',
       'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
       'DOCUMENT_COMPLIANCE_IMPLEMENTATION',
       'DOCUMENT_COMPLIANCE_DELIVERY_HOUR',
@@ -49,6 +52,9 @@ describe('first-wave commercial structure registry', () => {
         ]),
       ),
     ).toEqual({
+      CORO_PROFESSIONAL_ANNUAL: 'SAAS',
+      CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD: 'IMPLEMENTATION',
+      CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED: 'IMPLEMENTATION',
       DOCUMENT_COMPLIANCE_SUBSCRIPTION: 'SAAS',
       DOCUMENT_COMPLIANCE_IMPLEMENTATION: 'IMPLEMENTATION',
       DOCUMENT_COMPLIANCE_DELIVERY_HOUR: 'PROFESSIONAL_SERVICE',

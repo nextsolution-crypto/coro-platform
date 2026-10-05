@@ -837,13 +837,21 @@ export class CommercialSimulatorService {
                 latestRun.costResult.firstYearCostMinor.toString(),
               )
             : null;
-        const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
-          family.capabilityCodes.some((code) =>
-            scenario.capabilities.some(
-              (selection) => selection.capability.code === code,
+        const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter(
+          (family) =>
+            family.code !== 'PROFESSIONAL' &&
+            family.capabilityCodes.some((code) =>
+              scenario.capabilities.some(
+                (selection) => selection.capability.code === code,
+              ),
             ),
-          ),
         ).map((family) => family.code);
+        if (
+          scenario.lines.some((line) =>
+            line.componentCode.startsWith('CORO_PROFESSIONAL_'),
+          )
+        )
+          familyCodes.push('PROFESSIONAL');
         if (
           scenario.lines.some(
             (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
@@ -1470,6 +1478,14 @@ export class CommercialSimulatorService {
         };
       return { ...base, textValue: input.value };
     });
+    const activeSites = dto.driverValues.find(
+      (driver) => driver.driverCode === 'ACTIVE_SITES',
+    )?.value;
+    if (
+      familyCodes.includes('PROFESSIONAL') &&
+      (!activeSites || !/^\d+$/.test(activeSites) || BigInt(activeSites) <= 0n)
+    )
+      throw new BadRequestException('ACTIVE_SITES_REQUIRED');
 
     const existingCodeByLineId = new Map(
       workspace.scenarios[0].lines.map((line) => [line.id, line.componentCode]),
@@ -1493,9 +1509,15 @@ export class CommercialSimulatorService {
         billingPeriod: component.billingPeriod ?? undefined,
         metric: component.metric ?? undefined,
         tierMode: component.tierMode ?? undefined,
-        quantity: input.quantity,
+        quantity:
+          component.pricingModel === 'CAPACITY_BAND'
+            ? activeSites
+            : input.quantity,
         quantityUnit: component.metric ?? undefined,
-        commercialQuantityBasis: input.commercialQuantityBasis,
+        commercialQuantityBasis:
+          component.pricingModel === 'CAPACITY_BAND'
+            ? ('DECLARED' as const)
+            : input.commercialQuantityBasis,
         proposedUnitAmountMinor:
           input.proposedUnitAmountCad == null
             ? undefined
@@ -1827,13 +1849,21 @@ export class CommercialSimulatorService {
         currency: run?.currency ?? workspace.currency,
         packaging: validatePackagingSelection({
           familyCodes: (() => {
-            const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
-              family.capabilityCodes.some((code) =>
-                scenario.capabilities.some(
-                  (item) => item.capability.code === code,
+            const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter(
+              (family) =>
+                family.code !== 'PROFESSIONAL' &&
+                family.capabilityCodes.some((code) =>
+                  scenario.capabilities.some(
+                    (item) => item.capability.code === code,
+                  ),
                 ),
-              ),
             ).map((family) => family.code);
+            if (
+              scenario.lines.some((line) =>
+                line.componentCode.startsWith('CORO_PROFESSIONAL_'),
+              )
+            )
+              familyCodes.push('PROFESSIONAL');
             if (
               scenario.lines.some(
                 (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
@@ -2115,13 +2145,21 @@ export class CommercialSimulatorService {
       },
     });
     if (!scenario) throw new NotFoundException('Scenario introuvable.');
-    const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
-      family.capabilityCodes.some((code) =>
-        scenario.capabilities.some(
-          (selection) => selection.capability.code === code,
+    const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter(
+      (family) =>
+        family.code !== 'PROFESSIONAL' &&
+        family.capabilityCodes.some((code) =>
+          scenario.capabilities.some(
+            (selection) => selection.capability.code === code,
+          ),
         ),
-      ),
     ).map((family) => family.code);
+    if (
+      scenario.lines.some((line) =>
+        line.componentCode.startsWith('CORO_PROFESSIONAL_'),
+      )
+    )
+      familyCodes.push('PROFESSIONAL');
     if (
       scenario.lines.some(
         (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
@@ -2235,6 +2273,25 @@ export class CommercialSimulatorService {
         justification: line.justification,
       };
     });
+    const capacityLines = requestLines.filter(
+      (line) => line.pricingModel === 'CAPACITY_BAND',
+    );
+    if (capacityLines.length) {
+      const activeSites = scenario.driverValues.find(
+        (driver) => driver.driverCode === 'ACTIVE_SITES',
+      )?.integerValue;
+      if (!activeSites || activeSites <= 0n)
+        throw new BadRequestException('ACTIVE_SITES_REQUIRED');
+      if (
+        capacityLines.some((line) => line.quantity !== activeSites.toString())
+      )
+        throw new BadRequestException('ACTIVE_SITES_QUANTITY_MISMATCH');
+    }
+    const pricingMethodologyVersion = requestLines.some(
+      (line) => line.pricingModel === 'CAPACITY_BAND',
+    )
+      ? 'v2'
+      : 'v1';
     const costVersion = dto.costAssumptionVersionId
       ? await this.prisma.commercialCostAssumptionVersion.findUnique({
           where: { id: dto.costAssumptionVersionId },
@@ -2447,7 +2504,7 @@ export class CommercialSimulatorService {
       fingerprintVersion: SIMULATOR_FINGERPRINT_VERSION,
       priceBookVersionId: scenario.workspace.priceBookVersionId,
       currency: scenario.workspace.currency,
-      pricingMethodology: 'proposal-pricing/v1',
+      pricingMethodology: `proposal-pricing/${pricingMethodologyVersion}`,
       costAssumptionVersionId: dto.costAssumptionVersionId ?? null,
       valuationAssumptionVersionIds: [
         ...(dto.valuationAssumptionVersionIds ?? []),
@@ -2504,7 +2561,7 @@ export class CommercialSimulatorService {
     if (existing) return calculationRunResponse(existing);
     const priced = this.pricing.calculate({
       currency: 'CAD',
-      calculationVersion: 'proposal-pricing/v1',
+      calculationVersion: `proposal-pricing/${pricingMethodologyVersion}`,
       lines: requestLines,
     });
     if (priced.totals.firstYearCommitmentMinor === null)
@@ -2536,7 +2593,7 @@ export class CommercialSimulatorService {
             scenarioLockVersion: scenario.lockVersion,
             currency: 'CAD',
             pricingMethodologyCode: 'proposal-pricing',
-            pricingMethodologyVersion: 'v1',
+            pricingMethodologyVersion,
             costMethodologyCode: costVersion?.methodologyCode ?? null,
             costMethodologyVersion: costVersion?.methodologyVersion ?? null,
             priceStatus: 'COMPLETE',
@@ -2566,8 +2623,14 @@ export class CommercialSimulatorService {
                 textValue: value.textValue,
                 currency: value.currency,
                 unit: value.unit,
-                labelFr: value.driverCode,
-                labelEn: value.driverCode,
+                labelFr: resolveSimulatorDriver(
+                  value.driverCode,
+                  value.driverVersion,
+                ).labelFr,
+                labelEn: resolveSimulatorDriver(
+                  value.driverCode,
+                  value.driverVersion,
+                ).labelEn,
                 justification: value.justification,
               })),
             },
@@ -2647,9 +2710,10 @@ export class CommercialSimulatorService {
                 recurringAnnualCadenceMinor: BigInt(
                   priced.totals.recurringAnnualCadenceMinor ?? '0',
                 ),
-                monthlyRecurringEquivalentMinor: BigInt(
-                  priced.totals.monthlyRecurringEquivalentMinor ?? '0',
-                ),
+                monthlyRecurringEquivalentMinor:
+                  priced.totals.monthlyRecurringEquivalentMinor == null
+                    ? null
+                    : BigInt(priced.totals.monthlyRecurringEquivalentMinor),
                 annualRecurringEquivalentMinor: BigInt(
                   priced.totals.annualRecurringEquivalentMinor ?? '0',
                 ),
@@ -2831,7 +2895,9 @@ export class CommercialSimulatorService {
         recomputed.totals.annualRecurringEquivalentMinor,
         recomputed.totals.estimatedUsageTotalMinor,
         recomputed.totals.firstYearCommitmentMinor,
-      ].map((value) => value ?? '0');
+      ].map((value) =>
+        run.pricingMethodologyVersion === 'v1' ? (value ?? '0') : value,
+      );
       const expectedTotals = [
         expected.oneTimeTotalMinor,
         expected.recurringMonthlyCadenceMinor,
@@ -2840,7 +2906,7 @@ export class CommercialSimulatorService {
         expected.annualRecurringEquivalentMinor,
         expected.estimatedUsageTotalMinor,
         expected.firstYearCommitmentMinor,
-      ].map(String);
+      ].map((value) => value?.toString() ?? null);
       if (actualTotals.some((value, index) => value !== expectedTotals[index]))
         throw new ConflictException('SIMULATOR_PROPOSAL_PRICE_MISMATCH');
       const inputByCode = new Map(
@@ -2964,7 +3030,8 @@ export class CommercialSimulatorService {
           estimatedUsageTotalMinor: expected.estimatedUsageTotalMinor,
           firstYearCommitmentMinor: expected.firstYearCommitmentMinor,
           firstYearIncludesEstimate: expected.firstYearIncludesEstimate,
-          calculationVersion: 'proposal-pricing/v1',
+          calculationVersion:
+            run.pricingMethodologyCode + '/' + run.pricingMethodologyVersion,
           calculatedAt: new Date(),
           createdByUserId: actor.userId,
           createdByDisplayName: actorName,

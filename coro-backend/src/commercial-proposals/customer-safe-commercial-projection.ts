@@ -2,6 +2,7 @@ export const CUSTOMER_SAFE_INPUT_CODES = Object.freeze([
   'PROFESSIONALS',
   'CLIENTS',
   'SITES',
+  'ACTIVE_SITES',
   'POPULATION_INSTALLATIONS',
 ] as const);
 
@@ -131,8 +132,14 @@ export const customerSafeInputs = <
   inputs
     .filter((input) => customerInputCodes.has(input.code))
     .map((input) => ({
-      labelFr: input.labelFR ?? input.labelFr ?? '',
-      labelEn: input.labelEN ?? input.labelEn ?? null,
+      labelFr:
+        input.code === 'ACTIVE_SITES'
+          ? 'Capacité — jusqu’à'
+          : (input.labelFR ?? input.labelFr ?? ''),
+      labelEn:
+        input.code === 'ACTIVE_SITES'
+          ? 'Capacity — up to'
+          : (input.labelEN ?? input.labelEn ?? null),
       value: String(
         input.decimalValue ??
           input.integerValue ??
@@ -142,7 +149,10 @@ export const customerSafeInputs = <
           input.textValue ??
           '',
       ),
-      unit: input.unit ?? null,
+      unit:
+        input.code === 'ACTIVE_SITES'
+          ? 'sites actifs / active sites'
+          : (input.unit ?? null),
     }));
 
 export function assertCustomerSafeProjection(

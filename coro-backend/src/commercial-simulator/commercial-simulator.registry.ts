@@ -62,6 +62,16 @@ const presentation: Record<
     required: false,
     visibility: 'CUSTOMER_DEAL_INPUT',
   },
+  ACTIVE_SITES: {
+    labelFr: 'Capacité de sites actifs',
+    labelEn: 'Active-site capacity',
+    helpFr:
+      'Capacité contractuelle déclarée de sites actifs; aucune donnée de bâtiment n’est comptée automatiquement.',
+    helpEn:
+      'Declared contractual active-site capacity; no building data is counted automatically.',
+    required: false,
+    visibility: 'CUSTOMER_DEAL_INPUT',
+  },
   POPULATION_INSTALLATIONS: {
     labelFr: 'Installations Population',
     labelEn: 'Population installations',

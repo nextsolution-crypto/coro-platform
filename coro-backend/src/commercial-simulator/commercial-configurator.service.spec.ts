@@ -66,8 +66,8 @@ describe('Commercial Configurator projections', () => {
       },
     };
     const result = await serviceWith(prisma).configuratorBootstrap();
-    expect(result.families.map((item) => item.code)).toHaveLength(8);
-    expect(result.drivers).toHaveLength(18);
+    expect(result.families.map((item) => item.code)).toHaveLength(9);
+    expect(result.drivers).toHaveLength(19);
     expect(result.readiness).toEqual({
       catalog: 'READY',
       semanticClassification: 'COMPLETE',

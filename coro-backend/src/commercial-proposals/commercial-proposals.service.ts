@@ -410,9 +410,14 @@ export class CommercialProposalsService {
         amountMinor: x.overrideAmountMinor,
         justification: x.justification,
       }));
+      const calculationVersion = lines.some(
+        (line) => line.pricingModel === 'CAPACITY_BAND',
+      )
+        ? 'proposal-pricing/v2'
+        : r.calculationVersion;
       const calculated = this.pricing.calculate({
         currency: 'CAD',
-        calculationVersion: r.calculationVersion,
+        calculationVersion,
         includeEstimatedUsageInFirstYear: d.includeEstimatedUsageInFirstYear,
         globalAdjustments: globalInputs,
         lines: lines.map((x) => ({
@@ -624,6 +629,7 @@ export class CommercialProposalsService {
           contextEN: d.contextEN,
           termsFR: d.termsFR,
           termsEN: d.termsEN,
+          calculationVersion,
           lockVersion: { increment: 1 },
         },
       });
@@ -641,7 +647,7 @@ export class CommercialProposalsService {
               value === null ? 'NOT_AVAILABLE' : value,
             ]),
           ),
-          calculationVersion: r.calculationVersion,
+          calculationVersion,
         },
       });
       return calculated;

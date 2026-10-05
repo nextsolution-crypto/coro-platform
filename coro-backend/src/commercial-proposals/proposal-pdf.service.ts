@@ -124,7 +124,7 @@ export class ProposalPdfService {
             fileName: `${r.proposal.reference}-${language}-v${artifactVersion}.pdf`,
             mimeType: 'application/pdf',
             storageKey: `commercial-proposals/${r.proposalId}/${revisionId}/${id}-${language}.pdf`,
-            templateVersion: 'proposal-offer/v2',
+            templateVersion: 'proposal-offer/v3',
             generatorVersion: 'puppeteer/v1',
             generationKey,
             generationStartedAt: new Date(),

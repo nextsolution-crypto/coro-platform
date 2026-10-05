@@ -30,6 +30,26 @@ export const COMMERCIAL_FAMILY_REGISTRY_VERSION = 'v1';
 
 export const COMMERCIAL_FAMILY_REGISTRY = Object.freeze([
   family({
+    code: 'PROFESSIONAL',
+    labelFr: 'CORO Professional',
+    labelEn: 'CORO Professional',
+    descriptionFr:
+      'Abonnement professionnel annuel selon la capacité déclarée de sites actifs.',
+    descriptionEn:
+      'Annual professional subscription based on declared active-site capacity.',
+    displayOrder: 5,
+    availability: 'AVAILABLE',
+    capabilityCodes: ['COMPLIANCE_OPERATIONS'],
+    applicableDriverCodes: ['ACTIVE_SITES'],
+    optionalDriverCodes: [],
+    includedFeatureKeys: [
+      'CLIENT_PORTAL',
+      'PROJECTS_MANDATES',
+      'REX',
+      'CORRECTIVE_ACTIONS',
+    ],
+  }),
+  family({
     code: 'COMPLIANCE',
     labelFr: 'CORO Conformité',
     labelEn: 'CORO Compliance',

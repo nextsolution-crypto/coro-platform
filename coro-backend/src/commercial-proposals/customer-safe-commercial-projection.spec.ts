@@ -10,17 +10,31 @@ describe('customer-safe commercial projection', () => {
       'PROFESSIONALS',
       'CLIENTS',
       'SITES',
+      'ACTIVE_SITES',
       'POPULATION_INSTALLATIONS',
     ]);
     expect(
       customerSafeInputs([
         { code: 'PROFESSIONALS', labelFr: 'Professionnels', integerValue: 12n },
+        {
+          code: 'ACTIVE_SITES',
+          labelFr: 'Capacité de sites actifs',
+          labelEn: 'Active-site capacity',
+          integerValue: 125n,
+          unit: 'active site',
+        },
         { code: 'BILLABLE_RATE', labelFr: 'Taux', moneyMinorValue: 25000n },
         { code: 'PRODUCTIVITY_GAIN', labelFr: 'Gain', decimalValue: '0.25' },
         { code: 'POPULATION_SITE', labelFr: 'Population', integerValue: 100n },
       ]),
     ).toEqual([
       { labelFr: 'Professionnels', labelEn: null, value: '12', unit: null },
+      {
+        labelFr: 'Capacité — jusqu’à',
+        labelEn: 'Capacity — up to',
+        value: '125',
+        unit: 'sites actifs / active sites',
+      },
     ]);
   });
 

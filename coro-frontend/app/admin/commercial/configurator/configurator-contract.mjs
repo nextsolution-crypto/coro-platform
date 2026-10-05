@@ -3,6 +3,7 @@ export const CONFIGURATOR_API_BASE =
 export const CONFIGURATOR_ROUTE = "/admin/commercial/configurator";
 export const LEGACY_SIMULATOR_ROUTE = "/admin/commercial/simulator";
 export const COMMERCIAL_FAMILY_CODES = Object.freeze([
+  "PROFESSIONAL",
   "COMPLIANCE",
   "SENTINELLE",
   "INCIDENT_OPS",

@@ -14,6 +14,8 @@ assert.match(priceBooks, /\/publish/);
 assert.match(priceBooks, /revenueCategory/);
 assert.match(priceBooks, /revenueCategoryLabel/);
 assert.match(priceBooks, /COMMERCIAL_REVENUE_CATEGORIES/);
+assert.match(priceBooks, /CAPACITY_BAND/);
+assert.match(priceBooks, /prix total de la bande/);
 assert.doesNotMatch(priceBooks, /Stripe|invoice|subscription|entitlement/i);
 assert.match(organization, /commercial-identity/);
 assert.match(organization, /NOT_ASSIGNED/);

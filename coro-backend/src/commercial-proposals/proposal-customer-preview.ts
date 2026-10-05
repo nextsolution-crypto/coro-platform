@@ -59,9 +59,18 @@ export function buildProposalCustomerPreview(
           descriptionFr: line.descriptionFR,
           descriptionEn: line.descriptionEN,
           group: customerLineGroup(line.revenueCategory),
-          quantity: line.quantity?.toString() ?? null,
-          quantityLabelFr: quantityLabel?.fr ?? null,
-          quantityLabelEn: quantityLabel?.en ?? null,
+          quantity:
+            line.pricingModel === 'CAPACITY_BAND'
+              ? '1'
+              : (line.quantity?.toString() ?? null),
+          quantityLabelFr:
+            line.pricingModel === 'CAPACITY_BAND'
+              ? 'abonnement'
+              : (quantityLabel?.fr ?? null),
+          quantityLabelEn:
+            line.pricingModel === 'CAPACITY_BAND'
+              ? 'subscription'
+              : (quantityLabel?.en ?? null),
           offeredUnitAmountMinor:
             line.proposedUnitAmountMinor?.toString() ?? null,
           offeredExtendedAmountMinor:

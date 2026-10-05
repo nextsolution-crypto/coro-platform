@@ -108,14 +108,17 @@ export function ScenarioEditor({
         source: "CATALOG_COMPONENT",
         priceComponentId: component.id,
         name: component.labelFr,
-        pricingModel:
-          component.pricingModel === "PER_UNIT" ? "PER_UNIT" : "FLAT",
+        pricingModel: component.pricingModel,
         chargeType: component.chargeType,
         revenueCategory: component.revenueCategory,
         billingPeriod: component.billingPeriod,
-        metric: component.metric === "HOUR" ? "HOUR" : "FIXED",
-        quantity: null,
-        commercialQuantityBasis: null,
+        metric: component.metric,
+        quantity:
+          component.pricingModel === "CAPACITY_BAND"
+            ? (driverValues.ACTIVE_SITES ?? null)
+            : null,
+        commercialQuantityBasis:
+          component.pricingModel === "CAPACITY_BAND" ? "DECLARED" : null,
         proposedUnitAmountCad: null,
         justification: null,
         displayOrder: lines.length,
@@ -307,7 +310,9 @@ export function ScenarioEditor({
                       ? "Fixed price"
                       : component.pricingModel === "PER_UNIT"
                         ? "Per unit"
-                        : "Catalog-defined"}
+                        : component.pricingModel === "CAPACITY_BAND"
+                          ? "Total price for declared capacity band"
+                          : "Catalog-defined"}
                     {" · "}
                     {component.catalogAmountCad
                       ? `${component.catalogAmountCad} CAD`

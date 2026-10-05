@@ -13,6 +13,106 @@ const tiers = [
 ];
 
 describe('ProposalPricingEngine', () => {
+  const capacityTiers = [
+    ['1', '11', '450000'],
+    ['11', '31', '750000'],
+    ['31', '46', '950000'],
+    ['46', '61', '1150000'],
+    ['61', '76', '1350000'],
+    ['76', '101', '1550000'],
+    ['101', '126', '1750000'],
+    ['126', '151', '1900000'],
+    ['151', '176', '2100000'],
+    ['176', '201', '2250000'],
+  ].map(([minimumQuantity, maximumQuantity, amountMinor]) => ({
+    minimumQuantity,
+    maximumQuantity,
+    amountMinor,
+  }));
+
+  it.each([
+    ['10', '450000'],
+    ['11', '750000'],
+    ['30', '750000'],
+    ['31', '950000'],
+    ['45', '950000'],
+    ['46', '1150000'],
+    ['60', '1150000'],
+    ['61', '1350000'],
+    ['75', '1350000'],
+    ['76', '1550000'],
+    ['100', '1550000'],
+    ['101', '1750000'],
+    ['125', '1750000'],
+    ['126', '1900000'],
+    ['150', '1900000'],
+    ['151', '2100000'],
+    ['175', '2100000'],
+    ['176', '2250000'],
+    ['200', '2250000'],
+  ])('selects one total capacity-band price at %s sites', (quantity, total) => {
+    const result = engine.calculate({
+      ...base,
+      calculationVersion: 'proposal-pricing/v2',
+      lines: [
+        {
+          code: 'CORO_PROFESSIONAL_ANNUAL',
+          pricingModel: 'CAPACITY_BAND',
+          chargeType: 'RECURRING',
+          billingPeriod: 'YEAR',
+          metric: 'SITE',
+          quantity,
+          quantityUnit: 'SITE',
+          tiers: capacityTiers,
+        },
+      ],
+    });
+    expect(result.lines[0].catalogExtendedAmountMinor).toBe(total);
+    expect(result.lines[0].proposedExtendedAmountMinor).toBe(total);
+    expect(result.lines[0].tiersUsed).toHaveLength(1);
+  });
+
+  it.each(['0', '201', '-1', '1.5'])(
+    'fails closed for invalid or unmatched capacity %s',
+    (quantity) => {
+      expect(() =>
+        engine.calculate({
+          ...base,
+          calculationVersion: 'proposal-pricing/v2',
+          lines: [
+            {
+              code: 'CORO_PROFESSIONAL_ANNUAL',
+              pricingModel: 'CAPACITY_BAND',
+              chargeType: 'RECURRING',
+              billingPeriod: 'YEAR',
+              metric: 'SITE',
+              quantity,
+              tiers: capacityTiers,
+            },
+          ],
+        }),
+      ).toThrow();
+    },
+  );
+
+  it('keeps annual amounts exact and returns no invented monthly rounding', () => {
+    const result = engine.calculate({
+      ...base,
+      calculationVersion: 'proposal-pricing/v2',
+      lines: [
+        {
+          code: 'ANNUAL',
+          pricingModel: 'FLAT',
+          chargeType: 'RECURRING',
+          billingPeriod: 'YEAR',
+          amountMinor: '1750000',
+        },
+      ],
+    });
+    expect(result.totals.monthlyRecurringEquivalentMinor).toBeNull();
+    expect(result.totals.annualRecurringEquivalentMinor).toBe('1750000');
+    expect(result.totals.firstYearCommitmentMinor).toBe('1750000');
+  });
   it.each([
     ['2', '12500', '25000'],
     ['1.5', '12500', '18750'],

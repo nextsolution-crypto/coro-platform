@@ -55,8 +55,9 @@ export function calculationRunResponse(run: CalculationRunResponseSource) {
             run.priceResult.recurringMonthlyCadenceMinor.toString(),
           recurringAnnualCadenceMinor:
             run.priceResult.recurringAnnualCadenceMinor.toString(),
-          monthlyRecurringEquivalentMinor:
-            run.priceResult.monthlyRecurringEquivalentMinor.toString(),
+          monthlyRecurringEquivalentMinor: optionalBigInt(
+            run.priceResult.monthlyRecurringEquivalentMinor,
+          ),
           annualRecurringEquivalentMinor:
             run.priceResult.annualRecurringEquivalentMinor.toString(),
           estimatedUsageTotalMinor:

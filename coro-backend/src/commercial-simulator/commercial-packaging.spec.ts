@@ -11,9 +11,48 @@ import {
 
 describe('commercial packaging policy', () => {
   it('locks the version and validates the canonical registry', () => {
-    expect(COMMERCIAL_PACKAGING_POLICY_VERSION).toBe('commercial-packaging/v1');
-    expect(COMMERCIAL_PACKAGING_POLICY).toHaveLength(8);
+    expect(COMMERCIAL_PACKAGING_POLICY_VERSION).toBe('commercial-packaging/v2');
+    expect(COMMERCIAL_PACKAGING_POLICY).toHaveLength(9);
     expect(validatePackagingRegistry()).toEqual({ valid: true, issues: [] });
+  });
+
+  it('requires exactly one Professional implementation choice', () => {
+    const annual = {
+      componentCode: 'CORO_PROFESSIONAL_ANNUAL',
+      revenueCategory: 'SAAS',
+    };
+    const standard = {
+      componentCode: 'CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD',
+      revenueCategory: 'IMPLEMENTATION',
+    };
+    const advanced = {
+      componentCode: 'CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED',
+      revenueCategory: 'IMPLEMENTATION',
+    };
+    expect(
+      validatePackagingSelection({
+        familyCodes: ['PROFESSIONAL'],
+        components: [annual, standard],
+      }).status,
+    ).toBe('READY');
+    expect(
+      validatePackagingSelection({
+        familyCodes: ['PROFESSIONAL'],
+        components: [annual, advanced],
+      }).status,
+    ).toBe('READY');
+    expect(
+      validatePackagingSelection({
+        familyCodes: ['PROFESSIONAL'],
+        components: [annual],
+      }).status,
+    ).toBe('BLOCKED');
+    expect(
+      validatePackagingSelection({
+        familyCodes: ['PROFESSIONAL'],
+        components: [annual, standard, advanced],
+      }).status,
+    ).toBe('BLOCKED');
   });
 
   it('keeps Network non-sellable and unresolved families explicit', () => {
@@ -70,6 +109,7 @@ describe('commercial packaging policy', () => {
       status: 'READY',
       includedFeatures: [],
       unresolvedDecisions: [],
+      requiredOneOf: [],
       components: [
         {
           componentCode: 'A',
@@ -130,6 +170,7 @@ describe('commercial packaging policy', () => {
       status: 'READY',
       includedFeatures: [],
       unresolvedDecisions: [],
+      requiredOneOf: [],
       components: [
         {
           componentCode: 'A',

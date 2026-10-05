@@ -66,11 +66,11 @@ export type GuidedLine = {
   source: "CATALOG_COMPONENT" | "CUSTOM_COMPONENT" | "PROFESSIONAL_SERVICE";
   priceComponentId: string | null;
   name: string;
-  pricingModel: "FLAT" | "PER_UNIT";
+  pricingModel: string;
   chargeType: "RECURRING" | "ONE_TIME";
   revenueCategory: string | null;
   billingPeriod: "MONTH" | "YEAR" | null;
-  metric: "FIXED" | "HOUR" | null;
+  metric: string | null;
   quantity: string | null;
   commercialQuantityBasis: "DECLARED" | null;
   proposedUnitAmountCad: string | null;

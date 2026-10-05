@@ -37,6 +37,21 @@ export const FIRST_WAVE_COST_ASSUMPTIONS = Object.freeze({
 } as const);
 
 export const FIRST_WAVE_COMPONENTS = Object.freeze({
+  CORO_PROFESSIONAL_ANNUAL: Object.freeze({
+    capabilityCode: 'COMPLIANCE_OPERATIONS',
+    professionalServiceRole: null,
+    expectedRevenueCategory: CommercialRevenueCategory.SAAS,
+  }),
+  CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD: Object.freeze({
+    capabilityCode: 'COMPLIANCE_OPERATIONS',
+    professionalServiceRole: null,
+    expectedRevenueCategory: CommercialRevenueCategory.IMPLEMENTATION,
+  }),
+  CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED: Object.freeze({
+    capabilityCode: 'COMPLIANCE_OPERATIONS',
+    professionalServiceRole: null,
+    expectedRevenueCategory: CommercialRevenueCategory.IMPLEMENTATION,
+  }),
   DOCUMENT_COMPLIANCE_SUBSCRIPTION: Object.freeze({
     capabilityCode: 'COMPLIANCE_OPERATIONS',
     professionalServiceRole: null,

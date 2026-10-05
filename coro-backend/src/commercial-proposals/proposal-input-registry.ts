@@ -2,6 +2,7 @@ export const PROPOSAL_INPUT_REGISTRY = Object.freeze({
   PROFESSIONALS: ['INTEGER', 'QUANTITY', 'professional'],
   CLIENTS: ['INTEGER', 'QUANTITY', 'client'],
   SITES: ['INTEGER', 'QUANTITY', 'site'],
+  ACTIVE_SITES: ['INTEGER', 'QUANTITY', 'active site'],
   POPULATION_INSTALLATIONS: ['INTEGER', 'QUANTITY', 'installation'],
   MANDATES_PER_YEAR: ['DECIMAL', 'VALUE_ANALYSIS', 'mandate/year'],
   AVG_HOURS_PER_MANDATE: ['DECIMAL', 'VALUE_ANALYSIS', 'hour/mandate'],

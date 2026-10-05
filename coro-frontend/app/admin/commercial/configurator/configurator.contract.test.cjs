@@ -32,7 +32,9 @@ const path = require("node:path");
     contract.CONFIGURATOR_API_BASE,
     "/admin/v1/commercial/simulator/configurator",
   );
-  assert.equal(contract.COMMERCIAL_FAMILY_CODES.length, 8);
+  assert.equal(contract.COMMERCIAL_FAMILY_CODES.length, 9);
+  assert.match(guided, /CAPACITY_BAND/);
+  assert.match(guided, /Total price for declared capacity band/);
   assert.deepEqual(contract.GUIDED_SCENARIO_ACTIONS, [
     "create",
     "edit",

@@ -3,13 +3,13 @@ import { PROPOSAL_INPUT_REGISTRY } from '../commercial-proposals/proposal-input-
 import { COMMERCIAL_FAMILY_REGISTRY } from './commercial-family.registry';
 
 describe('commercial family registry', () => {
-  it('defines the eight localized families once and in deterministic order', () => {
-    expect(COMMERCIAL_FAMILY_REGISTRY).toHaveLength(8);
+  it('defines the localized families once and in deterministic order', () => {
+    expect(COMMERCIAL_FAMILY_REGISTRY).toHaveLength(9);
     expect(
       new Set(COMMERCIAL_FAMILY_REGISTRY.map((item) => item.code)).size,
-    ).toBe(8);
+    ).toBe(9);
     expect(COMMERCIAL_FAMILY_REGISTRY.map((item) => item.displayOrder)).toEqual(
-      [10, 20, 30, 40, 50, 60, 70, 80],
+      [5, 10, 20, 30, 40, 50, 60, 70, 80],
     );
     expect(
       COMMERCIAL_FAMILY_REGISTRY.every((item) => item.labelFr && item.labelEn),

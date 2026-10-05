@@ -402,8 +402,31 @@ export class CommercialCatalogService {
         );
       this.validateTiers(component.tiers, true);
     }
+    if (component.pricingModel === 'CAPACITY_BAND') {
+      if (component.tierMode || !component.tiers.length)
+        throw new BadRequestException(
+          `Le composant ${component.code} CAPACITY_BAND exige des tiers sans mode.`,
+        );
+      this.validateTiers(component.tiers, true);
+      if (
+        [...component.tiers]
+          .sort(
+            (a, b) => Number(a.minimumQuantity) - Number(b.minimumQuantity),
+          )[0]
+          ?.minimumQuantity.toString() !== '1'
+      )
+        throw new BadRequestException(
+          `Le composant ${component.code} CAPACITY_BAND doit commencer à 1.`,
+        );
+      if (component.metric !== 'SITE')
+        throw new BadRequestException(
+          `Le composant ${component.code} CAPACITY_BAND exige la metric SITE.`,
+        );
+    }
     if (
-      !['TIERED', 'COMPLEXITY', 'CUSTOM'].includes(component.pricingModel) &&
+      !['TIERED', 'CAPACITY_BAND', 'COMPLEXITY', 'CUSTOM'].includes(
+        component.pricingModel,
+      ) &&
       component.amountMinor === null
     )
       throw new BadRequestException(

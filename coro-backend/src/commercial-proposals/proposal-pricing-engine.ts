@@ -3,6 +3,7 @@ export type PricingModel =
   | 'PER_UNIT'
   | 'PER_SEAT'
   | 'PER_SITE'
+  | 'CAPACITY_BAND'
   | 'TIERED'
   | 'USAGE'
   | 'COMPLEXITY'
@@ -149,15 +150,11 @@ export class ProposalPricingEngine {
       }
     }
     const monthlyEquivalent =
-      hasMonth || hasYear
-        ? (() => {
-            if (year % 12n !== 0n)
-              throw new Error(
-                'Annual cadence cannot be represented exactly as monthly minor units',
-              );
-            return month + year / 12n;
-          })()
-        : null;
+      !hasMonth && !hasYear
+        ? null
+        : year % 12n === 0n
+          ? month + year / 12n
+          : null;
     const annualEquivalent = hasMonth || hasYear ? month * 12n + year : null;
     const includeEstimate = Boolean(
       request.includeEstimatedUsageInFirstYear && hasUsage,
@@ -225,6 +222,35 @@ export class ProposalPricingEngine {
         );
       catalog = q * unit;
       formula = `${q} × ${unit}`;
+    } else if (line.pricingModel === 'CAPACITY_BAND') {
+      if (q === null || !line.tiers?.length)
+        throw new Error('CAPACITY_BAND requires quantity and tiers');
+      if (q <= 0n)
+        throw new Error('CAPACITY_BAND quantity must be a positive integer');
+      if (line.metric !== 'SITE')
+        throw new Error('CAPACITY_BAND requires the SITE metric');
+      if (line.tierMode != null)
+        throw new Error('CAPACITY_BAND does not use a tier mode');
+      const tiers = this.validateTierGrid(line.tiers, false);
+      const matches = tiers.filter(
+        (tier) =>
+          q >= integer(tier.minimumQuantity, 'tier min') &&
+          (tier.maximumQuantity == null ||
+            q < integer(tier.maximumQuantity, 'tier max')),
+      );
+      if (matches.length !== 1)
+        throw new Error('CAPACITY_BAND_NO_STANDARD_BAND');
+      const tier = matches[0];
+      unit = integer(tier.amountMinor, 'tier amount');
+      catalog = unit;
+      formula = `${q} selects one capacity band at ${unit} total`;
+      tiersUsed = [
+        {
+          ...tier,
+          quantityApplied: q.toString(),
+          extendedAmountMinor: catalog.toString(),
+        },
+      ];
     } else if (line.pricingModel === 'TIERED') {
       if (q === null || !line.tierMode || !line.tiers?.length)
         throw new Error('TIERED requires quantity, mode and tiers');
@@ -337,5 +363,33 @@ export class ProposalPricingEngine {
       status,
       warnings,
     };
+  }
+
+  private validateTierGrid(
+    input: PricingTierInput[],
+    requireOpenLast: boolean,
+  ): PricingTierInput[] {
+    const tiers = [...input].sort((a, b) =>
+      Number(BigInt(a.minimumQuantity) - BigInt(b.minimumQuantity)),
+    );
+    if (tiers[0].minimumQuantity !== '1')
+      throw new Error('Tier grid must start at 1');
+    for (let index = 0; index < tiers.length; index++) {
+      const tier = tiers[index];
+      const next = tiers[index + 1];
+      const minimum = integer(tier.minimumQuantity, 'tier min');
+      integer(tier.amountMinor, 'tier amount');
+      if (tier.maximumQuantity == null) {
+        if (next) throw new Error('Only the last tier may be open');
+        continue;
+      }
+      const maximum = integer(tier.maximumQuantity, 'tier max');
+      if (maximum <= minimum) throw new Error('Invalid tier bounds');
+      if (next && next.minimumQuantity !== tier.maximumQuantity)
+        throw new Error('Tier grid contains a gap or overlap');
+    }
+    if (requireOpenLast && tiers[tiers.length - 1].maximumQuantity != null)
+      throw new Error('Last tier must be open');
+    return tiers;
   }
 }

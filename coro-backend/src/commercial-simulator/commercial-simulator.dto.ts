@@ -208,6 +208,7 @@ export class ScenarioLineDto {
     'PER_UNIT',
     'PER_SEAT',
     'PER_SITE',
+    'CAPACITY_BAND',
     'TIERED',
     'USAGE',
     'COMPLEXITY',
@@ -218,6 +219,7 @@ export class ScenarioLineDto {
     | 'PER_UNIT'
     | 'PER_SEAT'
     | 'PER_SITE'
+    | 'CAPACITY_BAND'
     | 'TIERED'
     | 'USAGE'
     | 'COMPLEXITY'
