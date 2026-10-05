@@ -27,6 +27,11 @@ import {
   validateCommercialQuantityBinding,
 } from './commercial-rule-registry';
 import { buildProposalCustomerPreview } from './proposal-customer-preview';
+import {
+  PROPOSAL_DETAIL_INCLUDE,
+  proposalDetailResponse,
+  proposalRevisionResponse,
+} from './proposal-response';
 
 type Actor = { userId: string };
 const money = (v: string | undefined) =>
@@ -50,26 +55,12 @@ export class CommercialProposalsService {
       },
     });
   }
-  proposal(id: string) {
-    return this.prisma.commercialProposal.findUnique({
+  async proposal(id: string) {
+    const proposal = await this.prisma.commercialProposal.findUnique({
       where: { id },
-      include: {
-        organization: true,
-        prospect: true,
-        revisions: {
-          orderBy: { revisionNumber: 'desc' },
-          include: {
-            lines: { include: { tiers: true, adjustments: true } },
-            inputs: true,
-            adjustments: true,
-            exclusivities: { include: { sectors: true, capabilities: true } },
-            commitments: true,
-            valueAnalysis: true,
-            documents: true,
-          },
-        },
-      },
+      include: PROPOSAL_DETAIL_INCLUDE,
     });
+    return proposalDetailResponse(proposal);
   }
   async customerPreview(proposalId: string, revisionId: string) {
     const revision = await this.prisma.commercialProposalRevision.findFirst({
@@ -882,7 +873,11 @@ export class CommercialProposalsService {
         beforeData: { status: r.status },
         afterData: { status: target },
       });
-      return tx.commercialProposalRevision.findUnique({ where: { id } });
+      const transitioned =
+        await tx.commercialProposalRevision.findUniqueOrThrow({
+          where: { id },
+        });
+      return proposalRevisionResponse(transitioned);
     });
   }
   async createContract(id: string, d: CreateContractFromProposalDto, a: Actor) {

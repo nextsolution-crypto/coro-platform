@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   INestApplication,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
@@ -25,7 +26,7 @@ class HeaderAuthenticationGuard implements CanActivate {
       user?: { userId: string; role: UserRole };
     }>();
     const role = req.headers['x-test-role'];
-    if (!role) return false;
+    if (!role) throw new UnauthorizedException();
     req.user = { userId: 'test-user', role: role as UserRole };
     return true;
   }
@@ -37,6 +38,13 @@ describe('Commercial proposals effective HTTP RBAC', () => {
     listProposals: jest.fn(() => Promise.resolve([])),
     createProposal: jest.fn(() => Promise.resolve({ id: 'proposal' })),
     listProspects: jest.fn(() => Promise.resolve([])),
+    proposal: jest.fn(() =>
+      Promise.resolve({
+        id: 'proposal',
+        reference: 'PROP-TEST',
+        revisions: [{ oneTimeTotalMinor: '250000' }],
+      }),
+    ),
   };
 
   beforeAll(async () => {
@@ -62,7 +70,7 @@ describe('Commercial proposals effective HTTP RBAC', () => {
   afterAll(async () => app.close());
 
   it.each([
-    [undefined, 403],
+    [undefined, 401],
     ['OPERATOR', 403],
     ['ADMIN', 403],
     ['SUPER_ADMIN', 200],
@@ -75,7 +83,7 @@ describe('Commercial proposals effective HTTP RBAC', () => {
   });
 
   it.each([
-    [undefined, 403],
+    [undefined, 401],
     ['OPERATOR', 403],
     ['ADMIN', 403],
     ['SUPER_ADMIN', 201],
@@ -85,5 +93,24 @@ describe('Commercial proposals effective HTTP RBAC', () => {
       .send({});
     if (role) call.set('x-test-role', role);
     await call.expect(expected);
+  });
+
+  it.each([
+    [undefined, 401],
+    ['OPERATOR', 403],
+    ['ADMIN', 403],
+    ['SUPER_ADMIN', 200],
+  ])('protects Proposal Detail for role %s', async (role, expected) => {
+    const call = request(app.getHttpServer()).get(
+      '/admin/v1/commercial/proposals/proposal',
+    );
+    if (role) call.set('x-test-role', role);
+    const response = await call.expect(expected);
+    if (role === 'SUPER_ADMIN') {
+      const body = response.body as {
+        revisions: Array<{ oneTimeTotalMinor: string }>;
+      };
+      expect(body.revisions[0].oneTimeTotalMinor).toBe('250000');
+    }
   });
 });
