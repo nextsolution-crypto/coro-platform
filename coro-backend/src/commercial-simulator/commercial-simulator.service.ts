@@ -73,6 +73,10 @@ import {
   assessCostMethodologyCompatibility,
   costMethodologyDefinitions,
 } from './cost-methodology.registry';
+import {
+  CALCULATION_RUN_RESPONSE_INCLUDE,
+  calculationRunResponse,
+} from './commercial-simulator-response';
 
 type Actor = { userId: string };
 
@@ -2482,9 +2486,9 @@ export class CommercialSimulatorService {
     const existing =
       await this.prisma.commercialSimulationCalculationRun.findUnique({
         where: { scenarioId_calculationKey: { scenarioId, calculationKey } },
-        include: { priceResult: true, lines: true, inputs: true },
+        include: CALCULATION_RUN_RESPONSE_INCLUDE,
       });
-    if (existing) return existing;
+    if (existing) return calculationRunResponse(existing);
     const priced = this.pricing.calculate({
       currency: 'CAD',
       calculationVersion: 'proposal-pricing/v1',
@@ -2494,11 +2498,11 @@ export class CommercialSimulatorService {
       throw new BadRequestException('Scenario pricing is incomplete.');
     const firstYearCommitmentMinor = priced.totals.firstYearCommitmentMinor;
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const created = await this.prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${scenarioId + calculationKey}, 0))`;
         const retry = await tx.commercialSimulationCalculationRun.findUnique({
           where: { scenarioId_calculationKey: { scenarioId, calculationKey } },
-          include: { priceResult: true, lines: true, inputs: true },
+          include: CALCULATION_RUN_RESPONSE_INCLUDE,
         });
         if (retry) return retry;
         const latest = await tx.commercialSimulationCalculationRun.aggregate({
@@ -2699,21 +2703,24 @@ export class CommercialSimulatorService {
                 }
               : undefined,
           },
-          include: { priceResult: true, lines: true, inputs: true },
+          include: CALCULATION_RUN_RESPONSE_INCLUDE,
         });
       });
+      return calculationRunResponse(created);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       )
-        return this.prisma.commercialSimulationCalculationRun.findUniqueOrThrow(
-          {
-            where: {
-              scenarioId_calculationKey: { scenarioId, calculationKey },
+        return calculationRunResponse(
+          await this.prisma.commercialSimulationCalculationRun.findUniqueOrThrow(
+            {
+              where: {
+                scenarioId_calculationKey: { scenarioId, calculationKey },
+              },
+              include: CALCULATION_RUN_RESPONSE_INCLUDE,
             },
-            include: { priceResult: true, lines: true, inputs: true },
-          },
+          ),
         );
       throw error;
     }

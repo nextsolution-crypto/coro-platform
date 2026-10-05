@@ -15,6 +15,7 @@ import { PLATFORM_ROLES_KEY } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { CommercialSimulatorController } from './commercial-simulator.controller';
 import { CommercialSimulatorService } from './commercial-simulator.service';
+import { calculationRunResponse } from './commercial-simulator-response';
 
 class HeaderAuthenticationGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
@@ -47,6 +48,36 @@ describe('CommercialSimulatorController security contract', () => {
         actorUserId: actor.userId,
       }),
     );
+    const calculateGuided = jest.fn(() =>
+      calculationRunResponse({
+        id: 'run-1',
+        priceStatus: 'COMPLETE',
+        costStatus: 'UNAVAILABLE',
+        valueStatus: 'UNAVAILABLE',
+        warningCodes: [],
+        inputs: [
+          { integerValue: 9_007_199_254_740_993n, moneyMinorValue: null },
+        ],
+        lines: [
+          {
+            catalogUnitAmountMinor: 50_000n,
+            proposedUnitAmountMinor: 50_000n,
+            catalogExtendedAmountMinor: 50_000n,
+            proposedExtendedAmountMinor: 50_000n,
+            estimatedCostMinor: null,
+          },
+        ],
+        priceResult: {
+          oneTimeTotalMinor: 0n,
+          recurringMonthlyCadenceMinor: 50_000n,
+          recurringAnnualCadenceMinor: 0n,
+          monthlyRecurringEquivalentMinor: 50_000n,
+          annualRecurringEquivalentMinor: 600_000n,
+          estimatedUsageTotalMinor: 0n,
+          firstYearCommitmentMinor: 600_000n,
+        },
+      } as never),
+    );
 
     beforeAll(async () => {
       const module = await Test.createTestingModule({
@@ -59,6 +90,7 @@ describe('CommercialSimulatorController security contract', () => {
             useValue: {
               configuratorBootstrap: jest.fn(() => ({ families: [] })),
               createGuidedWorkspace,
+              calculateGuided,
             },
           },
         ],
@@ -121,6 +153,30 @@ describe('CommercialSimulatorController security contract', () => {
         { title: 'Actor contract regression' },
         { userId: 'test-user' },
       );
+    });
+
+    it.each([
+      [undefined, 401],
+      ['OPERATOR', 403],
+      ['ADMIN', 403],
+      ['SUPER_ADMIN', 201],
+    ])('protects calculation for role %s', async (role, expected) => {
+      const server = app.getHttpServer() as Parameters<typeof request>[0];
+      const call = request(server)
+        .post(
+          '/admin/v1/commercial/simulator/configurator/workspaces/00000000-0000-4000-8000-000000000001/scenarios/00000000-0000-4000-8000-000000000002/calculate',
+        )
+        .send({});
+      if (role) call.set('x-test-role', role);
+      const response = await call.expect(expected);
+      if (role === 'SUPER_ADMIN') {
+        const body = response.body as {
+          priceResult: { firstYearCommitmentMinor: string };
+          inputs: Array<{ integerValue: string }>;
+        };
+        expect(body.priceResult.firstYearCommitmentMinor).toBe('600000');
+        expect(body.inputs[0].integerValue).toBe('9007199254740993');
+      }
     });
   });
 });

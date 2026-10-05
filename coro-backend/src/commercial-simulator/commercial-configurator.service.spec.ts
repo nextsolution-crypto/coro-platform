@@ -571,7 +571,15 @@ describe('Commercial Configurator projections', () => {
             fingerprintVersion: data.fingerprintVersion,
             scenarioLockVersion: data.scenarioLockVersion,
             valueStatus: data.valueStatus,
-            priceResult: {},
+            priceResult: {
+              oneTimeTotalMinor: 0n,
+              recurringMonthlyCadenceMinor: 0n,
+              recurringAnnualCadenceMinor: 0n,
+              monthlyRecurringEquivalentMinor: 0n,
+              annualRecurringEquivalentMinor: 0n,
+              estimatedUsageTotalMinor: 0n,
+              firstYearCommitmentMinor: 0n,
+            },
             lines: [],
             inputs: [],
           };
