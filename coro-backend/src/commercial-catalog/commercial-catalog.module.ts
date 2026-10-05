@@ -8,5 +8,6 @@ import { CommercialCatalogService } from './commercial-catalog.service';
   imports: [PrismaModule, AdminAuditModule],
   controllers: [CommercialCatalogController],
   providers: [CommercialCatalogService],
+  exports: [CommercialCatalogService],
 })
 export class CommercialCatalogModule {}

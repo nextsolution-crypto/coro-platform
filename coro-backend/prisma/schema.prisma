@@ -104,6 +104,7 @@ model User {
   commercialSimulationConversionsCreated CommercialSimulationProposalConversion[] @relation("CommercialSimulationConversionCreator")
   commercialCostAssumptionVersionsCreated CommercialCostAssumptionVersion[] @relation("CommercialCostAssumptionVersionCreator")
   commercialValuationAssumptionVersionsCreated CommercialValuationAssumptionVersion[] @relation("CommercialValuationAssumptionVersionCreator")
+  commercialConfigurationDeploymentsApproved CommercialConfigurationDeployment[] @relation("CommercialConfigurationDeploymentApprover")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -561,6 +562,7 @@ model PriceBook {
   updatedAt  DateTime           @updatedAt
   versions   PriceBookVersion[]
   proposalRevisions CommercialProposalRevision[]
+  configurationDeployments CommercialConfigurationDeployment[] @relation("CommercialConfigurationDeploymentPriceBook")
 
   @@index([audience, currency])
   @@index([archivedAt])
@@ -587,6 +589,7 @@ model PriceBookVersion {
   proposalRevisions    CommercialProposalRevision[]
   simulationWorkspaces CommercialSimulationWorkspace[]
   simulationRuns       CommercialSimulationCalculationRun[]
+  configurationDeployments CommercialConfigurationDeployment[] @relation("CommercialConfigurationDeploymentPriceBookVersion")
 
   @@unique([priceBookId, versionNumber])
   @@index([priceBookId, status])
@@ -5625,6 +5628,7 @@ model CommercialCostAssumptionSet {
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
   versions                     CommercialCostAssumptionVersion[]
+  configurationDeployments     CommercialConfigurationDeployment[] @relation("CommercialConfigurationDeploymentCostSet")
 }
 
 model CommercialCostAssumptionVersion {
@@ -5645,6 +5649,7 @@ model CommercialCostAssumptionVersion {
   createdBy                    User? @relation("CommercialCostAssumptionVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Restrict)
   values                       CommercialCostAssumptionValue[]
   runs                         CommercialSimulationCalculationRun[]
+  configurationDeployments     CommercialConfigurationDeployment[] @relation("CommercialConfigurationDeploymentCostVersion")
   @@unique([setId, versionNumber])
   @@index([setId, status])
 }
@@ -5923,4 +5928,34 @@ model CommercialSimulationProposalConversion {
   @@index([workspaceId, convertedAt])
   @@unique([calculationRunId, scenarioId])
   @@unique([proposalRevisionId, proposalId])
+}
+
+model CommercialConfigurationDeployment {
+  id                       String   @id @default(uuid())
+  definitionCode           String
+  definitionVersion        String
+  definitionFingerprint    String
+  priceBookId              String
+  priceBookVersionId       String
+  costAssumptionSetId      String
+  costAssumptionVersionId  String
+  configurationFingerprint String
+  status                   String   @default("APPLIED")
+  approvedByUserId         String?
+  approvedAt               DateTime?
+  publishedAt              DateTime?
+  lockVersion              Int      @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  priceBook             PriceBook                        @relation("CommercialConfigurationDeploymentPriceBook", fields: [priceBookId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  priceBookVersion      PriceBookVersion                 @relation("CommercialConfigurationDeploymentPriceBookVersion", fields: [priceBookVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  costAssumptionSet     CommercialCostAssumptionSet      @relation("CommercialConfigurationDeploymentCostSet", fields: [costAssumptionSetId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  costAssumptionVersion CommercialCostAssumptionVersion  @relation("CommercialConfigurationDeploymentCostVersion", fields: [costAssumptionVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  approvedBy            User?                            @relation("CommercialConfigurationDeploymentApprover", fields: [approvedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([definitionCode, definitionVersion, priceBookVersionId], map: "CommercialConfigDeployment_definition_target_key")
+  @@index([definitionCode, definitionVersion, status], map: "CommercialConfigDeployment_definition_status_idx")
+  @@index([priceBookId], map: "CommercialConfigDeployment_priceBook_idx")
+  @@index([costAssumptionVersionId], map: "CommercialConfigDeployment_cost_version_idx")
 }
