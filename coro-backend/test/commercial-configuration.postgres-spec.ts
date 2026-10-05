@@ -221,6 +221,11 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
       actor,
     );
     await service.approve('professional-direct', 'Founder reapproval', actor);
+    const approved = await service.analyze('professional-direct');
+    const targetCostVersionId = approved.target.costAssumptionVersionId;
+    const targetCostSetId = approved.target.costAssumptionSetId;
+    expect(targetCostVersionId).toBeTruthy();
+    expect(targetCostSetId).toBeTruthy();
     await expect(
       service.publish(
         'professional-direct',
@@ -233,8 +238,59 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
       prisma.priceBookVersion.findUniqueOrThrow({ where: { id: versionId } }),
     ).resolves.toMatchObject({ status: 'ACTIVE' });
     await expect(
-      prisma.commercialCostAssumptionVersion.findFirstOrThrow(),
-    ).resolves.toMatchObject({ status: 'PUBLISHED' });
+      prisma.commercialCostAssumptionVersion.findUniqueOrThrow({
+        where: { id: targetCostVersionId },
+      }),
+    ).resolves.toMatchObject({
+      id: targetCostVersionId,
+      setId: targetCostSetId,
+      status: 'PUBLISHED',
+      archivedAt: null,
+    });
+    const deployment =
+      await prisma.commercialConfigurationDeployment.findUniqueOrThrow({
+        where: {
+          definitionCode_definitionVersion_priceBookVersionId: {
+            definitionCode: 'professional-direct',
+            definitionVersion: 'v1',
+            priceBookVersionId: versionId,
+          },
+        },
+      });
+    expect(deployment).toMatchObject({
+      costAssumptionSetId: targetCostSetId,
+      costAssumptionVersionId: targetCostVersionId,
+      priceBookVersionId: versionId,
+      status: 'PUBLISHED',
+    });
+    const previousCostVersions =
+      await prisma.commercialCostAssumptionVersion.findMany({
+        where: { setId: targetCostSetId, id: { not: targetCostVersionId } },
+        select: { id: true, status: true },
+      });
+    expect(
+      previousCostVersions.every(({ status }) => status === 'ARCHIVED'),
+    ).toBe(true);
+    await expect(
+      prisma.adminAuditEvent.count({
+        where: {
+          actorUserId: actor.userId,
+          action: 'COMMERCIAL_COST_ASSUMPTION_PUBLISHED',
+          targetType: 'CommercialCostAssumptionVersion',
+          targetId: targetCostVersionId,
+        },
+      }),
+    ).resolves.toBe(1);
+    await expect(
+      prisma.adminAuditEvent.count({
+        where: {
+          actorUserId: actor.userId,
+          action: 'PRICE_BOOK_VERSION_PUBLISHED',
+          targetType: 'PriceBookVersion',
+          targetId: versionId,
+        },
+      }),
+    ).resolves.toBe(1);
     expect(await prisma.capabilityEntitlement.count()).toBe(entitlementCount);
     await expect(
       prisma.adminAuditEvent.count({
@@ -249,5 +305,24 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
         },
       }),
     ).resolves.toBeGreaterThanOrEqual(3);
+    const authorityCounts = {
+      costVersions: await prisma.commercialCostAssumptionVersion.count({
+        where: { setId: targetCostSetId },
+      }),
+      priceBookVersions: await prisma.priceBookVersion.count({
+        where: { priceBookId: deployment.priceBookId },
+      }),
+    };
+    await expect(
+      service.apply('professional-direct', actor),
+    ).resolves.toMatchObject({ status: 'PUBLISHED' });
+    expect({
+      costVersions: await prisma.commercialCostAssumptionVersion.count({
+        where: { setId: targetCostSetId },
+      }),
+      priceBookVersions: await prisma.priceBookVersion.count({
+        where: { priceBookId: deployment.priceBookId },
+      }),
+    }).toEqual(authorityCounts);
   });
 });
