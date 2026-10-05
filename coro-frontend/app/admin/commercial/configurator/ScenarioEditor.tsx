@@ -115,6 +115,7 @@ export function ScenarioEditor({
         billingPeriod: component.billingPeriod,
         metric: component.metric === "HOUR" ? "HOUR" : "FIXED",
         quantity: null,
+        commercialQuantityBasis: null,
         proposedUnitAmountCad: null,
         justification: null,
         displayOrder: lines.length,
@@ -138,6 +139,7 @@ export function ScenarioEditor({
         billingPeriod: null,
         metric: "FIXED",
         quantity: "1",
+        commercialQuantityBasis: null,
         proposedUnitAmountCad: "",
         justification: "",
         displayOrder: lines.length,
@@ -152,6 +154,7 @@ export function ScenarioEditor({
       .map((line, displayOrder) => ({
         priceComponentId: line.priceComponentId,
         quantity: line.quantity || undefined,
+        commercialQuantityBasis: line.commercialQuantityBasis || undefined,
         proposedUnitAmountCad: line.proposedUnitAmountCad || undefined,
         justification: line.justification || undefined,
         displayOrder,
@@ -170,6 +173,7 @@ export function ScenarioEditor({
           line.chargeType === "RECURRING" ? line.billingPeriod : undefined,
         metric: line.metric,
         quantity: line.quantity || undefined,
+        commercialQuantityBasis: line.commercialQuantityBasis || undefined,
         unitAmountCad: line.proposedUnitAmountCad,
         justification: line.justification,
         displayOrder: catalogLines.length + index,
@@ -280,7 +284,10 @@ export function ScenarioEditor({
                   {component.packaging
                     .filter((policy) => familyCodes.includes(policy.familyCode))
                     .map((policy) => (
-                      <span key={policy.familyCode} className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs">
+                      <span
+                        key={policy.familyCode}
+                        className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs"
+                      >
                         {policy.role === "REQUIRED"
                           ? "Requis"
                           : policy.role === "DEFAULT_SELECTED"
@@ -459,6 +466,25 @@ export function ScenarioEditor({
                   </label>
                 )}
                 <label className="text-xs">
+                  Quantity source / Source de quantité
+                  <select
+                    value={line.commercialQuantityBasis ?? ""}
+                    onChange={(event) =>
+                      updateLine(index, {
+                        commercialQuantityBasis:
+                          event.target.value === "DECLARED" ? "DECLARED" : null,
+                      })
+                    }
+                    className="mt-1 w-full rounded border p-2"
+                  >
+                    <option value="">Select / Sélectionner</option>
+                    <option value="DECLARED">
+                      Declared by commercial operator / Déclarée par l’opérateur
+                      commercial
+                    </option>
+                  </select>
+                </label>
+                <label className="text-xs">
                   {line.source === "CATALOG_COMPONENT"
                     ? "Proposed unit price CAD (optional)"
                     : "Unit price CAD"}
@@ -592,7 +618,12 @@ export function ScenarioEditor({
         </button>
         <button
           type="button"
-          disabled={busy || dirty || !lines.length || scenario.packaging.status !== "READY"}
+          disabled={
+            busy ||
+            dirty ||
+            !lines.length ||
+            scenario.packaging.status !== "READY"
+          }
           onClick={onCalculate}
           className="rounded bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-40"
         >

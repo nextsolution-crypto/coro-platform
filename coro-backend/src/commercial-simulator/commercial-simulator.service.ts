@@ -885,6 +885,7 @@ export class CommercialSimulatorService {
             metric: line.metric,
             quantity: line.quantity?.toString() ?? null,
             quantityUnit: line.quantityUnit,
+            commercialQuantityBasis: line.commercialQuantityBasis,
             proposedUnitAmountCad: minorToCad(line.proposedUnitAmountMinor),
             justification: line.justification,
             displayOrder: line.displayOrder,
@@ -1494,10 +1495,7 @@ export class CommercialSimulatorService {
         tierMode: component.tierMode ?? undefined,
         quantity: input.quantity,
         quantityUnit: component.metric ?? undefined,
-        commercialQuantityBasis:
-          component.pricingModel === 'PER_UNIT' && component.metric === 'HOUR'
-            ? ('DECLARED' as const)
-            : undefined,
+        commercialQuantityBasis: input.commercialQuantityBasis,
         proposedUnitAmountMinor:
           input.proposedUnitAmountCad == null
             ? undefined
@@ -1539,8 +1537,7 @@ export class CommercialSimulatorService {
         quantityUnit: input.metric ?? 'FIXED',
         proposedUnitAmountMinor: cadToMinor(input.unitAmountCad),
         justification: input.justification.trim(),
-        commercialQuantityBasis:
-          input.pricingModel === 'PER_UNIT' ? ('DECLARED' as const) : undefined,
+        commercialQuantityBasis: input.commercialQuantityBasis,
         displayOrder: input.displayOrder ?? catalogLines.length + index,
         costEfforts: input.costEfforts?.map((effort) => ({
           roleCode: effort.role,

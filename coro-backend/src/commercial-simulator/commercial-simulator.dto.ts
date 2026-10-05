@@ -78,6 +78,7 @@ export class GuidedCatalogLineDto {
   quantity?: string;
   @IsOptional() @Matches(/^\d+(?:\.\d{1,2})?$/) proposedUnitAmountCad?: string;
   @IsOptional() @IsString() justification?: string;
+  @IsOptional() @IsIn(['DECLARED']) commercialQuantityBasis?: 'DECLARED';
   @IsOptional() @IsInt() @Min(0) displayOrder?: number;
   @IsOptional()
   @IsArray()
@@ -100,6 +101,7 @@ export class GuidedCustomLineDto {
   @IsOptional()
   @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,6})?$/)
   quantity?: string;
+  @IsOptional() @IsIn(['DECLARED']) commercialQuantityBasis?: 'DECLARED';
   @Matches(/^\d+(?:\.\d{1,2})?$/) unitAmountCad!: string;
   @IsString() @Length(1, 1000) justification!: string;
   @IsOptional() @IsInt() @Min(0) displayOrder?: number;

@@ -72,6 +72,7 @@ export type GuidedLine = {
   billingPeriod: "MONTH" | "YEAR" | null;
   metric: "FIXED" | "HOUR" | null;
   quantity: string | null;
+  commercialQuantityBasis: "DECLARED" | null;
   proposedUnitAmountCad: string | null;
   justification: string | null;
   displayOrder: number;

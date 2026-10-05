@@ -432,6 +432,150 @@ describe('Commercial Configurator projections', () => {
     );
   });
 
+  it('preserves explicitly declared provenance for guided flat catalog lines', async () => {
+    const components = [
+      {
+        id: 'subscription',
+        capabilityId: 'capability-a',
+        capability: { code: 'COMPLIANCE_OPERATIONS' },
+        code: 'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
+        nameFr: 'Subscription',
+        nameEn: 'Subscription',
+        pricingModel: 'FLAT',
+        chargeType: 'RECURRING',
+        revenueCategory: 'SAAS',
+        billingPeriod: 'MONTH',
+        metric: 'FIXED',
+        tierMode: null,
+      },
+      {
+        id: 'implementation',
+        capabilityId: 'capability-a',
+        capability: { code: 'COMPLIANCE_OPERATIONS' },
+        code: 'DOCUMENT_COMPLIANCE_IMPLEMENTATION',
+        nameFr: 'Implementation',
+        nameEn: 'Implementation',
+        pricingModel: 'FLAT',
+        chargeType: 'ONE_TIME',
+        revenueCategory: 'IMPLEMENTATION',
+        billingPeriod: null,
+        metric: 'FIXED',
+        tierMode: null,
+      },
+    ];
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersionId: 'version-a',
+            scenarios: [{ lines: [] }],
+          }),
+        ),
+      },
+      commercialCapability: {
+        findMany: jest.fn(() =>
+          Promise.resolve([
+            { id: 'capability-a', code: 'COMPLIANCE_OPERATIONS' },
+          ]),
+        ),
+      },
+      priceComponent: { findMany: jest.fn(() => Promise.resolve(components)) },
+    };
+    const service = serviceWith(prisma);
+    const configure = jest
+      .spyOn(service, 'configureScenario')
+      .mockResolvedValue({ id: 'scenario-a' } as never);
+
+    await service.configureGuidedScenario(
+      'workspace-a',
+      'scenario-a',
+      {
+        lockVersion: 0,
+        familyCodes: ['COMPLIANCE'],
+        catalogLines: components.map((component) => ({
+          priceComponentId: component.id,
+          quantity: '1',
+          commercialQuantityBasis: 'DECLARED' as const,
+        })),
+        customLines: [],
+        driverValues: [],
+      },
+      { userId: 'super-admin' },
+    );
+
+    const payload = configure.mock.calls[0][2];
+    expect(payload.lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          componentCode: 'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
+          quantity: '1',
+          quantityUnit: 'FIXED',
+          commercialQuantityBasis: 'DECLARED',
+        }),
+        expect.objectContaining({
+          componentCode: 'DOCUMENT_COMPLIANCE_IMPLEMENTATION',
+          quantity: '1',
+          quantityUnit: 'FIXED',
+          commercialQuantityBasis: 'DECLARED',
+        }),
+      ]),
+    );
+  });
+
+  it('preserves explicit DECLARED provenance for guided professional services without inferring it', async () => {
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            currency: 'CAD',
+            priceBookVersionId: 'version-a',
+            scenarios: [{ lines: [] }],
+          }),
+        ),
+      },
+      commercialCapability: { findMany: jest.fn(() => Promise.resolve([])) },
+    };
+    const service = serviceWith(prisma);
+    const configure = jest
+      .spyOn(service, 'configureScenario')
+      .mockResolvedValue({ id: 'scenario-a' } as never);
+
+    await service.configureGuidedScenario(
+      'workspace-a',
+      'scenario-a',
+      {
+        lockVersion: 0,
+        familyCodes: ['PROFESSIONAL_SERVICES'],
+        catalogLines: [],
+        customLines: [
+          {
+            name: 'Delivery',
+            source: 'PROFESSIONAL_SERVICE',
+            pricingModel: 'PER_UNIT',
+            chargeType: 'ONE_TIME',
+            revenueCategory: 'PROFESSIONAL_SERVICE',
+            metric: 'HOUR',
+            quantity: '2',
+            commercialQuantityBasis: 'DECLARED',
+            unitAmountCad: '150.00',
+            justification: 'Explicit delivery effort',
+          },
+        ],
+        driverValues: [],
+      },
+      { userId: 'super-admin' },
+    );
+
+    expect(configure.mock.calls[0][2].lines).toEqual([
+      expect.objectContaining({
+        quantity: '2',
+        quantityUnit: 'HOUR',
+        commercialQuantityBasis: 'DECLARED',
+      }),
+    ]);
+  });
+
   it('refuses to archive the selected scenario without deleting evidence', async () => {
     const tx = {
       commercialSimulationWorkspace: {
