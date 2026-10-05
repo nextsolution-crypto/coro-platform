@@ -19,6 +19,7 @@ describe('proposal customer preview', () => {
     oneTimeTotalMinor: 25000n,
     recurringMonthlyCadenceMinor: 10000n,
     recurringAnnualCadenceMinor: null,
+    annualRecurringEquivalentMinor: 120000n,
     firstYearCommitmentMinor: 145000n,
     firstYearIncludesEstimate: false,
     lines: [
@@ -84,6 +85,12 @@ describe('proposal customer preview', () => {
     expect(preview.valueAnalysis?.disclaimerFr).toBe(
       'Estimation non contractuelle',
     );
+    expect(preview.totals).toMatchObject({
+      monthlyRecurringMinor: '10000',
+      annualRecurringMinor: null,
+      annualRecurringEquivalentMinor: '120000',
+      firstYearMinor: '145000',
+    });
   });
 
   it('deeply redacts internal economics, provenance, catalog prices and codes', () => {

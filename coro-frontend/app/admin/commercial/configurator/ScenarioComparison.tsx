@@ -45,8 +45,10 @@ export function ScenarioComparison({
               <dd>{money(scenario.totals?.oneTimeMinor ?? null)}</dd>
               <dt>Récurrent mensuel</dt>
               <dd>{money(scenario.totals?.monthlyRecurringMinor ?? null)}</dd>
-              <dt>Récurrent annuel</dt>
-              <dd>{money(scenario.totals?.annualRecurringMinor ?? null)}</dd>
+              <dt>Équivalent annuel récurrent</dt>
+              <dd>
+                {money(scenario.totals?.annualRecurringEquivalentMinor ?? null)}
+              </dd>
               <dt>Première année</dt>
               <dd>{money(scenario.totals?.firstYearMinor ?? null)}</dd>
               <dt>Coût direct interne</dt>

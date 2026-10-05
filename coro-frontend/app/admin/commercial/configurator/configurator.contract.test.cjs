@@ -73,6 +73,8 @@ const path = require("node:path");
   );
   assert.match(guided, /runs\/\$\{scenario\.latestResult!\.id\}\/convert/);
   assert.match(guided, /Aperçu client non contractuel/);
+  assert.match(guided, /Équivalent annuel récurrent/);
+  assert.match(guided, /annualRecurringEquivalentMinor/);
   assert.doesNotMatch(customerReview, /costAssumption|catalogUnitAmountMinor/);
   assert.match(guided, /simulator\/configurator\/workspaces/);
   assert.doesNotMatch(guided, /<textarea[^>]*>.*JSON/is);

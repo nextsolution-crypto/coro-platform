@@ -1,4 +1,7 @@
-import { calculationRunResponse } from './commercial-simulator-response';
+import {
+  calculationRunResponse,
+  proposalConversionResponse,
+} from './commercial-simulator-response';
 
 const source = (amount: bigint) =>
   ({
@@ -50,6 +53,35 @@ describe('calculationRunResponse', () => {
       '9007199254740993',
     );
     expect(result.inputs[0].moneyMinorValue).toBe('9007199254740993');
+    expect(() => JSON.stringify(result)).not.toThrow();
+  });
+});
+
+describe('proposalConversionResponse', () => {
+  it('projects every reachable Proposal snapshot BigInt exactly', () => {
+    const beyondSafeInteger = 9_007_199_254_740_993n;
+    const result = proposalConversionResponse({
+      id: 'conversion-1',
+      proposal: { id: 'proposal-1' },
+      proposalRevision: {
+        id: 'revision-1',
+        oneTimeTotalMinor: beyondSafeInteger,
+        recurringMonthlyCadenceMinor: beyondSafeInteger,
+        recurringAnnualCadenceMinor: beyondSafeInteger,
+        monthlyRecurringEquivalentMinor: beyondSafeInteger,
+        annualRecurringEquivalentMinor: beyondSafeInteger,
+        estimatedUsageTotalMinor: beyondSafeInteger,
+        firstYearCommitmentMinor: beyondSafeInteger,
+      },
+    } as never);
+
+    expect(containsBigInt(result)).toBe(false);
+    expect(result.proposalRevision.annualRecurringEquivalentMinor).toBe(
+      '9007199254740993',
+    );
+    expect(result.proposalRevision.firstYearCommitmentMinor).toBe(
+      '9007199254740993',
+    );
     expect(() => JSON.stringify(result)).not.toThrow();
   });
 });

@@ -158,6 +158,7 @@ export type CustomerSafeProjection = {
     oneTimeMinor: string | null;
     monthlyRecurringMinor: string | null;
     annualRecurringMinor: string | null;
+    annualRecurringEquivalentMinor: string | null;
     firstYearMinor: string | null;
   };
   inputs: Array<{ labelFr: string; value: string; unit: string | null }>;
@@ -182,6 +183,7 @@ export type ScenarioComparison = {
       oneTimeMinor: string | null;
       monthlyRecurringMinor: string | null;
       annualRecurringMinor: string | null;
+      annualRecurringEquivalentMinor: string | null;
       firstYearMinor: string | null;
     };
     internalEconomics: null | {

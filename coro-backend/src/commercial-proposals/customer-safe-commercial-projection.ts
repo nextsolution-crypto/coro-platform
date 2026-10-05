@@ -41,6 +41,7 @@ export type CustomerSafeCommercialProjection = {
     oneTimeMinor: string | null;
     monthlyRecurringMinor: string | null;
     annualRecurringMinor: string | null;
+    annualRecurringEquivalentMinor: string | null;
     firstYearMinor: string | null;
     firstYearIncludesEstimate: boolean;
   };

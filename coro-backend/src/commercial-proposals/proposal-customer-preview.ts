@@ -67,6 +67,8 @@ export function buildProposalCustomerPreview(
         source.recurringMonthlyCadenceMinor?.toString() ?? null,
       annualRecurringMinor:
         source.recurringAnnualCadenceMinor?.toString() ?? null,
+      annualRecurringEquivalentMinor:
+        source.annualRecurringEquivalentMinor?.toString() ?? null,
       firstYearMinor: source.firstYearCommitmentMinor?.toString() ?? null,
       firstYearIncludesEstimate: source.firstYearIncludesEstimate,
     },

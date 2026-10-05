@@ -67,7 +67,7 @@ export function CustomerSafeReview({
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <Total
-          label="Ponctuel"
+          label="Frais ponctuels"
           value={preview.totals.oneTimeMinor}
           currency={preview.currency}
         />
@@ -77,8 +77,8 @@ export function CustomerSafeReview({
           currency={preview.currency}
         />
         <Total
-          label="Annuel"
-          value={preview.totals.annualRecurringMinor}
+          label="Équivalent annuel récurrent"
+          value={preview.totals.annualRecurringEquivalentMinor}
           currency={preview.currency}
         />
         <Total

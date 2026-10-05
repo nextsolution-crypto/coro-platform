@@ -651,6 +651,7 @@ describe('Commercial Configurator projections', () => {
         oneTimeTotalMinor: 0n,
         recurringMonthlyCadenceMinor: 10000n,
         recurringAnnualCadenceMinor: 0n,
+        annualRecurringEquivalentMinor: 120000n,
         firstYearCommitmentMinor: 120000n,
       },
       costResult: { firstYearCostMinor: 40000n },
@@ -702,6 +703,12 @@ describe('Commercial Configurator projections', () => {
     ]);
     expect(result.scenarios[1].totals).toBeNull();
     expect(result.scenarios[2].lines).toEqual([]);
+    expect(result.scenarios[0].totals).toMatchObject({
+      monthlyRecurringMinor: '10000',
+      annualRecurringMinor: '0',
+      annualRecurringEquivalentMinor: '120000',
+      firstYearMinor: '120000',
+    });
     expect(result.components[0].scenarios).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ scenarioName: 'A', included: true }),
@@ -748,5 +755,75 @@ describe('Commercial Configurator projections', () => {
     await expect(service.customerPreview('workspace-a')).rejects.toThrow(
       'CUSTOMER_PREVIEW_PRICE_INCOMPLETE',
     );
+  });
+
+  it('presents monthly recurring charges with their annual equivalent', async () => {
+    const prisma = {
+      commercialSimulationWorkspace: {
+        findUnique: jest.fn(() =>
+          Promise.resolve({
+            organization: null,
+            prospect: {
+              legalName: 'Acme Inc.',
+              displayName: 'Acme',
+              contactName: null,
+              contactEmail: null,
+            },
+            selectedScenario: {
+              id: 'scenario-a',
+              lockVersion: 1,
+              capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
+              lines: [
+                {
+                  source: 'CATALOG_COMPONENT',
+                  componentCode: 'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
+                  revenueCategory: 'SAAS',
+                },
+              ],
+              runs: [
+                {
+                  scenarioLockVersion: 1,
+                  priceStatus: 'COMPLETE',
+                  currency: 'CAD',
+                  lines: [],
+                  inputs: [],
+                  priceResult: {
+                    oneTimeTotalMinor: 250000n,
+                    recurringMonthlyCadenceMinor: 50000n,
+                    recurringAnnualCadenceMinor: 0n,
+                    annualRecurringEquivalentMinor: 600000n,
+                    firstYearCommitmentMinor: 850000n,
+                    firstYearIncludesEstimate: false,
+                  },
+                },
+              ],
+            },
+          }),
+        ),
+      },
+      commercialSimulationScenario: {
+        findFirst: jest.fn(() =>
+          Promise.resolve({
+            capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
+            lines: [
+              {
+                source: 'CATALOG_COMPONENT',
+                componentCode: 'DOCUMENT_COMPLIANCE_SUBSCRIPTION',
+                revenueCategory: 'SAAS',
+              },
+            ],
+          }),
+        ),
+      },
+    };
+
+    const preview = await serviceWith(prisma).customerPreview('workspace-a');
+    expect(preview.totals).toMatchObject({
+      oneTimeMinor: '250000',
+      monthlyRecurringMinor: '50000',
+      annualRecurringMinor: '0',
+      annualRecurringEquivalentMinor: '600000',
+      firstYearMinor: '850000',
+    });
   });
 });

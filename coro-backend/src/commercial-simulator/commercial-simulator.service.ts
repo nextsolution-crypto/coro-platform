@@ -75,7 +75,9 @@ import {
 } from './cost-methodology.registry';
 import {
   CALCULATION_RUN_RESPONSE_INCLUDE,
+  PROPOSAL_CONVERSION_RESPONSE_INCLUDE,
   calculationRunResponse,
+  proposalConversionResponse,
 } from './commercial-simulator-response';
 
 type Actor = { userId: string };
@@ -1878,6 +1880,9 @@ export class CommercialSimulatorService {
                 annualRecurringMinor:
                   run.priceResult.recurringAnnualCadenceMinor?.toString() ??
                   null,
+                annualRecurringEquivalentMinor:
+                  run.priceResult.annualRecurringEquivalentMinor?.toString() ??
+                  null,
                 firstYearMinor:
                   run.priceResult.firstYearCommitmentMinor?.toString() ?? null,
               }
@@ -2066,6 +2071,8 @@ export class CommercialSimulatorService {
           run.priceResult.recurringMonthlyCadenceMinor?.toString() ?? null,
         annualRecurringMinor:
           run.priceResult.recurringAnnualCadenceMinor?.toString() ?? null,
+        annualRecurringEquivalentMinor:
+          run.priceResult.annualRecurringEquivalentMinor?.toString() ?? null,
         firstYearMinor:
           run.priceResult.firstYearCommitmentMinor?.toString() ?? null,
         firstYearIncludesEstimate: run.priceResult.firstYearIncludesEstimate,
@@ -2737,9 +2744,9 @@ export class CommercialSimulatorService {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${runId}, 0))`;
       const prior = await tx.commercialSimulationProposalConversion.findUnique({
         where: { calculationRunId: runId },
-        include: { proposal: true, proposalRevision: true },
+        include: PROPOSAL_CONVERSION_RESPONSE_INCLUDE,
       });
-      if (prior) return prior;
+      if (prior) return proposalConversionResponse(prior);
       const run = await tx.commercialSimulationCalculationRun.findFirst({
         where: { id: runId, scenarioId, workspaceId },
         include: {
@@ -3052,7 +3059,7 @@ export class CommercialSimulatorService {
             proposalRevisionId: revision.id,
             convertedByUserId: actor.userId,
           },
-          include: { proposal: true, proposalRevision: true },
+          include: PROPOSAL_CONVERSION_RESPONSE_INCLUDE,
         },
       );
       await this.audit.record(tx, {
@@ -3069,7 +3076,7 @@ export class CommercialSimulatorService {
           proposalRevisionId: revision.id,
         }),
       });
-      return conversion;
+      return proposalConversionResponse(conversion);
     });
   }
 }

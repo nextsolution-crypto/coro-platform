@@ -15,7 +15,10 @@ import { PLATFORM_ROLES_KEY } from '../auth/platform-roles.decorator';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { CommercialSimulatorController } from './commercial-simulator.controller';
 import { CommercialSimulatorService } from './commercial-simulator.service';
-import { calculationRunResponse } from './commercial-simulator-response';
+import {
+  calculationRunResponse,
+  proposalConversionResponse,
+} from './commercial-simulator-response';
 
 class HeaderAuthenticationGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
@@ -78,6 +81,22 @@ describe('CommercialSimulatorController security contract', () => {
         },
       } as never),
     );
+    const convertGuided = jest.fn(() =>
+      proposalConversionResponse({
+        id: 'conversion-1',
+        proposal: { id: 'proposal-1' },
+        proposalRevision: {
+          id: 'revision-1',
+          oneTimeTotalMinor: 250_000n,
+          recurringMonthlyCadenceMinor: 50_000n,
+          recurringAnnualCadenceMinor: 0n,
+          monthlyRecurringEquivalentMinor: 50_000n,
+          annualRecurringEquivalentMinor: 600_000n,
+          estimatedUsageTotalMinor: 0n,
+          firstYearCommitmentMinor: 850_000n,
+        },
+      } as never),
+    );
 
     beforeAll(async () => {
       const module = await Test.createTestingModule({
@@ -91,6 +110,7 @@ describe('CommercialSimulatorController security contract', () => {
               configuratorBootstrap: jest.fn(() => ({ families: [] })),
               createGuidedWorkspace,
               calculateGuided,
+              convertGuided,
             },
           },
         ],
@@ -176,6 +196,31 @@ describe('CommercialSimulatorController security contract', () => {
         };
         expect(body.priceResult.firstYearCommitmentMinor).toBe('600000');
         expect(body.inputs[0].integerValue).toBe('9007199254740993');
+      }
+    });
+
+    it.each([
+      [undefined, 401],
+      ['OPERATOR', 403],
+      ['ADMIN', 403],
+      ['SUPER_ADMIN', 201],
+    ])('protects Proposal conversion for role %s', async (role, expected) => {
+      const server = app.getHttpServer() as Parameters<typeof request>[0];
+      const call = request(server)
+        .post(
+          '/admin/v1/commercial/simulator/configurator/workspaces/00000000-0000-4000-8000-000000000001/scenarios/00000000-0000-4000-8000-000000000002/runs/00000000-0000-4000-8000-000000000003/convert',
+        )
+        .send({});
+      if (role) call.set('x-test-role', role);
+      const response = await call.expect(expected);
+      if (role === 'SUPER_ADMIN') {
+        const body = response.body as {
+          proposalRevision: Record<string, unknown>;
+        };
+        expect(body.proposalRevision).toMatchObject({
+          annualRecurringEquivalentMinor: '600000',
+          firstYearCommitmentMinor: '850000',
+        });
       }
     });
   });
