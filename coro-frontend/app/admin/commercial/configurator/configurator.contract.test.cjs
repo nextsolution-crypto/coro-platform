@@ -55,7 +55,7 @@ const path = require("node:path");
   assert.doesNotMatch(page, /<textarea[^>]+JSON/i);
   assert.doesNotMatch(page, /revenueCategory/);
   assert.match(page, /availability === "FUTURE"/);
-  assert.match(layout, /Commercial Configurator/);
+  assert.match(layout, /Configurateur d’offres/);
   assert.match(legacy, /workspace/);
   assert.match(page, /GuidedWorkspace/);
   assert.match(guided, /Save configuration/);

@@ -316,6 +316,24 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
     await expect(
       service.apply('professional-direct', actor),
     ).resolves.toMatchObject({ status: 'PUBLISHED' });
+    const publishedAnalysis = await service.analyze('professional-direct');
+    expect(publishedAnalysis).toMatchObject({
+      status: 'PUBLISHED',
+      changes: 0,
+      blockers: [],
+      target: {
+        priceBookVersionNumber: 1,
+        priceBookVersionStatus: 'ACTIVE',
+        costAssumptionVersionStatus: 'PUBLISHED',
+      },
+      approval: {
+        status: 'PUBLISHED',
+        current: false,
+        approvedByDisplayName: 'Bootstrap Admin',
+      },
+    });
+    expect(typeof publishedAnalysis.approval?.approvedAt).toBe('string');
+    expect(typeof publishedAnalysis.approval?.publishedAt).toBe('string');
     expect({
       costVersions: await prisma.commercialCostAssumptionVersion.count({
         where: { setId: targetCostSetId },

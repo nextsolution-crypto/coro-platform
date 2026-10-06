@@ -12,3 +12,14 @@ export const configurationCanApprove = (analysis) =>
   analysis?.status === "READY_FOR_REVIEW";
 export const configurationCanPublish = (analysis) =>
   analysis?.status === "APPROVED" && analysis.approval?.current === true;
+export const PRICING_CONFIGURATION_LABEL = "Configuration tarifaire";
+export const OFFER_CONFIGURATOR_LABEL = "Configurateur d’offres";
+export const publishedApprovalPresentation = (analysis) =>
+  analysis?.status === "PUBLISHED" && analysis?.approval?.approvedAt
+    ? {
+        state: "HISTORICAL_APPROVAL",
+        approvedBy: analysis.approval.approvedByDisplayName,
+        approvedAt: analysis.approval.approvedAt,
+        publishedAt: analysis.approval.publishedAt,
+      }
+    : null;

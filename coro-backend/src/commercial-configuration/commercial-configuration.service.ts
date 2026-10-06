@@ -310,6 +310,11 @@ export class CommercialConfigurationService {
               priceBookVersionId: version.id,
             },
           },
+          include: {
+            approvedBy: {
+              select: { firstName: true, lastName: true, email: true },
+            },
+          },
         })
       : null;
     const published =
@@ -345,14 +350,22 @@ export class CommercialConfigurationService {
       target: {
         priceBookId: book?.id ?? null,
         priceBookVersionId: version?.id ?? null,
+        priceBookVersionNumber: version?.versionNumber ?? null,
+        priceBookVersionStatus: version?.status ?? null,
         costAssumptionSetId: costSet?.id ?? null,
         costAssumptionVersionId: costVersion?.id ?? null,
+        costAssumptionVersionStatus: costVersion?.status ?? null,
       },
       approval: deployment
         ? {
             status: deployment.status,
             approvedByUserId: deployment.approvedByUserId,
+            approvedByDisplayName: deployment.approvedBy
+              ? `${deployment.approvedBy.firstName} ${deployment.approvedBy.lastName}`.trim() ||
+                deployment.approvedBy.email
+              : null,
             approvedAt: deployment.approvedAt?.toISOString() ?? null,
+            publishedAt: deployment.publishedAt?.toISOString() ?? null,
             current:
               deployment.configurationFingerprint === fingerprint &&
               deployment.status === 'APPROVED',

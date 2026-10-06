@@ -1,41 +1,83 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
 
+type Approval = {
+  status: string;
+  current: boolean;
+  approvedByDisplayName: string | null;
+  approvedAt: string | null;
+  publishedAt: string | null;
+};
 type Analysis = {
+  definition: { code: string; version: string; fingerprint: string };
   status: string;
   changes: number;
   missingCount: number;
   configurationFingerprint: string;
   blockers: Array<{ kind: string; code: string; status: string }>;
   items: Array<{ kind: string; code: string; status: string; action: string }>;
-  approval: null | { current: boolean; approvedAt: string | null };
+  target: {
+    priceBookVersionNumber: number | null;
+    priceBookVersionStatus: string | null;
+    costAssumptionVersionStatus: string | null;
+  };
+  approval: Approval | null;
+};
+type InternalValue = {
+  code: string;
+  scope: string;
+  moneyMinor: string | null;
+  decimal: string | null;
+  unit: string | null;
 };
 type Review = {
   title: string;
   subscription: Array<{ from: string; through: string; amountMinor: string }>;
   implementation: Array<{ labelFr: string; amountMinor: string }>;
   professionalServices: Array<{ labelFr: string; amountMinor: string }>;
-  internal: {
-    warning: string;
-    methodology: string;
-    values: Array<{
-      code: string;
-      scope: string;
-      moneyMinor: string | null;
-      decimal: string | null;
-      unit: string | null;
-    }>;
-  };
+  internal: { warning: string; methodology: string; values: InternalValue[] };
   policies: Record<string, boolean>;
 };
-const cad = (minor: string) => {
-  const padded = minor.padStart(3, "0");
-  const dollars = padded.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  const cents = padded.slice(-2);
-  return `${dollars}${cents === "00" ? "" : `,${cents}`} $ CA`;
+
+const cad = (minor: string) =>
+  `${new Intl.NumberFormat("fr-CA", { maximumFractionDigits: 2 }).format(Number(minor) / 100)} $ CA`;
+const dateTime = (value: string | null | undefined) =>
+  value
+    ? new Intl.DateTimeFormat("fr-CA", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(value))
+    : "—";
+const statusLabels: Record<string, string> = {
+  NOT_INSTALLED: "Non installée",
+  PARTIALLY_CONFIGURED: "Configuration incomplète",
+  READY_FOR_REVIEW: "Prête à vérifier",
+  APPROVED: "Approuvée",
+  PUBLISHED: "Publiée",
+  CONFLICT: "Conflit à résoudre",
+  MATCH: "Conforme",
+  MISSING: "À créer",
+  EXTRA_RELEVANT: "Élément inattendu",
+  REUSE: "Conserver",
+  CREATE: "Créer",
+  CREATE_DRAFT: "Créer le brouillon",
+  BLOCK: "Bloquer",
 };
+const itemLabels: Record<string, string> = {
+  CORO_PROFESSIONAL_DIRECT_CAD: "Catalogue CORO Professional — Client direct",
+  v1: "Version tarifaire 1",
+  CORO_PROFESSIONAL_ANNUAL: "Abonnement CORO Professional",
+  CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD: "Implantation Standard",
+  CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED: "Implantation avancée",
+  DOCUMENT_COMPLIANCE_DELIVERY_HOUR: "Service professionnel Delivery",
+  DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR: "Service Senior / technique",
+  CORO_PROFESSIONAL_DIRECT_COST: "Hypothèses de coûts CORO Professional",
+  "direct-cost/v2": "Méthode de coûts directs",
+};
+
 export default function CommercialConfigurationPage() {
   const definition = "professional-direct";
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -51,14 +93,14 @@ export default function CommercialConfigurationPage() {
       setAnalysis(data);
       setMessage("Analyse actualisée.");
       if (!data.missingCount && !data.blockers.length) {
-        const r = await api.get(
+        const response = await api.get(
           `/admin/v1/commercial/configurations/${definition}/review`,
         );
-        setReview(r.data);
-      }
-    } catch (e) {
+        setReview(response.data);
+      } else setReview(null);
+    } catch (error) {
       setMessage(
-        (e as { response?: { data?: { message?: string } } }).response?.data
+        (error as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? "Analyse impossible.",
       );
     } finally {
@@ -66,14 +108,13 @@ export default function CommercialConfigurationPage() {
     }
   }, []);
   useEffect(() => {
-    // Initial synchronization with the server-owned configuration state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void analyze();
   }, [analyze]);
   const mutate = async (
     path: string,
     body: Record<string, string>,
-    ok: string,
+    success: string,
   ) => {
     setBusy(true);
     try {
@@ -81,12 +122,12 @@ export default function CommercialConfigurationPage() {
         `/admin/v1/commercial/configurations/${definition}/${path}`,
         body,
       );
-      setMessage(ok);
+      setMessage(success);
       await analyze();
-    } catch (e) {
+    } catch (error) {
       setMessage(
         JSON.stringify(
-          (e as { response?: { data?: unknown } }).response?.data ??
+          (error as { response?: { data?: unknown } }).response?.data ??
             "Opération refusée.",
         ),
       );
@@ -94,17 +135,18 @@ export default function CommercialConfigurationPage() {
       setBusy(false);
     }
   };
+  const published = analysis?.status === "PUBLISHED";
   return (
     <AppLayout>
       <main className="mx-auto max-w-6xl space-y-6 p-6">
         <header>
           <p className="text-sm font-medium text-amber-700">
-            Super Admin · Configuration gouvernée
+            Super Admin · Administration commerciale
           </p>
-          <h1 className="text-3xl font-semibold">Configuration commerciale</h1>
+          <h1 className="text-3xl font-semibold">Configuration tarifaire</h1>
           <p className="text-slate-600">
-            ANALYZE → APPLY TO DRAFT → REVIEW → APPROVE → PUBLISH. Aucune étape
-            automatique.
+            Analyser → Préparer le brouillon → Vérifier → Approuver → Publier.
+            Aucune étape automatique.
           </p>
         </header>
         {message && (
@@ -119,7 +161,9 @@ export default function CommercialConfigurationPage() {
                 CORO Professional — DIRECT — CAD
               </h2>
               <p className="text-sm text-slate-500">
-                professional-direct/v1 · {analysis?.status ?? "Chargement"}
+                {analysis
+                  ? (statusLabels[analysis.status] ?? analysis.status)
+                  : "Chargement"}
               </p>
             </div>
             <button
@@ -127,26 +171,16 @@ export default function CommercialConfigurationPage() {
               onClick={() => void analyze()}
               className="rounded border px-4 py-2"
             >
-              Analyser la configuration
+              Analyser
             </button>
           </div>
           {analysis && (
             <>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <Metric label="Changements" value={String(analysis.changes)} />
-                <Metric
-                  label="Conflits"
-                  value={String(analysis.blockers.length)}
-                />
-                <Metric
-                  label="Approbation"
-                  value={
-                    analysis.approval?.current
-                      ? "Actuelle"
-                      : "Absente ou périmée"
-                  }
-                />
-              </div>
+              {published ? (
+                <PublishedSummary analysis={analysis} />
+              ) : (
+                <DraftSummary analysis={analysis} />
+              )}
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -157,16 +191,26 @@ export default function CommercialConfigurationPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {analysis.items.map((i, index) => (
+                    {analysis.items.map((item, index) => (
                       <tr
-                        key={`${i.kind}-${i.code}-${index}`}
+                        key={`${item.kind}-${item.code}-${index}`}
                         className="border-t"
                       >
                         <td className="py-2">
-                          {i.kind} · {i.code}
+                          <span className="font-medium">
+                            {itemLabels[item.code] ??
+                              item.code.replaceAll("_", " ")}
+                          </span>
+                          <span className="block text-xs text-slate-500">
+                            {item.code}
+                          </span>
                         </td>
-                        <td className="text-center">{i.status}</td>
-                        <td className="text-center">{i.action}</td>
+                        <td className="text-center">
+                          {statusLabels[item.status] ?? item.status}
+                        </td>
+                        <td className="text-center">
+                          {statusLabels[item.action] ?? item.action}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -176,25 +220,23 @@ export default function CommercialConfigurationPage() {
                 <button
                   disabled={
                     busy ||
+                    published ||
                     analysis.blockers.length > 0 ||
                     analysis.changes === 0
                   }
                   onClick={() =>
                     confirm(
-                      "Appliquer uniquement les éléments manquants au DRAFT?",
-                    ) &&
-                    void mutate(
-                      "apply",
-                      {},
-                      "Configuration appliquée au DRAFT.",
-                    )
+                      "Préparer uniquement les éléments manquants dans le brouillon?",
+                    ) && void mutate("apply", {}, "Brouillon préparé.")
                   }
                   className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40"
                 >
-                  Appliquer la configuration
+                  Préparer le brouillon
                 </button>
                 <button
-                  disabled={busy || analysis.status !== "READY_FOR_REVIEW"}
+                  disabled={
+                    busy || published || analysis.status !== "READY_FOR_REVIEW"
+                  }
                   onClick={() =>
                     confirm(
                       "Confirmer la revue exacte et approuver cette empreinte?",
@@ -210,17 +252,18 @@ export default function CommercialConfigurationPage() {
                   }
                   className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-40"
                 >
-                  Approuver la configuration
+                  Approuver
                 </button>
                 <button
                   disabled={
                     busy ||
+                    published ||
                     analysis.status !== "APPROVED" ||
                     !analysis.approval?.current
                   }
                   onClick={() =>
                     confirm(
-                      "Publier Cost puis PriceBook? Cette opération crée des autorités immuables.",
+                      "Publier les coûts puis le catalogue tarifaire? Cette opération crée des autorités immuables.",
                     ) &&
                     void mutate(
                       "publish",
@@ -240,62 +283,243 @@ export default function CommercialConfigurationPage() {
             </>
           )}
         </section>
-        {review && (
-          <section className="space-y-5 rounded-xl border bg-white p-5">
-            <h2 className="text-xl font-semibold">
-              Revue fondatrice — valeurs réellement configurées
-            </h2>
-            <div>
-              <h3 className="font-semibold">Abonnement Professional</h3>
-              {review.subscription.map((b) => (
-                <p key={b.from}>
-                  {b.from}–{b.through} sites : {cad(b.amountMinor)}
-                </p>
-              ))}
-              <p>&gt;200 : Enterprise / custom</p>
-            </div>
-            <div>
-              <h3 className="font-semibold">Implantation</h3>
-              {review.implementation.map((i) => (
-                <p key={i.labelFr}>
-                  {i.labelFr} : {cad(i.amountMinor)}
-                </p>
-              ))}
-              <p>Exactement une requise : OUI</p>
-            </div>
-            <div>
-              <h3 className="font-semibold">Services professionnels</h3>
-              {review.professionalServices.map((i) => (
-                <p key={i.labelFr}>
-                  {i.labelFr} : {cad(i.amountMinor)}/heure
-                </p>
-              ))}
-            </div>
-            <div className="rounded border border-amber-300 bg-amber-50 p-4">
-              <h3 className="font-semibold">{review.internal.warning}</h3>
-              <p>{review.internal.methodology}</p>
-              {review.internal.values.map((v) => (
-                <p key={`${v.code}-${v.scope}`}>
-                  {v.scope} · {v.moneyMinor ? cad(v.moneyMinor) : v.decimal}{" "}
-                  {v.unit}
-                </p>
-              ))}
-            </div>
-            <div>
-              <h3 className="font-semibold">Contrôles de politique</h3>
-              <pre className="overflow-auto text-xs">
-                {JSON.stringify(review.policies, null, 2)}
-              </pre>
-            </div>
-          </section>
-        )}
+        {review && <FounderReview review={review} analysis={analysis!} />}
       </main>
     </AppLayout>
   );
 }
+
+function DraftSummary({ analysis }: { analysis: Analysis }) {
+  const approval = analysis.approval;
+  const approvalLabel = approval?.current
+    ? "Actuelle"
+    : approval?.approvedAt
+      ? "À renouveler"
+      : "Absente";
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <Metric label="Changements" value={String(analysis.changes)} />
+      <Metric label="Conflits" value={String(analysis.blockers.length)} />
+      <Metric label="Approbation du brouillon" value={approvalLabel} />
+    </div>
+  );
+}
+
+function PublishedSummary({ analysis }: { analysis: Analysis }) {
+  return (
+    <div className="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 p-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Statut" value="Publiée" />
+        <Metric label="Configuration" value="Conforme" />
+        <Metric
+          label="Catalogue tarifaire"
+          value={`v${analysis.target.priceBookVersionNumber ?? "—"} · ${analysis.target.priceBookVersionStatus ?? "—"}`}
+        />
+        <Metric
+          label="Hypothèses de coûts"
+          value={
+            analysis.target.costAssumptionVersionStatus === "PUBLISHED"
+              ? "Publiées"
+              : (analysis.target.costAssumptionVersionStatus ?? "—")
+          }
+        />
+        <Metric
+          label="Approuvée par"
+          value={analysis.approval?.approvedByDisplayName ?? "—"}
+        />
+        <Metric
+          label="Approuvée le"
+          value={dateTime(analysis.approval?.approvedAt)}
+        />
+        <Metric
+          label="Publiée le"
+          value={dateTime(analysis.approval?.publishedAt)}
+        />
+        <Metric
+          label="Définition"
+          value={`${analysis.definition.code}/${analysis.definition.version}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FounderReview({
+  review,
+  analysis,
+}: {
+  review: Review;
+  analysis: Analysis;
+}) {
+  const value = (scope: string, code: string) =>
+    review.internal.values.find(
+      (entry) => entry.scope === scope && entry.code === code,
+    );
+  const deliveryCost =
+    value("ROLE:DELIVERY_PROFESSIONAL", "LOADED_DIRECT_DELIVERY_COST")
+      ?.moneyMinor ?? "0";
+  const seniorCost =
+    value("ROLE:SENIOR_REVIEWER", "LOADED_DIRECT_DELIVERY_COST")?.moneyMinor ??
+    "0";
+  const standardHours =
+    value(
+      "COMPONENT:CORO_PROFESSIONAL_IMPLEMENTATION_STANDARD",
+      "STANDARD_DELIVERY_EFFORT",
+    )?.decimal ?? "0";
+  const advancedHours =
+    value(
+      "COMPONENT:CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED",
+      "STANDARD_DELIVERY_EFFORT",
+    )?.decimal ?? "0";
+  const advancedSenior =
+    value(
+      "COMPONENT:CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED",
+      "STANDARD_SENIOR_REVIEW_EFFORT",
+    )?.decimal ?? "0";
+  const checks = [
+    [!review.policies.valueAnalysis, "Analyse de valeur désactivée"],
+    [!review.policies.partner, "Aucun tarif Partner"],
+    [!review.policies.sentinelle, "Sentinelle non incluse"],
+    [!review.policies.population, "Sentinelle Population non incluse"],
+    [!review.policies.incidentOps, "Incident / Ops non inclus"],
+    [
+      !review.policies.standardAbove200,
+      "Aucun tarif standard au-delà de 200 sites",
+    ],
+    [
+      review.policies.exactlyOneImplementation,
+      "Une seule option d’implantation requise",
+    ],
+  ] as const;
+  return (
+    <section className="space-y-6 rounded-xl border bg-white p-5">
+      <h2 className="text-xl font-semibold">Vérification commerciale</h2>
+      <section>
+        <h3 className="font-semibold">Abonnement CORO Professional</h3>
+        <p className="text-sm text-slate-600">
+          Client direct · CAD · Tarification annuelle selon la capacité de sites
+          actifs.
+        </p>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {review.subscription.map((band) => (
+            <div
+              key={band.from}
+              className="flex justify-between rounded border px-3 py-2"
+            >
+              <span>
+                {band.from}–{band.through} sites
+              </span>
+              <strong>{cad(band.amountMinor)} / an</strong>
+            </div>
+          ))}
+          <div className="flex justify-between rounded border px-3 py-2">
+            <span>Plus de 200 sites</span>
+            <strong>Entreprise / sur devis</strong>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h3 className="font-semibold">Implantation</h3>
+        {review.implementation.map((item) => (
+          <p key={item.labelFr}>
+            {item.labelFr} : <strong>{cad(item.amountMinor)}</strong>
+          </p>
+        ))}
+        <p className="text-sm text-slate-600">
+          Une option d’implantation requise.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-semibold">Services professionnels</h3>
+        {review.professionalServices.map((item) => (
+          <p key={item.labelFr}>
+            {item.labelFr.replace("Service professionnel ", "")} :{" "}
+            <strong>{cad(item.amountMinor)} / heure</strong>
+          </p>
+        ))}
+      </section>
+      <section className="rounded border border-amber-300 bg-amber-50 p-4">
+        <h3 className="font-semibold">INTERNE — NON VISIBLE PAR LE CLIENT</h3>
+        <p>
+          Coût chargé Delivery : <strong>{cad(deliveryCost)} / heure</strong>
+        </p>
+        <p>
+          Coût chargé Senior / technique :{" "}
+          <strong>{cad(seniorCost)} / heure</strong>
+        </p>
+        <div className="mt-3">
+          <p>Implantation Standard : {standardHours} h Delivery</p>
+          <p>
+            Coût direct modélisé :{" "}
+            <strong>
+              {cad(String(Number(deliveryCost) * Number(standardHours)))}
+            </strong>
+          </p>
+        </div>
+        <div className="mt-3">
+          <p>
+            Implantation avancée : {advancedHours} h Delivery · {advancedSenior}{" "}
+            h Senior / technique
+          </p>
+          <p>
+            Coût direct modélisé :{" "}
+            <strong>
+              {cad(
+                String(
+                  Number(deliveryCost) * Number(advancedHours) +
+                    Number(seniorCost) * Number(advancedSenior),
+                ),
+              )}
+            </strong>
+          </p>
+        </div>
+        <div className="mt-3">
+          <p>Coût récurrent SaaS CORO Professional</p>
+          <strong>Non configuré</strong>
+        </div>
+      </section>
+      <section>
+        <h3 className="font-semibold">Contrôles de politique</h3>
+        <ul className="mt-2 space-y-1">
+          {checks.map(([valid, label]) => (
+            <li
+              key={label}
+              className={valid ? "text-emerald-800" : "text-red-700"}
+            >
+              {valid ? "✓" : "✕"} {label}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <details className="rounded border p-4">
+        <summary className="cursor-pointer font-semibold">
+          Détails techniques
+        </summary>
+        <div className="mt-3 space-y-1 text-sm text-slate-600">
+          <p>
+            Définition : {analysis.definition.code}/
+            {analysis.definition.version}
+          </p>
+          <p>Catalogue : CORO_PROFESSIONAL_DIRECT_CAD</p>
+          <p>Méthode de coûts : {review.internal.methodology}</p>
+          <p>Empreinte de définition : {analysis.definition.fingerprint}</p>
+          <p>
+            Empreinte de configuration : {analysis.configurationFingerprint}
+          </p>
+          {analysis.items
+            .filter((item) => item.kind === "COMPONENT")
+            .map((item) => (
+              <p key={item.code}>Composant : {item.code}</p>
+            ))}
+        </div>
+      </details>
+    </section>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border p-3">
+    <div className="rounded border bg-white/70 p-3">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="font-semibold">{value}</p>
     </div>

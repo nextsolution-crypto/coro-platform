@@ -58,24 +58,41 @@ const ADMIN_GROUP = {
   ],
 };
 
-const SUPER_ADMIN_GROUP = {
-  label: 'Super Admin · Control Center · Commercial · Product · Platform',
+const SUPER_ADMIN_PLATFORM_GROUP = {
+  label: 'Super Admin',
   items: [
     { label: 'Control Center', path: '/admin/control-center', icon: '◉' },
     { label: 'Metering', path: '/admin/metering', icon: '∑' },
-    { label: 'Commercial', path: '/admin/commercial', icon: '◈' },
+  ],
+};
+
+const SUPER_ADMIN_COMMERCIAL_GROUP = {
+  label: 'Commercial',
+  items: [
     { label: 'Prospects', path: '/admin/commercial/prospects', icon: '○' },
-    { label: 'Proposals', path: '/admin/commercial/proposals', icon: '◇' },
-    { label: 'Commercial Configurator', path: '/admin/commercial/configurator', icon: '∆' },
-    { label: 'Advanced Simulator', path: '/admin/commercial/simulator', icon: '∴' },
-    { label: 'Contracts', path: '/admin/commercial/contracts', icon: '▧' },
+    { label: 'Propositions', path: '/admin/commercial/proposals', icon: '◇' },
+    { label: 'Configurateur d’offres', path: '/admin/commercial/configurator', icon: '∆' },
+    { label: 'Simulateur avancé', path: '/admin/commercial/simulator', icon: '∴' },
+    { label: 'Contrats', path: '/admin/commercial/contracts', icon: '▧' },
     { label: 'Entitlements', path: '/admin/commercial/entitlements', icon: '✓' },
-    { label: 'Reconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },
+    { label: 'Réconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },
+  ],
+};
+
+const SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP = {
+  label: 'Administration commerciale',
+  items: [
     { label: 'Organisations',    path: '/admin/organizations', icon: 'ðŸ¢' },
-    { label: 'Product Catalog', path: '/admin/product-catalog', icon: '◫' },
-    { label: 'Commercial Configuration', path: '/admin/commercial/configuration', icon: '⚙' },
-    { label: 'Cost Assumptions', path: '/admin/commercial/assumptions/cost', icon: '¤' },
-    { label: 'Value Assumptions', path: '/admin/commercial/assumptions/value', icon: '≈' },
+    { label: 'Catalogue produits', path: '/admin/product-catalog', icon: '◫' },
+    { label: 'Configuration tarifaire', path: '/admin/commercial/configuration', icon: '⚙' },
+    { label: 'Hypothèses de coûts', path: '/admin/commercial/assumptions/cost', icon: '¤' },
+    { label: 'Hypothèses de valeur', path: '/admin/commercial/assumptions/value', icon: '≈' },
+  ],
+};
+
+const SUPER_ADMIN_OTHER_GROUP = {
+  label: 'Plateforme',
+  items: [
     { label: 'Rapports REX', path: '/admin/rex-reports', icon: '📄' },
     { label: 'Recommandations', path: '/admin/referrals',     icon: '🎁' },
     { label: 'Carte globale',    path: '/admin/map',           icon: 'ðŸŒ' },
@@ -635,11 +652,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div>
                 <div className="mx-1 mb-3" style={{ borderTop: '1px solid #E9ECEF' }} />
                 <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
-                  {SUPER_ADMIN_GROUP.label}
+                  {SUPER_ADMIN_PLATFORM_GROUP.label}
                 </p>
                 <div className="space-y-0.5">
-                  {SUPER_ADMIN_GROUP.items.map(item => <NavItem key={item.path} item={item} />)}
+                  {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => <NavItem key={item.path} item={item} />)}
                 </div>
+                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_OTHER_GROUP].map(group => (
+                  <div key={group.label} className="mt-4">
+                    <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
+                      {group.label}
+                    </p>
+                    <div className="space-y-0.5">
+                      {group.items.map(item => <NavItem key={item.path} item={item} />)}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </nav>
