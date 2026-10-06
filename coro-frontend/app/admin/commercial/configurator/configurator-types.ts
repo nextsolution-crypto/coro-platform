@@ -101,6 +101,7 @@ export type GuidedScenario = {
   stale: boolean | null;
   latestResult: null | {
     id: string;
+    costAssumptionVersionId: string | null;
     calculatedAt: string;
     priceStatus: string;
     costStatus: string;
@@ -108,6 +109,7 @@ export type GuidedScenario = {
     warningCodes: string[];
     firstYearCommitmentCad: string | null;
     firstYearCostCad: string | null;
+    knownModeledDirectCostCad: string | null;
     contributionCad: string | null;
     marginPercent: string | null;
   };

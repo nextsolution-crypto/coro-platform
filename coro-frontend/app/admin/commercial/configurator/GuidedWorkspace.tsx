@@ -63,12 +63,30 @@ export function GuidedWorkspace({
         api.get(`${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/catalog`),
       ]);
       const next = workspaceResponse.data as Workspace;
+      const nextAssumptions = catalogResponse.data.assumptions ?? {
+        cost: [],
+        valuation: [],
+      };
       setWorkspace(next);
       setCatalog(catalogResponse.data.components);
       setReadiness(catalogResponse.data.readiness ?? []);
-      setAssumptions(
-        catalogResponse.data.assumptions ?? { cost: [], valuation: [] },
-      );
+      setAssumptions(nextAssumptions);
+      setCostVersionId((current) => {
+        const availableIds = new Set(
+          nextAssumptions.cost.map((item: { id: string }) => item.id),
+        );
+        const relevantScenario =
+          next.scenarios.find((item) => item.id === preferredId) ??
+          next.scenarios.find((item) => item.selected) ??
+          next.scenarios.find((item) => item.status === "ACTIVE");
+        const persisted =
+          relevantScenario?.latestResult?.costAssumptionVersionId;
+        if (persisted && availableIds.has(persisted)) return persisted;
+        if (current && availableIds.has(current)) return current;
+        return nextAssumptions.cost.length === 1
+          ? nextAssumptions.cost[0].id
+          : "";
+      });
       setActiveId(
         (current) =>
           preferredId ??
@@ -222,7 +240,11 @@ export function GuidedWorkspace({
                   onChange={(e) => setCostVersionId(e.target.value)}
                   className="mt-1 w-full rounded border p-2"
                 >
-                  <option value="">Non configuré — coût indisponible</option>
+                  <option value="">
+                    {assumptions.cost.length
+                      ? "Sélectionner une autorité de coûts"
+                      : "Non configuré — coût indisponible"}
+                  </option>
                   {assumptions.cost.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.label}

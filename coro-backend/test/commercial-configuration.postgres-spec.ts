@@ -343,4 +343,109 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
       }),
     }).toEqual(authorityCounts);
   });
+
+  it('resolves the governed Professional Cost authority for a Prospect calculation without manual effort re-entry', async () => {
+    const analysis = await service.analyze('professional-direct');
+    const costVersionId = analysis.target.costAssumptionVersionId;
+    const prospect = await prisma.commercialProspect.create({
+      data: {
+        reference: `FIX02B-${suffix}`,
+        legalName: 'FIX02B Prospect',
+        displayName: 'FIX02B Prospect',
+        country: 'CA',
+        createdByUserId: actor.userId,
+      },
+    });
+    const workspace = await prisma.commercialSimulationWorkspace.create({
+      data: {
+        reference: `FIX02B-WS-${suffix}`,
+        title: 'FIX02B Professional 125',
+        prospectId: prospect.id,
+        priceBookVersionId: versionId,
+        currency: 'CAD',
+        createdByUserId: actor.userId,
+      },
+    });
+    const scenario = await prisma.commercialSimulationScenario.create({
+      data: { workspaceId: workspace.id, name: 'Advanced 125' },
+    });
+    const components = await prisma.priceComponent.findMany({
+      where: { priceBookVersionId: versionId },
+    });
+    const component = (code: string) =>
+      components.find((item) => item.code === code)!;
+
+    await simulator.configureGuidedScenario(
+      workspace.id,
+      scenario.id,
+      {
+        lockVersion: 0,
+        familyCodes: ['PROFESSIONAL'],
+        catalogLines: [
+          ['CORO_PROFESSIONAL_ANNUAL', '125'],
+          ['CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED', '1'],
+          ['DOCUMENT_COMPLIANCE_DELIVERY_HOUR', '10'],
+          ['DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR', '3'],
+        ].map(([code, quantity], displayOrder) => ({
+          priceComponentId: component(code).id,
+          quantity,
+          commercialQuantityBasis: 'DECLARED' as const,
+          displayOrder,
+        })),
+        customLines: [],
+        driverValues: [{ driverCode: 'ACTIVE_SITES', value: '125' }],
+      },
+      actor,
+    );
+
+    const catalogView = await simulator.guidedCatalog(workspace.id);
+    expect(catalogView.assumptions.cost).toHaveLength(1);
+    expect(catalogView.assumptions.cost[0].id).toBe(costVersionId);
+    expect(catalogView.assumptions.cost[0].label).toContain(
+      'CORO Professional',
+    );
+
+    const run = await simulator.calculateGuided(
+      workspace.id,
+      scenario.id,
+      {},
+      actor,
+    );
+    expect(run).toMatchObject({
+      costAssumptionVersionId: costVersionId,
+      costMethodologyCode: 'direct-cost',
+      costMethodologyVersion: 'v2',
+      costStatus: 'UNAVAILABLE',
+      warningCodes: ['COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED'],
+    });
+    expect(run.priceResult).toMatchObject({
+      oneTimeTotalMinor: '742500',
+      recurringAnnualCadenceMinor: '1750000',
+      monthlyRecurringEquivalentMinor: null,
+      firstYearCommitmentMinor: '2492500',
+    });
+    expect(
+      Object.fromEntries(
+        run.lines.map((line) => [line.componentCode, line.estimatedCostMinor]),
+      ),
+    ).toMatchObject({
+      CORO_PROFESSIONAL_ANNUAL: null,
+      CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED: '148000',
+      DOCUMENT_COMPLIANCE_DELIVERY_HOUR: '50000',
+      DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR: '21000',
+    });
+
+    const reloaded = await simulator.getGuidedWorkspace(workspace.id);
+    expect(reloaded.scenarios[0].latestResult).toMatchObject({
+      costAssumptionVersionId: costVersionId,
+      knownModeledDirectCostCad: '2190.00',
+      firstYearCostCad: null,
+      contributionCad: null,
+    });
+    expect(
+      await prisma.commercialSimulationScenarioLineCostEffort.count({
+        where: { scenarioLine: { scenarioId: scenario.id } },
+      }),
+    ).toBe(0);
+  });
 });

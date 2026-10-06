@@ -39,8 +39,25 @@ export function ScenarioResults({ scenario }: { scenario: GuidedScenario }) {
           <strong>{money(result?.firstYearCommitmentCad ?? null)}</strong>
         </div>
         <div className="rounded-lg border p-3">
-          <p className="text-xs text-slate-500">First-year direct cost</p>
-          <strong>{money(result?.firstYearCostCad ?? null)}</strong>
+          <p className="text-xs text-slate-500">
+            {result?.costStatus === "COMPLETE"
+              ? "First-year direct cost"
+              : "Known modeled direct cost"}
+          </p>
+          <strong>
+            {money(
+              result?.firstYearCostCad ??
+                result?.knownModeledDirectCostCad ??
+                null,
+            )}
+          </strong>
+          {result?.warningCodes.includes(
+            "COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED",
+          ) && (
+            <p className="mt-1 text-xs text-amber-700">
+              Recurring SaaS cost: not configured.
+            </p>
+          )}
         </div>
         <div className="rounded-lg border p-3">
           <p className="text-xs text-slate-500">Value analysis</p>

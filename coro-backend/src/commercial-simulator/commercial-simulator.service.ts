@@ -794,6 +794,7 @@ export class CommercialSimulatorService {
                 include: {
                   priceResult: true,
                   costResult: true,
+                  lines: { select: { estimatedCostMinor: true } },
                   valueResults: { include: { metrics: true } },
                 },
               },
@@ -921,6 +922,8 @@ export class CommercialSimulatorService {
           latestResult: latestRun
             ? {
                 id: latestRun.id,
+                costAssumptionVersionId:
+                  latestRun.costAssumptionVersionId ?? null,
                 calculatedAt: latestRun.calculatedAt,
                 priceStatus: latestRun.priceStatus,
                 costStatus: latestRun.costStatus,
@@ -931,6 +934,17 @@ export class CommercialSimulatorService {
                 ),
                 firstYearCostCad: minorToCad(
                   latestRun.costResult?.firstYearCostMinor ?? null,
+                ),
+                knownModeledDirectCostCad: minorToCad(
+                  latestRun.lines.some(
+                    (line) => line.estimatedCostMinor !== null,
+                  )
+                    ? latestRun.lines.reduce(
+                        (total, line) =>
+                          total + (line.estimatedCostMinor ?? 0n),
+                        0n,
+                      )
+                    : null,
                 ),
                 contributionCad: contribution
                   ? minorToCad(BigInt(contribution.contributionMinor))
@@ -976,6 +990,12 @@ export class CommercialSimulatorService {
             status: 'PUBLISHED',
             methodologyCode: 'direct-cost',
             methodologyVersion: { in: ['v1', 'v2'] },
+            configurationDeployments: {
+              some: {
+                priceBookVersionId: workspace.priceBookVersion.id,
+                status: 'PUBLISHED',
+              },
+            },
           },
           select: {
             id: true,
@@ -2293,16 +2313,37 @@ export class CommercialSimulatorService {
     )
       ? 'v2'
       : 'v1';
+    const applicableCostVersions =
+      await this.prisma.commercialCostAssumptionVersion.findMany({
+        where: {
+          status: 'PUBLISHED',
+          methodologyCode: 'direct-cost',
+          methodologyVersion: { in: ['v1', 'v2'] },
+          configurationDeployments: {
+            some: {
+              priceBookVersionId: scenario.workspace.priceBookVersionId,
+              status: 'PUBLISHED',
+            },
+          },
+        },
+        include: { values: true },
+      });
+    const compatibleCostVersions = applicableCostVersions.filter(
+      (version) =>
+        assessCostMethodologyCompatibility({
+          methodologyCode: version.methodologyCode,
+          methodologyVersion: version.methodologyVersion,
+          values: version.values,
+        }).compatible,
+    );
+    if (!dto.costAssumptionVersionId && compatibleCostVersions.length > 1)
+      throw new BadRequestException('COST_ASSUMPTION_SELECTION_REQUIRED');
     const costVersion = dto.costAssumptionVersionId
-      ? await this.prisma.commercialCostAssumptionVersion.findUnique({
-          where: { id: dto.costAssumptionVersionId },
-          include: { values: true },
-        })
-      : null;
-    if (
-      dto.costAssumptionVersionId &&
-      (!costVersion || costVersion.status !== 'PUBLISHED')
-    )
+      ? compatibleCostVersions.find(
+          (version) => version.id === dto.costAssumptionVersionId,
+        )
+      : compatibleCostVersions[0];
+    if (dto.costAssumptionVersionId && !costVersion)
       throw new BadRequestException('COST_ASSUMPTION_VERSION_INVALID');
     if (costVersion && costVersion.currency !== scenario.workspace.currency)
       throw new BadRequestException('COST_ASSUMPTION_CURRENCY_MISMATCH');
@@ -2312,18 +2353,6 @@ export class CommercialSimulatorService {
         !['v1', 'v2'].includes(costVersion.methodologyVersion))
     )
       throw new BadRequestException('COST_ASSUMPTION_METHODOLOGY_INVALID');
-    if (costVersion) {
-      const compatibility = assessCostMethodologyCompatibility({
-        methodologyCode: costVersion.methodologyCode,
-        methodologyVersion: costVersion.methodologyVersion,
-        values: costVersion.values,
-      });
-      if (!compatibility.compatible)
-        throw new BadRequestException({
-          code: 'COST_ASSUMPTION_METHODOLOGY_INCOMPATIBLE',
-          issues: compatibility.issues,
-        });
-    }
     const valuationVersions = dto.valuationAssumptionVersionIds?.length
       ? await this.prisma.commercialValuationAssumptionVersion.findMany({
           where: { id: { in: dto.valuationAssumptionVersionIds } },
@@ -2371,11 +2400,38 @@ export class CommercialSimulatorService {
           },
         ]),
     );
+    const standardEffortsByComponent = new Map<
+      string,
+      Array<{ roleCode: string; hours: string }>
+    >();
+    for (const value of costVersion?.values ?? []) {
+      const roleCode =
+        value.assumptionCode === 'STANDARD_DELIVERY_EFFORT'
+          ? 'DELIVERY_PROFESSIONAL'
+          : value.assumptionCode === 'STANDARD_SENIOR_REVIEW_EFFORT'
+            ? 'SENIOR_REVIEWER'
+            : null;
+      if (
+        !roleCode ||
+        value.valueType !== 'DECIMAL' ||
+        value.decimalValue === null ||
+        !value.scopeKey.startsWith('COMPONENT:')
+      )
+        continue;
+      const componentCode = value.scopeKey.slice('COMPONENT:'.length);
+      const efforts = standardEffortsByComponent.get(componentCode) ?? [];
+      efforts.push({ roleCode, hours: value.decimalValue.toString() });
+      standardEffortsByComponent.set(componentCode, efforts);
+    }
     const lineCosts = scenario.lines.map((line) => {
       const unitCostMinor = costValueByLine.get(line.componentCode);
       const deterministicRole = professionalServiceRoleForComponent(
         line.componentCode,
       );
+      const scenarioEfforts = line.costEfforts.map((effort) => ({
+        roleCode: effort.roleCode,
+        hours: effort.hours.toString(),
+      }));
       const efforts = deterministicRole
         ? line.quantity
           ? [
@@ -2385,10 +2441,9 @@ export class CommercialSimulatorService {
               },
             ]
           : []
-        : line.costEfforts.map((effort) => ({
-            roleCode: effort.roleCode,
-            hours: effort.hours.toString(),
-          }));
+        : scenarioEfforts.length
+          ? scenarioEfforts
+          : (standardEffortsByComponent.get(line.componentCode) ?? []);
       if (efforts.length && unitCostMinor)
         throw new BadRequestException('AMBIGUOUS_COST_AUTHORITY');
       if (efforts.length) {
@@ -2466,6 +2521,17 @@ export class CommercialSimulatorService {
             })),
           )
         : null;
+    const knownCostLineCount = lineCosts.filter((line) => line !== null).length;
+    const missingRecurringSaasCost = scenario.lines.some(
+      (line, index) =>
+        line.revenueCategory === 'SAAS' && lineCosts[index] === null,
+    );
+    const costWarningCodes =
+      costVersion && !completeCost
+        ? knownCostLineCount > 0 && missingRecurringSaasCost
+          ? ['COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED']
+          : ['COST_CONFIGURATION_INCOMPLETE']
+        : [];
     const inputByCode = new Map(
       scenario.driverValues.map((value) => [value.driverCode, value]),
     );
@@ -2506,7 +2572,7 @@ export class CommercialSimulatorService {
       priceBookVersionId: scenario.workspace.priceBookVersionId,
       currency: scenario.workspace.currency,
       pricingMethodology: `proposal-pricing/${pricingMethodologyVersion}`,
-      costAssumptionVersionId: dto.costAssumptionVersionId ?? null,
+      costAssumptionVersionId: costVersion?.id ?? null,
       valuationAssumptionVersionIds: [
         ...(dto.valuationAssumptionVersionIds ?? []),
       ].sort(),
@@ -2585,7 +2651,7 @@ export class CommercialSimulatorService {
             scenarioId,
             workspaceId,
             priceBookVersionId: scenario.workspace.priceBookVersionId,
-            costAssumptionVersionId: dto.costAssumptionVersionId,
+            costAssumptionVersionId: costVersion?.id,
             sequence: (latest._max.sequence ?? 0) + 1,
             calculationKey,
             fingerprintVersion: SIMULATOR_FINGERPRINT_VERSION,
@@ -2604,6 +2670,7 @@ export class CommercialSimulatorService {
               : hasCompliance
                 ? 'UNAVAILABLE'
                 : 'NOT_APPLICABLE',
+            warningCodes: costWarningCodes,
             createdByUserId: actor.userId,
             valuationVersions: {
               create: valuationVersions.map((version) => ({

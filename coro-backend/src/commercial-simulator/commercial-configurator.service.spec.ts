@@ -274,41 +274,43 @@ describe('Commercial Configurator projections', () => {
       publishedAt: new Date(),
       set: { name: 'Direct cost', code: 'DIRECT_COST' },
     };
+    const findCostVersions = jest.fn((query: unknown) => {
+      void query;
+      return Promise.resolve([
+        {
+          ...base,
+          id: 'compatible-v2',
+          methodologyVersion: 'v2',
+          values: [
+            {
+              assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
+              assumptionVersion: 'v1',
+              scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
+              valueType: 'MONEY',
+              currency: 'CAD',
+            },
+          ],
+        },
+        {
+          ...base,
+          id: 'legacy-incompatible-v1',
+          methodologyVersion: 'v1',
+          values: [
+            {
+              assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
+              assumptionVersion: 'v1',
+              scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
+              valueType: 'MONEY',
+              currency: 'CAD',
+            },
+          ],
+        },
+      ]);
+    });
     const prisma = {
       $transaction: jest.fn((calls: Promise<unknown>[]) => Promise.all(calls)),
       commercialCostAssumptionVersion: {
-        findMany: jest.fn(() =>
-          Promise.resolve([
-            {
-              ...base,
-              id: 'compatible-v2',
-              methodologyVersion: 'v2',
-              values: [
-                {
-                  assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
-                  assumptionVersion: 'v1',
-                  scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
-                  valueType: 'MONEY',
-                  currency: 'CAD',
-                },
-              ],
-            },
-            {
-              ...base,
-              id: 'legacy-incompatible-v1',
-              methodologyVersion: 'v1',
-              values: [
-                {
-                  assumptionCode: 'LOADED_DIRECT_DELIVERY_COST',
-                  assumptionVersion: 'v1',
-                  scopeKey: 'ROLE:DELIVERY_PROFESSIONAL',
-                  valueType: 'MONEY',
-                  currency: 'CAD',
-                },
-              ],
-            },
-          ]),
-        ),
+        findMany: findCostVersions,
       },
       commercialValuationAssumptionVersion: {
         findMany: jest.fn(() => Promise.resolve([])),
@@ -350,6 +352,13 @@ describe('Commercial Configurator projections', () => {
     expect(result.assumptions.costCompatibilityWarnings).toEqual([
       expect.objectContaining({ id: 'legacy-incompatible-v1' }),
     ]);
+    const costQuery = findCostVersions.mock.calls[0][0] as {
+      where: { configurationDeployments: { some: Record<string, string> } };
+    };
+    expect(costQuery.where.configurationDeployments.some).toEqual({
+      priceBookVersionId: 'version-a',
+      status: 'PUBLISHED',
+    });
     const compliance = result.readiness.find(
       (item) => item.familyCode === 'COMPLIANCE',
     );
@@ -735,6 +744,9 @@ describe('Commercial Configurator projections', () => {
     const prisma = {
       commercialSimulationScenario: {
         findFirst: jest.fn(() => Promise.resolve(scenario)),
+      },
+      commercialCostAssumptionVersion: {
+        findMany: jest.fn(() => Promise.resolve([])),
       },
       commercialSimulationCalculationRun: { findUnique: findRun },
       $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
