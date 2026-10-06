@@ -48,7 +48,7 @@ export function buildFamilyReadiness(input: {
         nextActions: [],
       };
 
-    const familyComponents = input.components.filter((component) =>
+    const capabilityComponents = input.components.filter((component) =>
       family.capabilityCodes.length
         ? family.capabilityCodes.includes(component.capabilityCode as never)
         : family.code === 'PROFESSIONAL_SERVICES'
@@ -56,6 +56,14 @@ export function buildFamilyReadiness(input: {
           : false,
     );
     const packagingPolicy = packagingPolicyForFamily(family.code);
+    const packagingComponentCodes = new Set(
+      packagingPolicy?.components.map((component) => component.componentCode),
+    );
+    const familyComponents = packagingComponentCodes.size
+      ? input.components.filter((component) =>
+          packagingComponentCodes.has(component.code),
+        )
+      : capabilityComponents;
     const mappedPackagingComponents = familyComponents.filter((component) =>
       packagingPolicy?.components.some(
         (rule) => rule.componentCode === component.code,
@@ -75,7 +83,10 @@ export function buildFamilyReadiness(input: {
         (!component.amountConfigured &&
           component.pricingModel !== 'CUSTOM' &&
           component.pricingModel !== 'COMPLEXITY' &&
-          !(component.pricingModel === 'TIERED' && component.tierCount > 0)),
+          !(
+            ['TIERED', 'CAPACITY_BAND'].includes(component.pricingModel) &&
+            component.tierCount > 0
+          )),
     );
     const catalogStatus: ReadinessStatus = familyComponents.length
       ? invalid.length
