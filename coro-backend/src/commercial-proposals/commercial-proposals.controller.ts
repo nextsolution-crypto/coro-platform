@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   Request,
@@ -24,6 +25,7 @@ import {
   GenerateProposalPdfDto,
   SnapshotPopulationDto,
   TransitionProposalDto,
+  UpdateProspectDto,
   UpdateProposalFinalizationDto,
   ValueAnalysisDto,
 } from './dto/commercial-proposals.dto';
@@ -186,6 +188,13 @@ export class CommercialProspectsController {
   }
   @Get(':id') detail(@Param('id') id: string) {
     return this.service.prospect(id);
+  }
+  @Patch(':id') update(
+    @Param('id') id: string,
+    @Body() d: UpdateProspectDto,
+    @Request() r: Req,
+  ) {
+    return this.service.updateProspect(id, d, r.user);
   }
   @Post(':id/convert-to-organization') convert(
     @Param('id') id: string,

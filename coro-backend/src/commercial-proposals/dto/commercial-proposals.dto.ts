@@ -7,6 +7,7 @@ import {
   IsInt,
   IsISO31661Alpha2,
   IsISO8601,
+  Length,
   IsOptional,
   IsString,
   Matches,
@@ -37,9 +38,24 @@ import {
 } from '@prisma/client';
 
 export class CreateProspectDto {
-  @IsString() reference!: string;
-  @IsString() legalName!: string;
-  @IsString() displayName!: string;
+  @IsString() @Length(1, 100) reference!: string;
+  @IsString() @Length(1, 255) legalName!: string;
+  @IsString() @Length(1, 255) displayName!: string;
+  @IsEnum(ProposalLanguage) preferredLanguage!: ProposalLanguage;
+  @IsISO31661Alpha2() country!: string;
+  @IsOptional() @IsString() contactName?: string;
+  @IsOptional() @IsString() contactTitle?: string;
+  @IsOptional() @IsEmail() contactEmail?: string;
+  @IsOptional() @IsString() contactPhone?: string;
+  @IsOptional() @IsString() addressLine1?: string;
+  @IsOptional() @IsString() addressLine2?: string;
+  @IsOptional() @IsString() city?: string;
+  @IsOptional() @IsString() subdivision?: string;
+  @IsOptional() @IsString() postalCode?: string;
+}
+export class UpdateProspectDto {
+  @IsString() @Length(1, 255) legalName!: string;
+  @IsString() @Length(1, 255) displayName!: string;
   @IsEnum(ProposalLanguage) preferredLanguage!: ProposalLanguage;
   @IsISO31661Alpha2() country!: string;
   @IsOptional() @IsString() contactName?: string;

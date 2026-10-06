@@ -236,6 +236,7 @@ export class CommercialSimulatorService {
       total,
       items: rows.map((row) => ({
         id: row.id,
+        reference: row.reference,
         type: 'PROSPECT' as const,
         displayName: row.displayName,
         secondaryLabel: `${row.legalName} · ${row.reference}`,

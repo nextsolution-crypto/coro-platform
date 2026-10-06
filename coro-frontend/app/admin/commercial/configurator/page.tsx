@@ -45,6 +45,7 @@ type Bootstrap = {
 };
 type Target = {
   id: string;
+  reference?: string;
   type: TargetType;
   displayName: string;
   secondaryLabel?: string | null;
@@ -96,13 +97,19 @@ export default function CommercialConfiguratorPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [workspaceId, setWorkspaceId] = useState("");
+  const [requestedProspectId, setRequestedProspectId] = useState("");
 
   useEffect(() => {
     // The browser URL is the external source for the selected workspace.
+    const params = new URLSearchParams(window.location.search);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setWorkspaceId(
-      new URLSearchParams(window.location.search).get("workspace") ?? "",
-    );
+    setWorkspaceId(params.get("workspace") ?? "");
+    const prospectId = params.get("prospectId") ?? "";
+    if (params.get("targetType") === "PROSPECT" && prospectId) {
+      setTargetType("PROSPECT");
+      setRequestedProspectId(prospectId);
+      setAudience(params.get("audience") === "PARTNER" ? "PARTNER" : "DIRECT");
+    }
   }, []);
 
   useEffect(() => {
@@ -141,6 +148,18 @@ export default function CommercialConfiguratorPage() {
     }, 250);
     return () => window.clearTimeout(timer);
   }, [query, targetType]);
+
+  useEffect(() => {
+    if (!requestedProspectId || target) return;
+    const prospect = targets.find((item) => item.id === requestedProspectId);
+    if (!prospect?.selectable) return;
+    // The requested URL target becomes the local controlled selection once found.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTarget(prospect);
+    setQuery(prospect.displayName);
+    setTitle(`${prospect.displayName} — Nouvelle configuration`);
+    setRequestedProspectId("");
+  }, [requestedProspectId, target, targets]);
 
   useEffect(() => {
     if (!target) return;

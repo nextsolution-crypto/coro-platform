@@ -15,6 +15,7 @@ import {
   ConfigureRevisionDto,
   ConvertProspectDto,
   TransitionProposalDto,
+  UpdateProspectDto,
   UpdateProposalFinalizationDto,
   ValueAnalysisDto,
 } from './dto/commercial-proposals.dto';
@@ -151,26 +152,70 @@ export class CommercialProposalsService {
       orderBy: { createdAt: 'desc' },
     });
   }
-  prospect(id: string) {
-    return this.prisma.commercialProspect.findUnique({
+  async prospect(id: string) {
+    const prospect = await this.prisma.commercialProspect.findUnique({
       where: { id },
       include: { convertedOrganization: true, proposals: true },
     });
+    if (!prospect) throw new NotFoundException('Prospect introuvable.');
+    return prospect;
   }
   async createProspect(d: CreateProspectDto, a: Actor) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const u = await this.user(tx, a);
+        const x = await tx.commercialProspect.create({
+          data: { ...d, createdByUserId: a.userId, createdByDisplayName: u },
+        });
+        await this.audit.record(tx, {
+          actorUserId: a.userId,
+          action: 'PROSPECT_CREATED',
+          targetType: 'CommercialProspect',
+          targetId: x.id,
+          afterData: { reference: x.reference, status: x.status },
+        });
+        return x;
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException('Cette référence de prospect existe déjà.');
+      throw error;
+    }
+  }
+  async updateProspect(id: string, d: UpdateProspectDto, a: Actor) {
     return this.prisma.$transaction(async (tx) => {
-      const u = await this.user(tx, a);
-      const x = await tx.commercialProspect.create({
-        data: { ...d, createdByUserId: a.userId, createdByDisplayName: u },
+      const before = await tx.commercialProspect.findUnique({ where: { id } });
+      if (!before) throw new NotFoundException('Prospect introuvable.');
+      if (before.status !== 'ACTIVE')
+        throw new ConflictException(
+          'Seul un prospect actif peut être modifié.',
+        );
+      const after = await tx.commercialProspect.update({
+        where: { id },
+        data: { ...d, lockVersion: { increment: 1 } },
       });
       await this.audit.record(tx, {
         actorUserId: a.userId,
-        action: 'PROSPECT_CREATED',
+        action: 'PROSPECT_UPDATED',
         targetType: 'CommercialProspect',
-        targetId: x.id,
-        afterData: { reference: x.reference, status: x.status },
+        targetId: id,
+        beforeData: {
+          legalName: before.legalName,
+          displayName: before.displayName,
+          preferredLanguage: before.preferredLanguage,
+          country: before.country,
+        },
+        afterData: {
+          legalName: after.legalName,
+          displayName: after.displayName,
+          preferredLanguage: after.preferredLanguage,
+          country: after.country,
+        },
       });
-      return x;
+      return after;
     });
   }
   async convertProspect(id: string, d: ConvertProspectDto, a: Actor) {
