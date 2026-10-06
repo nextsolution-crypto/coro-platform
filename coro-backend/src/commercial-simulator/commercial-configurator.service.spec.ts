@@ -982,4 +982,109 @@ describe('Commercial Configurator projections', () => {
       firstYearMinor: '850000',
     });
   });
+
+  it('previews an explicitly requested calculated Prospect scenario without selecting it or exposing Cost evidence', async () => {
+    const findWorkspace = jest.fn(() =>
+      Promise.resolve({
+        organization: null,
+        prospect: {
+          legalName: 'Groupe Boréal Services Conseils — TEST',
+          displayName: 'Groupe Boréal Services Conseils — TEST',
+          contactName: null,
+          contactEmail: null,
+        },
+        createdBy: null,
+        selectedScenario: null,
+      }),
+    );
+    const findScenario = jest.fn(() =>
+      Promise.resolve({
+        id: 'scenario-professional',
+        lockVersion: 3,
+        capabilities: [],
+        lines: [],
+        runs: [
+          {
+            id: 'run-internal',
+            scenarioLockVersion: 3,
+            priceStatus: 'COMPLETE',
+            costStatus: 'PARTIAL',
+            costMethodology: 'direct-cost/v2',
+            warningCodes: ['COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED'],
+            currency: 'CAD',
+            lines: [
+              {
+                componentNameFr: 'CORO Professional',
+                revenueCategory: 'SAAS',
+                chargeType: 'RECURRING',
+                billingPeriod: 'ANNUAL',
+                quantityUnit: 'SITE',
+                quantity: '125',
+                proposedUnitAmountMinor: '14000',
+                proposedExtendedAmountMinor: '1750000',
+                estimatedCostMinor: '219000',
+                displayOrder: 1,
+              },
+            ],
+            inputs: [
+              {
+                driverCode: 'ACTIVE_SITES',
+                labelFr: 'Sites actifs',
+                labelEn: 'Active sites',
+                integerValue: 125n,
+                decimalValue: null,
+                moneyMinorValue: null,
+                booleanValue: null,
+                textValue: null,
+                unit: 'SITE',
+              },
+            ],
+            priceResult: {
+              oneTimeTotalMinor: 742500n,
+              recurringMonthlyCadenceMinor: null,
+              recurringAnnualCadenceMinor: 1750000n,
+              annualRecurringEquivalentMinor: 1750000n,
+              firstYearCommitmentMinor: 2492500n,
+              firstYearIncludesEstimate: false,
+            },
+          },
+        ],
+      }),
+    );
+    const prisma = {
+      commercialSimulationWorkspace: { findUnique: findWorkspace },
+      commercialSimulationScenario: { findFirst: findScenario },
+    };
+
+    const preview = await serviceWith(prisma).customerPreview(
+      'workspace-a',
+      'scenario-professional',
+    );
+
+    expect(findScenario).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'scenario-professional', workspaceId: 'workspace-a' },
+      }),
+    );
+    expect(preview.customer.displayName).toBe(
+      'Groupe Boréal Services Conseils — TEST',
+    );
+    expect(preview.totals).toMatchObject({
+      oneTimeMinor: '742500',
+      annualRecurringEquivalentMinor: '1750000',
+      firstYearMinor: '2492500',
+    });
+    expect(preview.inputs).toEqual([
+      {
+        labelFr: 'Capacité — jusqu’à',
+        labelEn: 'Capacity — up to',
+        value: '125',
+        unit: 'sites actifs / active sites',
+      },
+    ]);
+    expect(JSON.stringify(preview)).not.toMatch(
+      /219000|direct-cost\/v2|COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED|run-internal|estimatedCost/i,
+    );
+    expect(findWorkspace).toHaveBeenCalledTimes(1);
+  });
 });

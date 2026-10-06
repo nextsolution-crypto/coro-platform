@@ -97,6 +97,10 @@ describe('CommercialSimulatorController security contract', () => {
         },
       } as never),
     );
+    const customerPreview = jest.fn(() => ({
+      sourceType: 'RUN_PREVIEW',
+      customer: { displayName: 'Test prospect' },
+    }));
 
     beforeAll(async () => {
       const module = await Test.createTestingModule({
@@ -111,6 +115,7 @@ describe('CommercialSimulatorController security contract', () => {
               createGuidedWorkspace,
               calculateGuided,
               convertGuided,
+              customerPreview,
             },
           },
         ],
@@ -221,6 +226,26 @@ describe('CommercialSimulatorController security contract', () => {
           annualRecurringEquivalentMinor: '600000',
           firstYearCommitmentMinor: '850000',
         });
+      }
+    });
+
+    it.each([
+      [undefined, 401],
+      ['OPERATOR', 403],
+      ['ADMIN', 403],
+      ['SUPER_ADMIN', 200],
+    ])('protects Customer Preview for role %s', async (role, expected) => {
+      const server = app.getHttpServer() as Parameters<typeof request>[0];
+      const call = request(server).get(
+        '/admin/v1/commercial/simulator/configurator/workspaces/workspace-a/customer-preview?scenarioId=scenario-a',
+      );
+      if (role) call.set('x-test-role', role);
+      await call.expect(expected);
+      if (role === 'SUPER_ADMIN') {
+        expect(customerPreview).toHaveBeenCalledWith(
+          'workspace-a',
+          'scenario-a',
+        );
       }
     });
   });

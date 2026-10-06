@@ -43,6 +43,7 @@ export function GuidedWorkspace({
   const [message, setMessage] = useState("");
   const [comparison, setComparison] = useState<Comparison>();
   const [preview, setPreview] = useState<CustomerSafeProjection>();
+  const [previewBusy, setPreviewBusy] = useState(false);
   const [proposalTitle, setProposalTitle] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -146,10 +147,30 @@ export function GuidedWorkspace({
     setComparison(data);
   }
   async function loadPreview() {
-    const { data } = await api.get(
-      `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/customer-preview`,
-    );
-    setPreview(data);
+    if (!scenario?.latestResult || scenario.stale) {
+      setMessage("Recalculate this scenario before opening Customer Preview.");
+      return;
+    }
+    setPreviewBusy(true);
+    setMessage("");
+    try {
+      const { data } = await api.get(
+        `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/customer-preview`,
+        { params: { scenarioId: scenario.id } },
+      );
+      setPreview(data);
+    } catch (error) {
+      const apiMessage = (
+        error as { response?: { data?: { message?: string | string[] } } }
+      ).response?.data?.message;
+      setMessage(
+        Array.isArray(apiMessage)
+          ? apiMessage.join(" · ")
+          : (apiMessage ?? "Customer Preview could not be opened."),
+      );
+    } finally {
+      setPreviewBusy(false);
+    }
   }
 
   return (
@@ -204,10 +225,19 @@ export function GuidedWorkspace({
               Comparer les scénarios
             </button>
             <button
+              type="button"
+              disabled={
+                !scenario?.latestResult || scenario.stale || previewBusy
+              }
               className="rounded border px-4 py-2"
               onClick={() => void loadPreview()}
+              title={
+                !scenario?.latestResult || scenario.stale
+                  ? "Calculate this scenario before opening Customer Preview."
+                  : undefined
+              }
             >
-              Aperçu client
+              {previewBusy ? "Ouverture…" : "Aperçu client"}
             </button>
           </div>
           {comparison && (
@@ -357,7 +387,10 @@ export function GuidedWorkspace({
               <ScenarioResults scenario={scenario} />
               {preview && (
                 <>
-                  <CustomerSafeReview preview={preview} />
+                  <CustomerSafeReview
+                    preview={preview}
+                    onClose={() => setPreview(undefined)}
+                  />
                   <section className="rounded-xl border bg-white p-5">
                     <h2 className="font-semibold">
                       Créer la proposition gouvernée

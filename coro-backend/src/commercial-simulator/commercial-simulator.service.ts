@@ -2035,7 +2035,7 @@ export class CommercialSimulatorService {
     };
   }
 
-  async customerPreview(workspaceId: string) {
+  async customerPreview(workspaceId: string, scenarioId?: string) {
     const workspace =
       await this.prisma.commercialSimulationWorkspace.findUnique({
         where: { id: workspaceId },
@@ -2060,9 +2060,29 @@ export class CommercialSimulatorService {
           },
         },
       });
-    if (!workspace?.selectedScenario)
+    if (!workspace)
+      throw new BadRequestException('CUSTOMER_PREVIEW_WORKSPACE_REQUIRED');
+    const requestedScenario = scenarioId
+      ? await this.prisma.commercialSimulationScenario.findFirst({
+          where: { id: scenarioId, workspaceId },
+          include: {
+            capabilities: { include: { capability: true } },
+            lines: true,
+            runs: {
+              orderBy: { calculatedAt: 'desc' },
+              take: 1,
+              include: {
+                lines: { orderBy: { displayOrder: 'asc' } },
+                inputs: true,
+                priceResult: true,
+              },
+            },
+          },
+        })
+      : workspace.selectedScenario;
+    if (!requestedScenario)
       throw new BadRequestException('CUSTOMER_PREVIEW_SCENARIO_REQUIRED');
-    const scenario = workspace.selectedScenario;
+    const scenario = requestedScenario;
     const run = scenario.runs[0];
     if (!run)
       throw new BadRequestException('CUSTOMER_PREVIEW_CALCULATION_REQUIRED');
@@ -2125,7 +2145,10 @@ export class CommercialSimulatorService {
       totals: {
         oneTimeMinor: run.priceResult.oneTimeTotalMinor?.toString() ?? null,
         monthlyRecurringMinor:
-          run.priceResult.recurringMonthlyCadenceMinor?.toString() ?? null,
+          run.priceResult.recurringMonthlyCadenceMinor != null &&
+          run.priceResult.recurringMonthlyCadenceMinor > 0n
+            ? run.priceResult.recurringMonthlyCadenceMinor.toString()
+            : null,
         annualRecurringMinor:
           run.priceResult.recurringAnnualCadenceMinor?.toString() ?? null,
         annualRecurringEquivalentMinor:

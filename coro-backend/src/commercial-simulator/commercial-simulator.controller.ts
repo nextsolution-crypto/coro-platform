@@ -3,8 +3,8 @@ import {
   Controller,
   Get,
   Param,
-  Post,
   Query,
+  Post,
   Put,
   Req,
   UseGuards,
@@ -184,8 +184,9 @@ export class CommercialSimulatorController {
   }
   @Get('configurator/workspaces/:workspaceId/customer-preview') customerPreview(
     @Param('workspaceId') workspaceId: string,
+    @Query('scenarioId') scenarioId?: string,
   ) {
-    return this.service.customerPreview(workspaceId);
+    return this.service.customerPreview(workspaceId, scenarioId);
   }
   @Post('configurator/workspaces/:workspaceId/scenarios') createGuidedScenario(
     @Param('workspaceId') workspaceId: string,

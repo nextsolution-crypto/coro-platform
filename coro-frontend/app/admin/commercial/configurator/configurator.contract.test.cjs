@@ -104,6 +104,17 @@ const path = require("node:path");
   );
   assert.match(guided, /runs\/\$\{scenario\.latestResult!\.id\}\/convert/);
   assert.match(guided, /Aperçu client non contractuel/);
+  assert.match(guided, /params: \{ scenarioId: scenario\.id \}/);
+  assert.match(guided, /Customer Preview could not be opened/);
+  assert.match(guided, /role="dialog"/);
+  assert.match(guided, /aria-modal="true"/);
+  assert.match(guided, /preview\.inputs\.map/);
+  assert.match(guided, /monthlyRecurringMinor !== null/);
+  assert.match(guided, /onClose=\{\(\) => setPreview\(undefined\)\}/);
+  assert.match(
+    guided,
+    /disabled=\{\s*!scenario\?\.latestResult \|\| scenario\.stale \|\| previewBusy/,
+  );
   assert.match(guided, /Équivalent annuel récurrent/);
   assert.match(guided, /annualRecurringEquivalentMinor/);
   assert.match(guided, /commercialQuantityBasis/);

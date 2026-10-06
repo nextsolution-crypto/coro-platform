@@ -442,6 +442,43 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
       firstYearCostCad: null,
       contributionCad: null,
     });
+    const previewSideEffectsBefore = {
+      proposals: await prisma.commercialProposal.count(),
+      contracts: await prisma.organizationContract.count(),
+      entitlements: await prisma.capabilityEntitlement.count(),
+      scenarioLockVersion: (
+        await prisma.commercialSimulationScenario.findUniqueOrThrow({
+          where: { id: scenario.id },
+        })
+      ).lockVersion,
+    };
+    const preview = await simulator.customerPreview(workspace.id, scenario.id);
+    expect(preview.customer.displayName).toBe('FIX02B Prospect');
+    expect(preview.inputs).toContainEqual({
+      labelFr: 'Capacité — jusqu’à',
+      labelEn: 'Capacity — up to',
+      value: '125',
+      unit: 'sites actifs / active sites',
+    });
+    expect(preview.totals).toMatchObject({
+      oneTimeMinor: '742500',
+      monthlyRecurringMinor: null,
+      annualRecurringEquivalentMinor: '1750000',
+      firstYearMinor: '2492500',
+    });
+    expect(JSON.stringify(preview)).not.toMatch(
+      /219000|direct-cost|COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED|estimatedCost|contribution|ACTIVE_SITES|CAPACITY_BAND|DECLARED/i,
+    );
+    expect({
+      proposals: await prisma.commercialProposal.count(),
+      contracts: await prisma.organizationContract.count(),
+      entitlements: await prisma.capabilityEntitlement.count(),
+      scenarioLockVersion: (
+        await prisma.commercialSimulationScenario.findUniqueOrThrow({
+          where: { id: scenario.id },
+        })
+      ).lockVersion,
+    }).toEqual(previewSideEffectsBefore);
     expect(
       await prisma.commercialSimulationScenarioLineCostEffort.count({
         where: { scenarioLine: { scenarioId: scenario.id } },
