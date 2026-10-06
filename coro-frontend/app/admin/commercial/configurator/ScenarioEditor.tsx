@@ -8,6 +8,7 @@ import type {
   GuidedLine,
   GuidedScenario,
 } from "./configurator-types";
+import { applyFamilySelection } from "./scenario-family-selection.mjs";
 
 type CustomLine = GuidedLine & { temporary?: boolean };
 
@@ -233,30 +234,33 @@ export function ScenarioEditor({
       <section className="rounded-xl border bg-white p-5">
         <h2 className="text-lg font-semibold">1. Solutions</h2>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
-          {families.map((family) => (
-            <label
-              key={family.code}
-              className={`rounded-lg border p-3 ${family.availability === "FUTURE" ? "opacity-50" : ""}`}
-            >
-              <input
-                type="checkbox"
-                disabled={family.availability === "FUTURE"}
-                checked={familyCodes.includes(family.code)}
-                onChange={() =>
-                  mark(
-                    setFamilyCodes,
-                    familyCodes.includes(family.code)
-                      ? familyCodes.filter((code) => code !== family.code)
-                      : [...familyCodes, family.code],
-                  )
-                }
-              />
-              <strong className="ml-2">{family.labelFr}</strong>
-              <p className="mt-1 text-xs text-slate-500">
-                {family.descriptionFr} · {family.availability}
-              </p>
-            </label>
-          ))}
+          {families.map((family) => {
+            const selected = familyCodes.includes(family.code);
+            return (
+              <label
+                key={family.code}
+                data-selected={selected}
+                className={`rounded-lg border p-3 ${selected ? "border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600" : ""} ${family.availability === "FUTURE" ? "opacity-50" : "cursor-pointer"}`}
+              >
+                <input
+                  type="checkbox"
+                  disabled={family.availability === "FUTURE"}
+                  checked={selected}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setFamilyCodes((current) =>
+                      applyFamilySelection(current, family.code, checked),
+                    );
+                    setDirty(true);
+                  }}
+                />
+                <strong className="ml-2">{family.labelFr}</strong>
+                <p className="mt-1 text-xs text-slate-500">
+                  {family.descriptionFr} · {family.availability}
+                </p>
+              </label>
+            );
+          })}
         </div>
       </section>
 

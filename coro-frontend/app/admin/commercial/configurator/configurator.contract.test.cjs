@@ -5,6 +5,8 @@ const path = require("node:path");
 
 (async () => {
   const contract = await import("./configurator-contract.mjs");
+  const { applyFamilySelection } =
+    await import("./scenario-family-selection.mjs");
   const page = fs.readFileSync(path.join(__dirname, "page.tsx"), "utf8");
   const layout = fs.readFileSync(
     path.join(__dirname, "../../../../components/layout/AppLayout.tsx"),
@@ -28,11 +30,34 @@ const path = require("node:path");
     path.join(__dirname, "CustomerSafeReview.tsx"),
     "utf8",
   );
+  const scenarioEditor = fs.readFileSync(
+    path.join(__dirname, "ScenarioEditor.tsx"),
+    "utf8",
+  );
   assert.equal(
     contract.CONFIGURATOR_API_BASE,
     "/admin/v1/commercial/simulator/configurator",
   );
   assert.equal(contract.COMMERCIAL_FAMILY_CODES.length, 9);
+  const professionalSelected = applyFamilySelection([], "PROFESSIONAL", true);
+  assert.deepEqual(professionalSelected, ["PROFESSIONAL"]);
+  assert.equal(professionalSelected.includes("PROFESSIONAL"), true);
+  assert.deepEqual(
+    applyFamilySelection(professionalSelected, "PROFESSIONAL", true),
+    ["PROFESSIONAL"],
+  );
+  assert.deepEqual(
+    applyFamilySelection(professionalSelected, "PROFESSIONAL_SERVICES", true),
+    ["PROFESSIONAL", "PROFESSIONAL_SERVICES"],
+  );
+  assert.deepEqual(
+    applyFamilySelection(
+      ["PROFESSIONAL", "PROFESSIONAL_SERVICES"],
+      "PROFESSIONAL",
+      false,
+    ),
+    ["PROFESSIONAL_SERVICES"],
+  );
   assert.match(guided, /CAPACITY_BAND/);
   assert.match(guided, /Total price for declared capacity band/);
   assert.deepEqual(contract.GUIDED_SCENARIO_ACTIONS, [
@@ -79,6 +104,9 @@ const path = require("node:path");
   assert.match(guided, /annualRecurringEquivalentMinor/);
   assert.match(guided, /commercialQuantityBasis/);
   assert.match(guided, /Declared by commercial operator/);
+  assert.match(scenarioEditor, /applyFamilySelection/);
+  assert.match(scenarioEditor, /event\.currentTarget\.checked/);
+  assert.match(scenarioEditor, /data-selected=\{selected\}/);
   assert.match(guided, /Déclarée par/);
   assert.doesNotMatch(guided, /commercialRuleCode|commercialRuleVersion/);
   assert.doesNotMatch(guided, />METERED</);
