@@ -71,6 +71,7 @@ const SUPER_ADMIN_COMMERCIAL_GROUP = {
   items: [
     { label: 'Prospects', path: '/admin/commercial/prospects', icon: '○' },
     { label: 'Propositions', path: '/admin/commercial/proposals', icon: '◇' },
+    { label: 'Contenu commercial', path: '/admin/commercial/content', icon: '▤' },
     { label: 'Configurateur d’offres', path: '/admin/commercial/configurator', icon: '∆' },
     { label: 'Simulateur avancé', path: '/admin/commercial/simulator', icon: '∴' },
     { label: 'Contrats', path: '/admin/commercial/contracts', icon: '▧' },

@@ -105,6 +105,10 @@ model User {
   commercialCostAssumptionVersionsCreated CommercialCostAssumptionVersion[] @relation("CommercialCostAssumptionVersionCreator")
   commercialValuationAssumptionVersionsCreated CommercialValuationAssumptionVersion[] @relation("CommercialValuationAssumptionVersionCreator")
   commercialConfigurationDeploymentsApproved CommercialConfigurationDeployment[] @relation("CommercialConfigurationDeploymentApprover")
+  commercialContentVersionsCreated CommercialContentVersion[] @relation("CommercialContentVersionCreator")
+  commercialContentVersionsSubmitted CommercialContentVersion[] @relation("CommercialContentVersionSubmitter")
+  commercialContentVersionsApproved CommercialContentVersion[] @relation("CommercialContentVersionApprover")
+  commercialContentVersionsArchived CommercialContentVersion[] @relation("CommercialContentVersionArchiver")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -508,6 +512,36 @@ enum ProposalDocumentStatus {
 enum ProposalLanguage {
   FR
   EN
+}
+
+enum CommercialContentIntent {
+  INCLUDED
+  OPTIONAL
+  AUTONOMOUS
+  TECHNICAL_DEPENDENCY
+  NOT_INCLUDED
+  FUTURE
+}
+
+enum CommercialContentDeliveryMaturity {
+  AVAILABLE
+  LIMITED
+  FUTURE
+  UNVERIFIED
+}
+
+enum CommercialContentVersionStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum CommercialContentTargetType {
+  FAMILY
+  CAPABILITY
+  COMPONENT
+  FUNCTIONAL_FEATURE
 }
 
 model CommercialCapability {
@@ -1335,6 +1369,68 @@ model ProposalValueAnalysis {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   proposalRevision CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict)
+}
+
+model CommercialContent {
+  id        String                     @id @default(uuid())
+  code      String                     @unique @db.VarChar(100)
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
+  versions  CommercialContentVersion[]
+}
+
+model CommercialContentVersion {
+  id                  String                         @id @default(uuid())
+  commercialContentId String
+  versionNumber       Int
+  status              CommercialContentVersionStatus @default(DRAFT)
+  titleFR             String
+  titleEN             String?
+  descriptionFR       String
+  descriptionEN       String?
+  provenance          String                         @db.VarChar(100)
+  contentHash         String                         @db.Char(64)
+  lifecycleReason     String?
+  lockVersion         Int                            @default(0)
+  createdByUserId     String?
+  submittedByUserId   String?
+  approvedByUserId    String?
+  archivedByUserId    String?
+  submittedAt         DateTime?
+  approvedAt          DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  commercialContent   CommercialContent              @relation(fields: [commercialContentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy           User?                          @relation("CommercialContentVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  submittedBy         User?                          @relation("CommercialContentVersionSubmitter", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  approvedBy          User?                          @relation("CommercialContentVersionApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  archivedBy          User?                          @relation("CommercialContentVersionArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
+  bindings            CommercialContentBinding[]
+
+  @@unique([commercialContentId, versionNumber])
+  @@index([status, createdAt])
+  @@index([commercialContentId, status])
+}
+
+model CommercialContentBinding {
+  id                         String                            @id @default(uuid())
+  commercialContentVersionId String
+  targetType                 CommercialContentTargetType
+  targetCode                 String                            @db.VarChar(120)
+  labelFR                    String
+  labelEN                    String?
+  commercialIntent           CommercialContentIntent
+  deliveryMaturity           CommercialContentDeliveryMaturity
+  evidence                   String?
+  displayOrder               Int
+  createdAt                  DateTime                          @default(now())
+  updatedAt                  DateTime                          @updatedAt
+  commercialContentVersion   CommercialContentVersion          @relation(fields: [commercialContentVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([commercialContentVersionId, targetType, targetCode])
+  @@index([targetType, targetCode])
+  @@index([commercialContentVersionId, displayOrder])
 }
 
 model Client {

@@ -66,6 +66,7 @@ import { MeteringModule } from './metering/metering.module';
 import { OperationalObservationModule } from './operational-observation/operational-observation.module';
 import { CommercialSimulatorModule } from './commercial-simulator/commercial-simulator.module';
 import { CommercialConfigurationModule } from './commercial-configuration/commercial-configuration.module';
+import { CommercialContentModule } from './commercial-content/commercial-content.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { CommercialConfigurationModule } from './commercial-configuration/commer
   OperationalObservationModule,
   CommercialSimulatorModule,
   CommercialConfigurationModule,
+  CommercialContentModule,
   AuthModule,
   UsersModule,
   ClientsModule,
