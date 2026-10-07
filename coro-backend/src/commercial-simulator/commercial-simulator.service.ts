@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ProposalPricingEngine } from '../commercial-proposals/proposal-pricing-engine';
 import {
   CalculateScenarioDto,
+  EvaluateGuidedDraftDto,
   ConfigureScenarioDto,
   ConvertScenarioDto,
   ConfiguratorPriceBookQueryDto,
@@ -85,6 +86,29 @@ import {
 } from './commercial-family-authority';
 
 type Actor = { userId: string };
+
+const SCENARIO_EVALUATION_INCLUDE = {
+  workspace: {
+    include: {
+      priceBookVersion: {
+        include: { components: { include: { tiers: true } } },
+      },
+    },
+  },
+  lines: {
+    include: { capability: true, costEfforts: true },
+    orderBy: { displayOrder: 'asc' as const },
+  },
+  families: { orderBy: { displayOrder: 'asc' as const } },
+  capabilities: { include: { capability: true } },
+  driverValues: {
+    orderBy: [{ driverCode: 'asc' as const }, { scopeKey: 'asc' as const }],
+  },
+} satisfies Prisma.CommercialSimulationScenarioInclude;
+
+type ScenarioEvaluationState = Prisma.CommercialSimulationScenarioGetPayload<{
+  include: typeof SCENARIO_EVALUATION_INCLUDE;
+}>;
 
 const json = (value: unknown): Prisma.InputJsonValue => {
   const replaceBigInt = (_key: string, item: unknown): unknown =>
@@ -2290,6 +2314,282 @@ export class CommercialSimulatorService {
     return this.calculate(workspaceId, scenarioId, dto, actor);
   }
 
+  async evaluateGuidedDraft(workspaceId: string, dto: EvaluateGuidedDraftDto) {
+    const base = await this.prisma.commercialSimulationScenario.findFirst({
+      where: { id: dto.scenarioId, workspaceId, status: 'ACTIVE' },
+      include: SCENARIO_EVALUATION_INCLUDE,
+    });
+    if (!base) throw new NotFoundException('Scenario introuvable.');
+    if (base.workspace.currency !== 'CAD')
+      throw new BadRequestException('Simulator V1 supports CAD only.');
+
+    let familyCodes: string[];
+    try {
+      familyCodes = normalizeCommercialFamilyComposition(dto.familyCodes);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'COMMERCIAL_FAMILY_INVALID',
+      );
+    }
+    const families = familyCodes.map(
+      (code) => COMMERCIAL_FAMILY_REGISTRY.find((item) => item.code === code)!,
+    );
+    const capabilityCodes = [
+      ...new Set(families.flatMap((family) => family.capabilityCodes)),
+    ];
+    const capabilities = capabilityCodes.length
+      ? await this.prisma.commercialCapability.findMany({
+          where: {
+            code: { in: capabilityCodes },
+            isAvailable: true,
+            lifecycle: 'CURRENT',
+          },
+        })
+      : [];
+    if (capabilities.length !== capabilityCodes.length)
+      throw new BadRequestException('COMMERCIAL_CAPABILITY_NOT_AVAILABLE');
+
+    const componentById = new Map(
+      base.workspace.priceBookVersion.components.map((item) => [item.id, item]),
+    );
+    const catalogIds = dto.catalogLines.map((line) => line.priceComponentId);
+    if (new Set(catalogIds).size !== catalogIds.length)
+      throw new BadRequestException('DUPLICATE_CATALOG_COMPONENT');
+    const selectedComponents = catalogIds.map((id) => componentById.get(id));
+    if (selectedComponents.some((component) => !component))
+      throw new BadRequestException('CATALOG_COMPONENT_INVALID');
+    const permittedCapabilities = new Set(capabilityCodes);
+    for (const component of selectedComponents) {
+      if (!component?.revenueCategory)
+        throw new BadRequestException('REVENUE_CLASSIFICATION_INCOMPLETE');
+      const capability = capabilities.find(
+        (item) => item.id === component.capabilityId,
+      );
+      if (
+        (!capability || !permittedCapabilities.has(capability.code)) &&
+        component.revenueCategory !== 'PROFESSIONAL_SERVICE'
+      )
+        throw new BadRequestException(
+          'CATALOG_COMPONENT_OUTSIDE_SELECTED_FAMILY',
+        );
+    }
+
+    const packaging = validatePackagingSelection({
+      familyCodes,
+      components: selectedComponents.map((component) => ({
+        componentCode: component!.code,
+        revenueCategory: component!.revenueCategory,
+      })),
+    });
+    if (packaging.status !== 'READY')
+      throw new BadRequestException({
+        code: 'GUIDED_PACKAGING_NOT_READY',
+        policyVersion: packaging.policyVersion,
+        blockers: packaging.blockers,
+      });
+
+    const applicableDrivers = new Set(
+      families.flatMap((family) => [
+        ...family.applicableDriverCodes,
+        ...family.optionalDriverCodes,
+      ]),
+    );
+    const driverCodes = dto.driverValues.map((item) => item.driverCode);
+    if (new Set(driverCodes).size !== driverCodes.length)
+      throw new BadRequestException('DUPLICATE_DRIVER');
+    const now = new Date();
+    const driverValues = dto.driverValues.map((input, index) => {
+      const definition = resolveSimulatorDriver(input.driverCode, 'v1');
+      if (!applicableDrivers.has(definition.code as never))
+        throw new BadRequestException('DRIVER_NOT_APPLICABLE');
+      const shared = {
+        id: `transient-driver-${index}`,
+        scenarioId: base.id,
+        driverCode: definition.code,
+        driverVersion: definition.version,
+        scopeKey: 'GLOBAL',
+        valueType: definition.valueType,
+        source: 'USER_INPUT' as const,
+        decimalValue: null,
+        integerValue: null,
+        moneyMinorValue: null,
+        booleanValue: null,
+        textValue: null,
+        currency: null,
+        unit: definition.unit ?? null,
+        justification: input.justification ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      if (definition.valueType === 'INTEGER') {
+        if (!/^\d+$/.test(input.value) || BigInt(input.value) <= 0n)
+          throw new BadRequestException('INVALID_INTEGER_DRIVER');
+        return { ...shared, integerValue: BigInt(input.value) };
+      }
+      if (definition.valueType === 'DECIMAL') {
+        if (!/^\d+(?:\.\d{1,6})?$/.test(input.value))
+          throw new BadRequestException('INVALID_DECIMAL_DRIVER');
+        return { ...shared, decimalValue: new Prisma.Decimal(input.value) };
+      }
+      if (definition.valueType === 'MONEY')
+        return {
+          ...shared,
+          moneyMinorValue: BigInt(cadToMinor(input.value)),
+          currency: base.workspace.currency,
+        };
+      return { ...shared, textValue: input.value };
+    });
+    const activeSites = driverValues.find(
+      (driver) => driver.driverCode === 'ACTIVE_SITES',
+    )?.integerValue;
+    if (familyCodes.includes('PROFESSIONAL') && !activeSites)
+      throw new BadRequestException('ACTIVE_SITES_REQUIRED');
+
+    const capabilityById = new Map(
+      capabilities.map((capability) => [capability.id, capability]),
+    );
+    const existingCodeByLineId = new Map(
+      base.lines.map((line) => [line.id, line.componentCode]),
+    );
+    const catalogLines = dto.catalogLines.map((input, index) => {
+      const component = componentById.get(input.priceComponentId)!;
+      if (input.proposedUnitAmountCad != null && !input.justification?.trim())
+        throw new BadRequestException(
+          'CATALOG_OVERRIDE_JUSTIFICATION_REQUIRED',
+        );
+      return {
+        id: `transient-catalog-${index}`,
+        scenarioId: base.id,
+        capabilityId: component.capabilityId,
+        capability: capabilityById.get(component.capabilityId) ?? null,
+        priceComponentId: component.id,
+        source: 'CATALOG_COMPONENT' as const,
+        componentCode: component.code,
+        componentNameFr: component.nameFr,
+        componentNameEn: component.nameEn,
+        pricingModel: component.pricingModel,
+        chargeType: component.chargeType,
+        revenueCategory: component.revenueCategory!,
+        billingPeriod: component.billingPeriod,
+        metric: component.metric,
+        tierMode: component.tierMode,
+        quantity:
+          component.pricingModel === 'CAPACITY_BAND'
+            ? new Prisma.Decimal(activeSites!.toString())
+            : input.quantity
+              ? new Prisma.Decimal(input.quantity)
+              : null,
+        quantityUnit: component.metric,
+        proposedUnitAmountMinor:
+          input.proposedUnitAmountCad == null
+            ? null
+            : BigInt(cadToMinor(input.proposedUnitAmountCad)),
+        internalUse: null,
+        distributable: null,
+        distributionLimit: null,
+        distributionMetric: null,
+        commercialQuantityBasis:
+          component.pricingModel === 'CAPACITY_BAND'
+            ? ('DECLARED' as const)
+            : (input.commercialQuantityBasis ?? null),
+        commercialRuleCode: null,
+        commercialRuleVersion: null,
+        justification: input.justification ?? null,
+        displayOrder: input.displayOrder ?? index,
+        createdAt: now,
+        updatedAt: now,
+        costEfforts: (input.costEfforts ?? []).map((effort, effortIndex) => ({
+          id: `transient-cost-${index}-${effortIndex}`,
+          scenarioLineId: `transient-catalog-${index}`,
+          roleCode: effort.role,
+          hours: new Prisma.Decimal(effort.hours),
+          source: 'USER_INPUT' as const,
+          justification: effort.justification ?? null,
+          createdAt: now,
+        })),
+      };
+    });
+    const customLines = dto.customLines.map((input, index) => {
+      const existingCode = input.lineId
+        ? existingCodeByLineId.get(input.lineId)
+        : undefined;
+      if (input.lineId && !existingCode)
+        throw new BadRequestException('CUSTOM_LINE_OUTSIDE_SCENARIO');
+      if (input.pricingModel === 'PER_UNIT' && input.metric !== 'HOUR')
+        throw new BadRequestException('CUSTOM_PER_UNIT_REQUIRES_HOUR');
+      if (input.chargeType === 'RECURRING' && !input.billingPeriod)
+        throw new BadRequestException('RECURRING_LINE_REQUIRES_PERIOD');
+      const lineId = `transient-custom-${index}`;
+      return {
+        id: lineId,
+        scenarioId: base.id,
+        capabilityId: null,
+        capability: null,
+        priceComponentId: null,
+        source: input.source,
+        componentCode: existingCode ?? `TRANSIENT_CUSTOM_${index + 1}`,
+        componentNameFr: input.name.trim(),
+        componentNameEn: null,
+        pricingModel: input.pricingModel,
+        chargeType: input.chargeType,
+        revenueCategory: input.revenueCategory,
+        billingPeriod: input.billingPeriod ?? null,
+        metric: input.metric ?? 'FIXED',
+        tierMode: null,
+        quantity: input.quantity ? new Prisma.Decimal(input.quantity) : null,
+        quantityUnit: input.metric ?? 'FIXED',
+        proposedUnitAmountMinor: BigInt(cadToMinor(input.unitAmountCad)),
+        internalUse: null,
+        distributable: null,
+        distributionLimit: null,
+        distributionMetric: null,
+        commercialQuantityBasis: input.commercialQuantityBasis ?? null,
+        commercialRuleCode: null,
+        commercialRuleVersion: null,
+        justification: input.justification.trim(),
+        displayOrder: input.displayOrder ?? catalogLines.length + index,
+        createdAt: now,
+        updatedAt: now,
+        costEfforts: (input.costEfforts ?? []).map((effort, effortIndex) => ({
+          id: `transient-custom-cost-${index}-${effortIndex}`,
+          scenarioLineId: lineId,
+          roleCode: effort.role,
+          hours: new Prisma.Decimal(effort.hours),
+          source: 'USER_INPUT' as const,
+          justification: effort.justification ?? null,
+          createdAt: now,
+        })),
+      };
+    });
+    const transient = {
+      ...base,
+      families: familyCodes.map((familyCode, displayOrder) => ({
+        id: `transient-family-${displayOrder}`,
+        scenarioId: base.id,
+        familyCode,
+        displayOrder,
+        createdAt: now,
+      })),
+      capabilities: capabilities.map((capability, displayOrder) => ({
+        scenarioId: base.id,
+        capabilityId: capability.id,
+        displayOrder,
+        capability,
+      })),
+      driverValues,
+      lines: [...catalogLines, ...customLines].sort(
+        (left, right) => left.displayOrder - right.displayOrder,
+      ),
+    } as unknown as ScenarioEvaluationState;
+    return this.evaluateScenario(
+      workspaceId,
+      dto.scenarioId,
+      dto,
+      null,
+      transient,
+    );
+  }
+
   async convertGuided(
     workspaceId: string,
     scenarioId: string,
@@ -2306,26 +2606,28 @@ export class CommercialSimulatorService {
     scenarioId: string,
     dto: CalculateScenarioDto,
     actor: Actor,
+  ): Promise<ReturnType<typeof calculationRunResponse>> {
+    return (await this.evaluateScenario(
+      workspaceId,
+      scenarioId,
+      dto,
+      actor,
+    )) as ReturnType<typeof calculationRunResponse>;
+  }
+
+  private async evaluateScenario(
+    workspaceId: string,
+    scenarioId: string,
+    dto: CalculateScenarioDto,
+    actor: Actor | null,
+    scenarioOverride?: ScenarioEvaluationState,
   ) {
-    const scenario = await this.prisma.commercialSimulationScenario.findFirst({
-      where: { id: scenarioId, workspaceId, status: 'ACTIVE' },
-      include: {
-        workspace: {
-          include: {
-            priceBookVersion: {
-              include: { components: { include: { tiers: true } } },
-            },
-          },
-        },
-        lines: {
-          include: { capability: true, costEfforts: true },
-          orderBy: { displayOrder: 'asc' },
-        },
-        families: { orderBy: { displayOrder: 'asc' } },
-        capabilities: { include: { capability: true } },
-        driverValues: { orderBy: [{ driverCode: 'asc' }, { scopeKey: 'asc' }] },
-      },
-    });
+    const scenario =
+      scenarioOverride ??
+      (await this.prisma.commercialSimulationScenario.findFirst({
+        where: { id: scenarioId, workspaceId, status: 'ACTIVE' },
+        include: SCENARIO_EVALUATION_INCLUDE,
+      }));
     if (!scenario) throw new NotFoundException('Scenario introuvable.');
     const catalogLines = scenario.lines.filter(
       (line) => line.source === 'CATALOG_COMPONENT',
@@ -2722,17 +3024,111 @@ export class CommercialSimulatorService {
       })),
     };
     const calculationKey = simulatorFingerprint(evidence);
+    let priced: ReturnType<ProposalPricingEngine['calculate']>;
+    try {
+      priced = this.pricing.calculate({
+        currency: 'CAD',
+        calculationVersion: `proposal-pricing/${pricingMethodologyVersion}`,
+        lines: requestLines,
+      });
+    } catch (error) {
+      if (
+        actor === null &&
+        error instanceof Error &&
+        error.message === 'CAPACITY_BAND_NO_STANDARD_BAND'
+      ) {
+        return {
+          mode: 'TRANSIENT',
+          observationOnly: true,
+          persisted: false,
+          status: 'CUSTOM_PRICING_REQUIRED',
+          code: 'ENTERPRISE_CUSTOM_PRICING_REQUIRED',
+          calculationKey,
+          fingerprintVersion: SIMULATOR_FINGERPRINT_VERSION,
+          familyCodes: canonicalFamilyCodes,
+          warningCodes: ['CAPACITY_BAND_NO_STANDARD_BAND'],
+        };
+      }
+      throw error;
+    }
+    if (actor === null) {
+      const knownDirectCostMinor = lineCosts.reduce(
+        (total, line) => total + (line ? BigInt(line.totalMinor) : 0n),
+        0n,
+      );
+      return {
+        mode: 'TRANSIENT',
+        observationOnly: true,
+        persisted: false,
+        status:
+          priced.totals.firstYearCommitmentMinor === null
+            ? 'INCOMPLETE'
+            : 'COMPLETE',
+        calculationKey,
+        fingerprintVersion: SIMULATOR_FINGERPRINT_VERSION,
+        familyCodes: canonicalFamilyCodes,
+        packagingPolicyVersion: COMMERCIAL_PACKAGING_POLICY_VERSION,
+        pricingMethodology: `proposal-pricing/${pricingMethodologyVersion}`,
+        priceBookVersionId: scenario.workspace.priceBookVersionId,
+        currency: scenario.workspace.currency,
+        lines: priced.lines.map((line, index) => ({
+          componentCode: line.code,
+          label: scenario.lines[index].componentNameFr,
+          pricingModel: line.pricingModel,
+          chargeType: line.chargeType,
+          billingPeriod: line.billingPeriod ?? null,
+          quantity: line.quantity ?? null,
+          quantityUnit: line.quantityUnit ?? null,
+          catalogUnitAmountMinor: line.catalogUnitAmountMinor,
+          offeredUnitAmountMinor: line.proposedUnitAmountMinor,
+          offeredExtendedAmountMinor: line.proposedExtendedAmountMinor,
+          override: line.requestedStatus === 'MANUAL',
+          capacityBand:
+            line.pricingModel === 'CAPACITY_BAND' && line.tiersUsed[0]
+              ? {
+                  minimumQuantity: line.tiersUsed[0].minimumQuantity,
+                  maximumQuantity: line.tiersUsed[0].maximumQuantity ?? null,
+                  amountMinor: line.tiersUsed[0].amountMinor,
+                }
+              : null,
+          knownDirectCostMinor: lineCosts[index]?.totalMinor ?? null,
+        })),
+        totals: priced.totals,
+        cost: {
+          assumptionVersionId: costVersion?.id ?? null,
+          methodology: costVersion
+            ? `${costVersion.methodologyCode}/${costVersion.methodologyVersion}`
+            : null,
+          completeness: completeCost
+            ? 'COMPLETE'
+            : knownCostLineCount
+              ? 'PARTIAL'
+              : 'UNAVAILABLE',
+          knownDirectCostMinor: knownCostLineCount
+            ? knownDirectCostMinor.toString()
+            : null,
+          firstYearCostMinor: completeCost?.firstYearCostMinor ?? null,
+        },
+        contribution: completeCost
+          ? deriveMargin(
+              priced.totals.firstYearCommitmentMinor!,
+              completeCost.firstYearCostMinor,
+            )
+          : null,
+        valueStatus: complianceValue
+          ? 'COMPLETE'
+          : hasCompliance
+            ? 'UNAVAILABLE'
+            : 'NOT_APPLICABLE',
+        warningCodes: costWarningCodes,
+      };
+    }
     const existing =
       await this.prisma.commercialSimulationCalculationRun.findUnique({
         where: { scenarioId_calculationKey: { scenarioId, calculationKey } },
         include: CALCULATION_RUN_RESPONSE_INCLUDE,
       });
     if (existing) return calculationRunResponse(existing);
-    const priced = this.pricing.calculate({
-      currency: 'CAD',
-      calculationVersion: `proposal-pricing/${pricingMethodologyVersion}`,
-      lines: requestLines,
-    });
     if (priced.totals.firstYearCommitmentMinor === null)
       throw new BadRequestException('Scenario pricing is incomplete.');
     const firstYearCommitmentMinor = priced.totals.firstYearCommitmentMinor;

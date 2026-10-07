@@ -375,25 +375,32 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
     const component = (code: string) =>
       components.find((item) => item.code === code)!;
 
+    const guidedDraft = {
+      scenarioId: scenario.id,
+      familyCodes: ['PROFESSIONAL'],
+      catalogLines: [
+        ['CORO_PROFESSIONAL_ANNUAL', '125'],
+        ['CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED', '1'],
+        ['DOCUMENT_COMPLIANCE_DELIVERY_HOUR', '10'],
+        ['DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR', '3'],
+      ].map(([code, quantity], displayOrder) => ({
+        priceComponentId: component(code).id,
+        quantity,
+        commercialQuantityBasis: 'DECLARED' as const,
+        displayOrder,
+      })),
+      customLines: [],
+      driverValues: [{ driverCode: 'ACTIVE_SITES', value: '125' }],
+    };
     await simulator.configureGuidedScenario(
       workspace.id,
       scenario.id,
       {
         lockVersion: 0,
-        familyCodes: ['PROFESSIONAL'],
-        catalogLines: [
-          ['CORO_PROFESSIONAL_ANNUAL', '125'],
-          ['CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED', '1'],
-          ['DOCUMENT_COMPLIANCE_DELIVERY_HOUR', '10'],
-          ['DOCUMENT_COMPLIANCE_SENIOR_REVIEW_HOUR', '3'],
-        ].map(([code, quantity], displayOrder) => ({
-          priceComponentId: component(code).id,
-          quantity,
-          commercialQuantityBasis: 'DECLARED' as const,
-          displayOrder,
-        })),
-        customLines: [],
-        driverValues: [{ driverCode: 'ACTIVE_SITES', value: '125' }],
+        familyCodes: guidedDraft.familyCodes,
+        catalogLines: guidedDraft.catalogLines,
+        customLines: guidedDraft.customLines,
+        driverValues: guidedDraft.driverValues,
       },
       actor,
     );
@@ -404,6 +411,44 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
     expect(catalogView.assumptions.cost[0].label).toContain(
       'CORO Professional',
     );
+
+    const sideEffectsBefore = {
+      scenarios: await prisma.commercialSimulationScenario.count(),
+      lines: await prisma.commercialSimulationScenarioLine.count(),
+      runs: await prisma.commercialSimulationCalculationRun.count(),
+      proposals: await prisma.commercialProposal.count(),
+      contracts: await prisma.organizationContract.count(),
+      entitlements: await prisma.capabilityEntitlement.count(),
+      audits: await prisma.adminAuditEvent.count(),
+    };
+    let transient: Awaited<
+      ReturnType<typeof simulator.evaluateGuidedDraft>
+    > | null = null;
+    for (let index = 0; index < 20; index += 1)
+      transient = await simulator.evaluateGuidedDraft(
+        workspace.id,
+        guidedDraft,
+      );
+    expect(transient!).toMatchObject({
+      mode: 'TRANSIENT',
+      persisted: false,
+      fingerprintVersion: 'simulator-input/v4',
+      totals: { firstYearCommitmentMinor: '2492500' },
+      cost: {
+        completeness: 'PARTIAL',
+        knownDirectCostMinor: '219000',
+      },
+      warningCodes: ['COST_PARTIAL_RECURRING_SAAS_NOT_CONFIGURED'],
+    });
+    expect({
+      scenarios: await prisma.commercialSimulationScenario.count(),
+      lines: await prisma.commercialSimulationScenarioLine.count(),
+      runs: await prisma.commercialSimulationCalculationRun.count(),
+      proposals: await prisma.commercialProposal.count(),
+      contracts: await prisma.organizationContract.count(),
+      entitlements: await prisma.capabilityEntitlement.count(),
+      audits: await prisma.adminAuditEvent.count(),
+    }).toEqual(sideEffectsBefore);
 
     const run = await simulator.calculateGuided(
       workspace.id,
@@ -423,6 +468,19 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
       recurringAnnualCadenceMinor: '1750000',
       monthlyRecurringEquivalentMinor: null,
       firstYearCommitmentMinor: '2492500',
+    });
+    const transientTotals = (
+      transient! as unknown as {
+        totals: Record<string, string | null | boolean>;
+      }
+    ).totals;
+    const officialPrice = run.priceResult!;
+    expect(transientTotals).toMatchObject({
+      oneTimeTotalMinor: officialPrice.oneTimeTotalMinor,
+      recurringAnnualCadenceMinor: officialPrice.recurringAnnualCadenceMinor,
+      annualRecurringEquivalentMinor:
+        officialPrice.annualRecurringEquivalentMinor,
+      firstYearCommitmentMinor: officialPrice.firstYearCommitmentMinor,
     });
     expect(
       Object.fromEntries(

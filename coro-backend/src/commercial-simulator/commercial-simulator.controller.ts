@@ -29,6 +29,7 @@ import {
   CreateWorkspaceDto,
   SelectScenarioDto,
   GuidedConfigureScenarioDto,
+  EvaluateGuidedDraftDto,
   ScenarioMutationDto,
   UpdateScenarioMetadataDto,
   UpdateAssumptionVersionDto,
@@ -293,6 +294,13 @@ export class CommercialSimulatorController {
     return this.service.calculateGuided(workspaceId, scenarioId, dto, {
       userId: req.user.userId,
     });
+  }
+  @Post('configurator/workspaces/:workspaceId/evaluate')
+  evaluateGuidedDraft(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: EvaluateGuidedDraftDto,
+  ) {
+    return this.service.evaluateGuidedDraft(workspaceId, dto);
   }
   @Post(
     'configurator/workspaces/:workspaceId/scenarios/:scenarioId/runs/:runId/convert',

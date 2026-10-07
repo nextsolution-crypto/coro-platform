@@ -286,6 +286,28 @@ export class CalculateScenarioDto {
   valuationAssumptionVersionIds?: string[];
 }
 
+/**
+ * Complete, unsaved guided Scenario state evaluated in an existing workspace.
+ * Catalog prices, tiers, methodologies, rates and calculated totals are
+ * intentionally absent: those authorities are always resolved server-side.
+ */
+export class EvaluateGuidedDraftDto extends CalculateScenarioDto {
+  @IsUUID() scenarioId!: string;
+  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) familyCodes!: string[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedCatalogLineDto)
+  catalogLines!: GuidedCatalogLineDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedCustomLineDto)
+  customLines!: GuidedCustomLineDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GuidedDriverValueDto)
+  driverValues!: GuidedDriverValueDto[];
+}
+
 export class ConvertScenarioDto {
   @IsString() @Length(1, 255) title!: string;
   @IsIn(['DIRECT', 'PARTNER']) relationship!: 'DIRECT' | 'PARTNER';

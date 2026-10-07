@@ -81,6 +81,13 @@ describe('CommercialSimulatorController security contract', () => {
         },
       } as never),
     );
+    const evaluateGuidedDraft = jest.fn(() => ({
+      mode: 'TRANSIENT',
+      observationOnly: true,
+      persisted: false,
+      status: 'COMPLETE',
+      totals: { firstYearCommitmentMinor: '2492500' },
+    }));
     const convertGuided = jest.fn(() =>
       proposalConversionResponse({
         id: 'conversion-1',
@@ -114,6 +121,7 @@ describe('CommercialSimulatorController security contract', () => {
               configuratorBootstrap: jest.fn(() => ({ families: [] })),
               createGuidedWorkspace,
               calculateGuided,
+              evaluateGuidedDraft,
               convertGuided,
               customerPreview,
             },
@@ -203,6 +211,25 @@ describe('CommercialSimulatorController security contract', () => {
         expect(body.inputs[0].integerValue).toBe('9007199254740993');
       }
     });
+
+    it.each([
+      [undefined, 401],
+      ['OPERATOR', 403],
+      ['ADMIN', 403],
+      ['SUPER_ADMIN', 201],
+    ])(
+      'protects transient draft evaluation for role %s',
+      async (role, expected) => {
+        const server = app.getHttpServer() as Parameters<typeof request>[0];
+        const call = request(server)
+          .post(
+            '/admin/v1/commercial/simulator/configurator/workspaces/00000000-0000-4000-8000-000000000001/evaluate',
+          )
+          .send({});
+        if (role) call.set('x-test-role', role);
+        await call.expect(expected);
+      },
+    );
 
     it.each([
       [undefined, 401],
