@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-export const SIMULATOR_FINGERPRINT_VERSION = 'simulator-input/v3';
+export const SIMULATOR_FINGERPRINT_VERSION = 'simulator-input/v4';
 
 export function canonicalCapabilityCodes(codes: readonly string[]): string[] {
   return [...new Set(codes)].sort((left, right) => left.localeCompare(right));

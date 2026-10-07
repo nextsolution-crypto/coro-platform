@@ -79,6 +79,10 @@ import {
   calculationRunResponse,
   proposalConversionResponse,
 } from './commercial-simulator-response';
+import {
+  normalizeCommercialFamilyComposition,
+  resolveCommercialFamilyAuthority,
+} from './commercial-family-authority';
 
 type Actor = { userId: string };
 
@@ -785,6 +789,7 @@ export class CommercialSimulatorService {
           priceBookVersion: { include: { priceBook: true } },
           scenarios: {
             include: {
+              families: { orderBy: { displayOrder: 'asc' } },
               capabilities: { include: { capability: true } },
               lines: { include: { costEfforts: true } },
               driverValues: true,
@@ -839,28 +844,14 @@ export class CommercialSimulatorService {
                 latestRun.costResult.firstYearCostMinor.toString(),
               )
             : null;
-        const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter(
-          (family) =>
-            family.code !== 'PROFESSIONAL' &&
-            family.capabilityCodes.some((code) =>
-              scenario.capabilities.some(
-                (selection) => selection.capability.code === code,
-              ),
-            ),
-        ).map((family) => family.code);
-        if (
-          scenario.lines.some((line) =>
-            line.componentCode.startsWith('CORO_PROFESSIONAL_'),
-          )
-        )
-          familyCodes.push('PROFESSIONAL');
-        if (
-          scenario.lines.some(
-            (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
-          ) &&
-          !familyCodes.includes('PROFESSIONAL_SERVICES')
-        )
-          familyCodes.push('PROFESSIONAL_SERVICES');
+        const familyAuthority = resolveCommercialFamilyAuthority({
+          explicitCodes:
+            scenario.families?.map((family) => family.familyCode) ?? [],
+          componentCodes: scenario.lines
+            .filter((line) => line.source === 'CATALOG_COMPONENT')
+            .map((line) => line.componentCode),
+        });
+        const familyCodes = familyAuthority.codes;
         const packaging = validatePackagingSelection({
           familyCodes,
           components: scenario.lines
@@ -879,6 +870,7 @@ export class CommercialSimulatorService {
           lockVersion: scenario.lockVersion,
           selected: workspace.selectedScenarioId === scenario.id,
           familyCodes,
+          familyAuthoritySource: familyAuthority.source,
           packaging,
           capabilityCodes: scenario.capabilities.map(
             (selection) => selection.capability.code,
@@ -1175,6 +1167,7 @@ export class CommercialSimulatorService {
       const source = await tx.commercialSimulationScenario.findFirst({
         where: { id: scenarioId, workspaceId },
         include: {
+          families: true,
           capabilities: true,
           lines: { include: { costEfforts: true } },
           driverValues: true,
@@ -1191,6 +1184,12 @@ export class CommercialSimulatorService {
           name,
           description: source.description,
           displayOrder: source.displayOrder + 1,
+          families: {
+            create: source.families.map((item) => ({
+              familyCode: item.familyCode,
+              displayOrder: item.displayOrder,
+            })),
+          },
           capabilities: {
             create: source.capabilities.map((item) => ({
               capabilityId: item.capabilityId,
@@ -1387,17 +1386,17 @@ export class CommercialSimulatorService {
     if (workspace.currency !== 'CAD')
       throw new BadRequestException('Simulator V1 supports CAD only.');
 
-    const familyCodes = [...new Set(dto.familyCodes)];
-    if (familyCodes.length !== dto.familyCodes.length)
-      throw new BadRequestException('DUPLICATE_COMMERCIAL_FAMILY');
-    const families = familyCodes.map((code) => {
-      const family = COMMERCIAL_FAMILY_REGISTRY.find(
-        (item) => item.code === code,
+    let familyCodes: string[];
+    try {
+      familyCodes = normalizeCommercialFamilyComposition(dto.familyCodes);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'COMMERCIAL_FAMILY_INVALID',
       );
-      if (!family || family.availability === 'FUTURE')
-        throw new BadRequestException('COMMERCIAL_FAMILY_NOT_SELECTABLE');
-      return family;
-    });
+    }
+    const families = familyCodes.map(
+      (code) => COMMERCIAL_FAMILY_REGISTRY.find((item) => item.code === code)!,
+    );
     const capabilityCodes = [
       ...new Set(families.flatMap((family) => family.capabilityCodes)),
     ];
@@ -1600,6 +1599,7 @@ export class CommercialSimulatorService {
         ),
         lines: [...catalogLines, ...customLines],
         driverValues,
+        familyCodes,
       },
       actor,
     );
@@ -1611,13 +1611,68 @@ export class CommercialSimulatorService {
     dto: ConfigureScenarioDto,
     actor?: Actor,
   ) {
+    let normalizedFamilyCodes: string[] | undefined;
+    try {
+      normalizedFamilyCodes = dto.familyCodes
+        ? normalizeCommercialFamilyComposition(dto.familyCodes)
+        : undefined;
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'COMMERCIAL_FAMILY_INVALID',
+      );
+    }
     return this.prisma.$transaction(async (tx) => {
       const workspace = await tx.commercialSimulationWorkspace.findUnique({
         where: { id: workspaceId },
-        select: { priceBookVersionId: true },
+        select: {
+          priceBookVersionId: true,
+          scenarios: {
+            where: { id: scenarioId },
+            select: {
+              families: { select: { familyCode: true } },
+              lines: {
+                select: {
+                  source: true,
+                  componentCode: true,
+                  revenueCategory: true,
+                },
+              },
+            },
+          },
+        },
       });
-      if (!workspace)
+      if (!workspace || workspace.scenarios.length !== 1)
         throw new NotFoundException('Simulation workspace introuvable.');
+      const current = workspace.scenarios[0];
+      const effectiveLines = dto.lines ?? current.lines;
+      const catalogLines = effectiveLines.filter(
+        (line) => line.source === 'CATALOG_COMPONENT',
+      );
+      const explicitCodes =
+        normalizedFamilyCodes ??
+        current.families.map((family) => family.familyCode);
+      if (catalogLines.length || explicitCodes.length) {
+        const familyAuthority = resolveCommercialFamilyAuthority({
+          explicitCodes,
+          componentCodes: catalogLines.map((line) => line.componentCode),
+        });
+        if (familyAuthority.source === 'REVIEW_REQUIRED')
+          throw new BadRequestException('FAMILY_COMPOSITION_REVIEW_REQUIRED');
+        const packaging = validatePackagingSelection({
+          familyCodes: familyAuthority.codes,
+          components: catalogLines.map((line) => ({
+            componentCode: line.componentCode,
+            revenueCategory: line.revenueCategory ?? null,
+          })),
+        });
+        const blockers = packagingDraftBlockingIssues(packaging.blockers);
+        if (blockers.length)
+          throw new BadRequestException({
+            code: 'GUIDED_PACKAGING_INVALID',
+            policyVersion: packaging.policyVersion,
+            blockers,
+          });
+      }
       const updated = await tx.commercialSimulationScenario.updateMany({
         where: {
           id: scenarioId,
@@ -1663,6 +1718,19 @@ export class CommercialSimulatorService {
             data: dto.capabilityIds.map((capabilityId, displayOrder) => ({
               scenarioId,
               capabilityId,
+              displayOrder,
+            })),
+          });
+      }
+      if (normalizedFamilyCodes) {
+        await tx.commercialSimulationScenarioFamily.deleteMany({
+          where: { scenarioId },
+        });
+        if (normalizedFamilyCodes.length)
+          await tx.commercialSimulationScenarioFamily.createMany({
+            data: normalizedFamilyCodes.map((familyCode, displayOrder) => ({
+              scenarioId,
+              familyCode,
               displayOrder,
             })),
           });
@@ -1757,6 +1825,7 @@ export class CommercialSimulatorService {
       const scenario = await tx.commercialSimulationScenario.findUniqueOrThrow({
         where: { id: scenarioId },
         include: {
+          families: { orderBy: { displayOrder: 'asc' } },
           capabilities: true,
           lines: { include: { costEfforts: true } },
           driverValues: true,
@@ -1771,6 +1840,7 @@ export class CommercialSimulatorService {
           afterData: {
             workspaceId,
             lockVersion: scenario.lockVersion,
+            familyCount: scenario.families.length,
             capabilityCount: scenario.capabilities.length,
             lineCount: scenario.lines.length,
             driverCount: scenario.driverValues.length,
@@ -1824,6 +1894,7 @@ export class CommercialSimulatorService {
             where: { status: 'ACTIVE' },
             orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
             include: {
+              families: true,
               capabilities: { include: { capability: true } },
               lines: {
                 include: { costEfforts: true },
@@ -1860,6 +1931,13 @@ export class CommercialSimulatorService {
               run.costResult.firstYearCostMinor.toString(),
             )
           : null;
+      const catalogLines = scenario.lines.filter(
+        (line) => line.source === 'CATALOG_COMPONENT',
+      );
+      const familyAuthority = resolveCommercialFamilyAuthority({
+        explicitCodes: scenario.families?.map((item) => item.familyCode) ?? [],
+        componentCodes: catalogLines.map((line) => line.componentCode),
+      });
       return {
         scenarioId: scenario.id,
         name: scenario.name,
@@ -1868,33 +1946,11 @@ export class CommercialSimulatorService {
         calculatedAt:
           state === 'CURRENT' ? run?.calculatedAt.toISOString() : null,
         currency: run?.currency ?? workspace.currency,
+        familyCodes: familyAuthority.codes,
+        familyAuthoritySource: familyAuthority.source,
         packaging: validatePackagingSelection({
-          familyCodes: (() => {
-            const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter(
-              (family) =>
-                family.code !== 'PROFESSIONAL' &&
-                family.capabilityCodes.some((code) =>
-                  scenario.capabilities.some(
-                    (item) => item.capability.code === code,
-                  ),
-                ),
-            ).map((family) => family.code);
-            if (
-              scenario.lines.some((line) =>
-                line.componentCode.startsWith('CORO_PROFESSIONAL_'),
-              )
-            )
-              familyCodes.push('PROFESSIONAL');
-            if (
-              scenario.lines.some(
-                (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
-              ) &&
-              !familyCodes.includes('PROFESSIONAL_SERVICES')
-            )
-              familyCodes.push('PROFESSIONAL_SERVICES');
-            return familyCodes;
-          })(),
-          components: scenario.lines.map((line) => ({
+          familyCodes: familyAuthority.codes,
+          components: catalogLines.map((line) => ({
             componentCode: line.componentCode,
             revenueCategory: line.revenueCategory,
           })),
@@ -2045,6 +2101,7 @@ export class CommercialSimulatorService {
           createdBy: true,
           selectedScenario: {
             include: {
+              families: true,
               capabilities: { include: { capability: true } },
               lines: true,
               runs: {
@@ -2066,6 +2123,7 @@ export class CommercialSimulatorService {
       ? await this.prisma.commercialSimulationScenario.findFirst({
           where: { id: scenarioId, workspaceId },
           include: {
+            families: true,
             capabilities: { include: { capability: true } },
             lines: true,
             runs: {
@@ -2091,10 +2149,16 @@ export class CommercialSimulatorService {
     if (!run.priceResult || run.priceStatus !== 'COMPLETE')
       throw new BadRequestException('CUSTOMER_PREVIEW_PRICE_INCOMPLETE');
     await this.assertGuidedPackaging(workspaceId, scenario.id);
+    const familyAuthority = resolveCommercialFamilyAuthority({
+      explicitCodes: scenario.families?.map((item) => item.familyCode) ?? [],
+      componentCodes: scenario.lines
+        .filter((line) => line.source === 'CATALOG_COMPONENT')
+        .map((line) => line.componentCode),
+    });
+    if (familyAuthority.source === 'REVIEW_REQUIRED')
+      throw new BadRequestException('FAMILY_COMPOSITION_REVIEW_REQUIRED');
     const familyDefinitions = COMMERCIAL_FAMILY_REGISTRY.filter((family) =>
-      family.capabilityCodes.some((code) =>
-        scenario.capabilities.some((item) => item.capability.code === code),
-      ),
+      familyAuthority.codes.includes(family.code),
     );
     const target = workspace.organization ?? workspace.prospect;
     if (!target)
@@ -2178,7 +2242,7 @@ export class CommercialSimulatorService {
     const scenario = await this.prisma.commercialSimulationScenario.findFirst({
       where: { id: scenarioId, workspaceId },
       select: {
-        capabilities: { select: { capability: { select: { code: true } } } },
+        families: { select: { familyCode: true } },
         lines: {
           select: {
             source: true,
@@ -2189,28 +2253,15 @@ export class CommercialSimulatorService {
       },
     });
     if (!scenario) throw new NotFoundException('Scenario introuvable.');
-    const familyCodes = COMMERCIAL_FAMILY_REGISTRY.filter(
-      (family) =>
-        family.code !== 'PROFESSIONAL' &&
-        family.capabilityCodes.some((code) =>
-          scenario.capabilities.some(
-            (selection) => selection.capability.code === code,
-          ),
-        ),
-    ).map((family) => family.code);
-    if (
-      scenario.lines.some((line) =>
-        line.componentCode.startsWith('CORO_PROFESSIONAL_'),
-      )
-    )
-      familyCodes.push('PROFESSIONAL');
-    if (
-      scenario.lines.some(
-        (line) => line.revenueCategory === 'PROFESSIONAL_SERVICE',
-      ) &&
-      !familyCodes.includes('PROFESSIONAL_SERVICES')
-    )
-      familyCodes.push('PROFESSIONAL_SERVICES');
+    const familyAuthority = resolveCommercialFamilyAuthority({
+      explicitCodes: scenario.families?.map((item) => item.familyCode) ?? [],
+      componentCodes: scenario.lines
+        .filter((line) => line.source === 'CATALOG_COMPONENT')
+        .map((line) => line.componentCode),
+    });
+    if (familyAuthority.source === 'REVIEW_REQUIRED')
+      throw new BadRequestException('FAMILY_COMPOSITION_REVIEW_REQUIRED');
+    const familyCodes = familyAuthority.codes;
     const result = validatePackagingSelection({
       familyCodes,
       components: scenario.lines
@@ -2270,11 +2321,38 @@ export class CommercialSimulatorService {
           include: { capability: true, costEfforts: true },
           orderBy: { displayOrder: 'asc' },
         },
+        families: { orderBy: { displayOrder: 'asc' } },
         capabilities: { include: { capability: true } },
         driverValues: { orderBy: [{ driverCode: 'asc' }, { scopeKey: 'asc' }] },
       },
     });
     if (!scenario) throw new NotFoundException('Scenario introuvable.');
+    const catalogLines = scenario.lines.filter(
+      (line) => line.source === 'CATALOG_COMPONENT',
+    );
+    let canonicalFamilyCodes: string[] = [];
+    if (catalogLines.length || (scenario.families?.length ?? 0)) {
+      const familyAuthority = resolveCommercialFamilyAuthority({
+        explicitCodes: scenario.families?.map((item) => item.familyCode) ?? [],
+        componentCodes: catalogLines.map((line) => line.componentCode),
+      });
+      if (familyAuthority.source === 'REVIEW_REQUIRED')
+        throw new BadRequestException('FAMILY_COMPOSITION_REVIEW_REQUIRED');
+      canonicalFamilyCodes = familyAuthority.codes;
+      const packaging = validatePackagingSelection({
+        familyCodes: familyAuthority.codes,
+        components: catalogLines.map((line) => ({
+          componentCode: line.componentCode,
+          revenueCategory: line.revenueCategory,
+        })),
+      });
+      if (packaging.status !== 'READY')
+        throw new BadRequestException({
+          code: 'GUIDED_PACKAGING_NOT_READY',
+          policyVersion: packaging.policyVersion,
+          blockers: packaging.blockers,
+        });
+    }
     if (scenario.workspace.currency !== 'CAD')
       throw new BadRequestException('Simulator V1 supports CAD only.');
     const componentById = new Map(
@@ -2599,6 +2677,7 @@ export class CommercialSimulatorService {
       valuationAssumptionVersionIds: [
         ...(dto.valuationAssumptionVersionIds ?? []),
       ].sort(),
+      familyCodes: canonicalFamilyCodes,
       capabilities: canonicalCapabilityCodes(
         scenario.capabilities.map((item) => item.capability.code),
       ),

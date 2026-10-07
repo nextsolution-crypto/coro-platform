@@ -5522,6 +5522,7 @@ model CommercialSimulationScenario {
   updatedAt                    DateTime @updatedAt
   workspace                    CommercialSimulationWorkspace @relation("CommercialSimulationWorkspaceScenarios", fields: [workspaceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   selectedByWorkspace          CommercialSimulationWorkspace? @relation("CommercialSimulationSelectedScenario")
+  families                     CommercialSimulationScenarioFamily[]
   capabilities                 CommercialSimulationScenarioCapability[]
   lines                        CommercialSimulationScenarioLine[]
   driverValues                 CommercialSimulationDriverValue[]
@@ -5531,6 +5532,18 @@ model CommercialSimulationScenario {
   @@unique([id, workspaceId])
   @@unique([workspaceId, name])
   @@index([workspaceId, status, displayOrder])
+}
+
+model CommercialSimulationScenarioFamily {
+  id                           String @id @default(uuid())
+  scenarioId                   String
+  familyCode                   String @db.VarChar(100)
+  displayOrder                 Int @default(0)
+  createdAt                    DateTime @default(now())
+  scenario                     CommercialSimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([scenarioId, familyCode])
+  @@index([scenarioId, displayOrder])
 }
 
 model CommercialSimulationScenarioCapability {

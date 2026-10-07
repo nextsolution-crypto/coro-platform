@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import { CommercialRevenueCategory } from '@prisma/client';
 import {
   IsArray,
+  ArrayNotEmpty,
   IsBoolean,
   IsIn,
   IsInt,
@@ -114,7 +115,7 @@ export class GuidedCustomLineDto {
 
 export class GuidedConfigureScenarioDto {
   @IsInt() @Min(0) lockVersion!: number;
-  @IsArray() @IsString({ each: true }) familyCodes!: string[];
+  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) familyCodes!: string[];
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => GuidedCatalogLineDto)
@@ -170,6 +171,7 @@ export class DriverValueDto {
 
 export class ConfigureScenarioDto {
   @IsInt() @Min(0) lockVersion!: number;
+  @IsOptional() @IsArray() @IsString({ each: true }) familyCodes?: string[];
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })

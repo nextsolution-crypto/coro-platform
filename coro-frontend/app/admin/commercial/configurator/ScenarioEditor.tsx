@@ -233,6 +233,18 @@ export function ScenarioEditor({
 
       <section className="rounded-xl border bg-white p-5">
         <h2 className="text-lg font-semibold">1. Solutions</h2>
+        {scenario.familyAuthoritySource === "LEGACY_INFERRED" && (
+          <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            Legacy scenario: confirm and save the inferred solution selection to
+            make its commercial intent explicit.
+          </p>
+        )}
+        {scenario.familyAuthoritySource === "REVIEW_REQUIRED" && (
+          <p className="mt-2 rounded-lg bg-red-50 p-3 text-sm text-red-900">
+            This legacy scenario has no unambiguous commercial solution. Select
+            and save the intended solution before calculation.
+          </p>
+        )}
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           {families.map((family) => {
             const selected = familyCodes.includes(family.code);

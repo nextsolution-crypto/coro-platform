@@ -91,6 +91,7 @@ export type GuidedScenario = {
   lockVersion: number;
   selected: boolean;
   familyCodes: string[];
+  familyAuthoritySource: "EXPLICIT" | "LEGACY_INFERRED" | "REVIEW_REQUIRED";
   packaging: {
     policyVersion: string;
     status: "READY" | "BLOCKED";

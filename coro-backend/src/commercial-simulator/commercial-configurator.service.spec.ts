@@ -24,6 +24,7 @@ describe('Commercial Configurator projections', () => {
       commercialSimulationScenario: {
         findFirst: jest.fn(() =>
           Promise.resolve({
+            families: [{ familyCode: 'COMPLIANCE' }],
             capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
             lines: [
               {
@@ -928,6 +929,7 @@ describe('Commercial Configurator projections', () => {
             selectedScenario: {
               id: 'scenario-a',
               lockVersion: 1,
+              families: [{ familyCode: 'COMPLIANCE' }],
               capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
               lines: [
                 {
@@ -960,6 +962,7 @@ describe('Commercial Configurator projections', () => {
       commercialSimulationScenario: {
         findFirst: jest.fn(() =>
           Promise.resolve({
+            families: [{ familyCode: 'COMPLIANCE' }],
             capabilities: [{ capability: { code: 'COMPLIANCE_OPERATIONS' } }],
             lines: [
               {
@@ -1001,8 +1004,20 @@ describe('Commercial Configurator projections', () => {
       Promise.resolve({
         id: 'scenario-professional',
         lockVersion: 3,
+        families: [{ familyCode: 'PROFESSIONAL' }],
         capabilities: [],
-        lines: [],
+        lines: [
+          {
+            source: 'CATALOG_COMPONENT',
+            componentCode: 'CORO_PROFESSIONAL_ANNUAL',
+            revenueCategory: 'SAAS',
+          },
+          {
+            source: 'CATALOG_COMPONENT',
+            componentCode: 'CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED',
+            revenueCategory: 'IMPLEMENTATION',
+          },
+        ],
         runs: [
           {
             id: 'run-internal',
@@ -1074,6 +1089,9 @@ describe('Commercial Configurator projections', () => {
       annualRecurringEquivalentMinor: '1750000',
       firstYearMinor: '2492500',
     });
+    expect(preview.solutions).toEqual([
+      { labelFr: 'CORO Professional', labelEn: 'CORO Professional' },
+    ]);
     expect(preview.inputs).toEqual([
       {
         labelFr: 'Capacité — jusqu’à',

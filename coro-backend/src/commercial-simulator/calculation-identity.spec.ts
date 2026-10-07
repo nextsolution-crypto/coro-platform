@@ -6,8 +6,17 @@ import {
 } from './calculation-identity';
 
 describe('commercial simulator calculation identity', () => {
-  it('uses the expanded semantic identity version without redefining persisted v2 runs', () => {
-    expect(SIMULATOR_FINGERPRINT_VERSION).toBe('simulator-input/v3');
+  it('uses a new identity grammar for explicit commercial family intent', () => {
+    expect(SIMULATOR_FINGERPRINT_VERSION).toBe('simulator-input/v4');
+  });
+
+  it('distinguishes commercial family intent even when components are identical', () => {
+    const evidence = { components: ['SHARED_COMPONENT'] };
+    expect(
+      simulatorFingerprint({ ...evidence, familyCodes: ['PROFESSIONAL'] }),
+    ).not.toBe(
+      simulatorFingerprint({ ...evidence, familyCodes: ['COMPLIANCE'] }),
+    );
   });
 
   it('canonicalizes capability order and changes identity for a different set', () => {
