@@ -229,9 +229,19 @@ const path = require("node:path");
     guided,
     /CUSTOMER_PREVIEW_RECALCULATION_REQUIRED|customer-preview/,
   );
-  assert.match(guided, /runs\/\$\{scenario\.latestResult!\.id\}\/convert/);
+  assert.match(guided, /runs\/\$\{scenario\.latestResult\.id\}\/convert/);
   assert.match(guided, /Créer la proposition gouvernée/);
   assert.match(guided, /crée explicitement un brouillon de\s+proposition/);
+  assert.match(
+    guided,
+    /\{preview && \([\s\S]*?<CustomerSafeReview[\s\S]*?\)\}\s*<section[\s\S]*?Créer la proposition gouvernée/,
+  );
+  assert.match(guided, /async function createProposal\(\)/);
+  assert.match(guided, /let customerPreview = preview/);
+  assert.match(
+    guided,
+    /Proposition \$\{result\.reference\} prête en brouillon/,
+  );
   assert.match(guided, /!scenario\.selected/);
   assert.match(guided, /scenario\.familyAuthoritySource === "REVIEW_REQUIRED"/);
   assert.match(guided, /scenario\.packaging\.status !== "READY"/);

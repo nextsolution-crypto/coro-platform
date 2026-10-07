@@ -150,6 +150,24 @@ export function GuidedWorkspace({
     );
   const scenario = workspace.scenarios.find((item) => item.id === activeId);
   const professionalScenario = scenario?.familyCodes.includes("PROFESSIONAL");
+  const proposalBlockedReason = !scenario
+    ? "Ouvrez un scénario pour préparer une proposition."
+    : draftDirty
+      ? "Enregistrez les modifications et recalculez le scénario."
+      : !scenario.selected
+        ? "Retenez ce scénario avant de créer la proposition."
+        : !scenario.latestResult
+          ? "Calculez ce scénario avant de créer la proposition."
+          : scenario.stale
+            ? "Le calcul officiel est périmé. Recalculez le scénario."
+            : scenario.familyAuthoritySource === "REVIEW_REQUIRED"
+              ? "La famille commerciale doit être résolue avant la conversion."
+              : scenario.packaging.status !== "READY"
+                ? "Le packaging commercial doit être valide avant la conversion."
+                : scenario.latestResult.priceStatus !== "COMPLETE" ||
+                    scenario.latestResult.firstYearCommitmentCad === null
+                  ? "Le prix et le montant de première année doivent être complets."
+                  : null;
 
   async function loadComparison() {
     const { data } = await api.get(
@@ -187,6 +205,62 @@ export function GuidedWorkspace({
       );
     } finally {
       setPreviewBusy(false);
+    }
+  }
+
+  async function createProposal() {
+    if (!scenario?.latestResult || proposalBlockedReason) {
+      setMessage(
+        proposalBlockedReason ??
+          "Un calcul officiel courant est requis pour créer la proposition.",
+      );
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      let customerPreview = preview;
+      if (!customerPreview) {
+        const { data } = await api.get(
+          `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/customer-preview`,
+          { params: { scenarioId: scenario.id } },
+        );
+        customerPreview = data as CustomerSafeProjection;
+        setPreview(customerPreview);
+      }
+      const response = await api.post(
+        `/admin/v1/commercial/simulator/configurator/workspaces/${workspaceId}/scenarios/${scenario.id}/runs/${scenario.latestResult.id}/convert`,
+        {
+          title: proposalTitle,
+          relationship,
+          preferredLanguage: "FR",
+          recipientLegalName: customerPreview.customer.legalName,
+          recipientDisplayName: customerPreview.customer.displayName,
+          recipientCountry: "CA",
+          recipientContactName: contactName || undefined,
+          recipientEmail: contactEmail || undefined,
+          valueDisclaimerFr: valueDisclaimerFr.trim() || undefined,
+          valueDisclaimerEn: valueDisclaimerEn.trim() || undefined,
+        },
+      );
+      const result = {
+        id: response.data.proposal.id,
+        reference: response.data.proposal.reference,
+      };
+      setProposalResult(result);
+      await reload(scenario.id);
+      setMessage(`Proposition ${result.reference} prête en brouillon.`);
+    } catch (error) {
+      const apiMessage = (
+        error as { response?: { data?: { message?: string | string[] } } }
+      ).response?.data?.message;
+      setMessage(
+        Array.isArray(apiMessage)
+          ? apiMessage.join(" · ")
+          : (apiMessage ?? "La proposition n’a pas pu être créée."),
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -510,136 +584,92 @@ export function GuidedWorkspace({
                 <ScenarioResults scenario={scenario} />
               )}
               {preview && (
-                <>
-                  <CustomerSafeReview
-                    preview={preview}
-                    onClose={() => setPreview(undefined)}
-                  />
-                  <section className="rounded-xl border bg-white p-5">
-                    <h2 className="font-semibold">
-                      Créer la proposition gouvernée
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Cette action crée explicitement un brouillon de
-                      proposition depuis le scénario retenu et son dernier
-                      calcul officiel.
-                    </p>
-                    {!scenario.selected && (
-                      <p className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900">
-                        Retenez ce scénario avant de créer la proposition.
-                      </p>
-                    )}
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <input
-                        className="rounded border p-2"
-                        placeholder="Titre de la proposition"
-                        value={proposalTitle}
-                        onChange={(e) => setProposalTitle(e.target.value)}
-                      />
-                      <select
-                        className="rounded border p-2"
-                        value={relationship}
-                        onChange={(e) =>
-                          setRelationship(
-                            e.target.value as "DIRECT" | "PARTNER",
-                          )
-                        }
-                      >
-                        <option value="DIRECT">Direct</option>
-                        <option value="PARTNER">Partenaire</option>
-                      </select>
-                      <input
-                        className="rounded border p-2"
-                        placeholder="Contact"
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                      />
-                      <input
-                        className="rounded border p-2"
-                        placeholder="Courriel"
-                        value={contactEmail}
-                        onChange={(e) => setContactEmail(e.target.value)}
-                      />
-                      {scenario.latestResult?.valueStatus === "COMPLETE" && (
-                        <>
-                          <textarea
-                            className="rounded border p-2"
-                            placeholder="Avis de non-responsabilité sur la valeur (FR)"
-                            value={valueDisclaimerFr}
-                            onChange={(e) =>
-                              setValueDisclaimerFr(e.target.value)
-                            }
-                          />
-                          <textarea
-                            className="rounded border p-2"
-                            placeholder="Value disclaimer (EN, optional)"
-                            value={valueDisclaimerEn}
-                            onChange={(e) =>
-                              setValueDisclaimerEn(e.target.value)
-                            }
-                          />
-                        </>
-                      )}
-                    </div>
-                    <button
-                      disabled={
-                        !proposalTitle ||
-                        !scenario.selected ||
-                        !scenario.latestResult ||
-                        scenario.stale ||
-                        scenario.familyAuthoritySource === "REVIEW_REQUIRED" ||
-                        scenario.packaging.status !== "READY" ||
-                        scenario.latestResult.priceStatus !== "COMPLETE" ||
-                        (scenario.latestResult.valueStatus === "COMPLETE" &&
-                          !valueDisclaimerFr.trim()) ||
-                        busy
-                      }
-                      className="mt-3 rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-40"
-                      onClick={() =>
-                        void action(
-                          async () => {
-                            const response = await api.post(
-                              `/admin/v1/commercial/simulator/configurator/workspaces/${workspaceId}/scenarios/${scenario.id}/runs/${scenario.latestResult!.id}/convert`,
-                              {
-                                title: proposalTitle,
-                                relationship,
-                                preferredLanguage: "FR",
-                                recipientLegalName: preview.customer.legalName,
-                                recipientDisplayName:
-                                  preview.customer.displayName,
-                                recipientCountry: "CA",
-                                recipientContactName: contactName || undefined,
-                                recipientEmail: contactEmail || undefined,
-                                valueDisclaimerFr:
-                                  valueDisclaimerFr.trim() || undefined,
-                                valueDisclaimerEn:
-                                  valueDisclaimerEn.trim() || undefined,
-                              },
-                            );
-                            setProposalResult({
-                              id: response.data.proposal.id,
-                              reference: response.data.proposal.reference,
-                            });
-                            return response;
-                          },
-                          "Proposal created.",
-                          scenario.id,
-                        )
-                      }
-                    >
-                      Créer la proposition
-                    </button>
-                    {proposalResult && (
-                      <a
-                        className="ml-3 underline"
-                        href={`/admin/commercial/proposals/${proposalResult.id}`}
-                      >
-                        Ouvrir {proposalResult.reference}
-                      </a>
-                    )}
-                  </section>
-                </>
+                <CustomerSafeReview
+                  preview={preview}
+                  onClose={() => setPreview(undefined)}
+                />
               )}
+              <section className="rounded-xl border bg-white p-5">
+                <h2 className="font-semibold">
+                  Créer la proposition gouvernée
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Cette action crée explicitement un brouillon de proposition
+                  depuis le scénario retenu et son dernier calcul officiel.
+                </p>
+                {proposalBlockedReason && (
+                  <p className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900">
+                    {proposalBlockedReason}
+                  </p>
+                )}
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <input
+                    className="rounded border p-2"
+                    placeholder="Titre de la proposition"
+                    value={proposalTitle}
+                    onChange={(e) => setProposalTitle(e.target.value)}
+                  />
+                  <select
+                    className="rounded border p-2"
+                    value={relationship}
+                    onChange={(e) =>
+                      setRelationship(e.target.value as "DIRECT" | "PARTNER")
+                    }
+                  >
+                    <option value="DIRECT">Direct</option>
+                    <option value="PARTNER">Partenaire</option>
+                  </select>
+                  <input
+                    className="rounded border p-2"
+                    placeholder="Contact"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                  />
+                  <input
+                    className="rounded border p-2"
+                    placeholder="Courriel"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                  />
+                  {scenario.latestResult?.valueStatus === "COMPLETE" && (
+                    <>
+                      <textarea
+                        className="rounded border p-2"
+                        placeholder="Avis de non-responsabilité sur la valeur (FR)"
+                        value={valueDisclaimerFr}
+                        onChange={(e) => setValueDisclaimerFr(e.target.value)}
+                      />
+                      <textarea
+                        className="rounded border p-2"
+                        placeholder="Value disclaimer (EN, optional)"
+                        value={valueDisclaimerEn}
+                        onChange={(e) => setValueDisclaimerEn(e.target.value)}
+                      />
+                    </>
+                  )}
+                </div>
+                <button
+                  disabled={
+                    !proposalTitle ||
+                    !!proposalBlockedReason ||
+                    (scenario.latestResult?.valueStatus === "COMPLETE" &&
+                      !valueDisclaimerFr.trim()) ||
+                    busy
+                  }
+                  className="mt-3 rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-40"
+                  onClick={() => void createProposal()}
+                >
+                  Créer la proposition
+                </button>
+                {proposalResult && (
+                  <a
+                    className="ml-3 underline"
+                    href={`/admin/commercial/proposals/${proposalResult.id}`}
+                  >
+                    Ouvrir {proposalResult.reference}
+                  </a>
+                )}
+              </section>
             </>
           ) : (
             <section className="rounded-xl border bg-white p-8 text-center">
