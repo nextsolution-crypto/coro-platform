@@ -7,6 +7,12 @@ const path = require("node:path");
   const contract = await import("./configurator-contract.mjs");
   const { applyFamilySelection } =
     await import("./scenario-family-selection.mjs");
+  const {
+    PROFESSIONAL_COMPONENTS,
+    buildProfessionalDraftRequest,
+    capacityBusinessBounds,
+    professionalDraftFromScenario,
+  } = await import("./professional-offer-builder.mjs");
   const page = fs.readFileSync(path.join(__dirname, "page.tsx"), "utf8");
   const layout = fs.readFileSync(
     path.join(__dirname, "../../../../components/layout/AppLayout.tsx"),
@@ -23,6 +29,7 @@ const path = require("node:path");
     "ScenarioResults.tsx",
     "ScenarioComparison.tsx",
     "CustomerSafeReview.tsx",
+    "ProfessionalOfferBuilder.tsx",
   ]
     .map((file) => fs.readFileSync(path.join(__dirname, file), "utf8"))
     .join("\n");
@@ -33,6 +40,93 @@ const path = require("node:path");
   const scenarioEditor = fs.readFileSync(
     path.join(__dirname, "ScenarioEditor.tsx"),
     "utf8",
+  );
+  const professionalCatalog = Object.values(PROFESSIONAL_COMPONENTS).map(
+    (code) => ({ id: `id-${code}`, code }),
+  );
+  const professionalScenario = {
+    id: "scenario-professional",
+    lines: [
+      {
+        id: "annual",
+        source: "CATALOG_COMPONENT",
+        priceComponentId: `id-${PROFESSIONAL_COMPONENTS.annual}`,
+        quantity: "125",
+        costEfforts: [],
+      },
+      {
+        id: "advanced",
+        source: "CATALOG_COMPONENT",
+        priceComponentId: `id-${PROFESSIONAL_COMPONENTS.advanced}`,
+        quantity: "1",
+        costEfforts: [],
+      },
+      {
+        id: "delivery",
+        source: "CATALOG_COMPONENT",
+        priceComponentId: `id-${PROFESSIONAL_COMPONENTS.delivery}`,
+        quantity: "10",
+        costEfforts: [],
+      },
+      {
+        id: "senior",
+        source: "CATALOG_COMPONENT",
+        priceComponentId: `id-${PROFESSIONAL_COMPONENTS.senior}`,
+        quantity: "3",
+        costEfforts: [],
+      },
+    ],
+    drivers: [{ code: "ACTIVE_SITES", value: "125" }],
+  };
+  assert.deepEqual(
+    professionalDraftFromScenario(professionalScenario, professionalCatalog),
+    {
+      capacity: "125",
+      implementation: "ADVANCED",
+      deliveryHours: "10",
+      seniorHours: "3",
+    },
+  );
+  const professionalRequest = buildProfessionalDraftRequest({
+    scenario: professionalScenario,
+    catalog: professionalCatalog,
+    state: {
+      capacity: "150",
+      implementation: "STANDARD",
+      deliveryHours: "15",
+      seniorHours: "3",
+    },
+  });
+  assert.deepEqual(professionalRequest.familyCodes, ["PROFESSIONAL"]);
+  assert.deepEqual(professionalRequest.driverValues, [
+    { driverCode: "ACTIVE_SITES", value: "150" },
+  ]);
+  assert.deepEqual(
+    professionalRequest.catalogLines.map((line) => line.quantity),
+    ["150", "1", "15", "3"],
+  );
+  assert.equal(
+    professionalRequest.catalogLines.every(
+      (line) => line.commercialQuantityBasis === "DECLARED",
+    ),
+    true,
+  );
+  assert.equal("catalogAmountCad" in professionalRequest, false);
+  assert.equal("price" in professionalRequest, false);
+  const noServicesRequest = buildProfessionalDraftRequest({
+    scenario: professionalScenario,
+    catalog: professionalCatalog,
+    state: {
+      capacity: "125",
+      implementation: "ADVANCED",
+      deliveryHours: "0",
+      seniorHours: "0",
+    },
+  });
+  assert.equal(noServicesRequest.catalogLines.length, 2);
+  assert.equal(
+    capacityBusinessBounds({ minimumQuantity: "101", maximumQuantity: "126" }),
+    "101–125",
   );
   assert.equal(
     contract.CONFIGURATOR_API_BASE,
@@ -113,7 +207,7 @@ const path = require("node:path");
   assert.match(guided, /onClose=\{\(\) => setPreview\(undefined\)\}/);
   assert.match(
     guided,
-    /disabled=\{\s*!scenario\?\.latestResult \|\| scenario\.stale \|\| previewBusy/,
+    /disabled=\{\s*draftDirty \|\|\s*!scenario\?\.latestResult \|\|\s*scenario\.stale \|\|\s*previewBusy/,
   );
   assert.match(guided, /Équivalent annuel récurrent/);
   assert.match(guided, /annualRecurringEquivalentMinor/);
@@ -130,7 +224,19 @@ const path = require("node:path");
   assert.doesNotMatch(guided, />METERED</);
   assert.doesNotMatch(customerReview, /costAssumption|catalogUnitAmountMinor/);
   assert.match(guided, /simulator\/configurator\/workspaces/);
-  assert.doesNotMatch(guided, /<textarea[^>]*>.*JSON/is);
+  assert.match(guided, /\/workspaces\/\$\{workspaceId\}\/evaluate/);
+  assert.match(guided, /window\.setTimeout\(async \(\) =>/);
+  assert.match(guided, /}, 450\)/);
+  assert.match(guided, /AbortController/);
+  assert.match(guided, /requestSequence/);
+  assert.match(guided, /CORO Professional/);
+  assert.match(guided, /Enterprise \/ sur devis/);
+  assert.match(guided, /Aperçu en direct/);
+  assert.match(guided, /Analyse interne/);
+  assert.match(guided, /Options avancées/);
+  assert.match(guided, /beforeunload/);
+  assert.match(guided, /disabled=\{\s*draftDirty/);
+  assert.doesNotMatch(scenarioEditor, /<textarea[^>]*>.*JSON/is);
   assert.doesNotMatch(guided, /UUID|minor units|basis points|scopeKey/i);
   console.log("commercial configurator frontend contract: PASS");
 })().catch((error) => {

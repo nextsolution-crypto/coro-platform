@@ -17,6 +17,7 @@ import { ScenarioResults } from "./ScenarioResults";
 import { ScenarioSidebar } from "./ScenarioSidebar";
 import { CustomerSafeReview } from "./CustomerSafeReview";
 import { ScenarioComparison } from "./ScenarioComparison";
+import { ProfessionalOfferBuilder } from "./ProfessionalOfferBuilder";
 
 export function GuidedWorkspace({
   workspaceId,
@@ -56,6 +57,12 @@ export function GuidedWorkspace({
     id: string;
     reference: string;
   }>();
+  const [draftDirty, setDraftDirty] = useState(false);
+  const [technicalMode, setTechnicalMode] = useState(false);
+  const handleDirtyChange = useCallback((value: boolean) => {
+    setDraftDirty(value);
+    if (value) setPreview(undefined);
+  }, []);
 
   const reload = useCallback(
     async (preferredId?: string) => {
@@ -139,6 +146,7 @@ export function GuidedWorkspace({
       </p>
     );
   const scenario = workspace.scenarios.find((item) => item.id === activeId);
+  const professionalScenario = scenario?.familyCodes.includes("PROFESSIONAL");
 
   async function loadComparison() {
     const { data } = await api.get(
@@ -147,8 +155,14 @@ export function GuidedWorkspace({
     setComparison(data);
   }
   async function loadPreview() {
+    if (draftDirty) {
+      setMessage(
+        "Enregistrez les modifications et recalculez l’offre avant l’aperçu client.",
+      );
+      return;
+    }
     if (!scenario?.latestResult || scenario.stale) {
-      setMessage("Recalculate this scenario before opening Customer Preview.");
+      setMessage("Recalculez ce scénario avant d’ouvrir l’aperçu client.");
       return;
     }
     setPreviewBusy(true);
@@ -201,7 +215,11 @@ export function GuidedWorkspace({
         <ScenarioSidebar
           scenarios={workspace.scenarios}
           activeId={activeId}
-          onOpen={setActiveId}
+          onOpen={(id) => {
+            setActiveId(id);
+            setDraftDirty(false);
+            setTechnicalMode(false);
+          }}
           onCreate={() => {
             const name = window.prompt("Scenario name", "Standard");
             if (name?.trim())
@@ -216,7 +234,9 @@ export function GuidedWorkspace({
           }}
         />
         <main className="space-y-5">
-          <ReadinessPanel readiness={readiness} families={families} />
+          {(!professionalScenario || technicalMode) && (
+            <ReadinessPanel readiness={readiness} families={families} />
+          )}
           <div className="flex gap-3">
             <button
               className="rounded border px-4 py-2"
@@ -227,14 +247,19 @@ export function GuidedWorkspace({
             <button
               type="button"
               disabled={
-                !scenario?.latestResult || scenario.stale || previewBusy
+                draftDirty ||
+                !scenario?.latestResult ||
+                scenario.stale ||
+                previewBusy
               }
               className="rounded border px-4 py-2"
               onClick={() => void loadPreview()}
               title={
-                !scenario?.latestResult || scenario.stale
-                  ? "Calculate this scenario before opening Customer Preview."
-                  : undefined
+                draftDirty
+                  ? "Enregistrez puis recalculez avant l’aperçu client."
+                  : !scenario?.latestResult || scenario.stale
+                    ? "Calculez ce scénario avant l’aperçu client."
+                    : undefined
               }
             >
               {previewBusy ? "Ouverture…" : "Aperçu client"}
@@ -256,134 +281,226 @@ export function GuidedWorkspace({
               }
             />
           )}
-          <section className="rounded-xl border bg-white p-5">
-            <h2 className="text-lg font-semibold">Autorités d’hypothèses</h2>
-            <p className="text-xs text-slate-500">
-              Sélection explicite de versions publiées. Aucun brouillon n’est
-              offert.
-            </p>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <label className="text-sm">
-                Coûts internes
-                <select
-                  value={costVersionId}
-                  onChange={(e) => setCostVersionId(e.target.value)}
-                  className="mt-1 w-full rounded border p-2"
-                >
-                  <option value="">
-                    {assumptions.cost.length
-                      ? "Sélectionner une autorité de coûts"
-                      : "Non configuré — coût indisponible"}
-                  </option>
-                  {assumptions.cost.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.label}
+          {(!professionalScenario || technicalMode) && (
+            <section className="rounded-xl border bg-white p-5">
+              <h2 className="text-lg font-semibold">Autorités d’hypothèses</h2>
+              <p className="text-xs text-slate-500">
+                Sélection explicite de versions publiées. Aucun brouillon n’est
+                offert.
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="text-sm">
+                  Coûts internes
+                  <select
+                    value={costVersionId}
+                    onChange={(e) => setCostVersionId(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                  >
+                    <option value="">
+                      {assumptions.cost.length
+                        ? "Sélectionner une autorité de coûts"
+                        : "Non configuré — coût indisponible"}
                     </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm">
-                Méthodologie de valeur
-                <select
-                  value={valuationVersionId}
-                  onChange={(e) => setValuationVersionId(e.target.value)}
-                  className="mt-1 w-full rounded border p-2"
-                >
-                  <option value="">Non configurée — valeur indisponible</option>
-                  {assumptions.valuation.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.label}
+                    {assumptions.cost.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm">
+                  Méthodologie de valeur
+                  <select
+                    value={valuationVersionId}
+                    onChange={(e) => setValuationVersionId(e.target.value)}
+                    className="mt-1 w-full rounded border p-2"
+                  >
+                    <option value="">
+                      Non configurée — valeur indisponible
                     </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </section>
+                    {assumptions.valuation.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </section>
+          )}
           {scenario ? (
             <>
-              <ScenarioEditor
-                key={`${scenario.id}:${scenario.lockVersion}`}
-                scenario={scenario}
-                families={families}
-                drivers={drivers}
-                catalog={catalog}
-                busy={busy}
-                onSaveMetadata={(name, description) =>
-                  action(
-                    () =>
-                      api.put(
-                        `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/metadata`,
-                        {
-                          name,
-                          description: description || undefined,
-                          lockVersion: scenario.lockVersion,
-                        },
-                      ),
-                    "Scenario details saved.",
-                    scenario.id,
-                  )
-                }
-                onSave={(payload) =>
-                  action(
-                    () =>
-                      api.put(
-                        `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}`,
-                        payload,
-                      ),
-                    "Scenario configuration saved.",
-                    scenario.id,
-                  )
-                }
-                onCalculate={() =>
-                  action(
-                    () =>
-                      api.post(
-                        `/admin/v1/commercial/simulator/configurator/workspaces/${workspaceId}/scenarios/${scenario.id}/calculate`,
-                        {
-                          costAssumptionVersionId: costVersionId || undefined,
-                          valuationAssumptionVersionIds: valuationVersionId
-                            ? [valuationVersionId]
-                            : undefined,
-                        },
-                      ),
-                    "Scenario calculated.",
-                    scenario.id,
-                  )
-                }
-                onDuplicate={() =>
-                  action(
-                    () =>
-                      api.post(
-                        `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/duplicate`,
-                      ),
-                    "Scenario duplicated.",
-                  )
-                }
-                onArchive={() =>
-                  action(
-                    () =>
-                      api.post(
-                        `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/archive`,
-                        { lockVersion: scenario.lockVersion },
-                      ),
-                    "Scenario archived.",
-                  )
-                }
-                onSelect={() =>
-                  action(
-                    () =>
-                      api.post(
-                        `/admin/v1/commercial/simulator/workspaces/${workspaceId}/select`,
-                        {
-                          scenarioId: scenario.id,
-                          lockVersion: workspace.lockVersion,
-                        },
-                      ),
-                    "Scenario selected.",
-                    scenario.id,
-                  )
-                }
-              />
+              {professionalScenario && !technicalMode ? (
+                <ProfessionalOfferBuilder
+                  key={`${scenario.id}:${scenario.lockVersion}`}
+                  workspaceId={workspaceId}
+                  scenario={scenario}
+                  catalog={catalog}
+                  costAssumptionVersionId={costVersionId}
+                  valuationAssumptionVersionIds={
+                    valuationVersionId ? [valuationVersionId] : []
+                  }
+                  busy={busy}
+                  onDirtyChange={handleDirtyChange}
+                  onOpenTechnical={() => setTechnicalMode(true)}
+                  onSave={(payload) =>
+                    action(
+                      () =>
+                        api.put(
+                          `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}`,
+                          payload,
+                        ),
+                      "Configuration du scénario enregistrée.",
+                      scenario.id,
+                    )
+                  }
+                  onCalculate={() =>
+                    action(
+                      () =>
+                        api.post(
+                          `/admin/v1/commercial/simulator/configurator/workspaces/${workspaceId}/scenarios/${scenario.id}/calculate`,
+                          {
+                            costAssumptionVersionId: costVersionId || undefined,
+                            valuationAssumptionVersionIds: valuationVersionId
+                              ? [valuationVersionId]
+                              : undefined,
+                          },
+                        ),
+                      "Offre calculée.",
+                      scenario.id,
+                    )
+                  }
+                  onDuplicate={() =>
+                    action(
+                      () =>
+                        api.post(
+                          `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/duplicate`,
+                        ),
+                      "Scénario dupliqué.",
+                    )
+                  }
+                  onArchive={() =>
+                    action(
+                      () =>
+                        api.post(
+                          `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/archive`,
+                          { lockVersion: scenario.lockVersion },
+                        ),
+                      "Scénario archivé.",
+                    )
+                  }
+                  onSelect={() =>
+                    action(
+                      () =>
+                        api.post(
+                          `/admin/v1/commercial/simulator/workspaces/${workspaceId}/select`,
+                          {
+                            scenarioId: scenario.id,
+                            lockVersion: workspace.lockVersion,
+                          },
+                        ),
+                      "Scénario retenu.",
+                      scenario.id,
+                    )
+                  }
+                />
+              ) : (
+                <>
+                  {professionalScenario && (
+                    <button
+                      type="button"
+                      onClick={() => setTechnicalMode(false)}
+                      className="rounded border px-3 py-2 text-sm"
+                    >
+                      ← Revenir au configurateur d’offres
+                    </button>
+                  )}
+                  <ScenarioEditor
+                    key={`${scenario.id}:${scenario.lockVersion}`}
+                    scenario={scenario}
+                    families={families}
+                    drivers={drivers}
+                    catalog={catalog}
+                    busy={busy}
+                    onSaveMetadata={(name, description) =>
+                      action(
+                        () =>
+                          api.put(
+                            `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/metadata`,
+                            {
+                              name,
+                              description: description || undefined,
+                              lockVersion: scenario.lockVersion,
+                            },
+                          ),
+                        "Scenario details saved.",
+                        scenario.id,
+                      )
+                    }
+                    onSave={(payload) =>
+                      action(
+                        () =>
+                          api.put(
+                            `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}`,
+                            payload,
+                          ),
+                        "Scenario configuration saved.",
+                        scenario.id,
+                      )
+                    }
+                    onCalculate={() =>
+                      action(
+                        () =>
+                          api.post(
+                            `/admin/v1/commercial/simulator/configurator/workspaces/${workspaceId}/scenarios/${scenario.id}/calculate`,
+                            {
+                              costAssumptionVersionId:
+                                costVersionId || undefined,
+                              valuationAssumptionVersionIds: valuationVersionId
+                                ? [valuationVersionId]
+                                : undefined,
+                            },
+                          ),
+                        "Scenario calculated.",
+                        scenario.id,
+                      )
+                    }
+                    onDuplicate={() =>
+                      action(
+                        () =>
+                          api.post(
+                            `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/duplicate`,
+                          ),
+                        "Scenario duplicated.",
+                      )
+                    }
+                    onArchive={() =>
+                      action(
+                        () =>
+                          api.post(
+                            `${CONFIGURATOR_API_BASE}/workspaces/${workspaceId}/scenarios/${scenario.id}/archive`,
+                            { lockVersion: scenario.lockVersion },
+                          ),
+                        "Scenario archived.",
+                      )
+                    }
+                    onSelect={() =>
+                      action(
+                        () =>
+                          api.post(
+                            `/admin/v1/commercial/simulator/workspaces/${workspaceId}/select`,
+                            {
+                              scenarioId: scenario.id,
+                              lockVersion: workspace.lockVersion,
+                            },
+                          ),
+                        "Scenario selected.",
+                        scenario.id,
+                      )
+                    }
+                  />
+                </>
+              )}
               <ScenarioResults scenario={scenario} />
               {preview && (
                 <>

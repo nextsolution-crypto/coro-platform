@@ -240,3 +240,57 @@ export type ScenarioComparison = {
     }>;
   }>;
 };
+
+export type TransientEvaluation = {
+  mode: "TRANSIENT";
+  observationOnly: true;
+  persisted: false;
+  status: "COMPLETE" | "INCOMPLETE" | "CUSTOM_PRICING_REQUIRED";
+  code?: string;
+  fingerprintVersion: string;
+  familyCodes: string[];
+  pricingMethodology?: string;
+  currency?: string;
+  warningCodes: string[];
+  lines?: Array<{
+    componentCode: string;
+    label: string;
+    pricingModel: string;
+    chargeType: "RECURRING" | "ONE_TIME";
+    billingPeriod: "MONTH" | "YEAR" | null;
+    quantity: string | null;
+    quantityUnit: string | null;
+    catalogUnitAmountMinor: string | null;
+    offeredUnitAmountMinor: string | null;
+    offeredExtendedAmountMinor: string | null;
+    override: boolean;
+    capacityBand: null | {
+      minimumQuantity: string;
+      maximumQuantity: string | null;
+      amountMinor: string;
+    };
+    knownDirectCostMinor: string | null;
+  }>;
+  totals?: {
+    oneTimeTotalMinor: string | null;
+    recurringMonthlyCadenceMinor: string | null;
+    recurringAnnualCadenceMinor: string | null;
+    monthlyRecurringEquivalentMinor: string | null;
+    annualRecurringEquivalentMinor: string | null;
+    estimatedUsageTotalMinor: string | null;
+    firstYearCommitmentMinor: string | null;
+    firstYearIncludesEstimate: boolean;
+  };
+  cost?: {
+    assumptionVersionId: string | null;
+    methodology: string | null;
+    completeness: "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
+    knownDirectCostMinor: string | null;
+    firstYearCostMinor: string | null;
+  };
+  contribution?: {
+    contributionMinor: string;
+    marginBasisPoints: number | null;
+  } | null;
+  valueStatus?: "COMPLETE" | "UNAVAILABLE" | "NOT_APPLICABLE";
+};

@@ -14,13 +14,13 @@ export function ScenarioSidebar({
   return (
     <aside className="rounded-xl border bg-white p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold">Scenarios</h2>
+        <h2 className="font-semibold">Scénarios</h2>
         <button
           type="button"
           onClick={onCreate}
           className="rounded bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
         >
-          New
+          Nouveau
         </button>
       </div>
       <div className="mt-3 space-y-2">
@@ -33,15 +33,15 @@ export function ScenarioSidebar({
           >
             <span className="font-medium">{scenario.name}</span>
             <span className="mt-1 block text-xs text-slate-500">
-              {scenario.status === "ACTIVE" ? "Active" : "Archived"}
+              {scenario.status === "ACTIVE" ? "Actif" : "Archivé"}
               {" · "}
               {scenario.selected
-                ? "Selected"
+                ? "Scénario retenu"
                 : scenario.stale === true
-                  ? "Recalculation required"
+                  ? "Recalcul requis"
                   : scenario.latestResult
-                    ? "Current"
-                    : "Not calculated"}
+                    ? "Calcul officiel à jour"
+                    : "Non calculé"}
             </span>
           </button>
         ))}
