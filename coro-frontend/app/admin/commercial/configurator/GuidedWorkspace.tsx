@@ -61,7 +61,10 @@ export function GuidedWorkspace({
   const [technicalMode, setTechnicalMode] = useState(false);
   const handleDirtyChange = useCallback((value: boolean) => {
     setDraftDirty(value);
-    if (value) setPreview(undefined);
+    if (value) {
+      setPreview(undefined);
+      setProposalResult(undefined);
+    }
   }, []);
 
   const reload = useCallback(
@@ -219,6 +222,8 @@ export function GuidedWorkspace({
             setActiveId(id);
             setDraftDirty(false);
             setTechnicalMode(false);
+            setPreview(undefined);
+            setProposalResult(undefined);
           }}
           onCreate={() => {
             const name = window.prompt("Scenario name", "Standard");
@@ -514,6 +519,16 @@ export function GuidedWorkspace({
                     <h2 className="font-semibold">
                       Créer la proposition gouvernée
                     </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Cette action crée explicitement un brouillon de
+                      proposition depuis le scénario retenu et son dernier
+                      calcul officiel.
+                    </p>
+                    {!scenario.selected && (
+                      <p className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900">
+                        Retenez ce scénario avant de créer la proposition.
+                      </p>
+                    )}
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                       <input
                         className="rounded border p-2"
@@ -569,8 +584,12 @@ export function GuidedWorkspace({
                     <button
                       disabled={
                         !proposalTitle ||
+                        !scenario.selected ||
                         !scenario.latestResult ||
                         scenario.stale ||
+                        scenario.familyAuthoritySource === "REVIEW_REQUIRED" ||
+                        scenario.packaging.status !== "READY" ||
+                        scenario.latestResult.priceStatus !== "COMPLETE" ||
                         (scenario.latestResult.valueStatus === "COMPLETE" &&
                           !valueDisclaimerFr.trim()) ||
                         busy

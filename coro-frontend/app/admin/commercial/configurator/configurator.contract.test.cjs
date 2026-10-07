@@ -230,6 +230,13 @@ const path = require("node:path");
     /CUSTOMER_PREVIEW_RECALCULATION_REQUIRED|customer-preview/,
   );
   assert.match(guided, /runs\/\$\{scenario\.latestResult!\.id\}\/convert/);
+  assert.match(guided, /Créer la proposition gouvernée/);
+  assert.match(guided, /crée explicitement un brouillon de\s+proposition/);
+  assert.match(guided, /!scenario\.selected/);
+  assert.match(guided, /scenario\.familyAuthoritySource === "REVIEW_REQUIRED"/);
+  assert.match(guided, /scenario\.packaging\.status !== "READY"/);
+  assert.match(guided, /scenario\.latestResult\.priceStatus !== "COMPLETE"/);
+  assert.match(guided, /setProposalResult\(undefined\)/);
   assert.match(guided, /Aperçu client non contractuel/);
   assert.match(guided, /params: \{ scenarioId: scenario\.id \}/);
   assert.match(guided, /Customer Preview could not be opened/);

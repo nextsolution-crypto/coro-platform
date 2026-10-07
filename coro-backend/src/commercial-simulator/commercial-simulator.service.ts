@@ -3417,6 +3417,11 @@ export class CommercialSimulatorService {
         );
       if (run.scenario.lockVersion !== run.scenarioLockVersion)
         throw new BadRequestException('SIMULATOR_RUN_STALE');
+      if (
+        run.priceStatus !== 'COMPLETE' ||
+        run.priceResult.firstYearCommitmentMinor === null
+      )
+        throw new BadRequestException('SIMULATOR_PROPOSAL_PRICE_INCOMPLETE');
       const componentById = new Map(
         run.scenario.workspace.priceBookVersion.components.map((component) => [
           component.id,

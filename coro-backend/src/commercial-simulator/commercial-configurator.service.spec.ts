@@ -19,6 +19,39 @@ const expectPackagingNotReady = async (operation: Promise<unknown>) => {
 };
 
 describe('Commercial Configurator projections', () => {
+  it('rejects Proposal conversion when the official price is incomplete', async () => {
+    const tx = {
+      $executeRaw: jest.fn(() => Promise.resolve(0)),
+      commercialSimulationProposalConversion: {
+        findUnique: jest.fn(() => Promise.resolve(null)),
+      },
+      commercialSimulationCalculationRun: {
+        findFirst: jest.fn(() =>
+          Promise.resolve({
+            priceStatus: 'INCOMPLETE',
+            scenarioLockVersion: 2,
+            priceResult: { firstYearCommitmentMinor: null },
+            scenario: {
+              lockVersion: 2,
+              workspace: { selectedScenarioId: 'scenario-a' },
+            },
+          }),
+        ),
+      },
+    };
+    const service = serviceWith({
+      $transaction: jest.fn((operation: (client: typeof tx) => unknown) =>
+        operation(tx),
+      ),
+    });
+
+    await expect(
+      service.convert('workspace-a', 'scenario-a', 'run-a', {} as never, {
+        userId: 'admin',
+      }),
+    ).rejects.toThrow('SIMULATOR_PROPOSAL_PRICE_INCOMPLETE');
+  });
+
   it('blocks guided calculation and conversion when packaging is invalid', async () => {
     const prisma = {
       commercialSimulationScenario: {
