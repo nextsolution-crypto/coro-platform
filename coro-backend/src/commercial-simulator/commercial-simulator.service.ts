@@ -84,6 +84,10 @@ import {
   normalizeCommercialFamilyComposition,
   resolveCommercialFamilyAuthority,
 } from './commercial-family-authority';
+import {
+  commercialPriceTotalsMatch,
+  normalizeCommercialPriceTotals,
+} from './commercial-price-totals';
 
 type Actor = { userId: string };
 
@@ -3131,7 +3135,7 @@ export class CommercialSimulatorService {
     if (existing) return calculationRunResponse(existing);
     if (priced.totals.firstYearCommitmentMinor === null)
       throw new BadRequestException('Scenario pricing is incomplete.');
-    const firstYearCommitmentMinor = priced.totals.firstYearCommitmentMinor;
+    const normalizedPriceTotals = normalizeCommercialPriceTotals(priced.totals);
     try {
       const created = await this.prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${scenarioId + calculationKey}, 0))`;
@@ -3268,25 +3272,29 @@ export class CommercialSimulatorService {
               create: {
                 currency: 'CAD',
                 oneTimeTotalMinor: BigInt(
-                  priced.totals.oneTimeTotalMinor ?? '0',
+                  normalizedPriceTotals.oneTimeTotalMinor,
                 ),
                 recurringMonthlyCadenceMinor: BigInt(
-                  priced.totals.recurringMonthlyCadenceMinor ?? '0',
+                  normalizedPriceTotals.recurringMonthlyCadenceMinor,
                 ),
                 recurringAnnualCadenceMinor: BigInt(
-                  priced.totals.recurringAnnualCadenceMinor ?? '0',
+                  normalizedPriceTotals.recurringAnnualCadenceMinor,
                 ),
                 monthlyRecurringEquivalentMinor:
-                  priced.totals.monthlyRecurringEquivalentMinor == null
+                  normalizedPriceTotals.monthlyRecurringEquivalentMinor == null
                     ? null
-                    : BigInt(priced.totals.monthlyRecurringEquivalentMinor),
+                    : BigInt(
+                        normalizedPriceTotals.monthlyRecurringEquivalentMinor,
+                      ),
                 annualRecurringEquivalentMinor: BigInt(
-                  priced.totals.annualRecurringEquivalentMinor ?? '0',
+                  normalizedPriceTotals.annualRecurringEquivalentMinor,
                 ),
                 estimatedUsageTotalMinor: BigInt(
-                  priced.totals.estimatedUsageTotalMinor ?? '0',
+                  normalizedPriceTotals.estimatedUsageTotalMinor,
                 ),
-                firstYearCommitmentMinor: BigInt(firstYearCommitmentMinor),
+                firstYearCommitmentMinor: BigInt(
+                  normalizedPriceTotals.firstYearCommitmentMinor,
+                ),
                 firstYearIncludesEstimate:
                   priced.totals.firstYearIncludesEstimate,
               },
@@ -3458,27 +3466,7 @@ export class CommercialSimulatorService {
         }),
       });
       const expected = run.priceResult;
-      const actualTotals = [
-        recomputed.totals.oneTimeTotalMinor,
-        recomputed.totals.recurringMonthlyCadenceMinor,
-        recomputed.totals.recurringAnnualCadenceMinor,
-        recomputed.totals.monthlyRecurringEquivalentMinor,
-        recomputed.totals.annualRecurringEquivalentMinor,
-        recomputed.totals.estimatedUsageTotalMinor,
-        recomputed.totals.firstYearCommitmentMinor,
-      ].map((value) =>
-        run.pricingMethodologyVersion === 'v1' ? (value ?? '0') : value,
-      );
-      const expectedTotals = [
-        expected.oneTimeTotalMinor,
-        expected.recurringMonthlyCadenceMinor,
-        expected.recurringAnnualCadenceMinor,
-        expected.monthlyRecurringEquivalentMinor,
-        expected.annualRecurringEquivalentMinor,
-        expected.estimatedUsageTotalMinor,
-        expected.firstYearCommitmentMinor,
-      ].map((value) => value?.toString() ?? null);
-      if (actualTotals.some((value, index) => value !== expectedTotals[index]))
+      if (!commercialPriceTotalsMatch(recomputed.totals, expected))
         throw new ConflictException('SIMULATOR_PROPOSAL_PRICE_MISMATCH');
       const inputByCode = new Map(
         run.inputs.map((input) => [input.driverCode, input]),

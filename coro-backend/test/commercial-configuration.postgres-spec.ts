@@ -404,6 +404,11 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
       },
       actor,
     );
+    await simulator.selectScenario(
+      workspace.id,
+      { scenarioId: scenario.id, lockVersion: workspace.lockVersion },
+      actor,
+    );
 
     const catalogView = await simulator.guidedCatalog(workspace.id);
     expect(catalogView.assumptions.cost).toHaveLength(1);
@@ -537,6 +542,53 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
         })
       ).lockVersion,
     }).toEqual(previewSideEffectsBefore);
+    const conversion = await simulator.convertGuided(
+      workspace.id,
+      scenario.id,
+      run.id,
+      {
+        title: 'Professional 125 Proposal',
+        relationship: 'DIRECT',
+        preferredLanguage: 'FR',
+        recipientLegalName: prospect.legalName,
+        recipientDisplayName: prospect.displayName,
+        recipientCountry: 'CA',
+      },
+      actor,
+    );
+    expect(conversion.proposal).toMatchObject({ prospectId: prospect.id });
+    expect(conversion.proposalRevision).toMatchObject({
+      oneTimeTotalMinor: '742500',
+      recurringAnnualCadenceMinor: '1750000',
+      annualRecurringEquivalentMinor: '1750000',
+      firstYearCommitmentMinor: '2492500',
+    });
+    const repeated = await simulator.convertGuided(
+      workspace.id,
+      scenario.id,
+      run.id,
+      {
+        title: 'Ignored idempotent repeat',
+        relationship: 'DIRECT',
+        preferredLanguage: 'FR',
+        recipientLegalName: prospect.legalName,
+        recipientDisplayName: prospect.displayName,
+        recipientCountry: 'CA',
+      },
+      actor,
+    );
+    expect(repeated.id).toBe(conversion.id);
+    expect(
+      await prisma.commercialSimulationProposalConversion.count({
+        where: { calculationRunId: run.id },
+      }),
+    ).toBe(1);
+    expect(await prisma.organizationContract.count()).toBe(
+      previewSideEffectsBefore.contracts,
+    );
+    expect(await prisma.capabilityEntitlement.count()).toBe(
+      previewSideEffectsBefore.entitlements,
+    );
     expect(
       await prisma.commercialSimulationScenarioLineCostEffort.count({
         where: { scenarioLine: { scenarioId: scenario.id } },
