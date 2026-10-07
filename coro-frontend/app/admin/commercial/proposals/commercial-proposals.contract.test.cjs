@@ -7,6 +7,10 @@ const detail = fs.readFileSync(
   path.join(__dirname, "[proposalId]/page.tsx"),
   "utf8",
 );
+const customerSafeReview = fs.readFileSync(
+  path.join(__dirname, "../configurator/CustomerSafeReview.tsx"),
+  "utf8",
+);
 for (const token of [
   "Nouvelle proposition",
   "Aucune proposition",
@@ -40,9 +44,24 @@ for (const token of [
   "mark-ready",
   "download",
   'responseType: "blob"',
+  "Ouvrir l’aperçu client",
+  "openPreview",
+  "onClose={closePreview}",
 ])
   if (!detail.includes(token)) throw new Error(`finalization missing ${token}`);
 for (const forbidden of ["catalogUnitAmountMinor", "costAssumption", "margin"])
   if (detail.includes(forbidden))
     throw new Error(`detail leaks internal field ${forbidden}`);
+if (/setPreview\(response\.data\)[\s\S]*?\}, \[proposalId\]\)/.test(detail))
+  throw new Error("detail load must not automatically reopen customer preview");
+for (const token of [
+  'event.key === "Escape"',
+  "event.target === event.currentTarget",
+  "closeButtonRef.current?.focus()",
+  "previouslyFocused?.focus()",
+  'document.body.style.overflow = "hidden"',
+  "hasNonZeroMinor(preview.totals.monthlyRecurringMinor)",
+])
+  if (!customerSafeReview.includes(token))
+    throw new Error(`customer preview dismissal missing ${token}`);
 console.log("Commercial proposals configurator contract: OK");

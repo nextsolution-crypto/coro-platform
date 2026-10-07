@@ -59,6 +59,7 @@ export function GuidedWorkspace({
   }>();
   const [draftDirty, setDraftDirty] = useState(false);
   const [technicalMode, setTechnicalMode] = useState(false);
+  const closePreview = useCallback(() => setPreview(undefined), []);
   const handleDirtyChange = useCallback((value: boolean) => {
     setDraftDirty(value);
     if (value) {
@@ -584,10 +585,7 @@ export function GuidedWorkspace({
                 <ScenarioResults scenario={scenario} />
               )}
               {preview && (
-                <CustomerSafeReview
-                  preview={preview}
-                  onClose={() => setPreview(undefined)}
-                />
+                <CustomerSafeReview preview={preview} onClose={closePreview} />
               )}
               <section className="rounded-xl border bg-white p-5">
                 <h2 className="font-semibold">

@@ -62,6 +62,7 @@ export default function ProposalDetailPage({
   const [preview, setPreview] = useState<CustomerSafeProjection>();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const closePreview = useCallback(() => setPreview(undefined), []);
   const [form, setForm] = useState({
     validFrom: "",
     validUntil: "",
@@ -85,10 +86,6 @@ export default function ProposalDetailPage({
       termsFR: revision.termsFR ?? "",
       termsEN: revision.termsEN ?? "",
     });
-    const response = await api.get(
-      `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/customer-preview`,
-    );
-    setPreview(response.data);
   }, [proposalId]);
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -101,6 +98,21 @@ export default function ProposalDetailPage({
   const revision = detail?.revisions[0];
   const documents =
     revision?.documents.filter((item) => item.status === "FINALIZED") ?? [];
+  async function openPreview() {
+    if (!revision) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await api.get(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/customer-preview`,
+      );
+      setPreview(response.data);
+    } catch (error) {
+      setMessage(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function execute(action: () => Promise<void>, success: string) {
     setBusy(true);
     setMessage("");
@@ -281,7 +293,19 @@ export default function ProposalDetailPage({
             </button>
           </section>
         )}
-        {preview && <CustomerSafeReview preview={preview} />}
+        {revision && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void openPreview()}
+            className="rounded border px-4 py-2 disabled:opacity-50"
+          >
+            Ouvrir l’aperçu client
+          </button>
+        )}
+        {preview && (
+          <CustomerSafeReview preview={preview} onClose={closePreview} />
+        )}
         <section className="space-y-4 rounded border bg-white p-5">
           <div>
             <h2 className="font-semibold">Finalisation interne</h2>

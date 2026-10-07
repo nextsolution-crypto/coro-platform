@@ -253,8 +253,8 @@ const path = require("node:path");
   assert.match(guided, /role="dialog"/);
   assert.match(guided, /aria-modal="true"/);
   assert.match(guided, /preview\.inputs\.map/);
-  assert.match(guided, /monthlyRecurringMinor !== null/);
-  assert.match(guided, /onClose=\{\(\) => setPreview\(undefined\)\}/);
+  assert.match(customerReview, /hasNonZeroMinor/);
+  assert.match(guided, /onClose=\{closePreview\}/);
   assert.match(
     guided,
     /disabled=\{\s*draftDirty \|\|\s*!scenario\?\.latestResult \|\|\s*scenario\.stale \|\|\s*previewBusy/,

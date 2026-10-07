@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { CustomerSafeProjection } from "./configurator-types";
 
 const money = (value: string | null, currency: string) =>
@@ -7,21 +8,71 @@ const money = (value: string | null, currency: string) =>
         Number(value) / 100,
       );
 
+const hasNonZeroMinor = (value: string | null) =>
+  value !== null && Number(value) !== 0;
+
 export function CustomerSafeReview({
   preview,
   onClose,
 }: {
   preview: CustomerSafeProjection;
-  onClose?: () => void;
+  onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 sm:p-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="customer-preview-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <section className="mx-auto max-w-5xl rounded-xl border border-emerald-200 bg-white p-5 shadow-xl">
+      <section
+        ref={dialogRef}
+        className="mx-auto max-w-5xl rounded-xl border border-emerald-200 bg-white p-5 shadow-xl"
+      >
         <div className="rounded bg-amber-50 p-3 text-sm text-amber-900">
           Aperçu client non contractuel. L’offre commerciale est créée
           uniquement lors de la conversion en proposition.
@@ -39,15 +90,14 @@ export function CustomerSafeReview({
                 {preview.reference} · v{preview.revision}
               </b>
             )}
-            {onClose && (
-              <button
-                type="button"
-                className="rounded border px-3 py-1"
-                onClick={onClose}
-              >
-                Fermer
-              </button>
-            )}
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="rounded border px-3 py-1"
+              onClick={onClose}
+            >
+              Fermer
+            </button>
           </div>
         </div>
         <p className="mt-3 text-sm text-slate-600">
@@ -124,7 +174,7 @@ export function CustomerSafeReview({
             value={preview.totals.oneTimeMinor}
             currency={preview.currency}
           />
-          {preview.totals.monthlyRecurringMinor !== null && (
+          {hasNonZeroMinor(preview.totals.monthlyRecurringMinor) && (
             <Total
               label="Mensuel"
               value={preview.totals.monthlyRecurringMinor}
