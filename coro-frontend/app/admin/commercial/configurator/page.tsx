@@ -246,7 +246,7 @@ export default function CommercialConfiguratorPage() {
             <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700">
               Commercial
             </p>
-            <h1 className="text-3xl font-semibold">Commercial Configurator</h1>
+            <h1 className="text-3xl font-semibold">Configurateur d’offres</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-600">
               {CONFIGURATOR_BOUNDARY_NOTICE}
             </p>
@@ -255,7 +255,7 @@ export default function CommercialConfiguratorPage() {
             href={LEGACY_SIMULATOR_ROUTE}
             className="rounded border px-3 py-2 text-sm"
           >
-            Advanced / Legacy Simulator
+            Simulateur avancé / historique
           </Link>
         </div>
 

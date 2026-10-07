@@ -197,7 +197,7 @@ export function GuidedWorkspace({
               onClick={onClose}
               className="text-sm text-slate-600"
             >
-              ← All configurations
+              ← Toutes les configurations
             </button>
             <h1 className="mt-2 text-2xl font-semibold">{workspace.title}</h1>
             <p className="text-sm text-slate-500">
@@ -207,7 +207,7 @@ export function GuidedWorkspace({
             </p>
           </div>
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-            Guided configuration
+            Configuration guidée
           </span>
         </div>
       </header>
@@ -501,7 +501,9 @@ export function GuidedWorkspace({
                   />
                 </>
               )}
-              <ScenarioResults scenario={scenario} />
+              {(!professionalScenario || technicalMode) && (
+                <ScenarioResults scenario={scenario} />
+              )}
               {preview && (
                 <>
                   <CustomerSafeReview

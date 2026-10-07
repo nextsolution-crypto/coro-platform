@@ -41,6 +41,18 @@ const path = require("node:path");
     path.join(__dirname, "ScenarioEditor.tsx"),
     "utf8",
   );
+  const guidedWorkspace = fs.readFileSync(
+    path.join(__dirname, "GuidedWorkspace.tsx"),
+    "utf8",
+  );
+  const professionalBuilder = fs.readFileSync(
+    path.join(__dirname, "ProfessionalOfferBuilder.tsx"),
+    "utf8",
+  );
+  const scenarioResults = fs.readFileSync(
+    path.join(__dirname, "ScenarioResults.tsx"),
+    "utf8",
+  );
   const professionalCatalog = Object.values(PROFESSIONAL_COMPONENTS).map(
     (code) => ({ id: `id-${code}`, code }),
   );
@@ -177,6 +189,27 @@ const path = require("node:path");
   assert.match(layout, /Configurateur d’offres/);
   assert.match(legacy, /workspace/);
   assert.match(page, /GuidedWorkspace/);
+  assert.match(page, /Configurateur d’offres/);
+  assert.match(page, /Simulateur avancé \/ historique/);
+  assert.match(guidedWorkspace, /Configuration guidée/);
+  assert.match(
+    guidedWorkspace,
+    /\(!professionalScenario \|\| technicalMode\) && \(\s*<ScenarioResults/,
+  );
+  assert.match(scenarioResults, /Calculation results/);
+  assert.match(professionalBuilder, /Dernier calcul officiel/);
+  assert.match(
+    professionalBuilder,
+    /Valeurs enregistrées issues du dernier Run officiel/,
+  );
+  assert.match(professionalBuilder, /À recalculer/);
+  assert.match(professionalBuilder, /À jour/);
+  assert.match(professionalBuilder, /Coûts directs connus · interne/);
+  assert.match(professionalBuilder, /Diagnostics techniques/);
+  assert.match(professionalBuilder, /warningCodes\.join/);
+  assert.doesNotMatch(professionalBuilder, /Calculation results/);
+  assert.doesNotMatch(professionalBuilder, /Value analysis/);
+  assert.doesNotMatch(professionalBuilder, /Contribution\s*Unavailable/);
   assert.match(guided, /Save configuration/);
   assert.match(guided, /Recalculate/);
   assert.match(guided, /Contribution/);
@@ -223,6 +256,12 @@ const path = require("node:path");
   assert.doesNotMatch(guided, /commercialRuleCode|commercialRuleVersion/);
   assert.doesNotMatch(guided, />METERED</);
   assert.doesNotMatch(customerReview, /costAssumption|catalogUnitAmountMinor/);
+  assert.match(customerReview, /Capacité<\/b> — jusqu’à/);
+  assert.match(customerReview, /Validité : Non définie/);
+  assert.match(
+    customerReview,
+    /preview\.issuer\.legalName === preview\.issuer\.brandName/,
+  );
   assert.match(guided, /simulator\/configurator\/workspaces/);
   assert.match(guided, /\/workspaces\/\$\{workspaceId\}\/evaluate/);
   assert.match(guided, /window\.setTimeout\(async \(\) =>/);

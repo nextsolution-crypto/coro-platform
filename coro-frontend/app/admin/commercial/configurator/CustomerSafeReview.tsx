@@ -60,15 +60,24 @@ export function CustomerSafeReview({
                 key={`${input.labelFr}-${input.value}`}
                 className="rounded border p-3 text-sm"
               >
-                <b>{input.labelFr}</b> {input.value} {input.unit}
+                {input.unit === "sites actifs / active sites" ? (
+                  <>
+                    <b>Capacité</b> — jusqu’à {input.value} sites actifs
+                  </>
+                ) : (
+                  <>
+                    <b>{input.labelFr}</b> {input.value} {input.unit}
+                  </>
+                )}
               </p>
             ))}
           </div>
         )}
         <div className="mt-3 text-sm text-slate-600">
           <p>
-            Validité : {preview.validity.validFrom?.slice(0, 10) ?? "—"} au{" "}
-            {preview.validity.validUntil?.slice(0, 10) ?? "—"}
+            {preview.validity.validFrom || preview.validity.validUntil
+              ? `Validité : ${preview.validity.validFrom?.slice(0, 10) ?? "—"} au ${preview.validity.validUntil?.slice(0, 10) ?? "—"}`
+              : "Validité : Non définie"}
           </p>
           {preview.commercialTerms.contextFr && (
             <p className="mt-2 whitespace-pre-wrap">
@@ -156,7 +165,9 @@ export function CustomerSafeReview({
         <div className="mt-4 border-t pt-3 text-sm text-slate-600">
           <b>{preview.issuer.brandName}</b>
           {[
-            preview.issuer.legalName,
+            preview.issuer.legalName === preview.issuer.brandName
+              ? null
+              : preview.issuer.legalName,
             preview.issuer.address,
             preview.issuer.email,
             preview.issuer.phone,

@@ -397,6 +397,75 @@ export function ProfessionalOfferBuilder({
         </div>
       </section>
 
+      <section className="rounded-xl border bg-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Dernier calcul officiel</h2>
+            <p className="text-sm text-slate-500">
+              Valeurs enregistrées issues du dernier Run officiel.
+            </p>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${scenario.stale ? "bg-amber-50 text-amber-800" : scenario.latestResult ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}
+          >
+            {scenario.stale
+              ? "À recalculer"
+              : scenario.latestResult
+                ? "À jour"
+                : "Non calculé"}
+          </span>
+        </div>
+        {dirty && scenario.latestResult && (
+          <p className="mt-3 rounded bg-amber-50 p-3 text-sm text-amber-900">
+            Le brouillon actuel contient des modifications non enregistrées. Les
+            valeurs ci-dessous demeurent celles du dernier calcul officiel.
+          </p>
+        )}
+        {scenario.latestResult && (
+          <>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Summary
+                label="Première année"
+                value={moneyCad(scenario.latestResult.firstYearCommitmentCad)}
+              />
+              <Summary
+                label="Coûts directs connus · interne"
+                value={moneyCad(
+                  scenario.latestResult.firstYearCostCad ??
+                    scenario.latestResult.knownModeledDirectCostCad,
+                )}
+              />
+            </div>
+            <p className="mt-3 text-xs text-slate-500">
+              Calculé le{" "}
+              {new Date(scenario.latestResult.calculatedAt).toLocaleString(
+                "fr-CA",
+              )}
+            </p>
+            {!!scenario.latestResult.warningCodes.length && (
+              <details className="mt-4 rounded border p-3 text-sm">
+                <summary className="cursor-pointer font-medium">
+                  Diagnostics techniques
+                </summary>
+                <dl className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                  <div>
+                    <dt className="font-medium">État des coûts</dt>
+                    <dd>{scenario.latestResult.costStatus}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium">État de la valeur</dt>
+                    <dd>{scenario.latestResult.valueStatus}</dd>
+                  </div>
+                </dl>
+                <p className="mt-3 break-words text-xs text-slate-500">
+                  {scenario.latestResult.warningCodes.join(" · ")}
+                </p>
+              </details>
+            )}
+          </>
+        )}
+      </section>
+
       <details className="rounded-xl border bg-white p-5">
         <summary className="cursor-pointer font-semibold">
           Options avancées
@@ -482,12 +551,6 @@ export function ProfessionalOfferBuilder({
         <p className="text-sm font-medium text-amber-800">
           Modifications non enregistrées — enregistrez puis recalculez l’offre
           avant l’aperçu client.
-        </p>
-      )}
-      {scenario.latestResult && (
-        <p className="text-xs text-slate-500">
-          Dernier calcul officiel :{" "}
-          {new Date(scenario.latestResult.calculatedAt).toLocaleString("fr-CA")}
         </p>
       )}
     </div>
