@@ -68,6 +68,7 @@ import { CommercialSimulatorModule } from './commercial-simulator/commercial-sim
 import { CommercialConfigurationModule } from './commercial-configuration/commercial-configuration.module';
 import { CommercialContentModule } from './commercial-content/commercial-content.module';
 import { CommercialLegalIssuerModule } from './commercial-legal-issuer/commercial-legal-issuer.module';
+import { CommercialClauseModule } from './commercial-clauses/commercial-clause.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { CommercialLegalIssuerModule } from './commercial-legal-issuer/commercia
   CommercialConfigurationModule,
   CommercialContentModule,
   CommercialLegalIssuerModule,
+  CommercialClauseModule,
   AuthModule,
   UsersModule,
   ClientsModule,

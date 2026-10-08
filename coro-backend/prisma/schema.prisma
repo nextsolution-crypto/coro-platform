@@ -113,6 +113,11 @@ model User {
   commercialLegalIssuerVersionsVerified CommercialLegalIssuerVersion[] @relation("CommercialLegalIssuerVersionVerifier")
   commercialLegalIssuerVersionsArchived CommercialLegalIssuerVersion[] @relation("CommercialLegalIssuerVersionArchiver")
   commercialLegalIssuerSnapshotsCaptured CommercialLegalIssuerSnapshot[] @relation("CommercialLegalIssuerSnapshotCapturer")
+  commercialClauseVersionsCreated CommercialClauseVersion[] @relation("CommercialClauseVersionCreator")
+  commercialClauseVersionsBusinessReviewed CommercialClauseVersion[] @relation("CommercialClauseVersionBusinessReviewer")
+  commercialClauseVersionsLegalReviewed CommercialClauseVersion[] @relation("CommercialClauseVersionLegalReviewer")
+  commercialClauseVersionsApproved CommercialClauseVersion[] @relation("CommercialClauseVersionApprover")
+  commercialClauseVersionsArchived CommercialClauseVersion[] @relation("CommercialClauseVersionArchiver")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -558,6 +563,50 @@ enum CommercialLegalFieldApplicability {
   UNSPECIFIED
   APPLICABLE
   NOT_APPLICABLE
+}
+
+enum CommercialClauseCategory {
+  OFFER_VALIDITY
+  CURRENCY_AND_TAXES
+  PAYMENT_TERMS
+  INVOICING
+  SAAS_SUBSCRIPTION
+  RENEWAL
+  TERMINATION
+  SUSPENSION
+  SUPPORT_AND_MAINTENANCE
+  SERVICE_AVAILABILITY
+  IMPLEMENTATION
+  PROFESSIONAL_SERVICES
+  SCOPE_CHANGE
+  CUSTOMER_OBLIGATIONS
+  DELAYS
+  ADDITIONAL_FEES
+  PENALTIES
+  CONFIDENTIALITY
+  DATA_PROTECTION
+  DATA_RETENTION_AND_RETURN
+  INTELLECTUAL_PROPERTY
+  LIABILITY
+  FORCE_MAJEURE
+  GOVERNING_LAW
+  ACCEPTANCE
+}
+
+enum CommercialClauseVersionStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum CommercialClauseApplicabilityScope {
+  UNSPECIFIED
+  ALL_OFFERS
+  CORO_PROFESSIONAL
+  SENTINELLE_POPULATION_STANDALONE
+  PROFESSIONAL_SERVICES
+  COMBINED_OFFER
 }
 
 model CommercialCapability {
@@ -1548,6 +1597,72 @@ model CommercialLegalIssuerSnapshot {
   capturedBy               User?                        @relation("CommercialLegalIssuerSnapshotCapturer", fields: [capturedByUserId], references: [id], onDelete: SetNull)
 
   @@index([legalIssuerVersionId, capturedAt])
+}
+
+model CommercialClause {
+  id        String                    @id @default(uuid())
+  code      String                    @unique @db.VarChar(120)
+  category  CommercialClauseCategory
+  isActive  Boolean                   @default(true)
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+  versions  CommercialClauseVersion[]
+
+  @@index([category, isActive])
+}
+
+model CommercialClauseVersion {
+  id                       String                          @id @default(uuid())
+  commercialClauseId       String
+  versionNumber            Int
+  status                   CommercialClauseVersionStatus   @default(DRAFT)
+  titleFR                  String
+  titleEN                  String
+  textFR                   String                          @db.Text
+  textEN                   String                          @db.Text
+  businessOwner            String?
+  legalOwner               String?
+  isRequired               Boolean?
+  effectiveAt              DateTime?
+  provenance               String                          @db.VarChar(200)
+  parameterSchema          Json
+  contentHash              String                          @db.Char(64)
+  lifecycleReason          String?
+  businessReviewReason     String?
+  legalReviewReason        String?
+  legalReviewEvidence      String?
+  lockVersion              Int                             @default(0)
+  createdByUserId          String?
+  businessReviewedByUserId String?
+  legalReviewedByUserId    String?
+  approvedByUserId         String?
+  archivedByUserId         String?
+  submittedAt              DateTime?
+  businessReviewedAt       DateTime?
+  legalReviewedAt          DateTime?
+  approvedAt               DateTime?
+  archivedAt               DateTime?
+  createdAt                DateTime                        @default(now())
+  updatedAt                DateTime                        @updatedAt
+  commercialClause         CommercialClause                @relation(fields: [commercialClauseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy                User?                           @relation("CommercialClauseVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  businessReviewedBy       User?                           @relation("CommercialClauseVersionBusinessReviewer", fields: [businessReviewedByUserId], references: [id], onDelete: SetNull)
+  legalReviewedBy          User?                           @relation("CommercialClauseVersionLegalReviewer", fields: [legalReviewedByUserId], references: [id], onDelete: SetNull)
+  approvedBy               User?                           @relation("CommercialClauseVersionApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  archivedBy               User?                           @relation("CommercialClauseVersionArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
+  applicabilities          CommercialClauseApplicability[]
+
+  @@unique([commercialClauseId, versionNumber])
+  @@index([commercialClauseId, status])
+}
+
+model CommercialClauseApplicability {
+  commercialClauseVersionId String
+  scope                     CommercialClauseApplicabilityScope
+  version                   CommercialClauseVersion            @relation(fields: [commercialClauseVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([commercialClauseVersionId, scope])
+  @@index([scope])
 }
 
 model Client {
