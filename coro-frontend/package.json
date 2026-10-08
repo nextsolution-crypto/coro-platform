@@ -20,7 +20,8 @@
     "test:commercial-simulator": "node app/admin/commercial/simulator/simulator.contract.test.cjs",
     "test:commercial-configurator": "node app/admin/commercial/configurator/configurator.contract.test.cjs",
     "test:commercial-assumptions": "node app/admin/commercial/assumptions/assumptions.contract.test.cjs",
-    "test:commercial-content": "node app/admin/commercial/content/content.contract.test.cjs"
+    "test:commercial-content": "node app/admin/commercial/content/content.contract.test.cjs",
+    "test:commercial-legal-issuer": "node app/admin/commercial/legal-issuer/legal-issuer.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

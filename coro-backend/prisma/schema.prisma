@@ -109,6 +109,10 @@ model User {
   commercialContentVersionsSubmitted CommercialContentVersion[] @relation("CommercialContentVersionSubmitter")
   commercialContentVersionsApproved CommercialContentVersion[] @relation("CommercialContentVersionApprover")
   commercialContentVersionsArchived CommercialContentVersion[] @relation("CommercialContentVersionArchiver")
+  commercialLegalIssuerVersionsCreated CommercialLegalIssuerVersion[] @relation("CommercialLegalIssuerVersionCreator")
+  commercialLegalIssuerVersionsVerified CommercialLegalIssuerVersion[] @relation("CommercialLegalIssuerVersionVerifier")
+  commercialLegalIssuerVersionsArchived CommercialLegalIssuerVersion[] @relation("CommercialLegalIssuerVersionArchiver")
+  commercialLegalIssuerSnapshotsCaptured CommercialLegalIssuerSnapshot[] @relation("CommercialLegalIssuerSnapshotCapturer")
   approvedProjects    Project[]           @relation("approvedProjects")
   notifications       Notification[]
 
@@ -542,6 +546,18 @@ enum CommercialContentTargetType {
   CAPABILITY
   COMPONENT
   FUNCTIONAL_FEATURE
+}
+
+enum CommercialLegalIssuerVersionStatus {
+  DRAFT
+  VERIFIED
+  ARCHIVED
+}
+
+enum CommercialLegalFieldApplicability {
+  UNSPECIFIED
+  APPLICABLE
+  NOT_APPLICABLE
 }
 
 model CommercialCapability {
@@ -1139,6 +1155,7 @@ model CommercialProposalRevision {
   commitments ProposalMinimumCommitment[]
   documents ProposalDocument[] @relation("ProposalRevisionDocuments")
   valueAnalysis ProposalValueAnalysis?
+  legalIssuerSnapshot CommercialLegalIssuerSnapshot?
   sourceContractRevision OrganizationContractRevision? @relation("ProposalContractOrigin")
   simulationConversion CommercialSimulationProposalConversion?
   @@unique([proposalId, revisionNumber])
@@ -1431,6 +1448,106 @@ model CommercialContentBinding {
   @@unique([commercialContentVersionId, targetType, targetCode])
   @@index([targetType, targetCode])
   @@index([commercialContentVersionId, displayOrder])
+}
+
+model CommercialLegalIssuer {
+  id        String                         @id @default(uuid())
+  code      String                         @unique @db.VarChar(100)
+  createdAt DateTime                       @default(now())
+  updatedAt DateTime                       @updatedAt
+  versions  CommercialLegalIssuerVersion[]
+}
+
+model CommercialLegalIssuerVersion {
+  id                              String                              @id @default(uuid())
+  commercialLegalIssuerId         String
+  versionNumber                   Int
+  status                          CommercialLegalIssuerVersionStatus @default(DRAFT)
+  legalName                       String
+  tradeName                       String?
+  legalForm                       String?
+  country                         String?                             @db.Char(2)
+  subdivision                     String?
+  addressLine1                    String?
+  addressLine2                    String?
+  city                            String?
+  postalCode                      String?
+  officialEmail                   String?
+  officialPhone                   String?
+  website                         String?
+  businessNumber                  String?
+  businessNumberApplicability     CommercialLegalFieldApplicability  @default(UNSPECIFIED)
+  federalTaxNumber                String?
+  federalTaxApplicability         CommercialLegalFieldApplicability  @default(UNSPECIFIED)
+  provincialTaxNumber             String?
+  provincialTaxApplicability      CommercialLegalFieldApplicability  @default(UNSPECIFIED)
+  referenceCurrency               String?                             @db.Char(3)
+  representativeName              String?
+  representativeTitle             String?
+  representativeEmail             String?
+  authorizedSignatoryName         String?
+  authorizedSignatoryTitle        String?
+  authorizedSignatoryEmail        String?
+  provenance                      String                              @db.VarChar(100)
+  contentHash                     String                              @db.Char(64)
+  lifecycleReason                 String?
+  lockVersion                     Int                                 @default(0)
+  createdByUserId                 String?
+  verifiedByUserId                String?
+  archivedByUserId                String?
+  verifiedAt                      DateTime?
+  archivedAt                      DateTime?
+  createdAt                       DateTime                            @default(now())
+  updatedAt                       DateTime                            @updatedAt
+  commercialLegalIssuer           CommercialLegalIssuer              @relation(fields: [commercialLegalIssuerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdBy                       User?                               @relation("CommercialLegalIssuerVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  verifiedBy                      User?                               @relation("CommercialLegalIssuerVersionVerifier", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+  archivedBy                      User?                               @relation("CommercialLegalIssuerVersionArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
+  snapshots                       CommercialLegalIssuerSnapshot[]
+
+  @@unique([commercialLegalIssuerId, versionNumber])
+  @@index([commercialLegalIssuerId, status])
+}
+
+model CommercialLegalIssuerSnapshot {
+  id                       String                       @id @default(uuid())
+  proposalRevisionId       String                       @unique
+  legalIssuerVersionId     String
+  issuerCode               String                       @db.VarChar(100)
+  issuerVersionNumber      Int
+  legalName                String
+  tradeName                String?
+  legalForm                String?
+  country                  String?                      @db.Char(2)
+  subdivision              String?
+  addressLine1             String?
+  addressLine2             String?
+  city                     String?
+  postalCode               String?
+  officialEmail            String?
+  officialPhone            String?
+  website                  String?
+  businessNumber           String?
+  businessNumberApplicability CommercialLegalFieldApplicability
+  federalTaxNumber         String?
+  federalTaxApplicability  CommercialLegalFieldApplicability
+  provincialTaxNumber      String?
+  provincialTaxApplicability CommercialLegalFieldApplicability
+  referenceCurrency        String?                      @db.Char(3)
+  representativeName       String?
+  representativeTitle      String?
+  representativeEmail      String?
+  authorizedSignatoryName  String?
+  authorizedSignatoryTitle String?
+  authorizedSignatoryEmail String?
+  capturedAt               DateTime                     @default(now())
+  snapshotHash             String                       @db.Char(64)
+  capturedByUserId         String?
+  proposalRevision         CommercialProposalRevision   @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  legalIssuerVersion       CommercialLegalIssuerVersion @relation(fields: [legalIssuerVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  capturedBy               User?                        @relation("CommercialLegalIssuerSnapshotCapturer", fields: [capturedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([legalIssuerVersionId, capturedAt])
 }
 
 model Client {

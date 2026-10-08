@@ -67,6 +67,7 @@ import { OperationalObservationModule } from './operational-observation/operatio
 import { CommercialSimulatorModule } from './commercial-simulator/commercial-simulator.module';
 import { CommercialConfigurationModule } from './commercial-configuration/commercial-configuration.module';
 import { CommercialContentModule } from './commercial-content/commercial-content.module';
+import { CommercialLegalIssuerModule } from './commercial-legal-issuer/commercial-legal-issuer.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { CommercialContentModule } from './commercial-content/commercial-content
   CommercialSimulatorModule,
   CommercialConfigurationModule,
   CommercialContentModule,
+  CommercialLegalIssuerModule,
   AuthModule,
   UsersModule,
   ClientsModule,
