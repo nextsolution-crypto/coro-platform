@@ -11,6 +11,7 @@ const customerSafeReview = fs.readFileSync(
   path.join(__dirname, "../configurator/CustomerSafeReview.tsx"),
   "utf8",
 );
+
 for (const token of [
   "Préparer une offre",
   "Chargement des propositions",
@@ -31,6 +32,7 @@ if (
   )
 )
   throw new Error("dashboard must link directly to Proposal detail");
+
 for (const token of [
   "Target",
   "PriceBook",
@@ -47,6 +49,7 @@ for (const token of [
   "revenueCategory",
 ])
   if (!wizard.includes(token)) throw new Error(`wizard missing ${token}`);
+
 for (const token of [
   "customer-preview",
   "CustomerSafeReview",
@@ -58,24 +61,37 @@ for (const token of [
   "mark-ready",
   "download",
   'responseType: "blob"',
-  "Ouvrir l’aperçu client",
-  "openPreview",
-  "onClose={closePreview}",
+  "Prévisualiser le contenu client",
+  "onClose={() => setPreview(undefined)}",
   "document-compositions",
-  "Composer le brouillon documentaire",
-  "Prêt pour émission",
-  "Brouillon interne — exigences manquantes",
-  "Diagnostics de préparation",
-  "Sections incluses",
-  "Générer l&apos;offre de service V2",
+  "Informations générales",
+  "Solution et prestations",
+  "Investissement",
+  "Conditions commerciales",
+  "Aperçu et revue",
+  "Composer le document",
+  "Admissible à l’émission documentaire",
+  "Brouillon interne non transmissible",
+  "Diagnostic documentaire",
+  "Générer le PDF V2",
   "generate-pdf-v2",
-  "Source explicite : snapshot",
-  "brouillon interne",
+  "PDF historique V3",
+  "typedClauseParameters",
+  "approved-projection",
+  "/admin/v1/commercial/content",
+  "/admin/v1/commercial/legal-issuers",
 ])
-  if (!detail.includes(token)) throw new Error(`finalization missing ${token}`);
-for (const forbidden of ["catalogUnitAmountMinor", "costAssumption", "margin"])
+  if (!detail.includes(token))
+    throw new Error(`document workspace missing ${token}`);
+
+for (const forbidden of [
+  "catalogUnitAmountMinor",
+  "costAssumption",
+  "margin",
+  "Paramètres de clauses gouvernés (JSON)",
+])
   if (detail.includes(forbidden))
-    throw new Error(`detail leaks internal field ${forbidden}`);
+    throw new Error(`detail leaks forbidden content ${forbidden}`);
 if (/setPreview\(response\.data\)[\s\S]*?\}, \[proposalId\]\)/.test(detail))
   throw new Error("detail load must not automatically reopen customer preview");
 for (const token of [
@@ -88,4 +104,5 @@ for (const token of [
 ])
   if (!customerSafeReview.includes(token))
     throw new Error(`customer preview dismissal missing ${token}`);
-console.log("Commercial proposals configurator contract: OK");
+
+console.log("Commercial proposals governed document workspace contract: OK");
