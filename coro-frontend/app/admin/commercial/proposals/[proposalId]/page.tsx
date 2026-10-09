@@ -33,6 +33,8 @@ type Detail = {
   id: string;
   reference: string;
   title: string;
+  organization: { id: string; name: string } | null;
+  prospect: { id: string; legalName: string } | null;
   revisions: Revision[];
 };
 type CompositionDiagnostic = {
@@ -281,6 +283,18 @@ export default function ProposalDetailPage({
           <h1 className="text-3xl font-semibold">
             {detail?.reference ?? "Proposition"}
           </h1>
+          {detail && (detail.organization || detail.prospect) && (
+            <Link
+              className="mt-2 inline-block text-sm underline"
+              href={
+                detail.organization
+                  ? `/admin/commercial/dossier/ORGANIZATION/${detail.organization.id}`
+                  : `/admin/commercial/dossier/PROSPECT/${detail.prospect!.id}`
+              }
+            >
+              Ouvrir le dossier commercial
+            </Link>
+          )}
           <p>
             {detail?.title} · {labels[revision?.status ?? ""]} · v
             {revision?.revisionNumber}

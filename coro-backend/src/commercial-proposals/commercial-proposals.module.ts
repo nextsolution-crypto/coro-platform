@@ -12,11 +12,18 @@ import {
   CommercialRuleRegistry,
   PRODUCTION_COMMERCIAL_RULE_REGISTRY,
 } from './commercial-rule-registry';
+import { CommercialDossierController } from './commercial-dossier.controller';
+import { CommercialDossierService } from './commercial-dossier.service';
 @Module({
   imports: [AdminAuditModule, StorageModule],
-  controllers: [CommercialProposalsController, CommercialProspectsController],
+  controllers: [
+    CommercialProposalsController,
+    CommercialProspectsController,
+    CommercialDossierController,
+  ],
   providers: [
     CommercialProposalsService,
+    CommercialDossierService,
     ProposalPdfService,
     ProposalPricingEngine,
     {

@@ -121,6 +121,12 @@ export default function Organization360Page() {
               NO ENFORCEMENT
             </span>
           </div>
+          <Link
+            className="mt-4 inline-block text-sm font-medium underline"
+            href={`/admin/commercial/dossier/ORGANIZATION/${organizationId}`}
+          >
+            Ouvrir le dossier commercial
+          </Link>
         </header>
         <nav
           className="mt-5 flex gap-2 overflow-x-auto pb-2"
@@ -216,18 +222,42 @@ function TabContent({
   return <AuditPanel data={data} />;
 }
 
-function MeasurementPanel({ data, organizationId }: { data: JsonRecord; organizationId: string }) {
+function MeasurementPanel({
+  data,
+  organizationId,
+}: {
+  data: JsonRecord;
+  organizationId: string;
+}) {
   const items = (data.items as JsonRecord[]) ?? [];
   return (
     <section>
-      <Title title="Measurement" subtitle="Résultats opérationnels immuables · Évaluation commerciale non effectuée." />
-      <Link className="mb-4 inline-block font-medium text-red-700" href={`/admin/metering?organizationId=${organizationId}`}>
+      <Title
+        title="Measurement"
+        subtitle="Résultats opérationnels immuables · Évaluation commerciale non effectuée."
+      />
+      <Link
+        className="mb-4 inline-block font-medium text-red-700"
+        href={`/admin/metering?organizationId=${organizationId}`}
+      >
         Open Metering →
       </Link>
       {items.length === 0 ? (
         <State text="NOT_AVAILABLE — aucun résultat de mesure enregistré." />
       ) : (
-        <ListPanel title="Measurement results" items={items} fields={["metricCode", "quantity", "unit", "sourceQuality", "periodStart", "periodEnd", "status"]} />
+        <ListPanel
+          title="Measurement results"
+          items={items}
+          fields={[
+            "metricCode",
+            "quantity",
+            "unit",
+            "sourceQuality",
+            "periodStart",
+            "periodEnd",
+            "status",
+          ]}
+        />
       )}
     </section>
   );

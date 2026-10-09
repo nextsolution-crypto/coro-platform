@@ -682,6 +682,13 @@ export function GuidedWorkspace({
                   >
                     Retour au prospect
                   </Link>
+                  <span aria-hidden="true"> · </span>
+                  <Link
+                    className="underline"
+                    href={`/admin/commercial/dossier/PROSPECT/${encodeURIComponent(workspace.target.id)}`}
+                  >
+                    Dossier commercial
+                  </Link>
                 </p>
               )}
             </>
