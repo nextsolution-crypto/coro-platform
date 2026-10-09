@@ -21,6 +21,27 @@ type Prospect = {
   createdAt: string;
   updatedAt: string;
 };
+type ProspectProposal = {
+  id: string;
+  reference: string;
+  title: string;
+  status: string;
+  revisions: Array<{ revisionNumber: number; status: string }>;
+};
+type ProspectWorkspace = {
+  id: string;
+  reference: string;
+  title: string;
+  status: string;
+  updatedAt: string;
+  conversions: Array<{
+    proposal: { id: string; reference: string; status: string };
+  }>;
+};
+type ProspectDetailModel = Prospect & {
+  proposals: ProspectProposal[];
+  simulationWorkspaces: ProspectWorkspace[];
+};
 type ProspectForm = {
   reference: string;
   legalName: string;
@@ -52,7 +73,7 @@ const optional = (value: string) => value.trim() || undefined;
 
 export default function ProspectsPage() {
   const [items, setItems] = useState<Prospect[]>([]);
-  const [selected, setSelected] = useState<Prospect>();
+  const [selected, setSelected] = useState<ProspectDetailModel>();
   const [form, setForm] = useState<ProspectForm>(emptyForm);
   const [mode, setMode] = useState<"LIST" | "CREATE" | "EDIT">("LIST");
   const [query, setQuery] = useState("");
@@ -66,15 +87,27 @@ export default function ProspectsPage() {
       ? response.data
       : (response.data?.items ?? []);
     setItems(prospects);
-    if (selectId)
-      setSelected(prospects.find((prospect) => prospect.id === selectId));
+    if (selectId) await selectProspect(selectId);
+  }
+  async function selectProspect(id: string) {
+    try {
+      const response = await api.get(`/admin/v1/commercial/prospects/${id}`);
+      setSelected(response.data as ProspectDetailModel);
+    } catch {
+      setMessage("Impossible de charger la fiche commerciale du prospect.");
+    }
   }
   useEffect(() => {
     // Initial synchronization with the server-owned Prospect index.
+    const selectedId = new URLSearchParams(window.location.search).get(
+      "selected",
+    );
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void load()
+    void load(selectedId ?? undefined)
       .catch(() => setMessage("Impossible de charger les prospects."))
       .finally(() => setLoading(false));
+    // The initial URL selection is intentionally read once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("fr-CA");
@@ -202,7 +235,7 @@ export default function ProspectsPage() {
                     type="button"
                     className="block w-full border-b p-4 text-left last:border-0 hover:bg-slate-50"
                     key={prospect.id}
-                    onClick={() => setSelected(prospect)}
+                    onClick={() => void selectProspect(prospect.id)}
                   >
                     <span className="font-semibold">
                       {prospect.displayName}
@@ -415,7 +448,7 @@ function ProspectDetail({
   prospect,
   onEdit,
 }: {
-  prospect: Prospect;
+  prospect: ProspectDetailModel;
   onEdit: () => void;
 }) {
   const offerUrl = `/admin/commercial/configurator?targetType=PROSPECT&prospectId=${encodeURIComponent(prospect.id)}&audience=DIRECT`;
@@ -446,6 +479,67 @@ function ProspectDetail({
         <dt className="text-slate-500">Téléphone</dt>
         <dd>{prospect.contactPhone || "—"}</dd>
       </dl>
+      <section className="space-y-2 border-t pt-4">
+        <h3 className="font-semibold">Configurations commerciales</h3>
+        {prospect.simulationWorkspaces.length ? (
+          <ul className="space-y-2 text-sm">
+            {prospect.simulationWorkspaces.map((workspace) => (
+              <li key={workspace.id} className="rounded border p-3">
+                <div className="font-medium">{workspace.title}</div>
+                <div className="text-slate-500">
+                  {workspace.reference} · {workspace.status}
+                </div>
+                <Link
+                  className="mt-1 inline-block underline"
+                  href={`/admin/commercial/configurator?workspace=${encodeURIComponent(workspace.id)}`}
+                >
+                  Reprendre la configuration
+                </Link>
+                {workspace.conversions[0] && (
+                  <Link
+                    className="ml-3 inline-block underline"
+                    href={`/admin/commercial/proposals/${workspace.conversions[0].proposal.id}`}
+                  >
+                    {workspace.conversions[0].proposal.reference}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Aucune configuration existante.
+          </p>
+        )}
+      </section>
+      <section className="space-y-2 border-t pt-4">
+        <h3 className="font-semibold">Propositions</h3>
+        {prospect.proposals.length ? (
+          <ul className="space-y-2 text-sm">
+            {prospect.proposals.map((proposal) => {
+              const revision = proposal.revisions[0];
+              return (
+                <li key={proposal.id} className="rounded border p-3">
+                  <Link
+                    className="font-medium underline"
+                    href={`/admin/commercial/proposals/${proposal.id}`}
+                  >
+                    {proposal.reference}
+                  </Link>
+                  <div className="text-slate-500">
+                    {revision?.status ?? proposal.status}
+                    {revision ? ` · v${revision.revisionNumber}` : ""}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-600">
+            Aucune proposition enregistrée pour ce prospect.
+          </p>
+        )}
+      </section>
       <div className="flex flex-wrap gap-3">
         {prospect.status === "ACTIVE" && (
           <button onClick={onEdit} className="rounded border px-4 py-2">
@@ -457,7 +551,9 @@ function ProspectDetail({
             href={offerUrl}
             className="rounded bg-emerald-700 px-4 py-2 font-medium text-white"
           >
-            Préparer une offre
+            {prospect.simulationWorkspaces.length
+              ? "Créer une nouvelle configuration"
+              : "Préparer une offre"}
           </Link>
         )}
       </div>

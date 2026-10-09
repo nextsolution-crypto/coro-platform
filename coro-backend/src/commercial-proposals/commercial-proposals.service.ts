@@ -155,7 +155,43 @@ export class CommercialProposalsService {
   async prospect(id: string) {
     const prospect = await this.prisma.commercialProspect.findUnique({
       where: { id },
-      include: { convertedOrganization: true, proposals: true },
+      include: {
+        convertedOrganization: { select: { id: true, name: true } },
+        proposals: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            reference: true,
+            title: true,
+            status: true,
+            createdAt: true,
+            revisions: {
+              orderBy: { revisionNumber: 'desc' },
+              take: 1,
+              select: { revisionNumber: true, status: true },
+            },
+          },
+        },
+        simulationWorkspaces: {
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true,
+            reference: true,
+            title: true,
+            status: true,
+            updatedAt: true,
+            conversions: {
+              orderBy: { convertedAt: 'desc' },
+              take: 1,
+              select: {
+                proposal: {
+                  select: { id: true, reference: true, status: true },
+                },
+              },
+            },
+          },
+        },
+      },
     });
     if (!prospect) throw new NotFoundException('Prospect introuvable.');
     return prospect;

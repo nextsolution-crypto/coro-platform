@@ -829,6 +829,21 @@ export class CommercialSimulatorService {
                   costResult: true,
                   lines: { select: { estimatedCostMinor: true } },
                   valueResults: { include: { metrics: true } },
+                  conversion: {
+                    select: {
+                      convertedAt: true,
+                      proposal: {
+                        select: { id: true, reference: true, status: true },
+                      },
+                      proposalRevision: {
+                        select: {
+                          id: true,
+                          revisionNumber: true,
+                          status: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -853,8 +868,16 @@ export class CommercialSimulatorService {
       currency: workspace.currency,
       selectedScenarioId: workspace.selectedScenarioId,
       target: workspace.organization
-        ? { type: 'ORGANIZATION', name: workspace.organization.name }
-        : { type: 'PROSPECT', name: workspace.prospect?.displayName ?? '' },
+        ? {
+            type: 'ORGANIZATION',
+            id: workspace.organization.id,
+            name: workspace.organization.name,
+          }
+        : {
+            type: 'PROSPECT',
+            id: workspace.prospect?.id ?? null,
+            name: workspace.prospect?.displayName ?? '',
+          },
       catalog: {
         name: workspace.priceBookVersion.priceBook.name,
         audience: workspace.priceBookVersion.priceBook.audience,
@@ -973,6 +996,13 @@ export class CommercialSimulatorService {
                   contribution?.marginBasisPoints == null
                     ? null
                     : (contribution.marginBasisPoints / 100).toFixed(2),
+                proposalConversion: latestRun.conversion
+                  ? {
+                      convertedAt: latestRun.conversion.convertedAt,
+                      proposal: latestRun.conversion.proposal,
+                      revision: latestRun.conversion.proposalRevision,
+                    }
+                  : null,
               }
             : null,
         };

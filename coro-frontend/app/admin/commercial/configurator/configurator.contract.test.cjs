@@ -247,6 +247,16 @@ const path = require("node:path");
   assert.match(guided, /scenario\.packaging\.status !== "READY"/);
   assert.match(guided, /scenario\.latestResult\.priceStatus !== "COMPLETE"/);
   assert.match(guided, /setProposalResult\(undefined\)/);
+  assert.match(
+    guided,
+    /scenario\?\.latestResult\?\.proposalConversion\?\.proposal/,
+  );
+  assert.match(
+    guided,
+    /La proposition \$\{recoveredProposal\.reference\} existe déjà/,
+  );
+  assert.match(guided, /Ouvrir \{visibleProposal\.reference\}/);
+  assert.match(guided, /Retour au prospect/);
   assert.match(guided, /Aperçu client non contractuel/);
   assert.match(guided, /params: \{ scenarioId: scenario\.id \}/);
   assert.match(guided, /Customer Preview could not be opened/);

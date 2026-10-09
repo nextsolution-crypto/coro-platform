@@ -113,6 +113,11 @@ export type GuidedScenario = {
     knownModeledDirectCostCad: string | null;
     contributionCad: string | null;
     marginPercent: string | null;
+    proposalConversion: null | {
+      convertedAt: string;
+      proposal: { id: string; reference: string; status: string };
+      revision: { id: string; revisionNumber: number; status: string };
+    };
   };
 };
 
@@ -125,7 +130,7 @@ export type GuidedWorkspace = {
   lockVersion: number;
   currency: string;
   selectedScenarioId: string | null;
-  target: { type: string; name: string };
+  target: { type: string; id: string | null; name: string };
   catalog: {
     name: string;
     audience: string;

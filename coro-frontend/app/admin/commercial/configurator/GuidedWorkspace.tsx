@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { CONFIGURATOR_API_BASE } from "./configurator-contract.mjs";
 import type {
@@ -150,6 +151,9 @@ export function GuidedWorkspace({
       </p>
     );
   const scenario = workspace.scenarios.find((item) => item.id === activeId);
+  const recoveredProposal =
+    scenario?.latestResult?.proposalConversion?.proposal;
+  const visibleProposal = proposalResult ?? recoveredProposal;
   const professionalScenario = scenario?.familyCodes.includes("PROFESSIONAL");
   const proposalBlockedReason = !scenario
     ? "Ouvrez un scénario pour préparer une proposition."
@@ -168,7 +172,9 @@ export function GuidedWorkspace({
                 : scenario.latestResult.priceStatus !== "COMPLETE" ||
                     scenario.latestResult.firstYearCommitmentCad === null
                   ? "Le prix et le montant de première année doivent être complets."
-                  : null;
+                  : recoveredProposal
+                    ? `La proposition ${recoveredProposal.reference} existe déjà pour ce calcul officiel.`
+                    : null;
 
   async function loadComparison() {
     const { data } = await api.get(
@@ -659,15 +665,25 @@ export function GuidedWorkspace({
                 >
                   Créer la proposition
                 </button>
-                {proposalResult && (
-                  <a
+                {visibleProposal && (
+                  <Link
                     className="ml-3 underline"
-                    href={`/admin/commercial/proposals/${proposalResult.id}`}
+                    href={`/admin/commercial/proposals/${visibleProposal.id}`}
                   >
-                    Ouvrir {proposalResult.reference}
-                  </a>
+                    Ouvrir {visibleProposal.reference}
+                  </Link>
                 )}
               </section>
+              {workspace.target.type === "PROSPECT" && workspace.target.id && (
+                <p className="text-sm">
+                  <Link
+                    className="underline"
+                    href={`/admin/commercial/prospects?selected=${encodeURIComponent(workspace.target.id)}`}
+                  >
+                    Retour au prospect
+                  </Link>
+                </p>
+              )}
             </>
           ) : (
             <section className="rounded-xl border bg-white p-8 text-center">

@@ -12,11 +12,25 @@ const customerSafeReview = fs.readFileSync(
   "utf8",
 );
 for (const token of [
-  "Nouvelle proposition",
-  "Aucune proposition",
+  "Préparer une offre",
+  "Chargement des propositions",
+  "Impossible de charger les propositions",
+  "Accès non autorisé",
+  "Aucune proposition enregistrée",
+  "Aucune proposition ne correspond aux filtres",
+  "Réessayer",
+  "Référence, titre ou client",
+  "Prospects",
+  "Organisations",
   "/admin/v1/commercial/proposals",
 ])
   if (!dashboard.includes(token)) throw new Error(`dashboard missing ${token}`);
+if (
+  !/href=\{`\/admin\/commercial\/proposals\/\$\{proposal\.id\}`\}/.test(
+    dashboard,
+  )
+)
+  throw new Error("dashboard must link directly to Proposal detail");
 for (const token of [
   "Target",
   "PriceBook",

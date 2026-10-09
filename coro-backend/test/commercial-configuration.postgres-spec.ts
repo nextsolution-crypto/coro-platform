@@ -5,6 +5,7 @@ import { CommercialCatalogService } from '../src/commercial-catalog/commercial-c
 import { CommercialConfigurationService } from '../src/commercial-configuration/commercial-configuration.service';
 import { CommercialSimulatorService } from '../src/commercial-simulator/commercial-simulator.service';
 import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
+import { CommercialProposalsService } from '../src/commercial-proposals/commercial-proposals.service';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url) throw new Error('TEST_DATABASE_URL required');
@@ -16,6 +17,11 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
     prisma as never,
     new ProposalPricingEngine(),
     audit,
+  );
+  const proposals = new CommercialProposalsService(
+    prisma as never,
+    audit,
+    new ProposalPricingEngine(),
   );
   const service = new CommercialConfigurationService(
     prisma as never,
@@ -583,6 +589,43 @@ describe('Governed commercial configuration PostgreSQL acceptance', () => {
         where: { calculationRunId: run.id },
       }),
     ).toBe(1);
+    const readCountsBefore = {
+      proposals: await prisma.commercialProposal.count(),
+      runs: await prisma.commercialSimulationCalculationRun.count(),
+      scenarios: await prisma.commercialSimulationScenario.count(),
+    };
+    const recoveredWorkspace = await simulator.getGuidedWorkspace(workspace.id);
+    expect(
+      recoveredWorkspace.scenarios[0].latestResult?.proposalConversion,
+    ).toMatchObject({
+      proposal: {
+        id: conversion.proposal.id,
+        reference: conversion.proposal.reference,
+      },
+      revision: { revisionNumber: 1, status: 'DRAFT' },
+    });
+    const recoveredProspect = await proposals.prospect(prospect.id);
+    expect(recoveredProspect.proposals[0]).toMatchObject({
+      id: conversion.proposal.id,
+      reference: conversion.proposal.reference,
+      revisions: [{ revisionNumber: 1, status: 'DRAFT' }],
+    });
+    expect(recoveredProspect.simulationWorkspaces[0]).toMatchObject({
+      id: workspace.id,
+      conversions: [
+        {
+          proposal: {
+            id: conversion.proposal.id,
+            reference: conversion.proposal.reference,
+          },
+        },
+      ],
+    });
+    expect({
+      proposals: await prisma.commercialProposal.count(),
+      runs: await prisma.commercialSimulationCalculationRun.count(),
+      scenarios: await prisma.commercialSimulationScenario.count(),
+    }).toEqual(readCountsBefore);
     expect(await prisma.organizationContract.count()).toBe(
       previewSideEffectsBefore.contracts,
     );
