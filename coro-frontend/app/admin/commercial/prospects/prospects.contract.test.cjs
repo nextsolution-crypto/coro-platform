@@ -38,11 +38,15 @@ assert.match(
 );
 assert.match(page, /workspace=\$\{encodeURIComponent\(workspace\.id\)\}/);
 assert.match(page, /proposals\/\$\{proposal\.id\}/);
-assert.match(configurator, /params\.get\("targetType"\) === "PROSPECT"/);
+assert.match(
+  configurator,
+  /requestedType === "PROSPECT" \|\| requestedType === "ORGANIZATION"/,
+);
+assert.match(configurator, /params\.get\("targetId"\)/);
 assert.match(configurator, /params\.get\("prospectId"\)/);
 assert.match(
   configurator,
-  /targets\.find\(\(item\) => item\.id === requestedProspectId\)/,
+  /targets\.find\(\s*\(item\) => item\.id === requestedTargetId/,
 );
 assert.doesNotMatch(page, /Read-only index|No prospects/);
 assert.doesNotMatch(page, /workspace.*post|proposals.*post/i);

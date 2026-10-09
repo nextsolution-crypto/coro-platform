@@ -69,16 +69,10 @@ const SUPER_ADMIN_PLATFORM_GROUP = {
 const SUPER_ADMIN_COMMERCIAL_GROUP = {
   label: 'Commercial',
   items: [
-    { label: 'Prospects', path: '/admin/commercial/prospects', icon: '○' },
-    { label: 'Propositions', path: '/admin/commercial/proposals', icon: '◇' },
-    { label: 'Contenu commercial', path: '/admin/commercial/content', icon: '▤' },
-    { label: 'Émetteur légal', path: '/admin/commercial/legal-issuer', icon: '§' },
-    { label: 'Clauses commerciales', path: '/admin/commercial/clauses', icon: '¶' },
-    { label: 'Configurateur d’offres', path: '/admin/commercial/configurator', icon: '∆' },
-    { label: 'Simulateur avancé', path: '/admin/commercial/simulator', icon: '∴' },
+    { label: 'Tableau commercial', path: '/admin/commercial', icon: '◉' },
+    { label: 'Préparer une offre', path: '/admin/commercial/journey', icon: '∆' },
+    { label: 'Dossiers commerciaux', path: '/admin/commercial/prospects', icon: '○' },
     { label: 'Contrats', path: '/admin/commercial/contracts', icon: '▧' },
-    { label: 'Entitlements', path: '/admin/commercial/entitlements', icon: '✓' },
-    { label: 'Réconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },
   ],
 };
 
@@ -86,10 +80,24 @@ const SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP = {
   label: 'Administration commerciale',
   items: [
     { label: 'Organisations',    path: '/admin/organizations', icon: 'ðŸ¢' },
-    { label: 'Catalogue produits', path: '/admin/product-catalog', icon: '◫' },
+    { label: 'Catalogue et tarifs', path: '/admin/product-catalog', icon: '◫' },
+    { label: 'Contenus et clauses', path: '/admin/commercial/content', icon: '▤' },
+    { label: 'Émetteur légal', path: '/admin/commercial/legal-issuer', icon: '§' },
+  ],
+};
+
+const SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP = {
+  label: 'Outils avancés',
+  items: [
+    { label: 'Simulateur avancé', path: '/admin/commercial/simulator', icon: '∴' },
+    { label: 'Création technique Proposal', path: '/admin/commercial/proposals/new', icon: '◇' },
+    { label: 'Entitlements', path: '/admin/commercial/entitlements', icon: '✓' },
+    { label: 'Réconciliation', path: '/admin/commercial/reconciliation', icon: '⇄' },
     { label: 'Configuration tarifaire', path: '/admin/commercial/configuration', icon: '⚙' },
     { label: 'Hypothèses de coûts', path: '/admin/commercial/assumptions/cost', icon: '¤' },
     { label: 'Hypothèses de valeur', path: '/admin/commercial/assumptions/value', icon: '≈' },
+    { label: 'Clauses commerciales', path: '/admin/commercial/clauses', icon: '¶' },
+    { label: 'Propositions', path: '/admin/commercial/proposals', icon: '◇' },
   ],
 };
 
@@ -660,7 +668,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="space-y-0.5">
                   {SUPER_ADMIN_PLATFORM_GROUP.items.map(item => <NavItem key={item.path} item={item} />)}
                 </div>
-                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_OTHER_GROUP].map(group => (
+                {[SUPER_ADMIN_COMMERCIAL_GROUP, SUPER_ADMIN_COMMERCIAL_ADMIN_GROUP, SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP, SUPER_ADMIN_OTHER_GROUP].map(group => (
                   <div key={group.label} className="mt-4">
                     <p className="px-3 text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#ADB5BD' }}>
                       {group.label}

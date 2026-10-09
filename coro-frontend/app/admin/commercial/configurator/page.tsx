@@ -97,17 +97,21 @@ export default function CommercialConfiguratorPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [workspaceId, setWorkspaceId] = useState("");
-  const [requestedProspectId, setRequestedProspectId] = useState("");
+  const [requestedTargetId, setRequestedTargetId] = useState("");
 
   useEffect(() => {
     // The browser URL is the external source for the selected workspace.
     const params = new URLSearchParams(window.location.search);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWorkspaceId(params.get("workspace") ?? "");
-    const prospectId = params.get("prospectId") ?? "";
-    if (params.get("targetType") === "PROSPECT" && prospectId) {
-      setTargetType("PROSPECT");
-      setRequestedProspectId(prospectId);
+    const requestedType = params.get("targetType");
+    const targetId = params.get("targetId") ?? params.get("prospectId") ?? "";
+    if (
+      (requestedType === "PROSPECT" || requestedType === "ORGANIZATION") &&
+      targetId
+    ) {
+      setTargetType(requestedType);
+      setRequestedTargetId(targetId);
       setAudience(params.get("audience") === "PARTNER" ? "PARTNER" : "DIRECT");
     }
   }, []);
@@ -150,16 +154,18 @@ export default function CommercialConfiguratorPage() {
   }, [query, targetType]);
 
   useEffect(() => {
-    if (!requestedProspectId || target) return;
-    const prospect = targets.find((item) => item.id === requestedProspectId);
-    if (!prospect?.selectable) return;
+    if (!requestedTargetId || target) return;
+    const requestedTarget = targets.find(
+      (item) => item.id === requestedTargetId,
+    );
+    if (!requestedTarget?.selectable) return;
     // The requested URL target becomes the local controlled selection once found.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTarget(prospect);
-    setQuery(prospect.displayName);
-    setTitle(`${prospect.displayName} — Nouvelle configuration`);
-    setRequestedProspectId("");
-  }, [requestedProspectId, target, targets]);
+    setTarget(requestedTarget);
+    setQuery(requestedTarget.displayName);
+    setTitle(`${requestedTarget.displayName} — Nouvelle configuration`);
+    setRequestedTargetId("");
+  }, [requestedTargetId, target, targets]);
 
   useEffect(() => {
     if (!target) return;

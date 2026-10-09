@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveCommercialFamilyAuthority } from '../commercial-simulator/commercial-family-authority';
+import { COMMERCIAL_FAMILY_REGISTRY } from '../commercial-simulator/commercial-family.registry';
 import { CommercialDossierTargetType } from './commercial-dossier.dto';
 
 const money = (value: bigint | null | undefined) => value?.toString() ?? null;
@@ -84,6 +86,16 @@ export class CommercialDossierService {
               families: {
                 orderBy: { displayOrder: 'asc' },
                 select: { familyCode: true },
+              },
+              lines: {
+                orderBy: { displayOrder: 'asc' },
+                select: { componentCode: true },
+              },
+              capabilities: {
+                orderBy: { displayOrder: 'asc' },
+                select: {
+                  capability: { select: { code: true, nameFr: true } },
+                },
               },
               runs: {
                 orderBy: [{ calculatedAt: 'desc' }, { sequence: 'desc' }],
@@ -264,10 +276,14 @@ export class CommercialDossierService {
       scenarioCount: workspace.scenarios.length,
       scenariosTruncated: workspace.scenarios.length > COLLECTION_LIMIT,
       retainedScenarioId: workspace.selectedScenarioId,
-      resumeUrl: `/admin/commercial/configurator?workspaceId=${workspace.id}`,
+      resumeUrl: `/admin/commercial/configurator?workspace=${workspace.id}`,
       scenarios: workspace.scenarios
         .slice(0, COLLECTION_LIMIT)
         .map((scenario) => {
+          const familyAuthority = resolveCommercialFamilyAuthority({
+            explicitCodes: scenario.families.map((family) => family.familyCode),
+            componentCodes: scenario.lines.map((line) => line.componentCode),
+          });
           const run = scenario.runs[0] ?? null;
           const current = Boolean(
             run && run.scenarioLockVersion === scenario.lockVersion,
@@ -278,7 +294,21 @@ export class CommercialDossierService {
             status: scenario.status,
             displayOrder: scenario.displayOrder,
             retained: workspace.selectedScenarioId === scenario.id,
-            familyCodes: scenario.families.map((family) => family.familyCode),
+            familyAuthority: {
+              source: familyAuthority.source,
+              codes: familyAuthority.codes,
+              labels: familyAuthority.codes.map((code) => ({
+                code,
+                label:
+                  COMMERCIAL_FAMILY_REGISTRY.find(
+                    (family) => family.code === code,
+                  )?.labelFr ?? code,
+              })),
+            },
+            capabilities: scenario.capabilities.map(({ capability }) => ({
+              code: capability.code,
+              label: capability.nameFr,
+            })),
             currentOfficialRun: run
               ? {
                   calculatedAt: run.calculatedAt,

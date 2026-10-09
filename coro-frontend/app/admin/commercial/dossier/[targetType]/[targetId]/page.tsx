@@ -32,7 +32,12 @@ type Dossier = {
       id: string;
       name: string;
       retained: boolean;
-      familyCodes: string[];
+      familyAuthority: {
+        source: "EXPLICIT" | "LEGACY_INFERRED" | "REVIEW_REQUIRED";
+        codes: string[];
+        labels: Array<{ code: string; label: string }>;
+      };
+      capabilities: Array<{ code: string; label: string }>;
       currentOfficialRun: null | {
         current: boolean;
         priceStatus: string;
@@ -120,6 +125,22 @@ const readinessLabels: Record<string, string> = {
   INTERNAL_DRAFT: "Composition interne à compléter",
   ISSUANCE_READY: "Composition prête pour émission",
 };
+const businessLabels: Record<string, string> = {
+  DRAFT: "Brouillon",
+  INTERNAL_REVIEW: "En revue interne",
+  READY: "Prête à émettre",
+  SENT: "Transmise",
+  ACCEPTED: "Acceptée",
+  REJECTED: "Refusée",
+  CANCELLED: "Annulée",
+  FINALIZED: "Fichier finalisé",
+  HISTORICAL_PDF_V3: "Document historique",
+  PDF_V2_ELIGIBLE: "Document V2 prêt",
+  PDF_V2_INTERNAL_DRAFT: "Document V2 interne",
+  ACTIVE: "Actif",
+  APPROVED: "Approuvé",
+};
+const businessLabel = (code: string) => businessLabels[code] ?? code;
 
 export default function CommercialDossierPage({
   params,
@@ -188,7 +209,7 @@ export default function CommercialDossierPage({
 
   return (
     <AppLayout>
-      <main className="mx-auto max-w-7xl space-y-6 p-6">
+      <main className="mx-auto max-w-screen-2xl space-y-8 p-4 sm:p-6 lg:p-8">
         {state === "LOADING" && (
           <p role="status">Chargement du dossier commercial…</p>
         )}
@@ -214,7 +235,7 @@ export default function CommercialDossierPage({
         )}
         {state === "READY" && dossier && (
           <>
-            <header className="rounded-xl border bg-white p-6">
+            <header className="overflow-hidden rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:p-10">
               <p className="text-sm font-semibold uppercase text-emerald-700">
                 Dossier commercial ·{" "}
                 {dossier.target.type === "PROSPECT"
@@ -224,7 +245,7 @@ export default function CommercialDossierPage({
               <h1 className="mt-1 text-3xl font-semibold">
                 {dossier.target.name}
               </h1>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 max-w-3xl text-sm text-slate-300">
                 Vue consolidée en lecture seule des autorités commerciales
                 existantes.
               </p>
@@ -241,9 +262,12 @@ export default function CommercialDossierPage({
               </p>
             )}
 
-            <section className="rounded-xl border bg-white p-5">
+            <section className="rounded-2xl border bg-white p-6 shadow-sm">
               <h2 className="text-xl font-semibold">Progression</h2>
-              <ol className="mt-4 grid gap-2 md:grid-cols-4">
+              <ol
+                className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                aria-label="Progression commerciale"
+              >
                 {dossier.progress.map((stage) => (
                   <li
                     key={stage.code}
@@ -330,9 +354,23 @@ export default function CommercialDossierPage({
                         <strong>{scenario.name}</strong>
                         {scenario.retained && " · Retenu"}
                         <div className="text-slate-500">
-                          {scenario.familyCodes.join(", ") ||
-                            "Famille non résolue"}
+                          {scenario.familyAuthority.labels.length
+                            ? scenario.familyAuthority.labels
+                                .map((family) => family.label)
+                                .join(", ")
+                            : "Famille à confirmer — composition historique ambiguë"}
+                          {scenario.familyAuthority.source ===
+                            "LEGACY_INFERRED" &&
+                            " · Déduite de la composition historique"}
                         </div>
+                        {scenario.capabilities.length > 0 && (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Capacités :{" "}
+                            {scenario.capabilities
+                              .map((item) => item.label)
+                              .join(", ")}
+                          </div>
+                        )}
                         <div>
                           {scenario.currentOfficialRun
                             ? scenario.currentOfficialRun.current
@@ -396,7 +434,7 @@ export default function CommercialDossierPage({
                     <div className="mt-3 text-sm">
                       <p>
                         Révision v{proposal.latestRevision.revisionNumber} ·{" "}
-                        {proposal.latestRevision.status}
+                        {businessLabel(proposal.latestRevision.status)}
                       </p>
                       <p>
                         Document :{" "}
@@ -409,7 +447,8 @@ export default function CommercialDossierPage({
                       <ul className="mt-2 space-y-1">
                         {proposal.latestRevision.documents.map((document) => (
                           <li key={document.id}>
-                            {document.documentKind} · {document.status}
+                            {businessLabel(document.documentKind)} ·{" "}
+                            {businessLabel(document.status)}
                             {document.downloadUrl && (
                               <>
                                 {" "}
@@ -456,7 +495,7 @@ export default function CommercialDossierPage({
                       <li key={contract.id} className="rounded border p-3">
                         {contract.reference} · {contract.title}
                         <div className="text-sm text-slate-500">
-                          {contract.status} · v
+                          {businessLabel(contract.status)} · v
                           {contract.revisions[0]?.revisionNumber ?? "—"}
                         </div>
                       </li>

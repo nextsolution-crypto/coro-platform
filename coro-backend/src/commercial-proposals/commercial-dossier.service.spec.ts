@@ -51,7 +51,21 @@ describe('CommercialDossierService', () => {
             status: 'ACTIVE',
             lockVersion: 4,
             displayOrder: 1,
-            families: [{ familyCode: 'CORO_PROFESSIONAL' }],
+            families: [],
+            lines: [
+              { componentCode: 'CORO_PROFESSIONAL_ANNUAL' },
+              {
+                componentCode: 'CORO_PROFESSIONAL_IMPLEMENTATION_ADVANCED',
+              },
+            ],
+            capabilities: [
+              {
+                capability: {
+                  code: 'COMPLIANCE_OPERATIONS',
+                  nameFr: 'Opérations de conformité',
+                },
+              },
+            ],
             runs: [
               {
                 id: 'run-a',
@@ -94,6 +108,11 @@ describe('CommercialDossierService', () => {
         annualRecurringMinor: '1750000',
         firstYearMinor: '2492500',
       },
+    });
+    expect(result.workspaces[0].scenarios[0].familyAuthority).toEqual({
+      source: 'LEGACY_INFERRED',
+      codes: ['PROFESSIONAL'],
+      labels: [{ code: 'PROFESSIONAL', label: 'CORO Professional' }],
     });
     expect(result.nextActions).toEqual([
       expect.objectContaining({ code: 'CREATE_PROPOSAL' }),
@@ -173,12 +192,12 @@ describe('CommercialDossierService', () => {
       {
         code: 'RESUME_CONFIGURATION_workspace-new',
         label: 'Reprendre Configuration récente',
-        href: '/admin/commercial/configurator?workspaceId=workspace-new',
+        href: '/admin/commercial/configurator?workspace=workspace-new',
       },
       {
         code: 'RESUME_CONFIGURATION_workspace-old',
         label: 'Reprendre Configuration historique',
-        href: '/admin/commercial/configurator?workspaceId=workspace-old',
+        href: '/admin/commercial/configurator?workspace=workspace-old',
       },
     ]);
   });
