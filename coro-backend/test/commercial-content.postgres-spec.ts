@@ -53,7 +53,7 @@ describeDatabase('Commercial content authority PostgreSQL', () => {
               'COMMERCIAL_CONTENT_REVISION_CREATED',
             ],
           },
-          actorUserId: actor.userId,
+          targetId: draft.id,
         },
       }),
     ).toBe(1);
@@ -106,7 +106,32 @@ describeDatabase('Commercial content authority PostgreSQL', () => {
         actor,
       ),
     ).rejects.toThrow('UNKNOWN_CONTENT_TARGET');
-    const bilingual = await service.updateDraft(
+    await expect(
+      service.updateDraft(
+        initial.id,
+        {
+          ...baseUpdate,
+          bindings: baseUpdate.bindings.map((binding) =>
+            binding.targetCode === 'NETWORK'
+              ? {
+                  ...binding,
+                  commercialIntent: 'FUTURE',
+                  deliveryMaturity: 'AVAILABLE',
+                }
+              : binding,
+          ),
+        },
+        actor,
+      ),
+    ).rejects.toThrow('FUTURE_CONTENT_MATURITY_INVALID');
+    await expect(
+      service.approve(
+        initial.id,
+        { lockVersion: initial.lockVersion, reason: 'Wrong lifecycle' },
+        actor,
+      ),
+    ).rejects.toThrow('IN_REVIEW');
+    const incomplete = await service.updateDraft(
       initial.id,
       {
         lockVersion: initial.lockVersion,
@@ -115,11 +140,11 @@ describeDatabase('Commercial content authority PostgreSQL', () => {
         descriptionFR: initial.descriptionFR,
         descriptionEN: 'Draft commercial matrix subject to explicit approval.',
         provenance: initial.provenance,
-        bindings: initial.bindings.map((binding) => ({
+        bindings: initial.bindings.map((binding, index) => ({
           targetType: binding.targetType,
           targetCode: binding.targetCode,
           labelFR: binding.labelFR,
-          labelEN: `${binding.labelFR} (EN)`,
+          labelEN: index === 0 ? undefined : `${binding.labelFR} (EN)`,
           commercialIntent: binding.commercialIntent,
           deliveryMaturity: binding.deliveryMaturity,
           evidence: binding.evidence ?? undefined,
@@ -128,12 +153,65 @@ describeDatabase('Commercial content authority PostgreSQL', () => {
       },
       actor,
     );
-    await service.submit(
+    const incompleteReview = await service.submit(
+      incomplete.id,
+      { lockVersion: incomplete.lockVersion, reason: 'Incomplete review' },
+      actor,
+    );
+    await expect(
+      service.approve(
+        incompleteReview.id,
+        {
+          lockVersion: incompleteReview.lockVersion,
+          reason: 'Missing English label',
+        },
+        actor,
+      ),
+    ).rejects.toThrow('English content');
+    const completeDraft = await service.returnToDraft(
+      incompleteReview.id,
+      {
+        lockVersion: incompleteReview.lockVersion,
+        reason: 'Complete bilingual content',
+      },
+      actor,
+    );
+    const bilingual = await service.updateDraft(
+      completeDraft.id,
+      {
+        lockVersion: completeDraft.lockVersion,
+        titleFR: completeDraft.titleFR,
+        titleEN: 'CORO Professional — Compliance & Operations',
+        descriptionFR: completeDraft.descriptionFR,
+        descriptionEN: 'Draft commercial matrix subject to explicit approval.',
+        provenance: completeDraft.provenance,
+        bindings: completeDraft.bindings.map((binding) => ({
+          targetType: binding.targetType,
+          targetCode: binding.targetCode,
+          labelFR: binding.labelFR,
+          labelEN: `${binding.labelFR} (EN)`,
+          commercialIntent: binding.commercialIntent,
+          deliveryMaturity:
+            binding.targetCode === 'PMU_PSI_PCA'
+              ? ('UNVERIFIED' as const)
+              : binding.deliveryMaturity,
+          evidence: binding.evidence ?? undefined,
+          displayOrder: binding.displayOrder,
+        })),
+      },
+      actor,
+    );
+    const inReview = await service.submit(
       bilingual.id,
       { lockVersion: bilingual.lockVersion, reason: 'Review maturity' },
       actor,
     );
-    const inReview = (await service.detail('CORO_PROFESSIONAL')).versions[0];
+    expect(
+      inReview.bindings.some(
+        ({ commercialIntent, deliveryMaturity }) =>
+          commercialIntent === 'INCLUDED' && deliveryMaturity === 'UNVERIFIED',
+      ),
+    ).toBe(true);
     await expect(
       service.createRevision('CORO_PROFESSIONAL', actor),
     ).rejects.toThrow('open revision');
