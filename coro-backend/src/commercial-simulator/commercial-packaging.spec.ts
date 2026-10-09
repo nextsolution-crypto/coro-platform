@@ -8,6 +8,7 @@ import {
   packagingDraftBlockingIssues,
   validatePackagingSelection,
 } from './commercial-packaging';
+import { PROFESSIONAL_CONTENT_DRAFT } from '../commercial-content/professional-content.draft';
 
 describe('commercial packaging policy', () => {
   it('locks the version and validates the canonical registry', () => {
@@ -53,6 +54,55 @@ describe('commercial packaging policy', () => {
         components: [annual, standard, advanced],
       }).status,
     ).toBe('BLOCKED');
+  });
+
+  it('keeps Professional presentation features aligned with the A1A included content', () => {
+    const professional = COMMERCIAL_PACKAGING_POLICY.find(
+      (item) => item.familyCode === 'PROFESSIONAL',
+    );
+    const expectedFeatureKeys = [
+      'CLIENTS_BUILDINGS',
+      'COMPLIANCE_DOCUMENTS',
+      'PMU_PSI_PCA',
+      'PROJECTS_MANDATES',
+      'ACTIVITIES_TASKS_ASSIGNMENTS',
+      'BOOKING',
+      'PLANNER_AVAILABILITY',
+      'EXERCISES_SIMULATIONS',
+      'EXERCISE_REPORTS',
+      'REX',
+      'CORRECTIVE_ACTIONS',
+      'CLIENT_PORTAL',
+      'USER_ROLE_MANAGEMENT',
+    ];
+    const a1aIncludedFeatureKeys = PROFESSIONAL_CONTENT_DRAFT.bindings
+      .filter(
+        (binding) =>
+          binding.targetType === 'FUNCTIONAL_FEATURE' &&
+          binding.commercialIntent === 'INCLUDED',
+      )
+      .map((binding) => binding.targetCode);
+
+    expect(professional?.includedFeatures).toEqual(
+      expectedFeatureKeys.map((key) => ({
+        key,
+        classification: 'PRESENTATION_ONLY',
+      })),
+    );
+    expect(a1aIncludedFeatureKeys).toEqual(expectedFeatureKeys);
+    expect(new Set(expectedFeatureKeys).size).toBe(expectedFeatureKeys.length);
+    const specializedFeatureKeys = [
+      'SENTINELLE',
+      'POPULATION_PUE',
+      'KNOWLEDGE_AI',
+      'INCIDENT_OPS',
+      'BUILDING_BRIDGE',
+      'NETWORK',
+      'PERFORMANCE_CORO_INDEX',
+    ];
+    expect(
+      expectedFeatureKeys.filter((key) => specializedFeatureKeys.includes(key)),
+    ).toEqual([]);
   });
 
   it('keeps Network non-sellable and unresolved families explicit', () => {
