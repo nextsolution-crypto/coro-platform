@@ -47,6 +47,12 @@ for (const token of [
   "Ouvrir l’aperçu client",
   "openPreview",
   "onClose={closePreview}",
+  "document-compositions",
+  "Composer le brouillon documentaire",
+  "Prêt pour émission",
+  "Brouillon interne — exigences manquantes",
+  "Diagnostics de préparation",
+  "Sections incluses",
 ])
   if (!detail.includes(token)) throw new Error(`finalization missing ${token}`);
 for (const forbidden of ["catalogUnitAmountMinor", "costAssumption", "margin"])

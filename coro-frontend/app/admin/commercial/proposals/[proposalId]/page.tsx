@@ -32,6 +32,24 @@ type Detail = {
   title: string;
   revisions: Revision[];
 };
+type CompositionDiagnostic = {
+  code: string;
+  severity: "BLOCKING" | "WARNING";
+  subject?: string;
+};
+type Composition = {
+  id: string;
+  templateCode: string;
+  templateVersion: string;
+  language: "FR" | "EN";
+  sequence: number;
+  readiness: "INTERNAL_DRAFT" | "ISSUANCE_READY";
+  issuanceReady: boolean;
+  canonicalHash: string;
+  diagnostics: CompositionDiagnostic[];
+  snapshot?: { sections?: { code: string }[] };
+  composedAt: string;
+};
 const labels: Record<string, string> = {
   DRAFT: "Brouillon",
   INTERNAL_REVIEW: "Revue interne",
@@ -62,6 +80,15 @@ export default function ProposalDetailPage({
   const [preview, setPreview] = useState<CustomerSafeProjection>();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [composition, setComposition] = useState<Composition>();
+  const [compositionHistory, setCompositionHistory] = useState<Composition[]>(
+    [],
+  );
+  const [documentForm, setDocumentForm] = useState({
+    templateCode: "CORO_PROFESSIONAL",
+    language: "FR" as "FR" | "EN",
+    clauseParameters: "{}",
+  });
   const closePreview = useCallback(() => setPreview(undefined), []);
   const [form, setForm] = useState({
     validFrom: "",
@@ -78,6 +105,19 @@ export default function ProposalDetailPage({
     setDetail(data);
     const revision = data.revisions[0] as Revision | undefined;
     if (!revision) return;
+    const historyResponse = await api.get(
+      `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/document-compositions`,
+    );
+    const history = historyResponse.data as Composition[];
+    setCompositionHistory(history);
+    if (history[0]) {
+      const snapshotResponse = await api.get(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/document-compositions/${history[0].id}`,
+      );
+      setComposition(snapshotResponse.data);
+    } else {
+      setComposition(undefined);
+    }
     setForm({
       validFrom: revision.validFrom?.slice(0, 10) ?? "",
       validUntil: revision.validUntil?.slice(0, 10) ?? "",
@@ -176,6 +216,31 @@ export default function ProposalDetailPage({
         },
       );
     }, "PDF client privé généré.");
+  }
+  function composeDocument() {
+    if (!revision) return;
+    return execute(async () => {
+      let clauseParameters: Record<string, unknown>;
+      try {
+        clauseParameters = JSON.parse(documentForm.clauseParameters) as Record<
+          string,
+          unknown
+        >;
+      } catch {
+        throw new Error(
+          "Les paramètres de clauses doivent être un objet JSON.",
+        );
+      }
+      const response = await api.post(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/document-compositions`,
+        {
+          templateCode: documentForm.templateCode,
+          language: documentForm.language,
+          clauseParameters,
+        },
+      );
+      setComposition(response.data);
+    }, "Composition documentaire immuable créée.");
   }
   async function downloadPdf(document: Document) {
     if (!revision) return;
@@ -305,6 +370,123 @@ export default function ProposalDetailPage({
         )}
         {preview && (
           <CustomerSafeReview preview={preview} onClose={closePreview} />
+        )}
+        {revision && (
+          <section className="space-y-4 rounded border bg-white p-5">
+            <div>
+              <h2 className="font-semibold">Composition documentaire V2</h2>
+              <p className="text-sm text-slate-500">
+                Compose un brouillon interne à partir des autorités approuvées.
+                Cette action ne génère, n&apos;approuve et n&apos;envoie aucun
+                PDF.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Modèle documentaire">
+                <select
+                  value={documentForm.templateCode}
+                  onChange={(event) =>
+                    setDocumentForm({
+                      ...documentForm,
+                      templateCode: event.target.value,
+                    })
+                  }
+                  className="w-full rounded border p-2"
+                >
+                  <option value="CORO_PROFESSIONAL">CORO Professional</option>
+                  <option value="SENTINELLE_POPULATION_STANDALONE">
+                    Sentinelle Population autonome
+                  </option>
+                  <option value="PROFESSIONAL_SERVICES">
+                    Services professionnels
+                  </option>
+                  <option value="COMBINED_OFFER">Offre combinée</option>
+                </select>
+              </Field>
+              <Field label="Langue">
+                <select
+                  value={documentForm.language}
+                  onChange={(event) =>
+                    setDocumentForm({
+                      ...documentForm,
+                      language: event.target.value as "FR" | "EN",
+                    })
+                  }
+                  className="w-full rounded border p-2"
+                >
+                  <option value="FR">Français</option>
+                  <option value="EN">English</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Paramètres de clauses gouvernés (JSON)">
+              <textarea
+                value={documentForm.clauseParameters}
+                onChange={(event) =>
+                  setDocumentForm({
+                    ...documentForm,
+                    clauseParameters: event.target.value,
+                  })
+                }
+                rows={4}
+                className="w-full rounded border p-2 font-mono text-xs"
+              />
+            </Field>
+            <button
+              disabled={busy}
+              onClick={() => void composeDocument()}
+              className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+            >
+              Composer le brouillon documentaire
+            </button>
+            {composition && (
+              <div className="space-y-3 rounded border p-4 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <strong>
+                    {composition.issuanceReady
+                      ? "Prêt pour émission"
+                      : "Brouillon interne — exigences manquantes"}
+                  </strong>
+                  <span>
+                    {composition.templateCode} · v{composition.sequence}
+                  </span>
+                </div>
+                <p className="break-all font-mono text-xs">
+                  SHA-256 : {composition.canonicalHash}
+                </p>
+                {composition.snapshot?.sections && (
+                  <div>
+                    <h3 className="font-medium">Sections incluses</h3>
+                    <ul className="list-disc pl-5">
+                      {composition.snapshot.sections.map((section) => (
+                        <li key={section.code}>{section.code}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-medium">Diagnostics de préparation</h3>
+                  {composition.diagnostics.length ? (
+                    <ul className="list-disc pl-5">
+                      {composition.diagnostics.map((diagnostic) => (
+                        <li
+                          key={`${diagnostic.code}:${diagnostic.subject ?? ""}`}
+                        >
+                          {diagnostic.severity} · {diagnostic.code}
+                          {diagnostic.subject ? ` · ${diagnostic.subject}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>Aucun diagnostic bloquant.</p>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">
+                  Historique immuable : {compositionHistory.length} capture(s).
+                </p>
+              </div>
+            )}
+          </section>
         )}
         <section className="space-y-4 rounded border bg-white p-5">
           <div>

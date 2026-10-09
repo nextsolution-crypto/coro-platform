@@ -99,6 +99,7 @@ model User {
   commercialProposalsCreated CommercialProposal[] @relation("CommercialProposalCreator")
   commercialProposalRevisionsCreated CommercialProposalRevision[] @relation("CommercialProposalRevisionCreator")
   proposalDocumentsCreated ProposalDocument[] @relation("ProposalDocumentCreator")
+  proposalDocumentCompositionsCreated ProposalDocumentCompositionSnapshot[] @relation("ProposalDocumentCompositionCreator")
   commercialSimulationWorkspacesCreated CommercialSimulationWorkspace[] @relation("CommercialSimulationWorkspaceCreator")
   commercialSimulationRunsCreated CommercialSimulationCalculationRun[] @relation("CommercialSimulationRunCreator")
   commercialSimulationConversionsCreated CommercialSimulationProposalConversion[] @relation("CommercialSimulationConversionCreator")
@@ -521,6 +522,18 @@ enum ProposalDocumentStatus {
 enum ProposalLanguage {
   FR
   EN
+}
+
+enum ProposalDocumentTemplateCode {
+  CORO_PROFESSIONAL
+  SENTINELLE_POPULATION_STANDALONE
+  PROFESSIONAL_SERVICES
+  COMBINED_OFFER
+}
+
+enum ProposalDocumentCompositionReadiness {
+  INTERNAL_DRAFT
+  ISSUANCE_READY
 }
 
 enum CommercialContentIntent {
@@ -1207,6 +1220,7 @@ model CommercialProposalRevision {
   legalIssuerSnapshot CommercialLegalIssuerSnapshot?
   sourceContractRevision OrganizationContractRevision? @relation("ProposalContractOrigin")
   simulationConversion CommercialSimulationProposalConversion?
+  documentCompositions ProposalDocumentCompositionSnapshot[]
   @@unique([proposalId, revisionNumber])
   @@unique([id, proposalId])
   @@index([proposalId, status])
@@ -1417,6 +1431,29 @@ model ProposalDocument {
   @@unique([proposalRevisionId, type, language, artifactVersion])
   @@index([proposalRevisionId, status])
   @@index([status, generationLeaseUntil])
+}
+
+model ProposalDocumentCompositionSnapshot {
+  id                 String                               @id @default(uuid())
+  proposalRevisionId String
+  templateCode       ProposalDocumentTemplateCode
+  templateVersion    String                               @db.VarChar(50)
+  language           ProposalLanguage
+  sequence           Int
+  readiness          ProposalDocumentCompositionReadiness @default(INTERNAL_DRAFT)
+  issuanceReady      Boolean                              @default(false)
+  compositionKey     String                               @unique @db.Char(64)
+  canonicalHash      String                               @db.Char(64)
+  snapshot           Json
+  diagnostics        Json
+  composedByUserId   String?
+  composedAt         DateTime                             @default(now())
+  proposalRevision   CommercialProposalRevision           @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  composedBy         User?                                @relation("ProposalDocumentCompositionCreator", fields: [composedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([proposalRevisionId, templateCode, language, sequence], map: "ProposalDocComposition_revision_template_lang_seq_key")
+  @@index([proposalRevisionId, composedAt], map: "ProposalDocComposition_revision_composed_idx")
+  @@index([proposalRevisionId, templateCode, language], map: "ProposalDocComposition_revision_template_lang_idx")
 }
 
 model ProposalValueAnalysis {

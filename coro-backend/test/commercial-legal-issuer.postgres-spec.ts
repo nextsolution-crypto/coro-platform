@@ -57,7 +57,9 @@ describeDatabase('Commercial legal issuer authority PostgreSQL', () => {
   });
 
   it('verifies explicitly, snapshots deterministically, versions concurrently and retains immutable history', async () => {
-    const draft = (await service.list())[0].versions[0];
+    const draft = (await service.list())
+      .find(({ code }) => code === 'CORO')!
+      .versions.find(({ status }) => status === 'DRAFT')!;
     const complete = await service.updateDraft(
       draft.id,
       {

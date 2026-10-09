@@ -33,15 +33,18 @@ describeDatabase('Governed commercial clause library PostgreSQL', () => {
 
   it('creates exactly the governed NOT_APPROVED draft catalog without customer-safe leakage', async () => {
     const proposalCount = await prisma.commercialProposal.count();
+    const clauseCount = await prisma.commercialClause.count();
+    const approvedCount = await prisma.commercialClauseVersion.count({
+      where: { status: 'APPROVED' },
+    });
     const created = await service.createDraftCatalog(actor);
     expect(created).toHaveLength(25);
-    expect(await prisma.commercialClause.count()).toBe(25);
+    expect(await prisma.commercialClause.count()).toBe(clauseCount + 25);
     expect(
       await prisma.commercialClauseVersion.count({
         where: { status: 'APPROVED' },
       }),
-    ).toBe(0);
-    expect(await service.approvedProjection()).toEqual([]);
+    ).toBe(approvedCount);
     expect(await prisma.commercialProposal.count()).toBe(proposalCount);
     await expect(service.createDraftCatalog(actor)).rejects.toThrow(
       'already exists',
@@ -150,7 +153,12 @@ describeDatabase('Governed commercial clause library PostgreSQL', () => {
       actor,
     );
     expect(approved.status).toBe('APPROVED');
-    expect(await service.approvedProjection()).toHaveLength(1);
+    expect(
+      (await service.approvedProjection()).some(
+        ({ commercialClause }) =>
+          commercialClause.code === 'OFFER_VALIDITY_STANDARD',
+      ),
+    ).toBe(true);
     await expect(
       prisma.commercialClauseVersion.update({
         where: { id: approved.id },

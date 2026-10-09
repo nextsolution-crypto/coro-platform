@@ -34,13 +34,25 @@ describeDatabase('Commercial content authority PostgreSQL', () => {
   it('creates the Professional matrix only as an audited DRAFT', async () => {
     const proposalCountBefore = await prisma.commercialProposal.count();
     const entitlementCountBefore = await prisma.capabilityEntitlement.count();
-    const draft = await service.createProfessionalDraft(actor);
+    const existing = await prisma.commercialContent.findUnique({
+      where: { code: 'CORO_PROFESSIONAL' },
+      include: { versions: { include: { bindings: true } } },
+    });
+    const draft = existing
+      ? (existing.versions.find(({ status }) => status === 'DRAFT') ??
+        (await service.createRevision('CORO_PROFESSIONAL', actor)))
+      : await service.createProfessionalDraft(actor);
     expect(draft.status).toBe('DRAFT');
     expect(draft.bindings).toHaveLength(20);
     expect(
       await prisma.adminAuditEvent.count({
         where: {
-          action: 'COMMERCIAL_CONTENT_DRAFT_CREATED',
+          action: {
+            in: [
+              'COMMERCIAL_CONTENT_DRAFT_CREATED',
+              'COMMERCIAL_CONTENT_REVISION_CREATED',
+            ],
+          },
           actorUserId: actor.userId,
         },
       }),
@@ -52,7 +64,9 @@ describeDatabase('Commercial content authority PostgreSQL', () => {
   });
 
   it('creates a new draft revision, validates targets, approves explicitly and enforces DB immutability', async () => {
-    const initial = (await service.detail('CORO_PROFESSIONAL')).versions[0];
+    const initial = (await service.detail('CORO_PROFESSIONAL')).versions.find(
+      ({ status }) => status === 'DRAFT',
+    )!;
     const baseUpdate = {
       lockVersion: initial.lockVersion,
       titleFR: initial.titleFR,

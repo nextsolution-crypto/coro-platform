@@ -69,6 +69,7 @@ import { CommercialConfigurationModule } from './commercial-configuration/commer
 import { CommercialContentModule } from './commercial-content/commercial-content.module';
 import { CommercialLegalIssuerModule } from './commercial-legal-issuer/commercial-legal-issuer.module';
 import { CommercialClauseModule } from './commercial-clauses/commercial-clause.module';
+import { ProposalDocumentCompositionModule } from './proposal-document-composition/proposal-document-composition.module';
 
 @Module({
   imports: [
@@ -88,6 +89,7 @@ import { CommercialClauseModule } from './commercial-clauses/commercial-clause.m
   CommercialContentModule,
   CommercialLegalIssuerModule,
   CommercialClauseModule,
+  ProposalDocumentCompositionModule,
   AuthModule,
   UsersModule,
   ClientsModule,
