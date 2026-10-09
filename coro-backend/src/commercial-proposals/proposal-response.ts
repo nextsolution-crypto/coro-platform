@@ -17,6 +17,38 @@ export const PROPOSAL_DETAIL_INCLUDE = {
   },
 } as const satisfies Prisma.CommercialProposalInclude;
 
+export const PROPOSAL_LIST_SELECT = {
+  id: true,
+  reference: true,
+  title: true,
+  status: true,
+  createdAt: true,
+  organization: { select: { name: true } },
+  prospect: { select: { displayName: true } },
+  revisions: {
+    orderBy: { revisionNumber: 'desc' },
+    take: 1,
+    select: {
+      id: true,
+      revisionNumber: true,
+      status: true,
+      validFrom: true,
+      validUntil: true,
+      oneTimeTotalMinor: true,
+      recurringMonthlyCadenceMinor: true,
+      recurringAnnualCadenceMinor: true,
+      monthlyRecurringEquivalentMinor: true,
+      annualRecurringEquivalentMinor: true,
+      estimatedUsageTotalMinor: true,
+      firstYearCommitmentMinor: true,
+    },
+  },
+} as const satisfies Prisma.CommercialProposalSelect;
+
+export type ProposalListResponseSource = Prisma.CommercialProposalGetPayload<{
+  select: typeof PROPOSAL_LIST_SELECT;
+}>;
+
 export type ProposalDetailResponseSource = Prisma.CommercialProposalGetPayload<{
   include: typeof PROPOSAL_DETAIL_INCLUDE;
 }>;
@@ -108,4 +140,11 @@ export function proposalDetailResponse(
         : null,
     })),
   };
+}
+
+export function proposalListResponse(proposals: ProposalListResponseSource[]) {
+  return proposals.map((proposal) => ({
+    ...proposal,
+    revisions: proposal.revisions.map(proposalRevisionResponse),
+  }));
 }

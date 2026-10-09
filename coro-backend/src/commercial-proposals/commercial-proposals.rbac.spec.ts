@@ -35,7 +35,27 @@ class HeaderAuthenticationGuard implements CanActivate {
 describe('Commercial proposals effective HTTP RBAC', () => {
   let app: INestApplication;
   const service = {
-    listProposals: jest.fn(() => Promise.resolve([])),
+    listProposals: jest.fn(() =>
+      Promise.resolve([
+        {
+          id: 'proposal',
+          reference: 'PROP-TEST',
+          title: 'Test proposal',
+          status: 'DRAFT',
+          organization: null,
+          prospect: { displayName: 'Test prospect' },
+          revisions: [
+            {
+              revisionNumber: 1,
+              status: 'DRAFT',
+              oneTimeTotalMinor: '250000',
+              recurringAnnualCadenceMinor: '1750000',
+              firstYearCommitmentMinor: '2000000',
+            },
+          ],
+        },
+      ]),
+    ),
     createProposal: jest.fn(() => Promise.resolve({ id: 'proposal' })),
     listProspects: jest.fn(() => Promise.resolve([])),
     proposal: jest.fn(() =>
@@ -89,7 +109,23 @@ describe('Commercial proposals effective HTTP RBAC', () => {
       '/admin/v1/commercial/proposals',
     );
     if (role) call.set('x-test-role', role);
-    await call.expect(expected);
+    const response = await call.expect(expected);
+    if (role === 'SUPER_ADMIN') {
+      const body = response.body as Array<Record<string, unknown>>;
+      expect(body[0]).toMatchObject({
+        reference: 'PROP-TEST',
+        status: 'DRAFT',
+        prospect: { displayName: 'Test prospect' },
+        revisions: [
+          {
+            revisionNumber: 1,
+            oneTimeTotalMinor: '250000',
+            recurringAnnualCadenceMinor: '1750000',
+            firstYearCommitmentMinor: '2000000',
+          },
+        ],
+      });
+    }
   });
 
   it.each([

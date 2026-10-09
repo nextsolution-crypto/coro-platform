@@ -1,6 +1,8 @@
 import {
   ProposalDetailResponseSource,
+  ProposalListResponseSource,
   proposalDetailResponse,
+  proposalListResponse,
   proposalRevisionResponse,
 } from './proposal-response';
 
@@ -85,5 +87,53 @@ describe('Proposal HTTP response projection', () => {
 
   it('preserves null Proposal reads', () => {
     expect(proposalDetailResponse(null)).toBeNull();
+  });
+
+  it('projects Proposal lists without raw BigInt or internal relations', () => {
+    const source = [
+      {
+        id: 'proposal-a',
+        reference: 'PROP-TEST',
+        title: 'Test proposal',
+        status: 'DRAFT',
+        createdAt: new Date('2026-10-09T00:00:00.000Z'),
+        organization: null,
+        prospect: { displayName: 'Test prospect' },
+        revisions: [
+          {
+            id: 'revision-a',
+            revisionNumber: 1,
+            status: 'DRAFT',
+            validFrom: null,
+            validUntil: new Date('2026-11-09T00:00:00.000Z'),
+            ...revisionMoney,
+          },
+        ],
+      },
+    ] as unknown as ProposalListResponseSource[];
+
+    const response = proposalListResponse(source);
+    expect(() => JSON.stringify(response)).not.toThrow();
+    assertNoBigInt(response);
+    expect(response[0]).toMatchObject({
+      reference: 'PROP-TEST',
+      status: 'DRAFT',
+      prospect: { displayName: 'Test prospect' },
+      revisions: [
+        {
+          revisionNumber: 1,
+          oneTimeTotalMinor: large.toString(),
+          recurringAnnualCadenceMinor: '0',
+          firstYearCommitmentMinor: '850000',
+        },
+      ],
+    });
+    expect(response[0]).not.toHaveProperty('createdByUserId');
+    expect(response[0].revisions[0]).not.toHaveProperty('internalNotes');
+  });
+
+  it('keeps empty Proposal lists valid', () => {
+    expect(proposalListResponse([])).toEqual([]);
+    expect(JSON.stringify(proposalListResponse([]))).toBe('[]');
   });
 });

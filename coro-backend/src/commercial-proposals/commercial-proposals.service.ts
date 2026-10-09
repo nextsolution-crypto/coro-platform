@@ -31,7 +31,9 @@ import {
 import { buildProposalCustomerPreview } from './proposal-customer-preview';
 import {
   PROPOSAL_DETAIL_INCLUDE,
+  PROPOSAL_LIST_SELECT,
   proposalDetailResponse,
+  proposalListResponse,
   proposalRevisionResponse,
 } from './proposal-response';
 
@@ -47,15 +49,12 @@ export class CommercialProposalsService {
     private pricing: ProposalPricingEngine,
     private commercialRules: CommercialRuleRegistry = PRODUCTION_COMMERCIAL_RULE_REGISTRY,
   ) {}
-  listProposals() {
-    return this.prisma.commercialProposal.findMany({
+  async listProposals() {
+    const proposals = await this.prisma.commercialProposal.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        organization: { select: { name: true } },
-        prospect: { select: { displayName: true } },
-        revisions: { orderBy: { revisionNumber: 'desc' }, take: 1 },
-      },
+      select: PROPOSAL_LIST_SELECT,
     });
+    return proposalListResponse(proposals);
   }
   async proposal(id: string) {
     const proposal = await this.prisma.commercialProposal.findUnique({

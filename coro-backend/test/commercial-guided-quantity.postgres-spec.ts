@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   ExecutionContext,
+  Get,
   INestApplication,
   Param,
   Post,
@@ -60,6 +61,11 @@ class HeaderAuthenticationGuard implements CanActivate {
 @SuperAdminOnly()
 class ReadyLifecycleController {
   constructor(private readonly service: CommercialProposalsService) {}
+
+  @Get()
+  list() {
+    return this.service.listProposals();
+  }
 
   @Post(':proposalId/revisions/:revisionId/mark-ready')
   ready(
@@ -290,6 +296,68 @@ describe('guided commercial quantity provenance PostgreSQL lifecycle', () => {
       .send({ lockVersion: 0, reason: 'FIX05 authenticated READY proof' })
       .expect(201);
     expect(response.body).toMatchObject({ status: 'READY', lockVersion: 1 });
+
+    const serializationFixture = await prisma.commercialProposal.create({
+      data: {
+        reference: `PROP-SERIALIZATION-${suffix}`,
+        title: 'BigInt serialization fixture',
+        organizationId: organization.id,
+        createdByUserId: actor.id,
+        revisions: {
+          create: {
+            revisionNumber: 1,
+            relationshipSnapshot: 'DIRECT',
+            currency: 'CAD',
+            recipientLegalName: 'Serialization fixture',
+            recipientDisplayName: 'Serialization fixture',
+            recipientCountry: 'CA',
+            recipientPreferredLanguage: 'FR',
+            oneTimeTotalMinor: 250000n,
+            recurringAnnualCadenceMinor: 1750000n,
+            firstYearCommitmentMinor: 2000000n,
+            calculationVersion: 'serialization-regression/v1',
+            createdByUserId: actor.id,
+          },
+        },
+      },
+    });
+
+    const listResponse = await request(server)
+      .get('/admin/v1/commercial/proposals')
+      .set('x-test-role', 'SUPER_ADMIN')
+      .set('x-test-user', actor.id)
+      .expect(200);
+    const listed = (
+      listResponse.body as Array<{
+        id: string;
+        organization: { name: string } | null;
+        revisions: Array<{
+          oneTimeTotalMinor: string | null;
+          recurringAnnualCadenceMinor: string | null;
+          firstYearCommitmentMinor: string | null;
+        }>;
+      }>
+    ).find((item) => item.id === serializationFixture.id);
+    expect(listed).toMatchObject({
+      id: serializationFixture.id,
+      revisions: [
+        {
+          revisionNumber: 1,
+          status: 'DRAFT',
+        },
+      ],
+    });
+    expect(listed?.organization).toEqual({ name: `FIX05 ${suffix}` });
+    expect(
+      BigInt(listed?.revisions[0].oneTimeTotalMinor ?? '0'),
+    ).toBeGreaterThan(0n);
+    expect(
+      BigInt(listed?.revisions[0].recurringAnnualCadenceMinor ?? '0'),
+    ).toBeGreaterThan(0n);
+    expect(
+      BigInt(listed?.revisions[0].firstYearCommitmentMinor ?? '0'),
+    ).toBeGreaterThan(0n);
+    expect(JSON.stringify(listed)).not.toContain('internalNotes');
 
     const entitlementCount = await prisma.capabilityEntitlement.count({
       where: { organizationId: organization.id },
