@@ -5,13 +5,18 @@ import {
   Param,
   Post,
   Request,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { PlatformRolesGuard } from '../auth/platform-roles.guard';
 import { SuperAdminOnly } from '../auth/platform-roles.decorator';
-import { ComposeProposalDocumentDto } from './proposal-document-composition.dto';
+import {
+  ComposeProposalDocumentDto,
+  GenerateGovernedProposalPdfDto,
+} from './proposal-document-composition.dto';
 import { ProposalDocumentCompositionService } from './proposal-document-composition.service';
+import { GovernedProposalPdfService } from './governed-proposal-pdf.service';
 
 type RequestWithUser = { user: { userId: string } };
 
@@ -21,6 +26,7 @@ type RequestWithUser = { user: { userId: string } };
 export class ProposalDocumentCompositionController {
   constructor(
     private readonly composition: ProposalDocumentCompositionService,
+    private readonly pdf: GovernedProposalPdfService,
   ) {}
 
   @Post(':proposalId/revisions/:revisionId/document-compositions')
@@ -53,5 +59,45 @@ export class ProposalDocumentCompositionController {
     @Param('snapshotId') snapshotId: string,
   ) {
     return this.composition.metadata(proposalId, revisionId, snapshotId);
+  }
+
+  @Post(
+    ':proposalId/revisions/:revisionId/document-compositions/:snapshotId/generate-pdf-v2',
+  )
+  generatePdfV2(
+    @Param('proposalId') proposalId: string,
+    @Param('revisionId') revisionId: string,
+    @Param('snapshotId') snapshotId: string,
+    @Body() dto: GenerateGovernedProposalPdfDto,
+    @Request() request: RequestWithUser,
+  ) {
+    return this.pdf.generate(
+      proposalId,
+      revisionId,
+      snapshotId,
+      dto.idempotencyKey,
+      request.user,
+    );
+  }
+
+  @Get(
+    ':proposalId/revisions/:revisionId/document-compositions/:snapshotId/documents/:documentId/download',
+  )
+  async downloadPdfV2(
+    @Param('proposalId') proposalId: string,
+    @Param('revisionId') revisionId: string,
+    @Param('snapshotId') snapshotId: string,
+    @Param('documentId') documentId: string,
+  ) {
+    const document = await this.pdf.download(
+      proposalId,
+      revisionId,
+      snapshotId,
+      documentId,
+    );
+    return new StreamableFile(document.buffer, {
+      type: document.mimeType,
+      disposition: `attachment; filename="${document.fileName.replace(/["\r\n]/g, '_')}"`,
+    });
   }
 }

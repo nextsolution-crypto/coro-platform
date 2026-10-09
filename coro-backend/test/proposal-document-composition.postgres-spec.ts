@@ -512,4 +512,79 @@ describe('Proposal document composition PostgreSQL invariants', () => {
       }),
     ).toBe(4);
   });
+
+  it('persists governed PDF provenance while preserving legacy nullable documents', async () => {
+    const snapshot =
+      await prisma.proposalDocumentCompositionSnapshot.findFirstOrThrow({
+        where: {
+          proposalRevisionId: revisionId,
+          readiness: 'ISSUANCE_READY',
+          language: 'FR',
+        },
+      });
+    const legacy = await prisma.proposalDocument.create({
+      data: {
+        proposalRevisionId: revisionId,
+        type: 'OFFER',
+        language: 'FR',
+        artifactVersion: 91,
+        status: 'GENERATING',
+        fileName: 'legacy-v3.pdf',
+        mimeType: 'application/pdf',
+        storageKey: 'test/d01/legacy-v3.pdf',
+        templateVersion: 'proposal-offer/v3',
+        generatorVersion: 'puppeteer/v1',
+        generationKey: 'd01-legacy-v3',
+        generationStartedAt: new Date(),
+      },
+    });
+    expect(legacy.compositionSnapshotId).toBeNull();
+    await expect(
+      prisma.$executeRawUnsafe(
+        `INSERT INTO "ProposalDocument" ("id", "proposalRevisionId", "type", "language", "artifactVersion", "status", "fileName", "mimeType", "storageKey", "templateVersion", "generatorVersion", "generationKey", "generationStartedAt", "compositionSnapshotId", "createdAt", "updatedAt") VALUES ($1, $2, 'OFFER', 'FR', 92, 'GENERATING', 'invalid.pdf', 'application/pdf', 'test/d01/invalid.pdf', 'governed-proposal-offer/v2', 'puppeteer/v2', 'd01-invalid', NOW(), $3, NOW(), NOW())`,
+        'd01-invalid-document',
+        revisionId,
+        snapshot.id,
+      ),
+    ).rejects.toThrow();
+    const governed = await prisma.proposalDocument.create({
+      data: {
+        proposalRevisionId: revisionId,
+        type: 'OFFER',
+        language: 'FR',
+        artifactVersion: 93,
+        status: 'GENERATING',
+        fileName: 'governed-v2.pdf',
+        mimeType: 'application/pdf',
+        storageKey: 'test/d01/governed-v2.pdf',
+        templateVersion: 'governed-proposal-offer/v2',
+        generatorVersion: 'puppeteer/v2',
+        generationKey: 'd01-governed-v2',
+        generationStartedAt: new Date(),
+        compositionSnapshotId: snapshot.id,
+        compositionSnapshotHash: snapshot.canonicalHash,
+        compositionReadiness: snapshot.readiness,
+      },
+    });
+    expect(governed).toMatchObject({
+      compositionSnapshotId: snapshot.id,
+      compositionSnapshotHash: snapshot.canonicalHash,
+      compositionReadiness: 'ISSUANCE_READY',
+    });
+    await prisma.proposalDocument.update({
+      where: { id: governed.id },
+      data: {
+        status: 'FINALIZED',
+        sizeBytes: 100,
+        sha256: 'a'.repeat(64),
+        generatedAt: new Date(),
+      },
+    });
+    await expect(
+      prisma.proposalDocument.update({
+        where: { id: governed.id },
+        data: { fileName: 'rewritten.pdf' },
+      }),
+    ).rejects.toThrow();
+  });
 });

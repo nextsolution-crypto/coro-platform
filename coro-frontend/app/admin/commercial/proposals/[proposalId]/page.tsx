@@ -11,6 +11,9 @@ type Document = {
   status: string;
   fileName: string;
   artifactVersion: number;
+  templateVersion: string;
+  compositionSnapshotId: string | null;
+  compositionReadiness: "INTERNAL_DRAFT" | "ISSUANCE_READY" | null;
 };
 type Revision = {
   id: string;
@@ -136,8 +139,7 @@ export default function ProposalDetailPage({
     return () => window.clearTimeout(timeoutId);
   }, [load]);
   const revision = detail?.revisions[0];
-  const documents =
-    revision?.documents.filter((item) => item.status === "FINALIZED") ?? [];
+  const documents = revision?.documents ?? [];
   async function openPreview() {
     if (!revision) return;
     setBusy(true);
@@ -241,6 +243,15 @@ export default function ProposalDetailPage({
       );
       setComposition(response.data);
     }, "Composition documentaire immuable créée.");
+  }
+  function generateGovernedPdf() {
+    if (!revision || !composition) return;
+    return execute(async () => {
+      await api.post(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/document-compositions/${composition.id}/generate-pdf-v2`,
+        { idempotencyKey: crypto.randomUUID() },
+      );
+    }, "Offre de service V2 générée dans le stockage privé.");
   }
   async function downloadPdf(document: Document) {
     if (!revision) return;
@@ -484,6 +495,21 @@ export default function ProposalDetailPage({
                 <p className="text-xs text-slate-500">
                   Historique immuable : {compositionHistory.length} capture(s).
                 </p>
+                <button
+                  type="button"
+                  disabled={
+                    busy || composition.templateCode !== "CORO_PROFESSIONAL"
+                  }
+                  onClick={() => void generateGovernedPdf()}
+                  className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50"
+                >
+                  Générer l&apos;offre de service V2
+                </button>
+                <p className="text-xs text-slate-500">
+                  Source explicite : snapshot #{composition.sequence} ·{" "}
+                  {composition.readiness}. Un brouillon incomplet demeure marqué
+                  comme document interne non transmissible.
+                </p>
               </div>
             )}
           </section>
@@ -533,11 +559,15 @@ export default function ProposalDetailPage({
               {documents.map((document) => (
                 <button
                   key={document.id}
+                  disabled={document.status !== "FINALIZED"}
                   onClick={() => void downloadPdf(document)}
-                  className="block rounded border px-3 py-2 text-left hover:bg-slate-50"
+                  className="block rounded border px-3 py-2 text-left hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Télécharger {document.fileName} · version{" "}
-                  {document.artifactVersion}
+                  {document.artifactVersion} · {document.status}
+                  {document.compositionSnapshotId
+                    ? ` · PDF V2 ${document.compositionReadiness === "ISSUANCE_READY" ? "admissible" : "brouillon interne"} · snapshot ${document.compositionSnapshotId.slice(0, 8)}`
+                    : " · PDF historique v3"}
                 </button>
               ))}
             </div>

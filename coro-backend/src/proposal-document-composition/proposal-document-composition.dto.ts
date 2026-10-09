@@ -1,5 +1,11 @@
 import { ProposalDocumentTemplateCode, ProposalLanguage } from '@prisma/client';
-import { IsEnum, IsObject, IsOptional } from 'class-validator';
+import {
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsString,
+  Length,
+} from 'class-validator';
 
 export class ComposeProposalDocumentDto {
   @IsEnum(ProposalDocumentTemplateCode)
@@ -11,4 +17,10 @@ export class ComposeProposalDocumentDto {
   @IsOptional()
   @IsObject()
   clauseParameters?: Record<string, unknown>;
+}
+
+export class GenerateGovernedProposalPdfDto {
+  @IsString()
+  @Length(1, 200)
+  idempotencyKey!: string;
 }

@@ -53,6 +53,10 @@ for (const token of [
   "Brouillon interne — exigences manquantes",
   "Diagnostics de préparation",
   "Sections incluses",
+  "Générer l&apos;offre de service V2",
+  "generate-pdf-v2",
+  "Source explicite : snapshot",
+  "brouillon interne",
 ])
   if (!detail.includes(token)) throw new Error(`finalization missing ${token}`);
 for (const forbidden of ["catalogUnitAmountMinor", "costAssumption", "margin"])
