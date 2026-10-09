@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
+import { loadAllTargets } from "./target-pagination.mjs";
 
 type TargetType = "PROSPECT" | "ORGANIZATION";
 type Target = {
@@ -103,28 +104,40 @@ export default function FounderJourneyPage() {
   >("LOADING");
 
   useEffect(() => {
+    let active = true;
     const timer = window.setTimeout(() => {
       const resource =
         targetType === "PROSPECT" ? "prospects" : "organizations";
-      void api
-        .get(
-          `/admin/v1/commercial/simulator/configurator/targets/${resource}`,
-          {
-            params: { search: query || undefined, pageSize: 50 },
-          },
-        )
-        .then((response) => {
-          const items = response.data.items as Target[];
+      void loadAllTargets<Target>(({ page, pageSize }) =>
+        api
+          .get(
+            `/admin/v1/commercial/simulator/configurator/targets/${resource}`,
+            {
+              params: {
+                search: query || undefined,
+                page,
+                pageSize,
+              },
+            },
+          )
+          .then((response) => response.data),
+      )
+        .then((items) => {
+          if (!active) return;
           setTargets(items);
           setState(items.length ? "READY" : "EMPTY");
         })
         .catch((error: unknown) => {
+          if (!active) return;
           const status = (error as { response?: { status?: number } }).response
             ?.status;
           setState(status === 401 || status === 403 ? "UNAUTHORIZED" : "ERROR");
         });
     }, 250);
-    return () => window.clearTimeout(timer);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
   }, [query, reloadKey, targetType]);
 
   useEffect(() => {
