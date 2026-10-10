@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfiguratorService } from './configurator.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
@@ -23,13 +31,21 @@ export class ConfiguratorController {
   }
 
   @Post('save/:projectId')
-  save(@Param('projectId') projectId: string, @Body() config: any) {
-    return this.configuratorService.saveConfiguration(projectId, config);
+  save(
+    @Param('projectId') projectId: string,
+    @Body() config: any,
+    @Request() req: any,
+  ) {
+    return this.configuratorService.saveConfiguration(
+      projectId,
+      config,
+      req.user,
+    );
   }
 
   @Get('load/:projectId')
-  load(@Param('projectId') projectId: string) {
-    return this.configuratorService.getConfiguration(projectId);
+  load(@Param('projectId') projectId: string, @Request() req: any) {
+    return this.configuratorService.getConfiguration(projectId, req.user);
   }
 
   @Post('import-word')

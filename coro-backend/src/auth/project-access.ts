@@ -21,3 +21,9 @@ export function projectAccessWhere(
   }
   throw new ForbiddenException('Acces refuse a ce projet');
 }
+
+export function requireProjectApprover(actor: AdviserActor): void {
+  if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+    throw new ForbiddenException('Role approbateur requis');
+  }
+}

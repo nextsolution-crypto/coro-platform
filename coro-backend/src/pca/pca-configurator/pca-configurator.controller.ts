@@ -15,7 +15,7 @@ export class PcaConfiguratorController {
   ) {
     return this.pcaConfiguratorService.getConfig(
       projectId,
-      req.user.organizationId,
+      req.user,
     );
   }
 
@@ -27,7 +27,7 @@ export class PcaConfiguratorController {
   ) {
     return this.pcaConfiguratorService.saveConfig(
       projectId,
-      req.user.organizationId,
+      req.user,
       data,
     );
   }
@@ -39,13 +39,13 @@ export class PcaConfiguratorController {
   ) {
     return this.pcaConfiguratorService.getLinkedPmu(
       projectId,
-      req.user.organizationId,
+      req.user,
     );
   }
 
   @Get(':projectId/procedures')
   async getProcedures(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.pcaConfiguratorService.getPcaProcedures(req.user.organizationId, projectId);
+    return this.pcaConfiguratorService.getPcaProcedures(req.user, projectId);
   }
 
   @Put(':projectId/procedures/:procedureId/toggle')
@@ -55,7 +55,7 @@ export class PcaConfiguratorController {
     @Body() body: { isActive: boolean },
     @Request() req: any,
   ) {
-    return this.pcaConfiguratorService.togglePcaProcedure(req.user.organizationId, projectId, procedureId, body.isActive);
+    return this.pcaConfiguratorService.togglePcaProcedure(req.user, projectId, procedureId, body.isActive);
   }
 
   @Put(':projectId/procedures/:procedureId')
@@ -65,7 +65,7 @@ export class PcaConfiguratorController {
     @Body() body: { content: any },
     @Request() req: any,
   ) {
-    return this.pcaConfiguratorService.updatePcaProcedure(req.user.organizationId, projectId, procedureId, body.content);
+    return this.pcaConfiguratorService.updatePcaProcedure(req.user, projectId, procedureId, body.content);
   }
 
   @Delete(':projectId/procedures/:procedureId')
@@ -74,6 +74,6 @@ export class PcaConfiguratorController {
     @Param('procedureId') procedureId: string,
     @Request() req: any,
   ) {
-    return this.pcaConfiguratorService.restorePcaProcedure(req.user.organizationId, projectId, procedureId);
+    return this.pcaConfiguratorService.restorePcaProcedure(req.user, projectId, procedureId);
   }
 }

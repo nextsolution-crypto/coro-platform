@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../../auth/project-access';
 
 @Injectable()
 export class PcaConfiguratorService {
@@ -7,12 +8,12 @@ export class PcaConfiguratorService {
 
   private async ensureProjectAccess(
     projectId: string,
-    organizationId: string,
+    actor: AdviserActor,
   ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        organizationId,
+        ...projectAccessWhere(actor),
       },
       select: {
         id: true,
@@ -24,11 +25,11 @@ export class PcaConfiguratorService {
     }
   }
 
-  async getConfig(projectId: string, organizationId: string) {
+  async getConfig(projectId: string, actor: AdviserActor) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        organizationId,
+        ...projectAccessWhere(actor),
       },
       include: {
         client: true,
@@ -84,13 +85,13 @@ export class PcaConfiguratorService {
 
   async saveConfig(
     projectId: string,
-    organizationId: string,
+    actor: AdviserActor,
     data: any,
   ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        organizationId,
+        ...projectAccessWhere(actor),
       },
       select: {
         id: true,
@@ -127,10 +128,11 @@ export class PcaConfiguratorService {
   }
 
   async getPcaProcedures(
-    organizationId: string,
+    actor: AdviserActor,
     projectId: string,
   ) {
-    await this.ensureProjectAccess(projectId, organizationId);
+    await this.ensureProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
 
     const defaults = await this.prisma.procedureDefault.findMany({
       where: {
@@ -168,12 +170,13 @@ export class PcaConfiguratorService {
   }
 
   async togglePcaProcedure(
-    organizationId: string,
+    actor: AdviserActor,
     projectId: string,
     procedureId: string,
     isActive: boolean,
   ) {
-    await this.ensureProjectAccess(projectId, organizationId);
+    await this.ensureProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
 
     const proc = await this.prisma.procedureDefault.findUnique({
       where: {
@@ -211,12 +214,13 @@ export class PcaConfiguratorService {
   }
 
   async updatePcaProcedure(
-    organizationId: string,
+    actor: AdviserActor,
     projectId: string,
     procedureId: string,
     content: any,
   ) {
-    await this.ensureProjectAccess(projectId, organizationId);
+    await this.ensureProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
 
     const proc = await this.prisma.procedureDefault.findUnique({
       where: {
@@ -254,11 +258,12 @@ export class PcaConfiguratorService {
   }
 
   async restorePcaProcedure(
-    organizationId: string,
+    actor: AdviserActor,
     projectId: string,
     procedureId: string,
   ) {
-    await this.ensureProjectAccess(projectId, organizationId);
+    await this.ensureProjectAccess(projectId, actor);
+    const organizationId = actor.organizationId;
 
     const proc = await this.prisma.procedureDefault.findUnique({
       where: {
@@ -289,12 +294,12 @@ export class PcaConfiguratorService {
 
   async getLinkedPmu(
     projectId: string,
-    organizationId: string,
+    actor: AdviserActor,
   ) {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        organizationId,
+        ...projectAccessWhere(actor),
       },
       include: {
         building: true,
@@ -309,7 +314,7 @@ export class PcaConfiguratorService {
     // appartenant à la même organisation et au même bâtiment.
     const linkedProjects = await this.prisma.project.findMany({
       where: {
-        organizationId,
+        organizationId: actor.organizationId,
         buildingId: project.buildingId,
         documentType: {
           in: ['PMU', 'PSI'],

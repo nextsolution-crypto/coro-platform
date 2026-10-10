@@ -1,9 +1,21 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  Query,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProjectsService } from './projects.service';
 import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import { AuditService } from '../audit/audit.service';
 import { ClientPortalService } from '../client-portal/client-portal.service';
+import { ApprovalService } from '../approval/approval.service';
 
 @Controller('projects')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -12,6 +24,7 @@ export class ProjectsController {
     private projectsService: ProjectsService,
     private auditService: AuditService,
     private clientPortalService: ClientPortalService,
+    private approvalService: ApprovalService,
   ) {}
 
   @Get()
@@ -38,12 +51,18 @@ export class ProjectsController {
 
   @Get('pending-approval')
   findPendingApproval(@Request() req: any) {
-    return this.projectsService.findPendingApproval(req.user.organizationId, req.user.userId);
+    return this.projectsService.findPendingApproval(
+      req.user.organizationId,
+      req.user.userId,
+    );
   }
 
   @Get(':id/quality-score')
   getQualityScore(@Param('id') id: string, @Request() req: any) {
-    return this.projectsService.calculateQualityScore(id, req.user.organizationId);
+    return this.projectsService.calculateQualityScore(
+      id,
+      req.user.organizationId,
+    );
   }
 
   @Get(':id')
@@ -61,8 +80,17 @@ export class ProjectsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
-    const result = await this.projectsService.update(id, body, req.user.organizationId, req.user.userId);
+  async update(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    const result = await this.projectsService.update(
+      id,
+      body,
+      req.user.organizationId,
+      req.user.userId,
+    );
     if (body.status) {
       await this.auditService.log({
         action: 'STATUS_CHANGE',
@@ -85,7 +113,11 @@ export class ProjectsController {
 
   @Post(':id/submit')
   async submit(@Param('id') id: string, @Request() req: any) {
-    const result = await this.projectsService.submitForApproval(id, req.user.organizationId, req.user.userId);
+    const result = await this.approvalService.submit(
+      id,
+      req.user.userId,
+      req.user.organizationId,
+    );
     await this.auditService.log({
       action: 'STATUS_CHANGE',
       entityType: 'PROJECT',
@@ -105,14 +137,24 @@ export class ProjectsController {
     @Body() body: { comment?: string },
     @Request() req: any,
   ) {
-    const result = await this.projectsService.approve(id, req.user.organizationId, req.user.userId, body.comment);
+    const result = await this.approvalService.approve(
+      id,
+      req.user.userId,
+      req.user.organizationId,
+      req.user.role,
+    );
     await this.auditService.log({
       action: 'STATUS_CHANGE',
       entityType: 'PROJECT',
       entityId: id,
       projectId: id,
       description: `Document approuvé${body.comment ? ` — "${body.comment}"` : ''}`,
-      metadata: { newStatus: 'VALIDATED', comment: body.comment },
+      metadata: {
+        previousStatus: 'REVIEW',
+        newStatus: 'VALIDATED',
+        comment: body.comment,
+        version: result.version,
+      },
       userId: req.user.userId,
       organizationId: req.user.organizationId,
     });
@@ -125,7 +167,12 @@ export class ProjectsController {
     @Body() body: { comment: string },
     @Request() req: any,
   ) {
-    const result = await this.projectsService.reject(id, req.user.organizationId, req.user.userId, body.comment);
+    const result = await this.approvalService.requestRevision(
+      id,
+      req.user.userId,
+      req.user.organizationId,
+      body.comment,
+    );
     await this.auditService.log({
       action: 'STATUS_CHANGE',
       entityType: 'PROJECT',
@@ -145,7 +192,12 @@ export class ProjectsController {
     @Body() body: { comment?: string },
     @Request() req: any,
   ) {
-    const result = await this.projectsService.requestRevision(id, req.user.organizationId, body.comment);
+    const result = await this.approvalService.requestRevision(
+      id,
+      req.user.userId,
+      req.user.organizationId,
+      body.comment,
+    );
     await this.auditService.log({
       action: 'STATUS_CHANGE',
       entityType: 'PROJECT',

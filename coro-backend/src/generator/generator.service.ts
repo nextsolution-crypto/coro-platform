@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 import { generateModule1, DocumentContext } from './module1/module1.index';
 import { generateModule2 } from './module2.templates';
 import { generateModule3 } from './module3.templates';
@@ -325,8 +326,8 @@ private async loadProceduresFromDB(
     }
   }
 
-  private async assertProjectOwnership(projectId: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id: projectId, organizationId } });
+  private async assertProjectOwnership(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, ...projectAccessWhere(actor) } });
     if (!project) {
       throw new NotFoundException('Projet introuvable');
     }
@@ -491,8 +492,10 @@ private async loadProceduresFromDB(
     };
   }
 
-  async generateAndSave(projectId: string, config: any, organizationId: string, userId?: string) {
-    await this.assertProjectOwnership(projectId, organizationId);
+  async generateAndSave(projectId: string, config: any, actor: AdviserActor) {
+    await this.assertProjectOwnership(projectId, actor);
+    const organizationId = actor.organizationId;
+    const userId = actor.userId;
 
     // Une seule configuration résolue alimente toute la génération.
     // Project.configData est canonique; le body n'est qu'un fallback legacy.
@@ -790,8 +793,8 @@ const isPsi = ctx.documentType === 'PSI';
     return { documentId: document.id, ...documentData };
   }
 
-  async getDocument(projectId: string, organizationId: string) {
-    await this.assertProjectOwnership(projectId, organizationId);
+  async getDocument(projectId: string, actor: AdviserActor) {
+    await this.assertProjectOwnership(projectId, actor);
     return this.prisma.document.findFirst({
       where: { projectId },
       include: { project: { include: { client: true, building: true } } },
@@ -804,10 +807,10 @@ const isPsi = ctx.documentType === 'PSI';
     sectionId: string,
     content: string,
     language: string = 'fr',
-    organizationId: string,
+    actor: AdviserActor,
   ) {
     const doc = await this.prisma.document.findFirst({
-      where: { id: documentId, project: { organizationId } },
+      where: { id: documentId, project: { is: projectAccessWhere(actor) } },
     });
     if (!doc) throw new Error('Document introuvable');
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLimitsForLicense } from '../organizations/license-limits';
 
@@ -11,10 +15,7 @@ export class ProjectsService {
 
     // Si userId fourni → projets dont l'utilisateur est responsable OU a modifié
     if (userId) {
-      where.OR = [
-        { userId },
-        { lastEditedById: userId },
-      ];
+      where.OR = [{ userId }, { lastEditedById: userId }];
     }
 
     return this.prisma.project.findMany({
@@ -54,7 +55,9 @@ export class ProjectsService {
     userId: string;
     organizationId: string;
   }) {
-    const organization = await this.prisma.organization.findUnique({ where: { id: data.organizationId } });
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: data.organizationId },
+    });
     if (!organization) {
       throw new NotFoundException('Organisation introuvable');
     }
@@ -66,7 +69,7 @@ export class ProjectsService {
       });
       if (currentCount >= limits.maxProjects) {
         throw new ForbiddenException(
-          `Votre licence ${organization.licenseType} est limitée à ${limits.maxProjects} projet(s). Contactez CORO pour mettre à niveau.`
+          `Votre licence ${organization.licenseType} est limitée à ${limits.maxProjects} projet(s). Contactez CORO pour mettre à niveau.`,
         );
       }
     }
@@ -82,6 +85,11 @@ export class ProjectsService {
 
   async update(id: string, data: any, organizationId: string, userId?: string) {
     await this.assertOwnership(id, organizationId);
+    if (['REVIEW', 'VALIDATED', 'EXPORTED'].includes(data?.status)) {
+      throw new ForbiddenException(
+        'Transition documentaire reservee au workflow canonique',
+      );
+    }
     return this.prisma.project.update({
       where: { id },
       data: {
@@ -100,7 +108,9 @@ export class ProjectsService {
   }
 
   private async assertOwnership(id: string, organizationId: string) {
-    const project = await this.prisma.project.findFirst({ where: { id, organizationId } });
+    const project = await this.prisma.project.findFirst({
+      where: { id, organizationId },
+    });
     if (!project) {
       throw new ForbiddenException('Accès refusé à cette ressource.');
     }
@@ -135,8 +145,9 @@ export class ProjectsService {
       const lastDoc = project.documents[0];
       if (!lastDoc) continue;
 
-      const monthsAgo = (now.getTime() - new Date(lastDoc.updatedAt).getTime())
-        / (1000 * 60 * 60 * 24 * 30.44);
+      const monthsAgo =
+        (now.getTime() - new Date(lastDoc.updatedAt).getTime()) /
+        (1000 * 60 * 60 * 24 * 30.44);
 
       if (monthsAgo >= 10) {
         results.push({
@@ -154,67 +165,134 @@ export class ProjectsService {
 
     return results.sort((a, b) => b.monthsAgo - a.monthsAgo);
   }
-  private async calculatePcaQualityScore(projectId: string, organizationId: string): Promise<{
+  private async calculatePcaQualityScore(
+    projectId: string,
+    organizationId: string,
+  ): Promise<{
     score: number;
     level: 'EXCELLENT' | 'BON' | 'A_AMELIORER' | 'INCOMPLET';
     details: { label: string; points: number; earned: number; ok: boolean }[];
   }> {
     const doc = await this.prisma.document.findFirst({ where: { projectId } });
-    const pcaConfig = await this.prisma.pcaConfig.findUnique({ where: { projectId } });
-    const cfg = pcaConfig as any || {};
-    const details: { label: string; points: number; earned: number; ok: boolean }[] = [];
+    const pcaConfig = await this.prisma.pcaConfig.findUnique({
+      where: { projectId },
+    });
+    const cfg = (pcaConfig as any) || {};
+    const details: {
+      label: string;
+      points: number;
+      earned: number;
+      ok: boolean;
+    }[] = [];
     let totalScore = 0;
 
     // 1. Configuration complète (20 pts)
     const hasCoordinator = !!(cfg.coordinatorFirstName && cfg.coordinatorEmail);
     const pts1 = hasCoordinator ? 20 : cfg.coordinatorFirstName ? 10 : 0;
-    details.push({ label: 'Coordonnateur PCA défini', points: 20, earned: pts1, ok: hasCoordinator });
+    details.push({
+      label: 'Coordonnateur PCA défini',
+      points: 20,
+      earned: pts1,
+      ok: hasCoordinator,
+    });
     totalScore += pts1;
 
     // 2. Document généré (15 pts)
     const hasDoc = !!doc;
-    details.push({ label: 'Document généré', points: 15, earned: hasDoc ? 15 : 0, ok: hasDoc });
+    details.push({
+      label: 'Document généré',
+      points: 15,
+      earned: hasDoc ? 15 : 0,
+      ok: hasDoc,
+    });
     totalScore += hasDoc ? 15 : 0;
 
     // 3. Scénarios de risque identifiés (15 pts)
     const riskCount = (cfg.riskScenarios || []).length;
     const hasRisks = riskCount >= 3;
     const pts3 = hasRisks ? 15 : riskCount > 0 ? 8 : 0;
-    details.push({ label: 'Scénarios de risque (min. 3)', points: 15, earned: pts3, ok: hasRisks });
+    details.push({
+      label: 'Scénarios de risque (min. 3)',
+      points: 15,
+      earned: pts3,
+      ok: hasRisks,
+    });
     totalScore += pts3;
 
     // 4. BIA complété (15 pts)
     const serviceCount = (cfg.criticalServices || []).length;
     const hasBia = serviceCount >= 1;
     const pts4 = hasBia ? 15 : 0;
-    details.push({ label: 'Services critiques avec RTO/RPO (min. 1)', points: 15, earned: pts4, ok: hasBia });
+    details.push({
+      label: 'Services critiques avec RTO/RPO (min. 1)',
+      points: 15,
+      earned: pts4,
+      ok: hasBia,
+    });
     totalScore += pts4;
 
     // 5. Stratégies de continuité (10 pts)
-    const hasStrategies = !!(cfg.teleworkPossible || cfg.alternativeSite || cfg.itRedundancy || cfg.crossTraining);
-    details.push({ label: 'Stratégies de continuité définies', points: 10, earned: hasStrategies ? 10 : 0, ok: hasStrategies });
+    const hasStrategies = !!(
+      cfg.teleworkPossible ||
+      cfg.alternativeSite ||
+      cfg.itRedundancy ||
+      cfg.crossTraining
+    );
+    details.push({
+      label: 'Stratégies de continuité définies',
+      points: 10,
+      earned: hasStrategies ? 10 : 0,
+      ok: hasStrategies,
+    });
     totalScore += hasStrategies ? 10 : 0;
 
     // 6. Communication de crise (10 pts)
     const hasComm = !!(cfg.internalChannel && cfg.spokesperson);
-    details.push({ label: 'Communication de crise (canal + porte-parole)', points: 10, earned: hasComm ? 10 : cfg.internalChannel ? 5 : 0, ok: hasComm });
+    details.push({
+      label: 'Communication de crise (canal + porte-parole)',
+      points: 10,
+      earned: hasComm ? 10 : cfg.internalChannel ? 5 : 0,
+      ok: hasComm,
+    });
     totalScore += hasComm ? 10 : cfg.internalChannel ? 5 : 0;
 
     // 7. Critères d'activation définis (10 pts)
-    const hasActivation = !!(cfg.activationCriteria && cfg.activationCriteria.length > 20);
-    details.push({ label: 'Critères d\'activation du PCA', points: 10, earned: hasActivation ? 10 : 0, ok: hasActivation });
+    const hasActivation = !!(
+      cfg.activationCriteria && cfg.activationCriteria.length > 20
+    );
+    details.push({
+      label: "Critères d'activation du PCA",
+      points: 10,
+      earned: hasActivation ? 10 : 0,
+      ok: hasActivation,
+    });
     totalScore += hasActivation ? 10 : 0;
 
     // 8. Programme d'exercices (5 pts)
     const hasExercises = !!(cfg.exerciseFormative && cfg.planOwner);
-    details.push({ label: 'Programme d\'exercices et responsable définis', points: 5, earned: hasExercises ? 5 : 0, ok: hasExercises });
+    details.push({
+      label: "Programme d'exercices et responsable définis",
+      points: 5,
+      earned: hasExercises ? 5 : 0,
+      ok: hasExercises,
+    });
     totalScore += hasExercises ? 5 : 0;
 
-    const level = totalScore >= 80 ? 'EXCELLENT' : totalScore >= 60 ? 'BON' : totalScore >= 40 ? 'A_AMELIORER' : 'INCOMPLET';
+    const level =
+      totalScore >= 80
+        ? 'EXCELLENT'
+        : totalScore >= 60
+          ? 'BON'
+          : totalScore >= 40
+            ? 'A_AMELIORER'
+            : 'INCOMPLET';
     return { score: totalScore, level, details };
   }
 
-  async calculateQualityScore(projectId: string, organizationId: string): Promise<{
+  async calculateQualityScore(
+    projectId: string,
+    organizationId: string,
+  ): Promise<{
     score: number;
     level: 'EXCELLENT' | 'BON' | 'A_AMELIORER' | 'INCOMPLET';
     details: { label: string; points: number; earned: number; ok: boolean }[];
@@ -222,7 +300,7 @@ export class ProjectsService {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, organizationId },
     });
-        if (!project) return { score: 0, level: 'INCOMPLET', details: [] };
+    if (!project) return { score: 0, level: 'INCOMPLET', details: [] };
 
     // ── Branche PCA ──
     if (project.documentType === 'PCA') {
@@ -230,74 +308,140 @@ export class ProjectsService {
     }
 
     const doc = await this.prisma.document.findFirst({ where: { projectId } });
-    const plans = await this.prisma.buildingPlan.count({ where: { projectId } });
-    const module7 = await this.prisma.module7Data.findFirst({ where: { projectId } });
+    const plans = await this.prisma.buildingPlan.count({
+      where: { projectId },
+    });
+    const module7 = await this.prisma.module7Data.findFirst({
+      where: { projectId },
+    });
 
     const content = doc?.content as any;
     const config = content?.config || {};
     const modules = content?.modules_fr || [];
 
-    const details: { label: string; points: number; earned: number; ok: boolean }[] = [];
+    const details: {
+      label: string;
+      points: number;
+      earned: number;
+      ok: boolean;
+    }[] = [];
     let totalScore = 0;
 
     // ── 1. Configuration complète (20 pts) ────────────────────
-    const configKeys = Object.keys(config).filter(k => config[k] !== null && config[k] !== '' && config[k] !== false);
+    const configKeys = Object.keys(config).filter(
+      (k) => config[k] !== null && config[k] !== '' && config[k] !== false,
+    );
     const hasConfig = configKeys.length >= 20;
     const pts1 = hasConfig ? 20 : Math.floor((configKeys.length / 20) * 20);
-    details.push({ label: 'Configuration complète', points: 20, earned: pts1, ok: hasConfig });
+    details.push({
+      label: 'Configuration complète',
+      points: 20,
+      earned: pts1,
+      ok: hasConfig,
+    });
     totalScore += pts1;
 
     // ── 2. Document généré (15 pts) ───────────────────────────
     const hasDoc = !!doc;
-    details.push({ label: 'Document généré', points: 15, earned: hasDoc ? 15 : 0, ok: hasDoc });
+    details.push({
+      label: 'Document généré',
+      points: 15,
+      earned: hasDoc ? 15 : 0,
+      ok: hasDoc,
+    });
     totalScore += hasDoc ? 15 : 0;
 
     // ── 3. Liste téléphonique renseignée (10 pts) ─────────────
     const m2 = modules.find((m: any) => m.moduleNumber === 2);
-    const entries = m2?.sections?.find((s: any) => s.id === '2.1')?.entries || [];
+    const entries =
+      m2?.sections?.find((s: any) => s.id === '2.1')?.entries || [];
     const hasContacts = entries.length >= 3;
-    details.push({ label: 'Liste téléphonique (min. 3 contacts)', points: 10, earned: hasContacts ? 10 : entries.length > 0 ? 5 : 0, ok: hasContacts });
+    details.push({
+      label: 'Liste téléphonique (min. 3 contacts)',
+      points: 10,
+      earned: hasContacts ? 10 : entries.length > 0 ? 5 : 0,
+      ok: hasContacts,
+    });
     totalScore += hasContacts ? 10 : entries.length > 0 ? 5 : 0;
 
     // ── 4. Organigramme actif (10 pts) ────────────────────────
     const m3 = modules.find((m: any) => m.moduleNumber === 3);
-    const orgRoles = m3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
+    const orgRoles =
+      m3?.sections?.find((s: any) => s.id === '3.1')?.orgRoles || [];
     const activeRoles = orgRoles.filter((r: any) => r.isActive).length;
     const hasRoles = activeRoles >= 3;
-    details.push({ label: 'Organigramme (min. 3 rôles actifs)', points: 10, earned: hasRoles ? 10 : activeRoles > 0 ? 5 : 0, ok: hasRoles });
+    details.push({
+      label: 'Organigramme (min. 3 rôles actifs)',
+      points: 10,
+      earned: hasRoles ? 10 : activeRoles > 0 ? 5 : 0,
+      ok: hasRoles,
+    });
     totalScore += hasRoles ? 10 : activeRoles > 0 ? 5 : 0;
 
     // ── 5. Procédures actives (10 pts) ────────────────────────
     const m4 = modules.find((m: any) => m.moduleNumber === 4);
     const procedures = m4?.procedures || [];
     const hasProcs = procedures.length >= 5;
-    details.push({ label: 'Procédures actives (min. 5)', points: 10, earned: hasProcs ? 10 : procedures.length > 0 ? 5 : 0, ok: hasProcs });
+    details.push({
+      label: 'Procédures actives (min. 5)',
+      points: 10,
+      earned: hasProcs ? 10 : procedures.length > 0 ? 5 : 0,
+      ok: hasProcs,
+    });
     totalScore += hasProcs ? 10 : procedures.length > 0 ? 5 : 0;
 
     // ── 6. Plans techniques (10 pts) ──────────────────────────
     const hasPlans = plans >= 1;
-    details.push({ label: 'Plans techniques téléversés', points: 10, earned: hasPlans ? 10 : 0, ok: hasPlans });
+    details.push({
+      label: 'Plans techniques téléversés',
+      points: 10,
+      earned: hasPlans ? 10 : 0,
+      ok: hasPlans,
+    });
     totalScore += hasPlans ? 10 : 0;
 
     // ── 7. Photos équipements (10 pts) ────────────────────────
     const photos = module7?.photosData as any;
-    const photoCount = photos ? Object.values(photos).filter((v: any) => v && v !== '').length : 0;
+    const photoCount = photos
+      ? Object.values(photos).filter((v: any) => v && v !== '').length
+      : 0;
     const hasPhotos = photoCount >= 3;
-    details.push({ label: 'Photos équipements (min. 3)', points: 10, earned: hasPhotos ? 10 : photoCount > 0 ? 5 : 0, ok: hasPhotos });
+    details.push({
+      label: 'Photos équipements (min. 3)',
+      points: 10,
+      earned: hasPhotos ? 10 : photoCount > 0 ? 5 : 0,
+      ok: hasPhotos,
+    });
     totalScore += hasPhotos ? 10 : photoCount > 0 ? 5 : 0;
 
     // ── 8. Aucune validation critique (15 pts) ────────────────
     // On réutilise la logique de validation simplifiée
-    const hasCU = orgRoles.some((r: any) => r.isActive && (r.roleCode === 'ROLE-CU' || r.roleCode === 'ROLE-CHE'));
+    const hasCU = orgRoles.some(
+      (r: any) =>
+        r.isActive && (r.roleCode === 'ROLE-CU' || r.roleCode === 'ROLE-CHE'),
+    );
     const hasGaz = config.gazNaturel === true;
     const hasGazProc = procedures.some((p: any) => p.code === 'P005');
     const hasMat = config.matieresDangereuses === true;
     const hasMatProc = procedures.some((p: any) => p.code === 'P018');
-    const noBlockers = hasCU && (!hasGaz || hasGazProc) && (!hasMat || hasMatProc);
-    details.push({ label: 'Aucune validation critique', points: 15, earned: noBlockers ? 15 : 0, ok: noBlockers });
+    const noBlockers =
+      hasCU && (!hasGaz || hasGazProc) && (!hasMat || hasMatProc);
+    details.push({
+      label: 'Aucune validation critique',
+      points: 15,
+      earned: noBlockers ? 15 : 0,
+      ok: noBlockers,
+    });
     totalScore += noBlockers ? 15 : 0;
 
-    const level = totalScore >= 80 ? 'EXCELLENT' : totalScore >= 60 ? 'BON' : totalScore >= 40 ? 'A_AMELIORER' : 'INCOMPLET';
+    const level =
+      totalScore >= 80
+        ? 'EXCELLENT'
+        : totalScore >= 60
+          ? 'BON'
+          : totalScore >= 40
+            ? 'A_AMELIORER'
+            : 'INCOMPLET';
 
     return { score: totalScore, level, details };
   }
@@ -323,46 +467,63 @@ export class ProjectsService {
 
     const now = new Date();
 
-    return buildings.map(b => {
-      const lastProject = b.projects[0];
-      const lastDoc = lastProject?.documents[0];
+    return buildings
+      .map((b) => {
+        const lastProject = b.projects[0];
+        const lastDoc = lastProject?.documents[0];
 
-      let complianceStatus: 'CONFORME' | 'AVERTISSEMENT' | 'EXPIRE' | 'AUCUN_DOCUMENT';
-      let monthsAgo: number | null = null;
-      let lastUpdated: Date | null = null;
+        let complianceStatus:
+          | 'CONFORME'
+          | 'AVERTISSEMENT'
+          | 'EXPIRE'
+          | 'AUCUN_DOCUMENT';
+        let monthsAgo: number | null = null;
+        let lastUpdated: Date | null = null;
 
-      if (!lastDoc) {
-        complianceStatus = 'AUCUN_DOCUMENT';
-      } else {
-        lastUpdated = new Date(lastDoc.updatedAt);
-        monthsAgo = Math.floor(
-          (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-        );
-        complianceStatus = monthsAgo >= 12 ? 'EXPIRE' : monthsAgo >= 10 ? 'AVERTISSEMENT' : 'CONFORME';
-      }
+        if (!lastDoc) {
+          complianceStatus = 'AUCUN_DOCUMENT';
+        } else {
+          lastUpdated = new Date(lastDoc.updatedAt);
+          monthsAgo = Math.floor(
+            (now.getTime() - lastUpdated.getTime()) /
+              (1000 * 60 * 60 * 24 * 30.44),
+          );
+          complianceStatus =
+            monthsAgo >= 12
+              ? 'EXPIRE'
+              : monthsAgo >= 10
+                ? 'AVERTISSEMENT'
+                : 'CONFORME';
+        }
 
-      return {
-        id: b.id,
-        name: b.name,
-        address: b.address,
-        city: b.city,
-        province: b.province,
-        buildingType: b.buildingType,
-        clientName: b.client.name,
-        projectId: lastProject?.id || null,
-        projectName: lastProject?.name || null,
-        documentType: lastProject?.documentType || null,
-        lastUpdated,
-        monthsAgo,
-        complianceStatus,
-      };
-    }).sort((a, b) => {
-      // Trier d'abord par client, puis par état de conformité
-      const clientCompare = a.clientName.localeCompare(b.clientName, 'fr');
-      if (clientCompare !== 0) return clientCompare;
-      const order = { EXPIRE: 0, AVERTISSEMENT: 1, AUCUN_DOCUMENT: 2, CONFORME: 3 };
-      return order[a.complianceStatus] - order[b.complianceStatus];
-    });
+        return {
+          id: b.id,
+          name: b.name,
+          address: b.address,
+          city: b.city,
+          province: b.province,
+          buildingType: b.buildingType,
+          clientName: b.client.name,
+          projectId: lastProject?.id || null,
+          projectName: lastProject?.name || null,
+          documentType: lastProject?.documentType || null,
+          lastUpdated,
+          monthsAgo,
+          complianceStatus,
+        };
+      })
+      .sort((a, b) => {
+        // Trier d'abord par client, puis par état de conformité
+        const clientCompare = a.clientName.localeCompare(b.clientName, 'fr');
+        if (clientCompare !== 0) return clientCompare;
+        const order = {
+          EXPIRE: 0,
+          AVERTISSEMENT: 1,
+          AUCUN_DOCUMENT: 2,
+          CONFORME: 3,
+        };
+        return order[a.complianceStatus] - order[b.complianceStatus];
+      });
   }
   async submitForApproval(id: string, organizationId: string, userId: string) {
     await this.assertOwnership(id, organizationId);
@@ -372,23 +533,20 @@ export class ProjectsService {
     });
   }
 
-  async approve(id: string, organizationId: string, userId: string, comment?: string) {
-    const project = await this.prisma.project.findFirst({ where: { id, organizationId } });
-    if (!project) throw new ForbiddenException('Accès refusé.');
-    if (project.submittedById === userId) {
-      throw new ForbiddenException('Vous ne pouvez pas approuver un document que vous avez soumis.');
-    }
-    return this.prisma.project.update({
-      where: { id },
-      data: { status: 'VALIDATED' },
+  async reject(
+    id: string,
+    organizationId: string,
+    userId: string,
+    comment?: string,
+  ) {
+    const project = await this.prisma.project.findFirst({
+      where: { id, organizationId },
     });
-  }
-
-  async reject(id: string, organizationId: string, userId: string, comment?: string) {
-    const project = await this.prisma.project.findFirst({ where: { id, organizationId } });
     if (!project) throw new ForbiddenException('Accès refusé.');
     if (project.submittedById === userId) {
-      throw new ForbiddenException('Vous ne pouvez pas rejeter un document que vous avez soumis.');
+      throw new ForbiddenException(
+        'Vous ne pouvez pas rejeter un document que vous avez soumis.',
+      );
     }
     return this.prisma.project.update({
       where: { id },

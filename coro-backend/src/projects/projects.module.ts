@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 import { ClientPortalModule } from '../client-portal/client-portal.module';
+import { ApprovalModule } from '../approval/approval.module';
 
 @Module({
-  imports: [ClientPortalModule],
+  imports: [ClientPortalModule, ApprovalModule],
   controllers: [ProjectsController],
   providers: [ProjectsService],
   exports: [ProjectsService],

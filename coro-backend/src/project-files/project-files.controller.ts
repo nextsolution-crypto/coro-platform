@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  UseInterceptors,
+  UploadedFile,
+  Query,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ProjectFilesService } from './project-files.service';
@@ -14,9 +27,14 @@ export class ProjectFilesController {
   @EvidenceReadAccess()
   getFiles(
     @Param('projectId') projectId: string,
+    @Request() req: any,
     @Query('visibility') visibility?: string,
   ) {
-    return this.projectFilesService.getFilesForProject(projectId, visibility);
+    return this.projectFilesService.getFilesForProject(
+      projectId,
+      visibility,
+      req.user.organizationId,
+    );
   }
 
   @Post('project/:projectId')
@@ -42,18 +60,18 @@ export class ProjectFilesController {
   }
 
   @Put(':id/validate')
-  validateFile(@Param('id') id: string) {
-    return this.projectFilesService.validateFile(id);
+  validateFile(@Param('id') id: string, @Request() req: any) {
+    return this.projectFilesService.validateFile(id, req.user.organizationId);
   }
 
   @Delete(':id')
-  deleteFile(@Param('id') id: string) {
-    return this.projectFilesService.deleteFile(id);
+  deleteFile(@Param('id') id: string, @Request() req: any) {
+    return this.projectFilesService.deleteFile(id, req.user.organizationId);
   }
 
   @Get(':id/download')
   @EvidenceReadAccess()
-  getDownloadUrl(@Param('id') id: string) {
-    return this.projectFilesService.getSignedUrl(id);
+  getDownloadUrl(@Param('id') id: string, @Request() req: any) {
+    return this.projectFilesService.getSignedUrl(id, req.user.organizationId);
   }
 }

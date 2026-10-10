@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../client-portal/email.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
+import { requireProjectApprover } from '../auth/project-access';
 
 @Injectable()
 export class ApprovalService {
@@ -54,18 +59,26 @@ export class ApprovalService {
     // 2. Opérations secondaires.
     // Elles ne doivent jamais faire échouer la soumission après que la mutation métier
     // a déjà été persistée.
-    void this.notifySubmission(project, userId, organizationId).catch((error) => {
-      console.error(
-        `[ApprovalService] Erreur notification après soumission du projet ${projectId}:`,
-        error,
-      );
-    });
+    void this.notifySubmission(project, userId, organizationId).catch(
+      (error) => {
+        console.error(
+          `[ApprovalService] Erreur notification après soumission du projet ${projectId}:`,
+          error,
+        );
+      },
+    );
 
     return { success: true, status: 'REVIEW' };
   }
 
   // ── Approuver ────────────────────────────────────────────
-  async approve(projectId: string, userId: string, organizationId: string) {
+  async approve(
+    projectId: string,
+    userId: string,
+    organizationId: string,
+    role: string,
+  ) {
+    requireProjectApprover({ userId, organizationId, role });
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, organizationId },
       include: { client: true, building: true },
@@ -76,11 +89,13 @@ export class ApprovalService {
     }
 
     if (project.status !== 'REVIEW') {
-      throw new ForbiddenException('Ce projet n\'est pas en révision');
+      throw new ForbiddenException("Ce projet n'est pas en révision");
     }
 
     if (project.submittedById === userId) {
-      throw new ForbiddenException('Vous ne pouvez pas approuver votre propre soumission');
+      throw new ForbiddenException(
+        'Vous ne pouvez pas approuver votre propre soumission',
+      );
     }
 
     const approver = await this.prisma.user.findUnique({
@@ -88,7 +103,8 @@ export class ApprovalService {
       select: { firstName: true, lastName: true },
     });
 
-    const approverName = `${approver?.firstName ?? ''} ${approver?.lastName ?? ''}`.trim();
+    const approverName =
+      `${approver?.firstName ?? ''} ${approver?.lastName ?? ''}`.trim();
     const now = new Date();
 
     // 1. Calculer le prochain numéro de version.
@@ -148,32 +164,51 @@ export class ApprovalService {
 
     // 3bis. Génération automatique du PDF d'aperçu (exportedPdf*) en fire-and-forget.
     // N'invalide jamais l'approbation déjà enregistrée en base si elle échoue.
-    void this.exportService.generatePdf(project.id, {
-      selectedModules: project.documentType === 'PCA'
-        ? [1, 2, 3, 4, 5, 6, 7, 8]
-        : [1, 2, 3, 4, 6, 7, 8],
-      moduleOrder: project.documentType === 'PCA'
-        ? [1, 2, 3, 4, 5, 6, 7, 8]
-        : [1, 2, 3, 4, 6, 7, 8],
-      language: 'both',
-      isPreview: false,
-    }, organizationId).then(async (pdfResult) => {
-      const timestamp = Date.now();
-      const [exportedPdfFr, exportedPdfEn] = await Promise.all([
-        pdfResult.fr
-          ? this.storageService.uploadFile(pdfResult.fr, `${project.id}-${timestamp}-FR.pdf`, 'documents', 'application/pdf')
-          : Promise.resolve(null),
-        pdfResult.en
-          ? this.storageService.uploadFile(pdfResult.en, `${project.id}-${timestamp}-EN.pdf`, 'documents', 'application/pdf')
-          : Promise.resolve(null),
-      ]);
-      await this.prisma.project.update({
-        where: { id: project.id },
-        data: { exportedPdfFr, exportedPdfEn },
+    void this.exportService
+      .generatePdf(
+        project.id,
+        {
+          selectedModules:
+            project.documentType === 'PCA'
+              ? [1, 2, 3, 4, 5, 6, 7, 8]
+              : [1, 2, 3, 4, 6, 7, 8],
+          moduleOrder:
+            project.documentType === 'PCA'
+              ? [1, 2, 3, 4, 5, 6, 7, 8]
+              : [1, 2, 3, 4, 6, 7, 8],
+          language: 'both',
+          isPreview: false,
+        },
+        organizationId,
+      )
+      .then(async (pdfResult) => {
+        const timestamp = Date.now();
+        const [exportedPdfFr, exportedPdfEn] = await Promise.all([
+          pdfResult.fr
+            ? this.storageService.uploadFile(
+                pdfResult.fr,
+                `${project.id}-${timestamp}-FR.pdf`,
+                'documents',
+                'application/pdf',
+              )
+            : Promise.resolve(null),
+          pdfResult.en
+            ? this.storageService.uploadFile(
+                pdfResult.en,
+                `${project.id}-${timestamp}-EN.pdf`,
+                'documents',
+                'application/pdf',
+              )
+            : Promise.resolve(null),
+        ]);
+        await this.prisma.project.update({
+          where: { id: project.id },
+          data: { exportedPdfFr, exportedPdfEn },
+        });
+      })
+      .catch((err) => {
+        console.error('Erreur génération PDF après approbation:', err);
       });
-    }).catch((err) => {
-      console.error('Erreur génération PDF après approbation:', err);
-    });
 
     // 4. Notifications / emails secondaires.
     // Une panne de notification ou d'email ne doit pas invalider une approbation déjà
@@ -214,12 +249,16 @@ export class ApprovalService {
     }
 
     if (!['REVIEW', 'VALIDATED', 'EXPORTED'].includes(project.status)) {
-      throw new ForbiddenException('Ce projet ne peut pas être retourné en révision');
+      throw new ForbiddenException(
+        'Ce projet ne peut pas être retourné en révision',
+      );
     }
 
     // Bloquer seulement si REVIEW et que c'est le soumetteur.
     if (project.status === 'REVIEW' && project.submittedById === userId) {
-      throw new ForbiddenException('Vous ne pouvez pas retourner votre propre soumission');
+      throw new ForbiddenException(
+        'Vous ne pouvez pas retourner votre propre soumission',
+      );
     }
 
     // 1. Mutation métier principale.

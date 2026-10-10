@@ -15,6 +15,7 @@ import { OrganizationStatusGuard } from '../auth/organization-status.guard';
 import type { ExportOptions } from './export.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { projectAccessWhere } from '../auth/project-access';
 
 @Controller('projects/:projectId/export')
 @UseGuards(AuthGuard('jwt'), OrganizationStatusGuard)
@@ -35,7 +36,7 @@ export class ExportController {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        organizationId: req.user.organizationId,
+        ...projectAccessWhere(req.user),
       },
       include: {
         building: true,
@@ -156,7 +157,7 @@ export class ExportController {
     const project = await this.prisma.project.findFirst({
       where: {
         id: projectId,
-        organizationId: req.user.organizationId,
+        ...projectAccessWhere(req.user),
       },
       include: { building: true },
     });

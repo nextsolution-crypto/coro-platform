@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Request, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  UseInterceptors,
+  UploadedFile,
+  Query,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClientJwtGuard } from '../client-portal/client-jwt.guard';
 import { ProjectFilesService } from './project-files.service';
@@ -14,9 +25,15 @@ export class ProjectFilesClientController {
   @EvidenceReadAccess()
   getFiles(
     @Param('projectId') projectId: string,
+    @Request() req: any,
     @Query('visibility') visibility?: string,
   ) {
-    return this.projectFilesService.getFilesForProject(projectId, visibility);
+    return this.projectFilesService.getFilesForProject(
+      projectId,
+      visibility,
+      req.clientUser.organizationId,
+      req.clientUser.buildingIds,
+    );
   }
 
   @Post(':projectId')
@@ -37,6 +54,7 @@ export class ProjectFilesClientController {
       size: file.size,
       visibility: 'shared',
       uploadedByClientId: req.clientUser.sub,
+      permittedBuildingIds: req.clientUser.buildingIds,
     });
   }
 }

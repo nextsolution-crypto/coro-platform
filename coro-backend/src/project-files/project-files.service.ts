@@ -23,16 +23,31 @@ export class ProjectFilesService {
     uploadedById?: string;
     uploadedByClientId?: string;
     parentId?: string;
+    permittedBuildingIds?: string[];
   }) {
-    const project = await this.prisma.project.findUnique({ where: { id: data.projectId } });
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: data.projectId,
+        organizationId: data.organizationId,
+        ...(data.permittedBuildingIds?.length
+          ? { buildingId: { in: data.permittedBuildingIds } }
+          : {}),
+      },
+    });
     if (!project) throw new NotFoundException('Projet introuvable');
 
     // Déterminer la version
     let version = 1;
-    let parentId = data.parentId;
+    const parentId = data.parentId;
 
     if (parentId) {
-      const parent = await this.prisma.projectFile.findUnique({ where: { id: parentId } });
+      const parent = await this.prisma.projectFile.findFirst({
+        where: {
+          id: parentId,
+          projectId: data.projectId,
+          organizationId: data.organizationId,
+        },
+      });
       if (parent) {
         const lastVersion = await this.prisma.projectFile.findFirst({
           where: { OR: [{ id: parentId }, { parentId }] },
@@ -98,9 +113,26 @@ export class ProjectFilesService {
     return file;
   }
 
-  async getFilesForProject(projectId: string, visibility?: string) {
+  async getFilesForProject(
+    projectId: string,
+    visibility: string | undefined,
+    organizationId: string,
+    permittedBuildingIds?: string[],
+  ) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        organizationId,
+        ...(permittedBuildingIds?.length
+          ? { buildingId: { in: permittedBuildingIds } }
+          : {}),
+      },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
     const where: any = {
       projectId,
+      organizationId,
       parentId: null, // Seulement les fichiers racine (pas les versions)
     };
     if (visibility) where.visibility = visibility;
@@ -124,27 +156,36 @@ export class ProjectFilesService {
     return files;
   }
 
-  async validateFile(fileId: string) {
+  async validateFile(fileId: string, organizationId: string) {
+    const file = await this.prisma.projectFile.findFirst({
+      where: { id: fileId, organizationId },
+      select: { id: true },
+    });
+    if (!file) throw new NotFoundException('Fichier introuvable');
     return this.prisma.projectFile.update({
-      where: { id: fileId },
+      where: { id: file.id },
       data: { status: 'valide' },
     });
   }
 
-  async deleteFile(fileId: string) {
-    const file = await this.prisma.projectFile.findUnique({ where: { id: fileId } });
+  async deleteFile(fileId: string, organizationId: string) {
+    const file = await this.prisma.projectFile.findFirst({
+      where: { id: fileId, organizationId },
+    });
     if (!file) throw new NotFoundException('Fichier introuvable');
 
     // Supprimer les versions aussi
     await this.prisma.projectFile.deleteMany({
-      where: { OR: [{ id: fileId }, { parentId: fileId }] },
+      where: { organizationId, OR: [{ id: fileId }, { parentId: fileId }] },
     });
 
     return { success: true };
   }
 
-  async getSignedUrl(fileId: string) {
-    const file = await this.prisma.projectFile.findUnique({ where: { id: fileId } });
+  async getSignedUrl(fileId: string, organizationId: string) {
+    const file = await this.prisma.projectFile.findFirst({
+      where: { id: fileId, organizationId },
+    });
     if (!file) throw new NotFoundException('Fichier introuvable');
     // Retourner l'URL directe (déjà publique via Spaces)
     return { url: file.url, name: file.name };

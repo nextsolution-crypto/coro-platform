@@ -1,12 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class VersionsService {
   constructor(private prisma: PrismaService) {}
 
+  private async requireProject(projectId: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Projet introuvable');
+  }
+
   // ── Lister toutes les versions d'un projet ─────────────────
-  async findAll(projectId: string) {
+  async findAll(projectId: string, actor: AdviserActor) {
+    await this.requireProject(projectId, actor);
     return this.prisma.projectVersion.findMany({
       where: { projectId },
       orderBy: { versionNumber: 'desc' },
@@ -21,7 +31,12 @@ export class VersionsService {
   }
 
   // ── Sauvegarder une nouvelle version ───────────────────────
-  async create(projectId: string, label?: string) {
+  async create(
+    projectId: string,
+    label: string | undefined,
+    actor: AdviserActor,
+  ) {
+    await this.requireProject(projectId, actor);
     // Récupérer le document actuel
     const doc = await this.prisma.document.findFirst({
       where: { projectId },
@@ -46,14 +61,15 @@ export class VersionsService {
   }
 
   // ── Restaurer une version précédente ───────────────────────
-  async restore(projectId: string, versionId: string) {
+  async restore(projectId: string, versionId: string, actor: AdviserActor) {
+    await this.requireProject(projectId, actor);
     const version = await this.prisma.projectVersion.findFirst({
       where: { id: versionId, projectId },
     });
     if (!version) throw new NotFoundException('Version introuvable');
 
     // Sauvegarder la version actuelle avant restauration
-    await this.create(projectId, 'Sauvegarde avant restauration');
+    await this.create(projectId, 'Sauvegarde avant restauration', actor);
 
     // Restaurer le snapshot dans le document actuel
     const doc = await this.prisma.document.findFirst({
@@ -70,7 +86,8 @@ export class VersionsService {
   }
 
   // ── Supprimer une version ───────────────────────────────────
-  async remove(projectId: string, versionId: string) {
+  async remove(projectId: string, versionId: string, actor: AdviserActor) {
+    await this.requireProject(projectId, actor);
     const version = await this.prisma.projectVersion.findFirst({
       where: { id: versionId, projectId },
     });

@@ -14,12 +14,12 @@ export class GeneratorController {
 
   @Post('generate/:projectId')
   generate(@Param('projectId') projectId: string, @Body() config: any, @Request() req: any) {
-    return this.generatorService.generateAndSave(projectId, config, req.user.organizationId, req.user.userId);
+    return this.generatorService.generateAndSave(projectId, config, req.user);
   }
 
   @Get('document/:projectId')
   getDocument(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.generatorService.getDocument(projectId, req.user.organizationId);
+    return this.generatorService.getDocument(projectId, req.user);
   }
 
   @Put('document/:documentId/module/:moduleId/section/:sectionId')
@@ -31,7 +31,7 @@ export class GeneratorController {
     @Request() req: any,
   ) {
     return this.generatorService.updateModuleContent(
-      documentId, moduleId, sectionId, body.content, body.language || 'fr', req.user.organizationId
+      documentId, moduleId, sectionId, body.content, body.language || 'fr', req.user
     );
   }
 
