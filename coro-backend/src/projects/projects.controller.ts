@@ -29,9 +29,7 @@ export class ProjectsController {
 
   @Get()
   findAll(@Request() req: any) {
-    // OPERATOR voit seulement ses projets, ADMIN/SUPER_ADMIN voient tout
-    const userId = req.user.role === 'OPERATOR' ? req.user.userId : undefined;
-    return this.projectsService.findAll(req.user.organizationId, userId);
+    return this.projectsService.findAll(req.user);
   }
 
   @Get('search')
@@ -67,16 +65,19 @@ export class ProjectsController {
 
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: any) {
-    return this.projectsService.findOne(id, req.user.organizationId);
+    return this.projectsService.findOne(id, req.user);
   }
 
   @Post()
   create(@Body() body: any, @Request() req: any) {
-    return this.projectsService.create({
-      ...body,
-      userId: req.user.userId,
-      organizationId: req.user.organizationId,
-    });
+    return this.projectsService.create(
+      {
+        ...body,
+        userId: req.user.userId,
+        organizationId: req.user.organizationId,
+      },
+      req.user,
+    );
   }
 
   @Put(':id')
@@ -85,12 +86,7 @@ export class ProjectsController {
     @Body() body: any,
     @Request() req: any,
   ) {
-    const result = await this.projectsService.update(
-      id,
-      body,
-      req.user.organizationId,
-      req.user.userId,
-    );
+    const result = await this.projectsService.update(id, body, req.user);
     if (body.status) {
       await this.auditService.log({
         action: 'STATUS_CHANGE',
@@ -108,16 +104,12 @@ export class ProjectsController {
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: any) {
-    return this.projectsService.remove(id, req.user.organizationId);
+    return this.projectsService.remove(id, req.user);
   }
 
   @Post(':id/submit')
   async submit(@Param('id') id: string, @Request() req: any) {
-    const result = await this.approvalService.submit(
-      id,
-      req.user.userId,
-      req.user.organizationId,
-    );
+    const result = await this.approvalService.submit(id, req.user);
     await this.auditService.log({
       action: 'STATUS_CHANGE',
       entityType: 'PROJECT',
@@ -169,8 +161,7 @@ export class ProjectsController {
   ) {
     const result = await this.approvalService.requestRevision(
       id,
-      req.user.userId,
-      req.user.organizationId,
+      req.user,
       body.comment,
     );
     await this.auditService.log({
@@ -194,8 +185,7 @@ export class ProjectsController {
   ) {
     const result = await this.approvalService.requestRevision(
       id,
-      req.user.userId,
-      req.user.organizationId,
+      req.user,
       body.comment,
     );
     await this.auditService.log({

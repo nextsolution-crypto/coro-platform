@@ -24,11 +24,7 @@ export class ApprovalController {
 
   @Post(':projectId/submit')
   submit(@Param('projectId') projectId: string, @Request() req: any) {
-    return this.service.submit(
-      projectId,
-      req.user.userId,
-      req.user.organizationId,
-    );
+    return this.service.submit(projectId, req.user);
   }
 
   @Post(':projectId/approve')
@@ -62,12 +58,7 @@ export class ApprovalController {
     @Body() body: { commentaire?: string },
     @Request() req: any,
   ) {
-    return this.service.requestRevision(
-      projectId,
-      req.user.userId,
-      req.user.organizationId,
-      body.commentaire,
-    );
+    return this.service.requestRevision(projectId, req.user, body.commentaire);
   }
 
   @Get(':projectId/can-edit')

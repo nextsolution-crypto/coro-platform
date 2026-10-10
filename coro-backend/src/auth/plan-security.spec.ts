@@ -4,6 +4,7 @@ import { VersionsService } from '../versions/versions.service';
 import { ApprovalService } from '../approval/approval.service';
 import { ProjectFilesService } from '../project-files/project-files.service';
 import { PcaConfiguratorService } from '../pca/pca-configurator/pca-configurator.service';
+import { ProjectsService } from '../projects/projects.service';
 
 jest.mock('../export/export.service', () => ({
   ExportService: class ExportService {},
@@ -17,6 +18,140 @@ const operator = {
 };
 
 describe('plan document security boundaries', () => {
+  it('applies canonical assignment scope to project listing and detail reads', async () => {
+    const prisma: any = {
+      project: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }),
+      },
+    };
+    const service = new ProjectsService(prisma);
+
+    await service.findAll(operator);
+    await service.findOne('project-a', operator);
+
+    for (const call of [
+      prisma.project.findMany.mock.calls[0][0],
+      prisma.project.findFirst.mock.calls[0][0],
+    ]) {
+      expect(call.where).toEqual(
+        expect.objectContaining({
+          organizationId: 'org-a',
+          OR: [{ userId: 'operator-a' }, { lastEditedById: 'operator-a' }],
+        }),
+      );
+    }
+  });
+
+  it.each(['update', 'delete'] as const)(
+    'denies an unassigned same-tenant OPERATOR project %s with zero mutation',
+    async (operation) => {
+      const prisma: any = {
+        project: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          update: jest.fn(),
+        },
+      };
+      const service = new ProjectsService(prisma);
+      const action =
+        operation === 'update'
+          ? service.update('project-a', { name: 'Blocked' }, operator)
+          : service.remove('project-a', operator);
+      await expect(action).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.project.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects cross-organization project creation before database access', async () => {
+    const prisma: any = {
+      organization: { findUnique: jest.fn() },
+      project: { create: jest.fn() },
+    };
+    const service = new ProjectsService(prisma);
+    await expect(
+      service.create(
+        {
+          name: 'Foreign',
+          documentType: 'PMU',
+          year: 2026,
+          clientId: 'client-b',
+          buildingId: 'building-b',
+          userId: operator.userId,
+          organizationId: 'org-b',
+        },
+        operator,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.organization.findUnique).not.toHaveBeenCalled();
+    expect(prisma.project.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects project reassignment and protected lifecycle updates', async () => {
+    const prisma: any = {
+      project: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'project-a' }),
+        update: jest.fn(),
+      },
+    };
+    const service = new ProjectsService(prisma);
+    await expect(
+      service.update('project-a', { userId: 'operator-c' }, operator),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.update('project-a', { status: 'VALIDATED' }, operator),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.project.update).not.toHaveBeenCalled();
+  });
+
+  it('denies unauthorized submission and revision requests before mutation', async () => {
+    const prisma: any = {
+      project: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn(),
+      },
+    };
+    const service = new ApprovalService(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    await expect(service.submit('project-a', operator)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(
+      service.requestRevision('project-a', operator, 'Blocked'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.project.update).not.toHaveBeenCalled();
+  });
+
+  it('allows an ADMIN to request revision for a valid project lifecycle', async () => {
+    const prisma: any = {
+      project: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'project-a',
+          status: 'REVIEW',
+          submittedById: 'operator-a',
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      user: { findUnique: jest.fn().mockResolvedValue({ firstName: 'Admin' }) },
+    };
+    const notifications: any = { create: jest.fn().mockResolvedValue({}) };
+    const service = new ApprovalService(
+      prisma,
+      notifications,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    await expect(
+      service.requestRevision('project-a', admin, 'Changes required'),
+    ).resolves.toMatchObject({ status: 'IN_PROGRESS' });
+    expect(prisma.project.update).toHaveBeenCalledTimes(1);
+  });
+
   it('denies configuration reads and writes before exposing or mutating a foreign project', async () => {
     const prisma: any = {
       project: {

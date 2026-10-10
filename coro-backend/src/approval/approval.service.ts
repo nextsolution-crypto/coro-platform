@@ -8,7 +8,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { EmailService } from '../client-portal/email.service';
 import { ExportService } from '../export/export.service';
 import { StorageService } from '../storage/storage.service';
-import { requireProjectApprover } from '../auth/project-access';
+import {
+  AdviserActor,
+  projectAccessWhere,
+  requireProjectApprover,
+} from '../auth/project-access';
 
 @Injectable()
 export class ApprovalService {
@@ -21,9 +25,10 @@ export class ApprovalService {
   ) {}
 
   // ── Soumettre pour approbation ───────────────────────────
-  async submit(projectId: string, userId: string, organizationId: string) {
+  async submit(projectId: string, actor: AdviserActor) {
+    const { userId, organizationId } = actor;
     const project = await this.prisma.project.findFirst({
-      where: { id: projectId, organizationId },
+      where: { id: projectId, ...projectAccessWhere(actor) },
       include: { client: true, building: true, user: true },
     });
 
@@ -235,10 +240,11 @@ export class ApprovalService {
   // ── Retourner pour révision ──────────────────────────────
   async requestRevision(
     projectId: string,
-    userId: string,
-    organizationId: string,
+    actor: AdviserActor,
     commentaire?: string,
   ) {
+    requireProjectApprover(actor);
+    const { userId, organizationId } = actor;
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, organizationId },
       include: { client: true, building: true },

@@ -5,19 +5,16 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLimitsForLicense } from '../organizations/license-limits';
+import { AdviserActor, projectAccessWhere } from '../auth/project-access';
 
 @Injectable()
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(organizationId: string, userId?: string) {
-    const where: any = { isActive: true, organizationId };
+  async findAll(actor: AdviserActor) {
+    const where = { isActive: true, ...projectAccessWhere(actor) };
 
     // Si userId fourni → projets dont l'utilisateur est responsable OU a modifié
-    if (userId) {
-      where.OR = [{ userId }, { lastEditedById: userId }];
-    }
-
     return this.prisma.project.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
@@ -31,9 +28,9 @@ export class ProjectsService {
     });
   }
 
-  async findOne(id: string, organizationId: string) {
-    return this.prisma.project.findFirst({
-      where: { id, organizationId },
+  async findOne(id: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id, ...projectAccessWhere(actor) },
       include: {
         client: true,
         building: true,
@@ -44,19 +41,32 @@ export class ProjectsService {
         documents: true,
       },
     });
+    if (!project) {
+      throw new NotFoundException('Projet introuvable');
+    }
+    return project;
   }
 
-  async create(data: {
-    name: string;
-    documentType: any;
-    year: number;
-    clientId: string;
-    buildingId: string;
-    userId: string;
-    organizationId: string;
-  }) {
+  async create(
+    data: {
+      name: string;
+      documentType: any;
+      year: number;
+      clientId: string;
+      buildingId: string;
+      userId: string;
+      organizationId: string;
+    },
+    actor: AdviserActor,
+  ) {
+    if (
+      data.userId !== actor.userId ||
+      data.organizationId !== actor.organizationId
+    ) {
+      throw new ForbiddenException('Acces refuse a ce projet');
+    }
     const organization = await this.prisma.organization.findUnique({
-      where: { id: data.organizationId },
+      where: { id: actor.organizationId },
     });
     if (!organization) {
       throw new NotFoundException('Organisation introuvable');
@@ -65,7 +75,7 @@ export class ProjectsService {
     const limits = getLimitsForLicense(organization.licenseType);
     if (limits.maxProjects !== null) {
       const currentCount = await this.prisma.project.count({
-        where: { organizationId: data.organizationId, isActive: true },
+        where: { organizationId: actor.organizationId, isActive: true },
       });
       if (currentCount >= limits.maxProjects) {
         throw new ForbiddenException(
@@ -74,8 +84,34 @@ export class ProjectsService {
       }
     }
 
+    const [client, building] = await Promise.all([
+      this.prisma.client.findFirst({
+        where: { id: data.clientId, organizationId: actor.organizationId },
+        select: { id: true },
+      }),
+      this.prisma.building.findFirst({
+        where: {
+          id: data.buildingId,
+          organizationId: actor.organizationId,
+          clientId: data.clientId,
+        },
+        select: { id: true },
+      }),
+    ]);
+    if (!client || !building) {
+      throw new ForbiddenException('Acces refuse a ce projet');
+    }
+
     return this.prisma.project.create({
-      data,
+      data: {
+        name: data.name,
+        documentType: data.documentType,
+        year: data.year,
+        clientId: data.clientId,
+        buildingId: data.buildingId,
+        userId: actor.userId,
+        organizationId: actor.organizationId,
+      },
       include: {
         client: true,
         building: true,
@@ -83,28 +119,54 @@ export class ProjectsService {
     });
   }
 
-  async update(id: string, data: any, organizationId: string, userId?: string) {
-    await this.assertOwnership(id, organizationId);
+  async update(id: string, data: any, actor: AdviserActor) {
+    await this.assertAccess(id, actor);
     if (['REVIEW', 'VALIDATED', 'EXPORTED'].includes(data?.status)) {
       throw new ForbiddenException(
         'Transition documentaire reservee au workflow canonique',
       );
     }
+    const protectedFields = [
+      'organizationId',
+      'userId',
+      'lastEditedById',
+      'submittedById',
+      'submittedAt',
+      'approvedById',
+      'approvedAt',
+    ];
+    if (
+      protectedFields.some((field) =>
+        Object.prototype.hasOwnProperty.call(data || {}, field),
+      )
+    ) {
+      throw new ForbiddenException('Reaffectation de projet interdite');
+    }
     return this.prisma.project.update({
       where: { id },
       data: {
         ...data,
-        ...(userId ? { lastEditedById: userId } : {}),
+        lastEditedById: actor.userId,
       },
     });
   }
 
-  async remove(id: string, organizationId: string) {
-    await this.assertOwnership(id, organizationId);
+  async remove(id: string, actor: AdviserActor) {
+    await this.assertAccess(id, actor);
     return this.prisma.project.update({
       where: { id },
       data: { isActive: false },
     });
+  }
+
+  private async assertAccess(id: string, actor: AdviserActor) {
+    const project = await this.prisma.project.findFirst({
+      where: { id, ...projectAccessWhere(actor) },
+      select: { id: true },
+    });
+    if (!project) {
+      throw new ForbiddenException('Acces refuse a ce projet');
+    }
   }
 
   private async assertOwnership(id: string, organizationId: string) {
