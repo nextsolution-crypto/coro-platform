@@ -4,8 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   SMS_CARRIER_DISCLOSURE,
   SMS_CONFIRMATION_DISCLOSURE,
-  SMS_PRIVACY_URL,
-  SMS_TERMS_URL,
+  SMS_LEGAL_URLS,
 } from "./smsCompliance.ts";
 
 test("carrier disclosure is bilingual and contains every required term", () => {
@@ -24,8 +23,14 @@ test("carrier disclosure is bilingual and contains every required term", () => {
 });
 
 test("carrier disclosure uses canonical legal URLs", () => {
-  assert.equal(SMS_TERMS_URL, "https://getcoro.io/terms");
-  assert.equal(SMS_PRIVACY_URL, "https://getcoro.io/privacy");
+  assert.deepEqual(SMS_LEGAL_URLS.fr, {
+    terms: "https://getcoro.io/sms-terms",
+    privacy: "https://getcoro.io/privacy",
+  });
+  assert.deepEqual(SMS_LEGAL_URLS.en, {
+    terms: "https://getcoro.io/sms-terms?lang=en",
+    privacy: "https://getcoro.io/privacy?lang=en",
+  });
 });
 
 test("registration requires a false-by-default controlled consent and sends the explicit signal", () => {
@@ -37,8 +42,19 @@ test("registration requires a false-by-default controlled consent and sends the 
   assert.match(registration, /checked=\{consented\}/);
   assert.match(registration, /&&\s*consented\s*&&/);
   assert.match(registration, /smsConsent:\s*consented/);
-  assert.match(registration, /SMS_TERMS_URL/);
-  assert.match(registration, /SMS_PRIVACY_URL/);
+  assert.match(registration, /SMS_LEGAL_URLS/);
+});
+
+test("PHONE contact change renders the same carrier disclosure and direct legal links", () => {
+  const profile = readFileSync(
+    new URL("../components/PopulationContactProfile.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(profile, /SMS_CARRIER_DISCLOSURE/);
+  assert.match(profile, /SMS_LEGAL_URLS/);
+  assert.match(profile, /sms-contact-change-carrier-disclosure/);
+  assert.match(profile, /program\.privacyTextEN \|\| program\.privacyTextFR/);
+  assert.match(profile, /checked=\{consent\}/);
 });
 
 test("SMS confirmation renders the compliance disclosure", () => {

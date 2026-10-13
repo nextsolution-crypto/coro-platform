@@ -11,7 +11,7 @@ describe('Population SMS compliance disclosure', () => {
       const disclosure = populationSmsCarrierDisclosure(language);
       expect(disclosure).toMatch(/STOP/);
       expect(disclosure).toMatch(/HELP/);
-      expect(disclosure).toContain('https://getcoro.io/terms');
+      expect(disclosure).toContain('https://getcoro.io/sms-terms');
       expect(disclosure).toContain('https://getcoro.io/privacy');
       expect(disclosure).toMatch(
         language === PopulationPreferredLanguage.FR

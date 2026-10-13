@@ -7,7 +7,7 @@ import { isLegacyFooterVisible, isV2MigratedRoute, migratedV2Routes } from '../l
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
 
 test('the V2 migration registry holds ONLY the approved migrated routes; every other current route stays legacy', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/']);
   assert.equal(isV2MigratedRoute('/about'), true); assert.equal(isV2MigratedRoute('/contact'), true);
   assert.equal(isV2MigratedRoute('/'), true); // MIG-08A: Homepage is now V2
   const partial = ['/design-lab'];

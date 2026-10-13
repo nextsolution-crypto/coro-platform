@@ -15,7 +15,7 @@ const baseline = JSON.parse(readFileSync(join(process.cwd(), 'tests/fixtures/sit
 
 // Intentional corrections against the pre-MIG-00B.3 sitemap (English is not genuinely available on these two routes).
 const REMOVED_ON_PURPOSE = ['https://getcoro.io/sentinelle?lang=en', 'https://getcoro.io/sentinelle-population?lang=en'];
-const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/guides']; // MIG-03D, MIG-05A: new FR-only pages
+const NEW_ON_PURPOSE = ['https://getcoro.io/coro-incident', 'https://getcoro.io/guides', 'https://getcoro.io/sms-terms', 'https://getcoro.io/sms-terms?lang=en']; // MIG-03D, MIG-05A, TFN-01
 const ALTERNATES_DROPPED_ON_PURPOSE = ['https://getcoro.io/sentinelle', 'https://getcoro.io/sentinelle-population'];
 
 test('every previously valid static URL is preserved, except the documented intentional corrections', () => {
@@ -93,7 +93,7 @@ test('no PUBLISH-NOW route is currently unimplemented', () => {
 });
 
 test('publication status is independent from implementation and from V2 migration', () => {
-  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/']);
+  assert.deepEqual([...migratedV2Routes], ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/']);
   assert.ok(publicRoutes.some((r) => r.publication === 'PUBLISH-NOW' && r.implemented), 'published and implemented, yet not V2 migrated');
   assert.ok(publicRoutes.some((r) => r.publication === 'BUILD-NOW-HIDDEN' && !r.implemented), 'published target, not implemented (guides was the last PUBLISH-NOW gap; MIG-05A closed it)');
   assert.ok(!('v2Migrated' in publicRoutes[0]) && !('migrated' in publicRoutes[0]), 'the route registry does not own migration state');

@@ -14,7 +14,7 @@
  * / (MIG-08A, Homepage) was the final remaining legacy surface — registered last, after the pre-registry QA gate passed.
  * `normalizePath('/')` returns `'/'` and `Array.includes` is exact-match only, so this cannot over-match any other route.
  */
-export const migratedV2Routes: readonly string[] = ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/blog', '/'];
+export const migratedV2Routes: readonly string[] = ['/about', '/contact', '/partners', '/programme-recommandation', '/gestion-documentaire', '/gestion-de-projets', '/performance-objectifs', '/portail-client', '/resilience-operationnelle', '/sentinelle', '/sentinelle-population', '/coro-incident', '/security', '/pricing', '/guides', '/documents/plan-mesures-urgence-pmu', '/documents/plan-securite-incendie-psi', '/documents/plan-continuite-activites-pca', '/documents/plan-gestion-crise-pgc', '/documents/plan-reprise-activites-pra', '/documents/plan-urgence-environnementale-pue', '/privacy', '/terms', '/sms-terms', '/blog', '/'];
 
 /**
  * Explicit, opt-in registry for MIGRATED dynamic routes. `migratedV2Routes` is exact-match only and can never
