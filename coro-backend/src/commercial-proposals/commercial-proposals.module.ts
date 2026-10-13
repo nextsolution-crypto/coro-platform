@@ -14,8 +14,10 @@ import {
 } from './commercial-rule-registry';
 import { CommercialDossierController } from './commercial-dossier.controller';
 import { CommercialDossierService } from './commercial-dossier.service';
+import { ProposalDocumentCompositionModule } from '../proposal-document-composition/proposal-document-composition.module';
+import { ProposalIssuanceReadinessService } from './proposal-issuance-readiness.service';
 @Module({
-  imports: [AdminAuditModule, StorageModule],
+  imports: [AdminAuditModule, StorageModule, ProposalDocumentCompositionModule],
   controllers: [
     CommercialProposalsController,
     CommercialProspectsController,
@@ -26,6 +28,7 @@ import { CommercialDossierService } from './commercial-dossier.service';
     CommercialDossierService,
     ProposalPdfService,
     ProposalPricingEngine,
+    ProposalIssuanceReadinessService,
     {
       provide: CommercialRuleRegistry,
       useValue: PRODUCTION_COMMERCIAL_RULE_REGISTRY,

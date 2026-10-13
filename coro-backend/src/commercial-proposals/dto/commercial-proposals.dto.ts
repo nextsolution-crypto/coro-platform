@@ -238,6 +238,7 @@ export class TransitionProposalDto {
   @IsOptional() @IsString() acceptedByName?: string;
   @IsOptional() @IsString() acceptanceReference?: string;
   @IsOptional() @IsString() sentDocumentId?: string;
+  @IsOptional() @IsString() documentId?: string;
 }
 export class UpdateProposalFinalizationDto {
   @IsInt() @Min(0) lockVersion!: number;
@@ -251,10 +252,18 @@ export class UpdateProposalFinalizationDto {
 export class UpdateProposalTemporalTermsDto {
   @IsInt() @Min(0) revisionLockVersion!: number;
   @IsOptional() @IsInt() @Min(0) temporalLockVersion?: number;
-  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) serviceStartDate?: string | null;
-  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) initialInvoiceDate?: string | null;
-  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) externalSignatureDate?: string | null;
-  @IsOptional() @IsString() @MaxLength(500) externalSignatureEvidence?: string | null;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) serviceStartDate?:
+    | string
+    | null;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) initialInvoiceDate?:
+    | string
+    | null;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) externalSignatureDate?:
+    | string
+    | null;
+  @IsOptional() @IsString() @MaxLength(500) externalSignatureEvidence?:
+    | string
+    | null;
   @IsOptional() @IsInt() @Min(1) renewalTermMonths?: number | null;
   @IsOptional() @IsString() @MaxLength(100) contractualTimezone?: string;
 }

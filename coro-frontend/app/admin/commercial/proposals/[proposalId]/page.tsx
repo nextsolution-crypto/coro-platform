@@ -139,12 +139,34 @@ type TemporalTerms = {
     issuanceReady: boolean;
   };
 };
+type E01Blocker = {
+  code: string;
+  labelFR: string;
+  labelEN: string;
+  explanation: string;
+  authority: string;
+  correctiveAction: string;
+  navigationTarget?: string;
+};
+type E01Readiness = {
+  status: "READY" | "BLOCKED" | "NEEDS_REVIEW";
+  phase: "APPROVAL" | "ISSUANCE";
+  revisionNumber: number;
+  revisionStatus: string;
+  document: null | {
+    id: string;
+    fileName: string;
+    artifactVersion: number;
+    compositionSnapshotId: string;
+  };
+  blockers: E01Blocker[];
+};
 
 const statusLabels: Record<string, string> = {
   DRAFT: "Brouillon",
   INTERNAL_REVIEW: "Revue interne",
-  READY: "Prête techniquement",
-  SENT: "Envoyée",
+  READY: "Approuvée",
+  SENT: "Émise",
   ACCEPTED: "Acceptée",
   REJECTED: "Refusée",
   CANCELLED: "Annulée",
@@ -205,6 +227,7 @@ export default function ProposalDetailPage({
   const [composition, setComposition] = useState<Composition>();
   const [history, setHistory] = useState<Composition[]>([]);
   const [temporal, setTemporal] = useState<TemporalTerms>();
+  const [e01, setE01] = useState<E01Readiness>();
   const [state, setState] = useState<
     "LOADING" | "READY" | "ERROR" | "UNAUTHORIZED"
   >("LOADING");
@@ -231,6 +254,11 @@ export default function ProposalDetailPage({
     contractualTimezone: "America/Toronto",
   });
   const revision = detail?.revisions[0];
+  const governanceDecisionClosed =
+    revision != null &&
+    ["SENT", "ACCEPTED", "REJECTED", "SUPERSEDED", "CANCELLED"].includes(
+      revision.status,
+    );
 
   const load = useCallback(async () => {
     setState("LOADING");
@@ -253,6 +281,7 @@ export default function ProposalDetailPage({
         issuerResult,
         previewResult,
         temporalResult,
+        readinessResult,
       ] = await Promise.all([
         api.get(
           `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/document-compositions`,
@@ -266,6 +295,14 @@ export default function ProposalDetailPage({
         api.get(
           `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/temporal-terms`,
         ),
+        api.get(
+          `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/readiness`,
+          {
+            params: {
+              phase: current.status === "READY" ? "ISSUANCE" : "APPROVAL",
+            },
+          },
+        ),
       ]);
       const items = historyResult.data as Composition[];
       setHistory(items);
@@ -275,6 +312,7 @@ export default function ProposalDetailPage({
       setEconomic(previewResult.data);
       const temporalValue = temporalResult.data as TemporalTerms;
       setTemporal(temporalValue);
+      setE01(readinessResult.data as E01Readiness);
       setTemporalForm({
         serviceStartDate:
           temporalValue.temporalTerms?.serviceStartDate?.slice(0, 10) ?? "",
@@ -372,7 +410,7 @@ export default function ProposalDetailPage({
       );
     }, "Informations générales enregistrées.");
   }
-  function transition(path: "request-review" | "mark-ready") {
+  function transition(path: "request-review" | "mark-ready" | "mark-sent") {
     if (!revision) return;
     return execute(
       async () => {
@@ -380,16 +418,22 @@ export default function ProposalDetailPage({
           `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/${path}`,
           {
             lockVersion: revision.lockVersion,
+            documentId:
+              path === "request-review" ? undefined : e01?.document?.id,
             reason:
               path === "mark-ready"
-                ? "Validation finale par le fondateur"
-                : "Revue interne par le fondateur",
+                ? "Approbation interne explicite par le fondateur"
+                : path === "mark-sent"
+                  ? "Émission interne explicite de l’offre approuvée"
+                  : "Revue interne par le fondateur",
           },
         );
       },
       path === "mark-ready"
-        ? "Proposition marquée prête techniquement."
-        : "Revue interne commencée.",
+        ? "Proposition approuvée explicitement."
+        : path === "mark-sent"
+          ? "Offre officiellement émise. Aucun envoi externe n’a été effectué."
+          : "Revue interne commencée.",
     );
   }
   function saveTemporalTerms() {
@@ -1113,13 +1157,56 @@ export default function ProposalDetailPage({
             </article>
           )}
           {revision && (
-            <article className="rounded-lg border p-4">
-              <h3 className="font-semibold">Revue interne existante</h3>
-              <p className="mt-1 text-sm text-slate-600">
-                Ces actions conservent le lifecycle actuel et ne constituent pas
-                les futurs gates E01.
-              </p>
-              <div className="mt-3 flex gap-3">
+            <article
+              id="e01-governance"
+              className="scroll-mt-6 rounded-lg border p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">
+                    Approbation et émission gouvernées
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Révision exacte v{revision.revisionNumber} · Document :{" "}
+                    {e01?.document?.fileName ?? "aucun PDF gouverné final"}
+                  </p>
+                </div>
+                <Badge ok={governanceDecisionClosed || e01?.status === "READY"}>
+                  {governanceDecisionClosed
+                    ? (statusLabels[revision.status] ?? revision.status)
+                    : e01?.status === "READY"
+                    ? "Prêt"
+                    : e01?.status === "NEEDS_REVIEW"
+                      ? "Revue requise"
+                      : "Bloqué"}
+                </Badge>
+              </div>
+              {governanceDecisionClosed ? null : e01?.blockers.length ? (
+                <ul className="mt-4 space-y-3" aria-label="Blocages E01">
+                  {e01.blockers.map((item) => (
+                    <li key={item.code} className="rounded bg-amber-50 p-3">
+                      <strong>{item.labelFR}</strong>
+                      <p className="text-sm text-slate-700">
+                        {item.explanation} {item.correctiveAction}
+                      </p>
+                      {item.navigationTarget && (
+                        <Link
+                          className="mt-1 inline-block text-sm underline"
+                          href={item.navigationTarget}
+                        >
+                          Corriger ce point
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-sm text-emerald-800">
+                  Les autorités commerciales, juridiques, temporelles et
+                  documentaires correspondent à cette révision.
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-3">
                 {revision.status === "DRAFT" && (
                   <button
                     disabled={busy}
@@ -1131,14 +1218,54 @@ export default function ProposalDetailPage({
                 )}
                 {revision.status === "INTERNAL_REVIEW" && (
                   <button
-                    disabled={busy}
-                    onClick={() => void transition("mark-ready")}
-                    className="rounded border px-4 py-2"
+                    disabled={busy || e01?.status !== "READY"}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Approuver explicitement la révision v${revision.revisionNumber} et le document ${e01?.document?.fileName ?? "sélectionné"}?`,
+                        )
+                      )
+                        void transition("mark-ready");
+                    }}
+                    className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50"
                   >
-                    Marquer prête techniquement
+                    Approuver cette offre
+                  </button>
+                )}
+                {revision.status === "READY" && (
+                  <button
+                    disabled={busy || e01?.status !== "READY"}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Émettre officiellement la révision v${revision.revisionNumber}? Cette action enregistre l’instant d’émission sans envoyer de courriel.`,
+                        )
+                      )
+                        void transition("mark-sent");
+                    }}
+                    className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+                  >
+                    Émettre l’offre
                   </button>
                 )}
               </div>
+              {revision.status === "SENT" && (
+                <p className="mt-4 rounded bg-emerald-50 p-3 text-sm text-emerald-900">
+                  Offre émise. La révision et son document sont désormais en
+                  lecture seule. Cette émission ne vaut ni livraison externe ni
+                  acceptation client.
+                </p>
+              )}
+              <details className="mt-4 text-sm">
+                <summary className="cursor-pointer font-medium">
+                  Preuves et autorités avancées
+                </summary>
+                <p className="mt-2 text-slate-600">
+                  Statut {e01?.phase ?? "APPROVAL"} · révision v
+                  {e01?.revisionNumber ?? revision.revisionNumber} · autorité
+                  C01 et intégrité D01 revérifiées au moment de chaque décision.
+                </p>
+              </details>
             </article>
           )}
           <details className="rounded-lg border p-4">

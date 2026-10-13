@@ -80,6 +80,14 @@ for (const token of [
   "approved-projection",
   "/admin/v1/commercial/content",
   "/admin/v1/commercial/legal-issuers",
+  "/readiness",
+  '"mark-sent"',
+  "Approbation et émission gouvernées",
+  "Approuver cette offre",
+  "Émettre l’offre",
+  "Aucun envoi externe n’a été effectué",
+  "window.confirm",
+  "Blocages E01",
 ])
   if (!detail.includes(token))
     throw new Error(`document workspace missing ${token}`);

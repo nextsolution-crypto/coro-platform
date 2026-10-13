@@ -210,6 +210,34 @@ export class ProposalDocumentCompositionService {
     return this.response(snapshot);
   }
 
+  async evaluateCurrent(
+    tx: Transaction,
+    proposalId: string,
+    revisionId: string,
+    snapshotId: string,
+  ) {
+    const snapshot = await tx.proposalDocumentCompositionSnapshot.findFirst({
+      where: { id: snapshotId, proposalRevisionId: revisionId },
+    });
+    if (!snapshot)
+      throw new NotFoundException('Document composition snapshot not found.');
+    const content = snapshot.snapshot as unknown as {
+      clauses?: Array<{ parameters?: Record<string, unknown> }>;
+    };
+    const clauseParameters: Record<string, unknown> = {};
+    for (const clause of content.clauses ?? [])
+      Object.assign(clauseParameters, clause.parameters ?? {});
+    const current = await this.resolve(
+      tx,
+      proposalId,
+      revisionId,
+      snapshot.templateCode,
+      snapshot.language,
+      clauseParameters,
+    );
+    return { snapshot, current };
+  }
+
   private async resolve(
     tx: Transaction,
     proposalId: string,

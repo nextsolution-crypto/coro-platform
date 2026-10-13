@@ -4,6 +4,10 @@ import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { CommercialClauseService } from '../src/commercial-clauses/commercial-clause.service';
 import { CommercialContentService } from '../src/commercial-content/commercial-content.service';
 import { ProposalDocumentCompositionService } from '../src/proposal-document-composition/proposal-document-composition.service';
+import { ProposalIssuanceReadinessService } from '../src/commercial-proposals/proposal-issuance-readiness.service';
+import { CommercialProposalsService } from '../src/commercial-proposals/commercial-proposals.service';
+import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
+import { PRODUCTION_COMMERCIAL_RULE_REGISTRY } from '../src/commercial-proposals/commercial-rule-registry';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url)
@@ -25,6 +29,8 @@ describe('Proposal document composition PostgreSQL invariants', () => {
   let organizationId = '';
   let proposalId = '';
   let revisionId = '';
+  let priceBookId = '';
+  let priceBookVersionId = '';
 
   beforeAll(async () => {
     const organization = await prisma.organization.create({
@@ -280,7 +286,23 @@ describe('Proposal document composition PostgreSQL invariants', () => {
       data: {
         priceBookId: book.id,
         versionNumber: 1,
+        status: 'ACTIVE',
         effectiveFrom: new Date('2026-01-01T00:00:00.000Z'),
+        publishedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    });
+    priceBookId = book.id;
+    priceBookVersionId = priceBookVersion.id;
+    await prisma.commercialProposalRevision.update({
+      where: { id: revisionId },
+      data: {
+        sourcePriceBookId: book.id,
+        sourcePriceBookVersionId: priceBookVersion.id,
+        priceBookCodeSnapshot: book.code,
+        priceBookNameSnapshot: book.name,
+        priceBookVersionSnapshot: priceBookVersion.versionNumber,
+        audienceSnapshot: book.audience,
+        lockVersion: { increment: 1 },
       },
     });
     const workspace = await prisma.commercialSimulationWorkspace.create({
@@ -586,5 +608,133 @@ describe('Proposal document composition PostgreSQL invariants', () => {
         data: { fileName: 'rewritten.pdf' },
       }),
     ).rejects.toThrow();
+  });
+
+  it('enforces explicit E01 approval and issuance against exact C01/D01 evidence', async () => {
+    const snapshot =
+      await prisma.proposalDocumentCompositionSnapshot.findFirstOrThrow({
+        where: {
+          proposalRevisionId: revisionId,
+          readiness: 'ISSUANCE_READY',
+          language: 'FR',
+        },
+        orderBy: { sequence: 'desc' },
+      });
+    const document = await prisma.proposalDocument.findFirstOrThrow({
+      where: {
+        proposalRevisionId: revisionId,
+        compositionSnapshotId: snapshot.id,
+        status: 'FINALIZED',
+      },
+    });
+    await prisma.commercialProposalTemporalTerms.create({
+      data: {
+        proposalRevisionId: revisionId,
+        serviceStartDate: new Date('2026-11-01T00:00:00.000Z'),
+        initialInvoiceDate: new Date('2026-11-01T00:00:00.000Z'),
+        renewalTermMonths: 12,
+        provenance: { source: 'E01_SYNTHETIC_FIXTURE' },
+      },
+    });
+    await prisma.commercialProposalRevision.update({
+      where: { id: revisionId },
+      data: { status: 'INTERNAL_REVIEW', lockVersion: { increment: 1 } },
+    });
+    const readiness = new ProposalIssuanceReadinessService(
+      prisma as never,
+      service,
+      PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+    );
+    const proposals = new CommercialProposalsService(
+      prisma as never,
+      audit,
+      new ProposalPricingEngine(),
+      PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+      readiness,
+    );
+    const before = {
+      contracts: await prisma.organizationContract.count(),
+      entitlements: await prisma.capabilityEntitlement.count(),
+    };
+    const reviewRevision =
+      await prisma.commercialProposalRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+      });
+    expect(
+      await readiness.evaluate(proposalId, revisionId, document.id, 'APPROVAL'),
+    ).toMatchObject({ status: 'READY', blockers: [] });
+    const approvalAttempts = await Promise.allSettled([
+      proposals.transition(
+        revisionId,
+        'READY',
+        {
+          lockVersion: reviewRevision.lockVersion,
+          reason: 'E01 explicit synthetic approval',
+          documentId: document.id,
+        },
+        actor,
+      ),
+      proposals.transition(
+        revisionId,
+        'READY',
+        {
+          lockVersion: reviewRevision.lockVersion,
+          reason: 'E01 concurrent stale approval',
+          documentId: document.id,
+        },
+        actor,
+      ),
+    ]);
+    expect(
+      approvalAttempts.filter(({ status }) => status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      approvalAttempts.filter(({ status }) => status === 'rejected'),
+    ).toHaveLength(1);
+    expect(
+      await readiness.evaluate(proposalId, revisionId, document.id, 'ISSUANCE'),
+    ).toMatchObject({ status: 'READY', blockers: [] });
+    const approved = await prisma.commercialProposalRevision.findUniqueOrThrow({
+      where: { id: revisionId },
+    });
+    const issued = await proposals.transition(
+      revisionId,
+      'SENT',
+      {
+        lockVersion: approved.lockVersion,
+        reason: 'E01 explicit internal issuance',
+        documentId: document.id,
+      },
+      actor,
+    );
+    expect(issued.status).toBe('SENT');
+    expect(issued.sentAt).toBeInstanceOf(Date);
+    expect(issued.sentDocumentId).toBe(document.id);
+    await expect(
+      proposals.transition(
+        revisionId,
+        'SENT',
+        {
+          lockVersion: issued.lockVersion,
+          reason: 'E01 duplicate issuance',
+          documentId: document.id,
+        },
+        actor,
+      ),
+    ).rejects.toThrow('Transition invalide');
+    expect(
+      await prisma.adminAuditEvent.count({
+        where: {
+          targetId: revisionId,
+          action: { in: ['PROPOSAL_READY', 'PROPOSAL_SENT'] },
+        },
+      }),
+    ).toBe(2);
+    expect({
+      contracts: await prisma.organizationContract.count(),
+      entitlements: await prisma.capabilityEntitlement.count(),
+    }).toEqual(before);
+    expect(priceBookId).toBeTruthy();
+    expect(priceBookVersionId).toBeTruthy();
   });
 });

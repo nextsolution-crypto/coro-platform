@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Request,
   StreamableFile,
   UseGuards,
@@ -48,6 +49,19 @@ export class CommercialProposalsController {
   }
   @Get(':id') detail(@Param('id') id: string) {
     return this.service.proposal(id);
+  }
+  @Get(':id/revisions/:revisionId/readiness') readiness(
+    @Param('id') proposalId: string,
+    @Param('revisionId') revisionId: string,
+    @Query('documentId') documentId?: string,
+    @Query('phase') phase?: 'APPROVAL' | 'ISSUANCE',
+  ) {
+    return this.service.proposalReadiness(
+      proposalId,
+      revisionId,
+      documentId,
+      phase,
+    );
   }
   @Get(':id/revisions/:revisionId/customer-preview') preview(
     @Param('id') id: string,

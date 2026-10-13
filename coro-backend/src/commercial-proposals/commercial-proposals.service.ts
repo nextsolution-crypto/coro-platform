@@ -42,6 +42,7 @@ import {
   parseCivilDate,
   PROPOSAL_TEMPORAL_DEFAULTS,
 } from './proposal-temporal-terms';
+import { ProposalIssuanceReadinessService } from './proposal-issuance-readiness.service';
 
 type Actor = { userId: string };
 const money = (v: string | undefined) =>
@@ -54,7 +55,17 @@ export class CommercialProposalsService {
     private audit: AdminAuditService,
     private pricing: ProposalPricingEngine,
     private commercialRules: CommercialRuleRegistry = PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+    private readiness?: ProposalIssuanceReadinessService,
   ) {}
+  proposalReadiness(
+    proposalId: string,
+    revisionId: string,
+    documentId?: string,
+    phase: 'APPROVAL' | 'ISSUANCE' = 'APPROVAL',
+  ) {
+    if (!this.readiness) throw new Error('E01_READINESS_NOT_CONFIGURED');
+    return this.readiness.evaluate(proposalId, revisionId, documentId, phase);
+  }
   async listProposals() {
     const proposals = await this.prisma.commercialProposal.findMany({
       orderBy: { createdAt: 'desc' },
@@ -1116,7 +1127,7 @@ export class CommercialProposalsService {
       });
       if (!r) throw new NotFoundException();
       const allowed: Record<string, string[]> = {
-        DRAFT: ['INTERNAL_REVIEW', 'READY', 'CANCELLED'],
+        DRAFT: ['INTERNAL_REVIEW', 'CANCELLED'],
         INTERNAL_REVIEW: ['DRAFT', 'READY', 'CANCELLED'],
         READY: ['SENT', 'CANCELLED'],
         SENT: ['ACCEPTED', 'REJECTED', 'SUPERSEDED'],
@@ -1128,6 +1139,19 @@ export class CommercialProposalsService {
       if (!allowed[r.status].includes(target))
         throw new BadRequestException('Transition invalide.');
       if (target === 'READY') {
+        const readiness = await this.readiness!.evaluateWith(
+          tx,
+          r.proposalId,
+          id,
+          d.documentId ?? d.sentDocumentId,
+          'APPROVAL',
+        );
+        if (readiness.status !== 'READY')
+          throw new BadRequestException({
+            code: 'E01_APPROVAL_BLOCKED',
+            status: readiness.status,
+            blockers: readiness.blockers,
+          });
         for (const line of r.lines) {
           try {
             validateCommercialQuantityBinding(
@@ -1158,8 +1182,23 @@ export class CommercialProposalsService {
           }),
         });
       }
-      if (target === 'SENT' && !d.sentDocumentId)
+      if (target === 'SENT' && !(d.documentId ?? d.sentDocumentId))
         throw new BadRequestException('Document envoyé requis.');
+      if (target === 'SENT') {
+        const readiness = await this.readiness!.evaluateWith(
+          tx,
+          r.proposalId,
+          id,
+          d.documentId ?? d.sentDocumentId,
+          'ISSUANCE',
+        );
+        if (readiness.status !== 'READY')
+          throw new BadRequestException({
+            code: 'E01_ISSUANCE_BLOCKED',
+            status: readiness.status,
+            blockers: readiness.blockers,
+          });
+      }
       if (target === 'ACCEPTED' && (!d.acceptedByName || !r.sentDocumentId))
         throw new BadRequestException('Acceptation et document envoyé requis.');
       const reason = this.audit.normalizeReason(d.reason, true);
@@ -1170,7 +1209,7 @@ export class CommercialProposalsService {
       };
       if (target === 'SENT') {
         data.sentAt = new Date();
-        data.sentDocumentId = d.sentDocumentId;
+        data.sentDocumentId = d.documentId ?? d.sentDocumentId;
       }
       if (target === 'ACCEPTED') {
         data.acceptedAt = new Date();
@@ -1204,7 +1243,13 @@ export class CommercialProposalsService {
         organizationId: r.proposal.organizationId,
         reason,
         beforeData: { status: r.status },
-        afterData: { status: target },
+        afterData: {
+          status: target,
+          documentId: d.documentId ?? d.sentDocumentId ?? null,
+          decision: target === 'READY' ? 'EXPLICIT_APPROVAL' : undefined,
+          issuance:
+            target === 'SENT' ? 'EXPLICIT_INTERNAL_ISSUANCE' : undefined,
+        },
       });
       const transitioned =
         await tx.commercialProposalRevision.findUniqueOrThrow({

@@ -26,6 +26,7 @@ import { CommercialProposalsService } from '../src/commercial-proposals/commerci
 import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
 import { TransitionProposalDto } from '../src/commercial-proposals/dto/commercial-proposals.dto';
 import { CommercialSimulatorService } from '../src/commercial-simulator/commercial-simulator.service';
+import { PRODUCTION_COMMERCIAL_RULE_REGISTRY } from '../src/commercial-proposals/commercial-rule-registry';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url)
@@ -75,6 +76,15 @@ class ReadyLifecycleController {
   ) {
     return this.service.transition(revisionId, 'READY', dto, req.user);
   }
+
+  @Post(':proposalId/revisions/:revisionId/request-review')
+  review(
+    @Param('revisionId') revisionId: string,
+    @Body() dto: TransitionProposalDto,
+    @Req() req: { user: { userId: string } },
+  ) {
+    return this.service.transition(revisionId, 'INTERNAL_REVIEW', dto, req.user);
+  }
 }
 
 describe('guided commercial quantity provenance PostgreSQL lifecycle', () => {
@@ -90,6 +100,10 @@ describe('guided commercial quantity provenance PostgreSQL lifecycle', () => {
     prisma as never,
     audit,
     pricing,
+    PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+    {
+      evaluateWith: () => Promise.resolve({ status: 'READY', blockers: [] }),
+    } as never,
   );
   let app: INestApplication;
 
@@ -287,15 +301,23 @@ describe('guided commercial quantity provenance PostgreSQL lifecycle', () => {
       ]);
 
     const server = app.getHttpServer() as Parameters<typeof request>[0];
+    await request(server)
+      .post(
+        `/admin/v1/commercial/proposals/${conversion.proposal.id}/revisions/${conversion.proposalRevision.id}/request-review`,
+      )
+      .set('x-test-role', 'SUPER_ADMIN')
+      .set('x-test-user', actor.id)
+      .send({ lockVersion: 0, reason: 'FIX05 authenticated review proof' })
+      .expect(201);
     const response = await request(server)
       .post(
         `/admin/v1/commercial/proposals/${conversion.proposal.id}/revisions/${conversion.proposalRevision.id}/mark-ready`,
       )
       .set('x-test-role', 'SUPER_ADMIN')
       .set('x-test-user', actor.id)
-      .send({ lockVersion: 0, reason: 'FIX05 authenticated READY proof' })
+      .send({ lockVersion: 1, reason: 'FIX05 authenticated READY proof' })
       .expect(201);
-    expect(response.body).toMatchObject({ status: 'READY', lockVersion: 1 });
+    expect(response.body).toMatchObject({ status: 'READY', lockVersion: 2 });
 
     const serializationFixture = await prisma.commercialProposal.create({
       data: {
@@ -418,13 +440,21 @@ describe('guided commercial quantity provenance PostgreSQL lifecycle', () => {
       where: { id: draft.createdByUserId! },
     });
     const server = app.getHttpServer() as Parameters<typeof request>[0];
+    await request(server)
+      .post(
+        `/admin/v1/commercial/proposals/${revision.proposalId}/revisions/${draft.id}/request-review`,
+      )
+      .set('x-test-role', 'SUPER_ADMIN')
+      .set('x-test-user', actor.id)
+      .send({ lockVersion: 0, reason: 'FIX05 negative review proof' })
+      .expect(201);
     const response = await request(server)
       .post(
         `/admin/v1/commercial/proposals/${revision.proposalId}/revisions/${draft.id}/mark-ready`,
       )
       .set('x-test-role', 'SUPER_ADMIN')
       .set('x-test-user', actor.id)
-      .send({ lockVersion: 0, reason: 'FIX05 negative READY proof' })
+      .send({ lockVersion: 1, reason: 'FIX05 negative READY proof' })
       .expect(400);
     expect(JSON.stringify(response.body)).toContain(
       'source de quantité commerciale explicite',

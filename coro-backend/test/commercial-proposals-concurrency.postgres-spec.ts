@@ -3,6 +3,7 @@ import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
 import { CommercialProposalsService } from '../src/commercial-proposals/commercial-proposals.service';
 import { ProposalPricingEngine } from '../src/commercial-proposals/proposal-pricing-engine';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { PRODUCTION_COMMERCIAL_RULE_REGISTRY } from '../src/commercial-proposals/commercial-rule-registry';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = databaseUrl ? describe : describe.skip;
@@ -15,6 +16,10 @@ describeDatabase('Phase 2D proposal concurrency matrix', () => {
     prisma as unknown as PrismaService,
     new AdminAuditService(),
     new ProposalPricingEngine(),
+    PRODUCTION_COMMERCIAL_RULE_REGISTRY,
+    {
+      evaluateWith: () => Promise.resolve({ status: 'READY', blockers: [] }),
+    } as never,
   );
   const fixture = `p2d_concurrency_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   let actorId: string;
