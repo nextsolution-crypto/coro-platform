@@ -14,6 +14,7 @@ import { SuperAdminOnly } from '../auth/platform-roles.decorator';
 import {
   ClauseLegalReviewDto,
   ClauseReasonDto,
+  ConfirmClausePreconfigurationDto,
   UpdateCommercialClauseDraftDto,
 } from './commercial-clause.dto';
 import { CommercialClauseService } from './commercial-clause.service';
@@ -34,6 +35,15 @@ export class CommercialClauseController {
   }
   @Post('draft-catalog') createCatalog(@Request() req: AuthenticatedRequest) {
     return this.service.createDraftCatalog(req.user);
+  }
+  @Get('preconfiguration/dry-run') preconfigurationDryRun() {
+    return this.service.preconfigurationDryRun();
+  }
+  @Post('preconfiguration/apply') applyPreconfiguration(
+    @Body() dto: ConfirmClausePreconfigurationDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.service.applyPreconfiguration(dto, req.user);
   }
   @Patch('versions/:id') update(
     @Param('id') id: string,

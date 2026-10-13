@@ -31,6 +31,29 @@ type Clause = {
   isActive: boolean;
   versions: Version[];
 };
+type PreconfigurationClassification =
+  | "MISSING"
+  | "ELIGIBLE_PLACEHOLDER"
+  | "HUMAN_EDITED_DRAFT"
+  | "PROTECTED_NON_DRAFT"
+  | "ALREADY_PRECONFIGURED";
+type PreconfigurationPlan = {
+  legalReviewRequired: true;
+  automaticApproval: false;
+  summary: Record<PreconfigurationClassification, number>;
+  items: {
+    category: string;
+    classification: PreconfigurationClassification;
+    proposed: {
+      titleFR: string;
+      titleEN: string;
+      legalReviewNotes: string;
+      legalReferences: string[];
+    };
+  }[];
+};
+
+const preconfigurationConfirmation = "APPLY_B01_STANDARD_DRAFTS";
 
 export default function CommercialClauseLibraryPage() {
   const [clauses, setClauses] = useState<Clause[]>([]);
@@ -38,7 +61,10 @@ export default function CommercialClauseLibraryPage() {
   const [category, setCategory] = useState("ALL");
   const [reason, setReason] = useState("");
   const [evidence, setEvidence] = useState("");
-  const [parameters, setParameters] = useState("[]");
+  const [parameters, setParameters] = useState<Parameter[]>([]);
+  const [language, setLanguage] = useState<"FR" | "EN">("FR");
+  const [plan, setPlan] = useState<PreconfigurationPlan>();
+  const [confirmed, setConfirmed] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -49,7 +75,7 @@ export default function CommercialClauseLibraryPage() {
     const versions = values.flatMap((item) => item.versions);
     const next = versions.find((item) => item.id === selectId) ?? versions[0];
     setSelected(next);
-    setParameters(JSON.stringify(next?.parameterSchema ?? [], null, 2));
+    setParameters(next?.parameterSchema ?? []);
   }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -96,6 +122,50 @@ export default function CommercialClauseLibraryPage() {
     reason: reason.trim(),
   });
 
+  async function inspectPreconfiguration() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const { data } = await api.get(
+        "/admin/v1/commercial/clauses/preconfiguration/dry-run",
+      );
+      setPlan(data as PreconfigurationPlan);
+      setConfirmed(false);
+      setMessage("Analyse terminée sans aucune écriture.");
+    } catch (error) {
+      setMessage(
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ?? "Analyse impossible.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyPreconfiguration() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const { data } = await api.post(
+        "/admin/v1/commercial/clauses/preconfiguration/apply",
+        { confirmation: preconfigurationConfirmation },
+      );
+      setPlan(data as PreconfigurationPlan);
+      setConfirmed(false);
+      await load(selected?.id);
+      setMessage(
+        "Préconfiguration appliquée aux seuls placeholders admissibles. Toutes les clauses restent DRAFT.",
+      );
+    } catch (error) {
+      setMessage(
+        (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ?? "Préconfiguration impossible.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <AppLayout>
       <main className="mx-auto max-w-7xl space-y-5 p-6">
@@ -105,8 +175,8 @@ export default function CommercialClauseLibraryPage() {
             Bibliothèque de clauses gouvernée
           </h1>
           <p className="text-sm text-slate-600">
-            Les textes DRAFT et IN_REVIEW sont NOT_APPROVED et exclus des
-            documents clients.
+            Les textes DRAFT et IN_REVIEW exigent une revue juridique et sont
+            exclus des documents clients.
           </p>
         </header>
         {message && (
@@ -127,6 +197,13 @@ export default function CommercialClauseLibraryPage() {
           >
             Préparer le catalogue DRAFT
           </button>
+          <button
+            disabled={busy || clauses.length === 0}
+            className="rounded border border-emerald-700 px-4 py-2 text-emerald-800 disabled:opacity-40"
+            onClick={() => void inspectPreconfiguration()}
+          >
+            Analyser la préconfiguration B01
+          </button>
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
@@ -138,6 +215,67 @@ export default function CommercialClauseLibraryPage() {
             ))}
           </select>
         </section>
+        {plan && (
+          <section className="space-y-3 rounded border border-amber-300 bg-amber-50 p-4">
+            <div>
+              <h2 className="font-semibold">Prévisualisation sans écriture</h2>
+              <p className="text-sm text-slate-700">
+                Revue juridique obligatoire. Cette opération n’approuve aucune
+                clause et préserve les brouillons humains et les versions
+                gouvernées.
+              </p>
+            </div>
+            <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-5">
+              {Object.entries(plan.summary).map(([key, value]) => (
+                <div key={key} className="rounded bg-white p-2">
+                  <dt className="text-xs text-slate-500">{key}</dt>
+                  <dd className="font-semibold">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <details>
+              <summary className="cursor-pointer text-sm font-medium">
+                Voir les 25 décisions proposées
+              </summary>
+              <ul className="mt-2 max-h-72 space-y-1 overflow-auto text-sm">
+                {plan.items.map((item) => (
+                  <li key={item.category} className="rounded bg-white p-2">
+                    <strong>{item.proposed.titleFR}</strong> —{" "}
+                    {item.classification}
+                    <span className="block text-xs text-slate-600">
+                      {item.proposed.legalReviewNotes}
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      {item.proposed.legalReferences.length} références
+                      officielles à vérifier lors de la revue juridique
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+            {plan.summary.ELIGIBLE_PLACEHOLDER > 0 && (
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(event) => setConfirmed(event.target.checked)}
+                    className="mt-1"
+                  />
+                  Je confirme la mise à jour exclusive des placeholders DRAFT
+                  admissibles; aucune approbation juridique n’est créée.
+                </label>
+                <button
+                  disabled={busy || !confirmed}
+                  onClick={() => void applyPreconfiguration()}
+                  className="rounded bg-amber-800 px-4 py-2 text-white disabled:opacity-40"
+                >
+                  Appliquer la préconfiguration gouvernée
+                </button>
+              </div>
+            )}
+          </section>
+        )}
         <div className="grid gap-5 lg:grid-cols-[340px_1fr]">
           <aside className="space-y-2 rounded border bg-white p-3">
             {visible.map((clause) =>
@@ -146,13 +284,11 @@ export default function CommercialClauseLibraryPage() {
                   key={version.id}
                   onClick={() => {
                     setSelected(version);
-                    setParameters(
-                      JSON.stringify(version.parameterSchema, null, 2),
-                    );
+                    setParameters(version.parameterSchema);
                   }}
                   className={`w-full rounded border p-3 text-left ${selected?.id === version.id ? "border-emerald-600" : "border-slate-200"}`}
                 >
-                  <strong className="block text-sm">{clause.category}</strong>
+                  <strong className="block text-sm">{version.titleFR}</strong>
                   <span className="text-xs">
                     {clause.code} · v{version.versionNumber} · {version.status}
                   </span>
@@ -165,9 +301,26 @@ export default function CommercialClauseLibraryPage() {
               <div className="flex justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold">{selected.titleFR}</h2>
-                  <p className="text-xs">SHA-256 : {selected.contentHash}</p>
+                  <p className="text-sm text-amber-800">
+                    {selected.status === "APPROVED"
+                      ? "Version approuvée — lecture seule"
+                      : "Brouillon — revue juridique requise"}
+                  </p>
                 </div>
                 <strong>{selected.status}</strong>
+              </div>
+              <div className="flex gap-2" aria-label="Langue d’édition">
+                {(["FR", "EN"] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={language === item}
+                    onClick={() => setLanguage(item)}
+                    className={`rounded border px-3 py-1 ${language === item ? "border-emerald-700 bg-emerald-50" : "border-slate-300"}`}
+                  >
+                    {item}
+                  </button>
+                ))}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 {(
@@ -262,30 +415,106 @@ export default function CommercialClauseLibraryPage() {
                   />
                 </label>
               </div>
-              {(["textFR", "textEN"] as const).map((field) => (
-                <label key={field} className="block text-sm">
-                  {field}
-                  <textarea
-                    disabled={selected.status !== "DRAFT"}
-                    value={selected[field]}
-                    onChange={(event) =>
-                      setSelected({ ...selected, [field]: event.target.value })
-                    }
-                    rows={6}
-                    className="mt-1 w-full rounded border p-2"
-                  />
-                </label>
-              ))}
               <label className="block text-sm">
-                Paramètres typés (JSON)
+                Texte contractuel {language}
                 <textarea
                   disabled={selected.status !== "DRAFT"}
-                  value={parameters}
-                  onChange={(event) => setParameters(event.target.value)}
-                  rows={5}
-                  className="mt-1 w-full rounded border p-2 font-mono text-xs"
+                  value={language === "FR" ? selected.textFR : selected.textEN}
+                  onChange={(event) =>
+                    setSelected({
+                      ...selected,
+                      [language === "FR" ? "textFR" : "textEN"]:
+                        event.target.value,
+                    })
+                  }
+                  rows={8}
+                  className="mt-1 w-full rounded border p-2"
                 />
               </label>
+              <fieldset className="space-y-2 rounded border p-3">
+                <legend className="px-1 text-sm font-medium">
+                  Paramètres contractuels permis
+                </legend>
+                {parameters.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    Aucun paramètre pour cette clause.
+                  </p>
+                ) : (
+                  parameters.map((parameter, index) => (
+                    <div
+                      key={`${parameter.key}-${index}`}
+                      className="grid gap-2 sm:grid-cols-[1fr_180px_auto]"
+                    >
+                      <input
+                        aria-label={`Clé du paramètre ${index + 1}`}
+                        disabled={selected.status !== "DRAFT"}
+                        value={parameter.key}
+                        onChange={(event) =>
+                          setParameters((current) =>
+                            current.map((value, position) =>
+                              position === index
+                                ? { ...value, key: event.target.value }
+                                : value,
+                            ),
+                          )
+                        }
+                        className="rounded border p-2"
+                      />
+                      <select
+                        aria-label={`Type du paramètre ${index + 1}`}
+                        disabled={selected.status !== "DRAFT"}
+                        value={parameter.type}
+                        onChange={(event) =>
+                          setParameters((current) =>
+                            current.map((value, position) =>
+                              position === index
+                                ? { ...value, type: event.target.value }
+                                : value,
+                            ),
+                          )
+                        }
+                        className="rounded border p-2"
+                      >
+                        {[
+                          "DURATION_DAYS",
+                          "DURATION_MONTHS",
+                          "MONEY_MINOR",
+                          "DECIMAL",
+                          "TEXT",
+                          "JURISDICTION",
+                        ].map((type) => (
+                          <option key={type}>{type}</option>
+                        ))}
+                      </select>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          disabled={selected.status !== "DRAFT"}
+                          checked={parameter.required}
+                          onChange={(event) =>
+                            setParameters((current) =>
+                              current.map((value, position) =>
+                                position === index
+                                  ? { ...value, required: event.target.checked }
+                                  : value,
+                              ),
+                            )
+                          }
+                        />
+                        Requis
+                      </label>
+                    </div>
+                  ))
+                )}
+              </fieldset>
+              <details className="rounded border p-3 text-sm">
+                <summary className="cursor-pointer font-medium">
+                  Détails techniques avancés
+                </summary>
+                <p>Code : {selectedClause?.code}</p>
+                <p>SHA-256 : {selected.contentHash}</p>
+                <p>Provenance : {selected.provenance}</p>
+              </details>
               {selected.status === "DRAFT" && (
                 <button
                   disabled={busy}
@@ -309,7 +538,7 @@ export default function CommercialClauseLibraryPage() {
                             applicabilities: selected.applicabilities.map(
                               ({ scope }) => scope,
                             ),
-                            parameters: JSON.parse(parameters),
+                            parameters,
                           },
                         ),
                       "Brouillon enregistré.",

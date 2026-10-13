@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -16,6 +17,7 @@ import {
 import { CommercialClauseApplicabilityScope } from '@prisma/client';
 import { CLAUSE_PARAMETER_TYPES } from './commercial-clause.registry';
 import type { ClauseParameterType } from './commercial-clause.registry';
+import { B01_PRECONFIGURATION_CONFIRMATION } from './commercial-clause.preconfiguration';
 
 export class ClauseParameterDefinitionDto {
   @IsString() @Length(1, 100) key!: string;
@@ -51,4 +53,10 @@ export class ClauseReasonDto {
 
 export class ClauseLegalReviewDto extends ClauseReasonDto {
   @IsString() @Length(1, 2000) evidence!: string;
+}
+
+export class ConfirmClausePreconfigurationDto {
+  @IsString()
+  @IsIn([B01_PRECONFIGURATION_CONFIRMATION])
+  confirmation!: string;
 }

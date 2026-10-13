@@ -33,6 +33,8 @@ describe('Commercial clause HTTP RBAC', () => {
     list: jest.fn(() => []),
     approvedProjection: jest.fn(() => []),
     createDraftCatalog: jest.fn(() => []),
+    preconfigurationDryRun: jest.fn(() => ({ items: [] })),
+    applyPreconfiguration: jest.fn(() => ({ items: [] })),
   };
   beforeAll(async () => {
     const module = await Test.createTestingModule({
@@ -73,6 +75,32 @@ describe('Commercial clause HTTP RBAC', () => {
     const call = request(app.getHttpServer() as Server).post(
       '/admin/v1/commercial/clauses/draft-catalog',
     );
+    if (role) call.set('x-test-role', role);
+    await call.expect(expected);
+  });
+
+  it.each([
+    [undefined, 401],
+    ['OPERATOR', 403],
+    ['ADMIN', 403],
+    ['SUPER_ADMIN', 200],
+  ])('protects preconfiguration dry-runs for %s', async (role, expected) => {
+    const call = request(app.getHttpServer() as Server).get(
+      '/admin/v1/commercial/clauses/preconfiguration/dry-run',
+    );
+    if (role) call.set('x-test-role', role);
+    await call.expect(expected);
+  });
+
+  it.each([
+    [undefined, 401],
+    ['OPERATOR', 403],
+    ['ADMIN', 403],
+    ['SUPER_ADMIN', 201],
+  ])('protects preconfiguration writes for %s', async (role, expected) => {
+    const call = request(app.getHttpServer() as Server)
+      .post('/admin/v1/commercial/clauses/preconfiguration/apply')
+      .send({ confirmation: 'APPLY_B01_STANDARD_DRAFTS' });
     if (role) call.set('x-test-role', role);
     await call.expect(expected);
   });

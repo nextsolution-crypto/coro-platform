@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   ClauseLegalReviewDto,
   ClauseReasonDto,
+  ConfirmClausePreconfigurationDto,
   UpdateCommercialClauseDraftDto,
 } from './commercial-clause.dto';
 import {
@@ -18,6 +19,12 @@ import {
   ClauseParameterDefinition,
   COMMERCIAL_CLAUSE_DRAFT_CATALOG,
 } from './commercial-clause.registry';
+import {
+  B01_DRAFT_PROVENANCE,
+  B01_PRECONFIGURATION_CONFIRMATION,
+  B01_STANDARD_CLAUSE_DRAFTS,
+  StandardClauseDraft,
+} from './commercial-clause.preconfiguration';
 
 type Actor = { userId: string };
 const include = { applicabilities: { orderBy: { scope: 'asc' as const } } };
@@ -104,6 +111,71 @@ export class CommercialClauseService {
         created.push(version);
       }
       return created;
+    });
+  }
+
+  preconfigurationDryRun() {
+    return this.preconfigurationPlan(this.prisma);
+  }
+
+  applyPreconfiguration(dto: ConfirmClausePreconfigurationDto, actor: Actor) {
+    if (dto.confirmation !== B01_PRECONFIGURATION_CONFIRMATION)
+      throw new BadRequestException(
+        'Explicit B01 preconfiguration confirmation is required.',
+      );
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('COMMERCIAL_CLAUSE_B01_PRECONFIGURATION', 0))`;
+      const plan = await this.preconfigurationPlan(tx);
+      if (plan.summary.MISSING > 0)
+        throw new ConflictException(
+          'The canonical B01 draft catalog must exist before preconfiguration.',
+        );
+
+      for (const item of plan.items) {
+        if (item.classification !== 'ELIGIBLE_PLACEHOLDER' || !item.versionId)
+          continue;
+        const target = B01_STANDARD_CLAUSE_DRAFTS.find(
+          ({ category }) => category === item.category,
+        )!;
+        const payload = this.preconfigurationPayload(target);
+        this.validatePayload(target.category, payload, false);
+        const updated = await tx.commercialClauseVersion.updateMany({
+          where: {
+            id: item.versionId,
+            status: 'DRAFT',
+            lockVersion: item.lockVersion!,
+          },
+          data: {
+            ...this.versionData(payload),
+            lockVersion: { increment: 1 },
+          },
+        });
+        if (updated.count !== 1)
+          throw new ConflictException('Commercial clause version conflict.');
+        await tx.commercialClauseApplicability.deleteMany({
+          where: { commercialClauseVersionId: item.versionId },
+        });
+        await tx.commercialClauseApplicability.createMany({
+          data: payload.applicabilities.map((scope) => ({
+            commercialClauseVersionId: item.versionId!,
+            scope,
+          })),
+        });
+        const after = await this.version(tx, item.versionId);
+        await this.record(
+          tx,
+          actor,
+          'COMMERCIAL_CLAUSE_STANDARD_DRAFT_PRECONFIGURED',
+          after,
+          {
+            category: target.category,
+            contentHash: after.contentHash,
+            legalReviewRequired: true,
+            automaticApproval: false,
+          },
+        );
+      }
+      return this.preconfigurationPlan(tx);
     });
   }
 
@@ -384,6 +456,141 @@ export class CommercialClauseService {
     };
   }
 
+  private preconfigurationPayload(target: StandardClauseDraft) {
+    return {
+      titleFR: target.titleFR.trim(),
+      titleEN: target.titleEN.trim(),
+      textFR: target.textFR.trim(),
+      textEN: target.textEN.trim(),
+      businessOwner: 'CORO Commercial',
+      legalOwner: null,
+      isRequired: target.isRequired,
+      effectiveAt: null,
+      provenance: B01_DRAFT_PROVENANCE,
+      applicabilities: [...new Set(target.applicabilities)].sort(),
+      parameters: [...target.parameters].sort((a, b) =>
+        a.key.localeCompare(b.key),
+      ),
+    };
+  }
+
+  private async preconfigurationPlan(
+    db: PrismaService | Prisma.TransactionClient,
+  ) {
+    const clauses = await db.commercialClause.findMany({
+      where: {
+        code: {
+          in: COMMERCIAL_CLAUSE_DRAFT_CATALOG.map(({ code }) => code),
+        },
+      },
+      include: {
+        versions: {
+          include,
+          orderBy: { versionNumber: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    const byCategory = new Map(
+      clauses.map((clause) => [clause.category, clause]),
+    );
+    const items = B01_STANDARD_CLAUSE_DRAFTS.map((target) => {
+      const clause = byCategory.get(target.category);
+      const version = clause?.versions[0];
+      let classification:
+        | 'MISSING'
+        | 'ELIGIBLE_PLACEHOLDER'
+        | 'HUMAN_EDITED_DRAFT'
+        | 'PROTECTED_NON_DRAFT'
+        | 'ALREADY_PRECONFIGURED';
+      if (!clause || !version) classification = 'MISSING';
+      else if (version.status !== 'DRAFT')
+        classification = 'PROTECTED_NON_DRAFT';
+      else if (
+        version.contentHash ===
+        this.versionData(this.preconfigurationPayload(target)).contentHash
+      )
+        classification = 'ALREADY_PRECONFIGURED';
+      else if (this.isUntouchedPlaceholder(version, target.category))
+        classification = 'ELIGIBLE_PLACEHOLDER';
+      else classification = 'HUMAN_EDITED_DRAFT';
+      return {
+        category: target.category,
+        code: `${target.category}_STANDARD`,
+        clauseId: clause?.id ?? null,
+        versionId: version?.id ?? null,
+        lockVersion: version?.lockVersion ?? null,
+        currentStatus: version?.status ?? null,
+        classification,
+        proposed: {
+          titleFR: target.titleFR,
+          titleEN: target.titleEN,
+          textFR: target.textFR,
+          textEN: target.textEN,
+          isRequired: target.isRequired,
+          applicabilities: target.applicabilities,
+          parameters: target.parameters,
+          legalReviewNotes: target.legalReviewNotes,
+          legalReferences: target.legalReferences,
+          provenance: B01_DRAFT_PROVENANCE,
+          status: 'DRAFT' as const,
+        },
+      };
+    });
+    const summary = {
+      MISSING: 0,
+      ELIGIBLE_PLACEHOLDER: 0,
+      HUMAN_EDITED_DRAFT: 0,
+      PROTECTED_NON_DRAFT: 0,
+      ALREADY_PRECONFIGURED: 0,
+    };
+    for (const item of items) summary[item.classification] += 1;
+    return {
+      catalogVersion: B01_DRAFT_PROVENANCE,
+      legalReviewRequired: true,
+      automaticApproval: false,
+      summary,
+      items,
+    };
+  }
+
+  private isUntouchedPlaceholder(
+    version: {
+      titleFR: string;
+      titleEN: string;
+      textFR: string;
+      textEN: string;
+      provenance: string;
+      businessOwner: string | null;
+      legalOwner: string | null;
+      isRequired: boolean | null;
+      effectiveAt: Date | null;
+      parameterSchema: Prisma.JsonValue;
+      applicabilities: { scope: string }[];
+    },
+    category: StandardClauseDraft['category'],
+  ) {
+    const placeholder = COMMERCIAL_CLAUSE_DRAFT_CATALOG.find(
+      (item) => item.category === category,
+    );
+    return Boolean(
+      placeholder &&
+      version.titleFR === placeholder.titleFR &&
+      version.titleEN === placeholder.titleEN &&
+      version.textFR === placeholder.textFR &&
+      version.textEN === placeholder.textEN &&
+      version.provenance === placeholder.provenance &&
+      version.businessOwner === null &&
+      version.legalOwner === null &&
+      version.isRequired === null &&
+      version.effectiveAt === null &&
+      version.applicabilities.length === 1 &&
+      version.applicabilities[0]?.scope === 'UNSPECIFIED' &&
+      Array.isArray(version.parameterSchema) &&
+      version.parameterSchema.length === 0,
+    );
+  }
+
   private versionData(
     payload:
       | ReturnType<CommercialClauseService['payload']>
@@ -455,6 +662,15 @@ export class CommercialClauseService {
       )
         throw new BadRequestException(
           'Placeholder clause text cannot be approved.',
+        );
+      if (
+        payload.textFR.includes('À CONFIRMER') ||
+        payload.textFR.includes('TO_CONFIRM') ||
+        payload.textEN.includes('TO BE CONFIRMED') ||
+        payload.textEN.includes('TO_CONFIRM')
+      )
+        throw new BadRequestException(
+          'Unresolved clause terms cannot be approved.',
         );
     }
   }

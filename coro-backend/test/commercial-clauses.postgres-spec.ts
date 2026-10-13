@@ -56,6 +56,134 @@ describeDatabase('Governed commercial clause library PostgreSQL', () => {
     ).toBe(25);
   });
 
+  it('preconfigures only untouched placeholders and is idempotent', async () => {
+    const beforeDryRunAudit = await prisma.adminAuditEvent.count();
+    const initial = await service.preconfigurationDryRun();
+    expect(initial.items).toHaveLength(25);
+    expect(initial.summary.ELIGIBLE_PLACEHOLDER).toBe(25);
+    expect(await prisma.adminAuditEvent.count()).toBe(beforeDryRunAudit);
+
+    const clauses = await service.list();
+    const currency = clauses.find(
+      ({ code }) => code === 'CURRENCY_AND_TAXES_STANDARD',
+    )!.versions[0];
+    await service.updateDraft(
+      currency.id,
+      {
+        lockVersion: currency.lockVersion,
+        titleFR: 'Devise — adaptation humaine',
+        titleEN: 'Currency — human adaptation',
+        textFR: 'Texte humain à préserver intégralement.',
+        textEN: 'Human-authored wording that must be preserved.',
+        provenance: 'HUMAN_AUTHORED_TEST',
+        applicabilities: ['ALL_OFFERS'],
+        parameters: [],
+      },
+      actor,
+    );
+    const invoicing = clauses.find(({ code }) => code === 'INVOICING_STANDARD')!
+      .versions[0];
+    await service.submit(
+      invoicing.id,
+      { lockVersion: invoicing.lockVersion, reason: 'Protected review state' },
+      actor,
+    );
+
+    const protectedPlan = await service.preconfigurationDryRun();
+    expect(protectedPlan.summary.ELIGIBLE_PLACEHOLDER).toBe(23);
+    expect(protectedPlan.summary.HUMAN_EDITED_DRAFT).toBe(1);
+    expect(protectedPlan.summary.PROTECTED_NON_DRAFT).toBe(1);
+    expect(() =>
+      service.applyPreconfiguration({ confirmation: 'WRONG' }, actor),
+    ).toThrow('confirmation');
+
+    const approvedBeforeApply = await prisma.commercialClauseVersion.count({
+      where: { status: 'APPROVED' },
+    });
+    const applied = await service.applyPreconfiguration(
+      { confirmation: 'APPLY_B01_STANDARD_DRAFTS' },
+      actor,
+    );
+    expect(applied.summary.ALREADY_PRECONFIGURED).toBe(23);
+    expect(applied.summary.HUMAN_EDITED_DRAFT).toBe(1);
+    expect(applied.summary.PROTECTED_NON_DRAFT).toBe(1);
+    expect(
+      await prisma.adminAuditEvent.count({
+        where: { action: 'COMMERCIAL_CLAUSE_STANDARD_DRAFT_PRECONFIGURED' },
+      }),
+    ).toBe(23);
+    expect(
+      await prisma.commercialClauseVersion.count({
+        where: { status: 'APPROVED' },
+      }),
+    ).toBe(approvedBeforeApply);
+
+    const repeated = await service.applyPreconfiguration(
+      { confirmation: 'APPLY_B01_STANDARD_DRAFTS' },
+      actor,
+    );
+    expect(repeated.summary.ALREADY_PRECONFIGURED).toBe(23);
+    expect(
+      await prisma.adminAuditEvent.count({
+        where: { action: 'COMMERCIAL_CLAUSE_STANDARD_DRAFT_PRECONFIGURED' },
+      }),
+    ).toBe(23);
+    const preserved = await prisma.commercialClauseVersion.findUniqueOrThrow({
+      where: { id: currency.id },
+    });
+    expect(preserved.titleFR).toBe('Devise — adaptation humaine');
+    expect(preserved.provenance).toBe('HUMAN_AUTHORED_TEST');
+
+    const renewalClause = (await service.list()).find(
+      ({ code }) => code === 'RENEWAL_STANDARD',
+    )!;
+    const renewal = renewalClause.versions[0];
+    const ownedRenewal = await service.updateDraft(
+      renewal.id,
+      {
+        lockVersion: renewal.lockVersion,
+        titleFR: renewal.titleFR,
+        titleEN: renewal.titleEN,
+        textFR: renewal.textFR,
+        textEN: renewal.textEN,
+        businessOwner: 'Commercial',
+        legalOwner: 'Legal',
+        isRequired: renewal.isRequired ?? true,
+        provenance: renewal.provenance,
+        applicabilities: renewal.applicabilities.map(({ scope }) => scope),
+        parameters: renewal.parameterSchema as never,
+      },
+      actor,
+    );
+    const renewalReview = await service.submit(
+      ownedRenewal.id,
+      {
+        lockVersion: ownedRenewal.lockVersion,
+        reason: 'Review unresolved terms',
+      },
+      actor,
+    );
+    const renewalLegal = await service.recordLegalReview(
+      renewalReview.id,
+      {
+        lockVersion: renewalReview.lockVersion,
+        reason: 'Legal review identifies unresolved renewal term',
+        evidence: 'TEST-UNRESOLVED-RENEWAL-EVIDENCE',
+      },
+      actor,
+    );
+    await expect(
+      service.approve(
+        renewalLegal.id,
+        {
+          lockVersion: renewalLegal.lockVersion,
+          reason: 'Must remain blocked',
+        },
+        actor,
+      ),
+    ).rejects.toThrow('Unresolved clause terms');
+  });
+
   it('requires typed parameters, separate legal evidence and immutable approval', async () => {
     const clause = (await service.list()).find(
       ({ code }) => code === 'OFFER_VALIDITY_STANDARD',
