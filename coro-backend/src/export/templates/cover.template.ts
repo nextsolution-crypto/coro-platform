@@ -209,7 +209,22 @@ export interface LastPageData {
   language: 'fr' | 'en';
 }
 
-export function generateLastPage(data: LastPageData): string {
+export function hasLastPageContent(data: LastPageData): boolean {
+  return Boolean(
+    data.companyName?.trim() ||
+      data.companyPhone?.trim() ||
+      data.companyEmail?.trim() ||
+      data.companyAddress?.trim() ||
+      data.companyWebsite?.trim() ||
+      data.companyTagline?.trim(),
+  );
+}
+
+export function generateLastPage(data: LastPageData): string | null {
+  if (!hasLastPageContent(data)) {
+    return null;
+  }
+
   const isFr = data.language === 'fr';
   const year = data.year || new Date().getFullYear();
   const companyName = escapeHtml(data.companyName || '');

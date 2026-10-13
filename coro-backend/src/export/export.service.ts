@@ -414,27 +414,30 @@ export class ExportService {
         year: project.year,
         language: lang,
       });
-      const fullLastPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>@page{size:letter portrait;margin:0;}body{margin:0;padding:0;}</style></head><body>${lastPageHtml}</body></html>`;
-      const lastPage = await browser.newPage();
-      await lastPage.setContent(fullLastPageHtml, { waitUntil: 'networkidle0' as any });
-      // Attendre que les images base64 soient complètement rendues
-      await lastPage.evaluate(() => {
-        return Promise.all(
-          Array.from(document.images)
-            .filter(img => !img.complete)
-            .map(img => new Promise(resolve => {
-              img.onload = resolve;
-              img.onerror = resolve;
-            }))
-        );
-      });
-      const lastPageBytes = await lastPage.pdf({
-        format: 'Letter',
-        printBackground: true,
-        displayHeaderFooter: false,
-        margin: { top: '0', bottom: '0', left: '0', right: '0' },
-      });
-      await lastPage.close();
+      let lastPageBytes: Uint8Array | null = null;
+      if (lastPageHtml) {
+        const fullLastPageHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>@page{size:letter portrait;margin:0;}body{margin:0;padding:0;}</style></head><body>${lastPageHtml}</body></html>`;
+        const lastPage = await browser.newPage();
+        await lastPage.setContent(fullLastPageHtml, { waitUntil: 'networkidle0' as any });
+        // Attendre que les images base64 soient complètement rendues
+        await lastPage.evaluate(() => {
+          return Promise.all(
+            Array.from(document.images)
+              .filter(img => !img.complete)
+              .map(img => new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }))
+          );
+        });
+        lastPageBytes = await lastPage.pdf({
+          format: 'Letter',
+          printBackground: true,
+          displayHeaderFooter: false,
+          margin: { top: '0', bottom: '0', left: '0', right: '0' },
+        });
+        await lastPage.close();
+      }
 
       // ── Assemblage final : Couverture → Sommaire → Corps (avec séparateurs et plans) → Dernière page ──
       const allBuffers = [
@@ -442,7 +445,7 @@ export class ExportService {
         Buffer.from(tocBytes),
         ...bodyBuffersWithMeta.map(b => b.buffer),
         ...(certificationPageBytes ? [Buffer.from(certificationPageBytes)] : []),
-        Buffer.from(lastPageBytes),
+        ...(lastPageBytes ? [Buffer.from(lastPageBytes)] : []),
       ];
 
       // Identifie les sourceIndex correspondant aux pages de plans (Module 6),
@@ -455,7 +458,12 @@ export class ExportService {
       });
 
       const mergedPdf = await this.mergePdfsAndGetCounts(allBuffers);
-      await this.drawPageNumbers(mergedPdf.pdfDoc, mergedPdf.pageRanges, docTypeLabel);
+      await this.drawPageNumbers(
+        mergedPdf.pdfDoc,
+        mergedPdf.pageRanges,
+        docTypeLabel,
+        Boolean(lastPageBytes),
+      );
 
       if (options.isPreview) {
         await this.drawPreviewWatermark(mergedPdf.pdfDoc, isFr);
@@ -479,6 +487,7 @@ export class ExportService {
         project.client?.logoBase64,
         planSourceIndices,
         separatorSourceIndices,
+        Boolean(lastPageBytes),
       );
       await this.drawProcedureColorBars(mergedPdf.pdfDoc, mergedPdf.pageRanges, bodyBuffersWithMeta);
 
@@ -708,6 +717,7 @@ export class ExportService {
     pdfDoc: PDFDocument,
     pageRanges: { start: number; end: number; sourceIndex: number }[],
     docTypeLabel: string,
+    hasLastPage: boolean,
   ): Promise<void> {
     const { rgb, StandardFonts } = await import('pdf-lib');
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -720,7 +730,9 @@ export class ExportService {
     // index 0 = couverture, index 1 = sommaire — jamais numérotés
     // dernière page (totalPages - 1) = page de fin — jamais numérotée
     const SKIP_SOURCE_INDICES = new Set([0, 1]);
-    const lastSourceIndex = pageRanges[pageRanges.length - 1]?.sourceIndex;
+    const lastSourceIndex = hasLastPage
+      ? pageRanges[pageRanges.length - 1]?.sourceIndex
+      : undefined;
 
     for (const range of pageRanges) {
       if (SKIP_SOURCE_INDICES.has(range.sourceIndex)) continue;
@@ -768,6 +780,7 @@ export class ExportService {
     clientLogoBase64: string | undefined,
     planSourceIndices: Set<number>,
     separatorSourceIndices: Set<number>,
+    hasLastPage: boolean,
   ): Promise<void> {
     const pages = pdfDoc.getPages();
     const MAX_LOGO_WIDTH = 100;
@@ -802,7 +815,9 @@ export class ExportService {
     // index 0 = couverture — jamais de filigrane
     // les pages de plans (Module 6) sont aussi exclues (PDF externes insérés tels quels)
     // dernière page (page de fin) — aussi exclue
-    const lastSourceIndex = pageRanges[pageRanges.length - 1]?.sourceIndex;
+    const lastSourceIndex = hasLastPage
+      ? pageRanges[pageRanges.length - 1]?.sourceIndex
+      : undefined;
     const SKIP_SOURCE_INDICES = new Set([0, lastSourceIndex, ...planSourceIndices, ...separatorSourceIndices]);
 
     for (const range of pageRanges) {
