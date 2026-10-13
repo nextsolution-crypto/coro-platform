@@ -153,7 +153,9 @@ describePostgres('Planner mutations on PostgreSQL', () => {
   });
 
   it('keeps one active LEAD under concurrent inserts', async () => {
-    const booking = await fixture.createBooking();
+    const booking = await fixture.createBooking({
+      requestedDate: new Date('2099-01-05T14:00:00.000Z'),
+    });
     const attempts = await Promise.allSettled([
       prisma.bookingAssignment.create({ data: { bookingId: booking.id, userId: fixture.owner.id,
         role: 'LEAD', status: 'PENDING' } }),
