@@ -27,6 +27,7 @@ import {
   TransitionProposalDto,
   UpdateProspectDto,
   UpdateProposalFinalizationDto,
+  UpdateProposalTemporalTermsDto,
   ValueAnalysisDto,
 } from './dto/commercial-proposals.dto';
 type Req = { user: { userId: string } };
@@ -61,6 +62,20 @@ export class CommercialProposalsController {
     @Request() r: Req,
   ) {
     return this.service.updateFinalization(id, revisionId, d, r.user);
+  }
+  @Get(':id/revisions/:revisionId/temporal-terms') temporalTerms(
+    @Param('id') id: string,
+    @Param('revisionId') revisionId: string,
+  ) {
+    return this.service.temporalTerms(id, revisionId);
+  }
+  @Put(':id/revisions/:revisionId/temporal-terms') updateTemporalTerms(
+    @Param('id') id: string,
+    @Param('revisionId') revisionId: string,
+    @Body() d: UpdateProposalTemporalTermsDto,
+    @Request() r: Req,
+  ) {
+    return this.service.updateTemporalTerms(id, revisionId, d, r.user);
   }
   @Post(':id/revisions') revision(
     @Param('id') id: string,

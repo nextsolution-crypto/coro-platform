@@ -1221,11 +1221,37 @@ model CommercialProposalRevision {
   sourceContractRevision OrganizationContractRevision? @relation("ProposalContractOrigin")
   simulationConversion CommercialSimulationProposalConversion?
   documentCompositions ProposalDocumentCompositionSnapshot[]
+  temporalTerms CommercialProposalTemporalTerms?
   @@unique([proposalId, revisionNumber])
   @@unique([id, proposalId])
   @@index([proposalId, status])
   @@index([sourcePriceBookVersionId])
   @@index([status, validUntil])
+}
+
+model CommercialProposalTemporalTerms {
+  id                         String   @id @default(uuid())
+  proposalRevisionId         String   @unique
+  serviceStartDate           DateTime? @db.Date
+  initialInvoiceDate         DateTime? @db.Date
+  externalSignatureDate      DateTime? @db.Date
+  externalSignatureEvidence  String?  @db.VarChar(500)
+  offerValidityDays          Int      @default(90)
+  initialTermMonths          Int      @default(12)
+  paymentNetDays             Int      @default(30)
+  automaticRenewal           Boolean  @default(true)
+  nonrenewalNoticeDays       Int      @default(30)
+  renewalTermMonths          Int?
+  contractualTimezone        String   @default("America/Toronto") @db.VarChar(100)
+  calendarConventionVersion  String   @default("proposal-calendar/v1") @db.VarChar(100)
+  provenance                 Json
+  lockVersion                Int      @default(0)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  proposalRevision           CommercialProposalRevision @relation(fields: [proposalRevisionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([serviceStartDate])
+  @@index([initialInvoiceDate])
 }
 
 model ProposalInput {

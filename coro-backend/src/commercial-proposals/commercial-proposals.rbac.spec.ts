@@ -66,6 +66,12 @@ describe('Commercial proposals effective HTTP RBAC', () => {
       }),
     ),
     updateFinalization: jest.fn(() => Promise.resolve({ lockVersion: 1 })),
+    temporalTerms: jest.fn(() =>
+      Promise.resolve({ calculated: { advisoryOnly: true } }),
+    ),
+    updateTemporalTerms: jest.fn(() =>
+      Promise.resolve({ calculated: { advisoryOnly: true } }),
+    ),
   };
   const pdf = {
     download: jest.fn(() =>
@@ -188,6 +194,34 @@ describe('Commercial proposals effective HTTP RBAC', () => {
         '/admin/v1/commercial/proposals/proposal/revisions/revision/finalization',
       )
       .send({ lockVersion: 0, validUntil: '2026-12-31T00:00:00.000Z' });
+    if (role) call.set('x-test-role', role);
+    await call.expect(expected);
+  });
+
+  it.each([
+    [undefined, 401],
+    ['OPERATOR', 403],
+    ['ADMIN', 403],
+    ['SUPER_ADMIN', 200],
+  ])('protects temporal terms reads for role %s', async (role, expected) => {
+    const call = request(app.getHttpServer()).get(
+      '/admin/v1/commercial/proposals/proposal/revisions/revision/temporal-terms',
+    );
+    if (role) call.set('x-test-role', role);
+    await call.expect(expected);
+  });
+
+  it.each([
+    [undefined, 401],
+    ['OPERATOR', 403],
+    ['ADMIN', 403],
+    ['SUPER_ADMIN', 200],
+  ])('protects temporal terms writes for role %s', async (role, expected) => {
+    const call = request(app.getHttpServer())
+      .put(
+        '/admin/v1/commercial/proposals/proposal/revisions/revision/temporal-terms',
+      )
+      .send({ revisionLockVersion: 0 });
     if (role) call.set('x-test-role', role);
     await call.expect(expected);
   });

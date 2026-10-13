@@ -17,6 +17,7 @@ import {
   TransitionProposalDto,
   UpdateProspectDto,
   UpdateProposalFinalizationDto,
+  UpdateProposalTemporalTermsDto,
   ValueAnalysisDto,
 } from './dto/commercial-proposals.dto';
 import { ProposalPricingEngine } from './proposal-pricing-engine';
@@ -36,6 +37,11 @@ import {
   proposalListResponse,
   proposalRevisionResponse,
 } from './proposal-response';
+import {
+  calculateProposalTemporalTerms,
+  parseCivilDate,
+  PROPOSAL_TEMPORAL_DEFAULTS,
+} from './proposal-temporal-terms';
 
 type Actor = { userId: string };
 const money = (v: string | undefined) =>
@@ -79,6 +85,178 @@ export class CommercialProposalsService {
     if (!revision)
       throw new NotFoundException('Proposal revision introuvable.');
     return buildProposalCustomerPreview(revision);
+  }
+  async temporalTerms(proposalId: string, revisionId: string) {
+    const revision = await this.prisma.commercialProposalRevision.findFirst({
+      where: { id: revisionId, proposalId },
+      include: { temporalTerms: true, proposal: true },
+    });
+    if (!revision)
+      throw new NotFoundException('Proposal revision introuvable.');
+    return this.temporalResponse(revision);
+  }
+  async updateTemporalTerms(
+    proposalId: string,
+    revisionId: string,
+    d: UpdateProposalTemporalTermsDto,
+    a: Actor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${revisionId},0))`;
+      const revision = await tx.commercialProposalRevision.findFirst({
+        where: { id: revisionId, proposalId },
+        include: { temporalTerms: true, proposal: true },
+      });
+      if (!revision)
+        throw new NotFoundException('Proposal revision introuvable.');
+      if (revision.status !== 'DRAFT')
+        throw new ConflictException('DRAFT proposal revision required.');
+      if (revision.lockVersion !== d.revisionLockVersion)
+        throw new ConflictException(
+          'Conflit de version. Rechargez la proposition.',
+        );
+      if (
+        revision.temporalTerms &&
+        revision.temporalTerms.lockVersion !== d.temporalLockVersion
+      )
+        throw new ConflictException('Conflit des conditions temporelles.');
+      if (!revision.temporalTerms && d.temporalLockVersion !== undefined)
+        throw new ConflictException('Conflit des conditions temporelles.');
+
+      const externalSignatureEvidence =
+        d.externalSignatureEvidence?.trim() || null;
+      if (
+        Boolean(d.externalSignatureDate) !== Boolean(externalSignatureEvidence)
+      )
+        throw new BadRequestException(
+          'La date de signature externe et sa preuve sont requises ensemble.',
+        );
+      const timezone =
+        d.contractualTimezone?.trim() ||
+        revision.temporalTerms?.contractualTimezone ||
+        PROPOSAL_TEMPORAL_DEFAULTS.contractualTimezone;
+      try {
+        new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format();
+      } catch {
+        throw new BadRequestException('Fuseau horaire contractuel invalide.');
+      }
+      const civil = (value?: string | null) =>
+        value ? parseCivilDate(value) : null;
+      const values = {
+        serviceStartDate: civil(d.serviceStartDate),
+        initialInvoiceDate: civil(d.initialInvoiceDate),
+        externalSignatureDate: civil(d.externalSignatureDate),
+        externalSignatureEvidence,
+        renewalTermMonths: d.renewalTermMonths ?? null,
+        contractualTimezone: timezone,
+        provenance: {
+          serviceStartDate: d.serviceStartDate
+            ? 'SUPER_ADMIN_CONFIRMED'
+            : 'MISSING',
+          initialInvoiceDate: d.initialInvoiceDate
+            ? 'SUPER_ADMIN_CONFIRMED'
+            : 'MISSING',
+          externalSignatureDate: d.externalSignatureDate
+            ? 'EXTERNAL_EVIDENCE_RECORDED'
+            : 'NOT_APPLICABLE',
+          founderDefaults: 'FOUNDER_DECISION_2026-10-13',
+        },
+      };
+      const before = revision.temporalTerms;
+      const temporalTerms = before
+        ? await tx.commercialProposalTemporalTerms.update({
+            where: { id: before.id },
+            data: { ...values, lockVersion: { increment: 1 } },
+          })
+        : await tx.commercialProposalTemporalTerms.create({
+            data: {
+              proposalRevisionId: revisionId,
+              ...PROPOSAL_TEMPORAL_DEFAULTS,
+              ...values,
+            },
+          });
+      const parent = await tx.commercialProposalRevision.updateMany({
+        where: {
+          id: revisionId,
+          status: 'DRAFT',
+          lockVersion: d.revisionLockVersion,
+        },
+        data: { lockVersion: { increment: 1 } },
+      });
+      if (parent.count !== 1)
+        throw new ConflictException(
+          'Conflit de version. Rechargez la proposition.',
+        );
+      await this.audit.record(tx, {
+        actorUserId: a.userId,
+        action: 'PROPOSAL_TEMPORAL_TERMS_UPDATED',
+        targetType: 'CommercialProposalRevision',
+        targetId: revisionId,
+        organizationId: revision.proposal.organizationId,
+        beforeData: before
+          ? { temporalTermsId: before.id, lockVersion: before.lockVersion }
+          : undefined,
+        afterData: {
+          temporalTermsId: temporalTerms.id,
+          lockVersion: temporalTerms.lockVersion,
+          provenance: values.provenance,
+        },
+      });
+      return this.temporalResponse({
+        ...revision,
+        lockVersion: revision.lockVersion + 1,
+        temporalTerms,
+      });
+    });
+  }
+
+  private temporalResponse(revision: {
+    id: string;
+    status: CommercialProposalRevisionStatus;
+    lockVersion: number;
+    createdAt: Date;
+    sentAt: Date | null;
+    acceptedAt: Date | null;
+    temporalTerms: Prisma.CommercialProposalTemporalTermsGetPayload<object> | null;
+  }) {
+    const terms = revision.temporalTerms;
+    const source = {
+      createdAt: revision.createdAt,
+      sentAt: revision.sentAt,
+      acceptedAt: revision.acceptedAt,
+      serviceStartDate: terms?.serviceStartDate ?? null,
+      initialInvoiceDate: terms?.initialInvoiceDate ?? null,
+      externalSignatureDate: terms?.externalSignatureDate ?? null,
+      externalSignatureEvidence: terms?.externalSignatureEvidence ?? null,
+      offerValidityDays:
+        terms?.offerValidityDays ??
+        PROPOSAL_TEMPORAL_DEFAULTS.offerValidityDays,
+      initialTermMonths:
+        terms?.initialTermMonths ??
+        PROPOSAL_TEMPORAL_DEFAULTS.initialTermMonths,
+      paymentNetDays:
+        terms?.paymentNetDays ?? PROPOSAL_TEMPORAL_DEFAULTS.paymentNetDays,
+      automaticRenewal:
+        terms?.automaticRenewal ?? PROPOSAL_TEMPORAL_DEFAULTS.automaticRenewal,
+      nonrenewalNoticeDays:
+        terms?.nonrenewalNoticeDays ??
+        PROPOSAL_TEMPORAL_DEFAULTS.nonrenewalNoticeDays,
+      renewalTermMonths: terms?.renewalTermMonths ?? null,
+      contractualTimezone:
+        terms?.contractualTimezone ??
+        PROPOSAL_TEMPORAL_DEFAULTS.contractualTimezone,
+      calendarConventionVersion:
+        terms?.calendarConventionVersion ??
+        PROPOSAL_TEMPORAL_DEFAULTS.calendarConventionVersion,
+    };
+    return {
+      proposalRevisionId: revision.id,
+      revisionStatus: revision.status,
+      revisionLockVersion: revision.lockVersion,
+      temporalTerms: terms,
+      defaultsApplied: !terms,
+      calculated: calculateProposalTemporalTerms(source),
+    };
   }
   async updateFinalization(
     proposalId: string,

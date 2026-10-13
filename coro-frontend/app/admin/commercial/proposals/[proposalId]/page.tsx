@@ -107,6 +107,38 @@ type Composition = {
   canonicalHash: string;
   diagnostics: Diagnostic[];
 };
+type TemporalTerms = {
+  proposalRevisionId: string;
+  revisionStatus: string;
+  revisionLockVersion: number;
+  defaultsApplied: boolean;
+  temporalTerms: null | {
+    lockVersion: number;
+    serviceStartDate: string | null;
+    initialInvoiceDate: string | null;
+    externalSignatureDate: string | null;
+    externalSignatureEvidence: string | null;
+    renewalTermMonths: number | null;
+    contractualTimezone: string;
+  };
+  calculated: {
+    creationDate: string;
+    issuanceDate: string | null;
+    offerExpirationDate: string | null;
+    serviceStartDate: string | null;
+    initialTermEndExclusive: string | null;
+    initialTermLastCoveredDate: string | null;
+    nonrenewalDeadline: string | null;
+    initialInvoiceDate: string | null;
+    paymentDueDate: string | null;
+    electronicSignatureDate: string | null;
+    externalSignatureDate: string | null;
+    renewalTermMonths: number | null;
+    advisoryOnly: true;
+    blockers: string[];
+    issuanceReady: boolean;
+  };
+};
 
 const statusLabels: Record<string, string> = {
   DRAFT: "Brouillon",
@@ -172,6 +204,7 @@ export default function ProposalDetailPage({
   const [issuers, setIssuers] = useState<LegalIssuer[]>([]);
   const [composition, setComposition] = useState<Composition>();
   const [history, setHistory] = useState<Composition[]>([]);
+  const [temporal, setTemporal] = useState<TemporalTerms>();
   const [state, setState] = useState<
     "LOADING" | "READY" | "ERROR" | "UNAUTHORIZED"
   >("LOADING");
@@ -189,6 +222,13 @@ export default function ProposalDetailPage({
     contextEN: "",
     termsFR: "",
     termsEN: "",
+  });
+  const [temporalForm, setTemporalForm] = useState({
+    serviceStartDate: "",
+    initialInvoiceDate: "",
+    externalSignatureDate: "",
+    externalSignatureEvidence: "",
+    contractualTimezone: "America/Toronto",
   });
   const revision = detail?.revisions[0];
 
@@ -212,6 +252,7 @@ export default function ProposalDetailPage({
         contentResult,
         issuerResult,
         previewResult,
+        temporalResult,
       ] = await Promise.all([
         api.get(
           `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/document-compositions`,
@@ -222,6 +263,9 @@ export default function ProposalDetailPage({
         api.get(
           `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/customer-preview`,
         ),
+        api.get(
+          `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/temporal-terms`,
+        ),
       ]);
       const items = historyResult.data as Composition[];
       setHistory(items);
@@ -229,6 +273,21 @@ export default function ProposalDetailPage({
       setContents(contentResult.data);
       setIssuers(issuerResult.data);
       setEconomic(previewResult.data);
+      const temporalValue = temporalResult.data as TemporalTerms;
+      setTemporal(temporalValue);
+      setTemporalForm({
+        serviceStartDate:
+          temporalValue.temporalTerms?.serviceStartDate?.slice(0, 10) ?? "",
+        initialInvoiceDate:
+          temporalValue.temporalTerms?.initialInvoiceDate?.slice(0, 10) ?? "",
+        externalSignatureDate:
+          temporalValue.temporalTerms?.externalSignatureDate?.slice(0, 10) ??
+          "",
+        externalSignatureEvidence:
+          temporalValue.temporalTerms?.externalSignatureEvidence ?? "",
+        contractualTimezone:
+          temporalValue.temporalTerms?.contractualTimezone ?? "America/Toronto",
+      });
       if (items[0]) {
         const snapshot = await api.get(
           `/admin/v1/commercial/proposals/${proposalId}/revisions/${current.id}/document-compositions/${items[0].id}`,
@@ -332,6 +391,24 @@ export default function ProposalDetailPage({
         ? "Proposition marquée prête techniquement."
         : "Revue interne commencée.",
     );
+  }
+  function saveTemporalTerms() {
+    if (!revision || !temporal) return;
+    return execute(async () => {
+      await api.put(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/temporal-terms`,
+        {
+          revisionLockVersion: revision.lockVersion,
+          temporalLockVersion: temporal.temporalTerms?.lockVersion,
+          serviceStartDate: temporalForm.serviceStartDate || null,
+          initialInvoiceDate: temporalForm.initialInvoiceDate || null,
+          externalSignatureDate: temporalForm.externalSignatureDate || null,
+          externalSignatureEvidence:
+            temporalForm.externalSignatureEvidence || null,
+          contractualTimezone: temporalForm.contractualTimezone,
+        },
+      );
+    }, "Dates et conditions de l’offre enregistrées.");
   }
   function compose() {
     if (!revision) return;
@@ -586,6 +663,129 @@ export default function ProposalDetailPage({
 
         <Section
           number="2"
+          title="Dates et conditions de l’offre"
+          description="Dates civiles gouvernées et échéances calculées. Ces indications restent consultatives tant que le gate d’émission E01 n’est pas actif."
+          ready={temporal?.calculated.issuanceReady === true}
+        >
+          {temporal?.calculated.blockers.length ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
+              <p className="font-semibold">Décisions encore requises</p>
+              <ul className="mt-2 list-disc pl-5">
+                {temporal.calculated.blockers.map((blocker) => (
+                  <li key={blocker}>{blocker.replaceAll("_", " ")}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {revision?.status === "DRAFT" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Début des services">
+                <input
+                  type="date"
+                  value={temporalForm.serviceStartDate}
+                  onChange={(event) =>
+                    setTemporalForm({
+                      ...temporalForm,
+                      serviceStartDate: event.target.value,
+                    })
+                  }
+                  className="w-full rounded border p-2"
+                />
+              </Field>
+              <Field label="Date de facturation initiale">
+                <input
+                  type="date"
+                  value={temporalForm.initialInvoiceDate}
+                  onChange={(event) =>
+                    setTemporalForm({
+                      ...temporalForm,
+                      initialInvoiceDate: event.target.value,
+                    })
+                  }
+                  className="w-full rounded border p-2"
+                />
+              </Field>
+              <Field label="Date de signature externe">
+                <input
+                  type="date"
+                  value={temporalForm.externalSignatureDate}
+                  onChange={(event) =>
+                    setTemporalForm({
+                      ...temporalForm,
+                      externalSignatureDate: event.target.value,
+                    })
+                  }
+                  className="w-full rounded border p-2"
+                />
+              </Field>
+              <Field label="Référence de preuve externe">
+                <input
+                  value={temporalForm.externalSignatureEvidence}
+                  onChange={(event) =>
+                    setTemporalForm({
+                      ...temporalForm,
+                      externalSignatureEvidence: event.target.value,
+                    })
+                  }
+                  className="w-full rounded border p-2"
+                />
+              </Field>
+              <button
+                disabled={busy}
+                onClick={() => void saveTemporalTerms()}
+                className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50 sm:col-span-2 sm:w-fit"
+              >
+                Enregistrer les dates
+              </button>
+            </div>
+          ) : null}
+          {temporal ? (
+            <dl className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Fact label="Création" value={temporal.calculated.creationDate} />
+              <Fact
+                label="Émission"
+                value={temporal.calculated.issuanceDate ?? "Non émise"}
+              />
+              <Fact
+                label="Expiration"
+                value={
+                  temporal.calculated.offerExpirationDate ?? "Après émission"
+                }
+              />
+              <Fact
+                label="Fin du terme initial"
+                value={
+                  temporal.calculated.initialTermEndExclusive ?? "Début requis"
+                }
+              />
+              <Fact
+                label="Dernier jour couvert"
+                value={
+                  temporal.calculated.initialTermLastCoveredDate ??
+                  "Début requis"
+                }
+              />
+              <Fact
+                label="Préavis de non-renouvellement"
+                value={temporal.calculated.nonrenewalDeadline ?? "Début requis"}
+              />
+              <Fact
+                label="Échéance de paiement"
+                value={
+                  temporal.calculated.paymentDueDate ?? "Facturation requise"
+                }
+              />
+              <Fact
+                label="Signature électronique"
+                value={temporal.calculated.electronicSignatureDate ?? "Aucune"}
+              />
+              <Fact label="Renouvellement" value="Durée à confirmer" />
+            </dl>
+          ) : null}
+        </Section>
+
+        <Section
+          number="3"
           title="Solution et prestations"
           description="Contenu approuvé relié aux lignes économiques immuables."
           ready={contentReady}
@@ -635,7 +835,7 @@ export default function ProposalDetailPage({
         </Section>
 
         <Section
-          number="3"
+          number="4"
           title="Investissement"
           description="Projection client du calcul officiel; aucune donnée de coût interne."
           ready={Boolean(economic?.totals.firstYearMinor)}
@@ -724,7 +924,7 @@ export default function ProposalDetailPage({
         </Section>
 
         <Section
-          number="4"
+          number="5"
           title="Conditions commerciales"
           description="Clauses approuvées et paramètres autorisés; aucun JSON ni texte légal arbitraire."
           ready={clausesReady}
@@ -820,7 +1020,7 @@ export default function ProposalDetailPage({
         </Section>
 
         <Section
-          number="5"
+          number="6"
           title="Aperçu et revue"
           description="Composition explicite, PDF V2 gouverné et lifecycle existant."
           ready={composition?.issuanceReady === true}

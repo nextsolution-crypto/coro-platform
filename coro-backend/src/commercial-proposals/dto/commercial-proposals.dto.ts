@@ -12,6 +12,7 @@ import {
   IsString,
   Matches,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -246,6 +247,16 @@ export class UpdateProposalFinalizationDto {
   @IsOptional() @IsString() contextEN?: string | null;
   @IsOptional() @IsString() termsFR?: string | null;
   @IsOptional() @IsString() termsEN?: string | null;
+}
+export class UpdateProposalTemporalTermsDto {
+  @IsInt() @Min(0) revisionLockVersion!: number;
+  @IsOptional() @IsInt() @Min(0) temporalLockVersion?: number;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) serviceStartDate?: string | null;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) initialInvoiceDate?: string | null;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) externalSignatureDate?: string | null;
+  @IsOptional() @IsString() @MaxLength(500) externalSignatureEvidence?: string | null;
+  @IsOptional() @IsInt() @Min(1) renewalTermMonths?: number | null;
+  @IsOptional() @IsString() @MaxLength(100) contractualTimezone?: string;
 }
 export class GenerateProposalPdfDto {
   @IsEnum(ProposalLanguage) language!: ProposalLanguage;
