@@ -21,6 +21,10 @@ import {
   type PopulationContactChangeSession,
 } from "../lib/populationSession";
 import styles from "./PopulationPublicShell.module.css";
+import {
+  SMS_CARRIER_DISCLOSURE,
+  SMS_LEGAL_URLS,
+} from "../lib/smsCompliance";
 
 type Language = "fr" | "en";
 
@@ -179,6 +183,12 @@ export default function PopulationContactProfile({
     language === "en"
       ? program.consentTextEN || program.consentTextFR
       : program.consentTextFR;
+  const privacyText =
+    language === "en"
+      ? program.privacyTextEN || program.privacyTextFR
+      : program.privacyTextFR;
+  const smsDisclosure = SMS_CARRIER_DISCLOSURE[language];
+  const smsLegalUrls = SMS_LEGAL_URLS[language];
 
   useEffect(() => {
     if (!active) return;
@@ -515,6 +525,24 @@ export default function PopulationContactProfile({
               {disclosure && program.consentVersion ? (
                 <>
                   <p>{disclosure}</p>
+                  {privacyText && <p>{privacyText}</p>}
+                  <div
+                    className={styles.smsDisclosure}
+                    data-testid="sms-contact-change-carrier-disclosure"
+                  >
+                    <p>{smsDisclosure.intro}</p>
+                    <p>{smsDisclosure.frequency}</p>
+                    <p>{smsDisclosure.rates}</p>
+                    <p>{smsDisclosure.keywords}</p>
+                    <p>{smsDisclosure.purchase}</p>
+                    <p>
+                      <a href={smsLegalUrls.terms}>{smsDisclosure.terms}</a>
+                      {" · "}
+                      <a href={smsLegalUrls.privacy}>
+                        {smsDisclosure.privacy}
+                      </a>
+                    </p>
+                  </div>
                   <label className={styles.consentCheck}>
                     <input
                       type="checkbox"

@@ -1,5 +1,13 @@
-export const SMS_TERMS_URL = "https://getcoro.io/terms";
-export const SMS_PRIVACY_URL = "https://getcoro.io/privacy";
+export const SMS_LEGAL_URLS = {
+  fr: {
+    terms: "https://getcoro.io/sms-terms",
+    privacy: "https://getcoro.io/privacy",
+  },
+  en: {
+    terms: "https://getcoro.io/sms-terms?lang=en",
+    privacy: "https://getcoro.io/privacy?lang=en",
+  },
+} as const;
 
 export const SMS_CARRIER_DISCLOSURE = {
   fr: {

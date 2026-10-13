@@ -52,7 +52,7 @@ test('SMS terms contain every carrier disclosure in FR and EN with canonical lin
   for (const required of [/codes de vérification/i, /préalertes/i, /consignes de protection/i, /mises à jour d’incident/i, /fin d’alerte/i, /exercices ou tests/i, /fréquence des messages varie/i, /frais de messagerie et de données/i, /STOP/, /HELP/, /info@getcoro\.io/, /514 791-7871/, /transporteurs ne sont pas responsables/i, /condition d’achat/i]) assert.match(fr, required);
   for (const required of [/verification codes/i, /pre-alerts/i, /protective-action instructions/i, /incident updates/i, /all-clear messages/i, /exercises or tests/i, /message frequency varies/i, /message and data rates may apply/i, /STOP/, /HELP/, /info@getcoro\.io/, /514 791-7871/, /carriers are not liable/i, /condition of purchase/i]) assert.match(en, required);
   const page = read('app/terms/page.tsx');
-  assert.match(page, /https:\/\/getcoro\.io\/terms/);
+  assert.match(page, /localizedHref\('\/sms-terms', locale\)/);
   assert.match(page, /https:\/\/getcoro\.io\/privacy/);
 });
 

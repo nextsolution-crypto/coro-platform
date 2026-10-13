@@ -18,6 +18,7 @@ export default async function TermsPage({ searchParams }: PageProps) {
   const locale = localeFromSearchParams((await searchParams) ?? {});
   const content: TermsContent = termsContent[locale];
   const privacyHref = localizedHref('/privacy', locale);
+  const smsTermsHref = localizedHref('/sms-terms', locale);
   return (
     <V2Shell locale={locale} pathname="/terms" headerTone="dark">
       <LegalV2
@@ -27,7 +28,7 @@ export default async function TermsPage({ searchParams }: PageProps) {
           if ('smsLinks' in section && section.smsLinks) {
             return (
               <p>
-                <a className={styles.crossLink} href="https://getcoro.io/terms">{locale === 'fr' ? 'Conditions d’utilisation' : 'Terms of Service'}</a>
+                <a className={styles.crossLink} href={smsTermsHref}>{locale === 'fr' ? 'Conditions des messages SMS' : 'SMS Terms'}</a>
                 {' · '}
                 <a className={styles.crossLink} href="https://getcoro.io/privacy">{locale === 'fr' ? 'Politique de confidentialité' : 'Privacy Policy'}</a>
               </p>

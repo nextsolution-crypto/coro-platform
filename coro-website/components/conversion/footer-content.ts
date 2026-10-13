@@ -50,6 +50,7 @@ export const footerGroups: readonly FooterGroup[] = [
   { id: 'legal', label: { fr: 'Légal', en: 'Legal' }, links: [
     { path: '/privacy', label: { fr: 'Politique de confidentialité', en: 'Privacy policy' }, fr: true, en: true },
     { path: '/terms', label: { fr: 'Conditions d’utilisation', en: 'Terms of service' }, fr: true, en: true },
+    { path: '/sms-terms', label: { fr: 'Conditions SMS', en: 'SMS terms' }, fr: true, en: true },
   ] },
 ];
 

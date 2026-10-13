@@ -15,8 +15,7 @@ import {
 import styles from "./PopulationPublicShell.module.css";
 import {
   SMS_CARRIER_DISCLOSURE,
-  SMS_PRIVACY_URL,
-  SMS_TERMS_URL,
+  SMS_LEGAL_URLS,
 } from "../lib/smsCompliance";
 import PopulationVerification from "./PopulationVerification";
 
@@ -169,6 +168,7 @@ export default function PopulationRegistration({
   const firstChannel = program.smsEnabled && phone.trim() ? "SMS" : "EMAIL";
   const smsSelected = program.smsEnabled && Boolean(phone.trim());
   const smsDisclosure = SMS_CARRIER_DISCLOSURE[language];
+  const smsLegalUrls = SMS_LEGAL_URLS[language];
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -344,9 +344,9 @@ export default function PopulationRegistration({
                 <p>{smsDisclosure.keywords}</p>
                 <p>{smsDisclosure.purchase}</p>
                 <p>
-                  <a href={SMS_TERMS_URL}>{smsDisclosure.terms}</a>
+                  <a href={smsLegalUrls.terms}>{smsDisclosure.terms}</a>
                   {" · "}
-                  <a href={SMS_PRIVACY_URL}>{smsDisclosure.privacy}</a>
+                  <a href={smsLegalUrls.privacy}>{smsDisclosure.privacy}</a>
                 </p>
               </div>
             )}

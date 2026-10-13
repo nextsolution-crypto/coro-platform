@@ -11,7 +11,7 @@ const SMS_DISCLOSURE = {
     'Des frais de messagerie et de données peuvent s’appliquer.',
     'Répondez STOP pour vous désabonner ou HELP pour obtenir de l’aide.',
     'Le consentement n’est pas une condition d’achat.',
-    'Conditions d’utilisation : https://getcoro.io/terms',
+    'Conditions des messages SMS : https://getcoro.io/sms-terms',
     'Politique de confidentialité : https://getcoro.io/privacy',
   ].join(' '),
   EN: [
@@ -20,8 +20,8 @@ const SMS_DISCLOSURE = {
     'Message and data rates may apply.',
     'Reply STOP to unsubscribe or HELP for help.',
     'Consent is not a condition of purchase.',
-    'Terms of Service: https://getcoro.io/terms',
-    'Privacy Policy: https://getcoro.io/privacy',
+    'SMS Terms: https://getcoro.io/sms-terms?lang=en',
+    'Privacy Policy: https://getcoro.io/privacy?lang=en',
   ].join(' '),
 } as const;
 
