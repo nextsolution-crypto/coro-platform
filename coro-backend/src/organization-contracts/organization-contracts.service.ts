@@ -299,6 +299,8 @@ export class OrganizationContractsService {
           !before.revisions.some(
             (x) =>
               x.status === 'SIGNED' &&
+              !!x.signedAt &&
+              !!x.signedByName?.trim() &&
               x.effectiveFrom <= new Date() &&
               (!x.effectiveUntil || x.effectiveUntil > new Date()),
           )
@@ -1156,8 +1158,8 @@ export class OrganizationContractsService {
           await tx.organizationContract.update({
             where: { id: cid },
             data: {
-              status: rev.effectiveFrom > new Date() ? 'SCHEDULED' : 'ACTIVE',
-              activatedAt: rev.effectiveFrom <= new Date() ? new Date() : null,
+              status: 'SCHEDULED',
+              activatedAt: null,
               lockVersion: { increment: 1 },
             },
           });
@@ -1178,7 +1180,7 @@ export class OrganizationContractsService {
             priceBookVersionId: pb.id,
           }),
         });
-        return this.get(o, cid);
+        return this.serialize(await this.owned(tx, o, cid));
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );

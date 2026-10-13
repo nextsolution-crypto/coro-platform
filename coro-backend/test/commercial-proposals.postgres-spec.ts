@@ -134,12 +134,16 @@ describeDb('Phase 2D commercial proposals PostgreSQL invariants', () => {
         lockVersion: { increment: 1 },
       },
     });
+    const acceptanceOccurredAt = new Date();
     await prisma.commercialProposalRevision.update({
       where: { id: r.id },
       data: {
         status: 'ACCEPTED',
-        acceptedAt: new Date(),
+        acceptedAt: acceptanceOccurredAt,
+        acceptanceOccurredAt,
         acceptedByName: 'Buyer',
+        acceptedByAuthority: 'Authorized signatory',
+        acceptanceReference: `${s}:acceptance`,
         lifecycleReason: 'accepted',
         lockVersion: { increment: 1 },
       },
@@ -181,7 +185,10 @@ describeDb('Phase 2D commercial proposals PostgreSQL invariants', () => {
         data: {
           status: 'ACCEPTED',
           acceptedAt: new Date(),
+          acceptanceOccurredAt: new Date(),
           acceptedByName: 'Buyer',
+          acceptedByAuthority: 'Authorized signatory',
+          acceptanceReference: `${s}:second-acceptance`,
           lifecycleReason: 'accepted',
           sentDocumentId: d2.id,
           lockVersion: { increment: 1 },

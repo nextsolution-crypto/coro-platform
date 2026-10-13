@@ -235,8 +235,10 @@ export class ValueAnalysisDto {
 export class TransitionProposalDto {
   @IsString() reason!: string;
   @IsInt() @Min(0) lockVersion!: number;
-  @IsOptional() @IsString() acceptedByName?: string;
-  @IsOptional() @IsString() acceptanceReference?: string;
+  @IsOptional() @IsString() @MaxLength(200) acceptedByName?: string;
+  @IsOptional() @IsString() @MaxLength(200) acceptedByAuthority?: string;
+  @IsOptional() @IsISO8601() acceptanceOccurredAt?: string;
+  @IsOptional() @IsString() @MaxLength(500) acceptanceReference?: string;
   @IsOptional() @IsString() sentDocumentId?: string;
   @IsOptional() @IsString() documentId?: string;
 }

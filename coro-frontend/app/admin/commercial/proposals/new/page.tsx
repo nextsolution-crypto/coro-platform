@@ -97,6 +97,9 @@ export default function NewProposalPage() {
   const [totals, setTotals] = useState<Totals>(),
     [reason, setReason] = useState("Validation commerciale"),
     [acceptedBy, setAcceptedBy] = useState(""),
+    [acceptedByAuthority, setAcceptedByAuthority] = useState(""),
+    [acceptanceOccurredAt, setAcceptanceOccurredAt] = useState(""),
+    [acceptanceReference, setAcceptanceReference] = useState(""),
     [contractReference, setContractReference] = useState("");
   const summary = useMemo<Summary>(
     () => ({
@@ -667,11 +670,31 @@ export default function NewProposalPage() {
                       value={acceptedBy}
                       set={setAcceptedBy}
                     />
+                    <Field
+                      label="Autorite du signataire"
+                      value={acceptedByAuthority}
+                      set={setAcceptedByAuthority}
+                    />
+                    <Field
+                      label="Date et heure reelles de l'acceptation (ISO 8601)"
+                      value={acceptanceOccurredAt}
+                      set={setAcceptanceOccurredAt}
+                    />
+                    <Field
+                      label="Reference de preuve d'acceptation"
+                      value={acceptanceReference}
+                      set={setAcceptanceReference}
+                    />
                     <Action
                       busy={busy}
                       label="Accepter administrativement"
                       onClick={() =>
-                        transition("accept", 15, { acceptedByName: acceptedBy })
+                        transition("accept", 15, {
+                          acceptedByName: acceptedBy,
+                          acceptedByAuthority,
+                          acceptanceOccurredAt,
+                          acceptanceReference,
+                        })
                       }
                     />
                   </>

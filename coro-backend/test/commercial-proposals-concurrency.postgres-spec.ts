@@ -157,17 +157,59 @@ describeDatabase('Phase 2D proposal concurrency matrix', () => {
       { reason: 'Sent', lockVersion: 1, sentDocumentId: document.id },
       { userId: actorId },
     );
+    await expect(
+      service.transition(
+        revision.id,
+        'ACCEPTED',
+        {
+          reason: 'Incomplete acceptance must fail',
+          lockVersion: 2,
+          acceptedByName: 'Buyer',
+        },
+        { userId: actorId },
+      ),
+    ).rejects.toThrow(/autorit|preuve/i);
+    await expect(
+      service.transition(
+        revision.id,
+        'ACCEPTED',
+        {
+          reason: 'Future acceptance must fail',
+          lockVersion: 2,
+          acceptedByName: 'Buyer',
+          acceptedByAuthority: 'Authorized signatory',
+          acceptanceOccurredAt: new Date(Date.now() + 60_000).toISOString(),
+          acceptanceReference: `${fixture}:future-acceptance`,
+        },
+        { userId: actorId },
+      ),
+    ).rejects.toThrow(/post.rieure/i);
+    const acceptanceOccurredAt = new Date().toISOString();
     const attempts = await Promise.allSettled([
       service.transition(
         revision.id,
         'ACCEPTED',
-        { reason: 'Accepted', lockVersion: 2, acceptedByName: 'Buyer' },
+        {
+          reason: 'Accepted',
+          lockVersion: 2,
+          acceptedByName: 'Buyer',
+          acceptedByAuthority: 'Authorized signatory',
+          acceptanceOccurredAt,
+          acceptanceReference: `${fixture}:acceptance`,
+        },
         { userId: actorId },
       ),
       service.transition(
         revision.id,
         'ACCEPTED',
-        { reason: 'Retry', lockVersion: 2, acceptedByName: 'Buyer' },
+        {
+          reason: 'Retry',
+          lockVersion: 2,
+          acceptedByName: 'Buyer',
+          acceptedByAuthority: 'Authorized signatory',
+          acceptanceOccurredAt,
+          acceptanceReference: `${fixture}:acceptance`,
+        },
         { userId: actorId },
       ),
     ]);
@@ -187,5 +229,19 @@ describeDatabase('Phase 2D proposal concurrency matrix', () => {
     });
     expect(root.acceptedRevisionId).toBe(revision.id);
     expect(root.status).toBe('ACCEPTED');
+    const accepted = await prisma.commercialProposalRevision.findUniqueOrThrow({
+      where: { id: revision.id },
+    });
+    expect(accepted.acceptedByAuthority).toBe('Authorized signatory');
+    expect(accepted.acceptanceReference).toBe(`${fixture}:acceptance`);
+    expect(accepted.acceptanceOccurredAt?.toISOString()).toBe(
+      acceptanceOccurredAt,
+    );
+    await expect(
+      prisma.commercialProposalRevision.update({
+        where: { id: revision.id },
+        data: { acceptedByAuthority: 'Changed after acceptance' },
+      }),
+    ).rejects.toThrow();
   });
 });

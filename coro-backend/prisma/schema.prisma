@@ -1191,7 +1191,9 @@ model CommercialProposalRevision {
   sentAt DateTime?
   sentDocumentId String? @unique
   acceptedAt DateTime?
+  acceptanceOccurredAt DateTime?
   acceptedByName String?
+  acceptedByAuthority String?
   acceptanceReference String?
   rejectedAt DateTime?
   cancelledAt DateTime?

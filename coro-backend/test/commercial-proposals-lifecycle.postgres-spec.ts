@@ -92,7 +92,10 @@ describeDatabase('Phase 2D proposal lifecycle DB matrix', () => {
         ...(status === 'ACCEPTED'
           ? {
               acceptedAt: new Date(),
+              acceptanceOccurredAt: new Date(),
               acceptedByName: 'Buyer',
+              acceptedByAuthority: 'Authorized signatory',
+              acceptanceReference: `${fixture}:${status}:acceptance`,
               sentDocumentId,
             }
           : {}),

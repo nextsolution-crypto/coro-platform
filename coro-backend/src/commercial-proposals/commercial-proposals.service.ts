@@ -1199,8 +1199,30 @@ export class CommercialProposalsService {
             blockers: readiness.blockers,
           });
       }
-      if (target === 'ACCEPTED' && (!d.acceptedByName || !r.sentDocumentId))
-        throw new BadRequestException('Acceptation et document envoyé requis.');
+      const acceptanceRecordedAt = new Date();
+      const acceptanceOccurredAt = d.acceptanceOccurredAt
+        ? new Date(d.acceptanceOccurredAt)
+        : null;
+      if (
+        target === 'ACCEPTED' &&
+        (!d.acceptedByName?.trim() ||
+          !d.acceptedByAuthority?.trim() ||
+          !d.acceptanceReference?.trim() ||
+          !acceptanceOccurredAt ||
+          Number.isNaN(acceptanceOccurredAt.getTime()) ||
+          !r.sentDocumentId)
+      )
+        throw new BadRequestException(
+          'Document émis, signataire, autorité, date réelle et preuve d’acceptation requis.',
+        );
+      if (
+        target === 'ACCEPTED' &&
+        acceptanceOccurredAt &&
+        acceptanceOccurredAt > acceptanceRecordedAt
+      )
+        throw new BadRequestException(
+          'La date réelle d’acceptation ne peut pas être postérieure à son enregistrement.',
+        );
       const reason = this.audit.normalizeReason(d.reason, true);
       const data: Prisma.CommercialProposalRevisionUncheckedUpdateManyInput = {
         status: target,
@@ -1212,9 +1234,11 @@ export class CommercialProposalsService {
         data.sentDocumentId = d.documentId ?? d.sentDocumentId;
       }
       if (target === 'ACCEPTED') {
-        data.acceptedAt = new Date();
-        data.acceptedByName = d.acceptedByName;
-        data.acceptanceReference = d.acceptanceReference;
+        data.acceptedAt = acceptanceRecordedAt;
+        data.acceptanceOccurredAt = acceptanceOccurredAt;
+        data.acceptedByName = d.acceptedByName!.trim();
+        data.acceptedByAuthority = d.acceptedByAuthority!.trim();
+        data.acceptanceReference = d.acceptanceReference!.trim();
       }
       if (target === 'REJECTED') data.rejectedAt = new Date();
       if (target === 'CANCELLED') data.cancelledAt = new Date();
@@ -1231,7 +1255,7 @@ export class CommercialProposalsService {
           data: {
             status: 'ACCEPTED',
             acceptedRevisionId: id,
-            acceptedAt: new Date(),
+            acceptedAt: acceptanceRecordedAt,
             lockVersion: { increment: 1 },
           },
         });
@@ -1249,6 +1273,14 @@ export class CommercialProposalsService {
           decision: target === 'READY' ? 'EXPLICIT_APPROVAL' : undefined,
           issuance:
             target === 'SENT' ? 'EXPLICIT_INTERNAL_ISSUANCE' : undefined,
+          acceptance:
+            target === 'ACCEPTED'
+              ? {
+                  occurredAt: acceptanceOccurredAt,
+                  recordedAt: acceptanceRecordedAt,
+                  issuedDocumentId: r.sentDocumentId,
+                }
+              : undefined,
         },
       });
       const transitioned =
@@ -1269,6 +1301,7 @@ export class CommercialProposalsService {
           adjustments: true,
           exclusivities: { include: { sectors: true, capabilities: true } },
           commitments: true,
+          temporalTerms: true,
         },
       });
       if (!r || r.status !== 'ACCEPTED')
@@ -1287,6 +1320,10 @@ export class CommercialProposalsService {
         );
       if (!r.sourcePriceBookVersionId)
         throw new BadRequestException('PriceBookVersion source requise.');
+      if (!r.temporalTerms?.serviceStartDate)
+        throw new BadRequestException(
+          'Date de début de service contractuelle requise avant création du contrat.',
+        );
       const u = await this.user(tx, a);
       const contract = await tx.organizationContract.create({
         data: {
@@ -1305,8 +1342,8 @@ export class CommercialProposalsService {
           status: 'DRAFT',
           priceBookVersionId: r.sourcePriceBookVersionId,
           currency: r.currency,
-          effectiveFrom: r.validFrom ?? new Date(),
-          termStartAt: r.validFrom ?? new Date(),
+          effectiveFrom: r.temporalTerms.serviceStartDate,
+          termStartAt: r.temporalTerms.serviceStartDate,
           sourceProposalRevisionId: id,
           createdByUserId: a.userId,
           createdByDisplayName: u,

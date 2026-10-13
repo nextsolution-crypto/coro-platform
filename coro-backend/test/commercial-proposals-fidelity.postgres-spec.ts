@@ -434,6 +434,14 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
         generatedAt: new Date(),
       },
     });
+    const serviceStartDate = new Date('2027-01-15T00:00:00.000Z');
+    await prisma.commercialProposalTemporalTerms.create({
+      data: {
+        proposalRevisionId: revision.id,
+        serviceStartDate,
+        provenance: { source: 'ACCEPTANCE_ACTIVATION_FIXTURE' },
+      },
+    });
     await prisma.commercialProposalRevision.update({
       where: { id: revision.id },
       data: { status: 'READY', lifecycleReason: 'reviewed', lockVersion: 1 },
@@ -448,12 +456,16 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
         lockVersion: 2,
       },
     });
+    const acceptanceOccurredAt = new Date();
     await prisma.commercialProposalRevision.update({
       where: { id: revision.id },
       data: {
         status: 'ACCEPTED',
-        acceptedAt: new Date(),
+        acceptedAt: acceptanceOccurredAt,
+        acceptanceOccurredAt,
         acceptedByName: 'Authorized Buyer',
+        acceptedByAuthority: 'Signing officer',
+        acceptanceReference: `${fixture}:acceptance`,
         lifecycleReason: 'accepted',
         lockVersion: 3,
       },
@@ -495,6 +507,8 @@ describeDatabase('Phase 2D Proposal to Contract fidelity', () => {
           commitments: true,
         },
       });
+    expect(snapshot.effectiveFrom).toEqual(serviceStartDate);
+    expect(snapshot.termStartAt).toEqual(serviceStartDate);
     const sourceSnapshot =
       await prisma.commercialProposalRevision.findUniqueOrThrow({
         where: { id: revision.id },
