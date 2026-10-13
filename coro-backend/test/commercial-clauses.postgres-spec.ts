@@ -1,6 +1,27 @@
 import { PrismaClient } from '@prisma/client';
+import { createHash } from 'crypto';
 import { AdminAuditService } from '../src/admin-audit/admin-audit.service';
+import {
+  B01_PREVIOUS_DRAFT_PROVENANCE,
+  B01_PREVIOUS_STANDARD_CLAUSE_DRAFTS,
+} from '../src/commercial-clauses/commercial-clause.preconfiguration';
 import { CommercialClauseService } from '../src/commercial-clauses/commercial-clause.service';
+
+function canonicalHash(value: unknown) {
+  const canonical = (input: unknown): unknown =>
+    Array.isArray(input)
+      ? input.map(canonical)
+      : input && typeof input === 'object'
+        ? Object.fromEntries(
+            Object.entries(input)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([key, item]) => [key, canonical(item)]),
+          )
+        : input;
+  return createHash('sha256')
+    .update(JSON.stringify(canonical(value)))
+    .digest('hex');
+}
 
 const url = process.env.TEST_DATABASE_URL;
 const describeDatabase = url ? describe : describe.skip;
@@ -64,6 +85,52 @@ describeDatabase('Governed commercial clause library PostgreSQL', () => {
     expect(await prisma.adminAuditEvent.count()).toBe(beforeDryRunAudit);
 
     const clauses = await service.list();
+    const renewalBaseline = B01_PREVIOUS_STANDARD_CLAUSE_DRAFTS.find(
+      ({ category }) => category === 'RENEWAL',
+    )!;
+    const renewalVersion = clauses.find(
+      ({ code }) => code === 'RENEWAL_STANDARD',
+    )!.versions[0];
+    const previousPayload = {
+      titleFR: renewalBaseline.titleFR,
+      titleEN: renewalBaseline.titleEN,
+      textFR: renewalBaseline.textFR,
+      textEN: renewalBaseline.textEN,
+      businessOwner: 'CORO Commercial',
+      legalOwner: null,
+      isRequired: renewalBaseline.isRequired,
+      effectiveAt: null,
+      provenance: B01_PREVIOUS_DRAFT_PROVENANCE,
+      applicabilities: [...renewalBaseline.applicabilities].sort(),
+      parameters: [...renewalBaseline.parameters].sort((a, b) =>
+        a.key.localeCompare(b.key),
+      ),
+    };
+    await prisma.commercialClauseVersion.update({
+      where: { id: renewalVersion.id },
+      data: {
+        titleFR: previousPayload.titleFR,
+        titleEN: previousPayload.titleEN,
+        textFR: previousPayload.textFR,
+        textEN: previousPayload.textEN,
+        businessOwner: previousPayload.businessOwner,
+        legalOwner: previousPayload.legalOwner,
+        isRequired: previousPayload.isRequired,
+        effectiveAt: previousPayload.effectiveAt,
+        provenance: previousPayload.provenance,
+        parameterSchema: previousPayload.parameters,
+        contentHash: canonicalHash(previousPayload),
+      },
+    });
+    await prisma.commercialClauseApplicability.deleteMany({
+      where: { commercialClauseVersionId: renewalVersion.id },
+    });
+    await prisma.commercialClauseApplicability.createMany({
+      data: previousPayload.applicabilities.map((scope) => ({
+        commercialClauseVersionId: renewalVersion.id,
+        scope,
+      })),
+    });
     const currency = clauses.find(
       ({ code }) => code === 'CURRENCY_AND_TAXES_STANDARD',
     )!.versions[0];
@@ -90,7 +157,8 @@ describeDatabase('Governed commercial clause library PostgreSQL', () => {
     );
 
     const protectedPlan = await service.preconfigurationDryRun();
-    expect(protectedPlan.summary.ELIGIBLE_PLACEHOLDER).toBe(23);
+    expect(protectedPlan.summary.ELIGIBLE_PLACEHOLDER).toBe(22);
+    expect(protectedPlan.summary.ELIGIBLE_STANDARD_DRAFT).toBe(1);
     expect(protectedPlan.summary.HUMAN_EDITED_DRAFT).toBe(1);
     expect(protectedPlan.summary.PROTECTED_NON_DRAFT).toBe(1);
     expect(() =>
@@ -144,8 +212,8 @@ describeDatabase('Governed commercial clause library PostgreSQL', () => {
         lockVersion: renewal.lockVersion,
         titleFR: renewal.titleFR,
         titleEN: renewal.titleEN,
-        textFR: renewal.textFR,
-        textEN: renewal.textEN,
+        textFR: `${renewal.textFR} Condition À CONFIRMER.`,
+        textEN: `${renewal.textEN} Condition TO_CONFIRM.`,
         businessOwner: 'Commercial',
         legalOwner: 'Legal',
         isRequired: renewal.isRequired ?? true,

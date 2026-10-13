@@ -22,6 +22,8 @@ import {
 import {
   B01_DRAFT_PROVENANCE,
   B01_PRECONFIGURATION_CONFIRMATION,
+  B01_PREVIOUS_DRAFT_PROVENANCE,
+  B01_PREVIOUS_STANDARD_CLAUSE_DRAFTS,
   B01_STANDARD_CLAUSE_DRAFTS,
   StandardClauseDraft,
 } from './commercial-clause.preconfiguration';
@@ -132,7 +134,12 @@ export class CommercialClauseService {
         );
 
       for (const item of plan.items) {
-        if (item.classification !== 'ELIGIBLE_PLACEHOLDER' || !item.versionId)
+        if (
+          !['ELIGIBLE_PLACEHOLDER', 'ELIGIBLE_STANDARD_DRAFT'].includes(
+            item.classification,
+          ) ||
+          !item.versionId
+        )
           continue;
         const target = B01_STANDARD_CLAUSE_DRAFTS.find(
           ({ category }) => category === item.category,
@@ -456,7 +463,10 @@ export class CommercialClauseService {
     };
   }
 
-  private preconfigurationPayload(target: StandardClauseDraft) {
+  private preconfigurationPayload(
+    target: StandardClauseDraft,
+    provenance = B01_DRAFT_PROVENANCE,
+  ) {
     return {
       titleFR: target.titleFR.trim(),
       titleEN: target.titleEN.trim(),
@@ -466,7 +476,7 @@ export class CommercialClauseService {
       legalOwner: null,
       isRequired: target.isRequired,
       effectiveAt: null,
-      provenance: B01_DRAFT_PROVENANCE,
+      provenance,
       applicabilities: [...new Set(target.applicabilities)].sort(),
       parameters: [...target.parameters].sort((a, b) =>
         a.key.localeCompare(b.key),
@@ -500,19 +510,19 @@ export class CommercialClauseService {
       let classification:
         | 'MISSING'
         | 'ELIGIBLE_PLACEHOLDER'
+        | 'ELIGIBLE_STANDARD_DRAFT'
         | 'HUMAN_EDITED_DRAFT'
         | 'PROTECTED_NON_DRAFT'
         | 'ALREADY_PRECONFIGURED';
       if (!clause || !version) classification = 'MISSING';
       else if (version.status !== 'DRAFT')
         classification = 'PROTECTED_NON_DRAFT';
-      else if (
-        version.contentHash ===
-        this.versionData(this.preconfigurationPayload(target)).contentHash
-      )
+      else if (this.matchesStandardDraft(version, target))
         classification = 'ALREADY_PRECONFIGURED';
       else if (this.isUntouchedPlaceholder(version, target.category))
         classification = 'ELIGIBLE_PLACEHOLDER';
+      else if (this.isPreviousStandardDraft(version, target.category))
+        classification = 'ELIGIBLE_STANDARD_DRAFT';
       else classification = 'HUMAN_EDITED_DRAFT';
       return {
         category: target.category,
@@ -540,6 +550,7 @@ export class CommercialClauseService {
     const summary = {
       MISSING: 0,
       ELIGIBLE_PLACEHOLDER: 0,
+      ELIGIBLE_STANDARD_DRAFT: 0,
       HUMAN_EDITED_DRAFT: 0,
       PROTECTED_NON_DRAFT: 0,
       ALREADY_PRECONFIGURED: 0,
@@ -589,6 +600,64 @@ export class CommercialClauseService {
       Array.isArray(version.parameterSchema) &&
       version.parameterSchema.length === 0,
     );
+  }
+
+  private isPreviousStandardDraft(
+    version: Parameters<CommercialClauseService['matchesStandardDraft']>[0],
+    category: StandardClauseDraft['category'],
+  ) {
+    const previous = B01_PREVIOUS_STANDARD_CLAUSE_DRAFTS.find(
+      (item) => item.category === category,
+    );
+    return Boolean(
+      previous &&
+      this.matchesStandardDraft(
+        version,
+        previous,
+        B01_PREVIOUS_DRAFT_PROVENANCE,
+      ),
+    );
+  }
+
+  private matchesStandardDraft(
+    version: {
+      titleFR: string;
+      titleEN: string;
+      textFR: string;
+      textEN: string;
+      businessOwner: string | null;
+      legalOwner: string | null;
+      isRequired: boolean | null;
+      effectiveAt: Date | null;
+      provenance: string;
+      parameterSchema: Prisma.JsonValue;
+      contentHash: string;
+      applicabilities: { scope: string }[];
+    },
+    target: StandardClauseDraft,
+    provenance = B01_DRAFT_PROVENANCE,
+  ) {
+    const expected = this.versionData(
+      this.preconfigurationPayload(target, provenance),
+    ).contentHash;
+    const actual = this.versionData({
+      titleFR: version.titleFR,
+      titleEN: version.titleEN,
+      textFR: version.textFR,
+      textEN: version.textEN,
+      businessOwner: version.businessOwner,
+      legalOwner: version.legalOwner,
+      isRequired: version.isRequired,
+      effectiveAt: version.effectiveAt,
+      provenance: version.provenance,
+      applicabilities: version.applicabilities.map(({ scope }) => scope).sort(),
+      parameters: Array.isArray(version.parameterSchema)
+        ? ([...version.parameterSchema] as ClauseParameterDefinition[]).sort(
+            (a, b) => a.key.localeCompare(b.key),
+          )
+        : [],
+    }).contentHash;
+    return version.contentHash === expected && actual === expected;
   }
 
   private versionData(

@@ -5,8 +5,10 @@ import {
 import type { ClauseParameterDefinition } from './commercial-clause.registry';
 
 export const B01_PRECONFIGURATION_CONFIRMATION = 'APPLY_B01_STANDARD_DRAFTS';
-export const B01_DRAFT_PROVENANCE =
+export const B01_PREVIOUS_DRAFT_PROVENANCE =
   'CORO_B01_STANDARD_DRAFT_2026-10-13_LEGAL_REVIEW_REQUIRED';
+export const B01_DRAFT_PROVENANCE =
+  'CORO_B01_FOUNDER_POLICY_ALIGNMENT_2026-10-13_LEGAL_REVIEW_REQUIRED';
 
 export type StandardClauseDraft = {
   category: CommercialClauseCategory;
@@ -36,7 +38,7 @@ const p = (
   type: ClauseParameterDefinition['type'],
 ): ClauseParameterDefinition => ({ key, type, required: true });
 
-const b01StandardClauseDrafts: Array<
+const b01PreviousStandardClauseDrafts: Array<
   Omit<StandardClauseDraft, 'legalReferences'>
 > = [
   {
@@ -371,10 +373,104 @@ const b01StandardClauseDrafts: Array<
   },
 ];
 
-export const B01_STANDARD_CLAUSE_DRAFTS: StandardClauseDraft[] =
-  b01StandardClauseDrafts.map((draft) => ({
+export const B01_PREVIOUS_STANDARD_CLAUSE_DRAFTS: StandardClauseDraft[] =
+  b01PreviousStandardClauseDrafts.map((draft) => ({
     ...draft,
     legalReferences: B01_OFFICIAL_LEGAL_REFERENCES,
+  }));
+
+const founderPolicyAlignment: Partial<
+  Record<
+    CommercialClauseCategory,
+    Pick<StandardClauseDraft, 'textFR' | 'textEN' | 'legalReviewNotes'>
+  >
+> = {
+  RENEWAL: {
+    legalReviewNotes:
+      'Mécanisme commercial confirmé; droits impératifs et articulation avec les dates contractuelles à valider juridiquement.',
+    textFR:
+      'Après la période initiale de douze (12) mois civils, l’abonnement se renouvelle automatiquement pour des périodes successives de douze (12) mois civils, sauf si l’une des parties transmet à l’autre un avis écrit de non-renouvellement au moins trente (30) jours civils avant l’expiration du terme alors applicable. Les dates du terme initial, de chaque renouvellement et de l’échéance de l’avis sont déterminées par les dates contractuelles canoniques de l’offre acceptée; aucune date de signature, de prise d’effet ou de renouvellement n’est présumée ni appliquée rétroactivement. Les droits impératifs applicables demeurent réservés.',
+    textEN:
+      'After the initial term of twelve (12) calendar months, the subscription automatically renews for successive periods of twelve (12) calendar months unless either party gives the other written notice of non-renewal at least thirty (30) calendar days before the then-current term expires. The initial term, each renewal and the notice deadline are determined from the canonical contractual dates of the accepted offer; no signature, effective or renewal date is presumed or applied retroactively. Applicable mandatory rights remain reserved.',
+  },
+  TERMINATION: {
+    legalReviewNotes:
+      'Délai de remède commercial confirmé; exceptions légales et manquements graves à valider juridiquement.',
+    textFR:
+      'Sous réserve des droits et exceptions prévus par la loi, une partie peut résilier l’entente pour un manquement contractuel important de l’autre partie qui demeure non corrigé trente (30) jours civils après la réception d’un avis écrit décrivant le manquement. Ce délai s’applique réciproquement lorsqu’un remède est possible. Un avis ne suspend ni ne résilie automatiquement l’entente. Les cas où la loi permet une résiliation immédiate, ainsi que les manquements graves ou irrémédiables, doivent faire l’objet d’une appréciation distincte. Aucune pénalité de résiliation n’est créée par la présente clause.',
+    textEN:
+      'Subject to rights and exceptions under applicable law, either party may terminate the agreement for the other party’s material contractual breach that remains uncured thirty (30) calendar days after receipt of written notice describing the breach. This period applies reciprocally where cure is possible. Notice does not automatically suspend or terminate the agreement. Circumstances where immediate termination is permitted by law, as well as serious or irremediable breaches, require separate assessment. This clause creates no termination penalty.',
+  },
+  SUPPORT_AND_MAINTENANCE: {
+    legalReviewNotes:
+      'Valider les canaux réellement offerts et une éventuelle annexe spécialisée Sentinelle/Population avant approbation.',
+    textFR:
+      'Le soutien standard de CORO est offert du lundi au vendredi, de 9 h à 17 h, heure de l’Amérique/Toronto, à l’exclusion des jours fériés applicables au Québec, par les canaux de soutien effectivement mis à disposition. Aucun soutien 24/7, délai garanti de réponse ou de résolution, ni niveau de service quantifié n’est inclus. Tout engagement de soutien critique pour CORO Sentinelle ou Sentinelle Population exige une entente distincte expressément convenue avant son application.',
+    textEN:
+      'CORO standard support is available Monday through Friday, from 9:00 a.m. to 5:00 p.m. America/Toronto time, excluding applicable Québec statutory holidays, through the support channels actually made available. No 24/7 support, guaranteed response or resolution time, or quantified service level is included. Any critical-support commitment for CORO Sentinelle or Sentinelle Population requires a separate agreement expressly accepted before it applies.',
+  },
+  SERVICE_AVAILABILITY: {
+    legalReviewNotes:
+      'Aucun SLA quantifié approuvé; dépendances, maintenance et engagements spécialisés à valider.',
+    textFR:
+      'CORO met en œuvre des mesures raisonnables pour maintenir la disponibilité technique du service, sous réserve des maintenances, dépendances tierces et événements hors de son contrôle raisonnable. Aucun pourcentage de disponibilité, délai de rétablissement ou résultat d’urgence, réglementaire ou opérationnel n’est garanti par la présente clause. L’acceptation par un fournisseur, l’envoi et la livraison confirmée d’une communication constituent des événements distincts, et la livraison universelle de messages n’est pas garantie.',
+    textEN:
+      'CORO uses reasonable measures to maintain the technical availability of the service, subject to maintenance, third-party dependencies and events beyond its reasonable control. This clause provides no guaranteed availability percentage, restoration time, or emergency, regulatory or operational outcome. Provider acceptance, dispatch and confirmed delivery of a communication are distinct events, and universal message delivery is not guaranteed.',
+  },
+  SCOPE_CHANGE: {
+    legalReviewNotes:
+      'Processus de changement à harmoniser avec les offres; toute exclusivité exige une entente spécialisée.',
+    textFR:
+      'Toute modification importante de la portée, des volumes, des livrables ou des hypothèses doit être convenue par écrit. CORO présente, lorsque pertinent, les incidences sur les frais et l’échéancier avant l’exécution du changement. Aucune exclusivité n’est comprise dans l’abonnement standard ni accordée automatiquement. Toute exclusivité exceptionnelle exige une entente distincte et explicite précisant le territoire, le secteur ou segment de clientèle, les modules ou fonctions couverts, la durée, la contrepartie financière, les exclusions et les conditions de résiliation; elle ne crée aucun droit commercial ou technique avant les actes distincts requis.',
+    textEN:
+      'Any material change to scope, volumes, deliverables or assumptions must be agreed in writing. Where applicable, CORO presents the effect on fees and timelines before performing the change. No exclusivity is included in the standard subscription or granted automatically. Any exceptional exclusivity requires a separate express agreement specifying territory, sector or customer segment, covered modules or functions, duration, financial consideration, exclusions and termination conditions; it creates no commercial or technical right before the required separate actions occur.',
+  },
+  ADDITIONAL_FEES: {
+    legalReviewNotes:
+      'Valider les quotas courriel, les modalités d’usage SMS et leur présentation contractuelle avant approbation.',
+    textFR:
+      'Aucun frais additionnel n’est exigible sans fondement dans l’offre acceptée ou une modification convenue. Pour Sentinelle Population, l’abonnement SaaS est distinct de la consommation de communications. Les SMS sont facturés selon l’usage aux tarifs gouvernés par le PriceBook applicable, lesquels doivent être divulgués et acceptés avant activation; aucun tarif SMS n’est fixé par la présente clause. Les quotas et limites de courriels doivent être définis dans l’entente applicable. L’acceptation par le fournisseur, l’envoi et la livraison confirmée sont des événements distincts, et aucune livraison universelle n’est garantie.',
+    textEN:
+      'No additional fee is payable unless supported by the accepted offer or an agreed change. For Sentinelle Population, the SaaS subscription is separate from communication consumption. SMS is charged based on usage at rates governed by the applicable PriceBook, which must be disclosed and accepted before activation; this clause sets no SMS rate. Email quotas and limits must be defined in the applicable agreement. Provider acceptance, dispatch and confirmed delivery are distinct events, and universal delivery is not guaranteed.',
+  },
+  CONFIDENTIALITY: {
+    legalReviewNotes:
+      'Valider exclusions, durée de survie et traitement spécialisé futur de la responsabilité liée à la confidentialité.',
+    textFR:
+      'Chaque partie protège les renseignements confidentiels de l’autre avec des mesures au moins raisonnables et les utilise uniquement pour exécuter l’entente. Cette obligation ne vise pas les renseignements devenus publics sans faute, reçus licitement d’un tiers ou dont la divulgation est exigée par la loi. Les recours et limites de responsabilité propres à la confidentialité doivent être traités dans une annexe spécialisée soumise à une revue juridique et commerciale ultérieure; aucun plafond distinct n’est créé par le présent brouillon.',
+    textEN:
+      'Each party protects the other’s confidential information using at least reasonable safeguards and uses it only to perform the agreement. This obligation does not cover information made public without fault, lawfully received from a third party or required to be disclosed by law. Remedies and liability limits specific to confidentiality must be addressed in a specialized schedule subject to future legal and commercial review; this draft creates no separate cap.',
+  },
+  DATA_PROTECTION: {
+    legalReviewNotes:
+      'Aligner avec les rôles, politiques et futures annexes spécialisées de confidentialité, cybersécurité et Sentinelle/Population.',
+    textFR:
+      'Chaque partie respecte les lois applicables en matière de protection des renseignements personnels. CORO applique des mesures de sécurité raisonnables à l’information sous son contrôle, et le Client demeure responsable de l’autorité, des avis et des consentements nécessaires pour les renseignements qu’il fournit. Les obligations et limites de responsabilité propres aux renseignements personnels, à la cybersécurité, à CORO Sentinelle et à Sentinelle Population exigent des annexes spécialisées soumises à une revue juridique et commerciale ultérieure; aucun plafond distinct n’est créé par le présent brouillon.',
+    textEN:
+      'Each party complies with applicable privacy laws. CORO applies reasonable security safeguards to information under its control, and the Customer remains responsible for the authority, notices and consents required for information it provides. Obligations and liability limits specific to personal information, cybersecurity, CORO Sentinelle and Sentinelle Population require specialized schedules subject to future legal and commercial review; this draft creates no separate cap.',
+  },
+  DATA_RETENTION_AND_RETURN: {
+    legalReviewNotes:
+      'Validation technique requise pour les mécanismes d’exportation et la politique distincte de conservation des sauvegardes.',
+    textFR:
+      'Pendant les trente (30) jours civils suivant la fin du contrat, le Client peut demander le retour de ses données au moyen des mécanismes d’exportation techniquement pris en charge et sous réserve du droit applicable. Les données admissibles peuvent ensuite faire l’objet d’une suppression contrôlée ou d’une anonymisation, sous réserve des obligations de conservation légale, de preuve, de sécurité et de traçabilité. La suppression des sauvegardes suit une politique technique de conservation distincte qui doit être validée avant approbation juridique. Aucune date ferme d’achèvement de suppression ni aucun format d’exportation particulier n’est promis par le présent brouillon.',
+    textEN:
+      'For thirty (30) calendar days after contract termination, the Customer may request return of its data using technically supported export mechanisms and subject to applicable law. Eligible data may then be subject to controlled deletion or anonymization, subject to legal retention, evidence, security and traceability obligations. Backup deletion follows a separate technical retention policy that must be validated before legal approval. This draft promises neither a fixed deletion-completion deadline nor a particular export format.',
+  },
+  LIABILITY: {
+    legalReviewNotes:
+      'Plafond général commercial proposé; exclusions impératives et annexes spécialisées à valider juridiquement avant toute approbation.',
+    textFR:
+      'Sous réserve des responsabilités qui ne peuvent être exclues ou limitées par la loi applicable, la responsabilité totale de chaque partie découlant d’un événement est proposée comme étant limitée aux frais payés ou payables pour les services touchés au cours des douze (12) mois précédant l’événement à l’origine de la réclamation. Si l’événement survient pendant la première année d’abonnement, la référence proposée est l’engagement annuel initial prévu au contrat pour les services touchés. Aucune limitation ne s’applique lorsqu’elle est interdite, notamment en cas de faute intentionnelle ou lourde ou de préjudice corporel ou moral. La confidentialité, les renseignements personnels, la cybersécurité, CORO Sentinelle et Sentinelle Population nécessitent des annexes spécialisées soumises à une revue juridique et commerciale ultérieure; aucun plafond distinct n’est créé par le présent brouillon.',
+    textEN:
+      'Subject to liabilities that cannot be excluded or limited under applicable law, each party’s aggregate liability arising from an event is proposed to be limited to fees paid or payable for the affected services during the twelve (12) months preceding the event giving rise to the claim. If the event occurs during the first subscription year, the proposed reference is the contractual first annual commitment for the affected services. No limitation applies where prohibited, including in cases of intentional or gross fault or bodily or moral injury. Confidentiality, personal information, cybersecurity, CORO Sentinelle and Sentinelle Population require specialized schedules subject to future legal and commercial review; this draft creates no separate cap.',
+  },
+};
+
+export const B01_STANDARD_CLAUSE_DRAFTS: StandardClauseDraft[] =
+  B01_PREVIOUS_STANDARD_CLAUSE_DRAFTS.map((draft) => ({
+    ...draft,
+    ...founderPolicyAlignment[draft.category],
   }));
 
 if (B01_STANDARD_CLAUSE_DRAFTS.length !== 25) {

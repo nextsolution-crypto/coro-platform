@@ -34,6 +34,7 @@ type Clause = {
 type PreconfigurationClassification =
   | "MISSING"
   | "ELIGIBLE_PLACEHOLDER"
+  | "ELIGIBLE_STANDARD_DRAFT"
   | "HUMAN_EDITED_DRAFT"
   | "PROTECTED_NON_DRAFT"
   | "ALREADY_PRECONFIGURED";
@@ -154,7 +155,7 @@ export default function CommercialClauseLibraryPage() {
       setConfirmed(false);
       await load(selected?.id);
       setMessage(
-        "Préconfiguration appliquée aux seuls placeholders admissibles. Toutes les clauses restent DRAFT.",
+        "Alignement appliqué aux seuls placeholders et brouillons standard inchangés admissibles. Toutes les clauses restent DRAFT.",
       );
     } catch (error) {
       setMessage(
@@ -253,7 +254,9 @@ export default function CommercialClauseLibraryPage() {
                 ))}
               </ul>
             </details>
-            {plan.summary.ELIGIBLE_PLACEHOLDER > 0 && (
+            {plan.summary.ELIGIBLE_PLACEHOLDER +
+              plan.summary.ELIGIBLE_STANDARD_DRAFT >
+              0 && (
               <div className="space-y-2">
                 <label className="flex items-start gap-2 text-sm">
                   <input
@@ -262,8 +265,10 @@ export default function CommercialClauseLibraryPage() {
                     onChange={(event) => setConfirmed(event.target.checked)}
                     className="mt-1"
                   />
-                  Je confirme la mise à jour exclusive des placeholders DRAFT
-                  admissibles; aucune approbation juridique n’est créée.
+                  Je confirme l’alignement exclusif des placeholders et des
+                  brouillons standard DRAFT strictement inchangés. Les éditions
+                  humaines et versions gouvernées sont protégées; aucune
+                  approbation juridique n’est créée.
                 </label>
                 <button
                   disabled={busy || !confirmed}

@@ -9,6 +9,8 @@ for (const token of [
   "Analyser la préconfiguration B01",
   "Prévisualisation sans écriture",
   "APPLY_B01_STANDARD_DRAFTS",
+  "ELIGIBLE_STANDARD_DRAFT",
+  "brouillons standard DRAFT strictement inchangés",
   "revue juridique requise",
   "Applicabilité",
   "Paramètres contractuels permis",
