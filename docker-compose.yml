@@ -54,6 +54,11 @@ services:
       DO_SPACES_ENDPOINT: ${DO_SPACES_ENDPOINT}
       DO_SPACES_BUCKET: ${DO_SPACES_BUCKET}
       DO_SPACES_CDN_URL: ${DO_SPACES_CDN_URL}
+      PRIVATE_STORAGE_QA_MODE: ${PRIVATE_STORAGE_QA_MODE:-false}
+      PRIVATE_STORAGE_QA_ENDPOINT: ${PRIVATE_STORAGE_QA_ENDPOINT:-}
+      PRIVATE_STORAGE_QA_ACCESS_KEY: ${PRIVATE_STORAGE_QA_ACCESS_KEY:-}
+      PRIVATE_STORAGE_QA_SECRET_KEY: ${PRIVATE_STORAGE_QA_SECRET_KEY:-}
+      PRIVATE_STORAGE_QA_BUCKET: ${PRIVATE_STORAGE_QA_BUCKET:-}
       NODE_ENV: production
       PORT: 3002
     depends_on:
@@ -61,6 +66,7 @@ services:
         condition: service_healthy
     networks:
       - coro_network
+      - coro_qa_storage_internal
     ports:
       - "3002:3002"
     volumes:
@@ -108,9 +114,47 @@ services:
     ports:
       - "3003:3003"
 
+  private-storage-qa:
+    image: dxflrs/garage@sha256:9c96caa2612d3411acc5b0e6701fb238dbfba33e533a6d7d3d811a4b12d0d020
+    container_name: coro_private_storage_qa
+    profiles: ["qa-storage"]
+    command: ["/garage", "-c", "/etc/garage.toml", "server"]
+    environment:
+      GARAGE_RPC_SECRET: ${PRIVATE_STORAGE_QA_RPC_SECRET:-}
+    configs:
+      - source: private_storage_qa_config
+        target: /etc/garage.toml
+    volumes:
+      - private_storage_qa_data:/var/lib/garage
+    networks:
+      - coro_qa_storage_internal
+    healthcheck:
+      test: ["CMD", "/garage", "-c", "/etc/garage.toml", "status"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
 volumes:
   postgres_data:
+  private_storage_qa_data:
 
 networks:
   coro_network:
     driver: bridge
+  coro_qa_storage_internal:
+    driver: bridge
+    internal: true
+
+configs:
+  private_storage_qa_config:
+    content: |
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir = "/var/lib/garage/data"
+      db_engine = "sqlite"
+      replication_factor = 1
+      rpc_bind_addr = "[::]:3901"
+      rpc_public_addr = "private-storage-qa:3901"
+
+      [s3_api]
+      s3_region = "us-east-1"
+      api_bind_addr = "[::]:3900"
