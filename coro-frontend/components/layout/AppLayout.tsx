@@ -489,7 +489,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {glass ? <GlassIcon name="bell" size={20} /> : <span style={{ fontSize: '18px' }}>🔔</span>}
               {totalCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white text-xs font-bold rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: pendingApprovals.length > 0 || urgentCount > 0 ? p.bg('#C0392B') : p.bg('#F39C12'), fontSize: '10px' }}>
+                  style={{
+                    backgroundColor: pendingApprovals.length > 0 || urgentCount > 0 ? p.bg('#C0392B') : p.bg('#F39C12'),
+                    fontSize: '10px',
+                    // Glass uniquement : l'état « avis » (ambre) passe en texte foncé (6,65:1 au lieu de 2,19:1 en blanc).
+                    // L'état urgent garde le blanc sur le rouge d'urgence (5,44:1). Legacy : inchangé.
+                    ...(glass && !(pendingApprovals.length > 0 || urgentCount > 0)
+                      ? { backgroundColor: 'var(--cg-notice-bg)', color: 'var(--cg-notice-fg)' }
+                      : {}),
+                  }}>
                   {totalCount}
                 </span>
               )}

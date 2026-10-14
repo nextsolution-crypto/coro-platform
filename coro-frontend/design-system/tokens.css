@@ -149,6 +149,11 @@
   --cg-emergency-bg: #C0392B;
   --cg-emergency-fg: #FFFFFF;
   --cg-emergency-border: #7B241C;
+
+  /* Pastille de notification (avis non urgent) : ambre opaque + texte foncé, identiques en Light et en Dark.
+     Le blanc sur cet ambre ne fait que 2,19:1 ; le texte foncé atteint 6,65:1. L'état urgent reste le rouge d'urgence. */
+  --cg-notice-bg: #F39C12;
+  --cg-notice-fg: #1B2A3B;
 }
 
 /* ───────── Thème Dark ───────── */

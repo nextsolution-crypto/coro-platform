@@ -17,7 +17,8 @@ const projects = [
 const routes = {
   '/api/projects': { projects },
   '/api/projects/upcoming-updates': [],
-  '/api/projects/pending-approval': [],
+  // BENCH_PENDING=1 : une approbation en attente, pour mesurer l'état « urgent » de la pastille de notification.
+  '/api/projects/pending-approval': process.env.BENCH_PENDING === '1' ? [{ id: 'p1', name: 'Plan de continuité — Démo A', documentType: 'PCA', client: { name: 'Organisation Démo A' }, submittedBy: { firstName: 'Sam', lastName: 'Exemple' } }] : [],
   '/api/activities/recurring-to-renew': [],
   '/api/activities/upcoming': [],
   '/api/notifications/mandate-delays': [],

@@ -101,7 +101,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/blog', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
   { pattern: '/blog/[id]/edit', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/blog/new', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },
-  { pattern: '/settings', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex'] },
+  { pattern: '/settings', family: 'admin', shell: 'app', status: 'beta', styling: ['inline-hex'] },
   { pattern: '/settings/activity-types', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/settings/feedback', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/settings/module1-template', family: 'admin', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },

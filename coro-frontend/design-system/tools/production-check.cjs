@@ -78,7 +78,9 @@ function walk(dir, out = []) {
   const SENTINELS = [
     ['page de l’outil de développement', /GlassKitPlayground|Kit Liquid Glass|Outillage de développement/],
     ['faux API / banc de validation', /bench-token|bench@example\.test|OUTIL DE TEST UNIQUEMENT|mock-api|design-system[\\/]bench/],
-    ['terrain d’essai du kit (classes et dialogues)', /cgx-modal|cgx-table|Confirmation destructive/],
+    // Textes propres au terrain d'essai. Les classes génériques .cgx-* ne sont PAS un marqueur : la feuille du kit est livrée légitimement
+    // dès qu'une page migrée utilise une primitive (p. ex. PageHeader sur /settings).
+    ['terrain d’essai du kit (textes et dialogues propres à l’outil)', /Confirmation destructive|Ouvrir une modale|Exemple de modale|Exemple de dialogue|Terrain d.essai des primitives/],
   ];
   // Exception unique et vérifiée : .next/standalone/package.json est une copie de package.json ; elle contient le TEXTE des scripts
   // npm de développement (glass:bench…), jamais le code du banc. On contrôle séparément qu'elle ne contient aucune donnée de test.
@@ -106,7 +108,7 @@ function walk(dir, out = []) {
       for (const [method, url] of [['GET', '/glass-kit'], ['GET', '/glass-kit/'], ['GET', '/glass-kit?x=1'], ['HEAD', '/glass-kit'], ['GET', '/glass-kit/autre'], ['GET', '/GLASS-KIT'], ['GET', '/_next/data/x/glass-kit.json']]) {
         const r = await requestFollow(method, url);
         check(`${method} ${url} → 404${r.hops.length ? ' (après redirection ' + r.hops.join('>') + ' vers ' + r.finalPath + ')' : ''}`, r.status === 404, 'statut final ' + r.status);
-        if (method === 'GET') check(`  ${url} : aucune trace de l’outil dans la réponse`, !/GlassKitPlayground|Kit Liquid Glass|Ouvrir une modale|cgx-/.test(r.body));
+        if (method === 'GET') check(`  ${url} : aucune trace de l’outil dans la réponse`, !/GlassKitPlayground|Kit Liquid Glass|Ouvrir une modale|Confirmation destructive/.test(r.body));
       }
       for (const url of ['/login', '/dashboard', '/projects']) {
         const r = await request('GET', url);

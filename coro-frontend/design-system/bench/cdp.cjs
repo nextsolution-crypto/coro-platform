@@ -49,7 +49,7 @@ async function launch() {
 }
 
 /** Ouvre un onglet et renvoie une session { send, eval, key, click, goto, ... }. */
-async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width }) {
+async function openSession(port, { ui, theme, viewport, colorScheme = 'light', width, beta = false, role = 'SUPER_ADMIN' }) {
   const target = await getJson(`http://127.0.0.1:${port}/json/new?about:blank`, 'PUT');
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve) => (ws.onopen = resolve));
@@ -69,13 +69,14 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: colorScheme }] });
   // Préférences et session factice posées avant tout script de l'application (déterminisme : le résultat ne dépend
   // ni de l'ordre des routes ni d'une connexion antérieure partagée par le profil Chrome). Faux API local uniquement.
-  const fakeUser = { id: 'bench-user', email: 'bench@example.test', firstName: 'Alex', lastName: 'Démo', role: 'SUPER_ADMIN', organizationId: 'bench-org' };
+  const fakeUser = { id: 'bench-user', email: 'bench@example.test', firstName: 'Alex', lastName: 'Démo', role, organizationId: 'bench-org' };
   const seed = `try{` +
     `var u=${JSON.stringify(JSON.stringify(fakeUser))};` +
     `localStorage.setItem('coro_token','bench-token');localStorage.setItem('coro_user',u);` +
     `sessionStorage.setItem('coro_token','bench-token');sessionStorage.setItem('coro_user',u);` +
     (ui ? `localStorage.setItem('coro-ui-generation','${ui}');` : '') +
     (theme ? `localStorage.setItem('coro-theme-preference','${theme}');` : '') +
+    (beta ? `localStorage.setItem('coro-glass-beta','on');` : '') +
     `}catch(e){}`;
   await send('Page.addScriptToEvaluateOnNewDocument', { source: seed });
   const evaluate = async (expression) => {
@@ -87,7 +88,11 @@ async function openSession(port, { ui, theme, viewport, colorScheme = 'light', w
     send, eval: evaluate, consoleErrors, viewport: vp,
     async key(key, code, vk, shift = false) {
       const modifiers = shift ? 8 : 0;
-      await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key, code, windowsVirtualKeyCode: vk, modifiers });
+      // Entrée et Espace activent un bouton via leur caractère : sans `text`, le navigateur ne déclenche pas le clic (mesuré).
+      const text = key === 'Enter' ? '\r' : key === ' ' ? ' ' : undefined;
+      await send('Input.dispatchKeyEvent', text
+        ? { type: 'keyDown', key, code, windowsVirtualKeyCode: vk, modifiers, text, unmodifiedText: text }
+        : { type: 'rawKeyDown', key, code, windowsVirtualKeyCode: vk, modifiers });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: vk, modifiers });
       await sleep(250);
     },

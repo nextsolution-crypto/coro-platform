@@ -281,7 +281,7 @@ test('chaque token du thème Light a son équivalent Dark (sauf valeurs communes
   const names = (sel) => new Set([...rules.find((r) => r.selector === sel).body.matchAll(/(--cg-[\w-]+)\s*:/g)].map((m) => m[1]));
   const light = names(':root[data-ui="glass"]');
   const dark = names(':root[data-ui="glass"][data-theme="dark"]');
-  const common = /^--cg-(space|radius|blur|glass-saturate|duration|ease|focus-width|focus-offset|font|emergency|canvas-gradient)/;
+  const common = /^--cg-(space|radius|blur|glass-saturate|duration|ease|focus-width|focus-offset|font|emergency|notice|canvas-gradient)/;
   const missing = [...light].filter((n) => !common.test(n) && !dark.has(n));
   assert.deepEqual(missing, []);
 });
@@ -328,6 +328,7 @@ for (const theme of ['light', 'dark']) {
     for (const text of ['--cg-text-primary', '--cg-text-secondary', '--cg-text-muted']) check(`${text} sur surface opaque`, c(text), c('--cg-surface-solid'));
     for (const k of ['--cg-accent', '--cg-accent-hover', '--cg-accent-active']) check(`texte sur ${k}`, c('--cg-text-on-accent'), c(k));
     check('urgence', c('--cg-emergency-fg'), c('--cg-emergency-bg'));
+    check('pastille de notification (avis)', c('--cg-notice-fg'), c('--cg-notice-bg'));
     // Éléments d'interface (focus, bordure de champ) : 3:1 minimum (WCAG 1.4.11).
     const surface = over(c('--cg-glass-bg-strong'), c('--cg-canvas'));
     check('anneau de focus', c('--cg-focus-ring'), surface, 3);

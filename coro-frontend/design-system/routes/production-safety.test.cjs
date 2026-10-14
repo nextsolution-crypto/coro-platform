@@ -134,7 +134,21 @@ test('bêta de bout en bout (store en production) : route bêta en îlot Legacy 
   assert.deepEqual(results, { 'aucun drapeau': 'island', 'drapeau 1': 'island', 'jeton exact': 'glass' });
 });
 
+test('/settings (seule route bêta) : îlot Legacy en production par défaut, Glass seulement avec activation explicite', () => {
+  const prod = { production: true };
+  assert.equal(matcher.resolveRoute('/settings', prod).mode, 'island', 'production, sans activation');
+  assert.equal(matcher.resolveRoute('/settings', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: '1', storageValue: 'on' }) }).mode, 'island', 'production, activation accidentelle (1 + stockage local)');
+  assert.equal(matcher.resolveRoute('/settings', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'glass', 'production, jeton exact');
+  assert.equal(matcher.resolveRoute('/settings', { betaEnabled: core.resolveBetaEnabled({ production: false, storageValue: 'on' }) }).mode, 'glass', 'développement, clé locale');
+  assert.equal(matcher.resolveRoute('/settings').mode, 'island', 'développement, sans activation');
+  // Ses sous-pages ne sont PAS migrées : elles restent en îlot, bêta activée ou non.
+  for (const sub of ['/settings/users', '/settings/organization', '/settings/task-templates', '/settings/profile']) {
+    const r = matcher.resolveRoute(sub, { betaEnabled: true });
+    assert.notEqual(r.mode, 'glass', sub);
+  }
+});
+
 test('registre : aucune route bêta ni ga en dehors des listes validées ; routes inconnues restent Legacy', () => {
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta'), []);
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern), ['/settings']);
   for (const p of ['/nouveau-lot', '/projects/1/inconnu', '/admin/zzz']) assert.equal(matcher.resolveRoute(p, { production: true, betaEnabled: true }).mode, 'legacy', p);
 });

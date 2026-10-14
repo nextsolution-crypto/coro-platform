@@ -2,7 +2,7 @@
 
 > Généré par `npm run glass:inventory -- --write` (scanner d’imports × registre). Ne pas éditer à la main : les statuts se changent dans `routes/route-registry.ts`.
 
-**83 routes** (65 statiques, 18 dynamiques) — une page `page.tsx` = une route, aucun double comptage. Avec shell Glass : 74 ; plein écran : 9. Statuts : ga 3 · beta 0 · legacy-only 80.
+**83 routes** (65 statiques, 18 dynamiques) — une page `page.tsx` = une route, aucun double comptage. Avec shell Glass : 74 ; plein écran : 9. Statuts : ga 3 · beta 1 · legacy-only 79.
 
 ## Pilote migré — 2 route(s), 1721 lignes, 310 couleurs hex, 15 classes couleur Tailwind
 
@@ -51,7 +51,7 @@
 | `/editor/[projectId]/procedures/[procedureId]` | dynamique | none | inline-hex + tailwind | 760 | 105 | 1 | destructive, documents, emergency-content | legacy-only | — |
 | `/library` | statique | app | inline-hex | 503 | 58 | 0 | emergency-content | legacy-only | — |
 
-## Administration, paramètres, blog — 28 route(s), 16632 lignes, 1819 couleurs hex, 114 classes couleur Tailwind
+## Administration, paramètres, blog — 28 route(s), 16776 lignes, 1819 couleurs hex, 114 classes couleur Tailwind
 
 | Route | Type | Shell | Styles | Lignes | Hex | Tailwind | Sensibilité | Statut | Composants partagés |
 |---|---|---|---|---:|---:|---:|---|---|---|
@@ -74,7 +74,7 @@
 | `/blog` | statique | app | inline-hex + tailwind | 362 | 47 | 2 | destructive | legacy-only | — |
 | `/blog/[id]/edit` | dynamique | app | inline-hex + tailwind | 800 | 145 | 4 | — | legacy-only | ui/DragDropUpload.tsx |
 | `/blog/new` | statique | app | inline-hex + tailwind | 715 | 130 | 3 | — | legacy-only | ui/DragDropUpload.tsx |
-| `/settings` | statique | app | inline-hex | 436 | 18 | 0 | — | legacy-only | — |
+| `/settings` | statique | app | inline-hex | 580 | 18 | 0 | — | beta | — |
 | `/settings/activity-types` | statique | app | inline-hex + tailwind | 306 | 84 | 8 | — | legacy-only | — |
 | `/settings/feedback` | statique | app | inline-hex + tailwind | 355 | 28 | 1 | — | legacy-only | — |
 | `/settings/module1-template` | statique | app | inline-hex + tailwind | 306 | 49 | 3 | — | legacy-only | — |

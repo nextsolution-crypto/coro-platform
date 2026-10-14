@@ -134,3 +134,14 @@ test('cibles tactiles : 44 px sur mobile en Glass, sans effet sur desktop ni Leg
   assert.equal((layoutSrc.match(/min-h-\[44px\]/g) || []).length >= 3, true);
   for (const m of layoutSrc.matchAll(/\$\{glass \? '([^']*min-h-\[44px\][^']*)'/g)) assert.ok(/lg:min-h-0/.test(m[1]), 'min-h sans reset lg : ' + m[1]);
 });
+
+// ───────── Badge de notification (correction de contraste Glass) ─────────
+test('badge de notification : correction limitée à Glass, état urgent et Legacy inchangés', () => {
+  const src = fs.readFileSync(path.join(frontend, 'components/layout/AppLayout.tsx'), 'utf8');
+  // Expression Legacy d'origine conservée telle quelle.
+  assert.ok(src.includes("backgroundColor: pendingApprovals.length > 0 || urgentCount > 0 ? p.bg('#C0392B') : p.bg('#F39C12'),"));
+  // Le token n'apparaît que sous la condition glass, et uniquement pour l'état non urgent.
+  assert.ok(src.includes("...(glass && !(pendingApprovals.length > 0 || urgentCount > 0)"));
+  assert.equal((src.match(/--cg-notice-/g) || []).length, 2, 'tokens notice utilisés une seule fois (fond + texte)');
+  assert.ok(tokensCss.includes('--cg-notice-bg: #F39C12;') && tokensCss.includes('--cg-notice-fg: #1B2A3B;'));
+});

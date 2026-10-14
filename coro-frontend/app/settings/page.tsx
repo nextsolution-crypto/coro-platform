@@ -4,6 +4,10 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import AppLayout from '@/components/layout/AppLayout';
+// GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
+import { useTheme } from '@/design-system/theme/ThemeProvider';
+import SettingsGlassView from './SettingsGlassView';
+// GLASS:end
 
 import {
   User,
@@ -18,6 +22,9 @@ import {
 
 export default function SettingsPage() {
   const router = useRouter();
+  // GLASS:begin
+  const { ui, routeMode } = useTheme();
+  // GLASS:end
 
   const {
     user,
@@ -143,6 +150,18 @@ export default function SettingsPage() {
   ];
 
 
+  // GLASS:begin
+  // Vue Liquid Glass : uniquement si Glass est actif ET que la route est rendue en Glass (bêta activée, ou ga au registre).
+  // Sinon (Legacy, ou îlot Legacy tant que la bêta n'est pas activée), le rendu d'origine ci-dessous est utilisé tel quel.
+  // Les sections (donc le filtrage par rôle) et la navigation sont calculées ci-dessus, une seule fois, pour les deux rendus.
+  if (ui === 'glass' && routeMode === 'glass') {
+    return (
+      <AppLayout>
+        <SettingsGlassView sections={sections} onNavigate={(path) => router.push(path)} />
+      </AppLayout>
+    );
+  }
+  // GLASS:end
   return (
     <AppLayout>
 

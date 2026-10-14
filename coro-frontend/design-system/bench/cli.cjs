@@ -30,12 +30,12 @@ const slug = (route) => (route === '/' ? 'root' : route.replace(/^\//, '').repla
 const fileName = (route, ui, theme, vp, ext = 'json') => `${slug(route)}__${ui}-${theme}__${vp}.${ext}`;
 
 /** Exécute `fn(session, ctx)` pour chaque combinaison route × viewport, dans un seul Chrome. */
-async function forEachView({ routes, ui, theme, viewports }, fn) {
+async function forEachView({ routes, ui, theme, viewports, beta = false, role }, fn) {
   const chrome = await launch();
   try {
     for (const vp of viewports) {
       for (const route of routes) {
-        const session = await openSession(chrome.port, { ui, theme, viewport: Number(vp) });
+        const session = await openSession(chrome.port, { ui, theme, viewport: Number(vp), beta, role });
         try {
           const how = await session.goto(route);
           if (how.startsWith('ECHEC')) { console.log(`  ! ${route} @${vp} : inaccessible (${how})`); continue; }
@@ -48,12 +48,12 @@ async function forEachView({ routes, ui, theme, viewports }, fn) {
 }
 
 async function cmdSnapshot(o) {
-  const cfg = { routes: list(o.routes, ['/dashboard']), ui: o.ui || 'legacy', theme: o.theme || 'SYSTEM', viewports: list(o.viewports, ['1600']) };
+  const cfg = { routes: list(o.routes, ['/dashboard']), ui: o.ui || 'legacy', theme: o.theme || 'SYSTEM', viewports: list(o.viewports, ['1600']), beta: o.beta === 'true', role: o.role };
   const dir = o.out; if (!dir) throw new Error('--out requis');
   fs.mkdirSync(dir, { recursive: true });
   await forEachView(cfg, async (s, { route, vp, how }) => {
     const data = await s.eval(SNAPSHOT);
-    fs.writeFileSync(path.join(dir, fileName(route, cfg.ui, cfg.theme, vp)), data);
+    fs.writeFileSync(path.join(dir, fileName(route, cfg.ui + (cfg.beta ? '+beta' : ''), cfg.theme, vp)), data);
     console.log(`  ✓ ${route} @${vp} (${how}) : ${JSON.parse(data).count} éléments, ${s.consoleErrors.length} exception(s) page`);
   });
 }
@@ -92,13 +92,13 @@ function cmdCompare(o) {
 }
 
 async function cmdContrast(o) {
-  const cfg = { routes: list(o.routes, ['/dashboard']), ui: o.ui || 'glass', theme: o.theme || 'DARK', viewports: list(o.viewports, ['1600']) };
+  const cfg = { routes: list(o.routes, ['/dashboard']), ui: o.ui || 'glass', theme: o.theme || 'DARK', viewports: list(o.viewports, ['1600']), beta: o.beta === 'true', role: o.role };
   let failures = 0;
   await forEachView(cfg, async (s, { route, vp }) => {
     const r = JSON.parse(await s.eval(CONTRAST)); failures += r.failures;
     console.log(`  ${r.failures === 0 ? '✓' : '✗'} ${route} @${vp} ${cfg.ui}/${cfg.theme} : ${r.total} textes, ${r.failures} sous le seuil AA, ${r.approxBackgrounds} sur fond dégradé/image (approximatif)`);
     for (const it of r.items.slice(0, 6)) console.log(`      ${it.ratio}:1 (min ${it.need}) ${it.sel} « ${it.text} » ${it.fg} sur ${it.bg}${it.approx ? ' ~' : ''}`);
-    if (o.out) { fs.mkdirSync(o.out, { recursive: true }); fs.writeFileSync(path.join(o.out, fileName(route, cfg.ui, cfg.theme, vp)), JSON.stringify(r, null, 1)); }
+    if (o.out) { fs.mkdirSync(o.out, { recursive: true }); fs.writeFileSync(path.join(o.out, fileName(route, cfg.ui + (cfg.beta ? '+beta' : ''), cfg.theme, vp)), JSON.stringify(r, null, 1)); }
   });
   process.exitCode = failures === 0 ? 0 : 1;
 }
@@ -112,7 +112,7 @@ function cmdContrastCompare(o) {
   const key = (it) => it.sel + '|' + it.text;
   let regressions = 0;
   for (const f of fs.readdirSync(o.b).filter((x) => x.endsWith('.json'))) {
-    const twin = f.replace(/__[a-z]+-[A-Z]+__/, (m) => m.replace(/-[A-Z]+__/, '-SYSTEM__').replace(/^__[a-z]+/, '__legacy'));
+    const twin = f.replace(/__[a-z+]+-[A-Z]+__/, (m) => m.replace(/-[A-Z]+__/, '-SYSTEM__').replace(/^__[a-z+]+/, '__legacy'));
     const fa = path.join(o.a, twin);
     if (!fs.existsSync(fa)) { console.log('  ? pas de référence pour', f, '(attendu', twin + ')'); continue; }
     const A = JSON.parse(fs.readFileSync(fa)); const B = JSON.parse(fs.readFileSync(path.join(o.b, f)));
@@ -129,10 +129,10 @@ function cmdContrastCompare(o) {
 }
 
 async function cmdShots(o) {
-  const cfg = { routes: list(o.routes, ['/dashboard']), ui: o.ui || 'glass', theme: o.theme || 'LIGHT', viewports: list(o.viewports, ['320', '390', '768', '1600']) };
+  const cfg = { routes: list(o.routes, ['/dashboard']), ui: o.ui || 'glass', theme: o.theme || 'LIGHT', viewports: list(o.viewports, ['320', '390', '768', '1600']), beta: o.beta === 'true', role: o.role };
   if (!o.out) throw new Error('--out requis');
   await forEachView(cfg, async (s, { route, vp }) => {
-    const file = path.join(o.out, fileName(route, cfg.ui, cfg.theme, vp, 'png'));
+    const file = path.join(o.out, fileName(route, cfg.ui + (cfg.beta ? '+beta' : ''), cfg.theme, vp, 'png'));
     await s.screenshot(file); console.log('  ✓', file);
   });
 }
@@ -144,7 +144,7 @@ async function cmdScenarios(o) {
   try {
     for (const sc of scenarios) {
       if (only && !only.includes(sc.name)) continue;
-      const session = await openSession(chrome.port, { ui: sc.ui, theme: sc.theme, viewport: sc.viewport });
+      const session = await openSession(chrome.port, { ui: sc.ui, theme: sc.theme, viewport: sc.viewport, beta: sc.beta, role: sc.role });
       const checks = [];
       const check = (label, ok, detail = '') => { checks.push({ label, ok: !!ok, detail }); };
       try { const how = await session.goto(sc.route); if (how.startsWith('ECHEC')) { check('route accessible', false, how); } else { await sleep(600); await sc.run(session, check); } }

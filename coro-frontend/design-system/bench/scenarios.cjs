@@ -129,4 +129,5 @@ module.exports = [
       check('retour /dashboard : Glass rétabli', h.ui === 'glass' && h.islands === 0, JSON.stringify(h));
     },
   },
+  ...require('./scenarios-settings.cjs'),
 ];
