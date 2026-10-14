@@ -11,6 +11,13 @@ export const PROPOSAL_CONVERSION_RESPONSE_INCLUDE = {
   proposalRevision: true,
 } as const satisfies Prisma.CommercialSimulationProposalConversionInclude;
 
+export const CONFIGURED_SCENARIO_RESPONSE_INCLUDE = {
+  families: true,
+  capabilities: true,
+  lines: { include: { costEfforts: true } },
+  driverValues: true,
+} as const satisfies Prisma.CommercialSimulationScenarioInclude;
+
 export type CalculationRunResponseSource =
   Prisma.CommercialSimulationCalculationRunGetPayload<{
     include: typeof CALCULATION_RUN_RESPONSE_INCLUDE;
@@ -21,7 +28,30 @@ export type ProposalConversionResponseSource =
     include: typeof PROPOSAL_CONVERSION_RESPONSE_INCLUDE;
   }>;
 
+export type ConfiguredScenarioResponseSource =
+  Prisma.CommercialSimulationScenarioGetPayload<{
+    include: typeof CONFIGURED_SCENARIO_RESPONSE_INCLUDE;
+  }>;
+
 const optionalBigInt = (value: bigint | null) => value?.toString() ?? null;
+
+/** Projects a configured Scenario to its exact, JSON-safe public HTTP shape. */
+export function configuredScenarioResponse(
+  scenario: ConfiguredScenarioResponseSource,
+) {
+  return {
+    ...scenario,
+    lines: scenario.lines.map((line) => ({
+      ...line,
+      proposedUnitAmountMinor: optionalBigInt(line.proposedUnitAmountMinor),
+    })),
+    driverValues: scenario.driverValues.map((driver) => ({
+      ...driver,
+      integerValue: optionalBigInt(driver.integerValue),
+      moneyMinorValue: optionalBigInt(driver.moneyMinorValue),
+    })),
+  };
+}
 
 /**
  * Projects the immutable Prisma calculation snapshot to its public HTTP shape.

@@ -34,6 +34,7 @@ import {
   UpdateScenarioMetadataDto,
   UpdateAssumptionVersionDto,
 } from './commercial-simulator.dto';
+import { configuredScenarioResponse } from './commercial-simulator-response';
 
 type RequestWithUser = { user: { userId: string } };
 
@@ -210,15 +211,17 @@ export class CommercialSimulatorController {
     });
   }
   @Put('configurator/workspaces/:workspaceId/scenarios/:scenarioId')
-  configureGuidedScenario(
+  async configureGuidedScenario(
     @Param('workspaceId') workspaceId: string,
     @Param('scenarioId') scenarioId: string,
     @Body() dto: GuidedConfigureScenarioDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.service.configureGuidedScenario(workspaceId, scenarioId, dto, {
-      userId: req.user.userId,
-    });
+    return configuredScenarioResponse(
+      await this.service.configureGuidedScenario(workspaceId, scenarioId, dto, {
+        userId: req.user.userId,
+      }),
+    );
   }
   @Post('configurator/workspaces/:workspaceId/scenarios/:scenarioId/duplicate')
   duplicateGuidedScenario(
@@ -250,15 +253,17 @@ export class CommercialSimulatorController {
       userId: req.user.userId,
     });
   }
-  @Put('workspaces/:workspaceId/scenarios/:scenarioId') configure(
+  @Put('workspaces/:workspaceId/scenarios/:scenarioId') async configure(
     @Param('workspaceId') workspaceId: string,
     @Param('scenarioId') scenarioId: string,
     @Body() dto: ConfigureScenarioDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.service.configureScenario(workspaceId, scenarioId, dto, {
-      userId: req.user.userId,
-    });
+    return configuredScenarioResponse(
+      await this.service.configureScenario(workspaceId, scenarioId, dto, {
+        userId: req.user.userId,
+      }),
+    );
   }
   @Post('workspaces/:workspaceId/select') select(
     @Param('workspaceId') workspaceId: string,

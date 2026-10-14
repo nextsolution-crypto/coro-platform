@@ -108,6 +108,25 @@ describe('CommercialSimulatorController security contract', () => {
       sourceType: 'RUN_PREVIEW',
       customer: { displayName: 'Test prospect' },
     }));
+    const configuredScenario = jest.fn(() => ({
+      id: 'scenario-1',
+      lockVersion: 2,
+      families: [],
+      capabilities: [],
+      lines: [
+        {
+          proposedUnitAmountMinor: 9_007_199_254_740_993n,
+          costEfforts: [],
+        },
+      ],
+      driverValues: [
+        {
+          driverCode: 'ACTIVE_SITES',
+          integerValue: 9_007_199_254_740_993n,
+          moneyMinorValue: null,
+        },
+      ],
+    }));
 
     beforeAll(async () => {
       const module = await Test.createTestingModule({
@@ -124,6 +143,8 @@ describe('CommercialSimulatorController security contract', () => {
               evaluateGuidedDraft,
               convertGuided,
               customerPreview,
+              configureGuidedScenario: configuredScenario,
+              configureScenario: configuredScenario,
             },
           },
         ],
@@ -136,6 +157,41 @@ describe('CommercialSimulatorController security contract', () => {
     });
 
     afterAll(async () => app.close());
+
+    it.each([
+      [undefined, 401],
+      ['OPERATOR', 403],
+      ['ADMIN', 403],
+      ['SUPER_ADMIN', 200],
+    ])(
+      'protects and serializes Scenario configuration for role %s',
+      async (role, expected) => {
+        const server = app.getHttpServer() as Parameters<typeof request>[0];
+        const call = request(server)
+          .put(
+            '/admin/v1/commercial/simulator/configurator/workspaces/workspace-1/scenarios/scenario-1',
+          )
+          .send({});
+        if (role) call.set('x-test-role', role);
+        const response = await call.expect(expected);
+        if (role === 'SUPER_ADMIN') {
+          const body = response.body as {
+            lockVersion: number;
+            driverValues: Array<{
+              integerValue: string;
+              moneyMinorValue: string | null;
+            }>;
+            lines: Array<{ proposedUnitAmountMinor: string | null }>;
+          };
+          expect(body.lockVersion).toBe(2);
+          expect(body.driverValues[0].integerValue).toBe('9007199254740993');
+          expect(body.driverValues[0].moneyMinorValue).toBeNull();
+          expect(body.lines[0].proposedUnitAmountMinor).toBe(
+            '9007199254740993',
+          );
+        }
+      },
+    );
 
     it.each([
       [undefined, 401],

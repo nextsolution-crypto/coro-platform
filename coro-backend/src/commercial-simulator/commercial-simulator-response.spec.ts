@@ -1,5 +1,6 @@
 import {
   calculationRunResponse,
+  configuredScenarioResponse,
   proposalConversionResponse,
 } from './commercial-simulator-response';
 
@@ -39,6 +40,57 @@ const containsBigInt = (value: unknown): boolean => {
     return Object.values(value).some(containsBigInt);
   return false;
 };
+
+describe('configuredScenarioResponse', () => {
+  it('projects exact and nullable Scenario BigInts without mutating the Prisma graph', () => {
+    const beyondSafeInteger = 9_007_199_254_740_993n;
+    const prismaGraph = {
+      id: 'scenario-1',
+      lockVersion: 2,
+      families: [],
+      capabilities: [],
+      lines: [
+        {
+          id: 'line-1',
+          proposedUnitAmountMinor: beyondSafeInteger,
+          costEfforts: [],
+        },
+        {
+          id: 'line-2',
+          proposedUnitAmountMinor: null,
+          costEfforts: [],
+        },
+      ],
+      driverValues: [
+        {
+          id: 'driver-1',
+          integerValue: beyondSafeInteger,
+          moneyMinorValue: null,
+        },
+        {
+          id: 'driver-2',
+          integerValue: null,
+          moneyMinorValue: beyondSafeInteger,
+        },
+      ],
+    } as never;
+
+    const result = configuredScenarioResponse(prismaGraph);
+
+    expect(containsBigInt(result)).toBe(false);
+    expect(result.lockVersion).toBe(2);
+    expect(result.lines[0].proposedUnitAmountMinor).toBe('9007199254740993');
+    expect(result.lines[1].proposedUnitAmountMinor).toBeNull();
+    expect(result.driverValues[0].integerValue).toBe('9007199254740993');
+    expect(result.driverValues[0].moneyMinorValue).toBeNull();
+    expect(result.driverValues[1].moneyMinorValue).toBe('9007199254740993');
+    expect(() => JSON.stringify(result)).not.toThrow();
+    expect(
+      (prismaGraph as { driverValues: Array<{ integerValue: bigint }> })
+        .driverValues[0].integerValue,
+    ).toBe(beyondSafeInteger);
+  });
+});
 
 describe('calculationRunResponse', () => {
   it('projects every calculation response BigInt to an exact decimal string', () => {
