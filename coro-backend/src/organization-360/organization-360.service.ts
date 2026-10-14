@@ -12,6 +12,14 @@ type MetricClassification = 'CANONICAL' | 'INFERRED' | 'NOT_AVAILABLE';
 export class Organization360Service {
   constructor(private readonly prisma: PrismaService) {}
 
+  private jsonSafe<T>(value: T): T {
+    return JSON.parse(
+      JSON.stringify(value, (_key: string, item: unknown) =>
+        typeof item === 'bigint' ? item.toString() : item,
+      ),
+    ) as T;
+  }
+
   private async organization(organizationId: string) {
     const organization = await this.prisma.organization.findUnique({
       where: { id: organizationId },
@@ -532,7 +540,7 @@ export class Organization360Service {
         code: entitlement.capability.code,
         label: entitlement.capability.nameFr,
       }));
-    return {
+    return this.jsonSafe({
       legacy: {
         licenseType: organization.licenseType,
         organizationStatus: organization.isActive ? 'ACTIVE' : 'SUSPENDED',
@@ -561,7 +569,7 @@ export class Organization360Service {
       enforcement: 'NONE',
       billing: 'NOT_CONFIGURED',
       editable: false,
-    };
+    });
   }
 
   async usage(organizationId: string) {

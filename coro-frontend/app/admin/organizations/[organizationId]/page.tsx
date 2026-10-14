@@ -38,6 +38,24 @@ export default function Organization360Page() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const syncTabFromUrl = () => {
+      const requested = new URLSearchParams(window.location.search).get("tab");
+      if (
+        requested &&
+        ORGANIZATION_360_TABS.some(([code]) => code === requested)
+      ) {
+        setTab(requested as TabCode);
+      }
+    };
+    const timer = window.setTimeout(syncTabFromUrl, 0);
+    window.addEventListener("popstate", syncTabFromUrl);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("popstate", syncTabFromUrl);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     const fetchTab = async () => {
       try {
@@ -139,8 +157,12 @@ export default function Organization360Page() {
               onClick={() => {
                 setLoading(true);
                 setTab(code);
+                router.replace(
+                  `/admin/organizations/${organizationId}?tab=${code}`,
+                  { scroll: false },
+                );
               }}
-              className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium"
+              className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
               style={{
                 background: tab === code ? palette.ink : palette.panel,
                 color: tab === code ? "#FFF" : palette.ink,
@@ -553,6 +575,18 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
             {proposals.filter((proposal) => proposal.acceptedRevisionId).length}{" "}
             accepted
           </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {proposals.map((proposal) => (
+              <li key={String(proposal.id)}>
+                <Link
+                  className="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                  href={`/admin/commercial/proposals/${String(proposal.id)}`}
+                >
+                  {String(proposal.reference)} · {String(proposal.status)}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
         <div className="rounded-lg border p-4">
           <strong>Entitlements</strong>
@@ -606,6 +640,7 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
           contracts.map((contract) => {
             const revisions = (contract.revisions as JsonRecord[]) ?? [];
             const revision = revisions[0];
+            const priceLines = (revision?.priceLines as JsonRecord[]) ?? [];
             const book = (revision?.priceBookVersion as JsonRecord) ?? {};
             const priceBook = (book.priceBook as JsonRecord) ?? {};
             return (
@@ -635,6 +670,24 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
                   {((contract.documents as JsonRecord[]) ?? []).length}{" "}
                   document(s)
                 </p>
+                <ul className="mt-3 space-y-1 text-sm">
+                  {priceLines.map((line) => (
+                    <li key={String(line.id)}>
+                      {String(line.componentName)} ·{" "}
+                      {formatMinorAmount(
+                        line.contractExtendedAmountMinor ??
+                          line.contractAmountMinor,
+                        String(revision?.currency ?? "CAD"),
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  className="mt-3 inline-block text-sm underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                  href="/admin/commercial/contracts"
+                >
+                  Ouvrir les contrats
+                </Link>
                 {revision ? (
                   <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
                     <span>
@@ -820,4 +873,18 @@ function formatValue(value: unknown): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function formatMinorAmount(value: unknown, currency: string): string {
+  if (value === null || value === undefined) return "—";
+  const raw = String(value);
+  if (!/^-?\d+$/.test(raw)) return raw;
+  const minor = BigInt(raw);
+  const negative = minor < BigInt(0);
+  const absolute = negative ? -minor : minor;
+  const whole = (absolute / BigInt(100))
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const fraction = (absolute % BigInt(100)).toString().padStart(2, "0");
+  return `${negative ? "-" : ""}${whole},${fraction} $ ${currency}`;
 }
