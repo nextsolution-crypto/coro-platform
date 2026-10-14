@@ -83,6 +83,17 @@ type Revision = {
   contextEN: string | null;
   termsFR: string | null;
   termsEN: string | null;
+  sentAt: string | null;
+  sentDocumentId: string | null;
+  acceptedAt: string | null;
+  acceptanceOccurredAt: string | null;
+  acceptedByName: string | null;
+  acceptedByAuthority: string | null;
+  acceptanceReference: string | null;
+  sourceContractRevision: null | {
+    id: string;
+    contract: { id: string; reference: string; status: string };
+  };
   lines: ProposalLine[];
   documents: Document[];
 };
@@ -252,6 +263,16 @@ export default function ProposalDetailPage({
     externalSignatureDate: "",
     externalSignatureEvidence: "",
     contractualTimezone: "America/Toronto",
+  });
+  const [acceptanceForm, setAcceptanceForm] = useState({
+    acceptedByName: "",
+    acceptedByAuthority: "",
+    acceptanceOccurredAt: "",
+    acceptanceReference: "",
+  });
+  const [contractForm, setContractForm] = useState({
+    reference: "",
+    title: "",
   });
   const revision = detail?.revisions[0];
   const governanceDecisionClosed =
@@ -435,6 +456,64 @@ export default function ProposalDetailPage({
           ? "Offre officiellement émise. Aucun envoi externe n’a été effectué."
           : "Revue interne commencée.",
     );
+  }
+  function recordAcceptance() {
+    if (!revision) return;
+    if (
+      !acceptanceForm.acceptedByName.trim() ||
+      !acceptanceForm.acceptedByAuthority.trim() ||
+      !acceptanceForm.acceptanceOccurredAt ||
+      !acceptanceForm.acceptanceReference.trim()
+    ) {
+      setMessage(
+        "Le signataire, son autorité, la date réelle et la preuve sont requis.",
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        "Enregistrer cette preuve d’acceptation client? Cette décision ne crée aucun contrat automatiquement.",
+      )
+    )
+      return;
+    return execute(async () => {
+      await api.post(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/accept`,
+        {
+          lockVersion: revision.lockVersion,
+          reason: "Acceptation client enregistrée avec preuve externe",
+          acceptedByName: acceptanceForm.acceptedByName,
+          acceptedByAuthority: acceptanceForm.acceptedByAuthority,
+          acceptanceOccurredAt: new Date(
+            acceptanceForm.acceptanceOccurredAt,
+          ).toISOString(),
+          acceptanceReference: acceptanceForm.acceptanceReference,
+        },
+      );
+    }, "Acceptation enregistrée. La création du contrat reste une action distincte.");
+  }
+  function createContract() {
+    if (!revision) return;
+    if (!contractForm.reference.trim() || !contractForm.title.trim()) {
+      setMessage("La référence et le titre du contrat sont requis.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "Créer explicitement un contrat brouillon à partir de cette révision acceptée?",
+      )
+    )
+      return;
+    return execute(async () => {
+      await api.post(
+        `/admin/v1/commercial/proposals/${proposalId}/revisions/${revision.id}/create-contract`,
+        {
+          reference: contractForm.reference,
+          title: contractForm.title,
+          reason: "Création explicite depuis la proposition acceptée",
+        },
+      );
+    }, "Contrat créé. Sa signature et son activation restent distinctes.");
   }
   function saveTemporalTerms() {
     if (!revision || !temporal) return;
@@ -1175,10 +1254,10 @@ export default function ProposalDetailPage({
                   {governanceDecisionClosed
                     ? (statusLabels[revision.status] ?? revision.status)
                     : e01?.status === "READY"
-                    ? "Prêt"
-                    : e01?.status === "NEEDS_REVIEW"
-                      ? "Revue requise"
-                      : "Bloqué"}
+                      ? "Prêt"
+                      : e01?.status === "NEEDS_REVIEW"
+                        ? "Revue requise"
+                        : "Bloqué"}
                 </Badge>
               </div>
               {governanceDecisionClosed ? null : e01?.blockers.length ? (
@@ -1314,6 +1393,147 @@ export default function ProposalDetailPage({
             </p>
           </details>
         </Section>
+        {revision && ["SENT", "ACCEPTED"].includes(revision.status) && (
+          <Section
+            number="7"
+            title="Acceptation client et contrat"
+            description="L’acceptation, la création du contrat, sa signature et son activation sont des décisions séparées."
+            ready={Boolean(revision.acceptedAt)}
+          >
+            {revision.status === "SENT" && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <label>
+                  Nom du signataire
+                  <input
+                    className="mt-1 w-full rounded border p-2"
+                    value={acceptanceForm.acceptedByName}
+                    onChange={(event) =>
+                      setAcceptanceForm((current) => ({
+                        ...current,
+                        acceptedByName: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Autorité du signataire
+                  <input
+                    className="mt-1 w-full rounded border p-2"
+                    value={acceptanceForm.acceptedByAuthority}
+                    onChange={(event) =>
+                      setAcceptanceForm((current) => ({
+                        ...current,
+                        acceptedByAuthority: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Date et heure réelles
+                  <input
+                    type="datetime-local"
+                    className="mt-1 w-full rounded border p-2"
+                    value={acceptanceForm.acceptanceOccurredAt}
+                    onChange={(event) =>
+                      setAcceptanceForm((current) => ({
+                        ...current,
+                        acceptanceOccurredAt: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Référence de preuve
+                  <input
+                    className="mt-1 w-full rounded border p-2"
+                    value={acceptanceForm.acceptanceReference}
+                    onChange={(event) =>
+                      setAcceptanceForm((current) => ({
+                        ...current,
+                        acceptanceReference: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void recordAcceptance()}
+                  className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50 md:col-span-2"
+                >
+                  Enregistrer l’acceptation avec preuve
+                </button>
+              </div>
+            )}
+            {revision.status === "ACCEPTED" && (
+              <div className="space-y-4">
+                <div className="rounded bg-emerald-50 p-4 text-sm">
+                  <strong>Acceptation documentée</strong>
+                  <p>
+                    {revision.acceptedByName} · {revision.acceptedByAuthority} ·{" "}
+                    {revision.acceptanceOccurredAt
+                      ? new Date(revision.acceptanceOccurredAt).toLocaleString(
+                          "fr-CA",
+                        )
+                      : "date manquante"}
+                  </p>
+                  <p>Preuve : {revision.acceptanceReference ?? "incomplète"}</p>
+                </div>
+                {revision.sourceContractRevision ? (
+                  <p>
+                    Contrat existant :{" "}
+                    <strong>
+                      {revision.sourceContractRevision.contract.reference}
+                    </strong>{" "}
+                    · {revision.sourceContractRevision.contract.status}
+                  </p>
+                ) : detail?.organization ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label>
+                      Référence du contrat
+                      <input
+                        className="mt-1 w-full rounded border p-2"
+                        value={contractForm.reference}
+                        onChange={(event) =>
+                          setContractForm((current) => ({
+                            ...current,
+                            reference: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Titre du contrat
+                      <input
+                        className="mt-1 w-full rounded border p-2"
+                        value={contractForm.title}
+                        onChange={(event) =>
+                          setContractForm((current) => ({
+                            ...current,
+                            title: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void createContract()}
+                      className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50 md:col-span-2"
+                    >
+                      Créer explicitement le contrat
+                    </button>
+                  </div>
+                ) : (
+                  <p className="rounded border border-amber-300 bg-amber-50 p-4 text-sm">
+                    Le Prospect doit d’abord être converti en organisation avant
+                    la création du contrat.
+                  </p>
+                )}
+              </div>
+            )}
+          </Section>
+        )}
         <nav
           aria-label="Navigation contextuelle"
           className="flex flex-wrap gap-3 rounded-xl border bg-white p-4 text-sm"

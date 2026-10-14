@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import api from "@/lib/api";
+import CapabilityOperationsWorkspace from "@/components/admin/capability-operations/CapabilityOperationsWorkspace";
 
 type Money = {
   oneTimeMinor: string | null;
@@ -56,8 +57,22 @@ type Dossier = {
     latestRevision: null | {
       revisionNumber: number;
       status: string;
+      lockVersion: number;
       validUntil: string | null;
       documentReadiness: "NO_COMPOSITION" | "INTERNAL_DRAFT" | "ISSUANCE_READY";
+      issuance: {
+        issuedAt: string | null;
+        issuedDocumentId: string | null;
+        status: "ISSUED" | "NOT_ISSUED";
+      };
+      acceptance: {
+        status: "EVIDENCED" | "INCOMPLETE" | "NOT_ACCEPTED";
+        occurredAt: string | null;
+        recordedAt: string | null;
+        acceptedByName: string | null;
+        acceptedByAuthority: string | null;
+        evidenceReference: string | null;
+      };
       documentsTruncated: boolean;
       documents: Array<{
         id: string;
@@ -81,7 +96,32 @@ type Dossier = {
     reference: string;
     title: string;
     status: string;
-    revisions: Array<{ revisionNumber: number; status: string }>;
+    lockVersion: number;
+    activatedAt: string | null;
+    revisions: Array<{
+      id: string;
+      revisionNumber: number;
+      status: string;
+      lockVersion: number;
+      signedAt: string | null;
+      signedByName: string | null;
+      signatureReference: string | null;
+      effectiveFrom: string;
+      effectiveUntil: string | null;
+      termStartAt: string;
+      termEndAt: string | null;
+      renewalMode: string;
+      renewalTermMonths: number | null;
+      renewalNoticeDays: number | null;
+      priceLines: Array<{
+        id: string;
+        componentCode: string;
+        componentName: string;
+        quantity: string | null;
+        quantityUnit: string | null;
+        capability: null | { code: string; nameFr: string };
+      }>;
+    }>;
   }>;
   entitlementSummary: {
     present: boolean;
@@ -92,6 +132,22 @@ type Dossier = {
       capabilityCode: string;
       capabilityLabel: string;
       latestRevision: null | { lifecycle: string; enabled: boolean };
+    }>;
+    contractedCapabilities: Array<{
+      contractId: string;
+      contractRevisionId: string;
+      effectiveFrom: string;
+      snapshotLineId: string;
+      capabilityCode: string;
+      capabilityLabel: string;
+      quantity: string | null;
+      quantityUnit: string | null;
+      state: "ACTIVE" | "INACTIVE" | "MISSING";
+    }>;
+    excessEntitlements: Array<{
+      id: string;
+      capabilityCode: string;
+      capabilityLabel: string;
     }>;
   };
   progress: Array<{ code: string; complete: boolean }>;
@@ -112,13 +168,12 @@ const money = (minor: string | null) =>
       }).format(Number(minor) / 100);
 
 const stageLabels: Record<string, string> = {
-  CLIENT_IDENTIFIED: "Client identifié",
-  SOLUTION_CONFIGURED: "Solution configurée",
-  PROPOSAL_CREATED: "Proposition créée",
-  DOCUMENT_PREPARED: "Document préparé",
-  INTERNAL_REVIEW: "Revue interne et émission",
-  CONTRACT_ACCEPTED: "Contrat accepté",
-  ACTIVATION: "Activation",
+  OFFER_ISSUED: "Offre émise",
+  CUSTOMER_ACCEPTANCE: "Acceptation du client",
+  CONTRACT: "Contrat",
+  SIGNATURE_ACTIVATION: "Signature et activation",
+  MODULES_RIGHTS: "Modules et droits",
+  FINAL_VERIFICATION: "Vérification finale",
 };
 const readinessLabels: Record<string, string> = {
   NO_COMPOSITION: "Aucune composition",
@@ -150,6 +205,12 @@ export default function CommercialDossierPage({
   const { targetType, targetId } = use(params);
   const [dossier, setDossier] = useState<Dossier>();
   const [downloadError, setDownloadError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [busyContractId, setBusyContractId] = useState<string>();
+  const [signature, setSignature] = useState({
+    signedByName: "",
+    signatureReference: "",
+  });
   const [state, setState] = useState<
     "LOADING" | "READY" | "ERROR" | "UNAUTHORIZED"
   >("LOADING");
@@ -204,6 +265,55 @@ export default function CommercialDossierPage({
       URL.revokeObjectURL(url);
     } catch {
       setDownloadError("Impossible de télécharger le document privé.");
+    }
+  }
+
+  async function contractAction(
+    contract: Dossier["contracts"][number],
+    action: "sign" | "activate",
+  ) {
+    const revision = contract.revisions[0];
+    if (!revision) return;
+    const confirmed = window.confirm(
+      action === "sign"
+        ? "Enregistrer explicitement cette signature? Le contrat ne sera pas activé automatiquement."
+        : "Activer explicitement ce contrat? Aucun droit ne sera provisionné automatiquement.",
+    );
+    if (!confirmed) return;
+    setBusyContractId(contract.id);
+    setActionMessage("");
+    try {
+      if (action === "sign") {
+        await api.post(
+          `/admin/v1/organizations/${targetId}/contracts/${contract.id}/revisions/${revision.id}/sign`,
+          {
+            lockVersion: revision.lockVersion,
+            signedByName: signature.signedByName,
+            signatureReference: signature.signatureReference || undefined,
+            reason: "Signature contractuelle enregistrée explicitement",
+          },
+        );
+      } else {
+        await api.post(
+          `/admin/v1/organizations/${targetId}/contracts/${contract.id}/activate`,
+          {
+            lockVersion: contract.lockVersion,
+            reason: "Activation contractuelle explicite",
+          },
+        );
+      }
+      await load();
+      setActionMessage(
+        action === "sign"
+          ? "Signature enregistrée. Le contrat reste à activer explicitement."
+          : "Contrat activé. Les droits restent à prévisualiser et provisionner explicitement.",
+      );
+    } catch (error) {
+      const detail = (error as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setActionMessage(detail ?? "Action contractuelle impossible.");
+    } finally {
+      setBusyContractId(undefined);
     }
   }
 
@@ -444,6 +554,28 @@ export default function CommercialDossierPage({
                           ]
                         }
                       </p>
+                      <p>
+                        Émission :{" "}
+                        {proposal.latestRevision.issuance.status === "ISSUED"
+                          ? `émise le ${new Date(proposal.latestRevision.issuance.issuedAt!).toLocaleString("fr-CA")}`
+                          : "non émise"}
+                      </p>
+                      <p>
+                        Acceptation :{" "}
+                        {proposal.latestRevision.acceptance.status ===
+                        "EVIDENCED"
+                          ? `${proposal.latestRevision.acceptance.acceptedByName} (${proposal.latestRevision.acceptance.acceptedByAuthority}), le ${new Date(proposal.latestRevision.acceptance.occurredAt!).toLocaleString("fr-CA")}`
+                          : proposal.latestRevision.acceptance.status ===
+                              "INCOMPLETE"
+                            ? "preuve incomplète"
+                            : "non acceptée"}
+                      </p>
+                      {proposal.latestRevision.acceptance.evidenceReference && (
+                        <p className="text-slate-500">
+                          Preuve :{" "}
+                          {proposal.latestRevision.acceptance.evidenceReference}
+                        </p>
+                      )}
                       <ul className="mt-2 space-y-1">
                         {proposal.latestRevision.documents.map((document) => (
                           <li key={document.id}>
@@ -493,18 +625,106 @@ export default function CommercialDossierPage({
                   <ul className="mt-3 space-y-2">
                     {dossier.contracts.map((contract) => (
                       <li key={contract.id} className="rounded border p-3">
-                        {contract.reference} · {contract.title}
+                        <strong>
+                          {contract.reference} · {contract.title}
+                        </strong>
                         <div className="text-sm text-slate-500">
                           {businessLabel(contract.status)} · v
                           {contract.revisions[0]?.revisionNumber ?? "—"}
                         </div>
+                        {contract.revisions[0] && (
+                          <div className="mt-3 space-y-2 text-sm">
+                            <p>
+                              Révision{" "}
+                              {businessLabel(contract.revisions[0].status)}
+                              {contract.revisions[0].signedAt
+                                ? ` · Signée le ${new Date(contract.revisions[0].signedAt).toLocaleString("fr-CA")}`
+                                : " · Signature à enregistrer"}
+                            </p>
+                            <p>
+                              Effet :{" "}
+                              {new Date(
+                                contract.revisions[0].effectiveFrom,
+                              ).toLocaleDateString("fr-CA")}
+                              {contract.revisions[0].effectiveUntil
+                                ? ` au ${new Date(contract.revisions[0].effectiveUntil).toLocaleDateString("fr-CA")}`
+                                : ""}
+                            </p>
+                            {!contract.revisions[0].signedAt &&
+                              contract.revisions[0].status === "APPROVED" && (
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <label>
+                                    Signataire
+                                    <input
+                                      className="mt-1 w-full rounded border p-2"
+                                      value={signature.signedByName}
+                                      onChange={(event) =>
+                                        setSignature((current) => ({
+                                          ...current,
+                                          signedByName: event.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                  <label>
+                                    Référence de preuve
+                                    <input
+                                      className="mt-1 w-full rounded border p-2"
+                                      value={signature.signatureReference}
+                                      onChange={(event) =>
+                                        setSignature((current) => ({
+                                          ...current,
+                                          signatureReference:
+                                            event.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      busyContractId === contract.id ||
+                                      !signature.signedByName.trim()
+                                    }
+                                    className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50 sm:col-span-2"
+                                    onClick={() =>
+                                      void contractAction(contract, "sign")
+                                    }
+                                  >
+                                    Enregistrer la signature
+                                  </button>
+                                </div>
+                              )}
+                            {contract.revisions[0].status === "SIGNED" &&
+                              contract.status !== "ACTIVE" && (
+                                <button
+                                  type="button"
+                                  disabled={busyContractId === contract.id}
+                                  className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50"
+                                  onClick={() =>
+                                    void contractAction(contract, "activate")
+                                  }
+                                >
+                                  Activer explicitement le contrat
+                                </button>
+                              )}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
                 )}
+                {actionMessage && (
+                  <p
+                    role="status"
+                    className="mt-3 rounded bg-slate-50 p-3 text-sm"
+                  >
+                    {actionMessage}
+                  </p>
+                )}
               </section>
               <section className="rounded-xl border bg-white p-5">
-                <h2 className="text-xl font-semibold">Activations</h2>
+                <h2 className="text-xl font-semibold">Modules et droits</h2>
                 <p className="mt-2 text-sm">
                   {dossier.entitlementSummary.present
                     ? `${dossier.entitlementSummary.count} droit(s) explicite(s)`
@@ -513,8 +733,77 @@ export default function CommercialDossierPage({
                 <p className="text-xs text-slate-500">
                   Aucun droit n’est inféré depuis une proposition ou un contrat.
                 </p>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {dossier.entitlementSummary.contractedCapabilities.map(
+                    (item) => (
+                      <li
+                        key={item.snapshotLineId}
+                        className="rounded border p-3"
+                      >
+                        <strong>{item.capabilityLabel}</strong> · {item.state}
+                        <div className="text-slate-500">
+                          {item.quantity ?? "—"} {item.quantityUnit ?? ""}
+                        </div>
+                      </li>
+                    ),
+                  )}
+                  {dossier.entitlementSummary.excessEntitlements.map((item) => (
+                    <li
+                      key={item.id}
+                      className="rounded border border-amber-300 bg-amber-50 p-3"
+                    >
+                      {item.capabilityLabel} · droit actif sans appui dans le
+                      contrat courant
+                    </li>
+                  ))}
+                </ul>
               </section>
             </div>
+
+            {dossier.target.type === "ORGANIZATION" && (
+              <section className="rounded-xl border bg-slate-50 p-5">
+                <h2 className="text-xl font-semibold">
+                  Prévisualisation et provisionnement explicite
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Prévisualisez chaque ligne contractuelle avant confirmation.
+                  Aucun droit n’est créé au chargement de cette page.
+                </p>
+                <div className="mt-4 space-y-4">
+                  {dossier.entitlementSummary.contractedCapabilities
+                    .filter((item) => item.state === "MISSING")
+                    .map((item) => (
+                      <details
+                        key={item.snapshotLineId}
+                        className="rounded border bg-white p-4"
+                      >
+                        <summary className="cursor-pointer font-semibold">
+                          {item.capabilityLabel} · prévisualiser le droit
+                          manquant
+                        </summary>
+                        <div className="mt-4">
+                          <CapabilityOperationsWorkspace
+                            organizationId={targetId}
+                            initialCapability={item.capabilityCode}
+                            initialContract={{
+                              contractId: item.contractId,
+                              revisionId: item.contractRevisionId,
+                              snapshotLineId: item.snapshotLineId,
+                            }}
+                          />
+                        </div>
+                      </details>
+                    ))}
+                  {!dossier.entitlementSummary.contractedCapabilities.some(
+                    (item) => item.state === "MISSING",
+                  ) && (
+                    <p className="text-sm text-emerald-800">
+                      Aucun droit contractuel manquant à provisionner.
+                    </p>
+                  )}
+                </div>
+              </section>
+            )}
 
             <details className="rounded-xl border bg-white p-5">
               <summary className="cursor-pointer font-semibold">

@@ -438,6 +438,7 @@ export class Organization360Service {
             exclusivities: { include: { sectors: true, capabilities: true } },
             commitments: true,
             documents: true,
+            priceLines: { include: { capability: true } },
           },
           orderBy: { revisionNumber: 'desc' },
         },
@@ -481,6 +482,56 @@ export class Organization360Service {
     const currentContract =
       contracts.find((item) => item.isPrimary && item.status === 'ACTIVE') ??
       null;
+    const activeEntitlements = await this.prisma.capabilityEntitlement.findMany(
+      {
+        where: { organizationId },
+        select: {
+          id: true,
+          sourceContractId: true,
+          capability: { select: { code: true, nameFr: true } },
+          revisions: {
+            orderBy: { versionNumber: 'desc' },
+            take: 1,
+            select: { lifecycle: true, enabled: true },
+          },
+        },
+      },
+    );
+    const contractedCapabilities = (
+      currentContract?.revisions[0]?.priceLines ?? []
+    ).flatMap((line) =>
+      line.capability
+        ? [
+            {
+              code: line.capability.code,
+              label: line.capability.nameFr,
+              state: activeEntitlements.some(
+                (entitlement) =>
+                  entitlement.sourceContractId === currentContract?.id &&
+                  entitlement.capability.code === line.capability?.code &&
+                  entitlement.revisions[0]?.lifecycle === 'GRANTED' &&
+                  entitlement.revisions[0]?.enabled,
+              )
+                ? 'ACTIVE'
+                : 'MISSING',
+            },
+          ]
+        : [],
+    );
+    const excessEntitlements = activeEntitlements
+      .filter(
+        (entitlement) =>
+          entitlement.revisions[0]?.lifecycle === 'GRANTED' &&
+          entitlement.revisions[0]?.enabled &&
+          !contractedCapabilities.some(
+            (contracted) => contracted.code === entitlement.capability.code,
+          ),
+      )
+      .map((entitlement) => ({
+        id: entitlement.id,
+        code: entitlement.capability.code,
+        label: entitlement.capability.nameFr,
+      }));
     return {
       legacy: {
         licenseType: organization.licenseType,
@@ -494,6 +545,17 @@ export class Organization360Service {
       acceptedProposal:
         proposals.find((proposal) => proposal.acceptedRevisionId) ?? null,
       entitlementSummary,
+      continuity: {
+        contractedCapabilities,
+        excessEntitlements,
+        pendingActions: [
+          ...(currentContract ? [] : ['ACTIVE_CONTRACT_REQUIRED']),
+          ...(contractedCapabilities.some((item) => item.state === 'MISSING')
+            ? ['ENTITLEMENT_PROVISIONING_REQUIRED']
+            : []),
+          ...(excessEntitlements.length ? ['EXCESS_ENTITLEMENT_REVIEW'] : []),
+        ],
+      },
       pricing: currentContract ? 'CONTRACT_SNAPSHOT' : 'NOT_CONFIGURED',
       entitlements: 'OBSERVATION_ONLY',
       enforcement: 'NONE',

@@ -13,6 +13,9 @@ export const PROPOSAL_DETAIL_INCLUDE = {
       commitments: true,
       valueAnalysis: true,
       documents: true,
+      sourceContractRevision: {
+        include: { contract: true },
+      },
     },
   },
 } as const satisfies Prisma.CommercialProposalInclude;

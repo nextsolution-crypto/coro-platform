@@ -18,23 +18,37 @@ const noticeEn =
 export default function CapabilityOperationsWorkspace({
   organizationId,
   initialCapability,
+  initialContract,
 }: {
   organizationId: string;
   initialCapability?: string;
+  initialContract?: {
+    contractId: string;
+    revisionId: string;
+    snapshotLineId: string;
+  };
 }) {
   const [grants, setGrants] = useState<Grant[]>([]);
   const [filter, setFilter] = useState(initialCapability ?? "");
   const [selected, setSelected] = useState<Grant | null>(null);
   const [action, setAction] = useState("DISABLE");
-  const [createAction, setCreateAction] = useState("CREATE_TRIAL");
+  const [createAction, setCreateAction] = useState(
+    initialContract ? "PROVISION_CONTRACT" : "CREATE_TRIAL",
+  );
   const [reason, setReason] = useState("");
   const [scope, setScope] = useState("ORGANIZATION");
   const [clientId, setClientId] = useState("");
   const [buildingId, setBuildingId] = useState("");
   const [parentEntitlementId, setParentEntitlementId] = useState("");
-  const [contractId, setContractId] = useState("");
-  const [contractRevisionId, setContractRevisionId] = useState("");
-  const [snapshotLineId, setSnapshotLineId] = useState("");
+  const [contractId, setContractId] = useState(
+    initialContract?.contractId ?? "",
+  );
+  const [contractRevisionId, setContractRevisionId] = useState(
+    initialContract?.revisionId ?? "",
+  );
+  const [snapshotLineId, setSnapshotLineId] = useState(
+    initialContract?.snapshotLineId ?? "",
+  );
   const [enabled, setEnabled] = useState(true);
   const [distributable, setDistributable] = useState(false);
   const [effectiveUntil, setEffectiveUntil] = useState("");

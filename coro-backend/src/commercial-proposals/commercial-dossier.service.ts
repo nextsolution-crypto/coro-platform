@@ -8,13 +8,12 @@ const money = (value: bigint | null | undefined) => value?.toString() ?? null;
 const COLLECTION_LIMIT = 100;
 const DOCUMENT_LIMIT = 50;
 type DossierStage =
-  | 'CLIENT_IDENTIFIED'
-  | 'SOLUTION_CONFIGURED'
-  | 'PROPOSAL_CREATED'
-  | 'DOCUMENT_PREPARED'
-  | 'INTERNAL_REVIEW'
-  | 'CONTRACT_ACCEPTED'
-  | 'ACTIVATION';
+  | 'OFFER_ISSUED'
+  | 'CUSTOMER_ACCEPTANCE'
+  | 'CONTRACT'
+  | 'SIGNATURE_ACTIVATION'
+  | 'MODULES_RIGHTS'
+  | 'FINAL_VERIFICATION';
 
 type EntitlementReadModelSource = {
   id: string;
@@ -158,6 +157,13 @@ export class CommercialDossierService {
               oneTimeTotalMinor: true,
               annualRecurringEquivalentMinor: true,
               firstYearCommitmentMinor: true,
+              sentAt: true,
+              sentDocumentId: true,
+              acceptedAt: true,
+              acceptanceOccurredAt: true,
+              acceptedByName: true,
+              acceptedByAuthority: true,
+              acceptanceReference: true,
               documentCompositions: {
                 orderBy: [{ composedAt: 'desc' }, { sequence: 'desc' }],
                 take: 1,
@@ -216,6 +222,8 @@ export class CommercialDossierService {
               title: true,
               status: true,
               isPrimary: true,
+              lockVersion: true,
+              activatedAt: true,
               updatedAt: true,
               revisions: {
                 orderBy: { revisionNumber: 'desc' },
@@ -225,9 +233,34 @@ export class CommercialDossierService {
                   revisionNumber: true,
                   revisionType: true,
                   status: true,
+                  lockVersion: true,
                   effectiveFrom: true,
                   effectiveUntil: true,
                   sourceProposalRevisionId: true,
+                  signedAt: true,
+                  signedByName: true,
+                  signatureReference: true,
+                  termStartAt: true,
+                  termEndAt: true,
+                  renewalMode: true,
+                  renewalTermMonths: true,
+                  renewalNoticeDays: true,
+                  priceLines: {
+                    orderBy: { displayOrder: 'asc' },
+                    select: {
+                      id: true,
+                      componentCode: true,
+                      componentName: true,
+                      capabilityId: true,
+                      quantity: true,
+                      quantityUnit: true,
+                      distributionLimit: true,
+                      distributionMetric: true,
+                      capability: {
+                        select: { code: true, nameFr: true },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -361,6 +394,29 @@ export class CommercialDossierService {
                 ),
                 firstYearMinor: money(revision.firstYearCommitmentMinor),
               },
+              issuance: {
+                issuedAt: revision.sentAt,
+                issuedDocumentId: revision.sentDocumentId,
+                status: revision.sentAt ? 'ISSUED' : 'NOT_ISSUED',
+              },
+              acceptance: {
+                status:
+                  revision.status === 'ACCEPTED' &&
+                  revision.acceptanceOccurredAt &&
+                  revision.acceptedAt &&
+                  revision.acceptedByName &&
+                  revision.acceptedByAuthority &&
+                  revision.acceptanceReference
+                    ? 'EVIDENCED'
+                    : revision.status === 'ACCEPTED'
+                      ? 'INCOMPLETE'
+                      : 'NOT_ACCEPTED',
+                occurredAt: revision.acceptanceOccurredAt,
+                recordedAt: revision.acceptedAt,
+                acceptedByName: revision.acceptedByName,
+                acceptedByAuthority: revision.acceptedByAuthority,
+                evidenceReference: revision.acceptanceReference,
+              },
               documentReadiness: composition
                 ? composition.issuanceReady
                   ? 'ISSUANCE_READY'
@@ -400,7 +456,49 @@ export class CommercialDossierService {
       latestRevision: entitlement.revisions[0] ?? null,
     }));
 
+    const contractedCapabilities = contractSources.flatMap((contract) =>
+      (contract.revisions[0]?.priceLines ?? []).flatMap((line) => {
+        const capability = line.capability;
+        if (!capability) return [];
+        const matching = entitlementSummaries.filter(
+          (entitlement) =>
+            entitlement.capabilityCode === capability.code &&
+            entitlement.sourceContractId === contract.id,
+        );
+        const active = matching.some(
+          (entitlement) =>
+            entitlement.latestRevision?.lifecycle === 'GRANTED' &&
+            entitlement.latestRevision.enabled,
+        );
+        return {
+          contractId: contract.id,
+          contractRevisionId: contract.revisions[0].id,
+          effectiveFrom: contract.revisions[0].effectiveFrom,
+          snapshotLineId: line.id,
+          capabilityCode: capability.code,
+          capabilityLabel: capability.nameFr,
+          quantity: line.quantity?.toString() ?? null,
+          quantityUnit: line.quantityUnit,
+          distributionLimit: line.distributionLimit?.toString() ?? null,
+          distributionMetric: line.distributionMetric,
+          state: active ? 'ACTIVE' : matching.length ? 'INACTIVE' : 'MISSING',
+          entitlementIds: matching.map((entitlement) => entitlement.id),
+        };
+      }),
+    );
+    const excessEntitlements = entitlementSummaries.filter(
+      (entitlement) =>
+        entitlement.latestRevision?.lifecycle === 'GRANTED' &&
+        entitlement.latestRevision.enabled &&
+        !contractedCapabilities.some(
+          (contracted) =>
+            contracted.capabilityCode === entitlement.capabilityCode &&
+            contracted.contractId === entitlement.sourceContractId,
+        ),
+    );
+
     const evidence = this.progress(
+      targetId,
       workspaceSummaries,
       proposalSummaries,
       contractSources,
@@ -429,6 +527,8 @@ export class CommercialDossierService {
         count: entitlementSummaries.length,
         items: entitlementSummaries,
         inferred: false,
+        contractedCapabilities,
+        excessEntitlements,
       },
       progress: evidence.progress,
       blockers: evidence.blockers,
@@ -443,6 +543,7 @@ export class CommercialDossierService {
   }
 
   private progress(
+    targetId: string,
     workspaces: Array<{
       id: string;
       title: string;
@@ -462,9 +563,15 @@ export class CommercialDossierService {
         status: string;
         documentReadiness: string;
         relatedContract: unknown;
+        issuance: { status: string };
+        acceptance: { status: string };
       } | null;
     }>,
-    contracts: Array<{ status: string }>,
+    contracts: Array<{
+      status: string;
+      activatedAt: Date | null;
+      revisions: Array<{ status: string; signedAt: Date | null }>;
+    }>,
     entitlements: unknown[],
   ) {
     const retainedCandidates = workspaces.flatMap((workspace) =>
@@ -479,29 +586,31 @@ export class CommercialDossierService {
       : null;
     const proposal = proposals[0] ?? null;
     const revision = proposal?.latestRevision ?? null;
+    const signed = contracts.some((contract) =>
+      contract.revisions.some(
+        (contractRevision) =>
+          contractRevision.status === 'SIGNED' && contractRevision.signedAt,
+      ),
+    );
+    const active = contracts.some(
+      (contract) => contract.status === 'ACTIVE' && contract.activatedAt,
+    );
     const stages: Array<{ code: DossierStage; complete: boolean }> = [
-      { code: 'CLIENT_IDENTIFIED', complete: true },
-      { code: 'SOLUTION_CONFIGURED', complete: Boolean(retained) },
-      { code: 'PROPOSAL_CREATED', complete: proposals.length > 0 },
       {
-        code: 'DOCUMENT_PREPARED',
-        complete: Boolean(
-          revision && revision.documentReadiness !== 'NO_COMPOSITION',
-        ),
+        code: 'OFFER_ISSUED',
+        complete: revision?.issuance.status === 'ISSUED',
       },
       {
-        code: 'INTERNAL_REVIEW',
-        complete: Boolean(
-          revision && ['READY', 'SENT', 'ACCEPTED'].includes(revision.status),
-        ),
+        code: 'CUSTOMER_ACCEPTANCE',
+        complete: revision?.acceptance.status === 'EVIDENCED',
       },
+      { code: 'CONTRACT', complete: contracts.length > 0 },
+      { code: 'SIGNATURE_ACTIVATION', complete: Boolean(signed && active) },
+      { code: 'MODULES_RIGHTS', complete: active && entitlements.length > 0 },
       {
-        code: 'CONTRACT_ACCEPTED',
-        complete: contracts.some((contract) =>
-          ['ACTIVE', 'APPROVED'].includes(contract.status),
-        ),
+        code: 'FINAL_VERIFICATION',
+        complete: Boolean(active && entitlements.length > 0),
       },
-      { code: 'ACTIVATION', complete: entitlements.length > 0 },
     ];
     const blockers: Array<{ code: string; label: string }> = [];
     const nextActions: Array<{
@@ -509,7 +618,17 @@ export class CommercialDossierService {
       label: string;
       href: string | null;
     }> = [];
-    if (!workspaces.length)
+    if (
+      revision?.status === 'ACCEPTED' &&
+      !revision.relatedContract &&
+      !contracts.length
+    )
+      nextActions.push({
+        code: 'PREPARE_CONTRACT',
+        label: 'Préparer le contrat',
+        href: proposal?.detailUrl ?? null,
+      });
+    else if (!workspaces.length)
       nextActions.push({
         code: 'PREPARE_OFFER',
         label: 'Préparer une offre',
@@ -579,21 +698,29 @@ export class CommercialDossierService {
         label: 'Commencer la revue interne',
         href: proposal?.detailUrl ?? null,
       });
-    else if (
-      revision?.status === 'ACCEPTED' &&
-      !revision.relatedContract &&
-      !contracts.length
-    )
+    else if (revision?.status === 'SENT')
       nextActions.push({
-        code: 'PREPARE_CONTRACT',
-        label: 'Préparer le contrat',
-        href: '/admin/commercial/contracts',
+        code: 'RECORD_ACCEPTANCE',
+        label: "Enregistrer la preuve d'acceptation",
+        href: proposal?.detailUrl ?? null,
       });
-    else if (contracts.length && !entitlements.length)
+    else if (contracts.length && !signed)
+      nextActions.push({
+        code: 'SIGN_CONTRACT',
+        label: 'Enregistrer la signature du contrat',
+        href: `/admin/commercial/dossier/ORGANIZATION/${targetId}`,
+      });
+    else if (signed && !active)
+      nextActions.push({
+        code: 'ACTIVATE_CONTRACT',
+        label: 'Activer explicitement le contrat',
+        href: `/admin/commercial/dossier/ORGANIZATION/${targetId}`,
+      });
+    else if (active && !entitlements.length)
       nextActions.push({
         code: 'VERIFY_ACTIVATION',
         label: "Vérifier l'activation",
-        href: '/admin/commercial/entitlements',
+        href: `/admin/commercial/dossier/ORGANIZATION/${targetId}`,
       });
 
     return { progress: stages, blockers, nextActions };

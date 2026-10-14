@@ -466,6 +466,12 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
   const contracts = (data.contracts as JsonRecord[]) ?? [];
   const proposals = (data.proposals as JsonRecord[]) ?? [];
   const entitlementSummary = (data.entitlementSummary as JsonRecord[]) ?? [];
+  const continuity = (data.continuity ?? {}) as JsonRecord;
+  const contractedCapabilities =
+    (continuity.contractedCapabilities as JsonRecord[]) ?? [];
+  const excessEntitlements =
+    (continuity.excessEntitlements as JsonRecord[]) ?? [];
+  const pendingActions = (continuity.pendingActions as string[]) ?? [];
   const current =
     data.contract && typeof data.contract === "object"
       ? (data.contract as JsonRecord)
@@ -559,6 +565,40 @@ function CommercialPanel({ data }: { data: JsonRecord }) {
               .join(" · ") || "None"}
           </p>
         </div>
+      </div>
+      <div className="mt-4 rounded-lg border bg-slate-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <strong>Continuité contrat → droits</strong>
+          <Link
+            href={`/admin/commercial/dossier/ORGANIZATION/${organizationId}`}
+            className="text-sm underline"
+          >
+            Ouvrir le parcours guidé
+          </Link>
+        </div>
+        <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          {contractedCapabilities.map((capability) => (
+            <li
+              key={String(capability.code)}
+              className="rounded border bg-white p-3"
+            >
+              {String(capability.label)} · {String(capability.state)}
+            </li>
+          ))}
+          {excessEntitlements.map((capability) => (
+            <li
+              key={String(capability.id)}
+              className="rounded border border-amber-300 bg-amber-50 p-3"
+            >
+              {String(capability.label)} · droit actif hors contrat courant
+            </li>
+          ))}
+        </ul>
+        {pendingActions.length > 0 && (
+          <p className="mt-3 text-sm text-amber-800">
+            Actions requises : {pendingActions.join(" · ")}
+          </p>
+        )}
       </div>
       <h3 className="mt-6 font-semibold">Contracts and history</h3>
       <div className="mt-3 space-y-3">

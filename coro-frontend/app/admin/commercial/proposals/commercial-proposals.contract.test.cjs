@@ -88,6 +88,11 @@ for (const token of [
   "Aucun envoi externe n’a été effectué",
   "window.confirm",
   "Blocages E01",
+  "/accept",
+  "Enregistrer l’acceptation avec preuve",
+  "/create-contract",
+  "Créer explicitement le contrat",
+  "Cette décision ne crée aucun contrat automatiquement",
 ])
   if (!detail.includes(token))
     throw new Error(`document workspace missing ${token}`);

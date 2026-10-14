@@ -33,8 +33,14 @@ describe('Proposal document composition PostgreSQL invariants', () => {
   let priceBookVersionId = '';
 
   beforeAll(async () => {
+    const capability = await prisma.commercialCapability.findUniqueOrThrow({
+      where: { code: 'COMPLIANCE_OPERATIONS' },
+    });
     const organization = await prisma.organization.create({
-      data: { name: `composition_${suffix}` },
+      data: {
+        name: `composition_${suffix}`,
+        commercialRelationship: 'DIRECT',
+      },
     });
     organizationId = organization.id;
     actor = {
@@ -84,6 +90,7 @@ describe('Proposal document composition PostgreSQL invariants', () => {
           create: [
             {
               source: 'CUSTOM_COMPONENT',
+              capabilityId: capability.id,
               componentCode: `PROFESSIONAL_ANNUAL_${suffix}`,
               componentNameFR: 'CORO Professional annuel',
               componentNameEN: 'CORO Professional annual',
@@ -94,14 +101,17 @@ describe('Proposal document composition PostgreSQL invariants', () => {
               metric: 'SITE',
               quantity: '125',
               quantityUnit: 'SITE',
+              commercialQuantityBasis: 'DECLARED',
               proposedUnitAmountMinor: 1750000n,
               proposedExtendedAmountMinor: 1750000n,
               calculationStatus: 'CALCULATED',
               calculationExplanationFR: 'Palier approuve.',
+              internalUse: true,
               displayOrder: 0,
             },
             {
               source: 'CUSTOM_COMPONENT',
+              capabilityId: capability.id,
               componentCode: `IMPLEMENTATION_${suffix}`,
               componentNameFR: 'Implementation avancee',
               componentNameEN: 'Advanced implementation',
@@ -111,10 +121,12 @@ describe('Proposal document composition PostgreSQL invariants', () => {
               metric: 'FIXED',
               quantity: '1',
               quantityUnit: 'FIXED',
+              commercialQuantityBasis: 'DECLARED',
               proposedUnitAmountMinor: 742500n,
               proposedExtendedAmountMinor: 742500n,
               calculationStatus: 'CALCULATED',
               calculationExplanationFR: 'Forfait approuve.',
+              internalUse: true,
               displayOrder: 1,
             },
           ],
@@ -630,8 +642,8 @@ describe('Proposal document composition PostgreSQL invariants', () => {
     await prisma.commercialProposalTemporalTerms.create({
       data: {
         proposalRevisionId: revisionId,
-        serviceStartDate: new Date('2026-11-01T00:00:00.000Z'),
-        initialInvoiceDate: new Date('2026-11-01T00:00:00.000Z'),
+        serviceStartDate: new Date('2026-10-01T00:00:00.000Z'),
+        initialInvoiceDate: new Date('2026-10-01T00:00:00.000Z'),
         renewalTermMonths: 12,
         provenance: { source: 'E01_SYNTHETIC_FIXTURE' },
       },

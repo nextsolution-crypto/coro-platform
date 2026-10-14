@@ -144,6 +144,8 @@ describe('CommercialDossierService', () => {
       count: 0,
       items: [],
       inferred: false,
+      contractedCapabilities: [],
+      excessEntitlements: [],
     });
   });
 
@@ -296,8 +298,30 @@ describe('CommercialDossierService', () => {
         title: 'Contract A',
         status: 'ACTIVE',
         isPrimary: true,
+        lockVersion: 2,
+        activatedAt: date,
         updatedAt: date,
-        revisions: [],
+        revisions: [
+          {
+            id: 'contract-revision-a',
+            revisionNumber: 1,
+            status: 'SIGNED',
+            signedAt: date,
+            priceLines: [
+              {
+                id: 'snapshot-line-a',
+                quantity: '125',
+                quantityUnit: 'SITE',
+                distributionLimit: null,
+                distributionMetric: null,
+                capability: {
+                  code: 'COMPLIANCE_OPERATIONS',
+                  nameFr: 'ConformitÃ©',
+                },
+              },
+            ],
+          },
+        ],
       },
     ]);
     prisma.capabilityEntitlement.findMany.mockResolvedValue([
@@ -313,7 +337,7 @@ describe('CommercialDossierService', () => {
         revisions: [
           {
             versionNumber: 1,
-            lifecycle: 'ACTIVE',
+            lifecycle: 'GRANTED',
             enabled: true,
             distributable: false,
             effectiveFrom: date,
@@ -339,7 +363,88 @@ describe('CommercialDossierService', () => {
       present: true,
       count: 1,
       inferred: false,
+      contractedCapabilities: [
+        expect.objectContaining({
+          snapshotLineId: 'snapshot-line-a',
+          state: 'ACTIVE',
+          quantity: '125',
+        }),
+      ],
+      excessEntitlements: [],
     });
+    expect(result.progress).toEqual(
+      expect.arrayContaining([
+        { code: 'SIGNATURE_ACTIVATION', complete: true },
+        { code: 'MODULES_RIGHTS', complete: true },
+      ]),
+    );
+  });
+
+  it('requires authoritative issuance and evidenced acceptance for guided completion', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'organization-a',
+      name: 'Organization A',
+      isActive: true,
+    });
+    prisma.commercialProposal.findMany.mockResolvedValue([
+      {
+        id: 'proposal-a',
+        reference: 'PROP-A',
+        title: 'Proposal A',
+        status: 'OPEN',
+        organizationId: 'organization-a',
+        prospectId: null,
+        acceptedRevisionId: 'revision-a',
+        createdAt: date,
+        updatedAt: date,
+        simulationConversion: null,
+        revisions: [
+          {
+            id: 'revision-a',
+            revisionNumber: 1,
+            status: 'ACCEPTED',
+            validFrom: date,
+            validUntil: null,
+            oneTimeTotalMinor: 0n,
+            annualRecurringEquivalentMinor: 1n,
+            firstYearCommitmentMinor: 1n,
+            sentAt: date,
+            sentDocumentId: 'document-a',
+            acceptedAt: date,
+            acceptanceOccurredAt: date,
+            acceptedByName: 'Synthetic Signer',
+            acceptedByAuthority: 'Authorized tester',
+            acceptanceReference: 'SYNTHETIC-EVIDENCE',
+            documentCompositions: [],
+            documents: [],
+            sourceContractRevision: null,
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.get(
+      CommercialDossierTargetType.ORGANIZATION,
+      'organization-a',
+    );
+
+    expect(result.proposals[0].latestRevision).toMatchObject({
+      issuance: { status: 'ISSUED', issuedDocumentId: 'document-a' },
+      acceptance: {
+        status: 'EVIDENCED',
+        acceptedByName: 'Synthetic Signer',
+        evidenceReference: 'SYNTHETIC-EVIDENCE',
+      },
+    });
+    expect(result.progress).toEqual(
+      expect.arrayContaining([
+        { code: 'OFFER_ISSUED', complete: true },
+        { code: 'CUSTOMER_ACCEPTANCE', complete: true },
+      ]),
+    );
+    expect(result.nextActions).toEqual([
+      expect.objectContaining({ code: 'PREPARE_CONTRACT' }),
+    ]);
   });
 
   it('rejects an unknown explicit target', async () => {
