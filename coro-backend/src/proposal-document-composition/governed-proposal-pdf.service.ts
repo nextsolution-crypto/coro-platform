@@ -13,6 +13,7 @@ import type {
   CompositionDiagnostic,
   ProposalDocumentCompositionContent,
 } from './proposal-document-composition.types';
+import { ProposalDocumentCompositionService } from './proposal-document-composition.service';
 
 export const GOVERNED_PROPOSAL_PDF_TEMPLATE_VERSION =
   'governed-proposal-offer/v2';
@@ -201,6 +202,7 @@ export class GovernedProposalPdfService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly audit: AdminAuditService,
+    private readonly compositions: ProposalDocumentCompositionService,
   ) {}
 
   async generate(
@@ -222,6 +224,19 @@ export class GovernedProposalPdfService {
     if (!snapshot) throw new NotFoundException('Composition introuvable.');
     if (snapshot.templateCode !== 'CORO_PROFESSIONAL')
       throw new ConflictException('D01 supporte CORO_PROFESSIONAL uniquement.');
+    const evaluated = await this.compositions.evaluateCurrent(
+      this.prisma,
+      proposalId,
+      revisionId,
+      snapshot.id,
+    );
+    if (
+      evaluated.current.canonicalHash !== snapshot.canonicalHash ||
+      !evaluated.current.issuanceReady
+    )
+      throw new ConflictException(
+        'TEMPORAL_COMPOSITION_STALE: composez un nouveau snapshot C01 avant de générer D01.',
+      );
     const normalizedKey = idempotencyKey.trim();
     if (!normalizedKey)
       throw new ConflictException("Clé d'idempotence PDF requise.");

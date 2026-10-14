@@ -13,7 +13,9 @@ export type CompositionDiagnostic = Readonly<{
 }>;
 
 export type ProposalDocumentCompositionContent = Readonly<{
-  schemaVersion: 'proposal-document-composition/v1';
+  schemaVersion:
+    | 'proposal-document-composition/v1'
+    | 'proposal-document-composition/v2';
   proposalRevisionId: string;
   proposalReference: string;
   proposalRevisionNumber: number;
@@ -37,6 +39,7 @@ export type ProposalDocumentCompositionContent = Readonly<{
     | 'commercialTerms'
     | 'validity'
   >;
+  temporal?: Readonly<Record<string, unknown>>;
   sections: readonly {
     code: ProposalDocumentSectionCode;
     content: unknown;
@@ -46,6 +49,7 @@ export type ProposalDocumentCompositionContent = Readonly<{
     contentVersionIds: readonly string[];
     legalIssuerVersionId: string | null;
     clauseVersionIds: readonly string[];
+    temporalFingerprint?: string;
   };
 }>;
 

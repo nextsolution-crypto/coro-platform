@@ -78,6 +78,57 @@ export type ProposalTemporalSource = {
   calendarConventionVersion: string;
 };
 
+/**
+ * Stable document authority captured by C01. Issuance and electronic
+ * acceptance timestamps are deliberately excluded: they do not exist when
+ * the offer is composed and including them would make issuance circular.
+ */
+export function canonicalProposalTemporalAuthority(
+  source: ProposalTemporalSource,
+) {
+  const calculated = calculateProposalTemporalTerms({
+    ...source,
+    sentAt: null,
+    acceptedAt: null,
+  });
+  return {
+    schemaVersion: 'proposal-temporal-authority/v1' as const,
+    source: {
+      serviceStartDate: source.serviceStartDate
+        ? formatCivilDate(source.serviceStartDate)
+        : null,
+      initialInvoiceDate: source.initialInvoiceDate
+        ? formatCivilDate(source.initialInvoiceDate)
+        : null,
+      externalSignatureDate: source.externalSignatureDate
+        ? formatCivilDate(source.externalSignatureDate)
+        : null,
+      externalSignatureEvidence: source.externalSignatureEvidence,
+      offerValidityDays: source.offerValidityDays,
+      initialTermMonths: source.initialTermMonths,
+      paymentNetDays: source.paymentNetDays,
+      automaticRenewal: source.automaticRenewal,
+      nonrenewalNoticeDays: source.nonrenewalNoticeDays,
+      renewalTermMonths: source.renewalTermMonths,
+      contractualTimezone: source.contractualTimezone,
+      calendarConventionVersion: source.calendarConventionVersion,
+    },
+    calculated: {
+      creationDate: calculated.creationDate,
+      serviceStartDate: calculated.serviceStartDate,
+      initialTermEndExclusive: calculated.initialTermEndExclusive,
+      initialTermLastCoveredDate: calculated.initialTermLastCoveredDate,
+      nonrenewalDeadline: calculated.nonrenewalDeadline,
+      initialInvoiceDate: calculated.initialInvoiceDate,
+      paymentDueDate: calculated.paymentDueDate,
+      externalSignatureDate: calculated.externalSignatureDate,
+      renewalTermMonths: calculated.renewalTermMonths,
+      convention: calculated.convention,
+      timezone: calculated.timezone,
+    },
+  };
+}
+
 export function calculateProposalTemporalTerms(source: ProposalTemporalSource) {
   const civil = (value: Date | null) => (value ? formatCivilDate(value) : null);
   const issuanceDate = source.sentAt

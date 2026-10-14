@@ -623,7 +623,7 @@ describe('Proposal document composition PostgreSQL invariants', () => {
   });
 
   it('enforces explicit E01 approval and issuance against exact C01/D01 evidence', async () => {
-    const snapshot =
+    const staleSnapshot =
       await prisma.proposalDocumentCompositionSnapshot.findFirstOrThrow({
         where: {
           proposalRevisionId: revisionId,
@@ -632,10 +632,10 @@ describe('Proposal document composition PostgreSQL invariants', () => {
         },
         orderBy: { sequence: 'desc' },
       });
-    const document = await prisma.proposalDocument.findFirstOrThrow({
+    const staleDocument = await prisma.proposalDocument.findFirstOrThrow({
       where: {
         proposalRevisionId: revisionId,
-        compositionSnapshotId: snapshot.id,
+        compositionSnapshotId: staleSnapshot.id,
         status: 'FINALIZED',
       },
     });
@@ -646,6 +646,75 @@ describe('Proposal document composition PostgreSQL invariants', () => {
         initialInvoiceDate: new Date('2026-10-01T00:00:00.000Z'),
         renewalTermMonths: 12,
         provenance: { source: 'E01_SYNTHETIC_FIXTURE' },
+      },
+    });
+    const staleEvaluation = await service.evaluateCurrent(
+      prisma,
+      proposalId,
+      revisionId,
+      staleSnapshot.id,
+    );
+    expect(staleEvaluation.current.canonicalHash).not.toBe(
+      staleSnapshot.canonicalHash,
+    );
+    const firstFresh = await service.composeInternalDraft(
+      proposalId,
+      revisionId,
+      {
+        templateCode: 'CORO_PROFESSIONAL',
+        language: 'FR',
+        clauseParameters: { offerValidityDays: 30 },
+      },
+      actor,
+    );
+    expect(firstFresh.id).not.toBe(staleSnapshot.id);
+    expect(
+      (firstFresh.snapshot as Record<string, unknown>).temporal,
+    ).toBeDefined();
+    await prisma.commercialProposalTemporalTerms.update({
+      where: { proposalRevisionId: revisionId },
+      data: { renewalTermMonths: 24, lockVersion: { increment: 1 } },
+    });
+    expect(
+      (
+        await service.evaluateCurrent(
+          prisma,
+          proposalId,
+          revisionId,
+          firstFresh.id,
+        )
+      ).current.canonicalHash,
+    ).not.toBe(firstFresh.canonicalHash);
+    const snapshot = await service.composeInternalDraft(
+      proposalId,
+      revisionId,
+      {
+        templateCode: 'CORO_PROFESSIONAL',
+        language: 'FR',
+        clauseParameters: { offerValidityDays: 30 },
+      },
+      actor,
+    );
+    const document = await prisma.proposalDocument.create({
+      data: {
+        proposalRevisionId: revisionId,
+        type: 'OFFER',
+        language: 'FR',
+        artifactVersion: 94,
+        status: 'FINALIZED',
+        fileName: 'fresh-governed-v2.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 100,
+        storageKey: `test/d01/fresh-${suffix}.pdf`,
+        sha256: 'b'.repeat(64),
+        templateVersion: 'governed-proposal-offer/v2',
+        generatorVersion: 'puppeteer/v2',
+        generationKey: `d01-fresh-${suffix}`,
+        generationStartedAt: new Date(),
+        generatedAt: new Date(),
+        compositionSnapshotId: snapshot.id,
+        compositionSnapshotHash: snapshot.canonicalHash,
+        compositionReadiness: snapshot.readiness,
       },
     });
     await prisma.commercialProposalRevision.update({
@@ -668,10 +737,67 @@ describe('Proposal document composition PostgreSQL invariants', () => {
       contracts: await prisma.organizationContract.count(),
       entitlements: await prisma.capabilityEntitlement.count(),
     };
-    const reviewRevision =
+    const staleReadiness = await readiness.evaluate(
+      proposalId,
+      revisionId,
+      staleDocument.id,
+      'APPROVAL',
+    );
+    expect(staleReadiness.status).toBe('BLOCKED');
+    expect(staleReadiness.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'C01_SNAPSHOT_STALE' }),
+      ]),
+    );
+    let reviewRevision =
       await prisma.commercialProposalRevision.findUniqueOrThrow({
         where: { id: revisionId },
       });
+    const staleApprovalError: unknown = await proposals
+      .transition(
+        revisionId,
+        'READY',
+        {
+          lockVersion: reviewRevision.lockVersion,
+          reason: 'E01 stale approval must fail',
+          documentId: staleDocument.id,
+        },
+        actor,
+      )
+      .catch((error: unknown) => error);
+    expect(
+      (staleApprovalError as { response?: { code?: string } }).response?.code,
+    ).toBe('E01_APPROVAL_BLOCKED');
+    await prisma.commercialProposalRevision.update({
+      where: { id: revisionId },
+      data: { status: 'READY', lockVersion: { increment: 1 } },
+    });
+    const readyWithStaleDocument =
+      await prisma.commercialProposalRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+      });
+    const staleIssuanceError: unknown = await proposals
+      .transition(
+        revisionId,
+        'SENT',
+        {
+          lockVersion: readyWithStaleDocument.lockVersion,
+          reason: 'E01 stale issuance must fail',
+          documentId: staleDocument.id,
+        },
+        actor,
+      )
+      .catch((error: unknown) => error);
+    expect(
+      (staleIssuanceError as { response?: { code?: string } }).response?.code,
+    ).toBe('E01_ISSUANCE_BLOCKED');
+    await prisma.commercialProposalRevision.update({
+      where: { id: revisionId },
+      data: { status: 'INTERNAL_REVIEW', lockVersion: { increment: 1 } },
+    });
+    reviewRevision = await prisma.commercialProposalRevision.findUniqueOrThrow({
+      where: { id: revisionId },
+    });
     expect(
       await readiness.evaluate(proposalId, revisionId, document.id, 'APPROVAL'),
     ).toMatchObject({ status: 'READY', blockers: [] });

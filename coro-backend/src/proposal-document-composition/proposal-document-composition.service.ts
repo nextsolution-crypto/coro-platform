@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { buildProposalCustomerPreview } from '../commercial-proposals/proposal-customer-preview';
+import { canonicalProposalTemporalAuthority } from '../commercial-proposals/proposal-temporal-terms';
 import { PrismaService } from '../prisma/prisma.service';
 import { canonicalSha256 } from './canonical-json';
 import { ComposeProposalDocumentDto } from './proposal-document-composition.dto';
@@ -49,6 +50,7 @@ const revisionInclude = {
   commitments: true,
   valueAnalysis: true,
   legalIssuerSnapshot: true,
+  temporalTerms: true,
   simulationConversion: {
     include: {
       scenario: {
@@ -297,6 +299,28 @@ export class ProposalDocumentCompositionService {
       commercialTerms: preview.commercialTerms,
       validity: preview.validity,
     };
+    const temporal = revision.temporalTerms
+      ? canonicalProposalTemporalAuthority({
+          createdAt: revision.createdAt,
+          sentAt: revision.sentAt,
+          acceptedAt: revision.acceptedAt,
+          serviceStartDate: revision.temporalTerms.serviceStartDate,
+          initialInvoiceDate: revision.temporalTerms.initialInvoiceDate,
+          externalSignatureDate: revision.temporalTerms.externalSignatureDate,
+          externalSignatureEvidence:
+            revision.temporalTerms.externalSignatureEvidence,
+          offerValidityDays: revision.temporalTerms.offerValidityDays,
+          initialTermMonths: revision.temporalTerms.initialTermMonths,
+          paymentNetDays: revision.temporalTerms.paymentNetDays,
+          automaticRenewal: revision.temporalTerms.automaticRenewal,
+          nonrenewalNoticeDays: revision.temporalTerms.nonrenewalNoticeDays,
+          renewalTermMonths: revision.temporalTerms.renewalTermMonths,
+          contractualTimezone: revision.temporalTerms.contractualTimezone,
+          calendarConventionVersion:
+            revision.temporalTerms.calendarConventionVersion,
+        })
+      : null;
+    const temporalFingerprint = canonicalSha256(temporal);
     const sections = this.sections(
       revision,
       language,
@@ -305,7 +329,7 @@ export class ProposalDocumentCompositionService {
       clauses.items,
     );
     const composition: ProposalDocumentCompositionContent = {
-      schemaVersion: 'proposal-document-composition/v1',
+      schemaVersion: 'proposal-document-composition/v2',
       proposalRevisionId: revision.id,
       proposalReference: revision.proposal.reference,
       proposalRevisionNumber: revision.revisionNumber,
@@ -318,12 +342,14 @@ export class ProposalDocumentCompositionService {
       recipient: preview.customer,
       issuer: issuer.value,
       economics,
+      temporal: temporal ?? undefined,
       sections,
       clauses: clauses.items,
       provenance: {
         contentVersionIds: content.versionIds,
         legalIssuerVersionId: issuer.versionId,
         clauseVersionIds: clauses.versionIds,
+        temporalFingerprint,
       },
     };
     const orderedDiagnostics = [...diagnostics].sort((left, right) =>

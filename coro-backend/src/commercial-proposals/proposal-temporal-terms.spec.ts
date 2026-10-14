@@ -1,10 +1,51 @@
 import {
   addCalendarDays,
   addCalendarMonths,
+  canonicalProposalTemporalAuthority,
   calculateProposalTemporalTerms,
 } from './proposal-temporal-terms';
 
 describe('proposal temporal terms', () => {
+  it('builds deterministic document authority and preserves null semantics', () => {
+    const source = {
+      createdAt: new Date('2026-10-14T15:30:00.000Z'),
+      sentAt: null,
+      acceptedAt: null,
+      serviceStartDate: new Date('2026-11-01T00:00:00.000Z'),
+      initialInvoiceDate: new Date('2026-11-01T00:00:00.000Z'),
+      externalSignatureDate: null,
+      externalSignatureEvidence: null,
+      offerValidityDays: 90,
+      initialTermMonths: 12,
+      paymentNetDays: 30,
+      automaticRenewal: true,
+      nonrenewalNoticeDays: 30,
+      renewalTermMonths: 12,
+      contractualTimezone: 'America/Toronto',
+      calendarConventionVersion: 'proposal-calendar/v1',
+    };
+    const first = canonicalProposalTemporalAuthority(source);
+    expect(canonicalProposalTemporalAuthority(source)).toEqual(first);
+    expect(first.source.externalSignatureDate).toBeNull();
+    expect(first.calculated).toMatchObject({
+      serviceStartDate: '2026-11-01',
+      initialTermEndExclusive: '2027-11-01',
+      paymentDueDate: '2026-12-01',
+    });
+    expect(
+      canonicalProposalTemporalAuthority({
+        ...source,
+        sentAt: new Date('2026-10-20T15:00:00.000Z'),
+        acceptedAt: new Date('2026-10-21T15:00:00.000Z'),
+      }),
+    ).toEqual(first);
+    expect(
+      canonicalProposalTemporalAuthority({
+        ...source,
+        renewalTermMonths: 24,
+      }),
+    ).not.toEqual(first);
+  });
   it('uses calendar days and clamps month-end and leap-day anniversaries', () => {
     expect(addCalendarDays('2026-10-13', 90)).toBe('2027-01-11');
     expect(addCalendarMonths('2024-02-29', 12)).toBe('2025-02-28');

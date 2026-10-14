@@ -1,5 +1,8 @@
 import type { ProposalDocumentCompositionContent } from './proposal-document-composition.types';
-import { renderGovernedProposalHtml } from './governed-proposal-pdf.service';
+import {
+  GovernedProposalPdfService,
+  renderGovernedProposalHtml,
+} from './governed-proposal-pdf.service';
 
 jest.mock('puppeteer', () => ({ __esModule: true, default: {} }));
 
@@ -80,6 +83,40 @@ const content = {
 } as unknown as ProposalDocumentCompositionContent;
 
 describe('governed proposal PDF rendering', () => {
+  it('rejects a stale C01 snapshot before reserving or storing D01', async () => {
+    const prisma = {
+      proposalDocumentCompositionSnapshot: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'snapshot-a',
+          proposalRevisionId: 'revision-a',
+          templateCode: 'CORO_PROFESSIONAL',
+          canonicalHash: 'a'.repeat(64),
+          proposalRevision: { proposal: { reference: 'PROP-TEST' } },
+        }),
+      },
+      $transaction: jest.fn(),
+    };
+    const storage = { uploadPrivateImmutable: jest.fn() };
+    const compositions = {
+      evaluateCurrent: jest.fn().mockResolvedValue({
+        snapshot: { canonicalHash: 'a'.repeat(64) },
+        current: { canonicalHash: 'b'.repeat(64), issuanceReady: true },
+      }),
+    };
+    const service = new GovernedProposalPdfService(
+      prisma as never,
+      storage as never,
+      {} as never,
+      compositions as never,
+    );
+    await expect(
+      service.generate('proposal-a', 'revision-a', 'snapshot-a', 'attempt-a', {
+        userId: 'user-a',
+      }),
+    ).rejects.toThrow('TEMPORAL_COMPOSITION_STALE');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(storage.uploadPrivateImmutable).not.toHaveBeenCalled();
+  });
   it('renders exact customer-safe economics without monthly zero or internal cost', () => {
     const html = renderGovernedProposalHtml(content, [], 'ISSUANCE_READY');
     expect(html).toContain('17 500,00 $ CAD');
