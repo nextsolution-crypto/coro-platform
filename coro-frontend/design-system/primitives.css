@@ -205,3 +205,31 @@
   outline: var(--cg-focus-width) solid var(--cg-focus-ring);
   outline-offset: var(--cg-focus-offset);
 }
+
+/*
+ * Îlot Legacy : contenu d'un écran non migré affiché dans le shell Glass.
+ * Redonne au contenu son environnement d'origine (fond clair, couleurs historiques, color-scheme: light).
+ *
+ * INTERDIT ICI (vérifié par route-registry.test.cjs) : transform, filter, backdrop-filter, isolation, z-index, overflow,
+ * contain, will-change, perspective, position, opacity. Ces propriétés créeraient un bloc conteneur ou un contexte
+ * d'empilement qui piégerait les modales à position fixe et les menus flottants de l'écran sous le shell.
+ * Aucun sélecteur global : seuls les descendants de l'îlot sont concernés.
+ */
+:root[data-ui="glass"] .cg-legacy-island {
+  /* Variables de globals.css que le pont Glass redéfinit (tokens.css) : valeurs d'origine rétablies. */
+  --text-primary: #2C3E50;
+  --text-secondary: #6C757D;
+  --text-muted: #ADB5BD;
+  --foreground: #2C3E50;
+  color-scheme: light;
+  color: #2C3E50;
+  background-color: #F8F9FA;
+  border: 1px solid var(--cg-edge);
+  border-radius: var(--cg-radius-lg);
+  box-shadow: var(--cg-shadow-card);
+  padding: var(--cg-space-4);
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  :root[data-ui="glass"] .cg-legacy-island { padding: var(--cg-space-5); }
+}

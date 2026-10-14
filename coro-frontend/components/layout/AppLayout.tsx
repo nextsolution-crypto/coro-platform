@@ -9,6 +9,7 @@ import ToastContainer from '@/components/ui/ToastContainer';
 import { useTheme } from '@/design-system/theme/ThemeProvider';
 import { createPalette } from '@/design-system/glass-palette';
 import { GlassNavIcon, GlassIcon } from '@/design-system/glass-icons';
+import { LegacyIsland } from '@/design-system/LegacyIsland';
 import { User, Timer, BarChart3 } from 'lucide-react';
 
 // ── Navigation par groupes ──────────────────────────────────
@@ -146,7 +147,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthStore();
   const { toasts, showToast, removeToast } = useToast();
   // Génération d'interface : 'legacy' (défaut, rendu strictement inchangé) ou 'glass'.
-  const { ui } = useTheme();
+  const { ui, routeMode } = useTheme();
   const glass = ui === 'glass';
   const p = createPalette(glass);
   // Glass : hauteur réelle de la barre du haut (le 57 px codé en dur du Legacy ne correspond pas à son rendu).
@@ -787,7 +788,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* ── Contenu ── */}
         <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8" inert={drawerOpen ? true : undefined}>
-          {children}
+          {glass && routeMode === 'island' ? <LegacyIsland>{children}</LegacyIsland> : children}
         </main>
       </div>
       <ToastContainer toasts={toasts} removeToast={removeToast} />

@@ -14,7 +14,7 @@ import type { ThemePreference } from '@/design-system/theme/theme-core';
 export default function ProfilePage() {
   const router = useRouter();
   const { user, initAuth } = useAuthStore();
-  const { ui, preference, setUi, setPreference } = useTheme();
+  const { ui, uiPreference, preference, setUi, setPreference } = useTheme();
   const glass = ui === 'glass';
   const p = createPalette(glass);
   const gc = glass ? ' cg-glass' : '';
@@ -224,7 +224,7 @@ export default function ProfilePage() {
               { value: 'legacy', label: 'Classique', desc: 'Interface actuelle, inchangée' },
               { value: 'glass', label: 'Liquid Glass (aperçu)', desc: 'Nouveau design — tableau de bord et navigation' },
             ] as const).map(opt => {
-              const selected = ui === opt.value;
+              const selected = uiPreference === opt.value;
               return (
                 <button key={opt.value} type="button" role="radio" aria-checked={selected}
                   onClick={() => setUi(opt.value)}
@@ -249,7 +249,7 @@ export default function ProfilePage() {
             ] as { value: ThemePreference; label: string }[]).map(opt => {
               const selected = preference === opt.value;
               return (
-                <button key={opt.value} type="button" role="radio" aria-checked={selected} disabled={!glass}
+                <button key={opt.value} type="button" role="radio" aria-checked={selected} disabled={uiPreference !== 'glass'}
                   onClick={() => setPreference(opt.value)}
                   className="flex-1 p-3 rounded text-left transition-colors min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
@@ -261,7 +261,7 @@ export default function ProfilePage() {
               );
             })}
           </div>
-          {!glass && (
+          {uiPreference !== 'glass' && (
             <p className="text-xs mt-2" style={{ color: p.text('#ADB5BD') }}>Le choix du thème s’active avec l’interface Liquid Glass.</p>
           )}
         </div>

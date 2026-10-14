@@ -116,7 +116,7 @@ test('rendu serveur : snapshot constant legacy / SYSTEM / light, sans window', (
   const store = require('./theme-store.ts');
   assert.equal(store.getSnapshot(), store.SERVER_THEME_SNAPSHOT);
   assert.equal(store.getServerSnapshot(), store.SERVER_THEME_SNAPSHOT);
-  assert.deepEqual({ ...store.SERVER_THEME_SNAPSHOT }, { preference: 'SYSTEM', resolvedTheme: 'light', ui: 'legacy' });
+  assert.deepEqual({ ...store.SERVER_THEME_SNAPSHOT }, { preference: 'SYSTEM', resolvedTheme: 'light', ui: 'legacy', effectiveUi: 'legacy', routeMode: 'legacy' });
   assert.doesNotThrow(() => store.setThemePreference('DARK'));
   assert.doesNotThrow(() => store.reapplyCurrentTheme());
 });

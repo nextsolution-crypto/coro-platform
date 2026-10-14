@@ -88,7 +88,7 @@ test('anti-flash : page masquée en Glass seulement, révélée par ThemeProvide
   const m = tokensCss.match(/:root\[data-ui="glass"\]:not\(\[data-ui-ready\]\) body \{[^}]*\}/);
   assert.ok(m && m[0].includes('visibility: hidden'), 'règle de masquage absente');
   const provider = fs.readFileSync(path.join(__dirname, 'theme', 'ThemeProvider.tsx'), 'utf8');
-  assert.ok(provider.includes("'data-ui-ready'") && provider.includes('snapshot.ui === getSnapshot().ui'));
+  assert.ok(provider.includes("'data-ui-ready'") && provider.includes('snapshot.effectiveUi === getSnapshot().effectiveUi'));
   const core = fs.readFileSync(path.join(__dirname, 'theme', 'theme-core.ts'), 'utf8');
   assert.ok(core.includes("u==='glass'") && core.includes('data-ui-ready') && core.includes('2000'), 'repli 2 s absent du script');
 });
