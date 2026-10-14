@@ -83,7 +83,12 @@ class ReadyLifecycleController {
     @Body() dto: TransitionProposalDto,
     @Req() req: { user: { userId: string } },
   ) {
-    return this.service.transition(revisionId, 'INTERNAL_REVIEW', dto, req.user);
+    return this.service.transition(
+      revisionId,
+      'INTERNAL_REVIEW',
+      dto,
+      req.user,
+    );
   }
 }
 
