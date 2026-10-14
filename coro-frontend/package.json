@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:design-system": "node design-system/theme/theme.test.cjs && node design-system/glass-palette.test.cjs",
     "test:planning": "node app/planning/planning.test.cjs",
     "test:organization360": "node app/admin/organizations/[organizationId]/organization360.contract.test.cjs",
     "test:commercial-catalog": "node app/admin/product-catalog/product-catalog.contract.test.cjs",

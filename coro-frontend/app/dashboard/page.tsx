@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import AppLayout from '@/components/layout/AppLayout';
 import api from '@/lib/api';
 import { PageTitle } from '@/components/ui/Typography';
+import { useTheme } from '@/design-system/theme/ThemeProvider';
+import { createPalette } from '@/design-system/glass-palette';
 
 const statusConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
   DRAFT:       { label: 'Brouillon',   bg: '#F8F9FA', color: '#6C757D', border: '#DEE2E6' },
@@ -24,9 +26,31 @@ const activityStatusConfig: Record<string, { label: string; color: string; bg: s
   termine:  { label: 'Terminé',  color: '#1A5276', bg: '#D6EAF8' },
 };
 
+// Icônes des cartes KPI — affichées uniquement en mode Glass.
+type KpiIconName = 'folder' | 'clock' | 'check' | 'document';
+
+function KpiIcon({ name }: { name: KpiIconName }) {
+  const common = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  switch (name) {
+    case 'folder':
+      return <svg {...common}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>;
+    case 'clock':
+      return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
+    case 'check':
+      return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.8 2.8L16 9.5" /></svg>;
+    case 'document':
+      return <svg {...common}><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>;
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, refreshUser } = useAuthStore();
+  // Génération d'interface : 'legacy' (rendu strictement inchangé) ou 'glass'.
+  const { ui } = useTheme();
+  const glass = ui === 'glass';
+  const p = createPalette(glass);
+  const gc = glass ? ' cg-glass' : '';
 
   const [loading, setLoading] = useState(true);
   const [projets, setProjets] = useState<any[]>([]);
@@ -109,10 +133,10 @@ export default function DashboardPage() {
   const onboardingComplete = onboardingDone === onboardingItems.length;
 
   const kpis = [
-    { label: 'Projets actifs',    value: projetsActifs, color: '#C0392B', bg: '#FDEDEC', path: '/projects' },
-    { label: 'En révision',       value: enRevision,    color: '#F39C12', bg: '#FEF9E7', path: '/projects' },
-    { label: 'Validés',           value: valides,       color: '#27AE60', bg: '#EAFAF1', path: '/projects' },
-    { label: 'Mises à jour dues', value: updates.filter(u => u.level === 'URGENT').length, color: '#8E44AD', bg: '#F4ECF7', path: '/buildings/compliance' },
+    { label: 'Projets actifs',    value: projetsActifs, icon: 'folder' as KpiIconName, color: p.text('#C0392B'), bg: p.bg('#FDEDEC'), path: '/projects' },
+    { label: 'En révision',       value: enRevision,    icon: 'clock' as KpiIconName, color: p.text('#F39C12'), bg: p.bg('#FEF9E7'), path: '/projects' },
+    { label: 'Validés',           value: valides,       icon: 'check' as KpiIconName, color: p.text('#27AE60'), bg: p.bg('#EAFAF1'), path: '/projects' },
+    { label: 'Mises à jour dues', value: updates.filter(u => u.level === 'URGENT').length, icon: 'document' as KpiIconName, color: p.text('#8E44AD'), bg: p.bg('#F4ECF7'), path: '/buildings/compliance' },
   ];
 
   return (
@@ -120,7 +144,7 @@ export default function DashboardPage() {
       {/* ── En-tête ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
-                      <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#ADB5BD' }}>
+                      <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: p.text('#ADB5BD') }}>
               {today}
             </p>
             <PageTitle
@@ -133,43 +157,49 @@ export default function DashboardPage() {
               Bonjour, {user.firstName} 👋
             </PageTitle>
         </div>
+        {glass && (
+          <div className="hidden xl:block xl:ml-auto xl:mr-6 pl-3 self-center" style={{ borderLeft: '3px solid var(--cg-accent)' }}>
+            <p className="text-sm font-semibold uppercase" style={{ color: 'var(--cg-text-primary)', letterSpacing: '0.08em' }}>Résilience opérationnelle</p>
+            <p className="text-xs uppercase" style={{ color: 'var(--cg-text-secondary)', letterSpacing: '0.06em' }}>Des données réelles. Des décisions éclairées.</p>
+          </div>
+        )}
         <button onClick={() => router.push('/projects')}
-          className="w-full sm:w-auto text-white text-sm font-medium px-4 py-2.5 rounded flex items-center justify-center gap-2 flex-shrink-0"
-          style={{ backgroundColor: '#C0392B' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#A93226'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#C0392B'}>
+          className={`${glass ? 'self-start' : 'w-full'} sm:w-auto text-white text-sm font-medium px-4 py-2.5 rounded flex items-center justify-center gap-2 flex-shrink-0${glass ? ' cg-cta' : ''}`}
+          style={{ backgroundColor: p.bg('#C0392B') }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#A93226')}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#C0392B')}>
           + Nouveau projet
         </button>
       </div>
 
       {/* ── Checklist onboarding ── */}
       {isAdmin && !onboardingComplete && (
-        <div className="mb-6 rounded-md overflow-hidden" style={{ border: '1px solid #AED6F1', backgroundColor: '#EBF5FB' }}>
-          <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style={{ borderBottom: '1px solid #AED6F1' }}>
+        <div className={`mb-6 rounded-md overflow-hidden${gc}`} style={{ border: `1px solid ${p.line('#AED6F1')}`, backgroundColor: p.bg('#EBF5FB') }}>
+          <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style={{ borderBottom: `1px solid ${p.line('#AED6F1')}` }}>
             <div className="flex items-center gap-3 min-w-0">
               <span style={{ fontSize: 20 }}>🚀</span>
               <div>
-                <p className="text-sm font-bold" style={{ color: '#1A5276' }}>Configuration de votre organisation</p>
-                <p className="text-xs" style={{ color: '#2980B9' }}>{onboardingDone} sur {onboardingItems.length} étapes complétées</p>
+                <p className="text-sm font-bold" style={{ color: p.text('#1A5276') }}>Configuration de votre organisation</p>
+                <p className="text-xs" style={{ color: p.text('#2980B9') }}>{onboardingDone} sur {onboardingItems.length} étapes complétées</p>
               </div>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <div className="flex-1 sm:flex-none sm:w-32 h-2 rounded-full" style={{ backgroundColor: '#AED6F1' }}>
-                <div className="h-2 rounded-full transition-all" style={{ width: `${(onboardingDone / onboardingItems.length) * 100}%`, backgroundColor: '#2980B9' }} />
+              <div className="flex-1 sm:flex-none sm:w-32 h-2 rounded-full" style={{ backgroundColor: p.bg('#AED6F1') }}>
+                <div className="h-2 rounded-full transition-all" style={{ width: `${(onboardingDone / onboardingItems.length) * 100}%`, backgroundColor: p.bg('#2980B9') }} />
               </div>
-              <span className="text-sm font-bold" style={{ color: '#1A5276' }}>{Math.round((onboardingDone / onboardingItems.length) * 100)}%</span>
+              <span className="text-sm font-bold" style={{ color: p.text('#1A5276') }}>{Math.round((onboardingDone / onboardingItems.length) * 100)}%</span>
             </div>
           </div>
           <div className="px-4 sm:px-5 py-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
             {onboardingItems.map((item, i) => (
               <div key={i} onClick={() => !item.done && router.push(item.path)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors"
-                style={{ backgroundColor: item.done ? '#EAFAF1' : '#FFFFFF', border: `1px solid ${item.done ? '#A9DFBF' : '#DEE2E6'}`, cursor: item.done ? 'default' : 'pointer' }}
-                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = '#2980B9'; }}
-                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = '#DEE2E6'; }}>
+                style={{ backgroundColor: item.done ? p.bg('#EAFAF1') : p.bg('#FFFFFF'), border: `1px solid ${item.done ? p.line('#A9DFBF') : p.line('#DEE2E6')}`, cursor: item.done ? 'default' : 'pointer' }}
+                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = p.line('#2980B9'); }}
+                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = p.line('#DEE2E6'); }}>
                 <span style={{ fontSize: 16, flexShrink: 0 }}>{item.done ? '✅' : '○'}</span>
-                <span className="text-xs font-medium" style={{ color: item.done ? '#27AE60' : '#2C3E50' }}>{item.label}</span>
-                {!item.done && <span className="text-xs ml-auto flex-shrink-0" style={{ color: '#2980B9' }}>→</span>}
+                <span className="text-xs font-medium" style={{ color: item.done ? p.text('#27AE60') : p.text('#2C3E50') }}>{item.label}</span>
+                {!item.done && <span className="text-xs ml-auto flex-shrink-0" style={{ color: p.text('#2980B9') }}>→</span>}
               </div>
             ))}
           </div>
@@ -181,14 +211,31 @@ export default function DashboardPage() {
         {kpis.map(kpi => (
           <div key={kpi.label}
             onClick={() => router.push(kpi.path)}
-            className="rounded-md p-4 sm:p-5 cursor-pointer transition-all min-w-0"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = '#CED4DA'; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#E9ECEF'; }}>
-            <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>{kpi.label}</p>
-            <p className="text-3xl font-black" style={{ color: kpi.color }}>
-              {loading ? '…' : kpi.value}
-            </p>
+            className={`rounded-md p-4 sm:p-5 cursor-pointer transition-all min-w-0${gc}${glass ? ' cg-lift' : ''}`}
+            style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}` }}
+            onMouseEnter={e => { if (glass) return; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = p.line('#CED4DA'); }}
+            onMouseLeave={e => { if (glass) return; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = p.line('#E9ECEF'); }}>
+            {glass ? (
+              <div className="flex items-center gap-3 sm:gap-4">
+                <span aria-hidden="true" className="cg-tile flex items-center justify-center flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12"
+                  style={{ backgroundColor: kpi.bg, color: kpi.color, borderRadius: 'var(--cg-radius-lg)', border: '1px solid var(--cg-glass-border)' }}>
+                  <KpiIcon name={kpi.icon} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium mb-0.5" style={{ color: p.text('#6C757D') }}>{kpi.label}</p>
+                  <p className="text-3xl font-black leading-none" style={{ color: kpi.color }}>
+                    {loading ? '…' : kpi.value}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-medium mb-1" style={{ color: p.text('#6C757D') }}>{kpi.label}</p>
+                <p className="text-3xl font-black" style={{ color: kpi.color }}>
+                  {loading ? '…' : kpi.value}
+                </p>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -200,13 +247,13 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#C0392B' }} />
-              <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: '#2C3E50' }}>
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.bg('#C0392B') }} />
+              <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: p.text('#2C3E50') }}>
                 Actions requises
               </h3>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-              style={{ backgroundColor: '#C0392B' }}>
+              style={{ backgroundColor: p.bg('#C0392B') }}>
               {actionsRequises}
             </span>
           </div>
@@ -214,9 +261,9 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {/* Approbations en attente */}
             {pendingApprovals.length > 0 && (
-              <div className="rounded-md p-4"
-                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
-                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#C0392B' }}>
+              <div className={`rounded-md p-4${gc}`}
+                style={{ backgroundColor: p.bg('#FDEDEC'), border: `1px solid ${p.line('#F1948A')}` }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: p.text('#C0392B') }}>
                   ✓ {pendingApprovals.length} document{pendingApprovals.length > 1 ? 's' : ''} en attente d'approbation
                 </p>
                 <div className="space-y-2">
@@ -224,16 +271,16 @@ export default function DashboardPage() {
                     <div key={p.id}
                       onClick={() => router.push(`/projects/${p.id}`)}
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
-                      style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                      style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#F1948A')}` }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
                       <div className="flex flex-wrap items-center gap-2 min-w-0">
                         <span className="text-xs font-bold px-2 py-0.5 rounded text-white flex-shrink-0"
-                          style={{ backgroundColor: '#C0392B' }}>{p.documentType}</span>
-                        <span className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{p.name}</span>
-                        <span className="text-xs break-words" style={{ color: '#6C757D' }}>— {p.client?.name}</span>
+                          style={{ backgroundColor: p.bg('#C0392B') }}>{p.documentType}</span>
+                        <span className="text-sm font-medium break-words" style={{ color: p.text('#2C3E50') }}>{p.name}</span>
+                        <span className="text-xs break-words" style={{ color: p.text('#6C757D') }}>— {p.client?.name}</span>
                       </div>
-                      <span className="text-xs font-medium" style={{ color: '#C0392B' }}>Réviser →</span>
+                      <span className="text-xs font-medium" style={{ color: p.text('#C0392B') }}>Réviser →</span>
                     </div>
                   ))}
                 </div>
@@ -242,13 +289,13 @@ export default function DashboardPage() {
 
             {/* Délais de livraison mandats */}
             {mandateDelays.filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level)).length > 0 && (
-              <div className="rounded-md p-4"
+              <div className={`rounded-md p-4${gc}`}
                 style={{
-                  backgroundColor: mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? '#FDEDEC' : '#FEF9E7',
-                  border: `1px solid ${mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? '#F1948A' : '#FAD7A0'}`,
+                  backgroundColor: mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? p.bg('#FDEDEC') : p.bg('#FEF9E7'),
+                  border: `1px solid ${mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? p.line('#F1948A') : p.line('#FAD7A0')}`,
                 }}>
                 <p className="text-sm font-bold mb-3 flex items-center gap-2"
-                  style={{ color: mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? '#C0392B' : '#F39C12' }}>
+                  style={{ color: mandateDelays.some(d => ['DEPASSE', 'CRITIQUE'].includes(d.level)) ? p.text('#C0392B') : p.text('#F39C12') }}>
                   ⚡ {mandateDelays.filter(d => ['DEPASSE', 'CRITIQUE', 'URGENT', 'ATTENTION'].includes(d.level)).length} délai{mandateDelays.length > 1 ? 's' : ''} de livraison
                 </p>
                 <div className="space-y-2">
@@ -261,27 +308,27 @@ export default function DashboardPage() {
                         <div key={d.mandateId}
                           onClick={() => router.push(`/projects/${d.projectId}/mandate`)}
                           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
-                          style={{ backgroundColor: '#FFFFFF', border: `1px solid ${isUrgent ? '#F1948A' : '#FAD7A0'}` }}
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = isUrgent ? '#FDEDEC' : '#FEF9E7'}
-                          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                          style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${isUrgent ? p.line('#F1948A') : p.line('#FAD7A0')}` }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = isUrgent ? p.bg('#FDEDEC') : p.bg('#FEF9E7')}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-lg">
                               {d.level === 'DEPASSE' ? '🔴' : d.level === 'CRITIQUE' ? '🔴' : d.level === 'URGENT' ? '🟠' : '🟡'}
                             </span>
                             <div>
-                              <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{d.projectName}</p>
-                              <p className="text-xs" style={{ color: '#6C757D' }}>{d.clientName}</p>
+                              <p className="text-sm font-medium" style={{ color: p.text('#2C3E50') }}>{d.projectName}</p>
+                              <p className="text-xs" style={{ color: p.text('#6C757D') }}>{d.clientName}</p>
                             </div>
                           </div>
                           <div className="text-left sm:text-right w-full sm:w-auto sm:flex-shrink-0">
                             <p className="text-sm font-bold"
-                              style={{ color: isUrgent ? '#C0392B' : '#F39C12' }}>
+                              style={{ color: isUrgent ? p.text('#C0392B') : p.text('#F39C12') }}>
                               {d.diffDays < 0
                                 ? `Dépassé de ${Math.abs(d.diffDays)}j`
                                 : d.diffDays === 0 ? "Aujourd'hui !"
                                 : `${d.diffDays}j restants`}
                             </p>
-                            <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                            <p className="text-xs" style={{ color: p.text('#ADB5BD') }}>
                               {new Date(d.dateLimite).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })}
                             </p>
                           </div>
@@ -294,9 +341,9 @@ export default function DashboardPage() {
 
             {/* Documents à renouveler URGENT */}
             {updates.filter(u => u.level === 'URGENT').length > 0 && (
-              <div className="rounded-md p-4"
-                style={{ backgroundColor: '#FDEDEC', border: '1px solid #F1948A' }}>
-                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#C0392B' }}>
+              <div className={`rounded-md p-4${gc}`}
+                style={{ backgroundColor: p.bg('#FDEDEC'), border: `1px solid ${p.line('#F1948A')}` }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: p.text('#C0392B') }}>
                   🔔 {updates.filter(u => u.level === 'URGENT').length} document{updates.filter(u => u.level === 'URGENT').length > 1 ? 's' : ''} à renouveler de toute urgence
                 </p>
                 <div className="space-y-2">
@@ -304,18 +351,18 @@ export default function DashboardPage() {
                     <div key={u.id}
                       onClick={() => router.push(`/projects/${u.id}`)}
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer"
-                      style={{ backgroundColor: '#FFFFFF', border: '1px solid #F1948A' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                      style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#F1948A')}` }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                          style={{ backgroundColor: '#C0392B' }}>{u.documentType}</span>
+                          style={{ backgroundColor: p.bg('#C0392B') }}>{u.documentType}</span>
                         <div>
-                          <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{u.name}</p>
-                          <p className="text-xs break-words" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
+                          <p className="text-sm font-medium break-words" style={{ color: p.text('#2C3E50') }}>{u.name}</p>
+                          <p className="text-xs break-words" style={{ color: p.text('#6C757D') }}>{u.clientName} — {u.buildingName}</p>
                         </div>
                       </div>
-                      <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: '#C0392B' }}>
+                      <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: p.text('#C0392B') }}>
                         {u.monthsAgo} mois ⚠
                       </p>
                     </div>
@@ -326,9 +373,9 @@ export default function DashboardPage() {
 
             {/* Activités récurrentes à renouveler */}
             {recurringToRenew.length > 0 && (
-              <div className="rounded-md p-4"
-                style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}>
-                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#F39C12' }}>
+              <div className={`rounded-md p-4${gc}`}
+                style={{ backgroundColor: p.bg('#FEF9E7'), border: `1px solid ${p.line('#FAD7A0')}` }}>
+                <p className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: p.text('#F39C12') }}>
                   🔄 {recurringToRenew.length} activité{recurringToRenew.length > 1 ? 's' : ''} récurrente{recurringToRenew.length > 1 ? 's' : ''} à renouveler
                 </p>
                 <div className="space-y-2">
@@ -336,20 +383,20 @@ export default function DashboardPage() {
                     <div key={a.id}
                       onClick={() => router.push(`/projects/${a.projectId}/activities`)}
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
-                      style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FFFBF0'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#FFFFFF'}>
+                      style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#FAD7A0')}` }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FFFBF0')}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = p.bg('#FFFFFF')}>
                       <div>
-                        <p className="text-sm font-medium" style={{ color: '#2C3E50' }}>{a.label}</p>
-                        <p className="text-xs" style={{ color: '#6C757D' }}>{a.clientName} — {a.buildingName}</p>
+                        <p className="text-sm font-medium" style={{ color: p.text('#2C3E50') }}>{a.label}</p>
+                        <p className="text-xs" style={{ color: p.text('#6C757D') }}>{a.clientName} — {a.buildingName}</p>
                       </div>
-                      <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: '#F39C12' }}>
+                      <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: p.text('#F39C12') }}>
                         {a.monthsAgo} mois
                       </p>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs mt-3" style={{ color: '#ADB5BD' }}>
+                <p className="text-xs mt-3" style={{ color: p.text('#ADB5BD') }}>
                   💡 Allez dans Activités du projet → "Dupliquer pour l'an prochain"
                 </p>
               </div>
@@ -363,8 +410,8 @@ export default function DashboardPage() {
       ════════════════════════════════════════════════════ */}
       <div className="mb-4 flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ADB5BD' }} />
-          <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: '#2C3E50' }}>
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.bg('#ADB5BD') }} />
+          <h3 className="font-bold text-sm uppercase tracking-wider" style={{ color: p.text('#2C3E50') }}>
             Vue d'ensemble
           </h3>
         </div>
@@ -372,27 +419,27 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mb-6">
         {/* Activités à venir */}
-        <div className="xl:col-span-2 rounded-md min-w-0"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
+        <div className={`xl:col-span-2 rounded-md min-w-0${gc}`}
+          style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}` }}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-5 py-4"
-            style={{ borderBottom: '1px solid #E9ECEF' }}>
-            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>
+            style={{ borderBottom: `1px solid ${p.line('#E9ECEF')}` }}>
+            <h3 className="font-semibold text-sm" style={{ color: p.text('#2C3E50') }}>
               📅 Activités des 30 prochains jours
             </h3>
             <button onClick={() => router.push('/activities/portfolio')}
-              className="text-xs px-3 py-1.5 rounded transition-colors"
-              style={{ border: '1px solid #DEE2E6', color: '#6C757D' }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              className={`text-xs px-3 py-1.5 rounded transition-colors${glass ? ' cg-btn' : ''}`}
+              style={{ border: `1px solid ${p.line('#DEE2E6')}`, color: p.text('#6C757D') }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = glass ? '' : 'transparent'}>
               Tout voir →
             </button>
           </div>
           {loading ? (
-            <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+            <p className="text-sm text-center py-8 animate-pulse" style={{ color: p.text('#ADB5BD') }}>Chargement...</p>
           ) : upcomingActivities.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-2xl mb-2">📅</p>
-              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune activité prévue dans les 30 prochains jours</p>
+              <p className="text-sm" style={{ color: p.text('#ADB5BD') }}>Aucune activité prévue dans les 30 prochains jours</p>
             </div>
           ) : (
             <div>
@@ -404,22 +451,22 @@ export default function DashboardPage() {
                   <div key={activity.id}
                     onClick={() => router.push(`/projects/${activity.projectId}/activities`)}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 sm:px-5 py-3 cursor-pointer transition-colors"
-                    style={{ borderBottom: idx < upcomingActivities.length - 1 ? '1px solid #F8F9FA' : 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                    style={{ borderBottom: idx < upcomingActivities.length - 1 ? `1px solid ${p.line('#F8F9FA')}` : 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#F8F9FA')}
                     onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: '#2C3E50' }}>{label}</p>
-                      <p className="text-xs" style={{ color: '#ADB5BD' }}>
+                      <p className="text-sm font-medium truncate" style={{ color: p.text('#2C3E50') }}>{label}</p>
+                      <p className="text-xs" style={{ color: p.text('#ADB5BD') }}>
                         {activity.clientName} · {activity.projectName}
                       </p>
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto sm:flex-shrink-0 sm:ml-4">
                       <span className="text-xs font-bold"
-                        style={{ color: daysLeft <= 7 ? '#C0392B' : daysLeft <= 14 ? '#F39C12' : '#27AE60' }}>
+                        style={{ color: daysLeft <= 7 ? p.text('#C0392B') : daysLeft <= 14 ? p.text('#F39C12') : p.text('#27AE60') }}>
                         {daysLeft === 0 ? "Aujourd'hui" : daysLeft === 1 ? 'Demain' : `Dans ${daysLeft}j`}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: status.bg, color: status.color }}>
+                        style={{ backgroundColor: p.bg(status.bg), color: p.text(status.color) }}>
                         {status.label}
                       </span>
                     </div>
@@ -431,17 +478,17 @@ export default function DashboardPage() {
         </div>
 
         {/* Tâches */}
-        <div className="rounded-md"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E9ECEF' }}>
-          <div className="px-5 py-4" style={{ borderBottom: '1px solid #E9ECEF' }}>
-            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>⚠️ Mes tâches</h3>
+        <div className={`rounded-md${gc}`}
+          style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#E9ECEF')}` }}>
+          <div className="px-5 py-4" style={{ borderBottom: `1px solid ${p.line('#E9ECEF')}` }}>
+            <h3 className="font-semibold text-sm" style={{ color: p.text('#2C3E50') }}>⚠️ Mes tâches</h3>
           </div>
           {loading ? (
-            <p className="text-sm text-center py-8 animate-pulse" style={{ color: '#ADB5BD' }}>Chargement...</p>
+            <p className="text-sm text-center py-8 animate-pulse" style={{ color: p.text('#ADB5BD') }}>Chargement...</p>
           ) : lateTasks.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-2xl mb-2">✅</p>
-              <p className="text-sm" style={{ color: '#ADB5BD' }}>Aucune tâche en retard</p>
+              <p className="text-sm" style={{ color: p.text('#ADB5BD') }}>Aucune tâche en retard</p>
             </div>
           ) : (
             <div>
@@ -449,17 +496,17 @@ export default function DashboardPage() {
                 <div key={task.id}
                   onClick={() => router.push(`/projects/${task.projectId}/mandate`)}
                   className="px-4 sm:px-5 py-3 cursor-pointer transition-colors"
-                  style={{ borderBottom: idx < lateTasks.length - 1 ? '1px solid #F8F9FA' : 'none' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF9E7'}
+                  style={{ borderBottom: idx < lateTasks.length - 1 ? `1px solid ${p.line('#F8F9FA')}` : 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = p.bg('#FEF9E7')}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                  <p className="text-xs font-medium" style={{ color: '#2C3E50' }}>{task.taskTitle}</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#ADB5BD' }}>{task.clientName}</p>
+                  <p className="text-xs font-medium" style={{ color: p.text('#2C3E50') }}>{task.taskTitle}</p>
+                  <p className="text-xs mt-0.5" style={{ color: p.text('#ADB5BD') }}>{task.clientName}</p>
                   <div className="flex gap-2 mt-1">
                     {task.isAssignedToMe && (
-                      <span className="text-xs font-medium" style={{ color: '#2980B9' }}>👤 Assigné à moi</span>
+                      <span className="text-xs font-medium" style={{ color: p.text('#2980B9') }}>👤 Assigné à moi</span>
                     )}
                     {task.isLate && (
-                      <span className="text-xs font-bold" style={{ color: '#C0392B' }}>
+                      <span className="text-xs font-bold" style={{ color: p.text('#C0392B') }}>
                         {Math.ceil((new Date().getTime() - new Date(task.dueDate).getTime()) / (1000 * 60 * 60 * 24))}j de retard
                       </span>
                     )}
@@ -473,13 +520,13 @@ export default function DashboardPage() {
 
       {/* Documents à renouveler — AVERTISSEMENT seulement */}
       {updates.filter(u => u.level === 'AVERTISSEMENT').length > 0 && (
-        <div className="rounded-md p-4 sm:p-5 mb-6"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #FAD7A0' }}>
+        <div className={`rounded-md p-4 sm:p-5 mb-6${gc}`}
+          style={{ backgroundColor: p.bg('#FFFFFF'), border: `1px solid ${p.line('#FAD7A0')}` }}>
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span style={{ fontSize: '16px' }}>🔔</span>
-            <h3 className="font-semibold text-sm" style={{ color: '#2C3E50' }}>Documents bientôt à renouveler</h3>
+            <h3 className="font-semibold text-sm" style={{ color: p.text('#2C3E50') }}>Documents bientôt à renouveler</h3>
             <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-              style={{ backgroundColor: '#FEF9E7', color: '#F39C12' }}>
+              style={{ backgroundColor: p.bg('#FEF9E7'), color: p.text('#F39C12') }}>
               {updates.filter(u => u.level === 'AVERTISSEMENT').length} document{updates.filter(u => u.level === 'AVERTISSEMENT').length > 1 ? 's' : ''}
             </span>
           </div>
@@ -488,18 +535,18 @@ export default function DashboardPage() {
               <div key={u.id}
                 onClick={() => router.push(`/projects/${u.id}`)}
                 className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded cursor-pointer transition-colors"
-                style={{ backgroundColor: '#FEF9E7', border: '1px solid #FAD7A0' }}
+                style={{ backgroundColor: p.bg('#FEF9E7'), border: `1px solid ${p.line('#FAD7A0')}` }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-xs font-bold px-2 py-0.5 rounded text-white"
-                    style={{ backgroundColor: '#F39C12' }}>{u.documentType}</span>
+                    style={{ backgroundColor: p.bg('#F39C12') }}>{u.documentType}</span>
                   <div>
-                    <p className="text-sm font-medium break-words" style={{ color: '#2C3E50' }}>{u.name}</p>
-                    <p className="text-xs break-words" style={{ color: '#6C757D' }}>{u.clientName} — {u.buildingName}</p>
+                    <p className="text-sm font-medium break-words" style={{ color: p.text('#2C3E50') }}>{u.name}</p>
+                    <p className="text-xs break-words" style={{ color: p.text('#6C757D') }}>{u.clientName} — {u.buildingName}</p>
                   </div>
                 </div>
-                <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: '#F39C12' }}>
+                <p className="text-sm font-bold w-full sm:w-auto sm:flex-shrink-0 text-left sm:text-right" style={{ color: p.text('#F39C12') }}>
                   {u.monthsAgo} mois ○
                 </p>
               </div>
@@ -510,35 +557,35 @@ export default function DashboardPage() {
 
       {/* Projets récents */}
 <div
-  className="rounded-md"
+  className={`rounded-md${gc}`}
   style={{
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #E9ECEF',
+    backgroundColor: p.bg('#FFFFFF'),
+    border: `1px solid ${p.line('#E9ECEF')}`,
   }}
 >
   <div
     className="flex items-center justify-between px-4 sm:px-5 py-4"
-    style={{ borderBottom: '1px solid #E9ECEF' }}
+    style={{ borderBottom: `1px solid ${p.line('#E9ECEF')}` }}
   >
     <h3
       className="font-semibold text-sm"
-      style={{ color: '#2C3E50' }}
+      style={{ color: p.text('#2C3E50') }}
     >
       Projets récents
     </h3>
 
     <button
       onClick={() => router.push('/projects')}
-      className="text-xs px-3 py-1.5 rounded transition-colors"
+      className={`text-xs px-3 py-1.5 rounded transition-colors${glass ? ' cg-btn' : ''}`}
       style={{
-        border: '1px solid #DEE2E6',
-        color: '#6C757D',
+        border: `1px solid ${p.line('#DEE2E6')}`,
+        color: p.text('#6C757D'),
       }}
       onMouseEnter={e =>
-        (e.currentTarget.style.backgroundColor = '#F8F9FA')
+        (e.currentTarget.style.backgroundColor = p.bg('#F8F9FA'))
       }
       onMouseLeave={e =>
-        (e.currentTarget.style.backgroundColor = 'transparent')
+        (e.currentTarget.style.backgroundColor = glass ? '' : 'transparent')
       }
     >
       Voir tous →
@@ -548,7 +595,7 @@ export default function DashboardPage() {
   {loading ? (
     <p
       className="text-sm text-center py-8 animate-pulse"
-      style={{ color: '#ADB5BD' }}
+      style={{ color: p.text('#ADB5BD') }}
     >
       Chargement...
     </p>
@@ -556,7 +603,7 @@ export default function DashboardPage() {
     <div className="text-center py-12">
       <p
         className="text-sm"
-        style={{ color: '#ADB5BD' }}
+        style={{ color: p.text('#ADB5BD') }}
       >
         Aucun projet pour l'instant
       </p>
@@ -580,12 +627,12 @@ export default function DashboardPage() {
               style={{
                 borderBottom:
                   idx < projetsRecents.length - 1
-                    ? '1px solid #F8F9FA'
+                    ? `1px solid ${p.line('#F8F9FA')}`
                     : 'none',
               }}
               onMouseEnter={e =>
                 (e.currentTarget.style.backgroundColor =
-                  '#F8F9FA')
+                  p.bg('#F8F9FA'))
               }
               onMouseLeave={e =>
                 (e.currentTarget.style.backgroundColor =
@@ -596,22 +643,22 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <p
                     className="text-sm font-semibold break-words"
-                    style={{ color: '#2C3E50' }}
+                    style={{ color: p.text('#2C3E50') }}
                   >
                     {projet.name}
                   </p>
 
                   <p
                     className="text-xs mt-1 break-words"
-                    style={{ color: '#6C757D' }}
+                    style={{ color: p.text('#6C757D') }}
                   >
                     {projet.client?.name || '—'}
                   </p>
                 </div>
 
                 <span
-                  className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0"
-                  style={{ backgroundColor: '#C0392B' }}
+                  className={`px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0${glass ? ' cg-pill-solid' : ''}`}
+                  style={{ backgroundColor: p.bg('#C0392B') }}
                 >
                   {projet.documentType}
                 </span>
@@ -619,7 +666,7 @@ export default function DashboardPage() {
 
               <p
                 className="text-xs mb-3 break-words"
-                style={{ color: '#6C757D' }}
+                style={{ color: p.text('#6C757D') }}
               >
                 🏢 {projet.building?.name || '—'}
               </p>
@@ -628,8 +675,8 @@ export default function DashboardPage() {
                 <span
                   className="text-xs px-2 py-0.5 rounded-full font-medium"
                   style={{
-                    backgroundColor: s.bg,
-                    color: s.color,
+                    backgroundColor: p.bg(s.bg),
+                    color: p.text(s.color),
                     border: `1px solid ${s.border}`,
                   }}
                 >
@@ -638,7 +685,7 @@ export default function DashboardPage() {
 
                 <span
                   className="text-xs flex-shrink-0"
-                  style={{ color: '#ADB5BD' }}
+                  style={{ color: p.text('#ADB5BD') }}
                 >
                   {new Date(
                     projet.updatedAt
@@ -650,14 +697,14 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <span
                     className="text-xs"
-                    style={{ color: '#ADB5BD' }}
+                    style={{ color: p.text('#ADB5BD') }}
                   >
                     Progression
                   </span>
 
                   <span
                     className="text-xs font-medium"
-                    style={{ color: '#6C757D' }}
+                    style={{ color: p.text('#6C757D') }}
                   >
                     {projet.progress || 0}%
                   </span>
@@ -665,7 +712,7 @@ export default function DashboardPage() {
 
                 <div
                   className="w-full h-1.5 rounded-full"
-                  style={{ backgroundColor: '#E9ECEF' }}
+                  style={{ backgroundColor: p.bg('#E9ECEF') }}
                 >
                   <div
                     className="h-1.5 rounded-full"
@@ -673,8 +720,8 @@ export default function DashboardPage() {
                       width: `${projet.progress || 0}%`,
                       backgroundColor:
                         projet.progress === 100
-                          ? '#27AE60'
-                          : '#C0392B',
+                          ? p.bg('#27AE60')
+                          : p.bg('#C0392B'),
                     }}
                   />
                 </div>
@@ -691,7 +738,7 @@ export default function DashboardPage() {
           style={{ borderCollapse: 'collapse' }}
         >
           <thead>
-            <tr style={{ backgroundColor: '#F8F9FA' }}>
+            <tr style={{ backgroundColor: p.bg('#F8F9FA') }}>
               {[
                 'Projet',
                 'Client',
@@ -705,8 +752,8 @@ export default function DashboardPage() {
                   key={col}
                   className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
                   style={{
-                    color: '#ADB5BD',
-                    borderBottom: '1px solid #E9ECEF',
+                    color: p.text('#ADB5BD'),
+                    borderBottom: `1px solid ${p.line('#E9ECEF')}`,
                   }}
                 >
                   {col}
@@ -731,12 +778,12 @@ export default function DashboardPage() {
                   style={{
                     borderBottom:
                       idx < projetsRecents.length - 1
-                        ? '1px solid #F8F9FA'
+                        ? `1px solid ${p.line('#F8F9FA')}`
                         : 'none',
                   }}
                   onMouseEnter={e =>
                     (e.currentTarget.style.backgroundColor =
-                      '#F8F9FA')
+                      p.bg('#F8F9FA'))
                   }
                   onMouseLeave={e =>
                     (e.currentTarget.style.backgroundColor =
@@ -745,29 +792,29 @@ export default function DashboardPage() {
                 >
                   <td
                     className="px-4 py-3 font-medium"
-                    style={{ color: '#2C3E50' }}
+                    style={{ color: p.text('#2C3E50') }}
                   >
                     {projet.name}
                   </td>
 
                   <td
                     className="px-4 py-3 text-xs"
-                    style={{ color: '#495057' }}
+                    style={{ color: p.text('#495057') }}
                   >
                     {projet.client?.name || '—'}
                   </td>
 
                   <td
                     className="px-4 py-3 text-xs"
-                    style={{ color: '#495057' }}
+                    style={{ color: p.text('#495057') }}
                   >
                     {projet.building?.name || '—'}
                   </td>
 
                   <td className="px-4 py-3">
                     <span
-                      className="px-2 py-0.5 rounded text-xs font-bold text-white"
-                      style={{ backgroundColor: '#C0392B' }}
+                      className={`px-2 py-0.5 rounded text-xs font-bold text-white${glass ? ' cg-pill-solid' : ''}`}
+                      style={{ backgroundColor: p.bg('#C0392B') }}
                     >
                       {projet.documentType}
                     </span>
@@ -777,8 +824,8 @@ export default function DashboardPage() {
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{
-                        backgroundColor: s.bg,
-                        color: s.color,
+                        backgroundColor: p.bg(s.bg),
+                        color: p.text(s.color),
                         border: `1px solid ${s.border}`,
                       }}
                     >
@@ -791,7 +838,7 @@ export default function DashboardPage() {
                       <div
                         className="w-16 h-1.5 rounded-full"
                         style={{
-                          backgroundColor: '#E9ECEF',
+                          backgroundColor: p.bg('#E9ECEF'),
                         }}
                       >
                         <div
@@ -800,15 +847,15 @@ export default function DashboardPage() {
                             width: `${projet.progress || 0}%`,
                             backgroundColor:
                               projet.progress === 100
-                                ? '#27AE60'
-                                : '#C0392B',
+                                ? p.bg('#27AE60')
+                                : p.bg('#C0392B'),
                           }}
                         />
                       </div>
 
                       <span
                         className="text-xs"
-                        style={{ color: '#ADB5BD' }}
+                        style={{ color: p.text('#ADB5BD') }}
                       >
                         {projet.progress || 0}%
                       </span>
@@ -817,7 +864,7 @@ export default function DashboardPage() {
 
                   <td
                     className="px-4 py-3 text-xs"
-                    style={{ color: '#ADB5BD' }}
+                    style={{ color: p.text('#ADB5BD') }}
                   >
                     {new Date(
                       projet.updatedAt

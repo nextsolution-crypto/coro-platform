@@ -1,0 +1,315 @@
+/*
+ * CORO Liquid Glass — design tokens sémantiques.
+ *
+ * RÈGLE D'ISOLATION : tout est scopé sous :root[data-ui="glass"]. Sans cet attribut
+ * (état par défaut : data-ui="legacy"), aucun token n'existe et aucune règle ne s'applique,
+ * donc l'interface actuelle est strictement inchangée.
+ *
+ * Deux axes indépendants : data-ui (legacy | glass) et data-theme (light | dark).
+ * Ce fichier ne dépend d'aucune API ni d'aucun framework : il est copiable tel quel
+ * dans coro-client-portal.
+ *
+ * Préfixe --cg- (CORO Glass) pour ne jamais entrer en collision avec les variables
+ * existantes de globals.css (--background, --card, --primary, ...).
+ * Toutes les valeurs de couleur sont en #hex ou rgba() (lisibles par le test de contraste).
+ */
+
+/* ───────── Valeurs communes aux deux thèmes + thème Light (défaut) ───────── */
+:root[data-ui="glass"] {
+  color-scheme: light;
+
+  /* Échelle d'espacement (grille 4 px) */
+  --cg-space-1: 4px;
+  --cg-space-2: 8px;
+  --cg-space-3: 12px;
+  --cg-space-4: 16px;
+  --cg-space-5: 24px;
+  --cg-space-6: 32px;
+  --cg-space-7: 48px;
+  --cg-space-8: 64px;
+
+  /* Rayons : 4 px boutons/champs, 6 px cartes (design system CORO), 12 px panneaux flottants */
+  --cg-radius-sm: 4px;
+  --cg-radius-md: 6px;
+  --cg-radius-lg: 12px;
+  --cg-radius-pill: 999px;
+
+  /* Verre : intensité de flou et saturation (neutralisés par les replis d'accessibilité) */
+  --cg-blur-sm: 8px;
+  --cg-blur-md: 16px;
+  --cg-blur-lg: 28px;
+  --cg-glass-saturate: 140%;
+
+  /* Mouvement */
+  --cg-duration-fast: 120ms;
+  --cg-duration-base: 200ms;
+  --cg-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Focus clavier */
+  --cg-focus-width: 2px;
+  --cg-focus-offset: 2px;
+
+  /* Pont vers les variables legacy de globals.css (PageTitle, etc.) : actif en Glass uniquement,
+     pour que les composants partagés suivent le thème sans être modifiés. */
+  --text-primary: var(--cg-text-primary);
+  --text-secondary: var(--cg-text-secondary);
+  --text-muted: var(--cg-text-muted);
+  --foreground: var(--cg-text-primary);
+
+  /* Typographie : on conserve la police actuelle de l'app */
+  --cg-font-family: inherit;
+
+  /* Fonds */
+  --cg-canvas: #E1ECF9;
+  --cg-canvas-glow-a: #F3DDE0;
+  --cg-canvas-glow-b: #B7D3F3;
+  --cg-canvas-gradient:
+    radial-gradient(52% 42% at 6% 0%, var(--cg-canvas-glow-a) 0%, transparent 70%),
+    radial-gradient(60% 50% at 96% 6%, var(--cg-canvas-glow-b) 0%, transparent 72%),
+    radial-gradient(70% 55% at 72% 104%, rgba(160, 196, 240, 0.6) 0%, transparent 70%),
+    radial-gradient(45% 38% at 55% 38%, rgba(255, 255, 255, 0.5) 0%, transparent 72%),
+    linear-gradient(180deg, #F2F7FD 0%, var(--cg-canvas) 55%, #D5E4F5 100%);
+
+  /* Surfaces */
+  --cg-surface-solid: #FFFFFF;
+  --cg-surface-sunken: #DCE6F2;
+  --cg-glass-bg: rgba(255, 255, 255, 0.66);
+  --cg-glass-bg-strong: rgba(255, 255, 255, 0.86);
+  /* Panneaux flottants (menus, tiroirs) : quasi opaques pour rester lisibles sur le contenu, flou conservé. */
+  --cg-panel-bg: rgba(255, 255, 255, 0.97);
+  --cg-glass-border: rgba(255, 255, 255, 0.85);
+  --cg-glass-highlight: rgba(255, 255, 255, 0.95);
+
+  /* Profondeur du verre : reflet interne (sheen), arête lumineuse, anneau extérieur, élévation. */
+  --cg-sheen: linear-gradient(155deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.14) 45%, rgba(255, 255, 255, 0) 100%);
+  --cg-edge: rgba(255, 255, 255, 0.9);
+  --cg-ring: rgba(70, 105, 155, 0.16);
+  --cg-shadow-card: 0 12px 32px -14px rgba(40, 72, 120, 0.28), 0 2px 6px rgba(40, 72, 120, 0.06);
+  --cg-glow-accent: rgba(192, 57, 43, 0.38);
+  /* Façade vitrée abstraite du canevas (lignes de meneaux, purement décorative, sans image). */
+  --cg-grid-line: rgba(60, 110, 175, 0.10);
+  --cg-facade-sheen: rgba(255, 255, 255, 0.65);
+
+  /* Textes */
+  --cg-text-primary: #1B2A3B;
+  --cg-text-secondary: #42536A;
+  --cg-text-muted: #586A80;
+  --cg-text-disabled: #8C96A1;
+  --cg-text-on-accent: #FFFFFF;
+  --cg-text-link: #A93226;
+
+  /* Bordures */
+  --cg-border-subtle: rgba(40, 72, 120, 0.10);
+  --cg-border-default: rgba(40, 72, 120, 0.20);
+  --cg-border-strong: rgba(27, 42, 59, 0.58);
+
+  /* Ombres / élévations */
+  --cg-shadow-1: 0 1px 2px rgba(31, 45, 58, 0.06), 0 1px 1px rgba(31, 45, 58, 0.04);
+  --cg-shadow-2: 0 4px 12px rgba(31, 45, 58, 0.08), 0 1px 3px rgba(31, 45, 58, 0.06);
+  --cg-shadow-3: 0 16px 40px rgba(31, 45, 58, 0.14), 0 2px 6px rgba(31, 45, 58, 0.08);
+
+  /* Accent CORO */
+  --cg-accent: #C0392B;
+  --cg-accent-hover: #A93226;
+  --cg-accent-active: #922B21;
+  --cg-accent-soft: rgba(192, 57, 43, 0.1);
+  --cg-accent-text: #A93226;
+
+  /* États d'interaction */
+  --cg-hover-overlay: rgba(31, 45, 58, 0.05);
+  --cg-active-overlay: rgba(31, 45, 58, 0.1);
+  --cg-focus-ring: #1F6FB2;
+  --cg-disabled-bg: rgba(31, 45, 58, 0.06);
+  --cg-disabled-fg: #8C96A1;
+  --cg-disabled-border: rgba(31, 45, 58, 0.1);
+
+  /* États sémantiques : texte (fg), fond (bg), bordure (border) */
+  --cg-success-fg: #1B6E3F;
+  --cg-success-bg: rgba(39, 174, 96, 0.14);
+  --cg-success-border: rgba(39, 174, 96, 0.4);
+  --cg-warning-fg: #8A5300;
+  --cg-warning-bg: rgba(243, 156, 18, 0.16);
+  --cg-warning-border: rgba(243, 156, 18, 0.5);
+  --cg-danger-fg: #A93226;
+  --cg-danger-bg: rgba(192, 57, 43, 0.12);
+  --cg-danger-border: rgba(192, 57, 43, 0.4);
+  --cg-info-fg: #1D5F93;
+  --cg-info-bg: rgba(41, 128, 185, 0.13);
+  --cg-info-border: rgba(41, 128, 185, 0.4);
+  --cg-neutral-fg: #46535F;
+  --cg-neutral-bg: rgba(108, 117, 125, 0.13);
+  --cg-neutral-border: rgba(108, 117, 125, 0.35);
+  /* Violet (catégorie « mises à jour dues ») : ton décoratif, jamais porteur d'urgence. */
+  --cg-purple-fg: #6C3483;
+  --cg-purple-bg: rgba(142, 68, 173, 0.13);
+  --cg-purple-border: rgba(142, 68, 173, 0.4);
+
+  /* Urgence (panique, évacuation, incident) : IDENTIQUE en Light et Dark, jamais transparent,
+     jamais atténué par les replis d'accessibilité. */
+  --cg-emergency-bg: #C0392B;
+  --cg-emergency-fg: #FFFFFF;
+  --cg-emergency-border: #7B241C;
+}
+
+/* ───────── Thème Dark ───────── */
+:root[data-ui="glass"][data-theme="dark"] {
+  color-scheme: dark;
+
+  --cg-canvas: #070C14;
+  --cg-canvas-glow-a: #3A1519;
+  --cg-canvas-glow-b: #164879;
+
+  --cg-surface-solid: #0F1824;
+  --cg-surface-sunken: #050910;
+  --cg-glass-bg: rgba(16, 27, 44, 0.62);
+  --cg-glass-bg-strong: rgba(16, 27, 44, 0.84);
+  --cg-panel-bg: rgba(12, 20, 33, 0.99);
+  --cg-glass-border: rgba(140, 180, 240, 0.22);
+  --cg-glass-highlight: rgba(190, 215, 255, 0.16);
+
+  /* Canevas Dark : bleu-noir profond, lueurs multicouches. */
+  --cg-canvas-gradient:
+    radial-gradient(50% 40% at 4% 0%, var(--cg-canvas-glow-a) 0%, transparent 68%),
+    radial-gradient(65% 55% at 92% 4%, var(--cg-canvas-glow-b) 0%, transparent 70%),
+    radial-gradient(60% 45% at 55% 106%, rgba(24, 78, 140, 0.5) 0%, transparent 70%),
+    radial-gradient(42% 36% at 62% 40%, rgba(30, 90, 160, 0.22) 0%, transparent 72%),
+    linear-gradient(180deg, #0A121D 0%, var(--cg-canvas) 60%, #060A11 100%);
+
+  --cg-sheen: linear-gradient(155deg, rgba(150, 190, 255, 0.11) 0%, rgba(150, 190, 255, 0.035) 42%, rgba(150, 190, 255, 0) 100%);
+  --cg-edge: rgba(140, 180, 240, 0.24);
+  --cg-ring: rgba(2, 6, 12, 0.7);
+  --cg-shadow-card: 0 16px 36px -16px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --cg-glow-accent: rgba(231, 76, 60, 0.5);
+  --cg-grid-line: rgba(130, 180, 245, 0.10);
+  --cg-facade-sheen: rgba(110, 170, 245, 0.16);
+
+  --cg-text-primary: #EDF3FA;
+  --cg-text-secondary: #B8C6D6;
+  --cg-text-muted: #94A5B8;
+  --cg-text-disabled: #6B7580;
+  --cg-text-on-accent: #FFFFFF;
+  --cg-text-link: #FF9A8E;
+
+  --cg-border-subtle: rgba(150, 185, 235, 0.09);
+  --cg-border-default: rgba(150, 185, 235, 0.20);
+  --cg-border-strong: rgba(255, 255, 255, 0.5);
+
+  --cg-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --cg-shadow-2: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --cg-shadow-3: 0 18px 44px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  --cg-accent: #C0392B;
+  --cg-accent-hover: #A93226;
+  --cg-accent-active: #922B21;
+  --cg-accent-soft: rgba(255, 138, 125, 0.14);
+  --cg-accent-text: #FF9A8E;
+
+  --cg-hover-overlay: rgba(255, 255, 255, 0.07);
+  --cg-active-overlay: rgba(255, 255, 255, 0.13);
+  --cg-focus-ring: #7CC0F5;
+  --cg-disabled-bg: rgba(255, 255, 255, 0.05);
+  --cg-disabled-fg: #6B7580;
+  --cg-disabled-border: rgba(255, 255, 255, 0.08);
+
+  --cg-success-fg: #6FDB9C;
+  --cg-success-bg: rgba(39, 174, 96, 0.2);
+  --cg-success-border: rgba(111, 219, 156, 0.4);
+  --cg-warning-fg: #F7C15C;
+  --cg-warning-bg: rgba(243, 156, 18, 0.2);
+  --cg-warning-border: rgba(247, 193, 92, 0.45);
+  --cg-danger-fg: #FF9A8E;
+  --cg-danger-bg: rgba(231, 76, 60, 0.2);
+  --cg-danger-border: rgba(255, 154, 142, 0.45);
+  --cg-info-fg: #7CC0F5;
+  --cg-info-bg: rgba(41, 128, 185, 0.22);
+  --cg-info-border: rgba(124, 192, 245, 0.4);
+  --cg-neutral-fg: #B9C3CD;
+  --cg-neutral-bg: rgba(185, 195, 205, 0.12);
+  --cg-neutral-border: rgba(185, 195, 205, 0.3);
+  --cg-purple-fg: #D2A8E6;
+  --cg-purple-bg: rgba(142, 68, 173, 0.24);
+  --cg-purple-border: rgba(210, 168, 230, 0.4);
+
+  /* --cg-emergency-* : volontairement non redéfinis (hérités du bloc Light). */
+}
+
+/* ───────── Fond de page et chargement ───────── */
+
+/* Le fond de la page suit le canevas Glass dès le premier octet de CSS (sinon le fond clair
+   de globals.css apparaît brièvement en Dark). Le dégradé est identique à celui du shell. */
+:root[data-ui="glass"] { background-color: var(--cg-canvas); }
+:root[data-ui="glass"] body { background: var(--cg-canvas-gradient); }
+
+/* Le HTML rendu par le serveur est toujours en Legacy (le serveur ignore le choix de l'appareil).
+   Tant que React n'a pas re-rendu en Glass, on masque le contenu pour éviter un flash Legacy.
+   ThemeProvider pose data-ui-ready dès que le rendu correspond au thème réel.
+   Repli : le script anti-flash (head) pose data-ui-ready après 2 s même si React échoue. */
+:root[data-ui="glass"]:not([data-ui-ready]) body {
+  visibility: hidden;
+}
+
+/* ───────── Replis d'accessibilité et de compatibilité ───────── */
+
+/* Transparence réduite demandée par l'utilisateur, ou navigateur sans backdrop-filter :
+   surfaces opaques, plus aucun flou. */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-ui="glass"] {
+    --cg-glass-bg: var(--cg-surface-solid);
+    --cg-glass-bg-strong: var(--cg-surface-solid);
+    --cg-panel-bg: var(--cg-surface-solid);
+    --cg-sheen: none;
+    --cg-blur-sm: 0px;
+    --cg-blur-md: 0px;
+    --cg-blur-lg: 0px;
+    --cg-glass-saturate: 100%;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-ui="glass"] {
+    --cg-glass-bg: var(--cg-surface-solid);
+    --cg-glass-bg-strong: var(--cg-surface-solid);
+    --cg-panel-bg: var(--cg-surface-solid);
+    --cg-sheen: none;
+    --cg-blur-sm: 0px;
+    --cg-blur-md: 0px;
+    --cg-blur-lg: 0px;
+    --cg-glass-saturate: 100%;
+  }
+}
+
+/* Contraste renforcé demandé : bordures nettes. */
+@media (prefers-contrast: more) {
+  :root[data-ui="glass"] {
+    --cg-border-subtle: var(--cg-border-default);
+    --cg-border-default: var(--cg-border-strong);
+    --cg-glass-border: var(--cg-border-strong);
+    --cg-edge: var(--cg-border-strong);
+    --cg-grid-line: transparent;
+    --cg-facade-sheen: transparent;
+    --cg-sheen: none;
+  }
+}
+
+/* Mouvement réduit : plus de transition. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui="glass"] {
+    --cg-duration-fast: 0ms;
+    --cg-duration-base: 0ms;
+  }
+}
+
+/* Mode contraste forcé de l'OS : on laisse le système colorer bordures et focus. */
+@media (forced-colors: active) {
+  :root[data-ui="glass"] {
+    --cg-glass-border: CanvasText;
+    --cg-border-subtle: CanvasText;
+    --cg-border-default: CanvasText;
+    --cg-border-strong: CanvasText;
+    --cg-focus-ring: Highlight;
+    --cg-edge: CanvasText;
+    --cg-grid-line: transparent;
+    --cg-facade-sheen: transparent;
+    --cg-sheen: none;
+  }
+}
