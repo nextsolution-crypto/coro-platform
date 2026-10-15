@@ -5,10 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
+// GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
+import { useTheme } from '@/design-system/theme/ThemeProvider';
+import RendementEquipeGlassView from './RendementEquipeGlassView';
+// GLASS:end
 
 export default function RendementPage() {
   const router = useRouter();
   const { user } = useAuthStore();
+  // GLASS:begin
+  const { ui, routeMode } = useTheme();
+  // GLASS:end
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +67,32 @@ export default function RendementPage() {
     { id: 'custom', label: 'Personnalisé' },
   ];
 
+  // GLASS:begin
+  // Vue Liquid Glass : uniquement si Glass est actif ET que la route est rendue en Glass (bêta activée, ou ga au registre).
+  // Sinon (Legacy, ou île Legacy tant que la bêta n'est pas activée), le rendu d'origine ci-dessous est utilisé tel quel.
+  // Période, chargement de /rendement (et donc la portée des données décidée par le backend), dépliage et ouverture d'un mandat
+  // restent calculés ICI, une seule fois, pour les deux rendus. Le garde « utilisateur absent » ci-dessus s'applique aux deux.
+  if (ui === 'glass' && routeMode === 'glass') {
+    return (
+      <AppLayout>
+        <RendementEquipeGlassView
+          loading={loading}
+          data={data}
+          modes={VIEW_MODES}
+          viewMode={viewMode}
+          onViewMode={id => setViewMode(id as 'month' | 'year' | 'custom')}
+          customFrom={customFrom}
+          onCustomFrom={setCustomFrom}
+          customTo={customTo}
+          onCustomTo={setCustomTo}
+          expandedUser={expandedUser}
+          onToggleUser={userId => setExpandedUser(expandedUser === userId ? null : userId)}
+          onOpen={projectId => router.push(`/projects/${projectId}/mandate`)}
+        />
+      </AppLayout>
+    );
+  }
+  // GLASS:end
   return (
     <AppLayout>
       {/* En-tête */}

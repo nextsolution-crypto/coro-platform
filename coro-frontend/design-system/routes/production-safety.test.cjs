@@ -145,6 +145,10 @@ test('/settings (seule route bêta) : îlot Legacy en production par défaut, Gl
   assert.equal(matcher.resolveRoute('/activities/portfolio', prod).mode, 'island');
   assert.equal(matcher.resolveRoute('/activities/portfolio', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'true', storageValue: 'on' }) }).mode, 'island', 'activation accidentelle');
   assert.equal(matcher.resolveRoute('/activities/portfolio', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'glass');
+  // /dashboard/rendement : même règle (bêta, île par défaut, Glass seulement avec le jeton exact). /dashboard (ga) ne la rend pas Glass.
+  assert.equal(matcher.resolveRoute('/dashboard/rendement', prod).mode, 'island');
+  assert.equal(matcher.resolveRoute('/dashboard/rendement', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'true', storageValue: 'on' }) }).mode, 'island', 'activation accidentelle');
+  assert.equal(matcher.resolveRoute('/dashboard/rendement', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'glass');
   // /profile/rendement : même règle. La route sœur /profile (ga) ne la rend pas Glass par héritage.
   assert.equal(matcher.resolveRoute('/profile/rendement', prod).mode, 'island');
   assert.equal(matcher.resolveRoute('/profile/rendement', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'true', storageValue: 'on' }) }).mode, 'island', 'activation accidentelle');
@@ -157,6 +161,6 @@ test('/settings (seule route bêta) : îlot Legacy en production par défaut, Gl
 });
 
 test('registre : aucune route bêta ni ga en dehors des listes validées ; routes inconnues restent Legacy', () => {
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), ['/activities/portfolio', '/profile/rendement', '/settings']);
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), ['/activities/portfolio', '/dashboard/rendement', '/profile/rendement', '/settings']);
   for (const p of ['/nouveau-lot', '/projects/1/inconnu', '/admin/zzz']) assert.equal(matcher.resolveRoute(p, { production: true, betaEnabled: true }).mode, 'legacy', p);
 });

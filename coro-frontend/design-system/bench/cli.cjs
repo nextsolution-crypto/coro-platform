@@ -9,6 +9,7 @@
  *   node design-system/bench/cli.cjs contrast-compare --a DIR_CONTRASTE_LEGACY --b DIR_CONTRASTE_GLASS
  *   node design-system/bench/cli.cjs shots    --routes /dashboard --ui glass --theme LIGHT --viewports 320,390,768,1600 --out DIR
  *   node design-system/bench/cli.cjs scenarios [--only drawer]
+ *   (snapshot, contrast, shots) --eval "JS" : script exécuté dans la page après le chargement (p. ex. déplier des sections)
  *
  * Pré-requis : serveur de dev du frontend (BENCH_BASE_URL) et faux API (node design-system/bench/mock-api.cjs).
  * Limites : voir design-system/bench/README.md.
@@ -29,6 +30,9 @@ const list = (v, d) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boo
 const slug = (route) => (route === '/' ? 'root' : route.replace(/^\//, '').replace(/[^A-Za-z0-9]+/g, '_'));
 const fileName = (route, ui, theme, vp, ext = 'json') => `${slug(route)}__${ui}-${theme}__${vp}.${ext}`;
 
+/** Script optionnel (--eval) exécuté dans la page après le chargement, avant le gel des animations : p. ex. déplier des sections. */
+let AFTER_EVAL = null;
+
 /** Exécute `fn(session, ctx)` pour chaque combinaison route × viewport, dans un seul Chrome. */
 async function forEachView({ routes, ui, theme, viewports, beta = false, role }, fn) {
   const chrome = await launch();
@@ -39,6 +43,7 @@ async function forEachView({ routes, ui, theme, viewports, beta = false, role },
         try {
           const how = await session.goto(route);
           if (how.startsWith('ECHEC')) { console.log(`  ! ${route} @${vp} : inaccessible (${how})`); continue; }
+          if (AFTER_EVAL) { await sleep(800); await session.eval(AFTER_EVAL); await sleep(800); }
           await session.freeze(); await sleep(600);
           await fn(session, { route, vp, how });
         } finally { await session.close(); }
@@ -160,6 +165,7 @@ async function cmdScenarios(o) {
 
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2); const o = args(rest);
+  if (o.eval && o.eval !== 'true') AFTER_EVAL = o.eval;
   const table = { snapshot: cmdSnapshot, compare: cmdCompare, contrast: cmdContrast, 'contrast-compare': cmdContrastCompare, shots: cmdShots, scenarios: cmdScenarios };
   if (!table[cmd]) { console.log('Commandes : snapshot | compare | contrast | shots | scenarios (voir l’en-tête de ce fichier)'); process.exit(2); }
   await table[cmd](o);

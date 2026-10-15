@@ -55,7 +55,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { pattern: '/profile', family: 'pilot', shell: 'app', status: 'ga', styling: ['inline-hex', 'tailwind'], sensitivity: ['destructive'] },
   // ── work (11) ──
   { pattern: '/activities/portfolio', family: 'work', shell: 'app', status: 'beta', styling: ['inline-hex'] },
-  { pattern: '/dashboard/rendement', family: 'work', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'tailwind'] },
+  { pattern: '/dashboard/rendement', family: 'work', shell: 'app', status: 'beta', styling: ['inline-hex', 'tailwind'] },
   { pattern: '/notifications', family: 'work', shell: 'app', status: 'legacy-only', styling: ['inline-hex'], sensitivity: ['destructive'] },
   { pattern: '/planning', family: 'work', shell: 'app', status: 'legacy-only', styling: ['inline-hex', 'css-module'], sensitivity: ['destructive'] },
   { pattern: '/profile/rendement', family: 'work', shell: 'app', status: 'beta', styling: ['inline-hex'] },

@@ -18,7 +18,7 @@ const byPattern = new Map(ROUTE_REGISTRY.map((e) => [e.pattern, e]));
 
 // Routes autorisées à rendre du Glass. Toute activation d'une nouvelle route doit modifier CETTE liste : décision explicite et relue.
 const GA_ALLOWLIST = ['/dashboard', '/profile', '/glass-kit'];
-const BETA_ALLOWLIST = ['/activities/portfolio', '/profile/rendement', '/settings'];
+const BETA_ALLOWLIST = ['/activities/portfolio', '/dashboard/rendement', '/profile/rendement', '/settings'];
 
 const sample = (pattern) => pattern.replace(/\[\.\.\.[^\]]+\]/g, 'a/b').replace(/\[[^\]]+\]/g, 'abc123');
 

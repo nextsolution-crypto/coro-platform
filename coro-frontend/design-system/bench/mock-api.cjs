@@ -62,13 +62,29 @@ const MANDATS = [
   { projectId: 'p3', clientName: 'Organisation Démo A', projectName: 'Mandat avec un nom volontairement très long pour vérifier le retour à la ligne dans le tableau et dans les cartes', heures: 8, montantVendu: 0, coutReel: 800, marge: -800, margePct: 0 },
   { projectId: 'p4', clientName: 'Organisation Démo C', projectName: 'Plan de continuité', heures: 4, montantVendu: 1000, coutReel: 1500, marge: -500, margePct: -50 },
 ];
+// Phase 09A (/dashboard/rendement, vue équipe) : même point d'accès, réponse étendue — `teamStats` partout (le Legacy de l'équipe
+// le lit dès que la réponse existe) et, en mode données, trois conseillers. Le PREMIER conseiller reste celui de la page
+// personnelle (/profile/rendement lit conseillers[0]) : ses valeurs n'ont pas changé.
+const BUDGETS = { p1: 40, p2: 0, p3: 12, p4: 0 };
+const withBudget = (m) => ({ ...m, heuresBudgetees: BUDGETS[m.projectId] ?? 0 });
+const EMPTY_TEAM = { heuresTotal: 0, revenusTotal: 0, mandatsDeficitaires: 0 };
+const OTHER_CONSEILLERS = [
+  // Nom long, un seul mandat (singulier), aucun déficit.
+  { userId: 'u2', userName: 'Jean-Philippe Tremblay-Lavoie', heuresTotal: 10, revenusTotal: 1000, mandatsCount: 1, mandatsDeficitaires: 0,
+    mandatsList: [{ projectId: 'p5', clientName: 'Organisation Démo D', projectName: 'Plan particulier d’intervention', heures: 10, heuresBudgetees: 20, montantVendu: 3000, coutReel: 1000, marge: 2000, margePct: 67 }] },
+  // Montant vendu, coût et budget à zéro : toutes les valeurs financières sont indisponibles (« — »).
+  { userId: 'u3', userName: 'Zoé Roy', heuresTotal: 2.5, revenusTotal: 0, mandatsCount: 1, mandatsDeficitaires: 0,
+    mandatsList: [{ projectId: 'p6', clientName: 'Organisation Démo B', projectName: 'Suivi sans facturation', heures: 2.5, heuresBudgetees: 0, montantVendu: 0, coutReel: 0, marge: 0, margePct: 0 }] },
+];
 function rendementBody(url) {
-  if (process.env.BENCH_RENDEMENT !== '1') return { conseillers: [] };
+  if (process.env.BENCH_RENDEMENT !== '1') return { conseillers: [], teamStats: EMPTY_TEAM };
   const q = new URL(url, 'http://bench').searchParams;
   const days = (Date.parse(q.get('to')) - Date.parse(q.get('from'))) / 864e5 + 1;
-  if (days <= 10) return { conseillers: [{ heuresTotal: 12, revenusTotal: 0, mandatsCount: 1, mandatsList: [{ ...MANDATS[0], heures: 12, montantVendu: 0, coutReel: 0, marge: 0 }] }] };
+  if (days <= 10) return { conseillers: [{ userId: 'u1', userName: 'Sophie Martin', heuresTotal: 12, revenusTotal: 0, mandatsCount: 1, mandatsDeficitaires: 0, mandatsList: [withBudget({ ...MANDATS[0], heures: 12, montantVendu: 0, coutReel: 0, marge: 0 })] }], teamStats: { heuresTotal: 12, revenusTotal: 0, mandatsDeficitaires: 0 } };
   const heuresTotal = days > 300 ? 480 : 42.5;
-  return { conseillers: [{ heuresTotal, revenusTotal: 7800, mandatsCount: MANDATS.length, mandatsList: MANDATS }] };
+  const first = { userId: 'u1', userName: 'Sophie Martin', heuresTotal, revenusTotal: 7800, mandatsCount: MANDATS.length, mandatsDeficitaires: MANDATS.filter((m) => m.marge < 0).length, mandatsList: MANDATS.map(withBudget) };
+  const conseillers = [first, ...OTHER_CONSEILLERS];
+  return { conseillers, teamStats: { heuresTotal: conseillers.reduce((s, c) => s + c.heuresTotal, 0), revenusTotal: conseillers.reduce((s, c) => s + c.revenusTotal, 0), mandatsDeficitaires: conseillers.reduce((s, c) => s + c.mandatsDeficitaires, 0) } };
 }
 
 http.createServer((req, res) => {

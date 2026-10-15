@@ -127,6 +127,6 @@ test('registre : /profile/rendement est en bêta (jamais ga) ; /profile reste ga
   const entry = ROUTE_REGISTRY.find((e) => e.pattern === '/profile/rendement');
   assert.equal(entry.status, 'beta');
   assert.equal(ROUTE_REGISTRY.find((e) => e.pattern === '/profile').status, 'ga');
-  assert.equal(ROUTE_REGISTRY.find((e) => e.pattern === '/dashboard/rendement').status, 'legacy-only', 'le rendement du tableau de bord n’est pas migré');
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), ['/activities/portfolio', '/profile/rendement', '/settings']);
+  assert.equal(ROUTE_REGISTRY.find((e) => e.pattern === '/dashboard/rendement').status, 'beta', 'le rendement de l’équipe est migré en bêta (phase 09A), jamais ga');
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), ['/activities/portfolio', '/dashboard/rendement', '/profile/rendement', '/settings']);
 });
