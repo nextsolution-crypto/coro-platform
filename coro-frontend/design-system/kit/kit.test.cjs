@@ -109,3 +109,11 @@ test('GlassModal : fermée ou rendue côté serveur = aucun DOM (aucun portail s
 test('les 6 primitives demandées sont exportées', () => {
   for (const name of ['GlassTable', 'GlassModal', 'GlassField', 'StatusBadge', 'PageHeader', 'GlassButton']) assert.equal(typeof kit[name], 'function', name);
 });
+
+test('GlassTable : conteneur défilant focalisable par défaut, retirable (focusable=false) et largeur minimale optionnelle', () => {
+  const body = h('tbody', null, h('tr', null, h('td', null, '1')));
+  assert.match(html(h(kit.GlassTable, { label: 'L' }, body)), /tabindex="0"/);
+  assert.ok(!/tabindex/.test(html(h(kit.GlassTable, { label: 'L', focusable: false }, body))));
+  assert.match(html(h(kit.GlassTable, { label: 'L', minWidth: 900 }, body)), /style="min-width:900px"/);
+  assert.ok(!/min-width/.test(html(h(kit.GlassTable, { label: 'L' }, body))));
+});

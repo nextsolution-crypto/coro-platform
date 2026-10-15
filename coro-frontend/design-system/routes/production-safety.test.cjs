@@ -141,6 +141,10 @@ test('/settings (seule route bêta) : îlot Legacy en production par défaut, Gl
   assert.equal(matcher.resolveRoute('/settings', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'glass', 'production, jeton exact');
   assert.equal(matcher.resolveRoute('/settings', { betaEnabled: core.resolveBetaEnabled({ production: false, storageValue: 'on' }) }).mode, 'glass', 'développement, clé locale');
   assert.equal(matcher.resolveRoute('/settings').mode, 'island', 'développement, sans activation');
+  // /activities/portfolio : même règle (bêta, île par défaut, Glass seulement avec activation explicite).
+  assert.equal(matcher.resolveRoute('/activities/portfolio', prod).mode, 'island');
+  assert.equal(matcher.resolveRoute('/activities/portfolio', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'true', storageValue: 'on' }) }).mode, 'island', 'activation accidentelle');
+  assert.equal(matcher.resolveRoute('/activities/portfolio', { ...prod, betaEnabled: core.resolveBetaEnabled({ production: true, envValue: 'production-preview' }) }).mode, 'glass');
   // Ses sous-pages ne sont PAS migrées : elles restent en îlot, bêta activée ou non.
   for (const sub of ['/settings/users', '/settings/organization', '/settings/task-templates', '/settings/profile']) {
     const r = matcher.resolveRoute(sub, { betaEnabled: true });
@@ -149,6 +153,6 @@ test('/settings (seule route bêta) : îlot Legacy en production par défaut, Gl
 });
 
 test('registre : aucune route bêta ni ga en dehors des listes validées ; routes inconnues restent Legacy', () => {
-  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern), ['/settings']);
+  assert.deepEqual(ROUTE_REGISTRY.filter((e) => e.status === 'beta').map((e) => e.pattern).sort(), ['/activities/portfolio', '/settings']);
   for (const p of ['/nouveau-lot', '/projects/1/inconnu', '/admin/zzz']) assert.equal(matcher.resolveRoute(p, { production: true, betaEnabled: true }).mode, 'legacy', p);
 });

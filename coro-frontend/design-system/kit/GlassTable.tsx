@@ -10,6 +10,13 @@ export interface GlassTableProps {
   /** Survol de ligne (tableaux dont les lignes sont cliquables). */
   interactive?: boolean;
   stickyHeader?: boolean;
+  /** Largeur minimale du tableau en px : en dessous, le conteneur défile horizontalement (le tableau n'est pas écrasé). */
+  minWidth?: number;
+  /**
+   * Le conteneur défilant est-il un arrêt de tabulation ? Défaut : oui (un tableau sans contrôle interne doit rester défilable au clavier).
+   * Mettre false quand le tableau contient lui-même des éléments focalisables (boutons, liens) : éviter un arrêt superflu.
+   */
+  focusable?: boolean;
   /** Si vrai, affiche `emptyMessage` à la place du tableau. */
   isEmpty?: boolean;
   emptyMessage?: ReactNode;
@@ -21,7 +28,7 @@ export interface GlassTableProps {
  * Tableau : conteneur à défilement horizontal (région nommée, atteignable au clavier) + <table> stylée.
  * Le contenu reste du HTML sémantique standard (<thead>, <th scope>, <tbody>).
  */
-export function GlassTable({ label, caption, dense, interactive, stickyHeader, isEmpty, emptyMessage, children }: GlassTableProps) {
+export function GlassTable({ label, caption, dense, interactive, stickyHeader, minWidth, focusable = true, isEmpty, emptyMessage, children }: GlassTableProps) {
   if (isEmpty) {
     return (
       <div className="cgx-table-wrap" role="region" aria-label={label}>
@@ -30,8 +37,8 @@ export function GlassTable({ label, caption, dense, interactive, stickyHeader, i
     );
   }
   return (
-    <div className="cgx-table-wrap" role="region" aria-label={label} tabIndex={0}>
-      <table className="cgx-table" data-dense={dense ? 'true' : undefined} data-interactive={interactive ? 'true' : undefined} data-sticky={stickyHeader ? 'true' : undefined}>
+    <div className="cgx-table-wrap" role="region" aria-label={label} tabIndex={focusable ? 0 : undefined}>
+      <table className="cgx-table" style={minWidth ? { minWidth } : undefined} data-dense={dense ? 'true' : undefined} data-interactive={interactive ? 'true' : undefined} data-sticky={stickyHeader ? 'true' : undefined}>
         {caption ? <caption>{caption}</caption> : null}
         {children}
       </table>

@@ -130,4 +130,5 @@ module.exports = [
     },
   },
   ...require('./scenarios-settings.cjs'),
+  ...require('./scenarios-portfolio.cjs'),
 ];
