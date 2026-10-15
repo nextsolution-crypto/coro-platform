@@ -5,10 +5,17 @@ import { useAuthStore } from '@/stores/auth.store';
 import api from '@/lib/api';
 import AppLayout from '@/components/layout/AppLayout';
 import { useRouter } from 'next/navigation';
+// GLASS:begin — vue Liquid Glass (route bêta du registre). Hors des blocs GLASS, ce fichier est le code Legacy d'origine, inchangé.
+import { useTheme } from '@/design-system/theme/ThemeProvider';
+import RendementGlassView from './RendementGlassView';
+// GLASS:end
 
 export default function MonRendementPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  // GLASS:begin
+  const { ui, routeMode } = useTheme();
+  // GLASS:end
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +84,29 @@ export default function MonRendementPage() {
 
   if (!user) return null;
 
+  // GLASS:begin
+  // Vue Liquid Glass : uniquement si Glass est actif ET que la route est rendue en Glass (bêta activée, ou ga au registre).
+  // Sinon (Legacy, ou île Legacy tant que la bêta n'est pas activée), le rendu d'origine ci-dessous est utilisé tel quel.
+  // Période, chargement de /rendement et ouverture d'un mandat restent calculés ICI, une seule fois, pour les deux rendus.
+  if (ui === 'glass' && routeMode === 'glass') {
+    return (
+      <AppLayout>
+        <RendementGlassView
+          loading={loading}
+          data={data}
+          modes={VIEW_MODES}
+          viewMode={viewMode}
+          onViewMode={id => setViewMode(id as 'month' | 'year' | 'custom')}
+          customFrom={customFrom}
+          onCustomFrom={setCustomFrom}
+          customTo={customTo}
+          onCustomTo={setCustomTo}
+          onOpen={projectId => router.push(`/projects/${projectId}/mandate`)}
+        />
+      </AppLayout>
+    );
+  }
+  // GLASS:end
   return (
     <AppLayout>
       {/* Header */}

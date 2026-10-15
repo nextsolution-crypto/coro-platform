@@ -50,6 +50,27 @@ const ACTIVITIES = {
 };
 const delay = Number(process.env.BENCH_DELAY_MS || 0);
 
+// ───────── États simulables pour /profile/rendement (Phase 08A) ─────────
+//  BENCH_RENDEMENT=1       : données représentatives (4 mandats : marge positive, négative, montant vendu à zéro, nom très long)
+//  BENCH_FAIL_RENDEMENT=1  : /api/rendement répond 500 (le Legacy retombe sur « Aucune heure saisie »)
+//  BENCH_DELAY_MS=n        : /api/rendement répond aussi après n ms (état de chargement prolongé)
+//  La réponse dépend de la période demandée (from/to) pour vérifier le changement de période :
+//  ≤ 10 jours → un seul mandat, 12,0 h ; > 300 jours → 480,0 h ; sinon → la période « mois » (42,5 h).
+const MANDATS = [
+  { projectId: 'p1', clientName: 'Organisation Démo A', projectName: 'Plan de mesures d’urgence 2026', heures: 18.5, montantVendu: 4200, coutReel: 1850, marge: 2350, margePct: 56 },
+  { projectId: 'p2', clientName: 'Organisation Démo B', projectName: 'Plan de sécurité incendie', heures: 12, montantVendu: 2600, coutReel: 1200, marge: 1400, margePct: 54 },
+  { projectId: 'p3', clientName: 'Organisation Démo A', projectName: 'Mandat avec un nom volontairement très long pour vérifier le retour à la ligne dans le tableau et dans les cartes', heures: 8, montantVendu: 0, coutReel: 800, marge: -800, margePct: 0 },
+  { projectId: 'p4', clientName: 'Organisation Démo C', projectName: 'Plan de continuité', heures: 4, montantVendu: 1000, coutReel: 1500, marge: -500, margePct: -50 },
+];
+function rendementBody(url) {
+  if (process.env.BENCH_RENDEMENT !== '1') return { conseillers: [] };
+  const q = new URL(url, 'http://bench').searchParams;
+  const days = (Date.parse(q.get('to')) - Date.parse(q.get('from'))) / 864e5 + 1;
+  if (days <= 10) return { conseillers: [{ heuresTotal: 12, revenusTotal: 0, mandatsCount: 1, mandatsList: [{ ...MANDATS[0], heures: 12, montantVendu: 0, coutReel: 0, marge: 0 }] }] };
+  const heuresTotal = days > 300 ? 480 : 42.5;
+  return { conseillers: [{ heuresTotal, revenusTotal: 7800, mandatsCount: MANDATS.length, mandatsList: MANDATS }] };
+}
+
 http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Headers', '*'); res.setHeader('Access-Control-Allow-Methods', '*');
@@ -63,6 +84,11 @@ http.createServer((req, res) => {
   if (act) { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(process.env.BENCH_ACTIVITIES === '1' ? (ACTIVITIES[act[1]] || []) : [])); }
   if (route === '/api/clients' && process.env.BENCH_FAIL_CLIENTS === '1') { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ message: 'bench: erreur simulée' })); }
   if (route === '/api/clients' && delay) return setTimeout(() => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(routes[route])); }, delay);
+  if (route === '/api/rendement') {
+    if (process.env.BENCH_FAIL_RENDEMENT === '1') { res.writeHead(500, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ message: 'bench: erreur simulée' })); }
+    const send = () => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(rendementBody(req.url))); };
+    return delay ? setTimeout(send, delay) : send();
+  }
   const body = routes[route];
   res.writeHead(body === undefined ? 404 : 200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(body === undefined ? { message: 'bench: route non simulée' } : body));

@@ -2,7 +2,7 @@
 
 > Généré par `npm run glass:inventory -- --write` (scanner d’imports × registre). Ne pas éditer à la main : les statuts se changent dans `routes/route-registry.ts`.
 
-**83 routes** (65 statiques, 18 dynamiques) — une page `page.tsx` = une route, aucun double comptage. Avec shell Glass : 74 ; plein écran : 9. Statuts : ga 3 · beta 2 · legacy-only 78.
+**83 routes** (65 statiques, 18 dynamiques) — une page `page.tsx` = une route, aucun double comptage. Avec shell Glass : 74 ; plein écran : 9. Statuts : ga 3 · beta 3 · legacy-only 77.
 
 ## Pilote migré — 2 route(s), 1721 lignes, 310 couleurs hex, 15 classes couleur Tailwind
 
@@ -11,15 +11,15 @@
 | `/dashboard` | statique | app | inline-hex + tailwind | 1163 | 193 | 7 | — | ga | ui/Typography.tsx |
 | `/profile` | statique | app | inline-hex + tailwind | 558 | 117 | 8 | destructive | ga | WorkScheduleEditorPanel.tsx, workScheduleEditor.ts |
 
-## Projets, mandats, activités — 11 route(s), 15799 lignes, 1972 couleurs hex, 115 classes couleur Tailwind
+## Projets, mandats, activités — 11 route(s), 16054 lignes, 1972 couleurs hex, 115 classes couleur Tailwind
 
 | Route | Type | Shell | Styles | Lignes | Hex | Tailwind | Sensibilité | Statut | Composants partagés |
 |---|---|---|---|---:|---:|---:|---|---|---|
-| `/activities/portfolio` | statique | app | inline-hex | 1092 | 94 | 0 | — | beta | — |
+| `/activities/portfolio` | statique | app | inline-hex | 1106 | 94 | 0 | — | beta | — |
 | `/dashboard/rendement` | statique | app | inline-hex + tailwind | 416 | 56 | 1 | — | legacy-only | — |
 | `/notifications` | statique | app | inline-hex | 527 | 35 | 0 | destructive | legacy-only | — |
 | `/planning` | statique | app | inline-hex + css-module | 2063 | 178 | 0 | destructive | legacy-only | — |
-| `/profile/rendement` | statique | app | inline-hex | 672 | 62 | 0 | — | legacy-only | — |
+| `/profile/rendement` | statique | app | inline-hex | 913 | 62 | 0 | — | beta | — |
 | `/projects` | statique | app | inline-hex + tailwind | 1095 | 181 | 8 | destructive | legacy-only | ui/Typography.tsx |
 | `/projects/[id]` | dynamique | app | inline-hex + tailwind | 4401 | 534 | 16 | destructive, documents | legacy-only | EngagementPanel.tsx, ExportModal.tsx, ProjectFiles.tsx, ui/Typography.tsx |
 | `/projects/[id]/activities` | dynamique | none | inline-hex + tailwind + css-module | 1178 | 278 | 3 | destructive | legacy-only | — |
