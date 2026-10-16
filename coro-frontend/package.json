@@ -23,7 +23,8 @@
     "test:commercial-assumptions": "node app/admin/commercial/assumptions/assumptions.contract.test.cjs",
     "test:commercial-content": "node app/admin/commercial/content/content.contract.test.cjs",
     "test:commercial-legal-issuer": "node app/admin/commercial/legal-issuer/legal-issuer.contract.test.cjs",
-    "test:commercial-clauses": "node app/admin/commercial/clauses/clauses.contract.test.cjs"
+    "test:commercial-clauses": "node app/admin/commercial/clauses/clauses.contract.test.cjs",
+    "test:platform-permission-grants": "node app/admin/platform-permission-grants/platform-permission-grants.contract.test.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

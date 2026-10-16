@@ -105,6 +105,11 @@ const SUPER_ADMIN_COMMERCIAL_ADVANCED_GROUP = {
 const SUPER_ADMIN_OTHER_GROUP = {
   label: 'Plateforme',
   items: [
+    {
+      label: 'Permissions plateforme',
+      path: '/admin/platform-permission-grants',
+      icon: '⚿',
+    },
     { label: 'Rapports REX', path: '/admin/rex-reports', icon: '📄' },
     { label: 'Recommandations', path: '/admin/referrals',     icon: '🎁' },
     { label: 'Carte globale',    path: '/admin/map',           icon: 'ðŸŒ' },
