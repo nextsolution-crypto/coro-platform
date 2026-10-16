@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { RendementFinancialService } from './rendement-financial.service';
 
@@ -49,6 +49,26 @@ describe('RendementFinancialService', () => {
   const service = new RendementFinancialService(prisma);
 
   beforeEach(() => jest.clearAllMocks());
+
+  it.each(['USD', 'EUR', 'GBP', 'CHF', 'ZZZ', null])(
+    'rejects unsupported new mandate sale currency %p before database access',
+    async (soldCurrency) => {
+      await expect(
+        service.validateSale(
+          'mandate-a',
+          {
+            soldAmount: '100.00',
+            soldCurrency: soldCurrency as unknown as string,
+            soldAt: '2026-01-01',
+            reason: 'Currency policy regression',
+            lockVersion: 0,
+          },
+          actor(),
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.projectMandate.findMany).not.toHaveBeenCalled();
+    },
+  );
 
   it('aggregates a sold mandate once across advisors with Decimal labor cost', async () => {
     prisma.projectMandate.findMany.mockResolvedValue([mandate()]);

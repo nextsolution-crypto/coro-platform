@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { createBookingFixture } from './booking-postgres-fixture';
 import { AdvisorCostRatesService } from '../src/mandate/advisor-cost-rates.service';
 import { RendementFinancialService } from '../src/mandate/rendement-financial.service';
@@ -40,6 +40,48 @@ describePostgres('Governed rendement financial authority on PostgreSQL', () => {
         montantVendu: 9999,
       },
     });
+    const rateCountBeforeCurrencyRejections =
+      await prisma.advisorInternalCostRate.count();
+    for (const currency of ['USD', 'EUR', 'GBP', 'CHF', 'ZZZ']) {
+      await expect(
+        rates.createDraft(
+          {
+            userId: fixture.owner.id,
+            currency,
+            hourlyCost: '80',
+            effectiveFrom: '2026-01-01',
+          },
+          proposer,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+    expect(await prisma.advisorInternalCostRate.count()).toBe(
+      rateCountBeforeCurrencyRejections,
+    );
+    const mandateBeforeCurrencyRejections =
+      await prisma.projectMandate.findUniqueOrThrow({
+        where: { id: mandate.id },
+      });
+    for (const soldCurrency of ['USD', 'EUR', 'GBP', 'CHF', 'ZZZ']) {
+      await expect(
+        financial.validateSale(
+          mandate.id,
+          {
+            soldAmount: '10000.00',
+            soldCurrency,
+            soldAt: '2026-01-10',
+            reason: 'Synthetic currency rejection',
+            lockVersion: 0,
+          },
+          approver,
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+    expect(
+      await prisma.projectMandate.findUniqueOrThrow({
+        where: { id: mandate.id },
+      }),
+    ).toEqual(mandateBeforeCurrencyRejections);
     const task = await prisma.projectTask.create({
       data: {
         projectId: fixture.project.id,

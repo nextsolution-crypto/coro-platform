@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { CommercialProposalRevisionStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  governedCurrency,
+  governedOptionalCurrency,
+} from '../common/financial-currency';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import {
   CreateContractFromProposalDto,
@@ -723,7 +727,10 @@ export class CommercialProposalsService {
             decimalValue: i.decimalValue,
             integerValue: money(i.integerValue),
             moneyMinor: money(i.moneyMinor),
-            currency: i.currency ?? null,
+            currency:
+              i.valueType === 'MONEY'
+                ? governedCurrency(i.currency, { defaultWhenMissing: true })
+                : (governedOptionalCurrency(i.currency) ?? null),
           },
         });
       const proposalLineByCode = new Map<string, string>();
@@ -861,7 +868,12 @@ export class CommercialProposalsService {
             period: commitment.period,
             amountMinor: money(commitment.amountMinor),
             quantity: commitment.quantity,
-            currency: commitment.currency,
+            currency:
+              commitment.amountMinor !== undefined
+                ? governedCurrency(commitment.currency, {
+                    defaultWhenMissing: true,
+                  })
+                : governedOptionalCurrency(commitment.currency),
             unit: commitment.unit,
             description: commitment.description,
           },

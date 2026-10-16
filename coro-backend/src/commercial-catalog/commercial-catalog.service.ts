@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { AdminAuditService } from '../admin-audit/admin-audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { governedCurrency } from '../common/financial-currency';
 import {
   CreateComponentDto,
   CreatePriceBookDto,
@@ -257,12 +258,11 @@ export class CommercialCatalogService {
     return this.serialize(result);
   }
   async createPriceBook(dto: CreatePriceBookDto, actor: Actor) {
-    if (dto.currency !== 'CAD')
-      throw new BadRequestException(
-        'Seule la devise CAD est autorisée en Phase 2A.',
-      );
+    const currency = governedCurrency(dto.currency, {
+      defaultWhenMissing: true,
+    });
     return this.prisma.$transaction(async (tx) => {
-      const row = await tx.priceBook.create({ data: dto });
+      const row = await tx.priceBook.create({ data: { ...dto, currency } });
       await this.audit.record(tx, {
         actorUserId: actor.userId,
         action: 'PRICE_BOOK_CREATED',
@@ -483,10 +483,7 @@ export class CommercialCatalogService {
     if (!effectiveFrom) throw new BadRequestException('effectiveFrom requis.');
     return this.prisma.$transaction(async (tx) => {
       const before = await this.draft(tx, id);
-      if (before.priceBook.currency !== 'CAD')
-        throw new BadRequestException(
-          'Seule la devise CAD est publiable en Phase 2A.',
-        );
+      governedCurrency(before.priceBook.currency);
       const components = await tx.priceComponent.findMany({
         where: { priceBookVersionId: id },
         include: { capability: true, tiers: true },
